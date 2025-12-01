@@ -79,11 +79,15 @@ export function WhatsNewBadge() {
       }
     },
     onSuccess: () => {
+      queryClient.setQueryData(['/api/whats-new/unviewed-count'], { count: 0 });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
       queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
       setOpen(false);
     },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
+    }
   });
 
   const handleMarkViewed = (updateId: string) => {

@@ -81,8 +81,14 @@ export function NotificationsCenter() {
       return apiRequest('/api/notifications/mark-all-read', 'POST');
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
+      queryClient.setQueryData(queryKeys.notifications.all, (old: Notification[] = []) =>
+        old.map(n => ({ ...n, isRead: true }))
+      );
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
     },
+    onError: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
+    }
   });
 
   const markAsRead = (id: string) => {

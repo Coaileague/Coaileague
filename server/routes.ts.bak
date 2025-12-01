@@ -36,6 +36,7 @@ import schedulerRouter from "./routes/schedulerRoutes"; // CoAIleague Autonomous
 import { automationRouter } from "./routes/automation"; // Core Automation (Scheduling, Invoicing, Payroll)
 import { migrationRouter } from "./routes/migration"; // Data Migration from External Platforms
 import { registerHealthRoutes } from "./routes/health"; // Health check monitoring
+import { registerSearchRoutes } from "./routes/searchRoutes"; // AI-Powered Intelligent Search
 import { auditContextMiddleware } from "./middleware/audit";
 import { 
   apiLimiter, 
@@ -81,6 +82,8 @@ import emailRouter from "./routes/emails";
 import { calendarRouter } from "./routes/calendarRoutes";
 import { smsRouter } from "./routes/smsRoutes";
 import { whatsNewRouter } from "./routes/whatsNewRoutes";
+import { supportCommandRouter } from "./routes/support-command-console";
+import codeEditorRouter from "./routes/code-editor";
 import { onboardingRouter } from "./routes/onboardingRoutes";
 import { timesheetReportRouter } from "./routes/timesheetReportRoutes";
 import { timesheetInvoiceRouter } from "./routes/timesheetInvoiceRoutes";
@@ -90,7 +93,7 @@ import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
 import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
 import { createHealthCheckTicket } from "./services/autoTicketCreation";
 import { sendMonitoringAlert } from "./services/externalMonitoring";
-import { checkDatabase, checkChatWebSocket, checkStripe, checkGeminiAI } from "./services/healthCheck";
+import { checkDatabase, checkChatWebSocket, checkStripe, checkGeminiAI, checkQuickBooks, checkGusto, getIntegrationHealthSummary } from "./services/healthCheck";
 import { getTimeEntriesByEmployee, getTimeEntriesByWorkspace, getPendingTimeEntries, approveTimeEntry, rejectTimeEntry, calculatePayrollHours, createTimeEntry } from "./services/timeEntryService";
 import { exportEmployees, exportPayroll, exportAuditLogs, exportTimeEntries, exportAllData, anonymizeEmployeeData } from "./services/exportService";
 import { creditInvoice, discountInvoice, refundInvoice, correctInvoiceLineItem, getInvoiceAdjustmentHistory, bulkCreditInvoices } from "./services/invoiceAdjustmentService";
@@ -110,9 +113,11 @@ import { monitoringService } from "./services/monitoringService";
 import { processingMetricsService } from "./services/processingMetricsService";
 import { trainingRateService } from "./services/trainingRateService";
 import { analyticsDataService } from "./services/analyticsDataService";
+import { roomAnalyticsService } from "./services/roomAnalyticsService";
 import { documentExtractionService } from "./services/documentExtraction";
 import { notificationEngine } from "./services/universalNotificationEngine";
 import { issueDetectionService } from "./services/issueDetectionService";
+import { aiNotificationService } from "./services/aiNotificationService";
 import aiBrainConfig from "@shared/config/aiBrainGuardrails";
 import { approveDispute, rejectDispute, getPendingDisputes, getDisputesAssignedToUser } from "./services/timeEntryDisputeService";
 import { addDeduction, addGarnishment, applyDeductionsAndGarnishments, calculateTotalDeductions, calculateTotalGarnishments } from "./services/payrollDeductionService";
@@ -434,10 +439,127 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Audit logging middleware (captures request context for all authenticated requests)
   app.use(auditContextMiddleware);
   registerHealthRoutes(app, requireAuth);
+  registerSearchRoutes(app, requireAuth); // AI-Powered Search
 
   // ============================================================================
   // NOTIFICATIONS & FEATURE UPDATES
   // ============================================================================
+
+
+  // Combined notifications endpoint - returns platform updates, notifications, and maintenance alerts
+  app.get('/api/notifications/combined', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get user's workspace
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      const member = await storage.getWorkspaceMemberByUserId(userId);
+      const workspaceId = workspace?.id || member?.workspaceId;
+      
+      if (!workspaceId) {
+        return res.json({
+          platformUpdates: [],
+          maintenanceAlerts: [],
+          notifications: [],
+          unreadPlatformUpdates: 0,
+          unreadNotifications: 0,
+          unreadAlerts: 0,
+          totalUnread: 0,
+        });
+      }
+      
+      // Get platform updates (What's New) with user read state
+      const platformUpdatesData = await storage.getPlatformUpdatesWithReadState(userId, workspaceId, 20);
+      const unreadPlatformUpdates = platformUpdatesData.filter(u => !u.isViewed).length;
+      
+      // Get notifications
+      const notifications = await storage.getNotificationsByUser(userId, workspaceId, 20);
+      const unreadNotifications = notifications.filter(n => !n.isRead).length;
+      
+      // Get active maintenance alerts
+      const maintenanceAlerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+      const unreadAlerts = maintenanceAlerts.filter((a: any) => !a.isAcknowledged).length;
+      
+      res.json({
+        platformUpdates: platformUpdatesData,
+        maintenanceAlerts,
+        notifications,
+        unreadPlatformUpdates,
+        unreadNotifications,
+        unreadAlerts,
+        totalUnread: unreadPlatformUpdates + unreadNotifications + unreadAlerts,
+      });
+    } catch (error) {
+      console.error('Error fetching combined notifications:', error);
+      res.status(500).json({ message: 'Failed to fetch notifications' });
+    }
+  });
+  
+  // Mark all notifications as read (comprehensive - handles all types)
+  app.post('/api/notifications/mark-all-read', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get user's workspace
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      const member = await storage.getWorkspaceMemberByUserId(userId);
+      const workspaceId = workspace?.id || member?.workspaceId;
+      
+      if (!workspaceId) {
+        return res.json({ 
+          success: true, 
+          markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } 
+        });
+      }
+      
+      // Mark all platform updates as viewed
+      const platformUpdatesMarked = await storage.markAllPlatformUpdatesAsViewed(userId, workspaceId);
+      
+      // Mark all notifications as read
+      const notificationsMarked = await storage.markAllNotificationsAsRead(userId, workspaceId);
+      
+      // Acknowledge all maintenance alerts
+      const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+      let alertsMarked = 0;
+      for (const alert of alerts) {
+        if (!(alert as any).isAcknowledged) {
+          await aiNotificationService.acknowledgeMaintenanceAlert(alert.id, userId);
+          alertsMarked++;
+        }
+      }
+      
+      res.json({ 
+        success: true, 
+        markedRead: { 
+          platformUpdates: platformUpdatesMarked, 
+          notifications: notificationsMarked, 
+          alerts: alertsMarked 
+        } 
+      });
+    } catch (error) {
+      console.error('Error marking all notifications as read:', error);
+      res.status(500).json({ message: 'Failed to mark notifications as read' });
+    }
+  });
+
+  // Acknowledge maintenance alert
+  app.post('/api/maintenance-alerts/:id/acknowledge', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const { id: alertId } = req.params;
+      
+      const success = await aiNotificationService.acknowledgeMaintenanceAlert(alertId, userId);
+      
+      if (success) {
+        res.json({ success: true });
+      } else {
+        res.status(500).json({ message: 'Failed to acknowledge alert' });
+      }
+    } catch (error) {
+      console.error('Error acknowledging maintenance alert:', error);
+      res.status(500).json({ message: 'Failed to acknowledge alert' });
+    }
+  });
 
   // Get user notifications
   app.get('/api/notifications', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -790,6 +912,141 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================================================
+
+  // ============================================================================
+  // SMS & SHIFT REMINDER CONFIGURATION - Phase 2D
+  // ============================================================================
+
+  // Get SMS configuration status
+  app.get('/api/notifications/sms-status', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { isSMSConfigured } = await import('./services/smsService');
+      
+      res.json({
+        configured: isSMSConfigured(),
+        twilioAccountSid: process.env.TWILIO_ACCOUNT_SID ? '***configured***' : null,
+        twilioPhoneNumber: process.env.TWILIO_PHONE_NUMBER ? process.env.TWILIO_PHONE_NUMBER : null,
+      });
+    } catch (error) {
+      console.error('Error checking SMS status:', error);
+      res.status(500).json({ message: 'Failed to check SMS status' });
+    }
+  });
+
+  // Get shift reminder timing options
+  app.get('/api/notifications/reminder-options', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { getReminderTimingOptions } = await import('./services/shiftRemindersService');
+      
+      res.json({
+        timingOptions: getReminderTimingOptions(),
+        channels: [
+          { value: 'push', label: 'In-App Notifications' },
+          { value: 'email', label: 'Email' },
+          { value: 'sms', label: 'SMS Text Message' },
+        ],
+      });
+    } catch (error) {
+      console.error('Error getting reminder options:', error);
+      res.status(500).json({ message: 'Failed to get reminder options' });
+    }
+  });
+
+  // Send test SMS to user
+  app.post('/api/notifications/test-sms', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspaceId = req.user!.currentWorkspaceId;
+      const { phoneNumber } = req.body;
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: 'No active workspace' });
+      }
+
+      if (!phoneNumber || typeof phoneNumber !== 'string') {
+        return res.status(400).json({ message: 'Phone number is required' });
+      }
+
+      const { sendSMS, isSMSConfigured } = await import('./services/smsService');
+      
+      if (!isSMSConfigured()) {
+        return res.status(400).json({ message: 'SMS is not configured. Please add Twilio credentials.' });
+      }
+
+      const result = await sendSMS({
+        to: phoneNumber,
+        body: 'CoAIleague: This is a test message to verify your SMS settings are working correctly.',
+        type: 'test',
+        userId,
+        workspaceId,
+      });
+
+      if (result.success) {
+        res.json({ success: true, messageId: result.messageId, message: 'Test SMS sent successfully' });
+      } else {
+        res.status(400).json({ success: false, error: result.error });
+      }
+    } catch (error) {
+      console.error('Error sending test SMS:', error);
+      res.status(500).json({ message: 'Failed to send test SMS' });
+    }
+  });
+
+  // Verify SMS phone number
+  app.post('/api/notifications/verify-phone', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      const workspaceId = req.user!.currentWorkspaceId;
+      const { phoneNumber } = req.body;
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: 'No active workspace' });
+      }
+
+      if (!phoneNumber || typeof phoneNumber !== 'string') {
+        return res.status(400).json({ message: 'Phone number is required' });
+      }
+
+      const preferences = await storage.createOrUpdateNotificationPreferences(userId, workspaceId, {
+        smsPhoneNumber: phoneNumber,
+        smsVerified: true,
+      });
+
+      res.json({ success: true, preferences });
+    } catch (error) {
+      console.error('Error verifying phone:', error);
+      res.status(500).json({ message: 'Failed to verify phone number' });
+    }
+  });
+
+  // Trigger manual shift reminder (for testing)
+  app.post('/api/notifications/send-shift-reminder', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.user!.currentWorkspaceId;
+      const { shiftId } = req.body;
+
+      if (!workspaceId) {
+        return res.status(400).json({ message: 'No active workspace' });
+      }
+
+      if (!shiftId || typeof shiftId !== 'string') {
+        return res.status(400).json({ message: 'Shift ID is required' });
+      }
+
+      const { sendShiftReminder } = await import('./services/shiftRemindersService');
+      const result = await sendShiftReminder(shiftId, workspaceId);
+
+      if (result) {
+        res.json({ success: true, result });
+      } else {
+        res.status(404).json({ message: 'Shift not found or no employee assigned' });
+      }
+    } catch (error) {
+      console.error('Error sending shift reminder:', error);
+      res.status(500).json({ message: 'Failed to send shift reminder' });
+    }
+  });
+
   // SECURE USER IDENTITY & AUTHORIZATION ENDPOINTS
   // ============================================================================
   
@@ -909,7 +1166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(featureUpdates)
         .where(
           and(
-            eq(featureUpdates.status, 'active'),
+            eq(featureUpdates.status, 'published'),
             eq(featureUpdates.isMajor, true), // Only show major updates
             or(
               isNull(featureUpdates.releaseAt),
@@ -1015,7 +1272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         .from(featureUpdates)
         .where(
           and(
-            eq(featureUpdates.status, 'active'),
+            eq(featureUpdates.status, 'published'),
             eq(featureUpdates.isMajor, true),
             or(
               isNull(featureUpdates.releaseAt),
@@ -1841,6 +2098,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Integration health endpoint - QuickBooks and Gusto status
+  app.get('/api/integrations/health', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const healthData = await getIntegrationHealthSummary();
+      res.json(healthData);
+    } catch (error: any) {
+      console.error('[IntegrationHealth] Error:', error.message);
+      res.status(500).json({ 
+        error: 'Failed to check integration health',
+        quickbooks: { service: 'quickbooks', status: 'down', isCritical: false, message: 'Health check failed', lastChecked: new Date().toISOString() },
+        gusto: { service: 'gusto', status: 'down', isCritical: false, message: 'Health check failed', lastChecked: new Date().toISOString() },
+        overall: 'down',
+        timestamp: new Date().toISOString()
+      });
+    }
+  });
   // Organization status endpoint - returns org-aware status for universal toast notifications
   app.get('/api/workspace/status', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
@@ -1953,6 +2227,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register What's New routes (Platform updates feed)
   app.use("/api/whats-new", whatsNewRouter);
+  // Register Support Command Console routes (Force-push updates for support staff)
+  app.use("/api/support/command", supportCommandRouter);
+
+  // Register AI Brain Code Editor routes (staged code changes, approval workflow)
+  app.use("/api/code-editor", codeEditorRouter);
 
   // Register Onboarding Pipeline routes (tasks, progress, rewards)
   app.use("/api/onboarding", onboardingRouter);
@@ -12660,23 +12939,23 @@ ${application.email}`,
     }
   });
 
-  // Get employee availability
+  // ============================================================================
+  // EMPLOYEE AVAILABILITY MANAGEMENT - SCHEDULEOS™ INTEGRATION
+  // ============================================================================
+
+  // Get employee availability (by employee ID - for managers viewing specific employee)
   app.get('/api/employees/:employeeId/availability', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
       const { employeeId } = req.params;
-      const { employeeAvailability } = await import("@shared/schema");
+      const { includeExpired } = req.query;
+      const { availabilityService } = await import("./services/availabilityService");
 
-      const availability = await db
-        .select()
-        .from(employeeAvailability)
-        .where(
-          and(
-            eq(employeeAvailability.workspaceId, workspaceId),
-            eq(employeeAvailability.employeeId, employeeId)
-          )
-        )
-        .orderBy(employeeAvailability.dayOfWeek);
+      const availability = await availabilityService.getEmployeeAvailability(
+        workspaceId,
+        employeeId,
+        includeExpired === 'true'
+      );
 
       res.json(availability);
     } catch (error: any) {
@@ -12685,49 +12964,19 @@ ${application.email}`,
     }
   });
 
-  // Set employee availability
+  // Set employee availability (bulk replace all availability for employee)
   app.post('/api/employees/:employeeId/availability', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
       const { employeeId } = req.params;
-      const { availability } = req.body; // Array of availability objects
-      const { employeeAvailability } = await import("@shared/schema");
+      const { availability } = req.body;
+      const { availabilityService } = await import("./services/availabilityService");
 
-      // Delete existing availability
-      await db
-        .delete(employeeAvailability)
-        .where(
-          and(
-            eq(employeeAvailability.workspaceId, workspaceId),
-            eq(employeeAvailability.employeeId, employeeId)
-          )
-        );
-
-      // Insert new availability
-      if (availability && availability.length > 0) {
-        const values = availability.map((slot: any) => ({
-          workspaceId,
-          employeeId,
-          dayOfWeek: slot.dayOfWeek,
-          startTime: slot.startTime,
-          endTime: slot.endTime,
-          isAvailable: slot.isAvailable ?? true,
-        }));
-
-        await db.insert(employeeAvailability).values(values);
-      }
-
-      // Return updated availability
-      const updated = await db
-        .select()
-        .from(employeeAvailability)
-        .where(
-          and(
-            eq(employeeAvailability.workspaceId, workspaceId),
-            eq(employeeAvailability.employeeId, employeeId)
-          )
-        )
-        .orderBy(employeeAvailability.dayOfWeek);
+      const updated = await availabilityService.setEmployeeAvailability(
+        workspaceId,
+        employeeId,
+        availability || []
+      );
 
       res.json(updated);
     } catch (error: any) {
@@ -12735,6 +12984,239 @@ ${application.email}`,
       res.status(500).json({ message: error.message || 'Failed to set availability' });
     }
   });
+
+  // Get current user's own availability
+  app.get('/api/availability', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const userId = req.user!.id;
+      const { includeExpired } = req.query;
+      const { availabilityService } = await import("./services/availabilityService");
+
+      const employee = await db
+        .select()
+        .from(employees)
+        .where(and(
+          eq(employees.workspaceId, workspaceId),
+          eq(employees.userId, userId)
+        ))
+        .limit(1);
+
+      if (employee.length === 0) {
+        return res.status(404).json({ message: 'Employee record not found' });
+      }
+
+      const availability = await availabilityService.getEmployeeAvailability(
+        workspaceId,
+        employee[0].id,
+        includeExpired === 'true'
+      );
+
+      res.json(availability);
+    } catch (error: any) {
+      console.error('Error getting availability:', error);
+      res.status(500).json({ message: error.message || 'Failed to get availability' });
+    }
+  });
+
+  // Submit availability pattern (current user)
+  app.post('/api/availability', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const userId = req.user!.id;
+      const { slots } = req.body;
+      const { availabilityService } = await import("./services/availabilityService");
+
+      const employee = await db
+        .select()
+        .from(employees)
+        .where(and(
+          eq(employees.workspaceId, workspaceId),
+          eq(employees.userId, userId)
+        ))
+        .limit(1);
+
+      if (employee.length === 0) {
+        return res.status(404).json({ message: 'Employee record not found' });
+      }
+
+      const updated = await availabilityService.setEmployeeAvailability(
+        workspaceId,
+        employee[0].id,
+        slots || []
+      );
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error submitting availability:', error);
+      res.status(500).json({ message: error.message || 'Failed to submit availability' });
+    }
+  });
+
+  // Update individual availability slot
+  app.put('/api/availability/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { id } = req.params;
+      const updates = req.body;
+      const { availabilityService } = await import("./services/availabilityService");
+
+      const updated = await availabilityService.updateAvailabilitySlot(workspaceId, id, updates);
+
+      if (!updated) {
+        return res.status(404).json({ message: 'Availability slot not found' });
+      }
+
+      res.json(updated);
+    } catch (error: any) {
+      console.error('Error updating availability:', error);
+      res.status(500).json({ message: error.message || 'Failed to update availability' });
+    }
+  });
+
+  // Delete availability slot
+  app.delete('/api/availability/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { id } = req.params;
+      const { availabilityService } = await import("./services/availabilityService");
+
+      const deleted = await availabilityService.deleteAvailabilitySlot(workspaceId, id);
+
+      if (!deleted) {
+        return res.status(404).json({ message: 'Availability slot not found' });
+      }
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('Error deleting availability:', error);
+      res.status(500).json({ message: error.message || 'Failed to delete availability' });
+    }
+  });
+
+  // Get team availability overview (manager view)
+  app.get('/api/availability/team', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { startDate, endDate, employeeIds } = req.query;
+      const { availabilityService } = await import("./services/availabilityService");
+
+      const teamAvailability = await availabilityService.getTeamAvailability(workspaceId, {
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        employeeIds: employeeIds ? (employeeIds as string).split(',') : undefined,
+      });
+
+      res.json(teamAvailability);
+    } catch (error: any) {
+      console.error('Error getting team availability:', error);
+      res.status(500).json({ message: error.message || 'Failed to get team availability' });
+    }
+  });
+
+  // Add availability exception (one-time unavailability: vacation, sick day, etc.)
+  app.post('/api/availability/exception', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const userId = req.user!.id;
+      const { startDate, endDate, requestType, reason, notes } = req.body;
+      const { availabilityService } = await import("./services/availabilityService");
+
+      const employee = await db
+        .select()
+        .from(employees)
+        .where(and(
+          eq(employees.workspaceId, workspaceId),
+          eq(employees.userId, userId)
+        ))
+        .limit(1);
+
+      if (employee.length === 0) {
+        return res.status(404).json({ message: 'Employee record not found' });
+      }
+
+      const exception = await availabilityService.createException(
+        workspaceId,
+        employee[0].id,
+        {
+          startDate: new Date(startDate),
+          endDate: new Date(endDate),
+          requestType,
+          reason,
+          notes,
+        }
+      );
+
+      res.json(exception);
+    } catch (error: any) {
+      console.error('Error creating availability exception:', error);
+      res.status(500).json({ message: error.message || 'Failed to create availability exception' });
+    }
+  });
+
+  // Check for scheduling conflicts
+  app.post('/api/availability/check-conflict', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { employeeId, shiftDate, startTime, endTime } = req.body;
+      const { availabilityService } = await import("./services/availabilityService");
+
+      const conflict = await availabilityService.checkConflict(
+        workspaceId,
+        employeeId,
+        new Date(shiftDate),
+        startTime,
+        endTime
+      );
+
+      res.json(conflict);
+    } catch (error: any) {
+      console.error('Error checking availability conflict:', error);
+      res.status(500).json({ message: error.message || 'Failed to check conflict' });
+    }
+  });
+
+  // Detect understaffing based on availability patterns (manager view)
+  app.get('/api/availability/understaffing', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { startDate, endDate, minimumStaff } = req.query;
+      const { availabilityService } = await import("./services/availabilityService");
+
+      const alerts = await availabilityService.detectUnderstaffing(workspaceId, {
+        startDate: startDate ? new Date(startDate as string) : undefined,
+        endDate: endDate ? new Date(endDate as string) : undefined,
+        minimumStaffPerDay: minimumStaff ? parseInt(minimumStaff as string) : undefined,
+      });
+
+      res.json(alerts);
+    } catch (error: any) {
+      console.error('Error detecting understaffing:', error);
+      res.status(500).json({ message: error.message || 'Failed to detect understaffing' });
+    }
+  });
+
+  // Suggest optimal schedule based on availability (manager view)
+  app.post('/api/availability/suggest-schedule', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { startDate, endDate, shiftsPerDay, shiftDurationHours } = req.body;
+      const { availabilityService } = await import("./services/availabilityService");
+
+      const suggestion = await availabilityService.suggestOptimalSchedule(workspaceId, {
+        startDate: new Date(startDate),
+        endDate: new Date(endDate),
+        shiftsPerDay,
+        shiftDurationHours,
+      });
+
+      res.json(suggestion);
+    } catch (error: any) {
+      console.error('Error suggesting schedule:', error);
+      res.status(500).json({ message: error.message || 'Failed to suggest schedule' });
+    }
+  });
+
 
   // Get pending time-off requests for managers (with employee details)
   app.get('/api/time-off-requests/pending', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -14627,6 +15109,85 @@ Keep it professional, actionable, and under 250 words.`;
     }
   });
 
+  // Get priority queue - real-time support queue based on subscription tier and wait time
+  app.get('/api/support/priority-queue', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Get open support tickets with workspace and user info
+      const tickets = await db.query.supportTickets.findMany({
+        where: and(
+          eq(supportTickets.status, 'open'),
+          isNull(supportTickets.resolvedAt)
+        ),
+        with: {
+          workspace: true,
+        },
+        orderBy: (tickets, { asc }) => [asc(tickets.createdAt)],
+      });
+
+      // Calculate priority for each ticket
+      const tierWeights: Record<string, number> = {
+        'elite': 50,
+        'enterprise': 40,
+        'professional': 25,
+        'starter': 15,
+        'free': 10,
+        'trial': 10,
+      };
+
+      const priorityUsers = tickets.map((ticket) => {
+        const workspace = ticket.workspace;
+        const tier = (workspace?.subscriptionTier || 'free').toLowerCase();
+        const tierWeight = tierWeights[tier] || 10;
+        const isVIP = workspace?.isVip || false;
+        const vipBonus = isVIP ? 25 : 0;
+        
+        // Calculate wait time in minutes
+        const createdAt = new Date(ticket.createdAt);
+        const now = new Date();
+        const waitTimeMs = now.getTime() - createdAt.getTime();
+        const waitTime = Math.floor(waitTimeMs / (1000 * 60));
+        const waitTimeBonus = Math.min(waitTime, 25);
+        
+        const priorityScore = tierWeight + vipBonus + waitTimeBonus;
+        
+        // Map tier to our display tiers
+        let displayTier: 'elite' | 'enterprise' | 'professional' | 'free' = 'free';
+        if (tier === 'elite') displayTier = 'elite';
+        else if (tier === 'enterprise') displayTier = 'enterprise';
+        else if (tier === 'professional' || tier === 'starter') displayTier = 'professional';
+        
+        return {
+          id: ticket.id,
+          name: ticket.customerName || `${workspace?.name || 'Anonymous'} User`,
+          email: ticket.customerEmail || 'No email provided',
+          tier: displayTier,
+          vipStatus: isVIP,
+          priorityScore,
+          waitTime,
+          reason: ticket.subject || 'Support request',
+          ticketId: ticket.id,
+        };
+      });
+
+      // Sort by priority score (highest first)
+      priorityUsers.sort((a, b) => b.priorityScore - a.priorityScore);
+
+      // Calculate tier counts
+      const tierCounts = {
+        elite: priorityUsers.filter(u => u.tier === 'elite').length,
+        enterprise: priorityUsers.filter(u => u.tier === 'enterprise').length,
+        professional: priorityUsers.filter(u => u.tier === 'professional').length,
+        free: priorityUsers.filter(u => u.tier === 'free').length,
+      };
+
+      res.json({ users: priorityUsers, tierCounts });
+    } catch (error) {
+      console.error("Error fetching priority queue:", error);
+      res.status(500).json({ message: "Failed to fetch priority queue" });
+    }
+  });
+
+
   // Assign escalated ticket to platform staff
   app.patch('/api/support/escalated/:id/assign', requireAuth, requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
@@ -14909,6 +15470,7 @@ Summary:`;
   // ============================================================================
 
   // ============================================================================
+  // ============================================================================
   // PHASE 3: CRITICAL API GAPS - Support Ticket & AI Response Management
   // ============================================================================
 
@@ -14925,16 +15487,16 @@ Summary:`;
         return res.status(400).json({ message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
       }
 
-      // Get the ticket
-      const ticket = await storage.getSupportTicket(id);
-      if (!ticket) {
-        return res.status(404).json({ message: 'Ticket not found' });
-      }
-
       // Get user to verify workspace access
       const user = await storage.getUser(userId);
-      if (ticket.workspaceId !== user?.currentWorkspaceId) {
-        return res.status(403).json({ message: 'Access denied' });
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: 'No workspace selected' });
+      }
+
+      // Get the ticket
+      const ticket = await storage.getSupportTicket(id, user.currentWorkspaceId);
+      if (!ticket) {
+        return res.status(404).json({ message: 'Ticket not found' });
       }
 
       // Update ticket status
@@ -14986,16 +15548,16 @@ Summary:`;
       const { id } = req.params;
       const userId = req.user!.id;
 
-      // Get the ticket
-      const ticket = await storage.getSupportTicket(id);
-      if (!ticket) {
-        return res.status(404).json({ message: 'Ticket not found' });
-      }
-
       // Get user to verify workspace access
       const user = await storage.getUser(userId);
-      if (ticket.workspaceId !== user?.currentWorkspaceId) {
-        return res.status(403).json({ message: 'Access denied' });
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: 'No workspace selected' });
+      }
+
+      // Get the ticket
+      const ticket = await storage.getSupportTicket(id, user.currentWorkspaceId);
+      if (!ticket) {
+        return res.status(404).json({ message: 'Ticket not found' });
       }
 
       // Delete the ticket
@@ -15053,15 +15615,20 @@ Summary:`;
         return res.status(400).json({ message: 'Rating must be between 1 and 5' });
       }
 
+      // Get user to verify workspace access
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(403).json({ message: 'No workspace selected' });
+      }
+
       // Get the AI response
       const aiResponse = await storage.getAiResponse(id);
       if (!aiResponse) {
         return res.status(404).json({ message: 'AI response not found' });
       }
 
-      // Get user to verify workspace access
-      const user = await storage.getUser(userId);
-      if (aiResponse.workspaceId !== user?.currentWorkspaceId) {
+      // Verify workspace access
+      if (aiResponse.workspaceId !== user.currentWorkspaceId) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
@@ -15163,6 +15730,7 @@ Summary:`;
       res.status(500).json({ message: 'Failed to fetch AI suggestions' });
     }
   });
+
   // ADMIN SUPPORT ROUTES - Platform Administration
   // ============================================================================
 
@@ -15223,6 +15791,36 @@ Summary:`;
     }
   });
 
+  // Helper function to map audit event types to LiveActivity types
+  function mapEventTypeToActivityType(eventType) {
+    if (eventType.includes('LOGIN') || eventType.includes('SESSION')) return 'login';
+    if (eventType.includes('SHIFT') || eventType.includes('SCHEDULE')) return 'shift_created';
+    if (eventType.includes('INVOICE') || eventType.includes('PAYMENT')) return 'invoice_generated';
+    if (eventType.includes('EMPLOYEE') || eventType.includes('USER_CREATED')) return 'employee_added';
+    if (eventType.includes('ERROR') || eventType.includes('FAIL')) return 'error';
+    return 'login'; // Default
+  }
+
+  // Platform live activities - real data from audit_events
+  app.get('/api/admin/platform/activities', requirePlatformStaff, async (req, res) => {
+    try {
+      const limit = Math.min(Number(req.query.limit) || 20, 100);
+      const activities = await storage.getAuditEvents({ limit });
+      const liveActivities = activities.map((event) => ({
+        id: event.id,
+        timestamp: event.createdAt?.toISOString() || new Date().toISOString(),
+        user: event.actorName || event.actorId || 'System',
+        action: event.payload?.description || `${event.eventType}: ${event.aggregateType}`,
+        workspace: event.workspaceId || 'Platform',
+        type: mapEventTypeToActivityType(event.eventType),
+      }));
+      res.json(liveActivities);
+    } catch (error) {
+      console.error("Error fetching platform activities:", error);
+      res.status(500).json({ message: "Failed to fetch platform activities" });
+    }
+  });
+
   // ============================================================================
   // EXTERNAL IDENTIFIER LOOKUP SYSTEM
   // ============================================================================
@@ -15262,7 +15860,16 @@ Summary:`;
   });
 
   // DEMO WORKSPACE REFRESH - Idempotent data repopulation for testing
+  // ⚠️  SECURITY: Only allowed in development/staging for E2E testing
   app.post('/api/admin/demo-workspace/refresh', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    // Block demo data refresh in production environments
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('⚠️  Demo workspace refresh blocked in production environment');
+      return res.status(403).json({ 
+        message: "Demo workspace refresh is disabled in production for security reasons." 
+      });
+    }
+
     try {
       console.log("🔧 [DEBUG] Starting demo workspace refresh...");
       const { refreshDemoData } = await import("./seed-demo");
@@ -19719,8 +20326,31 @@ Return ONLY valid JSON array with this exact structure:
 
       // Analyze each employee's capacity
       for (const employee of employees) {
-        // Calculate scheduled hours for next week
-        const scheduledHours = 45; // Mock - would actually query schedules
+        // Calculate scheduled hours for next week from actual shifts data
+        const nextWeekEnd = new Date(nextWeekStart);
+        nextWeekEnd.setDate(nextWeekEnd.getDate() + 7);
+        
+        const employeeShifts = await db
+          .select()
+          .from(shifts)
+          .where(
+            and(
+              eq(shifts.employeeId, employee.id),
+              gte(shifts.date, nextWeekStart.toISOString().split('T')[0]),
+              lte(shifts.date, nextWeekEnd.toISOString().split('T')[0])
+            )
+          );
+        
+        // Calculate total scheduled hours from shifts
+        let scheduledHours = 0;
+        for (const shift of employeeShifts) {
+          if (shift.startTime && shift.endTime) {
+            const start = new Date(`1970-01-01T${shift.startTime}`);
+            const end = new Date(`1970-01-01T${shift.endTime}`);
+            scheduledHours += (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+          }
+        }
+        
         const availableHours = 40; // Standard work week
         const overageHours = Math.max(0, scheduledHours - availableHours);
 
@@ -27422,6 +28052,250 @@ app.get("/api/breaks/compliance-report", requireAuth, requireManager, readLimite
 });
 
 // ============================================================================
+// BREAK SCHEDULING API - Labor Law Compliance & Auto-Scheduling
+// ============================================================================
+
+// Get all available labor law rules
+app.get("/api/breaks/rules", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const rules = await breaksService.getAllLaborLawRules();
+    res.json({ success: true, data: rules });
+  } catch (error: any) {
+    console.error('Error fetching labor law rules:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get labor law rules for workspace jurisdiction
+app.get("/api/breaks/rules/workspace", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const rules = await breaksService.getWorkspaceLaborLawRules(workspaceId);
+    res.json({ success: true, data: rules });
+  } catch (error: any) {
+    console.error('Error fetching workspace labor law rules:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get rules for a specific jurisdiction
+app.get("/api/breaks/rules/:jurisdiction", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { jurisdiction } = req.params;
+    const rules = await breaksService.getLaborLawRulesByJurisdiction(jurisdiction);
+    if (!rules) {
+      return res.status(404).json({ error: 'Jurisdiction not found' });
+    }
+    res.json({ success: true, data: rules });
+  } catch (error: any) {
+    console.error('Error fetching jurisdiction rules:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Calculate required breaks for a shift
+app.post("/api/breaks/calculate", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { shiftStart, shiftEnd, jurisdiction } = req.body;
+
+    if (!shiftStart || !shiftEnd) {
+      return res.status(400).json({ error: 'shiftStart and shiftEnd are required' });
+    }
+
+    let rules;
+    if (jurisdiction) {
+      rules = await breaksService.getLaborLawRulesByJurisdiction(jurisdiction);
+      if (!rules) {
+        return res.status(404).json({ error: 'Jurisdiction not found' });
+      }
+    } else {
+      rules = await breaksService.getWorkspaceLaborLawRules(workspaceId);
+    }
+
+    const calculation = breaksService.calculateRequiredBreaks(
+      new Date(shiftStart),
+      new Date(shiftEnd),
+      rules
+    );
+
+    res.json({ success: true, data: calculation });
+  } catch (error: any) {
+    console.error('Error calculating breaks:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Auto-schedule breaks for a shift
+app.post("/api/breaks/auto-schedule", requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { shiftId, optimizeForCoverage, otherShiftIds } = req.body;
+
+    if (!shiftId) {
+      return res.status(400).json({ error: 'shiftId is required' });
+    }
+
+    const scheduledBreaks = await breaksService.autoScheduleBreaks(
+      workspaceId,
+      shiftId,
+      { optimizeForCoverage, otherShiftIds }
+    );
+
+    res.json({ 
+      success: true, 
+      data: scheduledBreaks,
+      message: `${scheduledBreaks.length} break(s) scheduled successfully`
+    });
+  } catch (error: any) {
+    console.error('Error auto-scheduling breaks:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Bulk auto-schedule breaks for multiple shifts
+app.post("/api/breaks/auto-schedule/bulk", requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { shiftIds, optimizeForCoverage } = req.body;
+
+    if (!shiftIds || !Array.isArray(shiftIds) || shiftIds.length === 0) {
+      return res.status(400).json({ error: 'shiftIds array is required' });
+    }
+
+    const results = [];
+    for (const shiftId of shiftIds) {
+      try {
+        const breaks = await breaksService.autoScheduleBreaks(
+          workspaceId,
+          shiftId,
+          { optimizeForCoverage, otherShiftIds: shiftIds.filter(id => id !== shiftId) }
+        );
+        results.push({ shiftId, success: true, breaks });
+      } catch (error: any) {
+        results.push({ shiftId, success: false, error: error.message });
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      data: results,
+      summary: {
+        total: shiftIds.length,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length,
+      }
+    });
+  } catch (error: any) {
+    console.error('Error bulk auto-scheduling breaks:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Check shift compliance for a date range
+app.get("/api/breaks/compliance", requireAuth, requireManager, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { startDate, endDate } = req.query;
+
+    const start = startDate ? new Date(startDate as string) : new Date();
+    start.setHours(0, 0, 0, 0);
+    
+    const end = endDate ? new Date(endDate as string) : new Date();
+    end.setHours(23, 59, 59, 999);
+
+    const compliance = await breaksService.checkShiftCompliance(workspaceId, start, end);
+
+    const compliantCount = compliance.filter(c => c.isCompliant).length;
+    const nonCompliantCount = compliance.filter(c => !c.isCompliant).length;
+
+    res.json({ 
+      success: true, 
+      data: compliance,
+      summary: {
+        total: compliance.length,
+        compliant: compliantCount,
+        nonCompliant: nonCompliantCount,
+        complianceRate: compliance.length > 0 
+          ? Math.round((compliantCount / compliance.length) * 100) 
+          : 100,
+      }
+    });
+  } catch (error: any) {
+    console.error('Error checking shift compliance:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get scheduled breaks for a specific shift
+app.get("/api/breaks/shift/:shiftId", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { shiftId } = req.params;
+
+    const breaks = await breaksService.getScheduledBreaksForShift(workspaceId, shiftId);
+
+    res.json({ success: true, data: breaks });
+  } catch (error: any) {
+    console.error('Error fetching shift breaks:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Update workspace jurisdiction
+app.patch("/api/breaks/jurisdiction", requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { jurisdiction } = req.body;
+
+    if (!jurisdiction) {
+      return res.status(400).json({ error: 'jurisdiction is required' });
+    }
+
+    // Validate jurisdiction exists
+    const rules = await breaksService.getLaborLawRulesByJurisdiction(jurisdiction);
+    if (!rules) {
+      return res.status(404).json({ error: 'Invalid jurisdiction code' });
+    }
+
+    const updated = await breaksService.updateWorkspaceJurisdiction(workspaceId, jurisdiction);
+
+    res.json({ 
+      success: true, 
+      data: {
+        laborLawJurisdiction: updated.laborLawJurisdiction,
+        rules,
+      },
+      message: `Jurisdiction updated to ${rules.jurisdictionName}`
+    });
+  } catch (error: any) {
+    console.error('Error updating jurisdiction:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Seed labor law rules (admin only)
+app.post("/api/breaks/seed-rules", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    // Only allow for root/admin users
+    if (req.user?.role !== 'root' && req.user?.role !== 'admin') {
+      return res.status(403).json({ error: 'Admin access required' });
+    }
+
+    const seededCount = await breaksService.seedLaborLawRules();
+
+    res.json({ 
+      success: true, 
+      message: `${seededCount} labor law rules seeded successfully`
+    });
+  } catch (error: any) {
+    console.error('Error seeding labor law rules:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+// ============================================================================
 // TIER-2: MONITORING SERVICE (Real-time Health)
 // ============================================================================
 
@@ -27639,6 +28513,178 @@ app.get("/api/analytics/summary", requireAuth, readLimiter, async (req: Authenti
     res.json({ success: true, data: summary });
   } catch (error: any) {
     console.error('Error fetching analytics summary:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
+// ADVANCED ANALYTICS DASHBOARD API
+// ============================================================================
+
+app.get("/api/analytics/dashboard", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { period = 'last_30_days', startDate, endDate } = req.query;
+    
+    const { advancedAnalyticsService } = await import("./services/advancedAnalyticsService");
+    
+    const dashboard = await advancedAnalyticsService.getDashboardMetrics(
+      workspaceId,
+      period as string,
+      startDate ? new Date(startDate as string) : undefined,
+      endDate ? new Date(endDate as string) : undefined
+    );
+
+    res.json({ success: true, data: dashboard });
+  } catch (error: any) {
+    console.error('Error fetching dashboard metrics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/analytics/time-usage", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { period = 'last_30_days', startDate, endDate } = req.query;
+    
+    const { advancedAnalyticsService } = await import("./services/advancedAnalyticsService");
+    
+    const timeUsage = await advancedAnalyticsService.getTimeUsageMetrics(
+      workspaceId,
+      period as string,
+      startDate ? new Date(startDate as string) : undefined,
+      endDate ? new Date(endDate as string) : undefined
+    );
+
+    res.json({ success: true, data: timeUsage });
+  } catch (error: any) {
+    console.error('Error fetching time usage metrics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/analytics/scheduling", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { period = 'last_30_days', startDate, endDate } = req.query;
+    
+    const { advancedAnalyticsService } = await import("./services/advancedAnalyticsService");
+    
+    const scheduling = await advancedAnalyticsService.getSchedulingMetrics(
+      workspaceId,
+      period as string,
+      startDate ? new Date(startDate as string) : undefined,
+      endDate ? new Date(endDate as string) : undefined
+    );
+
+    res.json({ success: true, data: scheduling });
+  } catch (error: any) {
+    console.error('Error fetching scheduling metrics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/analytics/revenue", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { period = 'last_30_days', startDate, endDate } = req.query;
+    
+    const { advancedAnalyticsService } = await import("./services/advancedAnalyticsService");
+    
+    const revenue = await advancedAnalyticsService.getRevenueMetrics(
+      workspaceId,
+      period as string,
+      startDate ? new Date(startDate as string) : undefined,
+      endDate ? new Date(endDate as string) : undefined
+    );
+
+    res.json({ success: true, data: revenue });
+  } catch (error: any) {
+    console.error('Error fetching revenue metrics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/analytics/employee-performance", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { period = 'last_30_days', startDate, endDate } = req.query;
+    
+    const { advancedAnalyticsService } = await import("./services/advancedAnalyticsService");
+    
+    const performance = await advancedAnalyticsService.getEmployeePerformanceMetrics(
+      workspaceId,
+      period as string,
+      startDate ? new Date(startDate as string) : undefined,
+      endDate ? new Date(endDate as string) : undefined
+    );
+
+    res.json({ success: true, data: performance });
+  } catch (error: any) {
+    console.error('Error fetching employee performance metrics:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get("/api/analytics/insights", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { period = 'last_30_days' } = req.query;
+    
+    const { advancedAnalyticsService } = await import("./services/advancedAnalyticsService");
+    
+    const [dashboard, timeUsage, scheduling, revenue] = await Promise.all([
+      advancedAnalyticsService.getDashboardMetrics(workspaceId, period as string),
+      advancedAnalyticsService.getTimeUsageMetrics(workspaceId, period as string),
+      advancedAnalyticsService.getSchedulingMetrics(workspaceId, period as string),
+      advancedAnalyticsService.getRevenueMetrics(workspaceId, period as string)
+    ]);
+    
+    const insights: string[] = [];
+    
+    if (dashboard.comparison) {
+      if (dashboard.comparison.revenueChange > 10) {
+        insights.push("Revenue increased by " + dashboard.comparison.revenueChange + "% compared to the previous period");
+      } else if (dashboard.comparison.revenueChange < -10) {
+        insights.push("Revenue decreased by " + Math.abs(dashboard.comparison.revenueChange) + "% - consider reviewing pricing or client acquisition");
+      }
+      
+      if (dashboard.comparison.hoursChange > 20) {
+        insights.push("Hours worked increased by " + dashboard.comparison.hoursChange + "% - great team productivity!");
+      } else if (dashboard.comparison.hoursChange < -20) {
+        insights.push("Hours worked decreased by " + Math.abs(dashboard.comparison.hoursChange) + "% - check shift scheduling");
+      }
+    }
+    
+    if (dashboard.utilizationRate < 70) {
+      insights.push("Utilization rate is at " + dashboard.utilizationRate + "% - consider optimizing shift assignments");
+    } else if (dashboard.utilizationRate > 95) {
+      insights.push("High utilization rate of " + dashboard.utilizationRate + "% - you may need to hire more staff");
+    }
+    
+    if (scheduling.fillRate < 80) {
+      insights.push("Shift fill rate is " + scheduling.fillRate + "% - review employee availability");
+    }
+    
+    if (scheduling.noShows > 0) {
+      insights.push(scheduling.noShows + " no-show(s) detected this period - consider implementing attendance policies");
+    }
+    
+    if (revenue.totalOverdue > 0) {
+      insights.push("$" + revenue.totalOverdue.toLocaleString() + " in overdue invoices - follow up with clients");
+    }
+    
+    if (revenue.collectionRate < 80) {
+      insights.push("Collection rate is " + revenue.collectionRate + "% - review invoicing and payment terms");
+    }
+    
+    if (timeUsage.overtimeHours > timeUsage.totalHours * 0.1) {
+      insights.push("Overtime is " + Math.round((timeUsage.overtimeHours / timeUsage.totalHours) * 100) + "% of total hours - consider hiring or scheduling adjustments");
+    }
+
+    res.json({ success: true, data: { insights } });
+  } catch (error: any) {
+    console.error('Error generating analytics insights:', error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -28367,6 +29413,807 @@ app.post("/api/notifications/send-test", requireAuth, requireManager, mutationLi
     res.status(500).json({ error: error.message || "Notification send failed" });
   }
 });
+
+app.post("/api/notifications/send-test", requireAuth, requireManager, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { notificationType } = req.body;
+
+    const result = await notificationEngine.sendNotification({
+      workspaceId,
+      type: notificationType || "document_extraction",
+      title: "Test Notification",
+      message: "This is a test notification from the AI Brain automation system",
+      metadata: { test: true },
+      severity: "info",
+    });
+
+    res.json({
+      success: result.success,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error("Error sending test notification:", error);
+    res.status(500).json({ error: error.message || "Notification send failed" });
+  }
+});
+
+// ============================================================================
+// CALENDAR HEAT MAP - Peak Hours Analysis
+// ============================================================================
+
+/**
+ * GET /api/analytics/heatmap
+ * Get heat map data showing staffing intensity by day and hour
+ * Query params:
+ *   - period?: 'today' | 'this_week' | 'last_week' | 'this_month' | 'last_month' | 'this_quarter' | 'last_30_days'
+ *   - clientId?: string (filter by client)
+ */
+app.get("/api/analytics/heatmap", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { period = 'last_30_days', clientId } = req.query;
+
+    const { heatmapService } = await import("./services/heatmapService");
+    
+    const data = await heatmapService.getHeatmapData({
+      workspaceId,
+      clientId: clientId as string | undefined
+    }, period as string);
+
+    res.json({
+      success: true,
+      data,
+      metadata: {
+        period,
+        clientId: clientId || 'all',
+        generatedAt: new Date().toISOString(),
+      }
+    });
+  } catch (error: any) {
+    console.error("Error fetching heatmap data:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch heatmap data" });
+  }
+});
+
+/**
+ * GET /api/analytics/heatmap/by-client
+ * Get heat map data grouped by client
+ */
+app.get("/api/analytics/heatmap/by-client", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { period = 'last_30_days' } = req.query;
+
+    const { heatmapService } = await import("./services/heatmapService");
+    
+    const data = await heatmapService.getHeatmapByClient(workspaceId, period as string);
+    
+    const clientData: Record<string, any> = {};
+    for (const [clientId, heatmap] of data) {
+      clientData[clientId] = heatmap;
+    }
+
+    res.json({
+      success: true,
+      data: clientData,
+      clientCount: Object.keys(clientData).length,
+      metadata: {
+        period,
+        generatedAt: new Date().toISOString(),
+      }
+    });
+  } catch (error: any) {
+    console.error("Error fetching heatmap by client:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch heatmap data" });
+  }
+});
+
+/**
+ * GET /api/analytics/heatmap/by-location
+ * Get heat map data grouped by location
+ */
+app.get("/api/analytics/heatmap/by-location", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { period = 'last_30_days' } = req.query;
+
+    const { heatmapService } = await import("./services/heatmapService");
+    
+    const data = await heatmapService.getHeatmapByLocation(workspaceId, period as string);
+
+    res.json({
+      success: true,
+      data,
+      locationCount: Object.keys(data).length,
+      metadata: {
+        period,
+        generatedAt: new Date().toISOString(),
+      }
+    });
+  } catch (error: any) {
+    console.error("Error fetching heatmap by location:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch heatmap data" });
+  }
+});
+
+/**
+ * GET /api/analytics/heatmap/ai-analysis
+ * Get AI-powered staffing analysis and recommendations
+ */
+app.get("/api/analytics/heatmap/ai-analysis", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { period = 'last_30_days' } = req.query;
+
+    const { heatmapService } = await import("./services/heatmapService");
+    
+    const analysis = await heatmapService.getAIStaffingAnalysis(workspaceId, period as string);
+
+    res.json({
+      success: true,
+      data: analysis,
+      metadata: {
+        period,
+        generatedAt: new Date().toISOString(),
+      }
+    });
+  } catch (error: any) {
+    console.error("Error fetching AI staffing analysis:", error);
+    res.status(500).json({ error: error.message || "Failed to generate AI analysis" });
+  }
+});
+
+/**
+ * GET /api/analytics/rooms
+ * Get analytics data for all rooms in a workspace
+ * Query params:
+ *   - roomType?: 'support' | 'work' | 'meeting' | 'org'
+ *   - timeframe?: 'hourly' | 'daily' (default: daily)
+ *   - days?: number (default: 7)
+ */
+app.get("/api/analytics/rooms", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { roomType, timeframe = 'daily', days = '7' } = req.query;
+
+    // Validate query parameters
+    const validRoomTypes = ['support', 'work', 'meeting', 'org'];
+    const validTimeframes = ['hourly', 'daily'];
+
+    if (roomType && !validRoomTypes.includes(roomType as string)) {
+      return res.status(400).json({ error: 'Invalid roomType parameter' });
+    }
+
+    if (!validTimeframes.includes(timeframe as string)) {
+      return res.status(400).json({ error: 'Invalid timeframe parameter' });
+    }
+
+    const daysNum = Math.min(Math.max(1, parseInt(days as string) || 7), 90); // Clamp between 1-90 days
+
+    // Get analytics data
+    const analytics = await roomAnalyticsService.getAnalyticsData(
+      workspaceId,
+      (roomType as any) || undefined,
+      (timeframe as any) || 'daily',
+      daysNum
+    );
+
+    res.json({
+      success: true,
+      data: analytics,
+      metadata: {
+        workspaceId,
+        timeframe,
+        days: daysNum,
+        roomType: roomType || 'all',
+        generatedAt: new Date().toISOString(),
+      }
+    });
+  } catch (error: any) {
+    console.error("Error fetching room analytics:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch analytics" });
+  }
+});
+
+// ============================================================================
+// ALERT SYSTEM ENDPOINTS - Real-time Alert Configuration & History
+// ============================================================================
+
+/**
+ * GET /api/alerts/config
+ * Get all alert configurations for the workspace
+ */
+app.get("/api/alerts/config", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertService } = await import("./services/alertService");
+    
+    let configs = await alertService.getAlertConfigurations(workspaceId);
+    
+    // Initialize default configs if none exist
+    if (configs.length === 0) {
+      configs = await alertService.initializeDefaultConfigs(workspaceId, req.userId!);
+    }
+    
+    res.json({ success: true, data: configs });
+  } catch (error: any) {
+    console.error("Error fetching alert configs:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch alert configurations" });
+  }
+});
+
+/**
+ * GET /api/alerts/config/:alertType
+ * Get a specific alert configuration by type
+ */
+app.get("/api/alerts/config/:alertType", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertType } = req.params;
+    const { alertService } = await import("./services/alertService");
+    
+    const config = await alertService.getAlertConfiguration(workspaceId, alertType);
+    
+    if (!config) {
+      return res.status(404).json({ error: "Alert configuration not found" });
+    }
+    
+    res.json({ success: true, data: config });
+  } catch (error: any) {
+    console.error("Error fetching alert config:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch alert configuration" });
+  }
+});
+
+/**
+ * PUT /api/alerts/config/:alertType
+ * Update or create an alert configuration
+ */
+app.put("/api/alerts/config/:alertType", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertType } = req.params;
+    const { alertService } = await import("./services/alertService");
+    
+    const validAlertTypes = ['overtime', 'low_coverage', 'compliance_violation', 'payment_overdue', 
+                             'shift_unfilled', 'clock_anomaly', 'budget_exceeded', 'approval_pending'];
+    
+    if (!validAlertTypes.includes(alertType)) {
+      return res.status(400).json({ error: "Invalid alert type" });
+    }
+    
+    const config = await alertService.upsertAlertConfiguration(
+      workspaceId,
+      { ...req.body, alertType },
+      req.userId!
+    );
+    
+    res.json({ success: true, data: config });
+  } catch (error: any) {
+    console.error("Error updating alert config:", error);
+    res.status(500).json({ error: error.message || "Failed to update alert configuration" });
+  }
+});
+
+/**
+ * PATCH /api/alerts/config/:alertType/toggle
+ * Quick toggle for enabling/disabling an alert type
+ */
+app.patch("/api/alerts/config/:alertType/toggle", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertType } = req.params;
+    const { isEnabled } = req.body;
+    const { alertService } = await import("./services/alertService");
+    
+    if (typeof isEnabled !== 'boolean') {
+      return res.status(400).json({ error: "isEnabled must be a boolean" });
+    }
+    
+    const config = await alertService.upsertAlertConfiguration(
+      workspaceId,
+      { alertType, isEnabled },
+      req.userId!
+    );
+    
+    res.json({ success: true, data: config });
+  } catch (error: any) {
+    console.error("Error toggling alert:", error);
+    res.status(500).json({ error: error.message || "Failed to toggle alert" });
+  }
+});
+
+/**
+ * GET /api/alerts/history
+ * Get alert history for the workspace
+ */
+app.get("/api/alerts/history", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertType, severity, acknowledged, resolved, limit = '50', offset = '0' } = req.query;
+    const { alertService } = await import("./services/alertService");
+    
+    const alerts = await alertService.getAlertHistory(workspaceId, {
+      alertType: alertType as string | undefined,
+      severity: severity as string | undefined,
+      acknowledged: acknowledged === 'true' ? true : acknowledged === 'false' ? false : undefined,
+      resolved: resolved === 'true' ? true : resolved === 'false' ? false : undefined,
+      limit: Math.min(parseInt(limit as string) || 50, 100),
+      offset: parseInt(offset as string) || 0,
+    });
+    
+    res.json({ success: true, data: alerts });
+  } catch (error: any) {
+    console.error("Error fetching alert history:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch alert history" });
+  }
+});
+
+/**
+ * GET /api/alerts/history/:id
+ * Get a specific alert by ID
+ */
+app.get("/api/alerts/history/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { alertService } = await import("./services/alertService");
+    
+    const alert = await alertService.getAlert(id);
+    
+    if (!alert) {
+      return res.status(404).json({ error: "Alert not found" });
+    }
+    
+    if (alert.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+    
+    res.json({ success: true, data: alert });
+  } catch (error: any) {
+    console.error("Error fetching alert:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch alert" });
+  }
+});
+
+/**
+ * POST /api/alerts/:id/acknowledge
+ * Acknowledge an alert
+ */
+app.post("/api/alerts/:id/acknowledge", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+    const { alertService } = await import("./services/alertService");
+    
+    const existingAlert = await alertService.getAlert(id);
+    if (!existingAlert) {
+      return res.status(404).json({ error: "Alert not found" });
+    }
+    if (existingAlert.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+    
+    const alert = await alertService.acknowledgeAlert(id, req.userId!, notes);
+    
+    res.json({ success: true, data: alert });
+  } catch (error: any) {
+    console.error("Error acknowledging alert:", error);
+    res.status(500).json({ error: error.message || "Failed to acknowledge alert" });
+  }
+});
+
+/**
+ * POST /api/alerts/:id/resolve
+ * Resolve an alert
+ */
+app.post("/api/alerts/:id/resolve", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const { id } = req.params;
+    const { notes } = req.body;
+    const { alertService } = await import("./services/alertService");
+    
+    const existingAlert = await alertService.getAlert(id);
+    if (!existingAlert) {
+      return res.status(404).json({ error: "Alert not found" });
+    }
+    if (existingAlert.workspaceId !== req.workspaceId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+    
+    const alert = await alertService.resolveAlert(id, req.userId!, notes);
+    
+    res.json({ success: true, data: alert });
+  } catch (error: any) {
+    console.error("Error resolving alert:", error);
+    res.status(500).json({ error: error.message || "Failed to resolve alert" });
+  }
+});
+
+/**
+ * GET /api/alerts/unacknowledged-count
+ * Get count of unacknowledged alerts
+ */
+app.get("/api/alerts/unacknowledged-count", requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertService } = await import("./services/alertService");
+    
+    const count = await alertService.getUnacknowledgedCount(workspaceId);
+    
+    res.json({ success: true, data: { count } });
+  } catch (error: any) {
+    console.error("Error fetching unacknowledged count:", error);
+    res.status(500).json({ error: error.message || "Failed to fetch count" });
+  }
+});
+
+/**
+ * POST /api/alerts/test
+ * Trigger a test alert for testing configuration
+ */
+app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+  try {
+    const workspaceId = req.workspaceId!;
+    const { alertType } = req.body;
+    const { alertService } = await import("./services/alertService");
+    
+    const validAlertTypes = ['overtime', 'low_coverage', 'compliance_violation', 'payment_overdue', 
+                             'shift_unfilled', 'clock_anomaly', 'budget_exceeded', 'approval_pending'];
+    
+    if (!alertType || !validAlertTypes.includes(alertType)) {
+      return res.status(400).json({ error: "Invalid or missing alert type" });
+    }
+    
+    const alert = await alertService.triggerAlert({
+      workspaceId,
+      alertType,
+      title: `Test Alert: ${alertType.replace(/_/g, ' ').toUpperCase()}`,
+      message: `This is a test alert for the ${alertType.replace(/_/g, ' ')} alert type.`,
+      severity: 'low',
+      triggerData: { isTest: true, triggeredBy: req.userId },
+      deduplicationKey: `test:${alertType}:${Date.now()}`,
+    });
+    
+    if (!alert) {
+      return res.status(400).json({ error: "Alert was not triggered - check if this alert type is enabled" });
+    }
+    
+    res.json({ success: true, data: alert, message: "Test alert triggered successfully" });
+  } catch (error: any) {
+    console.error("Error triggering test alert:", error);
+    res.status(500).json({ error: error.message || "Failed to trigger test alert" });
+  }
+});
+
+
+  // ============================================================================
+  // USER FEEDBACK PORTAL - Feature Requests, Bug Reports, and Suggestions
+  // ============================================================================
+  
+  /**
+   * POST /api/feedback
+   * Submit new feedback (bug report, feature request, improvement, general)
+   */
+  app.post("/api/feedback", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { title, description, type, priority, category, attachmentUrls } = req.body;
+      
+      if (!title || !description || !type) {
+        return res.status(400).json({ success: false, error: "Title, description, and type are required" });
+      }
+      
+      const validTypes = ['bug', 'feature_request', 'improvement', 'general', 'question'];
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({ success: false, error: "Invalid feedback type" });
+      }
+      
+      const validPriorities = ['low', 'medium', 'high', 'critical'];
+      if (priority && !validPriorities.includes(priority)) {
+        return res.status(400).json({ success: false, error: "Invalid priority level" });
+      }
+      
+      const feedback = await storage.createFeedback({
+        workspaceId: req.workspaceId!,
+        userId: req.userId!,
+        title,
+        description,
+        type,
+        priority: priority || 'medium',
+        category: category || null,
+        attachmentUrls: attachmentUrls || [],
+      });
+      
+      res.status(201).json({ success: true, data: feedback });
+    } catch (error: any) {
+      console.error("Error creating feedback:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to create feedback" });
+    }
+  });
+  
+  /**
+   * GET /api/feedback
+   * List feedback with filtering and sorting
+   */
+  app.get("/api/feedback", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { type, status, priority, sortBy, sortOrder, limit, offset, myFeedback } = req.query;
+      
+      const filters: any = {
+        workspaceId: req.workspaceId!,
+      };
+      
+      if (type) filters.type = type as string;
+      if (status) filters.status = status as string;
+      if (priority) filters.priority = priority as string;
+      if (sortBy) filters.sortBy = sortBy as string;
+      if (sortOrder) filters.sortOrder = sortOrder as 'asc' | 'desc';
+      if (limit) filters.limit = parseInt(limit as string, 10);
+      if (offset) filters.offset = parseInt(offset as string, 10);
+      if (myFeedback === 'true') filters.userId = req.userId!;
+      
+      const feedbackList = await storage.getFeedbackList(filters);
+      
+      const feedbackWithUserVotes = await Promise.all(
+        feedbackList.map(async (fb) => {
+          const userVote = await storage.getUserFeedbackVote(fb.id, req.userId!);
+          return { ...fb, userVote: userVote?.voteType || null };
+        })
+      );
+      
+      res.json({ success: true, data: feedbackWithUserVotes });
+    } catch (error: any) {
+      console.error("Error fetching feedback:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to fetch feedback" });
+    }
+  });
+  
+  /**
+   * GET /api/feedback/:id
+   * Get feedback detail with comments
+   */
+  app.get("/api/feedback/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      const feedback = await storage.getFeedback(id);
+      if (!feedback) {
+        return res.status(404).json({ success: false, error: "Feedback not found" });
+      }
+      
+      if (feedback.workspaceId !== req.workspaceId) {
+        return res.status(403).json({ success: false, error: "Access denied" });
+      }
+      
+      const comments = await storage.getFeedbackComments(id);
+      const userVote = await storage.getUserFeedbackVote(id, req.userId!);
+      
+      res.json({ 
+        success: true, 
+        data: { 
+          ...feedback, 
+          comments,
+          userVote: userVote?.voteType || null 
+        } 
+      });
+    } catch (error: any) {
+      console.error("Error fetching feedback detail:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to fetch feedback" });
+    }
+  });
+  
+  /**
+   * PATCH /api/feedback/:id
+   * Update feedback (only owner can update title/description)
+   */
+  app.patch("/api/feedback/:id", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { title, description, type, priority, category } = req.body;
+      
+      const feedback = await storage.getFeedback(id);
+      if (!feedback) {
+        return res.status(404).json({ success: false, error: "Feedback not found" });
+      }
+      
+      if (feedback.workspaceId !== req.workspaceId) {
+        return res.status(403).json({ success: false, error: "Access denied" });
+      }
+      
+      if (feedback.userId !== req.userId) {
+        return res.status(403).json({ success: false, error: "Only the author can edit this feedback" });
+      }
+      
+      const updateData: any = {};
+      if (title) updateData.title = title;
+      if (description) updateData.description = description;
+      if (type) updateData.type = type;
+      if (priority) updateData.priority = priority;
+      if (category !== undefined) updateData.category = category;
+      
+      const updated = await storage.updateFeedback(id, updateData);
+      res.json({ success: true, data: updated });
+    } catch (error: any) {
+      console.error("Error updating feedback:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to update feedback" });
+    }
+  });
+  
+  /**
+   * PATCH /api/feedback/:id/status
+   * Update feedback status (admin only)
+   */
+  app.patch("/api/feedback/:id/status", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { status, note } = req.body;
+      
+      const validStatuses = ['submitted', 'under_review', 'planned', 'in_progress', 'completed', 'declined', 'duplicate'];
+      if (!status || !validStatuses.includes(status)) {
+        return res.status(400).json({ success: false, error: "Invalid status" });
+      }
+      
+      const feedback = await storage.getFeedback(id);
+      if (!feedback) {
+        return res.status(404).json({ success: false, error: "Feedback not found" });
+      }
+      
+      if (feedback.workspaceId !== req.workspaceId) {
+        return res.status(403).json({ success: false, error: "Access denied" });
+      }
+      
+      const updated = await storage.updateFeedbackStatus(id, status, req.userId!, note);
+      res.json({ success: true, data: updated });
+    } catch (error: any) {
+      console.error("Error updating feedback status:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to update status" });
+    }
+  });
+  
+  /**
+   * POST /api/feedback/:id/vote
+   * Upvote or downvote feedback
+   */
+  app.post("/api/feedback/:id/vote", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { voteType } = req.body;
+      
+      if (!voteType || !['up', 'down'].includes(voteType)) {
+        return res.status(400).json({ success: false, error: "Invalid vote type. Use 'up' or 'down'" });
+      }
+      
+      const feedback = await storage.getFeedback(id);
+      if (!feedback) {
+        return res.status(404).json({ success: false, error: "Feedback not found" });
+      }
+      
+      if (feedback.workspaceId !== req.workspaceId) {
+        return res.status(403).json({ success: false, error: "Access denied" });
+      }
+      
+      const result = await storage.voteFeedback(id, req.userId!, voteType);
+      res.json({ success: true, data: result });
+    } catch (error: any) {
+      console.error("Error voting on feedback:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to vote" });
+    }
+  });
+  
+  /**
+   * POST /api/feedback/:id/comments
+   * Add a comment to feedback
+   */
+  app.post("/api/feedback/:id/comments", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      const { content, parentId } = req.body;
+      
+      if (!content || content.trim().length === 0) {
+        return res.status(400).json({ success: false, error: "Comment content is required" });
+      }
+      
+      const feedback = await storage.getFeedback(id);
+      if (!feedback) {
+        return res.status(404).json({ success: false, error: "Feedback not found" });
+      }
+      
+      if (feedback.workspaceId !== req.workspaceId) {
+        return res.status(403).json({ success: false, error: "Access denied" });
+      }
+      
+      const comment = await storage.createFeedbackComment({
+        feedbackId: id,
+        userId: req.userId!,
+        content: content.trim(),
+        parentId: parentId || null,
+      });
+      
+      res.status(201).json({ success: true, data: comment });
+    } catch (error: any) {
+      console.error("Error adding comment:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to add comment" });
+    }
+  });
+  
+  /**
+   * GET /api/feedback/:id/comments
+   * Get comments for a feedback item
+   */
+  app.get("/api/feedback/:id/comments", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      const feedback = await storage.getFeedback(id);
+      if (!feedback) {
+        return res.status(404).json({ success: false, error: "Feedback not found" });
+      }
+      
+      if (feedback.workspaceId !== req.workspaceId) {
+        return res.status(403).json({ success: false, error: "Access denied" });
+      }
+      
+      const comments = await storage.getFeedbackComments(id);
+      res.json({ success: true, data: comments });
+    } catch (error: any) {
+      console.error("Error fetching comments:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to fetch comments" });
+    }
+  });
+  
+  /**
+   * DELETE /api/feedback/:id/comments/:commentId
+   * Delete a comment (only author can delete)
+   */
+  app.delete("/api/feedback/:id/comments/:commentId", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id, commentId } = req.params;
+      
+      const feedback = await storage.getFeedback(id);
+      if (!feedback) {
+        return res.status(404).json({ success: false, error: "Feedback not found" });
+      }
+      
+      if (feedback.workspaceId !== req.workspaceId) {
+        return res.status(403).json({ success: false, error: "Access denied" });
+      }
+      
+      await storage.deleteFeedbackComment(commentId);
+      res.json({ success: true, message: "Comment deleted" });
+    } catch (error: any) {
+      console.error("Error deleting comment:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to delete comment" });
+    }
+  });
+  
+  /**
+   * DELETE /api/feedback/:id
+   * Delete feedback (only author can delete)
+   */
+  app.delete("/api/feedback/:id", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { id } = req.params;
+      
+      const feedback = await storage.getFeedback(id);
+      if (!feedback) {
+        return res.status(404).json({ success: false, error: "Feedback not found" });
+      }
+      
+      if (feedback.workspaceId !== req.workspaceId) {
+        return res.status(403).json({ success: false, error: "Access denied" });
+      }
+      
+      if (feedback.userId !== req.userId) {
+        return res.status(403).json({ success: false, error: "Only the author can delete this feedback" });
+      }
+      
+      await storage.deleteFeedback(id);
+      res.json({ success: true, message: "Feedback deleted" });
+    } catch (error: any) {
+      console.error("Error deleting feedback:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to delete feedback" });
+    }
+  });
 
   return server;
 }
