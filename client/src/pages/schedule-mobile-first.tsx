@@ -279,7 +279,6 @@ export default function ScheduleMobileFirst() {
         title: shift.title,
         employeeId: shift.employeeId,
         clientId: shift.clientId,
-        location: shift.location,
         description: shift.description,
         startTime: startTime.toISOString(),
         endTime: endTime.toISOString(),

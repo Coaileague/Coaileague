@@ -427,7 +427,80 @@ function RoomCard({
   const Icon = typeConfig.icon;
   const isPlatformRoom = ownership === 'platform';
   const ownershipIcon = OWNERSHIP_INDICATORS[ownership];
+  const isMobile = useIsMobile();
   
+  // Mobile list item view
+  if (isMobile) {
+    return (
+      <div
+        className={`flex items-center gap-3 px-4 py-3 border-b border-border/50 cursor-pointer transition-colors hover:bg-muted/50 ${
+          room.isParticipant ? 'opacity-60' : ''
+        }`}
+        onClick={() => {
+          if (!room.isParticipant) {
+            onSelect();
+          }
+        }}
+        data-testid={`item-room-${room.id || room.roomId}`}
+      >
+        {/* Avatar with Status Indicator */}
+        <div className="relative shrink-0">
+          <div className={`h-12 w-12 rounded-full flex items-center justify-center ${typeConfig.bgColor}`}>
+            <Icon className={`h-5 w-5 ${typeConfig.color}`} />
+          </div>
+          {isPlatformRoom && (
+            <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center">
+              <Bot className="h-2.5 w-2.5 text-white" />
+            </div>
+          )}
+          {room.status === 'open' && (
+            <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border border-background"></div>
+          )}
+        </div>
+
+        {/* Room Info */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-baseline justify-between gap-2 mb-0.5">
+            <h3 className="font-medium text-sm truncate" data-testid={`text-room-name-${room.id}`}>
+              {room.name || room.subject}
+            </h3>
+            <span className="text-xs text-muted-foreground shrink-0">
+              {room.lastMessageAt 
+                ? formatDistanceToNow(new Date(room.lastMessageAt), { addSuffix: true })
+                : room.createdAt
+                ? formatDistanceToNow(new Date(room.createdAt), { addSuffix: true })
+                : 'New'
+              }
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground truncate">
+            {room.participantsCount !== undefined ? `${room.participantsCount} participant${room.participantsCount !== 1 ? 's' : ''}` : typeConfig.label}
+          </p>
+        </div>
+
+        {/* Action Button */}
+        {!room.isParticipant && (
+          <Button
+            size="sm"
+            variant={isSelected ? "default" : "ghost"}
+            onClick={(e) => {
+              e.stopPropagation();
+              onSelect();
+            }}
+            data-testid={`button-select-room-${room.id || room.roomId}`}
+            className="shrink-0 h-8 px-3 text-xs"
+          >
+            {isSelected ? '✓' : '+'}
+          </Button>
+        )}
+        {room.isParticipant && (
+          <Check className="h-4 w-4 text-emerald-500 shrink-0" data-testid={`icon-joined-${room.id}`} />
+        )}
+      </div>
+    );
+  }
+
+  // Desktop grid card view
   return (
     <Card
       className={`cursor-pointer transition-all hover-elevate ${
@@ -1067,21 +1140,43 @@ export default function Chatrooms() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
-                    {filteredRooms.map((room: ChatRoom) => (
-                      <RoomCard
-                        key={room.id || room.roomId}
-                        room={room}
-                        isSelected={!!(room.id && selectedRooms.has(room.id))}
-                        onSelect={() => handleSelectRoom(room.id)}
-                        onJoin={() => {
-                          if (room.id) {
-                            joinRoomsMutation.mutate([room.id]);
-                          }
-                        }}
-                      />
-                    ))}
-                  </div>
+                  <>
+                    {/* Mobile: List View */}
+                    {isMobile ? (
+                      <div className="bg-card rounded-lg border divide-y overflow-hidden">
+                        {filteredRooms.map((room: ChatRoom) => (
+                          <RoomCard
+                            key={room.id || room.roomId}
+                            room={room}
+                            isSelected={!!(room.id && selectedRooms.has(room.id))}
+                            onSelect={() => handleSelectRoom(room.id)}
+                            onJoin={() => {
+                              if (room.id) {
+                                joinRoomsMutation.mutate([room.id]);
+                              }
+                            }}
+                          />
+                        ))}
+                      </div>
+                    ) : (
+                      /* Desktop: Grid View */
+                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
+                        {filteredRooms.map((room: ChatRoom) => (
+                          <RoomCard
+                            key={room.id || room.roomId}
+                            room={room}
+                            isSelected={!!(room.id && selectedRooms.has(room.id))}
+                            onSelect={() => handleSelectRoom(room.id)}
+                            onJoin={() => {
+                              if (room.id) {
+                                joinRoomsMutation.mutate([room.id]);
+                              }
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
                 )}
 
                 <div className="mt-6 text-center text-xs sm:text-sm text-muted-foreground">
