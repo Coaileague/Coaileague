@@ -9,6 +9,7 @@ import { GamificationEventTracker } from "./services/gamification/eventTracker";
 import { AiBrainNotifier } from "./services/gamification/aiBrainNotifier";
 import { WhatsNewGamificationBridge } from "./services/gamification/whatsNewIntegration";
 import { initializeNotifications } from "./services/notificationInit";
+import { aiBrainMasterOrchestrator } from "./services/ai-brain/aiBrainMasterOrchestrator";
 
 const app = express();
 app.use(express.json());
@@ -128,6 +129,17 @@ process.on('SIGTERM', () => {
     console.log('[Server] AI notification system initialized');
   } catch (error) {
     console.error('[Server] Warning: Failed to initialize notifications:', error);
+  }
+
+  // Initialize AI Brain Master Orchestrator - connects Gemini to ALL services
+  try {
+    await aiBrainMasterOrchestrator.initialize();
+    const actionSummary = aiBrainMasterOrchestrator.getActionSummary();
+    const totalActions = Object.values(actionSummary).reduce((a, b) => a + b, 0);
+    console.log(`[Server] AI Brain Master Orchestrator initialized - ${totalActions} actions registered`);
+    console.log('[Server] Action categories:', JSON.stringify(actionSummary));
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize AI Brain Master Orchestrator:', error);
   }
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
