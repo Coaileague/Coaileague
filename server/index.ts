@@ -8,6 +8,7 @@ import { initializeChatServerHub } from "./services/ChatServerHub";
 import { GamificationEventTracker } from "./services/gamification/eventTracker";
 import { AiBrainNotifier } from "./services/gamification/aiBrainNotifier";
 import { WhatsNewGamificationBridge } from "./services/gamification/whatsNewIntegration";
+import { initializeNotifications } from "./services/notificationInit";
 
 const app = express();
 app.use(express.json());
@@ -119,6 +120,14 @@ process.on('SIGTERM', () => {
     console.log('[Server] Gamification event system initialized');
   } catch (error) {
     console.error('[Server] Warning: Failed to initialize gamification events:', error);
+  }
+
+  // Initialize AI Notification System - seeds platform updates
+  try {
+    await initializeNotifications();
+    console.log('[Server] AI notification system initialized');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize notifications:', error);
   }
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
