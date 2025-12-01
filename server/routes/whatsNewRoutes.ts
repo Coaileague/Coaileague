@@ -176,6 +176,32 @@ whatsNewRouter.post('/:id/viewed', async (req: AuthenticatedRequest, res: Respon
   }
 });
 
+whatsNewRouter.post('/mark-all-viewed/batch', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const updateIds = req.body.updateIds || [];
+    const viewSource = req.body.source || 'badge-clear-all';
+    
+    let marked = 0;
+    for (const updateId of updateIds) {
+      const success = await markUpdateViewed(userId, updateId, viewSource);
+      if (success) marked++;
+    }
+
+    res.json({
+      success: true,
+      markedCount: marked,
+      totalRequested: updateIds.length,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 whatsNewRouter.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {

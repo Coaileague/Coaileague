@@ -73,8 +73,9 @@ export function WhatsNewBadge() {
 
   const markAllViewedMutation = useMutation({
     mutationFn: async () => {
-      for (const update of updates.filter(u => !u.hasViewed)) {
-        await apiRequest('POST', `/api/whats-new/${update.id}/viewed`, { source: 'badge-clear-all' });
+      const unviewedIds = updates.filter(u => !u.hasViewed).map(u => u.id);
+      if (unviewedIds.length > 0) {
+        await apiRequest('POST', `/api/whats-new/mark-all-viewed/batch`, { updateIds: unviewedIds, source: 'badge-clear-all' });
       }
     },
     onSuccess: () => {
