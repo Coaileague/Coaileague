@@ -18,7 +18,8 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
-import { performLogout } from "@/lib/logoutHandler";
+import { performLogout, setLogoutAnimationContext } from "@/lib/logoutHandler";
+import { useUniversalAnimation } from "@/contexts/universal-animation-context";
 
 interface NavItemProps {
   icon: typeof Home;
@@ -81,7 +82,15 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
+  const animationContext = useUniversalAnimation();
   
+  useEffect(() => {
+    // Wire animation context to logout handler
+    if (animationContext) {
+      setLogoutAnimationContext(animationContext);
+    }
+  }, [animationContext]);
+
   useEffect(() => {
     if (typeof window !== 'undefined' && 'visualViewport' in window && window.visualViewport) {
       const vv = window.visualViewport;
