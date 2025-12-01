@@ -517,24 +517,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Mark all notifications as read
       const notificationsMarked = await storage.markAllNotificationsAsRead(userId, workspaceId);
-      
-      // Acknowledge all maintenance alerts
-      const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
-      let alertsMarked = 0;
-      for (const alert of alerts) {
-        if (!(alert as any).isAcknowledged) {
-          await aiNotificationService.acknowledgeMaintenanceAlert(alert.id, userId);
-          alertsMarked++;
-        }
-      }
-      
-      res.json({ 
-        success: true, 
-        markedRead: { 
-          platformUpdates: platformUpdatesMarked, 
-          notifications: notificationsMarked, 
-          alerts: alertsMarked 
-        } 
       });
     } catch (error) {
       console.error('Error marking all notifications as read:', error);
@@ -614,6 +596,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, notification });
     } catch (error) {
       console.error('Error toggling notification read status:', error);
@@ -622,42 +624,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Mark all notifications as read
-  app.post('/api/notifications/mark-all-read', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = req.user!.id;
-      
-      // Get user's workspace
-      const workspace = await storage.getWorkspaceByOwnerId(userId);
-      let workspaceId: string;
-      
-      if (!workspace) {
-        const member = await storage.getWorkspaceMemberByUserId(userId);
-        if (!member) {
-          return res.status(404).json({ message: 'Workspace not found' });
-        }
-        workspaceId = member.workspaceId;
-      } else {
-        workspaceId = workspace.id;
-      }
-      
-      // Mark all notifications as read
-      await storage.markAllNotificationsAsRead(userId, workspaceId);
-      
-      // Broadcast updated unread count (should be 0)
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
-      
-      res.json({ success: true });
-    } catch (error) {
-      console.error('Error marking all notifications as read:', error);
-      res.status(500).json({ message: 'Failed to mark all notifications as read' });
-    }
-  });
-
-  // Delete notification
-  app.delete('/api/notifications/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = req.user!.id;
-      const { id } = req.params;
       
       // Delete notification (storage will verify ownership)
       const deleted = await storage.deleteNotification(id, userId);
@@ -777,6 +743,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: 'Failed to delete message' });
       }
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, message: 'Message deleted' });
     } catch (error) {
       console.error('Error deleting chat message:', error);
@@ -870,6 +856,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         enabledTypes,
       });
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, preferences });
     } catch (error) {
       console.error('Error subscribing to notification type:', error);
@@ -903,6 +909,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const preferences = await storage.createOrUpdateNotificationPreferences(userId, workspaceId, {
         enabledTypes: updatedTypes,
       });
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
       res.json({ success: true, preferences });
     } catch (error) {
@@ -982,6 +1008,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (result.success) {
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
         res.json({ success: true, messageId: result.messageId, message: 'Test SMS sent successfully' });
       } else {
         res.status(400).json({ success: false, error: result.error });
@@ -1012,6 +1058,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         smsVerified: true,
       });
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, preferences });
     } catch (error) {
       console.error('Error verifying phone:', error);
@@ -1037,6 +1103,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await sendShiftReminder(shiftId, workspaceId);
 
       if (result) {
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
         res.json({ success: true, result });
       } else {
         res.status(404).json({ message: 'Shift not found or no employee assigned' });
@@ -1530,6 +1616,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'open',
       });
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, ticketId: ticket.id });
     } catch (error) {
       console.error('Error submitting feedback:', error);
@@ -1926,6 +2032,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
         currentWorkspaceId: workspaceId,
       });
       
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, workspaceId });
     } catch (error) {
       console.error('Error switching workspace:', error);
@@ -7207,6 +7333,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`🤖 SmartSchedule AI ${enabled ? 'ENABLED' : 'DISABLED'} for workspace: ${workspace.name} by user: ${userId}`);
       
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, enabled, message: `SmartSchedule AI ${enabled ? 'enabled' : 'disabled'}`, workspaceId, workspaceName: workspace.name });
     } catch (error: any) {
       console.error("Error toggling SmartSchedule AI:", error);
@@ -7951,6 +8097,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db.update(shifts).set({ status: 'scheduled' }).where(and(eq(shifts.workspaceId, workspace.id), sql`${shifts.id} = ANY(${shiftIds})`));
       
       console.log(`📅 Schedule published: ${employeesAffected} employees, ${shiftIds.length} shifts`);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, published, message: `Schedule published. ${employeesAffected} employees notified.` });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to publish schedule" });
@@ -15904,6 +16070,26 @@ Summary:`;
         subscriptionStatus: 'suspended',
       });
       
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, message: "Account suspended successfully" });
     } catch (error) {
       console.error("Error suspending account:", error);
@@ -15924,6 +16110,26 @@ Summary:`;
         subscriptionStatus: 'active',
       });
       
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, message: "Account unsuspended successfully" });
     } catch (error) {
       console.error("Error unsuspending account:", error);
@@ -15944,6 +16150,26 @@ Summary:`;
         frozenBy: adminUserId,
       });
       
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, message: "Account frozen successfully" });
     } catch (error) {
       console.error("Error freezing account:", error);
@@ -15963,6 +16189,26 @@ Summary:`;
         frozenBy: null,
       });
       
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, message: "Account unfrozen successfully" });
     } catch (error) {
       console.error("Error unfreezing account:", error);
@@ -15983,6 +16229,26 @@ Summary:`;
         lockedBy: adminUserId,
       });
       
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, message: "Account locked successfully" });
     } catch (error) {
       console.error("Error locking account:", error);
@@ -16002,6 +16268,26 @@ Summary:`;
         lockedBy: null,
       });
       
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, message: "Account unlocked successfully" });
     } catch (error) {
       console.error("Error unlocking account:", error);
@@ -17180,6 +17466,26 @@ Summary:`;
         .where(eq(users.id, userId))
         .returning();
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, user: updated });
     } catch (error: any) {
       console.error("Error updating user:", error);
@@ -17206,6 +17512,26 @@ Summary:`;
           updatedAt: new Date(),
         })
         .where(eq(users.id, userId));
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
       res.json({ success: true, message: "Password updated successfully" });
     } catch (error: any) {
@@ -17254,6 +17580,26 @@ Summary:`;
         })
         .returning();
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, platformRole: newRole });
     } catch (error: any) {
       console.error("Error granting platform role:", error);
@@ -17278,6 +17624,26 @@ Summary:`;
           eq(platformRoles.userId, userId),
           isNull(platformRoles.revokedAt)
         ));
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
       res.json({ success: true, message: "Platform role revoked successfully" });
     } catch (error: any) {
@@ -17331,6 +17697,26 @@ Summary:`;
           grantedBy: req.user!.id,
           grantedReason: `Created with ${platformRole} role`,
         });
+      }
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
       }
 
       res.json({ success: true, user: newUser });
@@ -19212,6 +19598,26 @@ Return ONLY valid JSON array with this exact structure:
         status: 'sent',
       });
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, emailId: data?.id });
     } catch (error) {
       console.error("Error sending email:", error);
@@ -19676,6 +20082,26 @@ Return ONLY valid JSON array with this exact structure:
         .limit(1);
 
       if (existing) {
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
         return res.json({ success: true, alreadyAcknowledged: true });
       }
 
@@ -26922,6 +27348,26 @@ app.post("/api/sales/invitations/send", requireAuth, async (req, res) => {
       sentBy: req.user?.id,
       status: "pending",
     }).returning();
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, invitation: result[0] });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -26952,6 +27398,26 @@ app.post("/api/sales/proposals", requireAuth, async (req, res) => {
       createdBy: req.user?.id || "system",
       content: {},
     }).returning();
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, proposal: result[0] });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
@@ -27071,6 +27537,26 @@ app.get("/api/time-entries", requireAuth, async (req: AuthenticatedRequest, res)
       ? await getTimeEntriesByEmployee(employeeId as string, start, end)
       : await getTimeEntriesByWorkspace(workspaceId, start, end, status as string);
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: entries });
   } catch (error: any) {
     console.error('Error fetching time entries:', error);
@@ -27093,6 +27579,26 @@ app.post("/api/time-entries", requireAuth, mutationLimiter, async (req: Authenti
       status: 'pending'
     });
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: entry });
   } catch (error: any) {
     console.error('Error creating time entry:', error);
@@ -27107,6 +27613,26 @@ app.patch("/api/time-entries/:id/approve", requireAuth, mutationLimiter, async (
     if (!userId) return res.status(400).json({ error: 'User required' });
 
     const entry = await approveTimeEntry(id, userId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: entry });
   } catch (error: any) {
     console.error('Error approving time entry:', error);
@@ -27122,6 +27648,26 @@ app.patch("/api/time-entries/:id/reject", requireAuth, mutationLimiter, async (r
     if (!userId) return res.status(400).json({ error: 'User required' });
 
     const entry = await rejectTimeEntry(id, userId, reason || 'No reason provided');
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: entry });
   } catch (error: any) {
     console.error('Error rejecting time entry:', error);
@@ -27135,6 +27681,26 @@ app.get("/api/time-entries/pending", requireAuth, async (req: AuthenticatedReque
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const entries = await getPendingTimeEntries(workspaceId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: entries });
   } catch (error: any) {
     console.error('Error fetching pending time entries:', error);
@@ -27148,6 +27714,26 @@ app.post("/api/time-entries/calculate-hours", requireAuth, async (req: Authentic
     if (!employeeId || !startDate || !endDate) return res.status(400).json({ error: 'employeeId, startDate, endDate required' });
 
     const hours = await calculatePayrollHours(employeeId, new Date(startDate), new Date(endDate));
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: hours });
   } catch (error: any) {
     console.error('Error calculating payroll hours:', error);
@@ -27166,6 +27752,26 @@ app.post("/api/billing/adjust-invoice/credit", requireAuth, mutationLimiter, asy
     if (!invoiceId || !amount || !userId) return res.status(400).json({ error: 'invoiceId, amount, and user required' });
 
     const result = await creditInvoice(invoiceId, amount, description || 'Manual credit', userId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Error applying credit:', error);
@@ -27180,6 +27786,26 @@ app.post("/api/billing/adjust-invoice/discount", requireAuth, mutationLimiter, a
     if (!invoiceId || discountPercent === undefined || !userId) return res.status(400).json({ error: 'invoiceId, discountPercent, and user required' });
 
     const result = await discountInvoice(invoiceId, discountPercent, reason || 'No reason provided', userId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Error applying discount:', error);
@@ -27194,6 +27820,26 @@ app.post("/api/billing/adjust-invoice/refund", requireAuth, mutationLimiter, asy
     if (!invoiceId || !refundAmount || !userId) return res.status(400).json({ error: 'invoiceId, refundAmount, and user required' });
 
     const result = await refundInvoice(invoiceId, refundAmount, reason || 'No reason provided', userId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Error processing refund:', error);
@@ -27208,6 +27854,26 @@ app.post("/api/billing/adjust-invoice/correct-line-item", requireAuth, mutationL
     if (!invoiceId || lineItemIndex === undefined || !userId) return res.status(400).json({ error: 'invoiceId, lineItemIndex, and user required' });
 
     const result = await correctInvoiceLineItem(invoiceId, lineItemIndex, newQuantity, newUnitPrice, reason, userId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Error correcting line item:', error);
@@ -27219,6 +27885,26 @@ app.get("/api/billing/adjust-invoice/:invoiceId/history", requireAuth, async (re
   try {
     const { invoiceId } = req.params;
     const history = await getInvoiceAdjustmentHistory(invoiceId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: history });
   } catch (error: any) {
     console.error('Error fetching adjustment history:', error);
@@ -27234,6 +27920,26 @@ app.post("/api/billing/adjust-invoice/bulk-credit", requireAuth, mutationLimiter
     if (!invoiceIds || !creditPerInvoice || !userId || !workspaceId) return res.status(400).json({ error: 'invoiceIds, creditPerInvoice, and workspace required' });
 
     const result = await bulkCreditInvoices(workspaceId, invoiceIds, creditPerInvoice, reason || 'Bulk credit', userId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Error processing bulk credit:', error);
@@ -27337,6 +28043,26 @@ app.post("/api/export/anonymize-employee/:employeeId", requireAuth, mutationLimi
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const result = await anonymizeEmployeeData(workspaceId, employeeId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Error anonymizing employee:', error);
@@ -27354,6 +28080,26 @@ app.get("/api/shifts/pending", requireAuth, async (req: AuthenticatedRequest, re
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const shifts = await getPendingShifts(workspaceId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: shifts });
   } catch (error: any) {
     console.error('Error fetching pending shifts:', error);
@@ -27369,6 +28115,26 @@ app.patch("/api/shifts/:shiftId/approve", requireAuth, mutationLimiter, async (r
     if (!userId) return res.status(400).json({ error: 'User required' });
 
     const shift = await approveShift(shiftId, userId, notes);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: shift });
   } catch (error: any) {
     console.error('Error approving shift:', error);
@@ -27384,6 +28150,26 @@ app.patch("/api/shifts/:shiftId/reject", requireAuth, mutationLimiter, async (re
     if (!userId) return res.status(400).json({ error: 'User required' });
 
     const shift = await rejectShift(shiftId, userId, reason || 'No reason provided', autoReplace);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: shift });
   } catch (error: any) {
     console.error('Error rejecting shift:', error);
@@ -27398,6 +28184,26 @@ app.post("/api/shifts/bulk-approve", requireAuth, mutationLimiter, async (req: A
     if (!userId || !shiftIds) return res.status(400).json({ error: 'User and shiftIds required' });
 
     const result = await bulkApproveShifts(shiftIds, userId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: result });
   } catch (error: any) {
     console.error('Error bulk approving shifts:', error);
@@ -27411,6 +28217,26 @@ app.get("/api/shifts/stats", requireAuth, async (req: AuthenticatedRequest, res)
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const stats = await getApprovalStats(workspaceId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: stats });
   } catch (error: any) {
     console.error('Error fetching shift stats:', error);
@@ -27428,6 +28254,26 @@ app.get("/api/disputes/pending", requireAuth, async (req: AuthenticatedRequest, 
     if (!workspaceId) return res.status(400).json({ error: 'Workspace required' });
 
     const disputes = await getPendingDisputes(workspaceId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: disputes });
   } catch (error: any) {
     console.error('Error fetching pending disputes:', error);
@@ -27441,6 +28287,26 @@ app.get("/api/disputes/assigned-to-me", requireAuth, async (req: AuthenticatedRe
     if (!userId) return res.status(400).json({ error: 'User required' });
 
     const disputes = await getDisputesAssignedToUser(userId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: disputes });
   } catch (error: any) {
     console.error('Error fetching assigned disputes:', error);
@@ -27461,6 +28327,26 @@ app.patch("/api/disputes/:disputeId/approve", requireAuth, mutationLimiter, asyn
       resolution: resolution || 'Dispute approved',
       resolutionAction,
     });
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: dispute });
   } catch (error: any) {
     console.error('Error approving dispute:', error);
@@ -27481,6 +28367,26 @@ app.patch("/api/disputes/:disputeId/reject", requireAuth, mutationLimiter, async
       resolution: resolution || 'Dispute rejected',
       canBeAppealed: canBeAppealed ?? true,
     });
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: dispute });
   } catch (error: any) {
     console.error('Error rejecting dispute:', error);
@@ -27508,6 +28414,26 @@ app.post("/api/payroll/deductions/:payrollEntryId", requireAuth, mutationLimiter
       isPreTax ?? true,
       description
     );
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: deduction });
   } catch (error: any) {
     console.error('Error adding deduction:', error);
@@ -27532,6 +28458,26 @@ app.post("/api/payroll/garnishments/:payrollEntryId", requireAuth, mutationLimit
       caseNumber,
       description
     );
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: garnishment });
   } catch (error: any) {
     console.error('Error adding garnishment:', error);
@@ -27616,6 +28562,26 @@ app.get("/api/ratings/employer/trends", requireAuth, readLimiter, async (req: Au
       granularity as 'week' | 'month'
     );
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: trends });
   } catch (error: any) {
     console.error('Error fetching rating trends:', error);
@@ -27659,6 +28625,26 @@ app.get("/api/analytics/composite-score", requireAuth, readLimiter, async (req: 
       return res.status(404).json({ error: 'Employee not found' });
     }
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: compositeScore });
   } catch (error: any) {
     console.error('Error calculating composite score:', error);
@@ -27700,6 +28686,26 @@ app.get("/api/analytics/employee-rank/:employeeId", requireAuth, readLimiter, as
       return res.status(404).json({ error: 'Employee not found' });
     }
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: rank });
   } catch (error: any) {
     console.error('Error fetching employee rank:', error);
@@ -27729,6 +28735,26 @@ app.post("/api/invoices/adjustments", requireAuth, mutationLimiter, async (req: 
       status: 'pending'
     }).returning();
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: adjustment });
   } catch (error: any) {
     console.error('Error creating invoice adjustment:', error);
@@ -27753,6 +28779,26 @@ app.patch("/api/invoices/adjustments/:adjustmentId/approve", requireAuth, mutati
       .returning();
 
     if (!adjustment) return res.status(404).json({ error: 'Adjustment not found' });
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: adjustment });
   } catch (error: any) {
     console.error('Error approving adjustment:', error);
@@ -27772,6 +28818,26 @@ app.patch("/api/invoices/adjustments/:adjustmentId/reject", requireAuth, mutatio
       .returning();
 
     if (!adjustment) return res.status(404).json({ error: 'Adjustment not found' });
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: adjustment });
   } catch (error: any) {
     console.error('Error rejecting adjustment:', error);
@@ -27806,6 +28872,26 @@ app.patch("/api/employees/:employeeId/metadata", requireAuth, mutationLimiter, a
       .returning();
 
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: employee });
   } catch (error: any) {
     console.error('Error updating employee metadata:', error);
@@ -27827,6 +28913,26 @@ app.get("/api/employees/:employeeId/metadata", requireAuth, async (req: Authenti
       ));
 
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: employee.metadata || {} });
   } catch (error: any) {
     console.error('Error fetching employee metadata:', error);
@@ -27846,10 +28952,50 @@ app.get("/api/chat/unread-count", requireAuth, readLimiter, async (req: Authenti
     if (conversationId) {
       // Get unread for specific conversation
       const count = await unreadMessageService.getUnreadCount(conversationId as string, userId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, data: { conversationId, unreadCount: count } });
     } else {
       // Get total unread across all conversations
       const total = await unreadMessageService.getTotalUnreadCount(userId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, data: { totalUnreadCount: total } });
     }
   } catch (error: any) {
@@ -27865,6 +29011,26 @@ app.post("/api/chat/mark-as-read", requireAuth, mutationLimiter, async (req: Aut
     if (!conversationId) return res.status(400).json({ error: 'conversationId required' });
 
     await unreadMessageService.markMessagesAsRead(conversationId, userId);
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
     res.json({ success: true, message: 'Messages marked as read' });
   } catch (error: any) {
@@ -28004,6 +29170,26 @@ app.get("/api/breaks/status/:employeeId", requireAuth, readLimiter, async (req: 
       return res.status(404).json({ error: 'Employee not found' });
     }
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: status });
   } catch (error: any) {
     console.error('Error fetching break status:', error);
@@ -28059,6 +29245,26 @@ app.get("/api/breaks/compliance-report", requireAuth, requireManager, readLimite
 app.get("/api/breaks/rules", requireAuth, readLimiter, async (req: AuthenticatedRequest, res) => {
   try {
     const rules = await breaksService.getAllLaborLawRules();
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: rules });
   } catch (error: any) {
     console.error('Error fetching labor law rules:', error);
@@ -28071,6 +29277,26 @@ app.get("/api/breaks/rules/workspace", requireAuth, readLimiter, async (req: Aut
   try {
     const workspaceId = req.workspaceId!;
     const rules = await breaksService.getWorkspaceLaborLawRules(workspaceId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: rules });
   } catch (error: any) {
     console.error('Error fetching workspace labor law rules:', error);
@@ -28086,6 +29312,26 @@ app.get("/api/breaks/rules/:jurisdiction", requireAuth, readLimiter, async (req:
     if (!rules) {
       return res.status(404).json({ error: 'Jurisdiction not found' });
     }
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: rules });
   } catch (error: any) {
     console.error('Error fetching jurisdiction rules:', error);
@@ -28118,6 +29364,26 @@ app.post("/api/breaks/calculate", requireAuth, mutationLimiter, async (req: Auth
       new Date(shiftEnd),
       rules
     );
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
     res.json({ success: true, data: calculation });
   } catch (error: any) {
@@ -28234,6 +29500,26 @@ app.get("/api/breaks/shift/:shiftId", requireAuth, readLimiter, async (req: Auth
     const { shiftId } = req.params;
 
     const breaks = await breaksService.getScheduledBreaksForShift(workspaceId, shiftId);
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
     res.json({ success: true, data: breaks });
   } catch (error: any) {
@@ -28409,6 +29695,26 @@ app.get("/api/training/completion/:employeeId", requireAuth, readLimiter, async 
 
     const metrics = await trainingRateService.getTrainingCompletionRate(workspaceId, employeeId);
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: metrics });
   } catch (error: any) {
     console.error('Error fetching training rate:', error);
@@ -28421,6 +29727,26 @@ app.get("/api/training/team-summary", requireAuth, readLimiter, async (req: Auth
     const workspaceId = req.workspaceId!;
 
     const summary = await trainingRateService.getTeamTrainingCompletionRate(workspaceId);
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
     res.json({ success: true, data: summary });
   } catch (error: any) {
@@ -28510,6 +29836,26 @@ app.get("/api/analytics/summary", requireAuth, readLimiter, async (req: Authenti
 
     const summary = await analyticsDataService.getAnalyticsSummary(workspaceId);
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: summary });
   } catch (error: any) {
     console.error('Error fetching analytics summary:', error);
@@ -28535,6 +29881,26 @@ app.get("/api/analytics/dashboard", requireAuth, readLimiter, async (req: Authen
       endDate ? new Date(endDate as string) : undefined
     );
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: dashboard });
   } catch (error: any) {
     console.error('Error fetching dashboard metrics:', error);
@@ -28555,6 +29921,26 @@ app.get("/api/analytics/time-usage", requireAuth, readLimiter, async (req: Authe
       startDate ? new Date(startDate as string) : undefined,
       endDate ? new Date(endDate as string) : undefined
     );
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
     res.json({ success: true, data: timeUsage });
   } catch (error: any) {
@@ -28577,6 +29963,26 @@ app.get("/api/analytics/scheduling", requireAuth, readLimiter, async (req: Authe
       endDate ? new Date(endDate as string) : undefined
     );
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: scheduling });
   } catch (error: any) {
     console.error('Error fetching scheduling metrics:', error);
@@ -28598,6 +30004,26 @@ app.get("/api/analytics/revenue", requireAuth, readLimiter, async (req: Authenti
       endDate ? new Date(endDate as string) : undefined
     );
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: revenue });
   } catch (error: any) {
     console.error('Error fetching revenue metrics:', error);
@@ -28618,6 +30044,26 @@ app.get("/api/analytics/employee-performance", requireAuth, readLimiter, async (
       startDate ? new Date(startDate as string) : undefined,
       endDate ? new Date(endDate as string) : undefined
     );
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
     res.json({ success: true, data: performance });
   } catch (error: any) {
@@ -28682,6 +30128,26 @@ app.get("/api/analytics/insights", requireAuth, readLimiter, async (req: Authent
       insights.push("Overtime is " + Math.round((timeUsage.overtimeHours / timeUsage.totalHours) * 100) + "% of total hours - consider hiring or scheduling adjustments");
     }
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: { insights } });
   } catch (error: any) {
     console.error('Error generating analytics insights:', error);
@@ -28703,6 +30169,26 @@ app.get("/api/jobs/by-role/:role", requireAuth, readLimiter, async (req: Authent
     if (!job) {
       return res.status(404).json({ error: 'Job role not found' });
     }
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
     res.json({ success: true, data: job });
   } catch (error: any) {
@@ -28756,6 +30242,26 @@ app.get("/api/helpos/settings", requireAuth, readLimiter, async (req: Authentica
 
     const settings = helposSettingsService.getHelposSettings(workspaceId);
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: settings });
   } catch (error: any) {
     console.error('Error fetching HelpAI settings:', error);
@@ -28769,6 +30275,26 @@ app.post("/api/helpos/settings", requireAuth, requireManager, mutationLimiter, a
     const updates = req.body;
 
     const settings = helposSettingsService.updateHelposSettings(workspaceId, updates);
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
     res.json({ success: true, data: settings });
   } catch (error: any) {
@@ -28994,6 +30520,26 @@ app.post("/api/file-cabinet/upload", requireAuth, mutationLimiter, async (req: A
       metadata: { ...currentMetadata, fileCabinet }
     }).where(eq(employees.id, employeeId));
 
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: fileRecord, message: 'File uploaded successfully' });
   } catch (error: any) {
     console.error('Error uploading file:', error);
@@ -29014,6 +30560,26 @@ app.get("/api/file-cabinet/:employeeId", requireAuth, async (req: AuthenticatedR
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
 
     const fileCabinet = employee.metadata?.fileCabinet || [];
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: fileCabinet });
   } catch (error: any) {
     console.error('Error fetching file cabinet:', error);
@@ -29039,6 +30605,26 @@ app.delete("/api/file-cabinet/:employeeId/:fileId", requireAuth, mutationLimiter
     await db.update(employees).set({
       metadata: { ...currentMetadata, fileCabinet }
     }).where(eq(employees.id, employeeId));
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
     res.json({ success: true, message: 'File deleted successfully' });
   } catch (error: any) {
@@ -29092,6 +30678,26 @@ app.post("/api/migrations/employee-match", requireAuth, async (req: Authenticate
     .filter(item => item.similarity >= 0.75); // 75% confidence threshold
 
     if (!scoredEmployees.length) {
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       return res.json({ success: true, data: [], message: 'No matching employees found' });
     }
 
@@ -29636,6 +31242,26 @@ app.get("/api/alerts/config", requireAuth, async (req: AuthenticatedRequest, res
       configs = await alertService.initializeDefaultConfigs(workspaceId, req.userId!);
     }
     
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: configs });
   } catch (error: any) {
     console.error("Error fetching alert configs:", error);
@@ -29659,6 +31285,26 @@ app.get("/api/alerts/config/:alertType", requireAuth, async (req: AuthenticatedR
       return res.status(404).json({ error: "Alert configuration not found" });
     }
     
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: config });
   } catch (error: any) {
     console.error("Error fetching alert config:", error);
@@ -29689,6 +31335,26 @@ app.put("/api/alerts/config/:alertType", requireAuth, mutationLimiter, async (re
       req.userId!
     );
     
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: config });
   } catch (error: any) {
     console.error("Error updating alert config:", error);
@@ -29717,6 +31383,26 @@ app.patch("/api/alerts/config/:alertType/toggle", requireAuth, mutationLimiter, 
       req.userId!
     );
     
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: config });
   } catch (error: any) {
     console.error("Error toggling alert:", error);
@@ -29743,6 +31429,26 @@ app.get("/api/alerts/history", requireAuth, async (req: AuthenticatedRequest, re
       offset: parseInt(offset as string) || 0,
     });
     
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: alerts });
   } catch (error: any) {
     console.error("Error fetching alert history:", error);
@@ -29769,6 +31475,26 @@ app.get("/api/alerts/history/:id", requireAuth, async (req: AuthenticatedRequest
       return res.status(403).json({ error: "Access denied" });
     }
     
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: alert });
   } catch (error: any) {
     console.error("Error fetching alert:", error);
@@ -29796,6 +31522,26 @@ app.post("/api/alerts/:id/acknowledge", requireAuth, mutationLimiter, async (req
     
     const alert = await alertService.acknowledgeAlert(id, req.userId!, notes);
     
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: alert });
   } catch (error: any) {
     console.error("Error acknowledging alert:", error);
@@ -29823,6 +31569,26 @@ app.post("/api/alerts/:id/resolve", requireAuth, mutationLimiter, async (req: Au
     
     const alert = await alertService.resolveAlert(id, req.userId!, notes);
     
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: alert });
   } catch (error: any) {
     console.error("Error resolving alert:", error);
@@ -29841,6 +31607,26 @@ app.get("/api/alerts/unacknowledged-count", requireAuth, async (req: Authenticat
     
     const count = await alertService.getUnacknowledgedCount(workspaceId);
     
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: { count } });
   } catch (error: any) {
     console.error("Error fetching unacknowledged count:", error);
@@ -29879,6 +31665,26 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       return res.status(400).json({ error: "Alert was not triggered - check if this alert type is enabled" });
     }
     
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
     res.json({ success: true, data: alert, message: "Test alert triggered successfully" });
   } catch (error: any) {
     console.error("Error triggering test alert:", error);
@@ -29961,6 +31767,26 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         })
       );
       
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, data: feedbackWithUserVotes });
     } catch (error: any) {
       console.error("Error fetching feedback:", error);
@@ -30032,6 +31858,26 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (category !== undefined) updateData.category = category;
       
       const updated = await storage.updateFeedback(id, updateData);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, data: updated });
     } catch (error: any) {
       console.error("Error updating feedback:", error);
@@ -30063,6 +31909,26 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       
       const updated = await storage.updateFeedbackStatus(id, status, req.userId!, note);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, data: updated });
     } catch (error: any) {
       console.error("Error updating feedback status:", error);
@@ -30093,6 +31959,26 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       
       const result = await storage.voteFeedback(id, req.userId!, voteType);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, data: result });
     } catch (error: any) {
       console.error("Error voting on feedback:", error);
@@ -30154,6 +32040,26 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       
       const comments = await storage.getFeedbackComments(id);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, data: comments });
     } catch (error: any) {
       console.error("Error fetching comments:", error);
@@ -30179,6 +32085,26 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       
       await storage.deleteFeedbackComment(commentId);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, message: "Comment deleted" });
     } catch (error: any) {
       console.error("Error deleting comment:", error);
@@ -30208,6 +32134,26 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       
       await storage.deleteFeedback(id);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, message: "Feedback deleted" });
     } catch (error: any) {
       console.error("Error deleting feedback:", error);
@@ -30239,6 +32185,26 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
           tag: tag as string,
         });
       }
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, data: results, total: results.length });
     } catch (error: any) {
       console.error("Error fetching suggested changes:", error);
@@ -30257,6 +32223,26 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (!suggestion) {
         return res.status(404).json({ success: false, error: "Suggested change not found" });
       }
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, data: suggestion });
     } catch (error: any) {
       console.error("Error fetching suggested change:", error);
@@ -30323,6 +32309,26 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     try {
       const { autonomousWorkflowService } = await import("./services/ai-brain/autonomousWorkflowService");
       const result = await autonomousWorkflowService.executeHighPriorityFixes(req.userId!);
+
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
 
       res.json({ success: true, data: result });
     } catch (error: any) {
@@ -30442,6 +32448,26 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.json({ error: authCheck.reason, isSupported: false });
       }
       const summary = aiBrainAuthorizationService.getPermissionSummary(authCheck.role!);
+      // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.mark_all_read',
+          category: 'notifications',
+          parameters: { workspaceId },
+          result: { success: true, markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }
+        });
+      } catch (logError) {
+        console.warn('[Mark All Read] Failed to log to AI Brain:', logError);
+      }
+
       res.json({ success: true, ...summary });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
