@@ -57,8 +57,8 @@ export function WhatsNewBadge() {
   const localUnviewedCount = updates.filter(u => !u.hasViewed).length;
   // Use whichever is higher - ensures animation shows when there are new updates
   const unviewedCount = Math.max(apiUnviewedCount, localUnviewedCount);
-  // Show animation if there are ANY unviewed updates OR user hasn't opened the popover yet
-  const hasNewUpdates = unviewedCount > 0 || (updates.length > 0 && !open);
+  // Show animation ONLY if there are unviewed updates - properly synced with database
+  const hasNewUpdates = unviewedCount > 0;
 
   const markViewedMutation = useMutation({
     mutationFn: async (updateId: string) => {
@@ -75,7 +75,7 @@ export function WhatsNewBadge() {
     mutationFn: async () => {
       const unviewedIds = updates.filter(u => !u.hasViewed).map(u => u.id);
       if (unviewedIds.length > 0) {
-        await apiRequest('POST', `/api/whats-new/mark-all-viewed/batch`, { updateIds: unviewedIds, source: 'badge-clear-all' });
+        await apiRequest('POST', `/api/whats-new/mark-all-viewed`, { updateIds: unviewedIds, source: 'badge-clear-all' });
       }
     },
     onSuccess: () => {

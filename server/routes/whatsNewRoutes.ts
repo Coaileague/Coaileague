@@ -23,19 +23,20 @@ export const whatsNewRouter = Router();
 // Seed updates on startup
 seedPlatformUpdates().catch(console.error);
 
-whatsNewRouter.get('/', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+whatsNewRouter.get('/', async (req, res) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.json({ updates: [], enabled: false });
     }
 
+    const authReq = req as AuthenticatedRequest;
     const limit = req.query.limit ? parseInt(req.query.limit as string) : undefined;
     const category = req.query.category as string | undefined;
     const includeAll = req.query.all === 'true';
     
     // Get user info for RBAC filtering and view tracking
-    const userId = req.user?.id;
-    const userRole = req.workspaceRole || 'staff';
+    const userId = authReq.user?.id;
+    const userRole = authReq.workspaceRole || 'staff';
 
     const updates = await getUpdates({ limit, category, includeAll, userId, userRole });
 
@@ -50,15 +51,16 @@ whatsNewRouter.get('/', async (req: AuthenticatedRequest, res: Response, next: N
   }
 });
 
-whatsNewRouter.get('/latest', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+whatsNewRouter.get('/latest', async (req, res) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.json({ updates: [], enabled: false });
     }
 
+    const authReq = req as AuthenticatedRequest;
     const count = req.query.count ? parseInt(req.query.count as string) : 5;
-    const userId = req.user?.id;
-    const userRole = req.workspaceRole || 'staff';
+    const userId = authReq.user?.id;
+    const userRole = authReq.workspaceRole || 'staff';
     
     const updates = await getLatestUpdates(count, userId, userRole);
 
@@ -71,14 +73,15 @@ whatsNewRouter.get('/latest', async (req: AuthenticatedRequest, res: Response, n
   }
 });
 
-whatsNewRouter.get('/new-features', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+whatsNewRouter.get('/new-features', async (req, res) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.json({ updates: [], enabled: false });
     }
 
-    const userId = req.user?.id;
-    const userRole = req.workspaceRole || 'staff';
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
+    const userRole = authReq.workspaceRole || 'staff';
     const updates = await getNewFeatures(userId, userRole);
 
     res.json({
@@ -91,18 +94,19 @@ whatsNewRouter.get('/new-features', async (req: AuthenticatedRequest, res: Respo
   }
 });
 
-whatsNewRouter.get('/unviewed-count', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+whatsNewRouter.get('/unviewed-count', async (req, res) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.json({ count: 0, enabled: false });
     }
 
-    const userId = req.user?.id;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
     if (!userId) {
       return res.json({ count: 0, message: 'Not authenticated' });
     }
 
-    const userRole = req.workspaceRole || 'staff';
+    const userRole = authReq.workspaceRole || 'staff';
     const count = await getUnviewedCount(userId, userRole);
 
     res.json({
@@ -114,13 +118,14 @@ whatsNewRouter.get('/unviewed-count', async (req: AuthenticatedRequest, res: Res
   }
 });
 
-whatsNewRouter.get('/stats', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+whatsNewRouter.get('/stats', async (req, res) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.json({ enabled: false });
     }
 
-    const userRole = req.workspaceRole || 'staff';
+    const authReq = req as AuthenticatedRequest;
+    const userRole = authReq.workspaceRole || 'staff';
     const stats = await getUpdateStats(userRole);
 
     res.json({
@@ -132,15 +137,16 @@ whatsNewRouter.get('/stats', async (req: AuthenticatedRequest, res: Response, ne
   }
 });
 
-whatsNewRouter.get('/category/:category', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+whatsNewRouter.get('/category/:category', async (req, res) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.json({ updates: [], enabled: false });
     }
 
+    const authReq = req as AuthenticatedRequest;
     const category = req.params.category as 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement';
-    const userId = req.user?.id;
-    const userRole = req.workspaceRole || 'staff';
+    const userId = authReq.user?.id;
+    const userRole = authReq.workspaceRole || 'staff';
     
     const updates = await getUpdatesByCategory(category, userId, userRole);
 
@@ -155,30 +161,10 @@ whatsNewRouter.get('/category/:category', async (req: AuthenticatedRequest, res:
   }
 });
 
-whatsNewRouter.post('/:id/viewed', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+whatsNewRouter.post('/mark-all-viewed', async (req, res) => {
   try {
-    const userId = req.user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
-    const updateId = req.params.id;
-    const viewSource = req.body.source || 'feed';
-    
-    const success = await markUpdateViewed(userId, updateId, viewSource);
-
-    res.json({
-      success,
-      updateId,
-    });
-  } catch (error: any) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-whatsNewRouter.post('/mark-all-viewed/batch', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.user?.id;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -202,13 +188,36 @@ whatsNewRouter.post('/mark-all-viewed/batch', async (req: AuthenticatedRequest, 
   }
 });
 
-whatsNewRouter.get('/:id', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+whatsNewRouter.post('/:id/viewed', async (req, res) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
+    if (!userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const updateId = req.params.id;
+    const viewSource = req.body.source || 'feed';
+    
+    const success = await markUpdateViewed(userId, updateId, viewSource);
+
+    res.json({
+      success,
+      updateId,
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+whatsNewRouter.get('/:id', async (req, res) => {
   try {
     if (!isFeatureEnabled('enableWhatsNew')) {
       return res.status(404).json({ error: 'Updates not enabled' });
     }
 
-    const userId = req.user?.id;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id;
     const update = await getUpdateById(req.params.id, userId);
 
     if (!update) {

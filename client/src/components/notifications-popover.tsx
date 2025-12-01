@@ -111,6 +111,7 @@ export function NotificationsPopover() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
     },
   });
 
@@ -129,6 +130,10 @@ export function NotificationsPopover() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
     },
   });
 
