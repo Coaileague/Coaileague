@@ -22,7 +22,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSepara
 import { 
   MessageCircle, Users, Lock, Globe, Plus, Search, Loader2, Check, ArrowLeft, 
   RefreshCw, Crown, Building2, Wifi, Calendar, Briefcase, Video, MoreHorizontal,
-  Pause, XCircle, Play, Archive, AlertTriangle, Eye, Filter, LayoutGrid, List
+  Pause, XCircle, Play, Archive, AlertTriangle, Eye, Filter, LayoutGrid, List, Bot
 } from "lucide-react";
 import { formatDistanceToNow, format } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
@@ -424,6 +424,8 @@ function RoomCard({
   const typeConfig = getRoomTypeConfig(room.type, room.conversationType);
   const ownership = getRoomOwnership(room);
   const Icon = typeConfig.icon;
+  const isPlatformRoom = ownership === 'platform';
+  const ownershipIcon = OWNERSHIP_INDICATORS[ownership];
   
   return (
     <Card
@@ -437,74 +439,82 @@ function RoomCard({
       }}
       data-testid={`card-room-${room.id || room.roomId}`}
     >
-      <CardHeader className="p-4 sm:p-6 pb-2 sm:pb-3">
+      <CardHeader className="p-3 sm:p-4 pb-2">
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-2 sm:gap-3 flex-1 min-w-0">
-            <div className={`p-1.5 sm:p-2 rounded-lg shrink-0 ${typeConfig.bgColor}`}>
-              <Icon className={`h-4 w-4 sm:h-5 sm:w-5 ${typeConfig.color}`} />
+          <div className="flex items-start gap-2 flex-1 min-w-0">
+            <div className={`p-1 sm:p-1.5 rounded-lg shrink-0 relative ${typeConfig.bgColor}`}>
+              <Icon className={`h-4 w-4 ${typeConfig.color}`} />
+              {isPlatformRoom && ownershipIcon && (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="absolute -top-1 -right-1 bg-background border border-primary rounded-full p-0.5">
+                      <ownershipIcon.icon className={`h-2.5 w-2.5 ${ownershipIcon.color}`} />
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent className="text-xs">{ownershipIcon.label}</TooltipContent>
+                </Tooltip>
+              )}
             </div>
             <div className="flex-1 min-w-0">
-              <CardTitle className="text-sm sm:text-base line-clamp-2" data-testid={`text-room-name-${room.id}`}>
+              <CardTitle className="text-xs sm:text-sm line-clamp-1" data-testid={`text-room-name-${room.id}`}>
                 {room.name || room.subject}
               </CardTitle>
-              <div className="flex items-center gap-2 mt-1">
-                <RoomOwnershipBadge 
-                  ownership={ownership} 
-                  workspaceLogo={room.workspaceLogo}
-                  workspaceName={room.workspaceName}
-                />
+              <div className="flex items-center gap-1 mt-0.5 flex-wrap">
+                <Badge variant="outline" className="text-[10px] sm:text-xs py-0 px-1.5 h-5">
+                  {typeConfig.label}
+                </Badge>
               </div>
             </div>
           </div>
-          {room.isParticipant && (
-            <Badge variant="secondary" className="shrink-0 text-xs">
-              <Check className="h-3 w-3 mr-1" />
-              <span className="hidden sm:inline">Joined</span>
-            </Badge>
-          )}
+          <div className="flex flex-col gap-1 items-end shrink-0">
+            {isPlatformRoom && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Badge variant="secondary" className="text-[10px] sm:text-xs py-0 px-1.5 h-5 bg-green-500/10 text-green-600">
+                    <Bot className="h-2.5 w-2.5 mr-0.5" />
+                    <span className="hidden sm:inline">Bot</span>
+                  </Badge>
+                </TooltipTrigger>
+                <TooltipContent className="text-xs">Support bot active</TooltipContent>
+              </Tooltip>
+            )}
+            {room.isParticipant && (
+              <Badge variant="secondary" className="text-[10px] sm:text-xs py-0 px-1.5 h-5">
+                <Check className="h-2.5 w-2.5 mr-0.5" />
+                <span className="hidden sm:inline">Joined</span>
+              </Badge>
+            )}
+          </div>
         </div>
       </CardHeader>
-      <CardContent className="p-4 sm:p-6 pt-2 sm:pt-3">
-        <div className="space-y-2 sm:space-y-3">
-          <div className="flex items-center justify-between gap-2 flex-wrap">
-            <div className="flex gap-1.5 sm:gap-2 flex-wrap">
-              <Badge 
-                variant={typeConfig.badgeVariant} 
-                className={`text-xs ${typeConfig.bgColor} ${typeConfig.color} border ${typeConfig.borderColor}`}
-                data-testid={`badge-type-${room.id}`}
-              >
-                {typeConfig.label}
+      <CardContent className="p-3 sm:p-4 pt-1 sm:pt-2">
+        <div className="space-y-1.5 sm:space-y-2">
+          <div className="flex gap-1 flex-wrap">
+            {room.participantsCount !== undefined && (
+              <Badge variant="outline" className="text-[10px] sm:text-xs py-0 px-1.5 h-5 flex items-center gap-0.5" data-testid={`badge-participants-${room.id}`}>
+                <Users className="h-2.5 w-2.5" />
+                {room.participantsCount}
               </Badge>
-              {room.participantsCount !== undefined && (
-                <Badge variant="outline" className="text-xs flex items-center gap-1" data-testid={`badge-participants-${room.id}`}>
-                  <Users className="h-3 w-3" />
-                  {room.participantsCount}
-                </Badge>
-              )}
-              {room.visibility && (
-                <Badge variant="outline" className="text-xs flex items-center gap-1">
-                  {room.visibility === 'private' ? (
-                    <Lock className="h-3 w-3" />
-                  ) : (
-                    <Globe className="h-3 w-3" />
-                  )}
-                  <span className="hidden sm:inline">{room.visibility}</span>
-                </Badge>
-              )}
-            </div>
+            )}
+            {room.status && (
+              <Badge 
+                variant={room.status === 'open' ? 'secondary' : 'outline'} 
+                className={`text-[10px] sm:text-xs py-0 px-1.5 h-5 ${room.status === 'open' ? 'bg-green-500/10 text-green-600' : ''}`}
+              >
+                {room.status === 'open' ? '✓ Open' : room.status}
+              </Badge>
+            )}
           </div>
           
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center justify-between gap-1">
             {room.lastMessageAt ? (
-              <p className="text-xs text-muted-foreground">
-                Active {formatDistanceToNow(new Date(room.lastMessageAt), { addSuffix: true })}
-              </p>
-            ) : room.createdAt ? (
-              <p className="text-xs text-muted-foreground">
-                Created {formatDistanceToNow(new Date(room.createdAt), { addSuffix: true })}
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                {formatDistanceToNow(new Date(room.lastMessageAt), { addSuffix: true })}
               </p>
             ) : (
-              <span />
+              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
+                {room.createdAt ? formatDistanceToNow(new Date(room.createdAt), { addSuffix: true }) : 'Recently created'}
+              </p>
             )}
             
             {!room.isParticipant && (
@@ -516,7 +526,7 @@ function RoomCard({
                   onSelect();
                 }}
                 data-testid={`button-select-room-${room.id || room.roomId}`}
-                className="shrink-0 text-xs h-8"
+                className="shrink-0 text-[10px] sm:text-xs h-6 px-2"
               >
                 {isSelected ? 'Selected' : 'Select'}
               </Button>
@@ -529,20 +539,22 @@ function RoomCard({
 }
 
 // Default HelpDesk room - always visible even when API returns empty
+// Platform-owned support room with bot (persistent across all workspaces)
 const DEFAULT_HELPDESK_ROOM: ChatRoom = {
   roomId: 'helpdesk',
   id: 'helpdesk',
-  name: 'CoAIleague HelpDesk',
+  name: 'HelpDesk',
   subject: 'CoAIleague HelpDesk',
   slug: 'helpdesk',
   type: 'support',
   conversationType: 'dm_support',
-  participantsCount: 1, // HelpAI bot is always present
-  status: 'open',
+  participantsCount: 2, // HelpAI bot + support staff
+  status: 'open', // Always open with bot monitoring
   isParticipant: false,
   visibility: 'public',
   isPlatformOwned: true,
   createdBy: 'platform',
+  lastMessageAt: new Date().toISOString(),
 };
 
 export default function Chatrooms() {
@@ -1052,7 +1064,7 @@ export default function Chatrooms() {
                     </CardContent>
                   </Card>
                 ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
                     {filteredRooms.map((room: ChatRoom) => (
                       <RoomCard
                         key={room.id || room.roomId}
