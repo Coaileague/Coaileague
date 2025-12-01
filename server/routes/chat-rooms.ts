@@ -342,16 +342,28 @@ router.get(
       const workspaceId = authReq.workspaceId;
       const userId = authReq.user?.id;
 
-      if (!workspaceId || !userId) {
-        return res.status(403).json({ error: "No workspace context" });
+      // Allow platform-level access even without workspace context
+      // When no workspace, only return platform-wide support rooms
+      const hasPlatformAccess = !!userId;
+      
+      if (!hasPlatformAccess) {
+        return res.status(401).json({ error: "Authentication required" });
       }
 
       const rooms: any[] = [];
 
       // ========================================================================
-      // 1. SUPPORT ROOMS (type: 'support')
+      // 1. SUPPORT ROOMS (type: 'support') - Always include platform-wide rooms
       // ========================================================================
       try {
+        // Build query conditions based on workspace context
+        const supportRoomConditions = workspaceId
+          ? or(
+              eq(supportRooms.workspaceId, workspaceId),
+              isNull(supportRooms.workspaceId) // Platform-wide support rooms
+            )
+          : isNull(supportRooms.workspaceId); // Only platform-wide when no workspace
+
         const supportRoomsList = await db
           .select({
             id: supportRooms.id,
@@ -366,12 +378,7 @@ router.get(
             chatConversations,
             eq(supportRooms.conversationId, chatConversations.id)
           )
-          .where(
-            or(
-              eq(supportRooms.workspaceId, workspaceId),
-              isNull(supportRooms.workspaceId) // Platform-wide support rooms
-            )
-          );
+          .where(supportRoomConditions);
 
         for (const room of supportRoomsList) {
           // Count participants from associated conversation
@@ -405,8 +412,9 @@ router.get(
       }
 
       // ========================================================================
-      // 2. ORGANIZATION CHAT ROOMS (type: 'org')
+      // 2. ORGANIZATION CHAT ROOMS (type: 'org') - Only when workspace context exists
       // ========================================================================
+      if (workspaceId) {
       try {
         const orgRooms = await db
           .select({
@@ -446,10 +454,12 @@ router.get(
       } catch (error) {
         console.error("[GET /api/chat/rooms] Error fetching org rooms:", error);
       }
+      } // End of workspaceId check for org rooms
 
       // ========================================================================
-      // 3. GENERAL CHAT CONVERSATIONS (work, meeting rooms)
+      // 3. GENERAL CHAT CONVERSATIONS (work, meeting rooms) - Only when workspace context exists
       // ========================================================================
+      if (workspaceId) {
       try {
         const generalRooms = await db
           .select({
@@ -523,6 +533,7 @@ router.get(
       } catch (error) {
         console.error("[GET /api/chat/rooms] Error fetching general rooms:", error);
       }
+      } // End of workspaceId check for general rooms
 
       // Sort by last message time (most recent first)
       rooms.sort((a, b) => {
