@@ -150,7 +150,7 @@ import AutomationSettings from "@/pages/automation-settings";
 import AIBrainDashboard from "@/pages/ai-brain-dashboard";
 import SupportAIConsole from "@/pages/support-ai-console";
 import SystemHealth from "@/pages/system-health";
-import { FloatingSupportChat } from "@/components/floating-support-chat";
+import { HeaderChatButton } from "@/components/header-chat-button";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { HeaderBillboard } from "@/components/header-billboard";
@@ -489,6 +489,8 @@ function AppContent() {
                     </a>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Chat Button - Header mounted in middle */}
+                    <HeaderChatButton />
                     {/* Universal Notifications Bell - Shows all updates, alerts, and system messages */}
                     <NotificationsPopover />
                     {/* User Menu Dropdown */}
@@ -750,7 +752,6 @@ export default function App() {
                     <UniversalAnimationProvider>
                       <ResponsiveAppFrame>
                         <AppContent />
-                        <FloatingSupportChat />
                         <ReenableChatButton />
                         <Toaster />
                       </ResponsiveAppFrame>
