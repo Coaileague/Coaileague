@@ -13,7 +13,6 @@ import { useState } from "react";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { performLogout } from "@/lib/logoutHandler";
 import { NotificationsPopover } from "@/components/notifications-popover";
-import { WhatsNewBadge } from "@/components/whats-new-badge";
 import { AISearchTrigger } from "@/components/ai-search";
 import {
   DropdownMenu,
@@ -157,7 +156,6 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                       {showNotificationFeatures && (
                         <div className={`flex items-center ${HEADER_SPACING.mobileIconGap}`}>
                           <AISearchTrigger />
-                          <WhatsNewBadge />
                           <NotificationsPopover />
                         </div>
                       )}
@@ -204,7 +202,6 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
               <div className={`flex md:hidden items-center ${HEADER_SPACING.mobileIconGap} shrink-0`}>
                 {showNotificationFeatures && (
                   <div className={`flex items-center ${HEADER_SPACING.mobileIconGap}`}>
-                    <WhatsNewBadge />
                     <NotificationsPopover />
                   </div>
                 )}

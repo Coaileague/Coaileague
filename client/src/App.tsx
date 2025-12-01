@@ -153,7 +153,6 @@ import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { HeaderBillboard } from "@/components/header-billboard";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
-import { WhatsNewBadge } from "@/components/whats-new-badge";
 import { NotificationsCenter } from "@/components/notifications-center";
 import { WorkspaceTabsNav } from "@/components/workspace-tabs-nav";
 
@@ -482,9 +481,7 @@ function AppContent() {
                     </a>
                   </div>
                   <div className="flex items-center gap-2">
-                    {/* What's New Badge - Sparkles icon with unread count */}
-                    <WhatsNewBadge />
-                    {/* Notifications Bell */}
+                    {/* Universal Notifications Bell - Shows all updates, alerts, and system messages */}
                     <NotificationsCenter />
                     {/* User Menu Dropdown */}
                     <DropdownMenu>

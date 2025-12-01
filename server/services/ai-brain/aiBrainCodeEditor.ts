@@ -481,7 +481,6 @@ class AIBrainCodeEditorService {
 
         for (const role of supportRoles) {
           await db.insert(notifications).values({
-            workspaceId: 'coaileague-platform-workspace',
             userId: role.userId,
             type: 'code_change',
             title: `Code Change Applied: ${change.title}`,
