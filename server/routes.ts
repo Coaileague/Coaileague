@@ -517,9 +517,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Mark all notifications as read
       const notificationsMarked = await storage.markAllNotificationsAsRead(userId, workspaceId);
+      // Acknowledge all maintenance alerts
+      const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+      let alertsMarked = 0;
+      for (const alert of alerts) {
+        if (!(alert as any).isAcknowledged) {
+          await aiNotificationService.acknowledgeMaintenanceAlert(alert.id, userId);
+          alertsMarked++;
+        }
+      }
+      
+      // WebSocket broadcast for real-time client updates
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      
+      res.json({ 
+        success: true, 
+        markedRead: { 
+          platformUpdates: platformUpdatesMarked, 
+          notifications: notificationsMarked, 
+          alerts: alertsMarked 
+        } 
       });
-    } catch (error) {
       console.error('Error marking all notifications as read:', error);
+    } catch (error) {
       res.status(500).json({ message: 'Failed to mark notifications as read' });
     }
   });
