@@ -1214,7 +1214,7 @@ export const performanceReviews = pgTable("performance_reviews", {
   promotionRecommended: boolean("promotion_recommended").default(false),
 
   // ========================================================================
-  // TALENTOS™ EXTENDED FIELDS - Performance-to-Pay Loop & Analytics
+  // TALENT ANALYTICS EXTENDED FIELDS - Performance-to-Pay Loop & Analytics
   // ========================================================================
 
   // Auto-calculated performance metrics (from Unified Data Nexus)
@@ -1224,7 +1224,7 @@ export const performanceReviews = pgTable("performance_reviews", {
   averageHoursWorkedPerWeek: decimal("average_hours_worked_per_week", { precision: 5, scale: 2 }),
   overtimeHours: decimal("overtime_hours", { precision: 10, scale: 2 }),
 
-  // Report quality metrics (ReportOS™ integration)
+  // Report quality metrics (Reports & Forms integration)
   reportsSubmitted: integer("reports_submitted"),
   reportsApproved: integer("reports_approved"),
   reportsRejected: integer("reports_rejected"),
@@ -1235,7 +1235,7 @@ export const performanceReviews = pgTable("performance_reviews", {
   safetyIncidents: integer("safety_incidents"),
   trainingCompletionRate: decimal("training_completion_rate", { precision: 5, scale: 2 }),
 
-  // Additional subjective ratings (TalentOS™)
+  // Additional subjective ratings (Talent Analytics)
   qualityOfWorkRating: integer("quality_of_work_rating"), // 1-5
   initiativeRating: integer("initiative_rating"), // 1-5
 
@@ -1907,7 +1907,7 @@ export const insertInvoiceProposalSchema = createInsertSchema(invoiceProposals).
 export type InsertInvoiceProposal = z.infer<typeof insertInvoiceProposalSchema>;
 export type InvoiceProposal = typeof invoiceProposals.$inferSelect;
 
-// Payroll Proposals - AI-generated payroll awaiting approval (OperationsOS™ Automation)
+// Payroll Proposals - AI-generated payroll awaiting approval (Operations Automation)
 export const payrollProposals = pgTable("payroll_proposals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -2368,7 +2368,7 @@ export type InsertInvoiceLineItem = z.infer<typeof insertInvoiceLineItemSchema>;
 export type InvoiceLineItem = typeof invoiceLineItems.$inferSelect;
 
 // ============================================================================
-// BILLOS™ - FULL FINANCIAL AUTOMATION SYSTEM
+// BILLING PLATFORM - FULL FINANCIAL AUTOMATION SYSTEM
 // ============================================================================
 
 // Client Billable Rates (for zero-touch invoice generation)
@@ -3315,7 +3315,7 @@ export type InsertEmployeeCertification = z.infer<typeof insertEmployeeCertifica
 export type EmployeeCertification = typeof employeeCertifications.$inferSelect;
 
 // ============================================================================
-// COMPLIANCEOS™ - I-9 WORK AUTHORIZATION & RE-VERIFICATION
+// COMPLIANCE SYSTEM - I-9 WORK AUTHORIZATION & RE-VERIFICATION
 // ============================================================================
 
 export const i9StatusEnum = pgEnum('i9_status', ['pending', 'verified', 'reverification_required', 'expired', 'invalid']);
@@ -3381,7 +3381,7 @@ export type InsertEmployeeI9Record = z.infer<typeof insertEmployeeI9RecordSchema
 export type EmployeeI9Record = typeof employeeI9Records.$inferSelect;
 
 // ============================================================================
-// POLICIOS™ - HANDBOOK & POLICY ACKNOWLEDGMENT
+// POLICY MANAGEMENT - HANDBOOK & POLICY ACKNOWLEDGMENT
 // ============================================================================
 
 export const policyStatusEnum = pgEnum('policy_status', ['draft', 'published', 'archived']);
@@ -3461,7 +3461,7 @@ export type InsertPolicyAcknowledgment = z.infer<typeof insertPolicyAcknowledgme
 export type PolicyAcknowledgment = typeof policyAcknowledgments.$inferSelect;
 
 // ============================================================================
-// HIREOS™ - DIGITAL FILE CABINET & COMPLIANCE WORKFLOW (MONOPOLISTIC FEATURE)
+// EMPLOYEE ONBOARDING - DIGITAL FILE CABINET & COMPLIANCE WORKFLOW (MONOPOLISTIC FEATURE)
 // ============================================================================
 
 // Onboarding Workflow Templates (No-Code Builder)
@@ -3706,7 +3706,7 @@ export const auditActionEnum = pgEnum('audit_action', [
   'generate_invoice', 'payment_received',
   'assign_manager', 'remove_manager',
 
-  // AuditOS™ Chat moderation actions
+  // Audit System Chat moderation actions
   'kick_user',
   'silence_user',
   'give_voice',
@@ -3714,30 +3714,30 @@ export const auditActionEnum = pgEnum('audit_action', [
   'ban_user',
   'unban_user',
 
-  // AuditOS™ Account management actions
+  // Audit System Account management actions
   'reset_password',
   'unlock_account',
   'lock_account',
   'change_role',
   'change_permissions',
 
-  // AuditOS™ Workspace actions
+  // Audit System Workspace actions
   'transfer_ownership',
   'impersonate_user',
 
-  // AuditOS™ Data actions
+  // Audit System Data actions
   'export_data',
   'import_data',
   'delete_data',
   'restore_data',
 
-  // AuditOS™ System actions
+  // Audit System actions
   'update_motd',
   'update_banner',
   'change_settings',
   'view_audit_logs',
 
-  // AuditOS™ Support actions
+  // Audit System Support actions
   'escalate_ticket',
   'transfer_ticket',
   'view_documents',
@@ -3758,7 +3758,7 @@ export const auditLogs = pgTable("audit_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
 
-  // AuditOS™ Command tracking (IRC-style)
+  // Audit System Command tracking (IRC-style)
   commandId: varchar("command_id"), // Unique ID for command/response matching
 
   // Actor information
@@ -3768,16 +3768,16 @@ export const auditLogs = pgTable("audit_logs", {
 
   // Action details
   action: auditActionEnum("action").notNull(),
-  actionDescription: text("action_description"), // Human-readable description for AuditOS™
+  actionDescription: text("action_description"), // Human-readable description for Audit System
   entityType: varchar("entity_type"), // 'employee', 'shift', 'invoice', 'user', 'message', etc.
   entityId: varchar("entity_id"),
 
-  // AuditOS™ Target tracking
+  // Audit System Target tracking
   targetId: varchar("target_id"), // User, workspace, or resource affected by action
   targetName: varchar("target_name"), // Cached for historical accuracy
   targetType: varchar("target_type"), // 'user', 'workspace', 'message', 'document', etc.
 
-  // AuditOS™ Context
+  // Audit System Context
   conversationId: varchar("conversation_id"), // If chat-related
   reason: text("reason"), // Reason for action (e.g., kick/silence reason)
 
@@ -3790,7 +3790,7 @@ export const auditLogs = pgTable("audit_logs", {
   userAgent: text("user_agent"), // Required for SOC2/GDPR traceability
   requestId: varchar("request_id"), // For correlating related actions
 
-  // AuditOS™ Result tracking
+  // Audit System Result tracking
   success: boolean("success").default(true),
   errorMessage: text("error_message"), // If action failed
 
@@ -4555,10 +4555,10 @@ export type InsertCustomerReportAccess = z.infer<typeof insertCustomerReportAcce
 export type CustomerReportAccess = typeof customerReportAccess.$inferSelect;
 
 // ============================================================================
-// MONOPOLISTIC REPORTOS™ FEATURES
+// MONOPOLISTIC REPORTS & FORMS FEATURES
 // ============================================================================
 
-// Real-Time KPI Alerts - Configurable notifications tied to PredictionOS™ and Custom Logic
+// Real-Time KPI Alerts - Configurable notifications tied to AI Predictions and Custom Logic
 export const kpiAlerts = pgTable("kpi_alerts", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -5363,7 +5363,7 @@ export const editChatMessageSchema = z.object({
 export type EditChatMessage = z.infer<typeof editChatMessageSchema>;
 
 // ============================================================================
-// COMMOS™ WORKROOM UPGRADE - FILE UPLOADS, EVENTS, VOICE
+// COMMUNICATIONS WORKROOM UPGRADE - FILE UPLOADS, EVENTS, VOICE
 // ============================================================================
 
 // Chat Uploads - Centralized file tracking with virus scanning and retention
@@ -6064,7 +6064,7 @@ export type InsertEmailSend = z.infer<typeof insertEmailSendSchema>;
 export type EmailSend = typeof emailSends.$inferSelect;
 
 // ============================================================================
-// SALES MVP: DEALOS™ + BIDOS™ - CRM & PROCUREMENT SYSTEM
+// SALES MVP: DEAL MANAGEMENT + PROCUREMENT - CRM & PROCUREMENT SYSTEM
 // ============================================================================
 
 // Deals/Opportunities - Sales pipeline management
@@ -6574,7 +6574,7 @@ export type InsertChatAgreementAcceptance = z.infer<typeof insertChatAgreementAc
 export type ChatAgreementAcceptance = typeof chatAgreementAcceptances.$inferSelect;
 
 // ============================================================================
-// PREDICTIONOS™ - AI-POWERED PREDICTIVE ANALYTICS (MONOPOLISTIC FEATURE #1)
+// AI PREDICTIONS - AI-POWERED PREDICTIVE ANALYTICS (MONOPOLISTIC FEATURE #1)
 // ============================================================================
 
 // Employee turnover risk scores (90-day flight risk predictions)
@@ -6845,7 +6845,7 @@ export type InsertTimeEntryDiscrepancy = z.infer<typeof insertTimeEntryDiscrepan
 export type TimeEntryDiscrepancy = typeof timeEntryDiscrepancies.$inferSelect;
 
 // ============================================================================
-// TALENTOS™ - RECRUITMENT, PERFORMANCE, & RETENTION (MONOPOLISTIC TIER)
+// TALENT ANALYTICS - RECRUITMENT, PERFORMANCE, & RETENTION (MONOPOLISTIC TIER)
 // ============================================================================
 
 // Internal Talent Marketplace - Internal project/role bidding system
@@ -6886,7 +6886,7 @@ export const internalBids = pgTable("internal_bids", {
   selectedEmployeeId: varchar("selected_employee_id").references(() => employees.id),
   selectedAt: timestamp("selected_at"),
 
-  // High-risk employee tracking (PredictionOS™ integration)
+  // High-risk employee tracking (AI Predictions integration)
   highRiskViewCount: integer("high_risk_view_count").default(0), // Count of high-risk employees viewing
   highRiskViewers: jsonb("high_risk_viewers").$type<string[]>().default(sql`'[]'`), // Employee IDs with turnover score > 70%
   lastHighRiskViewAt: timestamp("last_high_risk_view_at"),
@@ -6924,8 +6924,8 @@ export const bidApplications = pgTable("bid_applications", {
   missingSkills: jsonb("missing_skills").$type<string[]>().default(sql`'[]'`),
   matchingSkills: jsonb("matching_skills").$type<string[]>().default(sql`'[]'`),
 
-  // PredictionOS™ risk score at time of application
-  turnoverRiskScore: integer("turnover_risk_score"), // 0-100 from PredictionOS™
+  // AI Predictions risk score at time of application
+  turnoverRiskScore: integer("turnover_risk_score"), // 0-100 from AI Predictions
   isHighRisk: boolean("is_high_risk").default(false), // Score > 70%
 
   // Application lifecycle
@@ -6976,7 +6976,7 @@ export const roleTemplates = pgTable("role_templates", {
   // Required skills & certifications
   requiredSkills: jsonb("required_skills").$type<string[]>().notNull().default(sql`'[]'`),
   requiredCertifications: jsonb("required_certifications").$type<string[]>().default(sql`'[]'`),
-  requiredTrainingCourses: jsonb("required_training_courses").$type<string[]>().default(sql`'[]'`), // Links to LearnOS™
+  requiredTrainingCourses: jsonb("required_training_courses").$type<string[]>().default(sql`'[]'`), // Links to Training Management
 
   // Desired (optional) qualifications
   desiredSkills: jsonb("desired_skills").$type<string[]>().default(sql`'[]'`),
@@ -7047,7 +7047,7 @@ export const skillGapAnalyses = pgTable("skill_gap_analyses", {
     type: string; // 'skill_training', 'certification', 'course', 'experience'
     priority: string; // 'high', 'medium', 'low'
     estimatedTime: number; // Days to complete
-    learnOsLinkId?: string; // Links to LearnOS™ course
+    trainingLinkId?: string; // Links to Training Management course
   }[]>().default(sql`'[]'`),
 
   // Progress tracking
@@ -7080,7 +7080,7 @@ export type InsertSkillGapAnalysis = z.infer<typeof insertSkillGapAnalysisSchema
 export type SkillGapAnalysis = typeof skillGapAnalyses.$inferSelect;
 
 // ============================================================================
-// ASSETOS™ - PHYSICAL RESOURCE ALLOCATION (MONOPOLISTIC TIER)
+// ASSET MANAGEMENT - PHYSICAL RESOURCE ALLOCATION (MONOPOLISTIC TIER)
 // ============================================================================
 
 // Assets - Physical resources (trucks, rigs, equipment)
@@ -7277,7 +7277,7 @@ export type InsertAssetUsageLog = z.infer<typeof insertAssetUsageLogSchema>;
 export type AssetUsageLog = typeof assetUsageLogs.$inferSelect;
 
 // ============================================================================
-// ENGAGEMENT OS™ - BIDIRECTIONAL INTELLIGENCE SYSTEM
+// EMPLOYEE ENGAGEMENT - BIDIRECTIONAL INTELLIGENCE SYSTEM
 // ============================================================================
 
 // Pulse Survey Templates - Customizable employee engagement surveys
@@ -7436,7 +7436,7 @@ export const anonymousSuggestions = pgTable("anonymous_suggestions", {
   sentimentLabel: varchar("sentiment_label"),
   urgencyLevel: varchar("urgency_level"), // 'low', 'medium', 'high', 'critical' (AI-determined)
 
-  // Ticket tracking (SupportOS™ integration)
+  // Ticket tracking (Support System integration)
   ticketId: varchar("ticket_id").references(() => supportTickets.id),
   status: varchar("status").default("submitted"), // 'submitted', 'under_review', 'in_progress', 'implemented', 'declined', 'duplicate'
   statusUpdatedAt: timestamp("status_updated_at"),
@@ -7539,7 +7539,7 @@ export const employeeHealthScores = pgTable("employee_health_scores", {
   cultureSatisfaction: decimal("culture_satisfaction", { precision: 5, scale: 2 }),
 
   // Risk indicators
-  turnoverRiskScore: decimal("turnover_risk_score", { precision: 5, scale: 2 }), // PredictionOS™ integration
+  turnoverRiskScore: decimal("turnover_risk_score", { precision: 5, scale: 2 }), // AI Predictions integration
   riskLevel: varchar("risk_level"), // 'low', 'medium', 'high', 'critical'
   riskFactors: jsonb("risk_factors").$type<string[]>().default(sql`'[]'`), // ['low_engagement', 'compensation_concern', 'manager_conflict']
 
@@ -7633,7 +7633,7 @@ export type InsertEmployerBenchmarkScore = z.infer<typeof insertEmployerBenchmar
 export type EmployerBenchmarkScore = typeof employerBenchmarkScores.$inferSelect;
 
 // ============================================================================
-// INTEGRATIONOS™ - EXTERNAL ECOSYSTEM LAYER (MONOPOLISTIC LOCK-IN)
+// INTEGRATIONS HUB - EXTERNAL ECOSYSTEM LAYER (MONOPOLISTIC LOCK-IN)
 // ============================================================================
 
 // Integration categories enum
@@ -8148,7 +8148,7 @@ export type InsertAutoReport = z.infer<typeof insertAutoReportSchema>;
 export type AutoReport = typeof autoReports.$inferSelect;
 
 // ============================================================================
-// ONBOARDOS™ - EMPLOYEE ONBOARDING WORKFLOWS
+// EMPLOYEE ONBOARDING - EMPLOYEE ONBOARDING WORKFLOWS
 // ============================================================================
 
 // Onboarding workflow templates
@@ -8281,7 +8281,7 @@ export type InsertOnboardingTaskCompletion = z.infer<typeof insertOnboardingTask
 export type OnboardingTaskCompletion = typeof onboardingTaskCompletions.$inferSelect;
 
 // ============================================================================
-// OFFBOARDOS™ - EXIT INTERVIEWS & OFFBOARDING WORKFLOWS
+// OFFBOARDING SYSTEM - EXIT INTERVIEWS & OFFBOARDING WORKFLOWS
 // ============================================================================
 
 // Offboarding sessions
@@ -8367,7 +8367,7 @@ export type InsertExitInterviewResponse = z.infer<typeof insertExitInterviewResp
 export type ExitInterviewResponse = typeof exitInterviewResponses.$inferSelect;
 
 // ============================================================================
-// EXPENSEOS™ - EXPENSE TRACKING & REIMBURSEMENTS
+// EXPENSE MANAGEMENT - EXPENSE TRACKING & REIMBURSEMENTS
 // ============================================================================
 
 export const expenseStatusEnum = pgEnum('expense_status', [
@@ -8504,7 +8504,7 @@ export type InsertExpenseReceipt = z.infer<typeof insertExpenseReceiptSchema>;
 export type ExpenseReceipt = typeof expenseReceipts.$inferSelect;
 
 // ============================================================================
-// BUDGETOS™ - BUDGET PLANNING & FORECASTING
+// BUDGET PLANNING - BUDGET PLANNING & FORECASTING
 // ============================================================================
 
 export const budgets = pgTable("budgets", {
@@ -8618,7 +8618,7 @@ export type InsertBudgetVariance = z.infer<typeof insertBudgetVarianceSchema>;
 export type BudgetVariance = typeof budgetVariances.$inferSelect;
 
 // ============================================================================
-// TRAININGOS™ - LEARNING MANAGEMENT SYSTEM
+// TRAINING MANAGEMENT - LEARNING MANAGEMENT SYSTEM
 // ============================================================================
 
 // Training courses/programs
@@ -8757,7 +8757,7 @@ export type TrainingCertification = typeof trainingCertifications.$inferSelect;
 // ============================================================================
 // DISPUTES - CHALLENGE PERFORMANCE REVIEWS, EMPLOYER RATINGS, & RMS FORMS
 // ============================================================================
-// NOTE: Write-ups/disciplinary actions are handled through ReportOS™ (RMS) forms
+// NOTE: Write-ups/disciplinary actions are handled through Reports & Forms (RMS) forms
 // Employees can dispute those RMS forms using this disputes system
 
 export const disputes = pgTable("disputes", {
@@ -8892,7 +8892,7 @@ export type CreateDispute = z.infer<typeof createDisputeSchema>;
 export type Dispute = typeof disputes.$inferSelect;
 
 // ============================================================================
-// RECORDOS™ - NATURAL LANGUAGE SEARCH
+// RECORD MANAGEMENT - NATURAL LANGUAGE SEARCH
 // ============================================================================
 
 export const searchQueries = pgTable("search_queries", {
@@ -8927,7 +8927,7 @@ export type InsertSearchQuery = z.infer<typeof insertSearchQuerySchema>;
 export type SearchQuery = typeof searchQueries.$inferSelect;
 
 // ============================================================================
-// INSIGHTOS™ - AI ANALYTICS & AUTONOMOUS INSIGHTS
+// AI INSIGHTS - AI ANALYTICS & AUTONOMOUS INSIGHTS
 // ============================================================================
 
 export const aiInsights = pgTable("ai_insights", {
@@ -9134,7 +9134,7 @@ export type InsertEmployeePayrollInfo = z.infer<typeof insertEmployeePayrollInfo
 export type EmployeePayrollInfo = typeof employeePayrollInfo.$inferSelect;
 
 // ============================================================================
-// EMPLOYEE AVAILABILITY - SCHEDULEOS™ INTEGRATION
+// EMPLOYEE AVAILABILITY - AI SCHEDULING INTEGRATION
 // ============================================================================
 
 export const availabilityStatusEnum = pgEnum('availability_status', [
@@ -9465,7 +9465,7 @@ export type InsertOrganizationOnboarding = z.infer<typeof insertOrganizationOnbo
 export type OrganizationOnboarding = typeof organizationOnboarding.$inferSelect;
 
 // ============================================================================
-// COMMOS - ORGANIZATION CHAT ROOMS & CHANNELS
+// COMMUNICATIONS - ORGANIZATION CHAT ROOMS & CHANNELS
 // ============================================================================
 
 // Room status enum
@@ -10679,7 +10679,7 @@ export type InsertBillingAuditLog = z.infer<typeof insertBillingAuditLogSchema>;
 export type BillingAuditLog = typeof billingAuditLog.$inferSelect;
 
 // ============================================================================
-// DISPATCHOS™ - COMPUTER-AIDED DISPATCH SYSTEM
+// DISPATCH SYSTEM - COMPUTER-AIDED DISPATCH SYSTEM
 // ============================================================================
 
 // Dispatch incidents (CAD calls)
@@ -11542,17 +11542,17 @@ export const analyticsStatsSchema = z.object({
     avgConfidenceScore: z.number(),
     autoApprovalRate: z.number(),
     breakdown: z.object({
-      scheduleOS: z.object({
+      scheduling: z.object({
         shiftsGenerated: z.number(),
         hoursSaved: z.number(),
         successRate: z.number(),
       }),
-      billOS: z.object({
+      billing: z.object({
         invoicesGenerated: z.number(),
         hoursSaved: z.number(),
         successRate: z.number(),
       }),
-      payrollOS: z.object({
+      payroll: z.object({
         payrollsProcessed: z.number(),
         hoursSaved: z.number(),
         successRate: z.number(),
@@ -11568,7 +11568,7 @@ export const analyticsStatsSchema = z.object({
 export type AnalyticsStats = z.infer<typeof analyticsStatsSchema>;
 
 // ============================================================================
-// HELPOS™ AI SUPPORT SYSTEM
+// HELP DESK AI SUPPORT SYSTEM
 // ============================================================================
 
 // HelpAI AI chat sessions - Track AI-powered support conversations
