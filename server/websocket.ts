@@ -4473,13 +4473,10 @@ export function setupWebSocket(server: Server) {
     },
   };
 
-  // Export the broadcaster globally for other services to use
-  const broadcasterObj = {
+  return {
+    wss,
     broadcastNotification,
     broadcastShiftUpdate,
     broadcastPlatformUpdate,
   };
-  setGlobalBroadcaster(broadcasterObj);
-
-  return { wss, ...broadcasterObj };
 }
