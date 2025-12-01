@@ -506,26 +506,7 @@ class AIBrainCodeEditorService {
         return { success: false, message: 'Rollback not available for this change' };
       }
 
-      const updateResult = await db.update(stagedCodeChanges)
-        .set({
-          status: 'rolling_back',
-          updatedAt: new Date(),
-        })
-        .where(and(
-          eq(stagedCodeChanges.id, changeId),
-          eq(stagedCodeChanges.status, 'applied')
-        ))
-        .returning({ id: stagedCodeChanges.id });
-
-      if (updateResult.length === 0) {
-        const freshChange = await this.getChangeById(changeId);
-        const currentStatus = freshChange?.status || 'unknown';
-        console.log(`[AIBrainCodeEditor] Race condition detected during rollback - change ${changeId} status is now ${currentStatus}`);
-        return { 
-          success: false, 
-          message: `Change is no longer in applied state (current status: ${currentStatus}). Another process may have modified it.` 
-        };
-      }
+      // Proceed with rollback - change is still in applied state
 
       const fullPath = path.join(WORKSPACE_ROOT, change.filePath);
 

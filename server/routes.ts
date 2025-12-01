@@ -30215,5 +30215,84 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     }
   });
 
+  // ============================================================================
+  // SUGGESTED CHANGES REGISTRY - AI Brain Template Library
+  // ============================================================================
+
+  /**
+   * GET /api/suggested-changes
+   * List all available suggested changes for AI Brain
+   */
+  app.get("/api/suggested-changes", async (req, res) => {
+    try {
+      const { suggestedChangesService } = await import("./services/ai-brain/suggestedChangesService");
+      const { category, tag, search } = req.query;
+      let results;
+      if (search) {
+        results = suggestedChangesService.searchSuggestions(search as string, {
+          category: category as string,
+          tag: tag as string,
+        });
+      } else {
+        results = suggestedChangesService.listSuggestions({
+          category: category as string,
+          tag: tag as string,
+        });
+      }
+      res.json({ success: true, data: results, total: results.length });
+    } catch (error: any) {
+      console.error("Error fetching suggested changes:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * GET /api/suggested-changes/:id
+   * Get a specific suggested change
+   */
+  app.get("/api/suggested-changes/:id", async (req, res) => {
+    try {
+      const { suggestedChangesService } = await import("./services/ai-brain/suggestedChangesService");
+      const suggestion = suggestedChangesService.getSuggestion(req.params.id);
+      if (!suggestion) {
+        return res.status(404).json({ success: false, error: "Suggested change not found" });
+      }
+      res.json({ success: true, data: suggestion });
+    } catch (error: any) {
+      console.error("Error fetching suggested change:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/suggested-changes/:id/stage
+   * Stage a suggested change for approval
+   */
+  app.post("/api/suggested-changes/:id/stage", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { suggestedChangesService } = await import("./services/ai-brain/suggestedChangesService");
+      const { includeRelated } = req.body;
+      const result = await suggestedChangesService.stageSuggestedChange(
+        req.params.id,
+        req.userId!,
+        includeRelated
+      );
+      res.json({ success: result.success, data: result });
+    } catch (error: any) {
+      console.error("Error staging suggested change:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   return server;
 }
+
+// ============================================================================
+// SUGGESTED CHANGES REGISTRY - AI Brain Template Library
+// ============================================================================
+
+/**
+ * GET /api/suggested-changes
+ * List all available suggested changes for AI Brain
+ * Query params: category, tag, priority, search
+ */
