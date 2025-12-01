@@ -63,15 +63,17 @@ class PlatformChangeMonitorService {
     changesDetected: number;
     notificationsSent: number;
   }> {
+    console.log(`🧠 [AI BRAIN] Platform scan initiated: ${scanType}`);
+    
     if (this.isScanning) {
-      console.log('[PlatformChangeMonitor] Scan already in progress, skipping');
+      console.log('🧠 [AI BRAIN] Scan already in progress, skipping');
       return { scanId: '', changesDetected: 0, notificationsSent: 0 };
     }
 
     this.isScanning = true;
     const startTime = Date.now();
     
-    console.log(`[PlatformChangeMonitor] Starting ${scanType} platform scan...`);
+    console.log(`🧠 [AI BRAIN] Starting ${scanType} platform scan...`);
 
     try {
       const [scanRecord] = await db.insert(platformScanSnapshots).values({
@@ -85,10 +87,12 @@ class PlatformChangeMonitorService {
       const previousSnapshot = await this.getLastCompletedSnapshot();
       
       const changes = this.detectChanges(previousSnapshot, currentSnapshot);
+      console.log(`🧠 [AI BRAIN] Detected ${changes.length} changes`);
       
       let notificationsSent = 0;
       
       if (changes.length > 0) {
+        console.log(`🧠 [AI BRAIN] Processing ${changes.length} detected changes...`);
         for (const change of changes) {
           const aiSummary = await this.generateAISummary(change);
           
@@ -107,7 +111,9 @@ class PlatformChangeMonitorService {
             metadata: { rawDiff: change.rawDiff.substring(0, 5000) },
           }).returning();
 
+          console.log(`🧠 [AI BRAIN] Notifying users about: ${aiSummary.title}`);
           const sentCount = await this.notifyAllUsers(changeEvent.id, aiSummary);
+          console.log(`🧠 [AI BRAIN] Notified ${sentCount} users`);
           notificationsSent += sentCount;
           
           await db.update(platformChangeEvents)
@@ -138,7 +144,7 @@ class PlatformChangeMonitorService {
 
       this.lastSnapshot = currentSnapshot;
 
-      console.log(`[PlatformChangeMonitor] Scan completed: ${changes.length} changes detected, ${notificationsSent} notifications sent (${durationMs}ms)`);
+      console.log(`🧠 [AI BRAIN] ✅ Scan completed: ${changes.length} changes, ${notificationsSent} notifications (${durationMs}ms)`);
 
       return {
         scanId: scanRecord.id,
@@ -146,8 +152,10 @@ class PlatformChangeMonitorService {
         notificationsSent,
       };
     } catch (error) {
-      console.error('[PlatformChangeMonitor] Scan failed:', error);
-      throw error;
+      console.error(`🧠 [AI BRAIN] ❌ Scan failed:`, error);
+      this.isScanning = false;
+      // Return error result instead of throwing
+      return { scanId: '', changesDetected: 0, notificationsSent: 0 };
     } finally {
       this.isScanning = false;
     }

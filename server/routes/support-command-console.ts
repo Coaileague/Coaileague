@@ -736,7 +736,6 @@ supportCommandRouter.post('/platform/scan-now', requireSupportRole, async (req: 
       action: 'completed',
       changesDetected: result.changesDetected,
       notificationsSent: result.notificationsSent,
-      platformStatus: result.platformStatus,
     });
 
     res.json({
