@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { apiGet, apiPost, apiPatch } from "@/lib/apiClient";
@@ -21,7 +21,14 @@ import {
   Sparkles, DollarSign, FileText, AlertTriangle, PartyPopper, 
   UserPlus, BrainCircuit, CheckCircle 
 } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
+
+interface NotificationCreator {
+  id: string;
+  firstName?: string;
+  lastName?: string;
+  email: string;
+}
 
 interface Notification {
   id: string;
@@ -33,6 +40,8 @@ interface Notification {
   isRead: boolean;
   createdAt: Date;
   actionUrl?: string;
+  createdBy?: NotificationCreator;
+  scope?: 'workspace' | 'user' | 'global';
 }
 
 export function NotificationsCenter() {
@@ -226,12 +235,29 @@ function NotificationItem({
   onMarkAsRead,
   getNotificationIcon,
 }: NotificationItemProps) {
+  const [now, setNow] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
+
   const handleClick = () => {
     onMarkAsRead();
     if (notification.actionUrl) {
       window.location.href = notification.actionUrl;
     }
   };
+
+  const getTypeLabel = (type: string) => {
+    if (type === 'system') return 'System';
+    if (['alert', 'maintenance_alert', 'support_escalation', 'deadline_approaching'].includes(type)) return 'Alert';
+    return 'Announcement';
+  };
+
+  const creatorName = notification.createdBy 
+    ? `${notification.createdBy.firstName || ''} ${notification.createdBy.lastName || ''}`.trim() || notification.createdBy.email
+    : 'System';
 
   const content = (
     <div
@@ -247,9 +273,11 @@ function NotificationItem({
         </div>
         <div className="flex-1 space-y-1">
           <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-medium leading-tight">
-              {notification.title}
-            </p>
+            <div className="flex-1">
+              <p className="text-sm font-medium leading-tight">
+                {notification.title}
+              </p>
+            </div>
             {!notification.isRead && (
               <div className="h-2 w-2 rounded-full bg-blue-500 shrink-0 mt-1" />
             )}
@@ -257,11 +285,22 @@ function NotificationItem({
           <p className="text-xs text-muted-foreground line-clamp-2">
             {notification.message}
           </p>
-          <p className="text-xs text-muted-foreground">
-            {formatDistanceToNow(new Date(notification.createdAt), {
-              addSuffix: true,
-            })}
-          </p>
+          <div className="flex items-center justify-between gap-2 text-xs">
+            <div className="flex gap-2 items-center">
+              <Badge variant="secondary" className="text-[10px]">
+                {getTypeLabel(notification.type)}
+              </Badge>
+              <span className="text-muted-foreground">by {creatorName}</span>
+            </div>
+            <div className="flex flex-col items-end gap-0.5 text-muted-foreground">
+              <span>{format(new Date(notification.createdAt), 'MMM dd, yyyy HH:mm')}</span>
+              <span className="text-[10px]">
+                {formatDistanceToNow(new Date(notification.createdAt), {
+                  addSuffix: true,
+                })}
+              </span>
+            </div>
+          </div>
         </div>
       </div>
     </div>
