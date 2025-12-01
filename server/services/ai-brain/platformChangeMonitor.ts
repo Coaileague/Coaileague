@@ -419,7 +419,7 @@ Keep the tone positive and professional. Focus on user benefits.`;
         description: summary.summary,
         category: 'announcement',
         visibility: 'all',
-        priority: 'high',
+        priority: 1, // 1=high, 2=normal, 3=low
         metadata: {
           source: 'ai_brain_platform_monitor',
           changeEventId,

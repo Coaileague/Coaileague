@@ -15333,8 +15333,8 @@ export const platformChangeEvents = pgTable("platform_change_events", {
   technicalDetails: text("technical_details"), // Technical description for support staff
   
   // Affected areas
-  affectedModules: text("affected_modules").array(), // ['scheduling', 'payroll', 'chat']
-  affectedFiles: text("affected_files").array(), // File paths that changed
+  affectedModules: jsonb("affected_modules"), // ['scheduling', 'payroll', 'chat']
+  affectedFiles: jsonb("affected_files"), // File paths that changed
   
   // Status indicators
   platformStatus: varchar("platform_status", { length: 50 }).notNull().default('operational'), // 'operational', 'degraded', 'investigating', 'resolved'

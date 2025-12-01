@@ -187,6 +187,12 @@ process.on('SIGTERM', () => {
     log(`serving on port ${port}`);
     
     // Start autonomous scheduler for automated jobs
-    startAutonomousScheduler();
+    try {
+      console.log('[Server] Initializing autonomous scheduler...');
+      startAutonomousScheduler();
+      console.log('[Server] Autonomous scheduler started successfully');
+    } catch (error) {
+      console.error('[Server] CRITICAL: Failed to start autonomous scheduler:', error);
+    }
   });
 })();
