@@ -102,8 +102,10 @@ export function NotificationsPopover() {
 
   const { data, isLoading, refetch } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications/combined"],
-    enabled: open,
-    staleTime: 0,
+    enabled: true,
+    staleTime: 2000,
+    refetchInterval: 3000,
+    refetchIntervalInBackground: true,
   });
 
   const markAsReadMutation = useMutation({
