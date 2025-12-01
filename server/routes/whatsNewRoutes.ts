@@ -165,17 +165,21 @@ whatsNewRouter.post('/mark-all-viewed', async (req, res) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id;
-    if (!userId) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
     const updateIds = req.body.updateIds || [];
     const viewSource = req.body.source || 'badge-clear-all';
     
     let marked = 0;
-    for (const updateId of updateIds) {
-      const success = await markUpdateViewed(userId, updateId, viewSource);
-      if (success) marked++;
+    
+    // If authenticated, mark in database
+    if (userId) {
+      for (const updateId of updateIds) {
+        const success = await markUpdateViewed(userId, updateId, viewSource);
+        if (success) marked++;
+      }
+    } else {
+      // For unauthenticated users, just return success
+      // Frontend will handle persistence via localStorage
+      marked = updateIds.length;
     }
 
     res.json({

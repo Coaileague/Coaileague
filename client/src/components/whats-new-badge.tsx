@@ -53,34 +53,64 @@ export function WhatsNewBadge() {
   });
 
   const updates = updatesData?.updates || [];
+  
+  // Filter out locally acknowledged items
+  const acknowledgedIds = new Set(JSON.parse(localStorage.getItem('whats-new-acknowledged') || '[]'));
+  const filteredUpdates = updates.filter(u => !acknowledgedIds.has(u.id));
+  
   const apiUnviewedCount = unviewedData?.count || 0;
-  const localUnviewedCount = updates.filter(u => !u.hasViewed).length;
+  const localUnviewedCount = filteredUpdates.filter(u => !u.hasViewed).length;
   const unviewedCount = Math.max(apiUnviewedCount, localUnviewedCount);
   const hasNewUpdates = unviewedCount > 0;
 
   const acknowledgeSelectedMutation = useMutation({
     mutationFn: async () => {
       const idsToAcknowledge = Array.from(selectedIds);
-      if (idsToAcknowledge.length === 0) return;
+      if (idsToAcknowledge.length === 0) return { markedCount: 0 };
       
       console.log('[WhatsNew] Acknowledging IDs:', idsToAcknowledge);
-      const response = await apiRequest('POST', '/api/whats-new/mark-all-viewed', { 
-        updateIds: idsToAcknowledge, 
-        source: 'badge-selection' 
-      });
-      const data = await response.json();
-      console.log('[WhatsNew] Response:', data);
-      return data;
+      try {
+        const response = await apiRequest('POST', '/api/whats-new/mark-all-viewed', { 
+          updateIds: idsToAcknowledge, 
+          source: 'badge-selection' 
+        });
+        const data = await response.json();
+        console.log('[WhatsNew] Response:', data);
+        // Store locally for anonymous users
+        const acknowledged = JSON.parse(localStorage.getItem('whats-new-acknowledged') || '[]');
+        idsToAcknowledge.forEach(id => {
+          if (!acknowledged.includes(id)) acknowledged.push(id);
+        });
+        localStorage.setItem('whats-new-acknowledged', JSON.stringify(acknowledged));
+        return data;
+      } catch (error) {
+        console.error('[WhatsNew] API error:', error);
+        // Even if API fails, mark as acknowledged locally
+        const acknowledged = JSON.parse(localStorage.getItem('whats-new-acknowledged') || '[]');
+        idsToAcknowledge.forEach(id => {
+          if (!acknowledged.includes(id)) acknowledged.push(id);
+        });
+        localStorage.setItem('whats-new-acknowledged', JSON.stringify(acknowledged));
+        throw error;
+      }
     },
     onSuccess: (data) => {
       console.log('[WhatsNew] Success! Marked:', data);
       setSelectedIds(new Set());
       // Force refresh immediately
-      refetchUpdates();
-      refetchUnviewed();
+      setTimeout(() => {
+        refetchUpdates();
+        refetchUnviewed();
+      }, 100);
     },
     onError: (error) => {
       console.error('[WhatsNew] Error acknowledging updates:', error);
+      // Still clear selection and refresh even on error (localStorage should have saved)
+      setSelectedIds(new Set());
+      setTimeout(() => {
+        refetchUpdates();
+        refetchUnviewed();
+      }, 100);
     }
   });
 
@@ -138,7 +168,7 @@ export function WhatsNewBadge() {
     { top: "0px", left: "-6px", delay: "0.9s" },
   ];
 
-  const unviewedUpdates = updates.filter(u => !u.hasViewed);
+  const unviewedUpdates = filteredUpdates.filter(u => !u.hasViewed);
   const allUnviewedSelected = unviewedUpdates.length > 0 && selectedIds.size === unviewedUpdates.length;
 
   return (
@@ -224,7 +254,7 @@ export function WhatsNewBadge() {
         )}
 
         <ScrollArea className="h-[40vh] sm:h-[400px]">
-          {updates.length === 0 ? (
+          {filteredUpdates.length === 0 ? (
             <div className="p-8 text-center">
               <Sparkles className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
@@ -233,7 +263,7 @@ export function WhatsNewBadge() {
             </div>
           ) : (
             <div className="divide-y">
-              {updates.map((update) => (
+              {filteredUpdates.map((update) => (
                 <div 
                   key={update.id} 
                   className={`p-4 space-y-2 relative group ${!update.hasViewed ? 'bg-primary/5' : 'opacity-60'}`}
