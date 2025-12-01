@@ -3,21 +3,11 @@
  * =============================
  * Unified authorization layer ensuring only properly authenticated support staff
  * can command the AI Brain to perform platform actions.
- * 
- * This validates:
- * - User authentication (must be logged in)
- * - User role/permission level
- * - Action-specific requirements
- * - Audit logging of all command execution
  */
 
 import { db } from '../../db';
 import { systemAuditLogs, users } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-
-// ============================================================================
-// ROLE HIERARCHY & PERMISSIONS
-// ============================================================================
 
 export const ROLE_HIERARCHY: Record<string, number> = {
   'none': 0,
@@ -33,7 +23,7 @@ export const ROLE_HIERARCHY: Record<string, number> = {
 
 export const SUPPORT_ROLES = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
 
-export const AI_BRAIN_AUTHORITY_ROLES = {
+export const AI_BRAIN_AUTHORITY_ROLES: Record<string, string[]> = {
   'scheduling': ['manager', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
   'payroll': ['sysop', 'deputy_admin', 'root_admin'],
   'invoicing': ['manager', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
@@ -47,10 +37,6 @@ export const AI_BRAIN_AUTHORITY_ROLES = {
   'user_assistance': ['employee', 'manager', 'support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
   'system': ['sysop', 'deputy_admin', 'root_admin'],
 };
-
-// ============================================================================
-// AUTHORIZATION REQUEST
-// ============================================================================
 
 export interface AuthorizationContext {
   userId: string;
@@ -68,10 +54,6 @@ export interface ActionAuthCheck {
   reason?: string;
 }
 
-// ============================================================================
-// AUTHORIZATION SERVICE
-// ============================================================================
-
 class AIBrainAuthorizationService {
   private static instance: AIBrainAuthorizationService;
 
@@ -82,23 +64,16 @@ class AIBrainAuthorizationService {
     return this.instance;
   }
 
-  /**
-   * Check if user can execute an action
-   */
   async canExecuteAction(context: AuthorizationContext, category: string, actionId: string): Promise<ActionAuthCheck> {
-    const userLevel = ROLE_HIERARCHY[context.userRole] || 0;
-    const requiredRoles = AI_BRAIN_AUTHORITY_ROLES[category as keyof typeof AI_BRAIN_AUTHORITY_ROLES] || [];
-    
+    const requiredRoles = AI_BRAIN_AUTHORITY_ROLES[category] || [];
     const isAuthorized = requiredRoles.includes(context.userRole);
     
-    // Log the authorization check
     await this.logAuthorizationCheck({
       userId: context.userId,
       userRole: context.userRole,
       actionId,
       category,
       isAuthorized,
-      userLevel,
       requiredRoles
     });
     
@@ -114,18 +89,12 @@ class AIBrainAuthorizationService {
     };
   }
 
-  /**
-   * Validate support staff authentication
-   */
   async validateSupportStaff(userId: string): Promise<{ valid: boolean; role?: string; reason?: string }> {
     try {
       const user = await db.select().from(users).where(eq(users.id, userId)).limit(1);
       
       if (!user || user.length === 0) {
-        return {
-          valid: false,
-          reason: 'User not found'
-        };
+        return { valid: false, reason: 'User not found' };
       }
 
       const userRecord = user[0];
@@ -139,35 +108,21 @@ class AIBrainAuthorizationService {
         };
       }
 
-      return {
-        valid: true,
-        role
-      };
+      return { valid: true, role };
     } catch (error) {
-      return {
-        valid: false,
-        reason: `Validation error: ${(error as any).message}`
-      };
+      return { valid: false, reason: `Validation error: ${(error as any).message}` };
     }
   }
 
-  /**
-   * Check if action requires support role
-   */
   requiresSupportRole(category: string): boolean {
-    const requiredRoles = AI_BRAIN_AUTHORITY_ROLES[category as keyof typeof AI_BRAIN_AUTHORITY_ROLES] || [];
-    // Check if at least some support roles are required
+    const requiredRoles = AI_BRAIN_AUTHORITY_ROLES[category] || [];
     return SUPPORT_ROLES.some(role => requiredRoles.includes(role));
   }
 
-  /**
-   * Get minimum required role for action
-   */
   getMinimumRequiredRole(category: string): string {
-    const requiredRoles = AI_BRAIN_AUTHORITY_ROLES[category as keyof typeof AI_BRAIN_AUTHORITY_ROLES] || [];
+    const requiredRoles = AI_BRAIN_AUTHORITY_ROLES[category] || [];
     if (requiredRoles.length === 0) return 'employee';
     
-    // Find the role with highest in hierarchy
     return requiredRoles.reduce((minRole, currentRole) => {
       const currentLevel = ROLE_HIERARCHY[currentRole] || 0;
       const minLevel = ROLE_HIERARCHY[minRole] || 0;
@@ -175,60 +130,42 @@ class AIBrainAuthorizationService {
     });
   }
 
-  /**
-   * Get all categories accessible by role
-   */
   getAccessibleCategories(userRole: string): string[] {
     const categories: string[] = [];
-    
     for (const [category, requiredRoles] of Object.entries(AI_BRAIN_AUTHORITY_ROLES)) {
       if (requiredRoles.includes(userRole)) {
         categories.push(category);
       }
     }
-    
     return categories;
   }
 
-  /**
-   * Log authorization check (for audit trail)
-   */
   private async logAuthorizationCheck(data: {
     userId: string;
     userRole: string;
     actionId: string;
     category: string;
     isAuthorized: boolean;
-    userLevel: number;
     requiredRoles: string[];
   }): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
-        id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         userId: data.userId,
-        action: 'ai_brain_command_authorization_check',
-        resourceType: 'ai_brain_orchestrator',
-        resourceId: data.actionId,
+        action: 'ai_brain_authorization_check',
+        entityType: 'ai_brain_orchestrator',
+        entityId: data.actionId,
         changes: {
-          action: data.actionId,
           category: data.category,
           authorized: data.isAuthorized,
           userRole: data.userRole,
-          requiredRoles: data.requiredRoles,
-          userLevel: data.userLevel
-        },
-        timestamp: new Date(),
-        ipAddress: 'internal',
-        severity: data.isAuthorized ? 'info' : 'warning'
+          requiredRoles: data.requiredRoles
+        }
       });
     } catch (error) {
-      console.warn('[AIBrainAuthorizationService] Failed to log authorization check:', error);
+      console.warn('[AIBrainAuthorizationService] Failed to log auth check:', error);
     }
   }
 
-  /**
-   * Log command execution (for audit trail)
-   */
   async logCommandExecution(data: {
     userId: string;
     userRole: string;
@@ -240,47 +177,33 @@ class AIBrainAuthorizationService {
   }): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
-        id: `audit-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
         userId: data.userId,
         action: 'ai_brain_command_execution',
-        resourceType: 'ai_brain_orchestrator',
-        resourceId: data.actionId,
+        entityType: 'ai_brain_orchestrator',
+        entityId: data.actionId,
         changes: {
-          action: data.actionId,
           category: data.category,
           parameters: data.parameters,
           result: data.result ? 'success' : 'failed',
           error: data.error
-        },
-        timestamp: new Date(),
-        ipAddress: 'internal',
-        severity: data.error ? 'error' : 'info'
+        }
       });
     } catch (error) {
-      console.warn('[AIBrainAuthorizationService] Failed to log command execution:', error);
+      console.warn('[AIBrainAuthorizationService] Failed to log execution:', error);
     }
   }
 
-  /**
-   * Get permission summary for a role
-   */
   getPermissionSummary(userRole: string): {
     role: string;
     level: number;
     accessible_categories: string[];
     is_support_staff: boolean;
-    max_action_level: string;
   } {
-    const categories = this.getAccessibleCategories(userRole);
-    const level = ROLE_HIERARCHY[userRole] || 0;
-    const isSupport = SUPPORT_ROLES.includes(userRole);
-    
     return {
       role: userRole,
-      level,
-      accessible_categories: categories,
-      is_support_staff: isSupport,
-      max_action_level: isSupport ? 'high' : 'basic'
+      level: ROLE_HIERARCHY[userRole] || 0,
+      accessible_categories: this.getAccessibleCategories(userRole),
+      is_support_staff: SUPPORT_ROLES.includes(userRole)
     };
   }
 }

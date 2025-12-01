@@ -30355,6 +30355,99 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
   });
 
   return server;
+
+  // ============================================================================
+  // AI BRAIN ORCHESTRATOR - Command Execution for Authorized Support Staff
+  // ============================================================================
+
+  app.post("/api/ai-brain/command/execute", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { aiBrainMasterOrchestrator } = await import("./services/ai-brain/aiBrainMasterOrchestrator");
+      const { aiBrainAuthorizationService } = await import("./services/ai-brain/aiBrainAuthorizationService");
+      const { actionId, category, parameters } = req.body;
+
+      if (!actionId || !category) {
+        return res.status(400).json({ error: 'actionId and category required' });
+      }
+
+      const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.userId!);
+      if (!authCheck.valid) {
+        return res.status(403).json({ error: authCheck.reason });
+      }
+
+      const actionAuthCheck = await aiBrainAuthorizationService.canExecuteAction(
+        { userId: req.userId!, userRole: authCheck.role! },
+        category,
+        actionId
+      );
+
+      if (!actionAuthCheck.isAuthorized) {
+        return res.status(403).json({ error: actionAuthCheck.reason });
+      }
+
+      const { helpaiOrchestrator } = await import("./services/helpai/helpaiActionOrchestrator");
+      const result = await helpaiOrchestrator.executeAction({
+        actionId: `${category}.${actionId}`,
+        category: category as any,
+        name: actionId,
+        payload: parameters || {},
+        userId: req.userId,
+        userRole: authCheck.role!,
+        priority: parameters?.priority || 'normal'
+      });
+
+      await aiBrainAuthorizationService.logCommandExecution({
+        userId: req.userId!,
+        userRole: authCheck.role!,
+        actionId: `${category}.${actionId}`,
+        category,
+        parameters,
+        result: result.success
+      });
+
+      res.json({ success: result.success, message: result.message, data: result, executedBy: req.userId, authorizedRole: authCheck.role });
+    } catch (error: any) {
+      console.error('[AI Brain Command]', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/ai-brain/workflow/execute-chain", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { aiBrainMasterOrchestrator } = await import("./services/ai-brain/aiBrainMasterOrchestrator");
+      const { aiBrainAuthorizationService } = await import("./services/ai-brain/aiBrainAuthorizationService");
+      const { name, steps } = req.body;
+
+      if (!name || !Array.isArray(steps)) {
+        return res.status(400).json({ error: 'name and steps required' });
+      }
+
+      const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.userId!);
+      if (!authCheck.valid) {
+        return res.status(403).json({ error: authCheck.reason });
+      }
+
+      const workflow = await aiBrainMasterOrchestrator.executeWorkflowChain(name, steps, req.userId!, authCheck.role!);
+      res.json({ success: workflow.status === 'completed', workflow, executedBy: req.userId, authorizedRole: authCheck.role });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get("/api/ai-brain/permissions/summary", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { aiBrainAuthorizationService } = await import("./services/ai-brain/aiBrainAuthorizationService");
+      const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.userId!);
+      if (!authCheck.valid) {
+        return res.json({ error: authCheck.reason, isSupported: false });
+      }
+      const summary = aiBrainAuthorizationService.getPermissionSummary(authCheck.role!);
+      res.json({ success: true, ...summary });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
 }
 
 // ============================================================================
