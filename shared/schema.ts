@@ -15248,3 +15248,129 @@ export const batchCodeChangeLinks = pgTable("batch_code_change_links", {
 ]);
 
 export type BatchCodeChangeLink = typeof batchCodeChangeLinks.$inferSelect;
+
+// ============================================================================
+// AI BRAIN PLATFORM CHANGE MONITOR
+// Autonomous detection and notification of platform updates
+// ============================================================================
+
+// Platform scan status enum
+export const platformScanStatusEnum = pgEnum("platform_scan_status", [
+  'running',
+  'completed', 
+  'failed'
+]);
+
+// Change severity enum
+export const changeSeverityEnum = pgEnum("change_severity", [
+  'critical',   // Breaking changes, security fixes
+  'major',      // New features, significant improvements
+  'minor',      // Bug fixes, small enhancements
+  'patch',      // Hotfixes, typo corrections
+  'info'        // Informational updates
+]);
+
+// Platform scan snapshots - stores point-in-time platform state
+export const platformScanSnapshots = pgTable("platform_scan_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Scan metadata
+  scanType: varchar("scan_type", { length: 50 }).notNull(), // 'full', 'quick', 'health', 'scheduled'
+  status: platformScanStatusEnum("status").notNull().default('running'),
+  
+  // Platform state fingerprint
+  codebaseHash: varchar("codebase_hash", { length: 64 }), // SHA-256 of key files
+  schemaVersion: varchar("schema_version", { length: 50 }),
+  serviceCount: integer("service_count"),
+  routeCount: integer("route_count"),
+  
+  // Health snapshot
+  healthStatus: jsonb("health_status"), // Snapshot of all service health
+  
+  // Scan results
+  changesDetected: integer("changes_detected").default(0),
+  errorCount: integer("error_count").default(0),
+  
+  // Timing
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+  
+  // Raw data for comparison
+  snapshotData: jsonb("snapshot_data"), // Full snapshot for diff comparison
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("platform_scan_snapshots_status_idx").on(table.status),
+  index("platform_scan_snapshots_type_idx").on(table.scanType),
+  index("platform_scan_snapshots_created_idx").on(table.createdAt),
+]);
+
+export const insertPlatformScanSnapshotSchema = createInsertSchema(platformScanSnapshots).omit({
+  id: true,
+  completedAt: true,
+  durationMs: true,
+  createdAt: true,
+});
+
+export type InsertPlatformScanSnapshot = z.infer<typeof insertPlatformScanSnapshotSchema>;
+export type PlatformScanSnapshot = typeof platformScanSnapshots.$inferSelect;
+
+// Platform change events - AI-summarized changes with notifications
+export const platformChangeEvents = pgTable("platform_change_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Link to scan that detected this
+  scanId: varchar("scan_id").references(() => platformScanSnapshots.id),
+  
+  // Change details
+  changeType: varchar("change_type", { length: 100 }).notNull(), // 'feature_added', 'bug_fixed', 'hotpatch', 'enhancement', 'security_fix'
+  severity: changeSeverityEnum("severity").notNull().default('info'),
+  
+  // AI-generated content (Gemini summaries)
+  title: varchar("title", { length: 255 }).notNull(),
+  summary: text("summary").notNull(), // AI-generated user-friendly summary
+  technicalDetails: text("technical_details"), // Technical description for support staff
+  
+  // Affected areas
+  affectedModules: text("affected_modules").array(), // ['scheduling', 'payroll', 'chat']
+  affectedFiles: text("affected_files").array(), // File paths that changed
+  
+  // Status indicators
+  platformStatus: varchar("platform_status", { length: 50 }).notNull().default('operational'), // 'operational', 'degraded', 'investigating', 'resolved'
+  requiresAction: boolean("requires_action").default(false), // If users need to do something
+  actionRequired: text("action_required"), // What users need to do
+  
+  // Notification tracking
+  notifiedAllUsers: boolean("notified_all_users").default(false),
+  notificationSentAt: timestamp("notification_sent_at"),
+  notificationCount: integer("notification_count").default(0), // How many users were notified
+  
+  // What's New integration
+  whatsNewId: varchar("whats_new_id").references(() => platformUpdates.id),
+  
+  // Metadata
+  metadata: jsonb("metadata"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("platform_change_events_scan_idx").on(table.scanId),
+  index("platform_change_events_type_idx").on(table.changeType),
+  index("platform_change_events_severity_idx").on(table.severity),
+  index("platform_change_events_status_idx").on(table.platformStatus),
+  index("platform_change_events_notified_idx").on(table.notifiedAllUsers),
+  index("platform_change_events_created_idx").on(table.createdAt),
+]);
+
+export const insertPlatformChangeEventSchema = createInsertSchema(platformChangeEvents).omit({
+  id: true,
+  notificationSentAt: true,
+  notificationCount: true,
+  whatsNewId: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPlatformChangeEvent = z.infer<typeof insertPlatformChangeEventSchema>;
+export type PlatformChangeEvent = typeof platformChangeEvents.$inferSelect;
