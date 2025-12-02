@@ -717,7 +717,7 @@ router.get('/emote-cycles', async (_req, res) => {
       starBehaviors: {
         cyan: { label: 'Co', baseGlow: '#38bdf8', role: 'leader' },
         purple: { label: 'AI', baseGlow: '#a855f7', role: 'processor' },
-        gold: { label: 'L', baseGlow: '#f4c15d', role: 'wisdom' }
+        gold: { label: 'LE', baseGlow: '#f4c15d', role: 'wisdom' }
       }
     };
   }, {});
