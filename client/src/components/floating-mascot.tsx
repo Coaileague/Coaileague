@@ -34,7 +34,7 @@ import {
   type EmotePhase 
 } from '@/config/mascotConfig';
 import { TrinityPhysics, MotionPattern, MOTION_PATTERNS } from '@/lib/mascot/TrinityPhysics';
-import { StatusEmoteEffects, STATUS_COLORS } from '@/lib/mascot/StatusEmoteEffects';
+import { StatusEmoteEffects } from '@/lib/mascot/StatusEmoteEffects';
 import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
 import { useQuery } from '@tanstack/react-query';
 
