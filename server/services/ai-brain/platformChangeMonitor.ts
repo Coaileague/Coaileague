@@ -44,6 +44,9 @@ class PlatformChangeMonitorService {
     'shared/schema.ts',
     'server/routes.ts',
     'client/src/App.tsx',
+    'client/src/components/gemini-agent-mascot.tsx',
+    'client/src/hooks/use-mascot-position.ts',
+    'client/src/hooks/use-mascot-mode.ts',
     'package.json',
     'replit.md'
   ];
@@ -57,6 +60,7 @@ class PlatformChangeMonitorService {
     authentication: [/auth|login|session|user/i],
     analytics: [/analytics|report|metric|dashboard/i],
     ai_brain: [/ai-brain|gemini|orchestrator|automation/i],
+    ui_components: [/mascot|gemini-agent|interactive-ui|component/i],
   };
 
   async scanPlatform(scanType: 'full' | 'quick' | 'health' | 'scheduled' = 'scheduled'): Promise<{
