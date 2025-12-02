@@ -186,9 +186,15 @@ function checkCollisionWithUI(
   return false;
 }
 
+interface CustomDimensions {
+  width?: number;
+  height?: number;
+}
+
 export function useSmartBubblePlacement(
   mascotContainerRef: React.RefObject<HTMLDivElement | null>,
-  isThoughtVisible: boolean
+  isThoughtVisible: boolean,
+  customDimensions?: CustomDimensions
 ): BubblePlacement {
   const [placement, setPlacement] = useState<BubblePlacement>({
     direction: 'top',
@@ -210,7 +216,9 @@ export function useSmartBubblePlacement(
     
     const mascotContainer = mascotContainerRef.current;
     const mascotRect = mascotContainer.getBoundingClientRect();
-    const { width: bubbleWidth, height: bubbleHeight, padding } = BUBBLE_DIMENSIONS;
+    const bubbleWidth = customDimensions?.width ?? BUBBLE_DIMENSIONS.width;
+    const bubbleHeight = customDimensions?.height ?? BUBBLE_DIMENSIONS.height;
+    const padding = BUBBLE_DIMENSIONS.padding;
     
     for (const direction of DIRECTION_ORDER) {
       const bubbleRect = getBubbleRect(direction, mascotRect, bubbleWidth, bubbleHeight);
@@ -241,7 +249,7 @@ export function useSmartBubblePlacement(
       shouldAutoDismiss: collisionCountRef.current > 2,
       position: getPositionStyles('top'),
     });
-  }, [mascotContainerRef, isThoughtVisible]);
+  }, [mascotContainerRef, isThoughtVisible, customDimensions?.width, customDimensions?.height]);
   
   useEffect(() => {
     if (!isThoughtVisible) {
