@@ -409,7 +409,7 @@ export const SantaSleigh = memo(function SantaSleigh({
       viewBox="0 0 120 60"
       className={className}
       style={{
-        transform: direction === 'rtl' ? 'scaleX(-1)' : undefined,
+        transform: direction === 'ltr' ? 'scaleX(-1)' : undefined,
         filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
       }}
     >
