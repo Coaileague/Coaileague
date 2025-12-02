@@ -8,6 +8,9 @@
  * - Smooth roaming with physics-based movement
  * - Rich emote expressions
  * - Thought bubbles with AI insights
+ * - DPR-aware crisp rendering on mobile
+ * - Adaptive quality tiers for performance
+ * - Touch haptic feedback
  */
 
 import { useEffect, useRef, useCallback, useState, memo, useMemo } from 'react';
@@ -16,10 +19,39 @@ import { uiAvoidanceSystem, type MascotPosition } from '@/lib/mascot/UIAvoidance
 import { userActionTracker, type ActionEvent } from '@/lib/mascot/UserActionTracker';
 import { emotesManager, type Emote, EMOTE_ANIMATIONS } from '@/lib/mascot/EmotesLibrary';
 import { thoughtManager } from '@/lib/mascot/ThoughtManager';
-import { MASCOT_CONFIG, getDeviceSizes } from '@/config/mascotConfig';
+import { 
+  MASCOT_CONFIG, 
+  getDeviceSizes, 
+  QUALITY_TIERS, 
+  PERFORMANCE_CONFIG, 
+  TOUCH_FEEDBACK_CONFIG,
+  detectInitialQualityTier,
+  type QualityTier,
+  type QualitySettings 
+} from '@/config/mascotConfig';
 import { TrinityPhysics, MotionPattern, MOTION_PATTERNS } from '@/lib/mascot/TrinityPhysics';
 import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
 import { useQuery } from '@tanstack/react-query';
+
+// Performance monitoring for adaptive quality
+interface PerformanceMetrics {
+  frameTimes: number[];
+  avgFPS: number;
+  lastMeasurement: number;
+  isIdle: boolean;
+  idleStartTime: number | null;
+}
+
+// Haptic feedback helper
+function triggerHaptic(duration: number = TOUCH_FEEDBACK_CONFIG.hapticDuration) {
+  if (TOUCH_FEEDBACK_CONFIG.enableHaptic && 'vibrate' in navigator) {
+    try {
+      navigator.vibrate(duration);
+    } catch (e) {
+      // Haptic not available - silently fail
+    }
+  }
+}
 
 // Holiday directive response type
 interface HolidayDirectiveResponse {
@@ -333,6 +365,20 @@ const FloatingMascot = memo(function FloatingMascot({
   const [currentThought, setCurrentThought] = useState<string>('');
   const [showThought, setShowThought] = useState(false);
   
+  // Quality tier state for adaptive rendering
+  const [qualityTier, setQualityTier] = useState<QualityTier>(() => detectInitialQualityTier());
+  const qualitySettings = useMemo(() => QUALITY_TIERS[qualityTier], [qualityTier]);
+  
+  // Performance metrics for adaptive quality
+  const performanceRef = useRef<PerformanceMetrics>({
+    frameTimes: [],
+    avgFPS: 60,
+    lastMeasurement: Date.now(),
+    isIdle: false,
+    idleStartTime: null
+  });
+  const lastFrameTimeRef = useRef(performance.now());
+  
   const sizes = getDeviceSizes();
   const mascotSize = sizes.bubble;
 
@@ -349,18 +395,87 @@ const FloatingMascot = memo(function FloatingMascot({
     const ctx = canvas.getContext('2d', { alpha: true });
     if (!ctx) return;
 
-    const dpr = Math.min(window.devicePixelRatio, 2);
+    // DPR-aware canvas scaling for crisp rendering on all devices
+    // Clamp DPR to quality tier max for performance optimization
+    const rawDpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(rawDpr, qualitySettings.maxDPR);
+    
+    // Set canvas dimensions for sharp rendering
     canvas.width = mascotSize * dpr;
     canvas.height = mascotSize * dpr;
+    canvas.style.width = `${mascotSize}px`;
+    canvas.style.height = `${mascotSize}px`;
     ctx.scale(dpr, dpr);
+    
+    // Enable image smoothing for quality rendering
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = qualityTier === 'high' ? 'high' : 'medium';
 
     const colors = MODE_COLORS[currentMode];
     twinsRef.current[0].color = colors.primary;
     twinsRef.current[1].color = colors.secondary;
     twinsRef.current[2].color = colors.tertiary;
 
+    // Frame budget tracking for adaptive quality
+    let frameSkipCounter = 0;
+    const targetFrameInterval = 1000 / qualitySettings.targetFPS;
+    
     const animate = () => {
-      timeRef.current += 0.02;
+      const now = performance.now();
+      const frameTime = now - lastFrameTimeRef.current;
+      lastFrameTimeRef.current = now;
+      
+      // Track frame times for FPS calculation
+      const perf = performanceRef.current;
+      perf.frameTimes.push(frameTime);
+      if (perf.frameTimes.length > 30) {
+        perf.frameTimes.shift();
+      }
+      
+      // Calculate average FPS every 30 frames
+      if (perf.frameTimes.length >= 30) {
+        const avgFrameTime = perf.frameTimes.reduce((a, b) => a + b, 0) / perf.frameTimes.length;
+        perf.avgFPS = 1000 / avgFrameTime;
+        
+        // Adaptive quality: downgrade if FPS is too low
+        if (PERFORMANCE_CONFIG.enableAdaptiveQuality) {
+          const timeSinceLastMeasure = now - perf.lastMeasurement;
+          if (timeSinceLastMeasure > PERFORMANCE_CONFIG.measurementWindow) {
+            perf.lastMeasurement = now;
+            
+            if (perf.avgFPS < PERFORMANCE_CONFIG.qualityDowngradeThreshold && qualityTier !== 'low') {
+              setQualityTier(prev => prev === 'high' ? 'medium' : 'low');
+            } else if (perf.avgFPS > PERFORMANCE_CONFIG.qualityUpgradeThreshold && qualityTier !== 'high') {
+              setQualityTier(prev => prev === 'low' ? 'medium' : 'high');
+            }
+          }
+        }
+      }
+      
+      // Idle throttling: reduce FPS when mascot is idle
+      if (currentMode === 'IDLE' && !isDragging && !isHovered) {
+        if (!perf.idleStartTime) {
+          perf.idleStartTime = now;
+        } else if (now - perf.idleStartTime > PERFORMANCE_CONFIG.idleThrottleDelay) {
+          perf.isIdle = true;
+        }
+      } else {
+        perf.idleStartTime = null;
+        perf.isIdle = false;
+      }
+      
+      // Skip frames when idle to save battery
+      if (perf.isIdle) {
+        frameSkipCounter++;
+        const idleFrameSkip = Math.floor(60 / PERFORMANCE_CONFIG.idleTargetFPS);
+        if (frameSkipCounter < idleFrameSkip) {
+          animationRef.current = requestAnimationFrame(animate);
+          return;
+        }
+        frameSkipCounter = 0;
+      }
+      
+      timeRef.current += 0.02 * qualitySettings.animationSmoothing;
       const t = timeRef.current;
       const center = mascotSize / 2;
       // MAXIMUM orbit radius for clear visual separation between stars - force far apart
@@ -518,32 +633,40 @@ const FloatingMascot = memo(function FloatingMascot({
       const brandingLabels = ['Co', 'AI', 'L'];
       const brandingColors = ['#a855f7', '#38bdf8', '#38bdf8'];
       
+      // Quality-aware star rendering with crisp edges
+      const qs = qualitySettings;
+      
       twins.forEach((twin, index) => {
-        // Clean compact stars - NO strokes, NO lines, just fills
-        const starSize = mascotSize * 0.07;
-        const innerSize = starSize * 0.5;
+        // Crisp star sizing - slightly larger for better visibility on mobile
+        const starSize = mascotSize * 0.08;
+        const innerSize = starSize * 0.45;
         
-        // Subtle glow halo - very tight, no overlap possible
-        const haloGradient = ctx.createRadialGradient(
-          twin.x, twin.y, 0,
-          twin.x, twin.y, starSize * 1.0
-        );
-        haloGradient.addColorStop(0, `${twin.color}25`);
-        haloGradient.addColorStop(0.7, `${twin.color}08`);
-        haloGradient.addColorStop(1, 'transparent');
+        // Quality-aware glow halo - reduced on lower tiers for performance
+        if (qs.haloAlpha > 0) {
+          const haloGradient = ctx.createRadialGradient(
+            twin.x, twin.y, 0,
+            twin.x, twin.y, starSize * qs.glowBlurRadius
+          );
+          const haloAlphaHex = Math.round(qs.haloAlpha * 255).toString(16).padStart(2, '0');
+          const haloFadeHex = Math.round(qs.haloAlpha * 0.3 * 255).toString(16).padStart(2, '0');
+          haloGradient.addColorStop(0, `${twin.color}${haloAlphaHex}`);
+          haloGradient.addColorStop(0.6, `${twin.color}${haloFadeHex}`);
+          haloGradient.addColorStop(1, 'transparent');
+          
+          ctx.beginPath();
+          ctx.arc(twin.x, twin.y, starSize * qs.glowBlurRadius, 0, Math.PI * 2);
+          ctx.fillStyle = haloGradient;
+          ctx.fill();
+        }
         
-        ctx.beginPath();
-        ctx.arc(twin.x, twin.y, starSize * 1.0, 0, Math.PI * 2);
-        ctx.fillStyle = haloGradient;
-        ctx.fill();
-        
-        // Main star body - simple solid colored circle
+        // Main star body with enhanced gradient for depth
         const bodyGradient = ctx.createRadialGradient(
-          twin.x - starSize * 0.15, twin.y - starSize * 0.15, 0,
+          twin.x - starSize * 0.2, twin.y - starSize * 0.2, 0,
           twin.x, twin.y, starSize
         );
         bodyGradient.addColorStop(0, '#ffffff');
-        bodyGradient.addColorStop(0.25, twin.color);
+        bodyGradient.addColorStop(0.2, '#ffffff');
+        bodyGradient.addColorStop(0.35, twin.color);
         bodyGradient.addColorStop(1, twin.color);
         
         ctx.beginPath();
@@ -551,31 +674,79 @@ const FloatingMascot = memo(function FloatingMascot({
         ctx.fillStyle = bodyGradient;
         ctx.fill();
         
-        // NO STROKES - just a filled inner core
+        // Quality-aware rim light for depth (high tier only)
+        if (qs.enableRimLight) {
+          const rimGradient = ctx.createRadialGradient(
+            twin.x + starSize * 0.3, twin.y + starSize * 0.3, starSize * 0.6,
+            twin.x, twin.y, starSize
+          );
+          rimGradient.addColorStop(0, 'transparent');
+          rimGradient.addColorStop(0.8, 'rgba(255, 255, 255, 0.15)');
+          rimGradient.addColorStop(1, 'rgba(255, 255, 255, 0.25)');
+          
+          ctx.beginPath();
+          ctx.arc(twin.x, twin.y, starSize, 0, Math.PI * 2);
+          ctx.fillStyle = rimGradient;
+          ctx.fill();
+        }
+        
+        // Inner glow core - quality-aware
+        if (qs.enableInnerGlow) {
+          const innerGlowGradient = ctx.createRadialGradient(
+            twin.x, twin.y, 0,
+            twin.x, twin.y, innerSize * 1.5
+          );
+          innerGlowGradient.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+          innerGlowGradient.addColorStop(0.5, 'rgba(255, 255, 255, 0.7)');
+          innerGlowGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
+          
+          ctx.beginPath();
+          ctx.arc(twin.x, twin.y, innerSize * 1.5, 0, Math.PI * 2);
+          ctx.fillStyle = innerGlowGradient;
+          ctx.fill();
+        }
+        
+        // Bright inner core - always rendered for visibility
         const coreGradient = ctx.createRadialGradient(
-          twin.x, twin.y, 0,
+          twin.x - innerSize * 0.1, twin.y - innerSize * 0.1, 0,
           twin.x, twin.y, innerSize
         );
         coreGradient.addColorStop(0, '#ffffff');
-        coreGradient.addColorStop(1, 'rgba(255, 255, 255, 0.8)');
+        coreGradient.addColorStop(0.6, '#ffffff');
+        coreGradient.addColorStop(1, 'rgba(255, 255, 255, 0.9)');
         
         ctx.beginPath();
         ctx.arc(twin.x, twin.y, innerSize, 0, Math.PI * 2);
         ctx.fillStyle = coreGradient;
         ctx.fill();
         
-        // Text label - clean without shadow
-        const fontSize = Math.max(6, mascotSize * 0.10);
+        // Text label with subtle shadow for readability
+        const fontSize = Math.max(7, mascotSize * 0.11);
         ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
+        
+        // Shadow for text contrast (only on high quality)
+        if (qs.shadowQuality === 'full') {
+          ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+          ctx.shadowBlur = 2;
+          ctx.shadowOffsetX = 0;
+          ctx.shadowOffsetY = 1;
+        }
+        
         ctx.fillStyle = brandingColors[index];
         ctx.fillText(brandingLabels[index], twin.x, twin.y + 0.5);
         
-        // Christmas LED wrap decoration around each star
+        // Reset shadow
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
+        
+        // Christmas LED wrap decoration - quality-aware LED count
         if (isChristmas && showHolidayDecorations) {
           const colors = holidayLedColors[index] || ['#ff0000', '#00ff00', '#ffffff'];
-          drawLEDWrap(ctx, twin.x, twin.y, starSize, t, colors, 6, 0.4 + index * 0.1);
+          drawLEDWrap(ctx, twin.x, twin.y, starSize, t, colors, qs.ledCount, 0.4 + index * 0.1);
         }
       });
 
@@ -604,7 +775,7 @@ const FloatingMascot = memo(function FloatingMascot({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [currentMode, mascotSize, isChristmas, showHolidayDecorations, holidayLedColors]);
+  }, [currentMode, mascotSize, isChristmas, showHolidayDecorations, holidayLedColors, qualitySettings, qualityTier, isDragging, isHovered]);
 
   useEffect(() => {
     setCurrentMode(mode);
@@ -714,6 +885,7 @@ const FloatingMascot = memo(function FloatingMascot({
 
   const handleDragStart = useCallback(() => {
     setIsDragging(true);
+    triggerHaptic(15); // Subtle haptic on drag start
     emotesManager.triggerByCategory('playful');
   }, []);
 
@@ -747,6 +919,7 @@ const FloatingMascot = memo(function FloatingMascot({
   }, [posX, posY, onPositionChange, userId]);
 
   const handleTap = useCallback(() => {
+    triggerHaptic(10); // Light haptic on tap
     emotesManager.triggerByCategory('clicking');
     spawnParticles(5);
   }, [spawnParticles]);

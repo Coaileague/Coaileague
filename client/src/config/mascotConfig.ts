@@ -350,6 +350,148 @@ export interface RoamingConfig {
   };
 }
 
+// ============================================================================
+// MOBILE GRAPHICS QUALITY SYSTEM
+// Adaptive rendering tiers for optimal performance across devices
+// ============================================================================
+
+export type QualityTier = 'high' | 'medium' | 'low';
+
+export interface QualitySettings {
+  tier: QualityTier;
+  maxDPR: number;
+  targetFPS: number;
+  glowIntensity: number;
+  glowBlurRadius: number;
+  particleCount: number;
+  ledCount: number;
+  shadowQuality: 'full' | 'simple' | 'none';
+  enableRimLight: boolean;
+  enableInnerGlow: boolean;
+  haloAlpha: number;
+  animationSmoothing: number;
+}
+
+export interface PerformanceConfig {
+  enableAdaptiveQuality: boolean;
+  frameBudgetMs: number;
+  idleThrottleDelay: number;
+  idleTargetFPS: number;
+  qualityUpgradeThreshold: number;
+  qualityDowngradeThreshold: number;
+  measurementWindow: number;
+}
+
+// Quality tier presets - mobile gets crisp, performant rendering
+export const QUALITY_TIERS: Record<QualityTier, QualitySettings> = {
+  high: {
+    tier: 'high',
+    maxDPR: 2.5,
+    targetFPS: 60,
+    glowIntensity: 0.35,
+    glowBlurRadius: 1.2,
+    particleCount: 10,
+    ledCount: 8,
+    shadowQuality: 'full',
+    enableRimLight: true,
+    enableInnerGlow: true,
+    haloAlpha: 0.25,
+    animationSmoothing: 1.0,
+  },
+  medium: {
+    tier: 'medium',
+    maxDPR: 2.0,
+    targetFPS: 45,
+    glowIntensity: 0.25,
+    glowBlurRadius: 0.8,
+    particleCount: 6,
+    ledCount: 5,
+    shadowQuality: 'simple',
+    enableRimLight: true,
+    enableInnerGlow: false,
+    haloAlpha: 0.18,
+    animationSmoothing: 0.8,
+  },
+  low: {
+    tier: 'low',
+    maxDPR: 1.5,
+    targetFPS: 30,
+    glowIntensity: 0.15,
+    glowBlurRadius: 0.5,
+    particleCount: 3,
+    ledCount: 3,
+    shadowQuality: 'none',
+    enableRimLight: false,
+    enableInnerGlow: false,
+    haloAlpha: 0.12,
+    animationSmoothing: 0.6,
+  },
+};
+
+export const PERFORMANCE_CONFIG: PerformanceConfig = {
+  enableAdaptiveQuality: true,
+  frameBudgetMs: 16.67, // 60 FPS target
+  idleThrottleDelay: 5000, // 5 seconds of idle before throttling
+  idleTargetFPS: 15,
+  qualityUpgradeThreshold: 55, // FPS threshold to upgrade quality
+  qualityDowngradeThreshold: 35, // FPS threshold to downgrade quality
+  measurementWindow: 3000, // 3 seconds of measurement before tier change
+};
+
+// Device detection helper for initial quality tier
+export function detectInitialQualityTier(): QualityTier {
+  if (typeof window === 'undefined') return 'high';
+  
+  const isMobile = window.matchMedia?.('(max-width: 768px)').matches || 
+                   'ontouchstart' in window ||
+                   navigator.maxTouchPoints > 0;
+  
+  const memoryGB = (navigator as any).deviceMemory || 4;
+  const hardwareConcurrency = navigator.hardwareConcurrency || 4;
+  const dpr = window.devicePixelRatio || 1;
+  
+  // High-end device detection
+  if (!isMobile && memoryGB >= 8 && hardwareConcurrency >= 8) {
+    return 'high';
+  }
+  
+  // Mid-range or newer mobile devices
+  if (memoryGB >= 4 && hardwareConcurrency >= 4 && dpr <= 3) {
+    return isMobile ? 'medium' : 'high';
+  }
+  
+  // Lower-end devices or high DPR screens (battery concern)
+  if (isMobile && dpr >= 3) {
+    return 'medium';
+  }
+  
+  // Budget devices
+  if (memoryGB < 3 || hardwareConcurrency < 4) {
+    return 'low';
+  }
+  
+  return isMobile ? 'medium' : 'high';
+}
+
+// Touch feedback configuration
+export interface TouchFeedbackConfig {
+  enableHaptic: boolean;
+  enableRipple: boolean;
+  hapticDuration: number;
+  rippleDuration: number;
+  rippleColor: string;
+  rippleOpacity: number;
+}
+
+export const TOUCH_FEEDBACK_CONFIG: TouchFeedbackConfig = {
+  enableHaptic: true,
+  enableRipple: true,
+  hapticDuration: 10,
+  rippleDuration: 300,
+  rippleColor: 'rgba(168, 85, 247, 0.4)',
+  rippleOpacity: 0.6,
+};
+
 // Thought Bubble Styling System
 export type ThoughtBubbleMode = 'normal' | 'seasonal' | 'holiday';
 export type ThoughtBubbleAnimation = 
