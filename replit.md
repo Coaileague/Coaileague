@@ -1,7 +1,7 @@
 # CoAIleague - AI-Powered Workforce Intelligence Platform
 
 ### Overview
-CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management platform. It eliminates hardcoded values through centralized dynamic configuration, integrating financials with real Stripe payments. Key capabilities include dynamic configuration, advanced AI-powered automation (scheduling, sentiment analysis, onboarding, health monitoring, dispute resolution), integrated financials, robust real-time notifications, and comprehensive error handling. It features a HelpAI Integration, providing a multi-tenant AI orchestration layer for autonomous invoicing, payroll, notifications, and workflow automation. The project aims to deliver a production-ready solution with strong market potential for efficient workforce management.
+CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management platform designed to eliminate hardcoded values through centralized dynamic configuration. It integrates financials with real Stripe payments and offers advanced AI-powered automation for scheduling, sentiment analysis, onboarding, health monitoring, and dispute resolution. The platform includes a HelpAI Integration for multi-tenant AI orchestration across invoicing, payroll, notifications, and workflow automation, aiming to deliver a production-ready solution with strong market potential for efficient workforce management.
 
 ### User Preferences
 - I prefer simple language
@@ -10,52 +10,51 @@ CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management p
 - I prefer detailed explanations
 
 ### System Architecture
-The system employs a multi-tenant architecture with robust RBAC security and multi-tenant isolation, managing all application settings dynamically through centralized configuration files.
+The system employs a multi-tenant architecture with RBAC security and isolation, managing all application settings dynamically through centralized configuration files.
 
 **UI/UX Decisions:**
-- **Mobile & Responsive Design:** Centralized mobile configuration with breakpoints, WCAG-compliant touch targets, typography scaling, and a `ResponsiveScaleWrapper` component.
-- **Unified Pages:** Consolidated sales pages (`workspace-sales.tsx`) and marketing/pricing pages (`universal-marketing.tsx`) driven by centralized configuration.
-- **Notification Widgets:** `WhatsNewBadge` (spinning star with color cycling) and `NotificationBell` (glow-only animation).
-- **Universal Animation System:** Canvas-based visual effects with 6 animation modes and auto-detected seasonal themes.
+- **Mobile & Responsive Design:** Centralized mobile configuration with WCAG compliance, typography scaling, and a `ResponsiveScaleWrapper` component.
+- **Unified Pages:** Consolidated sales, marketing, and pricing pages driven by centralized configuration.
+- **Notification Widgets:** `WhatsNewBadge` and `NotificationBell` with distinct visual animations.
+- **Universal Animation System:** Canvas-based visual effects with 6 animation modes and seasonal theme detection.
+- **CoAI Twin Mascot:** An AI-powered interactive twin-star mascot globally visible on all pages, providing AI-driven insights and contextual reactions, featuring autonomous roaming with UI avoidance and transparent glassmorphism thought bubbles.
+- **Animated Word Logo:** A Google Doodle-style seasonal animated word logo system with 11 themed variations, SVG-based letter animations, and canvas decoration overlays.
 
 **Technical Implementations:**
-- **CoAI Twin Mascot (Dec 2, 2025):** AI-powered interactive twin-star mascot rendered as draggable 60px bubble (120px expanded). Globally visible on ALL pages. Features: AI-driven insights via Gemini, contextual reactions ("wee!", "ouch!", "I'm gonna snitch to HR"), holiday-aware thought monologues, drag with zoom effects, persistent positioning via localStorage, expand/minimize/reset buttons, **autonomous roaming** (moves randomly every 8-20s with UI avoidance), **transparent glassmorphism bubbles** (25% opacity backgrounds with 16px backdrop blur for thought bubbles, text shadows for contrast). **Architecture:** `mascotConfig.ts` (universal config), `ThoughtManager.ts` (thought rotation/queuing), `use-mascot-roaming.ts` (autonomous movement with rAF animation, easeInOutCubic easing, drag-pause behavior), `UIAvoidanceSystem.ts` (safe position detection), `mascot-routes.ts` (AI backend with Gemini), `use-mascot-observer.ts` (user action tracking with contextual AI advice). **Roaming System:** 5-10s initial delay, 8-20s intervals, 2s move duration, 100px edge padding, thought cooldown (10s), automatic pause during drag with 2s resume delay. **Observation System:** Tracks clicks, typing, scrolling, navigation, idle states; triggers contextual AI advice with 45s cooldown, max 3 insights per page. **12 Splash Animations:** sparkle_burst, confetti_shower, star_spiral, wave_ripple, energy_pulse, rainbow_arc, lightning_flash, heart_float, bubble_pop, fire_burst, ice_crystals, leaf_scatter (all text-based, no emojis). **API Endpoints:** GET /api/mascot/insights (AI-powered insights), GET /api/mascot/faqs (FAQ knowledge), GET /api/mascot/tasks (onboarding suggestions), POST /api/mascot/ask (AI advice via Gemini 2.0 Flash).
-- **Animated Word Logo (Dec 2025):** Google Doodle-style seasonal animated word logo system with 11 themed variations. SVG-based letter animations (wave, bounce, glow, shimmer) with canvas decoration overlays. Auto-detects season from date: Winter/Christmas (snowflakes, lights), New Year (fireworks), Valentine's (hearts), Spring (flowers), Easter (pastels), Summer (sun rays), Fall (leaves), Halloween (pumpkins), Thanksgiving (harvest). Components: `AnimatedWordLogo.tsx` (main component), `seasonalThemes.ts` (date registry), `useSeasonalTheme.ts` (hook). Features: 3 size variants, reduced motion accessibility, proper cleanup/lifecycle management, canvas decoration engine with ResizeObserver.
-- **AI Brain Services:** Fully implemented for document extraction, issue detection, autonomous scheduling, and HelpAI orchestration, leveraging Gemini 2.0 Flash. This includes advanced FAQ knowledge governance, intelligent learning, and gap detection.
-- **Universal Chat (HelpAI):** All chat routes (`/chat`, `/mobile-chat`) now route to HelpAI Orchestration as the single unified AI chatbot for the platform (Dec 2, 2025). Replaced hardcoded chat greeting system with full HelpAI integration providing orchestrator-level AI capabilities.
-- **Gemini Function Calling (Dec 2025):** Complete 8-step workflow with multi-turn conversation loop. Tools: `search_faqs` (TEXT[] array handling via EXISTS+UNNEST), `create_support_ticket`, `get_business_insights`, `suggest_automation`, `recommend_platform_feature`, `update_faq`. Features max iteration guard (3), multi-part candidate response extraction, and best-effort tool result fallbacks when Gemini returns no text.
+- **AI Brain Services:** Comprehensive AI capabilities for document extraction, issue detection, autonomous scheduling, and HelpAI orchestration, leveraging Gemini 2.0 Flash for advanced knowledge governance and gap detection.
+- **Universal Chat (HelpAI):** A single, unified AI chatbot for the platform, routing all chat interactions through HelpAI Orchestration.
+- **Gemini Function Calling:** An 8-step workflow with multi-turn conversation support, integrating tools for FAQ search, support ticket creation, business insights, automation suggestions, feature recommendations, and FAQ updates.
 - **Financials:** Real Stripe integration for payment processing, payroll, invoicing, deductions, and tax calculations.
 - **Email Automation:** Full Resend integration with per-email billing and pre-built templates.
 - **Notifications:** WebSocket infrastructure for real-time notifications and Resend for email delivery.
 - **Compliance:** Daily certification checks, HR alerts, and a dispute resolution system.
-- **Gamification:** Employee engagement system with achievements, points/XP, leaderboards, and streak tracking (feature-flagged). Integrated with onboarding (25pts/step, 200 bonus), tutorials (10pts/step, 50 bonus), org migration (scaled rewards up to 350pts), and org setup (50/30/500pts). Emits milestone events for real-time celebration.
+- **Gamification:** Employee engagement system with achievements, points, leaderboards, and streak tracking, integrated with onboarding and tutorials.
 - **Data Management:** PostgreSQL database with 150+ indexed and optimized tables.
 - **Error Handling:** Global error boundaries and configurable error messages.
 - **Workspace Configuration:** Customizable settings per workspace.
-- **System Health:** A `/health` endpoint for monitoring database, Stripe, Gemini, WebSocket, and session health.
-- **HelpAI Orchestration:** Multi-tenant AI brain for autonomous operations with encrypted credential storage (AES-256-GCM), SHA-256 integrity checksums, API registry, and per-org credential management.
-- **Session Management:** Explicit session saves with PostgreSQL-backed session storage.
-- **WebSocket Security (Dec 2025):** Session-based authentication for all WebSocket handlers. Identity derived from HTTP session cookies at connection time (`ws.serverAuth`), preventing client-supplied ID spoofing. Workspace validation enforces tenant isolation - non-staff users can only access conversations/notifications in their workspace. Guests isolated to helpdesk room without workspace context. Staff access audited for platform-wide operations.
-- **Platform-Wide RBAC (Dec 2025):** Centralized platform role management via `hasPlatformWideAccess()` helper and `PLATFORM_WIDE_ROLES` constant in `server/rbac.ts`. Platform roles (Bot, support_agent, support_manager, sysop, deputy_admin, root_admin) operate without workspace dependency. WebSocket captures `platformRole` at connection time via `getUserPlatformRole()`. Platform staff subscribe to notifications under 'coaileague-platform-workspace' key, enabling workspace-agnostic system notifications.
-- **Time Tracking:** Clock-in/out, timesheet reports, AI anomaly detection, and approval workflow.
-- **Client Billing:** Invoice generation from tracked hours, PDF export, email sending.
-- **Advanced Scheduling:** Recurring shifts, shift swapping, one-click duplication.
-- **Employee Availability:** CRUD module, team view, availability exceptions, conflict detection.
-- **Calendar Sync:** iCal export/import, calendar subscriptions.
-- **Analytics Dashboard:** 6 metrics endpoints (time, revenue, scheduling, performance) and AI insights.
-- **Heat Map Visualization:** 7x24 grid staffing intensity, AI staffing analysis and optimization.
-- **Break Compliance:** 50-state labor law configuration, auto-scheduling, compliance checking.
-- **AI Brain Platform Awareness:** 100+ features registry across 4 feature families, natural language feature discovery, diagnostic endpoints.
-- **Automation Jobs:** 12 scheduled jobs (billing, scheduling, payroll, reminders, compliance, email, platform change monitoring).
-- **AI Brain Platform Change Monitor:** Autonomous service that scans codebase, schema, services, and health every 15 minutes. Uses Gemini AI to generate intelligent change summaries, classifies by severity, and notifies all users via notifications table and WebSocket broadcasts. Support console endpoints for manual triggering and history viewing.
-- **Notification System:** Platform updates from AI brain, support staff maintenance alerts, real-time WebSocket delivery, user notification history tracking.
-- **Support Command Console:** Force-push updates system for support staff with 6 command endpoints and real-time WebSocket broadcast.
-- **AI Brain Code Editor:** Staged code editing system with approval workflow, integrated with HelpAI orchestrator, and automatic What's New notifications.
-- **AI Brain Master Orchestrator:** Central orchestration hub coordinating 61 actions across 12 categories (scheduling, payroll, compliance, escalation, analytics, notifications, automation, employee lifecycle, health checks, user assistance, file system, workflows, test runner), connecting Gemini AI to all platform services, and executing workflow chains with authorization validation and audit logging.
-- **AI Brain File System Tools:** Comprehensive file access with read (line ranges), write/create, edit (search/replace), delete, list (recursive), search (regex), diff generation, and metadata retrieval. Protected paths (node_modules, .git, .env), allowed extensions only, and path traversal prevention.
-- **AI Brain Code Editor API:** Full staged code editing workflow with 11 endpoints: stage, stage-batch, pending, change details, approve, reject, apply, rollback, read file, list files, and AI-request. Integrated with What's New notifications and WebSocket broadcasts.
-- **AI Brain Authorization Service:** Role-based permission model with a 9-level role hierarchy and category-specific permission matrix, validating support staff credentials and logging all authorization checks.
-- **AI Brain Platform Change Monitor:** Autonomous service scanning the platform for changes, generating AI-summarized notifications with severity classification, and broadcasting them to users.
+- **System Health:** A `/health` endpoint for monitoring key services.
+- **HelpAI Orchestration:** Multi-tenant AI brain with encrypted credential storage, SHA-256 integrity checksums, and per-org credential management.
+- **Session Management:** Explicit session saves with PostgreSQL-backed storage.
+- **WebSocket Security:** Session-based authentication and workspace validation for tenant isolation.
+- **Platform-Wide RBAC:** Centralized role management for platform-level roles without workspace dependency.
+- **Time Tracking:** Clock-in/out, timesheet reports, AI anomaly detection, and approval workflows.
+- **Client Billing:** Invoice generation from tracked hours, PDF export, and email sending.
+- **Advanced Scheduling:** Recurring shifts, shift swapping, and one-click duplication.
+- **Employee Availability:** CRUD module, team view, availability exceptions, and conflict detection.
+- **Calendar Sync:** iCal export/import, and calendar subscriptions.
+- **Analytics Dashboard:** Metrics endpoints for time, revenue, scheduling, and performance, coupled with AI insights.
+- **Heat Map Visualization:** 7x24 grid for staffing intensity, with AI analysis and optimization.
+- **Break Compliance:** 50-state labor law configuration, auto-scheduling, and compliance checking.
+- **AI Brain Platform Awareness:** Registry of 100+ features across 4 families, natural language feature discovery, and diagnostic endpoints.
+- **Automation Jobs:** 12 scheduled jobs for billing, scheduling, payroll, reminders, compliance, email, and platform change monitoring.
+- **AI Brain Platform Change Monitor:** Autonomous service scanning codebase and services to generate and broadcast AI-summarized change notifications.
+- **Notification System:** Platform updates, support staff alerts, real-time WebSocket delivery, and user notification history.
+- **Support Command Console:** Force-push updates system for support staff with command endpoints and real-time WebSocket broadcast, including mascot orchestration.
+- **AI Brain Code Editor:** Staged code editing system with approval workflow and HelpAI integration.
+- **AI Brain Master Orchestrator:** Central hub coordinating 61 actions across 12 categories, connecting Gemini AI to platform services and executing workflow chains.
+- **AI Brain File System Tools:** Comprehensive and secure file access with read, write, edit, delete, list, search, diff, and metadata retrieval.
+- **AI Brain Code Editor API:** Full staged code editing workflow with endpoints for staging, approval, application, and rollback.
+- **AI Brain Authorization Service:** Role-based permission model with a 9-level hierarchy and category-specific matrix, validating credentials and logging checks.
 
 **System Design Choices:**
 - **Modularity:** Composed of 87 backend service modules and 220+ frontend routes.
@@ -65,25 +64,6 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **Security:** AES-256-GCM encryption, PBKDF2-SHA256 key derivation, RBAC, per-org credential isolation, and credential expiry warnings.
 - **Unified Config Registry:** Single source of truth at `shared/config/registry.ts` with Zod validation.
 
-### Consolidation Report (Dec 2025 Audit)
-**Identified Dead Code:**
-- `server/services/sentimentAnalysis.ts` - Exports `analyzeReviewSentiment` but never imported. Uses Gemini for review sentiment with persistence but redundant with `sentimentAnalyzer.ts`.
-
-**Consolidation Candidates (Future Work):**
-- **AI Bot Services:** `aiBot.ts` (OpenAI, minimal usage in queueReminderJob) and `helpai/helpAIBotService.ts` (Gemini, comprehensive) - Could merge into single unified service.
-- **Sentiment Analysis:** `sentimentAnalysis.ts` and `sentimentAnalyzer.ts` - Similar functionality, different AI backends.
-- **Notification Services:** 4 services with overlapping concerns (notificationService, aiNotificationService, universalNotificationEngine, notificationDigestService) - Could benefit from facade pattern.
-
-**Properly Separated (Not Duplicates):**
-- `oauth/gusto.ts` vs `partners/gusto.ts` - Correct separation (OAuth flow vs API operations)
-- `oauth/quickbooks.ts` vs `partners/quickbooks.ts` - Correct separation
-- Analytics services serve different purposes (data, AI insights, stats, owner analytics)
-
-**Files with LSP Warnings (Non-Blocking):**
-- `server/routes/ownerAnalytics.ts` - 6 type annotation warnings (runtime works)
-- `server/services/partners/gusto.ts` - 20 diagnostics (requires Gusto API keys)
-- `server/services/analyticsStats.ts` - 1 diagnostic
-
 ### External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
 - **Resend**: Email delivery and notification workflows.
@@ -91,4 +71,4 @@ The system employs a multi-tenant architecture with robust RBAC security and mul
 - **WebSocket**: Real-time notifications.
 - **Google Cloud Storage (GCS)**: File management.
 - **PostgreSQL**: Primary relational database.
-- **Twilio**: SMS notifications (requires TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_PHONE_NUMBER secrets).
+- **Twilio**: SMS notifications.
