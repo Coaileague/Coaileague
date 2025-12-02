@@ -34,6 +34,7 @@ import {
   type EmotePhase 
 } from '@/config/mascotConfig';
 import { TrinityPhysics, MotionPattern, MOTION_PATTERNS } from '@/lib/mascot/TrinityPhysics';
+import { StatusEmoteEffects, STATUS_COLORS } from '@/lib/mascot/StatusEmoteEffects';
 import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
 import { useQuery } from '@tanstack/react-query';
 
@@ -305,6 +306,10 @@ const FloatingMascot = memo(function FloatingMascot({
   ]);
   const timeRef = useRef(0);
   const particlesRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; color: string }[]>([]);
+  
+  // Status Emote Effects - dynamic visual behaviors for different modes
+  const statusEffectsRef = useRef<StatusEmoteEffects>(new StatusEmoteEffects());
+  const lastModeRef = useRef<MascotMode>('IDLE');
   
   // Motion pattern state - AI Brain can switch this
   const [activeMotionPattern, setActiveMotionPattern] = useState<MotionPattern>('TRIAD_SYNCHRONIZED');
@@ -631,6 +636,26 @@ const FloatingMascot = memo(function FloatingMascot({
 
       ctx.clearRect(0, 0, mascotSize, mascotSize);
       
+      // Status Emote Effects - detect mode changes and trigger visual effects
+      const statusEffects = statusEffectsRef.current;
+      if (lastModeRef.current !== currentMode) {
+        statusEffects.onModeChange(currentMode, center, center);
+        lastModeRef.current = currentMode;
+      }
+      
+      // Update status effects each frame
+      statusEffects.update(currentMode, center, center, 1);
+      
+      // Apply screen shake from status effects (for ERROR mode)
+      const shakeOffset = statusEffects.getShakeOffset();
+      if (shakeOffset.x !== 0 || shakeOffset.y !== 0) {
+        ctx.save();
+        ctx.translate(shakeOffset.x, shakeOffset.y);
+      }
+      
+      // Draw shockwaves and particles BEHIND stars
+      statusEffects.drawEffects(ctx, center, center, currentMode);
+      
       // INDEPENDENT STARS - No connections, no central glow, fully separate entities
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over'; // No additive blending
@@ -926,6 +951,12 @@ const FloatingMascot = memo(function FloatingMascot({
         ctx.fill();
       });
       ctx.globalAlpha = 1;
+      
+      // Restore context if shake transform was applied
+      const shakeWasApplied = statusEffectsRef.current.getShakeOffset();
+      if (shakeWasApplied.x !== 0 || shakeWasApplied.y !== 0) {
+        ctx.restore();
+      }
 
       animationRef.current = requestAnimationFrame(animate);
     };
