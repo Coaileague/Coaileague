@@ -29,14 +29,15 @@ export interface TrinityPhysicsConfig {
   bounceElasticity: number;     // How bouncy collisions are
 }
 
-// Optimized for smooth 60fps/30fps rendering - STRONGER separation to prevent overlap
+// FULLY INDEPENDENT STARS - Maximum separation, no visual overlap possible
+// CONFIG SYNCED WITH TRINITY_STAR_CONFIG in mascotConfig.ts
 const DEFAULT_CONFIG: TrinityPhysicsConfig = {
-  repulsionStrength: 4.5,       // Strong repulsion to push stars apart
-  springStrength: 0.05,         // Gentler spring so repulsion wins
-  dampening: 0.85,              // Higher dampening for smoother deceleration
-  minDistance: 22,              // Larger minimum gap - stars CANNOT overlap
-  maxSpeed: 5,                  // Lower max speed for polished motion
-  bounceElasticity: 0.6         // More bouncy to separate faster
+  repulsionStrength: 10.0,      // VERY strong repulsion - 3RD STAR NEVER HIDES
+  springStrength: 0.02,         // Very weak spring - maximum independence
+  dampening: 0.70,              // Lower dampening for more dynamic floating
+  minDistance: 45,              // LARGE minimum gap - ALL 3 STARS VISIBLE
+  maxSpeed: 4,                  // Controlled speed for smooth independent motion
+  bounceElasticity: 0.85        // Very bouncy for immediate separation
 };
 
 export class TrinityPhysics {
@@ -49,14 +50,15 @@ export class TrinityPhysics {
     this.bounds = { width: 100, height: 100, centerX: 50, centerY: 50 };
     
     // Initialize 3 Trinity bodies with 120° offset positions - WIDER spread to prevent overlap
-    const initRadius = 20;
+    // Use minDistance as guide for initial spread - ensures all 3 stars start separated
+    const initRadius = Math.max(25, this.config.minDistance * 0.6);
     const angles = [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3];
     this.bodies = angles.map((angle, i) => ({
       x: Math.cos(angle) * initRadius,
       y: Math.sin(angle) * initRadius,
       vx: 0,
       vy: 0,
-      radius: 10,  // Slightly larger radius for better collision detection
+      radius: 15,  // Larger radius for better collision detection - PREVENTS 3RD STAR HIDING
       mass: 1,
       targetX: Math.cos(angle) * initRadius,
       targetY: Math.sin(angle) * initRadius

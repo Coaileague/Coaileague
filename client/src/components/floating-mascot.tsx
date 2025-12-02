@@ -25,9 +25,13 @@ import {
   QUALITY_TIERS, 
   PERFORMANCE_CONFIG, 
   TOUCH_FEEDBACK_CONFIG,
+  TRINITY_STAR_CONFIG,
+  EMOTE_PHASE_CONFIGS,
+  getEmotePhaseConfig,
   detectInitialQualityTier,
   type QualityTier,
-  type QualitySettings 
+  type QualitySettings,
+  type EmotePhase 
 } from '@/config/mascotConfig';
 import { TrinityPhysics, MotionPattern, MOTION_PATTERNS } from '@/lib/mascot/TrinityPhysics';
 import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
@@ -352,15 +356,19 @@ const FloatingMascot = memo(function FloatingMascot({
     }
   }, [holidayDirective]);
   
-  // Trinity Physics for collision detection with scaled minDistance based on mascot size
+  // Trinity Physics with DYNAMIC CONFIG - no hardcoded values
   const sizes = getDeviceSizes();
   const mascotSize = sizes.bubble;
+  const trinityConfig = TRINITY_STAR_CONFIG;
   
   const physicsRef = useRef<TrinityPhysics | null>(null);
   if (!physicsRef.current) {
-    // Scale minDistance with mascotSize to prevent visual overlap at any size
-    const scaledMinDistance = Math.max(22, mascotSize * 0.2);
-    physicsRef.current = new TrinityPhysics({ minDistance: scaledMinDistance });
+    // Use config values for physics - fully dynamic
+    physicsRef.current = new TrinityPhysics({ 
+      minDistance: trinityConfig.minDistance,
+      repulsionStrength: trinityConfig.repulsionStrength,
+      springStrength: trinityConfig.springStrength,
+    });
   }
 
   const [currentMode, setCurrentMode] = useState<MascotMode>(mode);
@@ -370,6 +378,121 @@ const FloatingMascot = memo(function FloatingMascot({
   const [tapRipple, setTapRipple] = useState<{ x: number; y: number; active: boolean } | null>(null);
   const [currentThought, setCurrentThought] = useState<string>('');
   const [showThought, setShowThought] = useState(false);
+  
+  // ============================================================================
+  // EMOTE PHASE STATE MACHINE
+  // Tracks current phase, loops through sequence, auto-returns to IDLE
+  // Supports: finite loops (loopCount > 0), infinite loops (-1), and loopPhases
+  // ============================================================================
+  const emotePhaseTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const emotePhaseIndexRef = useRef<number>(0);
+  const remainingLoopsRef = useRef<number>(0);
+  const [currentEmotePhase, setCurrentEmotePhase] = useState<EmotePhase>('IDLE');
+  
+  // Effect: Manage emote phase transitions with automatic idle return
+  useEffect(() => {
+    // Clean up any existing timer
+    if (emotePhaseTimerRef.current) {
+      clearTimeout(emotePhaseTimerRef.current);
+      emotePhaseTimerRef.current = null;
+    }
+    
+    // Reset phase when mode changes
+    if (currentMode === 'IDLE') {
+      emotePhaseIndexRef.current = 0;
+      remainingLoopsRef.current = 0;
+      setCurrentEmotePhase('IDLE');
+      return;
+    }
+    
+    // Get phase config for current mode
+    const phaseConfig = getEmotePhaseConfig(currentMode);
+    if (!phaseConfig || phaseConfig.phases.length === 0) {
+      setCurrentEmotePhase('IDLE');
+      return;
+    }
+    
+    // Initialize loop counter for finite loops
+    emotePhaseIndexRef.current = 0;
+    remainingLoopsRef.current = phaseConfig.loopCount || 0;
+    setCurrentEmotePhase(phaseConfig.phases[0]);
+    
+    // Find loop phase boundaries if loopPhases defined
+    // Returns 0 if loopPhases not found or phase not in sequence (safe fallback)
+    const findLoopStartIndex = (config: typeof phaseConfig): number => {
+      if (!config.loopPhases || config.loopPhases.length === 0) return 0;
+      const firstLoopPhase = config.loopPhases[0];
+      const index = config.phases.indexOf(firstLoopPhase);
+      return index >= 0 ? index : 0; // Safe fallback to 0 if not found
+    };
+    
+    // Schedule phase transitions
+    const advancePhase = () => {
+      const config = getEmotePhaseConfig(currentMode);
+      if (!config) return;
+      
+      emotePhaseIndexRef.current++;
+      
+      // Check if we've completed all phases
+      if (emotePhaseIndexRef.current >= config.phases.length) {
+        // Handle looping based on loopCount
+        if (config.loopCount === -1) {
+          // Infinite loop - restart from loop start
+          const loopStart = findLoopStartIndex(config);
+          emotePhaseIndexRef.current = loopStart;
+          setCurrentEmotePhase(config.phases[loopStart]);
+          scheduleNextPhase();
+        } else if (remainingLoopsRef.current > 1) {
+          // Finite loops remaining - decrement and restart from loop start
+          remainingLoopsRef.current--;
+          const loopStart = findLoopStartIndex(config);
+          emotePhaseIndexRef.current = loopStart;
+          setCurrentEmotePhase(config.phases[loopStart]);
+          scheduleNextPhase();
+        } else if (config.returnToIdleOnComplete) {
+          // All loops complete - return to IDLE
+          emotePhaseIndexRef.current = 0;
+          remainingLoopsRef.current = 0;
+          setCurrentEmotePhase('IDLE');
+          setCurrentMode('IDLE');
+          if (onModeChange) onModeChange('IDLE');
+        }
+        return;
+      }
+      
+      // Advance to next phase
+      setCurrentEmotePhase(config.phases[emotePhaseIndexRef.current]);
+      scheduleNextPhase();
+    };
+    
+    const scheduleNextPhase = () => {
+      const config = getEmotePhaseConfig(currentMode);
+      if (!config) return;
+      
+      const currentIndex = emotePhaseIndexRef.current;
+      if (currentIndex >= config.phases.length) return;
+      
+      // Get phase name at current index, then look up duration
+      const phaseName = config.phases[currentIndex];
+      const duration = config.phaseDurations[phaseName] || 500; // Default 500ms if missing
+      
+      if (duration > 0) {
+        emotePhaseTimerRef.current = setTimeout(advancePhase, duration);
+      } else {
+        // Duration 0 means stay in this phase indefinitely until mode changes
+      }
+    };
+    
+    // Start the phase sequence
+    scheduleNextPhase();
+    
+    return () => {
+      if (emotePhaseTimerRef.current) {
+        clearTimeout(emotePhaseTimerRef.current);
+        emotePhaseTimerRef.current = null;
+      }
+    };
+  }, [currentMode, onModeChange]);
   
   // Quality tier state for adaptive rendering
   const [qualityTier, setQualityTier] = useState<QualityTier>(() => detectInitialQualityTier());
@@ -492,41 +615,53 @@ const FloatingMascot = memo(function FloatingMascot({
       const effectiveSettings = isOverBudget ? {
         ...qualitySettings,
         particleCount: Math.floor(qualitySettings.particleCount * 0.5),
-        glowRadius: qualitySettings.glowRadius * 0.7,
+        glowBlurRadius: qualitySettings.glowBlurRadius * 0.7,
         enableBlur: false
       } : qualitySettings;
       
       timeRef.current += 0.02 * effectiveSettings.animationSmoothing;
       const t = timeRef.current;
       const center = mascotSize / 2;
-      // MAXIMUM orbit radius for GUARANTEED visual separation - stars CANNOT merge
-      // Using 0.55 ensures even with glow halos, stars remain distinct
-      const radius = Math.max(mascotSize * 0.55, 35);
+      // DYNAMIC orbit radius from config - no hardcoded values
+      const radius = Math.max(
+        mascotSize * trinityConfig.orbitRadiusMultiplier, 
+        trinityConfig.minOrbitRadius
+      );
+      const floatAmp = trinityConfig.individualFloatAmplitude;
 
       ctx.clearRect(0, 0, mascotSize, mascotSize);
       
-      // No central glow - each star has its own individual glow only
+      // INDEPENDENT STARS - No connections, no central glow, fully separate entities
       ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over'; // No additive blending
 
       const twins = twinsRef.current;
       
-      // Trinity positions with 120° offset
+      // Trinity positions with 120° offset - each star floats independently
       let x1: number, y1: number, x2: number, y2: number, x3: number, y3: number;
       
-      // Helper to calculate trinity positions with 120° offset
+      // 120° offset for triangular base formation
       const trinityOffset = (Math.PI * 2) / 3;
+      
+      // Individual float offsets - each star has unique floating rhythm (from config)
+      const floatOffset1 = Math.sin(t * 1.3) * floatAmp + Math.cos(t * 0.7) * (floatAmp * 0.66);
+      const floatOffset2 = Math.sin(t * 1.1 + 1.5) * floatAmp + Math.cos(t * 0.9 + 0.8) * (floatAmp * 0.66);
+      const floatOffset3 = Math.sin(t * 0.9 + 3.0) * floatAmp + Math.cos(t * 1.2 + 2.1) * (floatAmp * 0.66);
       
       switch (currentMode) {
         case 'IDLE':
-          twins.forEach((twin, i) => { twin.angle += 0.015; });
-          // Equilateral triangle formation - FULL radius for clear visual separation
-          const idleAngle = twins[0].angle;
-          x1 = center + Math.cos(idleAngle) * radius;
-          y1 = center + Math.sin(idleAngle) * radius;
-          x2 = center + Math.cos(idleAngle + trinityOffset) * radius;
-          y2 = center + Math.sin(idleAngle + trinityOffset) * radius;
-          x3 = center + Math.cos(idleAngle + trinityOffset * 2) * radius;
-          y3 = center + Math.sin(idleAngle + trinityOffset * 2) * radius;
+          // Each star rotates at slightly different speeds for organic independent motion
+          twins[0].angle += 0.012;
+          twins[1].angle += 0.014;
+          twins[2].angle += 0.011;
+          
+          // Stars float independently around their base triangle positions
+          x1 = center + Math.cos(twins[0].angle) * radius + floatOffset1;
+          y1 = center + Math.sin(twins[0].angle) * radius + floatOffset2 * 0.6;
+          x2 = center + Math.cos(twins[1].angle + trinityOffset) * radius + floatOffset2;
+          y2 = center + Math.sin(twins[1].angle + trinityOffset) * radius + floatOffset3 * 0.6;
+          x3 = center + Math.cos(twins[2].angle + trinityOffset * 2) * radius + floatOffset3;
+          y3 = center + Math.sin(twins[2].angle + trinityOffset * 2) * radius + floatOffset1 * 0.6;
           break;
         
         case 'THINKING':
@@ -655,36 +790,33 @@ const FloatingMascot = memo(function FloatingMascot({
       const brandingLabels = ['Co', 'AI', 'L'];
       const brandingColors = ['#a855f7', '#38bdf8', '#38bdf8'];
       
-      // Quality-aware star rendering with crisp edges - REDUCED GLOW to prevent merging
+      // INDEPENDENT STAR RENDERING - Each star is a distinct entity with NO visual overlap
       const qs = qualitySettings;
       
-      // Reset composite operation to prevent additive blending between stars
-      ctx.globalCompositeOperation = 'source-over';
-      
       twins.forEach((twin, index) => {
-        // Crisp star sizing - balanced for visibility without overlap
-        const starSize = mascotSize * 0.07; // Slightly smaller body
-        const innerSize = starSize * 0.45;
+        // DYNAMIC star sizing from config - compact and never overlaps
+        const starSize = mascotSize * trinityConfig.starSizeMultiplier;
+        const innerSize = starSize * 0.5;
         
-        // CAPPED glow halo - maximum 0.5x star size to prevent overlap
-        const maxGlowRadius = starSize * 0.5; // Cap at 50% of star size
-        const actualGlowRadius = Math.min(starSize * qs.glowBlurRadius, maxGlowRadius);
+        // MINIMAL glow from config - tight around star, no overlap possible
+        const maxGlowRadius = starSize * trinityConfig.glowRadiusMultiplier;
+        const actualGlowRadius = Math.min(starSize * qs.glowBlurRadius * 0.5, maxGlowRadius);
         
-        // Quality-aware glow halo - reduced alpha for subtle glow without merging
+        // Subtle glow halo - each star glows independently
         if (qs.haloAlpha > 0) {
-          const cappedAlpha = Math.min(qs.haloAlpha, 0.4); // Cap alpha at 0.4
+          const cappedAlpha = Math.min(qs.haloAlpha, 0.25); // Very subtle glow
           const haloGradient = ctx.createRadialGradient(
-            twin.x, twin.y, 0,
-            twin.x, twin.y, actualGlowRadius
+            twin.x, twin.y, starSize * 0.8, // Start glow from edge of star
+            twin.x, twin.y, starSize + actualGlowRadius // Tight outer edge
           );
           const haloAlphaHex = Math.round(cappedAlpha * 255).toString(16).padStart(2, '0');
-          const haloFadeHex = Math.round(cappedAlpha * 0.25 * 255).toString(16).padStart(2, '0');
+          const haloFadeHex = Math.round(cappedAlpha * 0.1 * 255).toString(16).padStart(2, '0');
           haloGradient.addColorStop(0, `${twin.color}${haloAlphaHex}`);
-          haloGradient.addColorStop(0.5, `${twin.color}${haloFadeHex}`);
+          haloGradient.addColorStop(0.6, `${twin.color}${haloFadeHex}`);
           haloGradient.addColorStop(1, 'transparent');
           
           ctx.beginPath();
-          ctx.arc(twin.x, twin.y, actualGlowRadius, 0, Math.PI * 2);
+          ctx.arc(twin.x, twin.y, starSize + actualGlowRadius, 0, Math.PI * 2);
           ctx.fillStyle = haloGradient;
           ctx.fill();
         }

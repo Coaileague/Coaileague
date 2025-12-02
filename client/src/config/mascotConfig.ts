@@ -134,6 +134,91 @@ export interface TransportEffectConfig {
   glowColor: string;
 }
 
+// ============================================================================
+// TRINITY STAR PHYSICS CONFIGURATION
+// Dynamic settings for 3-star mascot - NO HARDCODED VALUES
+// ============================================================================
+
+export interface TrinityStarConfig {
+  orbitRadiusMultiplier: number;     // Multiplier for orbit radius (0.4-0.7)
+  minOrbitRadius: number;            // Minimum absolute orbit radius in px
+  starSizeMultiplier: number;        // Star body size as % of mascot size
+  glowRadiusMultiplier: number;      // Glow extends this far from star edge
+  minDistance: number;               // Minimum distance between stars (physics)
+  individualFloatAmplitude: number;  // How much each star floats independently
+  repulsionStrength: number;         // How hard stars push apart
+  springStrength: number;            // How strongly stars return to formation
+}
+
+export const TRINITY_STAR_CONFIG: TrinityStarConfig = {
+  orbitRadiusMultiplier: 0.7,        // 70% of mascot size for wider orbit - PREVENTS MERGING
+  minOrbitRadius: 50,                // At least 50px orbit radius - ENSURES SEPARATION
+  starSizeMultiplier: 0.10,          // 10% of mascot size - VISIBLE STARS
+  glowRadiusMultiplier: 0.4,         // Moderate glow - 40% of star size
+  minDistance: 45,                   // Large gap between stars - NO MERGING
+  individualFloatAmplitude: 4,       // Each star floats +/- 4px independently
+  repulsionStrength: 10.0,           // Very strong push-apart force - PREVENTS 3RD STAR HIDING
+  springStrength: 0.02,              // Very weak pull-together for maximum independence
+};
+
+// ============================================================================
+// EMOTE ANIMATION PHASE SYSTEM
+// Animations loop through phases then return to IDLE
+// ============================================================================
+
+export type EmotePhase = 'IDLE' | 'ENTER' | 'ACTIVE' | 'PEAK' | 'EXIT' | 'RETURN_TO_IDLE';
+
+export interface EmotePhaseConfig {
+  phases: EmotePhase[];              // Sequence of phases
+  phaseDurations: Record<EmotePhase, number>; // Duration of each phase in ms
+  loopPhases?: EmotePhase[];         // Which phases loop (optional)
+  loopCount?: number;                // How many times to loop (0 = until stopped)
+  syncAllStars: boolean;             // All 3 stars animate in unison
+  returnToIdleOnComplete: boolean;   // Auto-return to idle after animation
+}
+
+export const EMOTE_PHASE_CONFIGS: Record<string, EmotePhaseConfig> = {
+  default: {
+    phases: ['ENTER', 'ACTIVE', 'EXIT', 'RETURN_TO_IDLE'],
+    phaseDurations: { IDLE: 0, ENTER: 300, ACTIVE: 2000, PEAK: 500, EXIT: 300, RETURN_TO_IDLE: 200 },
+    syncAllStars: true,
+    returnToIdleOnComplete: true,
+  },
+  celebrating: {
+    phases: ['ENTER', 'ACTIVE', 'PEAK', 'ACTIVE', 'PEAK', 'EXIT', 'RETURN_TO_IDLE'],
+    phaseDurations: { IDLE: 0, ENTER: 200, ACTIVE: 800, PEAK: 400, EXIT: 300, RETURN_TO_IDLE: 300 },
+    loopPhases: ['ACTIVE', 'PEAK'],
+    loopCount: 3,
+    syncAllStars: true,
+    returnToIdleOnComplete: true,
+  },
+  thinking: {
+    phases: ['ENTER', 'ACTIVE', 'EXIT', 'RETURN_TO_IDLE'],
+    phaseDurations: { IDLE: 0, ENTER: 400, ACTIVE: 0, PEAK: 0, EXIT: 400, RETURN_TO_IDLE: 200 },
+    syncAllStars: true,
+    returnToIdleOnComplete: false, // Stays in thinking until mode changes
+  },
+  alert: {
+    phases: ['ENTER', 'PEAK', 'ACTIVE', 'EXIT', 'RETURN_TO_IDLE'],
+    phaseDurations: { IDLE: 0, ENTER: 100, ACTIVE: 1500, PEAK: 300, EXIT: 200, RETURN_TO_IDLE: 200 },
+    loopPhases: ['PEAK'],
+    loopCount: 5,
+    syncAllStars: true,
+    returnToIdleOnComplete: true,
+  },
+  notification: {
+    phases: ['ENTER', 'PEAK', 'ACTIVE', 'EXIT', 'RETURN_TO_IDLE'],
+    phaseDurations: { IDLE: 0, ENTER: 150, ACTIVE: 2000, PEAK: 200, EXIT: 250, RETURN_TO_IDLE: 200 },
+    syncAllStars: true,
+    returnToIdleOnComplete: true,
+  },
+};
+
+// Get phase config for an emote type
+export function getEmotePhaseConfig(emoteType: string): EmotePhaseConfig {
+  return EMOTE_PHASE_CONFIGS[emoteType] || EMOTE_PHASE_CONFIGS.default;
+}
+
 // Emote system for mascot expressions
 export type EmoteType = 
   | 'neutral'
