@@ -260,12 +260,14 @@ const FloatingMascot = memo(function FloatingMascot({
       switch (currentMode) {
         case 'IDLE':
           twins.forEach((twin, i) => { twin.angle += 0.015; });
-          x1 = center + Math.cos(twins[0].angle) * radius * 0.6;
-          y1 = center + Math.sin(twins[0].angle * 0.5) * radius * 0.4;
-          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius * 0.6;
-          y2 = center + Math.sin((twins[0].angle + trinityOffset) * 0.5) * radius * 0.4;
-          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius * 0.6;
-          y3 = center + Math.sin((twins[0].angle + trinityOffset * 2) * 0.5) * radius * 0.4;
+          // Equilateral triangle formation - all 3 stars use consistent 120° offsets
+          const idleAngle = twins[0].angle;
+          x1 = center + Math.cos(idleAngle) * radius * 0.6;
+          y1 = center + Math.sin(idleAngle) * radius * 0.5;
+          x2 = center + Math.cos(idleAngle + trinityOffset) * radius * 0.6;
+          y2 = center + Math.sin(idleAngle + trinityOffset) * radius * 0.5;
+          x3 = center + Math.cos(idleAngle + trinityOffset * 2) * radius * 0.6;
+          y3 = center + Math.sin(idleAngle + trinityOffset * 2) * radius * 0.5;
           break;
         
         case 'THINKING':
@@ -484,6 +486,10 @@ const FloatingMascot = memo(function FloatingMascot({
 
   useEffect(() => {
     setCurrentMode(mode);
+    // Reset physics to prevent residual overlap when switching modes
+    if (physicsRef.current) {
+      physicsRef.current.resetToTargets();
+    }
   }, [mode]);
 
   useEffect(() => {
