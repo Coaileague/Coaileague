@@ -170,7 +170,7 @@ import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 function MascotRenderer() {
   const { currentMode } = useMascotMode();
   const [location] = useLocation();
-  const { position, isExpanded, isDragging, toggleExpanded, resetPosition, dragHandlers } = useMascotPosition(isExpanded ? 180 : 80);
+  const { position, isExpanded, isDragging, toggleExpanded, resetPosition, dragHandlers } = useMascotPosition(80);
   
   // Hide mascot only on demo and auth pages
   const hideMascotPages = ['/mascot-demo', '/login', '/register'];

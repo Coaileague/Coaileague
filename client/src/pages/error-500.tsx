@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ServerCrash, Home, RefreshCw, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { CoAIleagueStaticLogo } from "@/components/coaileague-static-logo";
+import { GeminiAgentMascot } from "@/components/gemini-agent-mascot";
 
 export default function Error500() {
   const [, setLocation] = useLocation();
@@ -34,8 +35,14 @@ export default function Error500() {
             </div>
           </div>
 
-          <div className="mx-auto mb-6 h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center border border-destructive/20">
-            <ServerCrash className="h-8 w-8 text-destructive" data-testid="icon-error-500" />
+          <div className="mx-auto mb-4 flex justify-center">
+            <GeminiAgentMascot mode="ERROR" variant="mini" size={64} />
+          </div>
+
+          <div className="bg-red-950/30 border border-red-800/30 rounded-lg p-3 mb-4 mx-auto max-w-sm">
+            <p className="text-[11px] text-red-200 text-center leading-relaxed">
+              <span className="text-red-400 font-semibold">CoAI Alert:</span> I've detected a hiccup in our systems. Don't worry - our team is already on it. Try refreshing or come back shortly!
+            </p>
           </div>
 
           <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-error-title">

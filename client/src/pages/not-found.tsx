@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Home, ArrowLeft, Search, MessageSquare, FileQuestion } from "lucide-react";
 import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
+import { GeminiAgentMascot } from "@/components/gemini-agent-mascot";
 
 export default function NotFound() {
   const [, setLocation] = useLocation();
@@ -17,8 +18,14 @@ export default function NotFound() {
             </div>
           </div>
 
-          <div className="mx-auto mb-6 h-16 w-16 rounded-full bg-muted flex items-center justify-center border">
-            <FileQuestion className="h-8 w-8 text-muted-foreground" data-testid="icon-error-404" />
+          <div className="mx-auto mb-4 flex justify-center">
+            <GeminiAgentMascot mode="SEARCHING" variant="mini" size={64} />
+          </div>
+
+          <div className="bg-slate-900/50 border border-slate-700/50 rounded-lg p-3 mb-4 mx-auto max-w-sm">
+            <p className="text-[11px] text-slate-300 text-center leading-relaxed">
+              <span className="text-sky-400 font-semibold">CoAI says:</span> I'm searching for that page, but it seems to have wandered off. Let me help you find your way back!
+            </p>
           </div>
 
           <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-error-title">
