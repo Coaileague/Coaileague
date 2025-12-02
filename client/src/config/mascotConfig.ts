@@ -152,7 +152,7 @@ export interface TrinityStarConfig {
 
 export const TRINITY_STAR_CONFIG: TrinityStarConfig = {
   orbitRadiusMultiplier: 0.85,       // 85% of mascot size for VERY wide orbit - MAXIMUM SEPARATION
-  minOrbitRadius: 60,                // At least 60px orbit radius - FORCES SEPARATION
+  minOrbitRadius: 100,               // At least 100px orbit radius - FORCES WIDE SEPARATION
   starSizeMultiplier: 0.085,         // 8.5% of mascot size - compact but visible
   glowRadiusMultiplier: 0.3,         // Tight glow - 30% of star size (no overlap)
   minDistance: 60,                   // LARGE gap between stars - 3RD STAR ALWAYS VISIBLE

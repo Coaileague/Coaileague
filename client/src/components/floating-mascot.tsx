@@ -817,7 +817,8 @@ const FloatingMascot = memo(function FloatingMascot({
 
       // Trinity branding: "Co" on cyan, "AI" on purple, "L" on gold - spells "CoAIL"
       const brandingLabels = ['Co', 'AI', 'L'];
-      const brandingColors = ['#a855f7', '#38bdf8', '#38bdf8'];
+      // FIXED: Each star has DISTINCT text color matching its identity - gold star (#f4c15d) was incorrectly cyan!
+      const brandingColors = [colors.primary, colors.secondary, colors.tertiary];
       
       // INDEPENDENT STAR RENDERING - Each star is a distinct entity with NO visual overlap
       const qs = qualitySettings;
