@@ -34,7 +34,10 @@ export type MascotMode =
   | 'LISTENING' 
   | 'UPLOADING' 
   | 'SUCCESS' 
-  | 'ERROR';
+  | 'ERROR'
+  | 'CELEBRATING'
+  | 'ADVISING'
+  | 'HOLIDAY';
 
 interface Twin {
   id: number;
@@ -81,7 +84,10 @@ const MODE_COLORS: Record<MascotMode, string> = {
   LISTENING: '#fbbf24', // Amber
   UPLOADING: '#06b6d4', // Cyan
   SUCCESS: '#f472b6',   // Pink
-  ERROR: '#ef4444'      // Red
+  ERROR: '#ef4444',     // Red
+  CELEBRATING: '#fbbf24', // Amber/Gold
+  ADVISING: '#10b981',    // Emerald
+  HOLIDAY: '#f472b6'      // Pink
 };
 
 const MODE_LABELS: Record<MascotMode, string> = {
@@ -93,7 +99,10 @@ const MODE_LABELS: Record<MascotMode, string> = {
   LISTENING: 'Listening',
   UPLOADING: 'Uploading',
   SUCCESS: 'Complete',
-  ERROR: 'Error'
+  ERROR: 'Error',
+  CELEBRATING: 'Celebrating',
+  ADVISING: 'Advising',
+  HOLIDAY: 'Holiday'
 };
 
 class CoAITwinEngine {

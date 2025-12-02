@@ -1,7 +1,7 @@
 // Multi-tenant SaaS Scheduling Platform
 
 import { Switch, Route, useLocation, Link } from "wouter";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -164,52 +164,137 @@ import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { CoAITwinMascot } from "@/components/coai-twin-mascot";
 import { useMascotMode } from "@/hooks/use-mascot-mode";
 import { useMascotPosition } from "@/hooks/use-mascot-position";
-import MASCOT_CONFIG, { shouldHideMascot } from "@/config/mascotConfig";
+import MASCOT_CONFIG, { shouldHideMascot, getDeviceSizes, getCurrentHoliday } from "@/config/mascotConfig";
+import { thoughtManager, type Thought } from "@/lib/mascot/ThoughtManager";
+import { useMascotAIIntegration } from "@/hooks/use-mascot-ai";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 
 function MascotRenderer() {
+  const { user } = useAuth();
+  useMascotAIIntegration(user?.workspaceId);
   const currentMode = useMascotMode();
   const [location] = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const [currentThought, setCurrentThought] = useState<string | null>(null);
+  const [currentThought, setCurrentThought] = useState<Thought | null>(null);
+  const [floatOffset, setFloatOffset] = useState({ x: 0, y: 0 });
+  const [dragVelocity, setDragVelocity] = useState(0);
+  const lastPosRef = useRef({ x: 0, y: 0, time: 0 });
+  const floatTimeRef = useRef(0);
+  const floatAnimRef = useRef<number | null>(null);
   
-  const sizes = isMobile ? MASCOT_CONFIG.mobile : MASCOT_CONFIG.desktop;
+  const sizes = getDeviceSizes();
   const { position, isExpanded, isDragging, toggleExpanded, resetPosition, dragHandlers } = useMascotPosition(sizes.defaultSize, isMobile);
   
   const bubbleSize = isExpanded ? sizes.expandedSize : sizes.defaultSize;
-  const emoticon = MASCOT_CONFIG.thoughts.emoticons[currentMode];
+  const zoomScale = isDragging ? MASCOT_CONFIG.floatMotion.dragZoomScale : 1;
   
   useEffect(() => {
-    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    const handleResize = () => setIsMobile(window.innerWidth < MASCOT_CONFIG.breakpoints.mobile);
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
   useEffect(() => {
-    if (!MASCOT_CONFIG.thoughts.enabled) return;
-    const thoughts = MASCOT_CONFIG.thoughts.defaultThoughts[currentMode];
-    const randomThought = thoughts[Math.floor(Math.random() * thoughts.length)];
-    setCurrentThought(randomThought);
-    const timer = setTimeout(() => setCurrentThought(null), MASCOT_CONFIG.thoughts.displayDuration);
-    return () => clearTimeout(timer);
+    const unsubscribe = thoughtManager.subscribe((thought) => {
+      setCurrentThought(thought);
+    });
+    thoughtManager.startRotation();
+    
+    const holiday = getCurrentHoliday();
+    if (holiday) {
+      setTimeout(() => thoughtManager.triggerHolidayGreeting(), 2000);
+    }
+    
+    return () => {
+      unsubscribe();
+      thoughtManager.stopRotation();
+    };
+  }, []);
+  
+  useEffect(() => {
+    thoughtManager.triggerModeThought(currentMode);
   }, [currentMode]);
   
+  useEffect(() => {
+    if (!MASCOT_CONFIG.floatMotion.enabled || isDragging) {
+      if (floatAnimRef.current) {
+        cancelAnimationFrame(floatAnimRef.current);
+        floatAnimRef.current = null;
+      }
+      setFloatOffset({ x: 0, y: 0 });
+      return;
+    }
+    
+    const animate = () => {
+      floatTimeRef.current += 16;
+      const { amplitude, frequency } = MASCOT_CONFIG.floatMotion;
+      setFloatOffset({
+        x: Math.sin(floatTimeRef.current * frequency) * amplitude.x,
+        y: Math.sin(floatTimeRef.current * frequency * 1.3) * amplitude.y,
+      });
+      floatAnimRef.current = requestAnimationFrame(animate);
+    };
+    
+    floatAnimRef.current = requestAnimationFrame(animate);
+    return () => {
+      if (floatAnimRef.current) cancelAnimationFrame(floatAnimRef.current);
+    };
+  }, [isDragging]);
+  
+  useEffect(() => {
+    if (isDragging) {
+      const now = Date.now();
+      const dx = position.x - lastPosRef.current.x;
+      const dy = position.y - lastPosRef.current.y;
+      const dt = Math.max(now - lastPosRef.current.time, 1);
+      const velocity = Math.sqrt(dx * dx + dy * dy) / dt * 16;
+      
+      setDragVelocity(velocity);
+      lastPosRef.current = { x: position.x, y: position.y, time: now };
+      
+      if (velocity > 5 && Math.random() > 0.92) {
+        thoughtManager.triggerReaction('drag_move', velocity);
+      }
+    } else if (dragVelocity > 0) {
+      thoughtManager.triggerReaction('drag_end', dragVelocity);
+      setDragVelocity(0);
+    }
+  }, [position, isDragging]);
+  
+  const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    e.stopPropagation();
+    if (!isDragging) {
+      thoughtManager.triggerReaction('tap');
+    }
+  }, [isDragging]);
+  
   if (!MASCOT_CONFIG.enabled || shouldHideMascot(location)) return null;
+  
+  const effectiveX = position.x + (isDragging ? 0 : floatOffset.x);
+  const effectiveY = position.y + (isDragging ? 0 : floatOffset.y);
   
   return (
     <div 
       className={`fixed select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       style={{ 
-        bottom: position.y,
-        right: position.x,
+        bottom: effectiveY,
+        right: effectiveX,
         width: bubbleSize,
         height: bubbleSize,
         zIndex: MASCOT_CONFIG.zIndex,
-        transition: `all ${MASCOT_CONFIG.animation.transitionDuration}ms ease-out`,
+        transform: `scale(${zoomScale})`,
+        transformOrigin: 'center',
+        transition: isDragging 
+          ? 'transform 150ms ease-out' 
+          : `all ${MASCOT_CONFIG.animation.transitionDuration}ms ease-out, transform 150ms ease-out`,
       }}
       data-testid="mascot-container"
     >
-      <div className="relative group w-full h-full" {...dragHandlers}>
+      <div 
+        className="relative group w-full h-full" 
+        {...dragHandlers}
+        onClick={handleTap}
+      >
         <CoAITwinMascot 
           mode={currentMode} 
           variant={isExpanded ? 'expanded' : 'mini'}
@@ -217,11 +302,19 @@ function MascotRenderer() {
         />
         
         {currentThought && (
-          <div className={`absolute -top-16 left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg bg-slate-900/95 border border-slate-600 text-slate-100 whitespace-nowrap shadow-lg pointer-events-none animate-in fade-in duration-300 ${isMobile ? 'text-xs' : 'text-sm'}`}>
-            <div className="flex items-center gap-2">
-              <span className="text-lg">{emoticon}</span>
-              <span className="font-medium">{currentThought}</span>
+          <div 
+            className={`absolute -top-16 left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg bg-slate-900/95 border border-slate-600 text-slate-100 whitespace-nowrap shadow-lg pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-300 ${isMobile ? 'text-xs max-w-[160px] whitespace-normal text-center' : 'text-sm'}`}
+            style={{
+              boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+            }}
+          >
+            <div className="flex items-center gap-2 justify-center">
+              <span className="text-lg shrink-0">{currentThought.emoticon}</span>
+              <span className="font-medium">{currentThought.text}</span>
             </div>
+            <div 
+              className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-slate-900 border-r border-b border-slate-600 rotate-45"
+            />
           </div>
         )}
         
