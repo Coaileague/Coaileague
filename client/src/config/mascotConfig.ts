@@ -392,19 +392,20 @@ export interface ThoughtBubbleTheme {
 }
 
 // Seasonal thought bubble configurations
+// Updated for visibility on both light and dark backgrounds
 export const THOUGHT_BUBBLE_THEMES: Record<HolidayKey, ThoughtBubbleTheme> = {
   default: {
     mode: 'normal',
     style: {
-      background: 'rgba(15, 23, 42, 0.15)',
-      backdropBlur: 'blur(8px)',
-      border: '1px solid rgba(148, 163, 184, 0.2)',
+      background: 'rgba(15, 23, 42, 0.85)',
+      backdropBlur: 'blur(12px)',
+      border: '2px solid rgba(168, 85, 247, 0.5)',
       borderRadius: '12px',
-      textColor: 'rgba(241, 245, 249, 0.95)',
-      glowColor: 'rgba(168, 85, 247, 0.3)',
-      glowIntensity: 0.4,
-      opacity: 0.9,
-      shadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+      textColor: 'rgba(255, 255, 255, 0.95)',
+      glowColor: 'rgba(168, 85, 247, 0.5)',
+      glowIntensity: 0.5,
+      opacity: 0.95,
+      shadow: '0 4px 20px rgba(0, 0, 0, 0.3), 0 0 8px rgba(168, 85, 247, 0.3)',
     },
     animation: {
       enter: 'fade',
@@ -417,15 +418,15 @@ export const THOUGHT_BUBBLE_THEMES: Record<HolidayKey, ThoughtBubbleTheme> = {
   new_year: {
     mode: 'holiday',
     style: {
-      background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(56, 189, 248, 0.1))',
+      background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9))',
       backdropBlur: 'blur(12px)',
-      border: '1px solid rgba(255, 215, 0, 0.3)',
+      border: '2px solid rgba(255, 215, 0, 0.6)',
       borderRadius: '16px',
-      textColor: 'rgba(255, 255, 255, 0.95)',
-      glowColor: 'rgba(255, 215, 0, 0.4)',
+      textColor: 'rgba(255, 255, 255, 0.98)',
+      glowColor: 'rgba(255, 215, 0, 0.5)',
       glowIntensity: 0.6,
-      opacity: 0.85,
-      shadow: '0 4px 20px rgba(255, 215, 0, 0.15)',
+      opacity: 0.95,
+      shadow: '0 4px 20px rgba(0, 0, 0, 0.4), 0 0 12px rgba(255, 215, 0, 0.3)',
     },
     animation: {
       enter: 'confetti-burst',
@@ -439,15 +440,15 @@ export const THOUGHT_BUBBLE_THEMES: Record<HolidayKey, ThoughtBubbleTheme> = {
   valentines: {
     mode: 'holiday',
     style: {
-      background: 'rgba(236, 72, 153, 0.1)',
+      background: 'rgba(15, 23, 42, 0.88)',
       backdropBlur: 'blur(10px)',
-      border: '1px solid rgba(236, 72, 153, 0.3)',
+      border: '2px solid rgba(236, 72, 153, 0.6)',
       borderRadius: '20px',
-      textColor: 'rgba(255, 255, 255, 0.95)',
-      glowColor: 'rgba(236, 72, 153, 0.4)',
+      textColor: 'rgba(255, 255, 255, 0.98)',
+      glowColor: 'rgba(236, 72, 153, 0.5)',
       glowIntensity: 0.5,
-      opacity: 0.85,
-      shadow: '0 4px 18px rgba(236, 72, 153, 0.2)',
+      opacity: 0.95,
+      shadow: '0 4px 18px rgba(0, 0, 0, 0.4), 0 0 10px rgba(236, 72, 153, 0.3)',
     },
     animation: {
       enter: 'hearts-float',
@@ -461,15 +462,15 @@ export const THOUGHT_BUBBLE_THEMES: Record<HolidayKey, ThoughtBubbleTheme> = {
   spring: {
     mode: 'seasonal',
     style: {
-      background: 'rgba(74, 222, 128, 0.08)',
-      backdropBlur: 'blur(8px)',
-      border: '1px solid rgba(74, 222, 128, 0.25)',
+      background: 'rgba(15, 23, 42, 0.85)',
+      backdropBlur: 'blur(10px)',
+      border: '2px solid rgba(74, 222, 128, 0.5)',
       borderRadius: '14px',
-      textColor: 'rgba(241, 245, 249, 0.95)',
-      glowColor: 'rgba(74, 222, 128, 0.3)',
+      textColor: 'rgba(255, 255, 255, 0.98)',
+      glowColor: 'rgba(74, 222, 128, 0.4)',
       glowIntensity: 0.4,
-      opacity: 0.88,
-      shadow: '0 4px 16px rgba(74, 222, 128, 0.1)',
+      opacity: 0.95,
+      shadow: '0 4px 16px rgba(0, 0, 0, 0.35), 0 0 8px rgba(74, 222, 128, 0.25)',
     },
     animation: {
       enter: 'float-in',
@@ -483,15 +484,15 @@ export const THOUGHT_BUBBLE_THEMES: Record<HolidayKey, ThoughtBubbleTheme> = {
   easter: {
     mode: 'holiday',
     style: {
-      background: 'linear-gradient(135deg, rgba(251, 207, 232, 0.1), rgba(196, 181, 253, 0.1))',
+      background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(30, 41, 59, 0.88))',
       backdropBlur: 'blur(10px)',
-      border: '1px solid rgba(196, 181, 253, 0.3)',
+      border: '2px solid rgba(196, 181, 253, 0.5)',
       borderRadius: '18px',
-      textColor: 'rgba(255, 255, 255, 0.95)',
+      textColor: 'rgba(255, 255, 255, 0.98)',
       glowColor: 'rgba(196, 181, 253, 0.4)',
       glowIntensity: 0.45,
-      opacity: 0.87,
-      shadow: '0 4px 16px rgba(196, 181, 253, 0.15)',
+      opacity: 0.95,
+      shadow: '0 4px 16px rgba(0, 0, 0, 0.35), 0 0 8px rgba(196, 181, 253, 0.25)',
     },
     animation: {
       enter: 'pop',
@@ -504,15 +505,15 @@ export const THOUGHT_BUBBLE_THEMES: Record<HolidayKey, ThoughtBubbleTheme> = {
   summer: {
     mode: 'seasonal',
     style: {
-      background: 'rgba(251, 191, 36, 0.08)',
-      backdropBlur: 'blur(6px)',
-      border: '1px solid rgba(251, 191, 36, 0.2)',
+      background: 'rgba(15, 23, 42, 0.85)',
+      backdropBlur: 'blur(10px)',
+      border: '2px solid rgba(251, 191, 36, 0.5)',
       borderRadius: '12px',
-      textColor: 'rgba(255, 255, 255, 0.95)',
-      glowColor: 'rgba(251, 191, 36, 0.35)',
+      textColor: 'rgba(255, 255, 255, 0.98)',
+      glowColor: 'rgba(251, 191, 36, 0.45)',
       glowIntensity: 0.5,
-      opacity: 0.85,
-      shadow: '0 4px 20px rgba(251, 191, 36, 0.15)',
+      opacity: 0.95,
+      shadow: '0 4px 20px rgba(0, 0, 0, 0.35), 0 0 10px rgba(251, 191, 36, 0.25)',
     },
     animation: {
       enter: 'slide-up',
@@ -525,15 +526,15 @@ export const THOUGHT_BUBBLE_THEMES: Record<HolidayKey, ThoughtBubbleTheme> = {
   halloween: {
     mode: 'holiday',
     style: {
-      background: 'rgba(249, 115, 22, 0.1)',
-      backdropBlur: 'blur(8px)',
-      border: '1px solid rgba(249, 115, 22, 0.3)',
+      background: 'rgba(15, 23, 42, 0.9)',
+      backdropBlur: 'blur(10px)',
+      border: '2px solid rgba(249, 115, 22, 0.6)',
       borderRadius: '10px',
-      textColor: 'rgba(255, 255, 255, 0.95)',
+      textColor: 'rgba(255, 255, 255, 0.98)',
       glowColor: 'rgba(249, 115, 22, 0.5)',
       glowIntensity: 0.6,
-      opacity: 0.9,
-      shadow: '0 4px 18px rgba(249, 115, 22, 0.25)',
+      opacity: 0.95,
+      shadow: '0 4px 18px rgba(0, 0, 0, 0.4), 0 0 12px rgba(249, 115, 22, 0.35)',
     },
     animation: {
       enter: 'pop',
@@ -546,15 +547,15 @@ export const THOUGHT_BUBBLE_THEMES: Record<HolidayKey, ThoughtBubbleTheme> = {
   thanksgiving: {
     mode: 'holiday',
     style: {
-      background: 'rgba(180, 83, 9, 0.1)',
-      backdropBlur: 'blur(8px)',
-      border: '1px solid rgba(217, 119, 6, 0.25)',
+      background: 'rgba(15, 23, 42, 0.88)',
+      backdropBlur: 'blur(10px)',
+      border: '2px solid rgba(217, 119, 6, 0.5)',
       borderRadius: '14px',
-      textColor: 'rgba(255, 255, 255, 0.95)',
-      glowColor: 'rgba(217, 119, 6, 0.35)',
-      glowIntensity: 0.4,
-      opacity: 0.88,
-      shadow: '0 4px 16px rgba(180, 83, 9, 0.15)',
+      textColor: 'rgba(255, 255, 255, 0.98)',
+      glowColor: 'rgba(217, 119, 6, 0.45)',
+      glowIntensity: 0.45,
+      opacity: 0.95,
+      shadow: '0 4px 16px rgba(0, 0, 0, 0.35), 0 0 10px rgba(217, 119, 6, 0.25)',
     },
     animation: {
       enter: 'leaves-drift',
@@ -568,15 +569,15 @@ export const THOUGHT_BUBBLE_THEMES: Record<HolidayKey, ThoughtBubbleTheme> = {
   christmas: {
     mode: 'holiday',
     style: {
-      background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.08), rgba(22, 163, 74, 0.08))',
+      background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(30, 41, 59, 0.9))',
       backdropBlur: 'blur(12px)',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
+      border: '2px solid rgba(220, 38, 38, 0.4)',
       borderRadius: '16px',
-      textColor: 'rgba(255, 255, 255, 0.95)',
-      glowColor: 'rgba(255, 255, 255, 0.4)',
+      textColor: 'rgba(255, 255, 255, 0.98)',
+      glowColor: 'rgba(22, 163, 74, 0.45)',
       glowIntensity: 0.5,
-      opacity: 0.85,
-      shadow: '0 4px 20px rgba(255, 255, 255, 0.1)',
+      opacity: 0.95,
+      shadow: '0 4px 20px rgba(0, 0, 0, 0.4), 0 0 12px rgba(220, 38, 38, 0.2), 0 0 12px rgba(22, 163, 74, 0.2)',
     },
     animation: {
       enter: 'snowfall',

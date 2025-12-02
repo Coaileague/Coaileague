@@ -413,10 +413,24 @@ class CoAITwinEngine {
     this.drawParticles();
 
     this.twins.forEach((t, twinIndex) => {
-      this.ctx.beginPath();
+      // Draw dark outline trail for visibility on light backgrounds
       for (let i = 0; i < t.trail.length - 1; i++) {
         const p1 = t.trail[i];
         const p2 = t.trail[i + 1];
+        this.ctx.beginPath();
+        this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.3)';
+        this.ctx.globalAlpha = p1.life * 0.4;
+        this.ctx.lineWidth = p1.life * 6 * s * 0.003;
+        this.ctx.moveTo(p1.x, p1.y);
+        this.ctx.lineTo(p2.x, p2.y);
+        this.ctx.stroke();
+      }
+      
+      // Draw colored trail
+      for (let i = 0; i < t.trail.length - 1; i++) {
+        const p1 = t.trail[i];
+        const p2 = t.trail[i + 1];
+        this.ctx.beginPath();
         this.ctx.strokeStyle = t.color;
         this.ctx.globalAlpha = p1.life * 0.5;
         this.ctx.lineWidth = p1.life * 4 * s * 0.003;
@@ -486,6 +500,19 @@ class CoAITwinEngine {
     const scaledOuterR = outerR * scale;
     const scaledInnerR = innerR * scale;
     
+    // Draw dark outline first for visibility on light backgrounds
+    this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.6)';
+    this.ctx.lineWidth = 3;
+    this.ctx.beginPath();
+    for (let i = 0; i < 4; i++) {
+      const angle = (i * Math.PI / 2) - (this.state.time * 0.05 * speed);
+      this.ctx.lineTo(drawX + Math.cos(angle) * (scaledOuterR + 2), drawY + Math.sin(angle) * (scaledOuterR + 2));
+      this.ctx.lineTo(drawX + Math.cos(angle + Math.PI / 4) * (scaledInnerR + 1), drawY + Math.sin(angle + Math.PI / 4) * (scaledInnerR + 1));
+    }
+    this.ctx.closePath();
+    this.ctx.stroke();
+    
+    // Draw colored fill with glow
     this.ctx.fillStyle = color;
     this.ctx.shadowBlur = 20 + (glow * 30);
     this.ctx.shadowColor = color;
@@ -497,7 +524,19 @@ class CoAITwinEngine {
     }
     this.ctx.closePath();
     this.ctx.fill();
+    
+    // Add darker stroke around star for contrast
     this.ctx.shadowBlur = 0;
+    this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.4)';
+    this.ctx.lineWidth = 1.5;
+    this.ctx.stroke();
+    
+    // Draw center dot with dark ring
+    this.ctx.beginPath();
+    this.ctx.arc(drawX, drawY, scaledInnerR + 1, 0, Math.PI * 2);
+    this.ctx.fillStyle = 'rgba(15, 23, 42, 0.3)';
+    this.ctx.fill();
+    
     this.ctx.fillStyle = '#fff';
     this.ctx.beginPath();
     this.ctx.arc(drawX, drawY, scaledInnerR, 0, Math.PI * 2);
@@ -517,11 +556,27 @@ class CoAITwinEngine {
         continue;
       }
       
+      const fontSize = 12 + p.life * 8;
       this.ctx.globalAlpha = p.life;
-      this.ctx.font = `${12 + p.life * 8}px sans-serif`;
+      this.ctx.font = `bold ${fontSize}px sans-serif`;
       this.ctx.textAlign = 'center';
       this.ctx.textBaseline = 'middle';
-      this.ctx.fillStyle = '#fff';
+      
+      // Draw dark text shadow for visibility on light backgrounds
+      this.ctx.fillStyle = 'rgba(15, 23, 42, 0.7)';
+      this.ctx.fillText(p.char || '', p.x + 1, p.y + 1);
+      
+      // Choose colorful fill based on particle type for visibility
+      const colorMap: Record<string, string> = {
+        'sparkle': '#fbbf24',    // Amber/gold
+        'hearts': '#ec4899',     // Pink
+        'stars': '#facc15',      // Yellow
+        'confetti': '#a855f7',   // Purple
+        'zzz': '#6366f1',        // Indigo
+        'question': '#3b82f6',   // Blue  
+        'exclaim': '#ef4444',    // Red
+      };
+      this.ctx.fillStyle = colorMap[p.type] || '#fff';
       this.ctx.fillText(p.char || '', p.x, p.y);
     }
     this.ctx.globalAlpha = 1.0;
@@ -555,6 +610,16 @@ class CoAITwinEngine {
         this.shockwaves.splice(i, 1);
         continue;
       }
+      
+      // Draw dark outer ring for visibility on light backgrounds
+      this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.4)';
+      this.ctx.globalAlpha = sw.opacity * 0.6;
+      this.ctx.lineWidth = 4;
+      this.ctx.beginPath();
+      this.ctx.arc(0, 0, sw.r, 0, Math.PI * 2);
+      this.ctx.stroke();
+      
+      // Draw colored shockwave
       this.ctx.strokeStyle = sw.color;
       this.ctx.globalAlpha = sw.opacity;
       this.ctx.lineWidth = 2;
@@ -575,6 +640,16 @@ class CoAITwinEngine {
         this.particles.splice(i, 1);
         continue;
       }
+      
+      // Draw dark outline for visibility on light backgrounds
+      this.ctx.globalAlpha = p.life * 0.6;
+      this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.5)';
+      this.ctx.lineWidth = 2;
+      this.ctx.beginPath();
+      this.ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      this.ctx.stroke();
+      
+      // Draw colored particle
       this.ctx.fillStyle = p.color;
       this.ctx.globalAlpha = p.life;
       this.ctx.beginPath();
