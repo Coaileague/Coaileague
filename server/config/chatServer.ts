@@ -42,8 +42,8 @@ export const CHAT_SERVER_CONFIG = {
     main: {
       id: 'helpdesk',
       slug: 'helpdesk',
-      name: 'CoAIleague HelpDesk',
-      description: 'Live support chat powered by CoAIleague AI',
+      name: 'HelpAI Support',
+      description: 'Live support chat powered by HelpAI',
       status: 'open' as const,
       visibility: 'public' as const,
     },
@@ -83,32 +83,32 @@ export const CHAT_SERVER_CONFIG = {
 
     // Queue update messages
     queueUpdate: {
-      label: '⏳ Queue Update',
+      label: 'Queue Update',
       fields: {
         ticket: 'Ticket',
         waitTime: 'Wait Time',
         position: 'Position in Queue',
       },
-      footer: 'CoAIleague AI is reviewing your issue. An agent will be assigned shortly.',
+      footer: 'HelpAI is reviewing your issue. An agent will be assigned shortly.',
     },
 
     // Ticket status messages
     ticketCreated: {
-      title: '✓ Ticket Created',
+      title: 'Ticket Created',
       description: (ticketId: string) =>
-        `Ticket #${ticketId} - CoAIleague AI is analyzing your issue. An agent will be with you shortly.`,
+        `Ticket #${ticketId} - HelpAI is analyzing your issue. An agent will be with you shortly.`,
     },
 
     ticketAssigned: {
-      title: '✅ Agent Assigned',
+      title: 'Agent Assigned',
       message: (ticketId: string) =>
-        `✅ An agent is now helping you!\n\nTicket #${ticketId} has been assigned. Your chat is no longer read-only.`,
-      sender: 'CoAIleague AI',
+        `An agent is now helping you!\n\nTicket #${ticketId} has been assigned. Your chat is no longer read-only.`,
+      sender: 'HelpAI',
     },
 
     // Welcome/intro messages
     welcome: {
-      title: 'Welcome to CoAIleague Support',
+      title: 'Welcome to HelpAI Support',
       description:
         'Please provide some information so our support team can better assist you.',
     },
@@ -137,9 +137,9 @@ export const CHAT_SERVER_CONFIG = {
 
     // Status messages
     status: {
-      open: '🟢 Open - Accepting Support Requests',
-      closed: '🔴 Closed - No Support Available',
-      maintenance: '🟡 Maintenance - System Updates',
+      open: 'Open - Accepting Support Requests',
+      closed: 'Closed - No Support Available',
+      maintenance: 'Maintenance - System Updates',
     },
 
     // Error messages
@@ -154,17 +154,17 @@ export const CHAT_SERVER_CONFIG = {
 
     // Toast notifications
     toasts: {
-      informationReceived: '✓ Information Received',
-      ticketCreated: '✓ Ticket Created',
-      errorCreatingTicket: '⚠️ Error Creating Ticket',
+      informationReceived: 'Information Received',
+      ticketCreated: 'Ticket Created',
+      errorCreatingTicket: 'Error Creating Ticket',
       roomStatusUpdated: 'Room Status Updated',
-      userMuted: '🔇 User Muted',
-      userBanned: '🚫 User Banned',
-      userUnmuted: '🔊 User Unmuted',
-      userUnbanned: '✓ User Unbanned',
-      cacheCleared: '✓ Cache Cleared',
-      connectionReset: '🔄 Connection Reset',
-      testMessageSent: '🔧 Test Message Sent',
+      userMuted: 'User Muted',
+      userBanned: 'User Banned',
+      userUnmuted: 'User Unmuted',
+      userUnbanned: 'User Unbanned',
+      cacheCleared: 'Cache Cleared',
+      connectionReset: 'Connection Reset',
+      testMessageSent: 'Test Message Sent',
     },
   },
 

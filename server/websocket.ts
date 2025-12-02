@@ -394,7 +394,7 @@ interface DispatchUnitStatusUpdatePayload {
 type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload | RequestSecurePayload | SecureResponsePayload | ReleaseSpectatorPayload | TransferUserPayload | SilenceUserPayload | GiveVoicePayload | BanUserPayload | JoinShiftUpdatesPayload | ShiftUpdatePayload | JoinNotificationsPayload | NotificationUpdatePayload | CallInitiatedPayload | CallAcceptedPayload | CallRejectedPayload | CallEndedPayload | WebRTCOfferPayload | WebRTCAnswerPayload | WebRTCIceCandidatePayload | JoinDispatchUpdatesPayload | DispatchGPSUpdatePayload | DispatchIncidentUpdatePayload | DispatchUnitStatusUpdatePayload;
 
 // In-memory MOTD storage (staff can update)
-let currentMOTD = "Welcome to CoAIleague HelpDesk Support Network - Your satisfaction is our priority - 24/7/365";
+let currentMOTD = "Welcome to HelpAI Support - Your satisfaction is our priority - 24/7/365";
 
 // Main HelpDesk room identifier (consistent across all handlers)
 const MAIN_ROOM_ID = 'helpdesk';

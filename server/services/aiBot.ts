@@ -39,10 +39,10 @@ interface AiBotResponse {
  */
 export async function generateGreeting(userName: string, isGuest: boolean): Promise<string> {
   if (isGuest) {
-    return `👋 Welcome to HelpDesk, ${userName}! I'm HelpAI, your AI assistant. I can help answer questions while you wait for our team. You have ${FREE_GUEST_LIMIT} free AI responses to try out our service!`;
+    return `Welcome to HelpDesk, ${userName}! I'm HelpAI, your AI assistant. I can help answer questions while you wait for our team. You have ${FREE_GUEST_LIMIT} free AI responses to try out our service!`;
   }
   
-  return `👋 Welcome back to HelpDesk, ${userName}! I'm HelpAI, your AI assistant, ready to help with any questions about CoAIleague™.`;
+  return `Welcome back to HelpDesk, ${userName}! I'm HelpAI, your AI assistant, ready to help with any questions.`;
 }
 
 /**
@@ -51,7 +51,7 @@ export async function generateGreeting(userName: string, isGuest: boolean): Prom
  * This gives staff time to prepare while bot handles the initial greeting
  */
 export async function generateStaffIntroduction(staffName: string, customerName: string): Promise<string> {
-  return `📢 Support staff ${staffName} is now ready to help you${customerName ? `, ${customerName}` : ''}! Please provide your full name and organization ID so we can assist you better. 🙌`;
+  return `Support staff ${staffName} is now ready to help you${customerName ? `, ${customerName}` : ''}! Please provide your full name and organization ID so we can assist you better.`;
 }
 
 /**
@@ -81,7 +81,7 @@ export async function getAiResponse(
   
   if (!isSubscriber && usageCount >= FREE_GUEST_LIMIT) {
     return {
-      message: `🎯 You've used all ${FREE_GUEST_LIMIT} free AI responses! Want unlimited AI support? Subscribe to CoAIleague™ or contact our team directly - a human will assist you shortly!`,
+      message: `You've used all ${FREE_GUEST_LIMIT} free AI responses! Want unlimited AI support? Subscribe to CoAIleague or contact our team directly - a human will assist you shortly!`,
       usageCount,
       limitReached: true
     };
@@ -94,32 +94,32 @@ export async function getAiResponse(
       messages: [
         {
           role: "system",
-          content: `You are HelpAI, the high-tech AI assistant for CoAIleague™ - an elite autonomous workforce management platform. You're super knowledgeable, professional, and helpful.
+          content: `You are HelpAI, the universal AI assistant for CoAIleague - an elite autonomous workforce management platform. You're knowledgeable, professional, and helpful.
 
-🎯 YOUR PERSONALITY:
+YOUR PERSONALITY:
 - High-tech and modern
 - Expert on all platform features
 - Friendly but professional
 - Concise and clear (under 150 words)
 - Always helpful with queue management and support
 
-📦 THE 8 OS™ PRODUCTS YOU KNOW:
-1. TrackOS™ - Time tracking, clock-in/out, automated hours
+THE 8 OS PRODUCTS YOU KNOW:
+1. TrackOS - Time tracking, clock-in/out, automated hours
 2. Billing Platform - Auto invoice generation from time entries
-3. AI Scheduling™ - Smart scheduling + AI auto-scheduling
-4. AI Hiring™ - Employee onboarding, multi-step workflows
-5. ReportOS™ - Report templates, submissions, approvals
-6. AnalyticsOS™ - Real-time dashboards, business insights
-7. AI Payroll™ - 99% automated payroll, tax calculations
+3. AI Scheduling - Smart scheduling + AI auto-scheduling
+4. AI Hiring - Employee onboarding, multi-step workflows
+5. ReportOS - Report templates, submissions, approvals
+6. AnalyticsOS - Real-time dashboards, business insights
+7. AI Payroll - 99% automated payroll, tax calculations
 8. HelpAI - That's YOU! Live support + AI assistance
 
-👥 USER ROLES:
+USER ROLES:
 - Owner: Full system access, can approve payroll
 - Manager: Team management, scheduling
 - Employee: Time tracking, view schedule, paychecks
 - Platform Roles: root_admin, deputy_admin, support_manager, sysop
 
-💡 CAPABILITIES:
+CAPABILITIES:
 - Answer platform questions
 - Help with queue/ticket management
 - Explain features and workflows

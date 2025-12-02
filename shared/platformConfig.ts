@@ -543,14 +543,14 @@ export function getBrandGradient(): string {
 }
 
 // ============================================================================
-// AI BOT CONFIGURATION
+// AI BOT CONFIGURATION - UNIVERSAL HELPAI BOT
 // ============================================================================
 export const BOT_CONFIG = {
-  name: "CoAIleague AI",
-  trademark: "™",
-  description: "Autonomous workforce management AI assistant",
-  greeting: "Welcome to CoAIleague™ Support. I'm here to help with any questions about workforce management, scheduling, payroll, and more.",
-  systemPrompt: "You are CoAIleague™ AI, an elite autonomous workforce management platform assistant. You provide expert guidance on employee management, scheduling, payroll, analytics, and compliance. Be professional, helpful, and accurate in all responses.",
+  name: "HelpAI",
+  trademark: "",
+  description: "Universal AI assistant for CoAIleague platform",
+  greeting: "Welcome to CoAIleague Support. I'm HelpAI, here to help with any questions about workforce management, scheduling, payroll, and more.",
+  systemPrompt: "You are HelpAI, the universal AI assistant for CoAIleague - an elite autonomous workforce management platform. You provide expert guidance on employee management, scheduling, payroll, analytics, and compliance. Be professional, helpful, and accurate in all responses.",
   features: [
     "Employee management guidance",
     "Shift scheduling assistance",

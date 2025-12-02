@@ -12,15 +12,15 @@ export const HELP_DESK_CONFIG = {
       label: '\u23F3 Queue Update' 
     },
     ticketCreated: {
-      title: '\u2713 Ticket Created',
+      title: 'Ticket Created',
       description: (id: string) =>
-        `Ticket #${id} - CoAIleague AI is analyzing your issue. An agent will be with you shortly.`,
+        `Ticket #${id} - HelpAI is analyzing your issue. An agent will be with you shortly.`,
     },
     ticketAssigned: {
-      title: '\u2705 Agent Assigned',
+      title: 'Agent Assigned',
       message: (id: string) =>
-        `\u2705 An agent is now helping you!\n\nTicket #${id} has been assigned. Your chat is no longer read-only.`,
-      sender: 'CoAIleague AI',
+        `An agent is now helping you!\n\nTicket #${id} has been assigned. Your chat is no longer read-only.`,
+      sender: 'HelpAI',
     },
   },
   roles: {
