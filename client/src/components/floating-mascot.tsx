@@ -648,7 +648,8 @@ const FloatingMascot = memo(function FloatingMascot({
       
       // Apply screen shake from status effects (for ERROR mode)
       const shakeOffset = statusEffects.getShakeOffset();
-      if (shakeOffset.x !== 0 || shakeOffset.y !== 0) {
+      const applyShake = shakeOffset.x !== 0 || shakeOffset.y !== 0;
+      if (applyShake) {
         ctx.save();
         ctx.translate(shakeOffset.x, shakeOffset.y);
       }
@@ -952,9 +953,8 @@ const FloatingMascot = memo(function FloatingMascot({
       });
       ctx.globalAlpha = 1;
       
-      // Restore context if shake transform was applied
-      const shakeWasApplied = statusEffectsRef.current.getShakeOffset();
-      if (shakeWasApplied.x !== 0 || shakeWasApplied.y !== 0) {
+      // Restore context if shake transform was applied (uses applyShake flag from earlier)
+      if (applyShake) {
         ctx.restore();
       }
 
