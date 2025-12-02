@@ -1,7 +1,7 @@
 // Multi-tenant SaaS Scheduling Platform
 
 import { Switch, Route, useLocation, Link } from "wouter";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -164,70 +164,92 @@ import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { CoAITwinMascot } from "@/components/coai-twin-mascot";
 import { useMascotMode } from "@/hooks/use-mascot-mode";
 import { useMascotPosition } from "@/hooks/use-mascot-position";
+import MASCOT_CONFIG, { shouldHideMascot } from "@/config/mascotConfig";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 
-// Dynamic Draggable Mascot Renderer - AI-connected bubble that follows user everywhere
 function MascotRenderer() {
   const currentMode = useMascotMode();
   const [location] = useLocation();
-  const { position, isExpanded, isDragging, toggleExpanded, resetPosition, dragHandlers } = useMascotPosition(200);
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [currentThought, setCurrentThought] = useState<string | null>(null);
   
-  // Hide mascot only on demo and auth pages
-  const hideMascotPages = ['/mascot-demo', '/login', '/register'];
-  const shouldHideMascot = hideMascotPages.some(page => location.startsWith(page));
+  const sizes = isMobile ? MASCOT_CONFIG.mobile : MASCOT_CONFIG.desktop;
+  const { position, isExpanded, isDragging, toggleExpanded, resetPosition, dragHandlers } = useMascotPosition(sizes.defaultSize, isMobile);
   
-  if (shouldHideMascot) return null;
-
-  const bubbleSize = isExpanded ? 300 : 200;
+  const bubbleSize = isExpanded ? sizes.expandedSize : sizes.defaultSize;
+  const emoticon = MASCOT_CONFIG.thoughts.emoticons[currentMode];
+  
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  useEffect(() => {
+    if (!MASCOT_CONFIG.thoughts.enabled) return;
+    const thoughts = MASCOT_CONFIG.thoughts.defaultThoughts[currentMode];
+    const randomThought = thoughts[Math.floor(Math.random() * thoughts.length)];
+    setCurrentThought(randomThought);
+    const timer = setTimeout(() => setCurrentThought(null), MASCOT_CONFIG.thoughts.displayDuration);
+    return () => clearTimeout(timer);
+  }, [currentMode]);
+  
+  if (!MASCOT_CONFIG.enabled || shouldHideMascot(location)) return null;
   
   return (
     <div 
-      className={`fixed z-[9999] select-none transition-transform duration-150 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+      className={`fixed select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       style={{ 
         bottom: position.y,
         right: position.x,
+        width: bubbleSize,
+        height: bubbleSize,
+        zIndex: MASCOT_CONFIG.zIndex,
+        transition: `all ${MASCOT_CONFIG.animation.transitionDuration}ms ease-out`,
       }}
       data-testid="mascot-container"
     >
-      <div 
-        className="relative group"
-        {...dragHandlers}
-      >
+      <div className="relative group w-full h-full" {...dragHandlers}>
         <CoAITwinMascot 
           mode={currentMode} 
           variant={isExpanded ? 'expanded' : 'mini'}
           size={bubbleSize}
         />
         
-        <div 
-          className={`absolute top-1 right-1 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-auto ${isDragging ? 'hidden' : ''}`}
-        >
+        {currentThought && (
+          <div className={`absolute -top-16 left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg bg-slate-900/95 border border-slate-600 text-slate-100 whitespace-nowrap shadow-lg pointer-events-none animate-in fade-in duration-300 ${isMobile ? 'text-xs' : 'text-sm'}`}>
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{emoticon}</span>
+              <span className="font-medium">{currentThought}</span>
+            </div>
+          </div>
+        )}
+        
+        <div className={`absolute top-1 right-1 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-auto ${isDragging ? 'hidden' : ''}`}>
           <button
             onClick={(e) => { e.stopPropagation(); toggleExpanded(); }}
-            className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 border border-slate-500 flex items-center justify-center hover:from-slate-500 hover:to-slate-700 transition-all shadow-lg hover:shadow-xl"
+            className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 border border-slate-500 flex items-center justify-center hover:from-slate-500 hover:to-slate-700 transition-all shadow-lg hover:shadow-xl"
             title={isExpanded ? "Minimize" : "Expand"}
             data-testid="button-mascot-toggle-size"
           >
             {isExpanded ? (
-              <Minimize2 className="w-3.5 h-3.5 text-slate-100" />
+              <Minimize2 className="w-3 h-3 text-slate-100" />
             ) : (
-              <Maximize2 className="w-3.5 h-3.5 text-slate-100" />
+              <Maximize2 className="w-3 h-3 text-slate-100" />
             )}
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); resetPosition(); }}
-            className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 border border-slate-500 flex items-center justify-center hover:from-slate-500 hover:to-slate-700 transition-all shadow-lg hover:shadow-xl"
+            className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 border border-slate-500 flex items-center justify-center hover:from-slate-500 hover:to-slate-700 transition-all shadow-lg hover:shadow-xl"
             title="Reset position"
             data-testid="button-mascot-reset-position"
           >
-            <RotateCcw className="w-3.5 h-3.5 text-slate-100" />
+            <RotateCcw className="w-3 h-3 text-slate-100" />
           </button>
         </div>
         
-        <div 
-          className={`absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1.5 rounded-lg bg-slate-900/98 border border-slate-600 text-xs text-slate-200 opacity-0 group-hover:opacity-100 transition-all pointer-events-none font-medium shadow-lg ${isDragging ? 'hidden' : ''}`}
-        >
-          🎯 Drag to move • Click to expand
+        <div className={`absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-1 rounded text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition-all pointer-events-none font-medium ${isDragging ? 'hidden' : ''}`}>
+          Drag to move
         </div>
       </div>
     </div>
@@ -836,6 +858,8 @@ export default function App() {
                         <ReenableChatButton />
                         <Toaster />
                       </ResponsiveAppFrame>
+                      {/* CoAI Twin Mascot - UNIVERSAL visibility on ALL pages including public/guest routes */}
+                      <MascotRenderer />
                     </UniversalAnimationProvider>
                   </TooltipProvider>
                   </TransitionProvider>
@@ -846,8 +870,6 @@ export default function App() {
         </ForceRefreshProvider>
         </ServiceHealthProvider>
       </QueryClientProvider>
-      {/* Mascot globally visible on ALL pages (public and authenticated) - OUTSIDE all constraints */}
-      <MascotRenderer />
     </GlobalErrorBoundary>
   );
 }

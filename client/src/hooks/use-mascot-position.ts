@@ -7,55 +7,59 @@
  * - Bounds checking to keep mascot visible
  * - Reset to default position
  * - Size variant toggle (mini/expanded)
+ * 
+ * Uses universal mascot configuration from @/config/mascotConfig
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import MASCOT_CONFIG from '@/config/mascotConfig';
 
 interface Position {
   x: number;
   y: number;
 }
 
-interface MascotPositionState {
-  position: Position;
-  isExpanded: boolean;
-  isDragging: boolean;
-}
+const { storageKeys, defaultPosition, mobileDefaultPosition } = MASCOT_CONFIG;
 
-const STORAGE_KEY = 'coaileague-mascot-position';
-const EXPANDED_STORAGE_KEY = 'coaileague-mascot-expanded';
-
-const DEFAULT_POSITION: Position = {
-  x: 24,
-  y: 24,
-};
-
-export function useMascotPosition(bubbleSize: number = 80) {
-  const [position, setPosition] = useState<Position>(DEFAULT_POSITION);
+export function useMascotPosition(bubbleSize: number = 80, isMobile: boolean = false) {
+  const initialPosition = isMobile ? mobileDefaultPosition : defaultPosition;
+  const [position, setPosition] = useState<Position>(initialPosition);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
 
   useEffect(() => {
     try {
-      const savedPosition = localStorage.getItem(STORAGE_KEY);
-      const savedExpanded = localStorage.getItem(EXPANDED_STORAGE_KEY);
+      const savedPosition = localStorage.getItem(storageKeys.position);
+      const savedExpanded = localStorage.getItem(storageKeys.expanded);
       
       if (savedPosition) {
         const parsed = JSON.parse(savedPosition);
-        setPosition(parsed);
+        const minPos = 16;
+        const maxX = window.innerWidth - bubbleSize - 16;
+        const maxY = window.innerHeight - bubbleSize - 16;
+        
+        if (typeof parsed.x === 'number' && typeof parsed.y === 'number' &&
+            parsed.x >= minPos && parsed.x <= maxX &&
+            parsed.y >= minPos && parsed.y <= maxY) {
+          setPosition(parsed);
+        } else {
+          localStorage.removeItem(storageKeys.position);
+          setPosition(defaultPosition);
+        }
       }
       if (savedExpanded) {
         setIsExpanded(savedExpanded === 'true');
       }
     } catch (e) {
       console.warn('Failed to load mascot position:', e);
+      localStorage.removeItem(storageKeys.position);
     }
-  }, []);
+  }, [bubbleSize]);
 
   const savePosition = useCallback((pos: Position) => {
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(pos));
+      localStorage.setItem(storageKeys.position, JSON.stringify(pos));
     } catch (e) {
       console.warn('Failed to save mascot position:', e);
     }
@@ -77,7 +81,6 @@ export function useMascotPosition(bubbleSize: number = 80) {
     const deltaX = clientX - dragStart.current.x;
     const deltaY = clientY - dragStart.current.y;
 
-    // For right/bottom anchored positioning: subtract deltas (inverted)
     const newX = dragStart.current.posX - deltaX;
     const newY = dragStart.current.posY - deltaY;
 
@@ -99,15 +102,15 @@ export function useMascotPosition(bubbleSize: number = 80) {
   }, [isDragging, position, savePosition]);
 
   const resetPosition = useCallback(() => {
-    setPosition(DEFAULT_POSITION);
-    savePosition(DEFAULT_POSITION);
+    setPosition(defaultPosition);
+    savePosition(defaultPosition);
   }, [savePosition]);
 
   const toggleExpanded = useCallback(() => {
     const newExpanded = !isExpanded;
     setIsExpanded(newExpanded);
     try {
-      localStorage.setItem(EXPANDED_STORAGE_KEY, String(newExpanded));
+      localStorage.setItem(storageKeys.expanded, String(newExpanded));
     } catch (e) {
       console.warn('Failed to save mascot expanded state:', e);
     }

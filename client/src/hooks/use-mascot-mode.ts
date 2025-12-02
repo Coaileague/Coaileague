@@ -16,7 +16,8 @@
  */
 
 import { useMemo } from 'react';
-import type { MascotMode } from '@/components/coai-twin-mascot';
+import type { MascotMode } from '@/config/mascotConfig';
+import MASCOT_CONFIG from '@/config/mascotConfig';
 
 interface MascotModeOptions {
   isLoading?: boolean;
