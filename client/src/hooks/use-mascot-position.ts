@@ -133,12 +133,18 @@ export function useMascotPosition(bubbleSize: number = 80, isMobile: boolean = f
     handleDragEnd();
   }, [handleDragEnd]);
 
+  const setRoamingPosition = useCallback((pos: Position) => {
+    setPosition(pos);
+    savePosition(pos);
+  }, [savePosition]);
+
   return {
     position,
     isExpanded,
     isDragging,
     toggleExpanded,
     resetPosition,
+    setRoamingPosition,
     dragHandlers: {
       onPointerDown,
       onPointerMove,

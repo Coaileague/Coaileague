@@ -124,6 +124,21 @@ export interface TaskTemplate {
   priority: 'low' | 'medium' | 'high';
 }
 
+export interface RoamingConfig {
+  enabled: boolean;
+  interval: { min: number; max: number };
+  moveDuration: number;
+  pauseDuration: { min: number; max: number };
+  boundsPadding: number;
+  avoidEdges: boolean;
+  preferCorners: boolean;
+  reactions: {
+    startMoving: string[];
+    reachedDestination: string[];
+    exploring: string[];
+  };
+}
+
 export interface MascotConfig {
   enabled: boolean;
   desktop: MascotSizes;
@@ -153,6 +168,7 @@ export interface MascotConfig {
     floatEasing: string;
   };
   floatMotion: FloatMotion;
+  roaming: RoamingConfig;
   reactions: Reactions;
   holidays: HolidayConfig[];
   ai: AIConfig;
@@ -245,6 +261,39 @@ export const MASCOT_CONFIG: MascotConfig = {
     boundsPadding: 16,
     dragZoomScale: 1.15,
     dragZoomDuration: 150,
+  },
+  
+  roaming: {
+    enabled: true,
+    interval: { min: 8000, max: 20000 },
+    moveDuration: 2000,
+    pauseDuration: { min: 5000, max: 15000 },
+    boundsPadding: 100,
+    avoidEdges: true,
+    preferCorners: false,
+    reactions: {
+      startMoving: [
+        "Time to explore!",
+        "Off I go~",
+        "Adventure awaits!",
+        "Let me check things out...",
+        "Wandering around...",
+      ],
+      reachedDestination: [
+        "Nice spot!",
+        "Here's good.",
+        "Found a cozy corner!",
+        "This looks interesting...",
+        "Setting up here!",
+      ],
+      exploring: [
+        "Checking the platform...",
+        "Looking for ways to help!",
+        "Monitoring things...",
+        "Keeping an eye out!",
+        "Scanning for insights...",
+      ],
+    },
   },
   
   reactions: {

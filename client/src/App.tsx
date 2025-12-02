@@ -164,6 +164,7 @@ import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { CoAITwinMascot } from "@/components/coai-twin-mascot";
 import { useMascotMode } from "@/hooks/use-mascot-mode";
 import { useMascotPosition } from "@/hooks/use-mascot-position";
+import { useMascotRoaming } from "@/hooks/use-mascot-roaming";
 import MASCOT_CONFIG, { shouldHideMascot, getDeviceSizes, getCurrentHoliday } from "@/config/mascotConfig";
 import { thoughtManager, type Thought } from "@/lib/mascot/ThoughtManager";
 import { useMascotAIIntegration } from "@/hooks/use-mascot-ai";
@@ -183,9 +184,17 @@ function MascotRenderer() {
   const floatAnimRef = useRef<number | null>(null);
   
   const sizes = getDeviceSizes();
-  const { position, isExpanded, isDragging, toggleExpanded, resetPosition, dragHandlers } = useMascotPosition(sizes.defaultSize, isMobile);
+  const { position, isExpanded, isDragging, toggleExpanded, resetPosition, setRoamingPosition, dragHandlers } = useMascotPosition(sizes.defaultSize, isMobile);
   
   const bubbleSize = isExpanded ? sizes.expandedSize : sizes.defaultSize;
+  
+  const { isRoaming } = useMascotRoaming(
+    position,
+    setRoamingPosition,
+    bubbleSize,
+    isDragging,
+    isExpanded
+  );
   const zoomScale = isDragging ? MASCOT_CONFIG.floatMotion.dragZoomScale : 1;
   
   useEffect(() => {
