@@ -165,6 +165,7 @@ import { CoAITwinMascot } from "@/components/coai-twin-mascot";
 import { useMascotMode } from "@/hooks/use-mascot-mode";
 import { useMascotPosition } from "@/hooks/use-mascot-position";
 import { useMascotRoaming } from "@/hooks/use-mascot-roaming";
+import { useSmartBubblePlacement, getArrowStyles } from "@/hooks/use-smart-bubble-placement";
 import MASCOT_CONFIG, { shouldHideMascot, getDeviceSizes, getCurrentHoliday } from "@/config/mascotConfig";
 import { thoughtManager, type Thought } from "@/lib/mascot/ThoughtManager";
 import { useMascotAIIntegration } from "@/hooks/use-mascot-ai";
@@ -182,6 +183,7 @@ function MascotRenderer() {
   const lastPosRef = useRef({ x: 0, y: 0, time: 0 });
   const floatTimeRef = useRef(0);
   const floatAnimRef = useRef<number | null>(null);
+  const mascotContainerRef = useRef<HTMLDivElement>(null);
   
   const sizes = getDeviceSizes();
   const { position, isExpanded, isDragging, toggleExpanded, resetPosition, setRoamingPosition, dragHandlers } = useMascotPosition(sizes.defaultSize, isMobile);
@@ -196,6 +198,18 @@ function MascotRenderer() {
     isExpanded
   );
   const zoomScale = isDragging ? MASCOT_CONFIG.floatMotion.dragZoomScale : 1;
+  
+  const bubblePlacement = useSmartBubblePlacement(mascotContainerRef, !!currentThought);
+  const arrowStyles = getArrowStyles(bubblePlacement.direction);
+  
+  useEffect(() => {
+    if (bubblePlacement.shouldAutoDismiss && currentThought) {
+      const timer = setTimeout(() => {
+        setCurrentThought(null);
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [bubblePlacement.shouldAutoDismiss, currentThought]);
   
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < MASCOT_CONFIG.breakpoints.mobile);
@@ -284,6 +298,7 @@ function MascotRenderer() {
   
   return (
     <div 
+      ref={mascotContainerRef}
       className={`fixed select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       style={{ 
         bottom: effectiveY,
@@ -312,17 +327,31 @@ function MascotRenderer() {
         
         {currentThought && (
           <div 
-            className={`absolute -top-16 left-1/2 -translate-x-1/2 px-3 py-2 rounded-lg bg-slate-900/95 border border-slate-600 text-slate-100 whitespace-nowrap shadow-lg pointer-events-none animate-in fade-in slide-in-from-bottom-2 duration-300 ${isMobile ? 'text-xs max-w-[160px] whitespace-normal text-center' : 'text-sm'}`}
+            className={`absolute px-3 py-2 rounded-lg border border-slate-600/80 text-slate-100 whitespace-nowrap shadow-lg pointer-events-none animate-in fade-in duration-300 ${isMobile ? 'text-xs max-w-[160px] whitespace-normal text-center' : 'text-sm'} ${bubblePlacement.isColliding ? 'backdrop-blur-md' : ''}`}
             style={{
-              boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
+              ...bubblePlacement.position,
+              backgroundColor: bubblePlacement.isColliding 
+                ? `rgba(15, 23, 42, ${bubblePlacement.opacity})` 
+                : 'rgba(15, 23, 42, 0.95)',
+              boxShadow: bubblePlacement.isColliding 
+                ? '0 4px 20px rgba(0,0,0,0.25)' 
+                : '0 4px 20px rgba(0,0,0,0.4)',
+              transition: 'opacity 200ms ease, background-color 200ms ease',
             }}
+            data-testid="mascot-thought-bubble"
           >
             <div className="flex items-center gap-2 justify-center">
               <span className="text-lg shrink-0">{currentThought.emoticon}</span>
               <span className="font-medium">{currentThought.text}</span>
             </div>
             <div 
-              className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-1/2 w-2 h-2 bg-slate-900 border-r border-b border-slate-600 rotate-45"
+              className={`${arrowStyles.position} w-2 h-2 ${arrowStyles.borderClasses} border-slate-600/80`}
+              style={{
+                backgroundColor: bubblePlacement.isColliding 
+                  ? `rgba(15, 23, 42, ${bubblePlacement.opacity})` 
+                  : 'rgba(15, 23, 42, 0.95)',
+                transform: arrowStyles.transform,
+              }}
             />
           </div>
         )}

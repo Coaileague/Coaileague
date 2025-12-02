@@ -430,6 +430,36 @@ class UIAvoidanceSystem {
     return [...this.elements];
   }
 
+  getZones(): SafeZone[] {
+    return this.findSafeZones();
+  }
+
+  checkCollision(rect: DOMRect): boolean {
+    const testRect = {
+      left: rect.left,
+      top: rect.top,
+      right: rect.right,
+      bottom: rect.bottom
+    };
+
+    for (const el of this.elements) {
+      if (el.priority < 40) continue;
+      
+      const elRect = {
+        left: el.rect.left - el.padding,
+        top: el.rect.top - el.padding,
+        right: el.rect.right + el.padding,
+        bottom: el.rect.bottom + el.padding
+      };
+
+      if (this.rectsOverlap(testRect, elRect)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
   getObstructingElements(pos: MascotPosition): UIElement[] {
     const mascotRect = {
       left: pos.x,
