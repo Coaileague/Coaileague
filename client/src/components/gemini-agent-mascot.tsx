@@ -497,7 +497,8 @@ export const GeminiAgentMascot = memo(function GeminiAgentMascot({
   showControls = false,
   onModeChange,
   size,
-  mini = false
+  mini = false,
+  variant
 }: GeminiAgentMascotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
