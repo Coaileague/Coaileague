@@ -15756,3 +15756,154 @@ export const insertHolidayMascotHistorySchema = createInsertSchema(holidayMascot
 
 export type InsertHolidayMascotHistory = z.infer<typeof insertHolidayMascotHistorySchema>;
 export type HolidayMascotHistory = typeof holidayMascotHistory.$inferSelect;
+
+// ============================================================================
+// MASCOT SESSIONS & INTERACTIONS - Per-org persistent mascot data
+// ============================================================================
+
+// Mascot sessions - tracks unique per-org mascot interaction sessions
+export const mascotSessions = pgTable("mascot_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Multi-tenant scope
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Session lifecycle
+  sessionKey: varchar("session_key", { length: 100 }).notNull(), // Unique key per org session
+  startedAt: timestamp("started_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
+  isActive: boolean("is_active").default(true),
+  
+  // Mascot state snapshot
+  motionProfile: varchar("motion_profile", { length: 50 }),
+  positionX: integer("position_x"),
+  positionY: integer("position_y"),
+  
+  // Context tracking
+  contextSnapshot: jsonb("context_snapshot"), // { page, userActions, recentMessages }
+  
+  // Statistics
+  totalInteractions: integer("total_interactions").default(0),
+  totalThoughts: integer("total_thoughts").default(0),
+  totalAdvice: integer("total_advice").default(0),
+  totalTasksGenerated: integer("total_tasks_generated").default(0),
+  
+  // Metadata
+  userAgent: text("user_agent"),
+  screenWidth: integer("screen_width"),
+  screenHeight: integer("screen_height"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("mascot_sessions_workspace_idx").on(table.workspaceId),
+  index("mascot_sessions_user_idx").on(table.userId),
+  index("mascot_sessions_active_idx").on(table.isActive),
+  index("mascot_sessions_key_idx").on(table.sessionKey),
+  index("mascot_sessions_started_idx").on(table.startedAt),
+]);
+
+export const insertMascotSessionSchema = createInsertSchema(mascotSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertMascotSession = z.infer<typeof insertMascotSessionSchema>;
+export type MascotSession = typeof mascotSessions.$inferSelect;
+
+// Mascot interactions - logs all user interactions with the mascot
+export const mascotInteractions = pgTable("mascot_interactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Session and org context
+  sessionId: varchar("session_id").notNull().references(() => mascotSessions.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Interaction details
+  source: varchar("source", { length: 50 }).notNull(), // 'user', 'chat', 'navigation', 'click', 'scroll', 'idle'
+  interactionType: varchar("interaction_type", { length: 50 }).notNull(), // 'ask', 'observe', 'react', 'advise', 'task_create'
+  
+  // Payload - what triggered the interaction
+  payload: jsonb("payload"), // { question, chatMessage, clickTarget, pageUrl, etc }
+  
+  // AI response data
+  aiResponse: text("ai_response"),
+  aiResponseType: varchar("ai_response_type", { length: 50 }), // 'thought', 'advice', 'task', 'reaction'
+  aiTokensUsed: integer("ai_tokens_used"),
+  
+  // Position at interaction time
+  mascotPositionX: integer("mascot_position_x"),
+  mascotPositionY: integer("mascot_position_y"),
+  
+  // Timing
+  processingTimeMs: integer("processing_time_ms"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("mascot_interactions_session_idx").on(table.sessionId),
+  index("mascot_interactions_workspace_idx").on(table.workspaceId),
+  index("mascot_interactions_user_idx").on(table.userId),
+  index("mascot_interactions_source_idx").on(table.source),
+  index("mascot_interactions_type_idx").on(table.interactionType),
+  index("mascot_interactions_created_idx").on(table.createdAt),
+]);
+
+export const insertMascotInteractionSchema = createInsertSchema(mascotInteractions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertMascotInteraction = z.infer<typeof insertMascotInteractionSchema>;
+export type MascotInteraction = typeof mascotInteractions.$inferSelect;
+
+// Mascot tasks - AI-generated task lists for users
+export const mascotTasks = pgTable("mascot_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Session and org context
+  sessionId: varchar("session_id").notNull().references(() => mascotSessions.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Task details
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 50 }), // 'setup', 'optimization', 'engagement', 'compliance', etc
+  priority: varchar("priority", { length: 20 }).default('medium'), // 'low', 'medium', 'high', 'urgent'
+  
+  // Status tracking
+  status: varchar("status", { length: 20 }).default('pending'), // 'pending', 'in_progress', 'completed', 'dismissed'
+  completedAt: timestamp("completed_at"),
+  
+  // AI generation context
+  generatedFromInteractionId: varchar("generated_from_interaction_id").references(() => mascotInteractions.id, { onDelete: 'set null' }),
+  aiReasoning: text("ai_reasoning"), // Why this task was suggested
+  
+  // Action link
+  actionUrl: text("action_url"),
+  actionLabel: varchar("action_label", { length: 50 }),
+  
+  // Ordering
+  sortOrder: integer("sort_order").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("mascot_tasks_session_idx").on(table.sessionId),
+  index("mascot_tasks_workspace_idx").on(table.workspaceId),
+  index("mascot_tasks_user_idx").on(table.userId),
+  index("mascot_tasks_status_idx").on(table.status),
+  index("mascot_tasks_priority_idx").on(table.priority),
+]);
+
+export const insertMascotTaskSchema = createInsertSchema(mascotTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertMascotTask = z.infer<typeof insertMascotTaskSchema>;
+export type MascotTask = typeof mascotTasks.$inferSelect;
