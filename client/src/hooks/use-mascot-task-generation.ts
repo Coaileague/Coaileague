@@ -60,7 +60,7 @@ export function useMascotTaskGeneration(options: UseTaskGenerationOptions = {}) 
       return response.json() as Promise<TaskGenerationResult>;
     },
     onSuccess: (data) => {
-      queryClient.invalidateQueries({ queryKey: ['/api/mascot/generated-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/mascot/generated-tasks', workspaceId] });
       if (data.tasks?.length > 0) {
         toast({
           title: 'Tasks Generated',
@@ -85,7 +85,7 @@ export function useMascotTaskGeneration(options: UseTaskGenerationOptions = {}) 
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/mascot/generated-tasks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/mascot/generated-tasks', workspaceId] });
     },
   });
 
