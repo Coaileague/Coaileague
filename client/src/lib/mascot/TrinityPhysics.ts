@@ -275,8 +275,185 @@ export class TrinityPhysics {
       body.vy += (Math.random() - 0.5) * intensity;
     }
   }
+
+  /**
+   * Apply a specific motion pattern to the Trinity stars
+   * These patterns define unique, AI-switchable behaviors
+   */
+  applyMotionPattern(pattern: MotionPattern, time: number, params?: MotionParams) {
+    const radius = Math.min(this.bounds.width, this.bounds.height) * 0.35;
+    const trinityOffset = (Math.PI * 2) / 3; // 120° offset
+    
+    switch (pattern) {
+      case 'TRIAD_SYNCHRONIZED':
+        // All 3 stars rotate together in perfect formation
+        this.applyTriadSynchronized(time, radius, trinityOffset, params);
+        break;
+      
+      case 'DUAL_COUNTER_ROTATION':
+        // Two stars orbit clockwise, one counter-clockwise
+        this.applyDualCounterRotation(time, radius, params);
+        break;
+      
+      case 'CENTRAL_ORBIT':
+        // Two stars orbit around the third (gold NX as center)
+        this.applyCentralOrbit(time, radius, params);
+        break;
+      
+      case 'INDIVIDUAL_NOISE':
+        // Each star moves independently with noise-based motion
+        this.applyIndividualNoise(time, radius, params);
+        break;
+      
+      case 'SEQUENCE_SCRIPTED':
+        // Choreographed sequence that cycles through patterns
+        this.applySequenceScripted(time, radius, trinityOffset, params);
+        break;
+    }
+  }
+
+  private applyTriadSynchronized(time: number, radius: number, offset: number, params?: MotionParams) {
+    const speed = params?.speed ?? 0.015;
+    const angle = time * speed;
+    const orbitRadius = radius * (params?.orbitRadius ?? 0.6);
+    
+    for (let i = 0; i < 3; i++) {
+      const starAngle = angle + offset * i;
+      this.bodies[i].targetX = Math.cos(starAngle) * orbitRadius;
+      this.bodies[i].targetY = Math.sin(starAngle) * orbitRadius * 0.8; // Slight vertical squash
+    }
+  }
+
+  private applyDualCounterRotation(time: number, radius: number, params?: MotionParams) {
+    const speed = params?.speed ?? 0.02;
+    const orbitRadius = radius * (params?.orbitRadius ?? 0.6);
+    
+    // Stars 0 and 1 rotate clockwise
+    const cwAngle = time * speed;
+    this.bodies[0].targetX = Math.cos(cwAngle) * orbitRadius;
+    this.bodies[0].targetY = Math.sin(cwAngle) * orbitRadius;
+    
+    this.bodies[1].targetX = Math.cos(cwAngle + Math.PI) * orbitRadius * 0.8;
+    this.bodies[1].targetY = Math.sin(cwAngle + Math.PI) * orbitRadius * 0.8;
+    
+    // Star 2 rotates counter-clockwise at different speed
+    const ccwAngle = -time * speed * 1.5;
+    this.bodies[2].targetX = Math.cos(ccwAngle) * orbitRadius * 0.5;
+    this.bodies[2].targetY = Math.sin(ccwAngle) * orbitRadius * 0.5;
+  }
+
+  private applyCentralOrbit(time: number, radius: number, params?: MotionParams) {
+    const speed = params?.speed ?? 0.025;
+    const centralStar = params?.centralStar ?? 2; // Gold NX as default center
+    const orbitRadius = radius * (params?.orbitRadius ?? 0.7);
+    
+    // Central star stays mostly still with gentle pulse
+    const pulse = Math.sin(time * 0.5) * 2;
+    this.bodies[centralStar].targetX = pulse;
+    this.bodies[centralStar].targetY = pulse * 0.5;
+    
+    // Other two stars orbit around central
+    const orbiters = [0, 1, 2].filter(i => i !== centralStar);
+    orbiters.forEach((starIdx, i) => {
+      const orbitAngle = time * speed + i * Math.PI;
+      this.bodies[starIdx].targetX = Math.cos(orbitAngle) * orbitRadius;
+      this.bodies[starIdx].targetY = Math.sin(orbitAngle) * orbitRadius;
+    });
+  }
+
+  private applyIndividualNoise(time: number, radius: number, params?: MotionParams) {
+    const seed = params?.seed ?? 12345;
+    const noiseScale = params?.noiseScale ?? 0.3;
+    
+    // Simple pseudo-random noise function
+    const noise = (x: number, y: number) => {
+      const n = Math.sin(x * 12.9898 + y * 78.233 + seed) * 43758.5453;
+      return n - Math.floor(n);
+    };
+    
+    for (let i = 0; i < 3; i++) {
+      const offsetX = noise(time * 0.01 + i, i * 100) * 2 - 1;
+      const offsetY = noise(i * 100, time * 0.01 + i) * 2 - 1;
+      
+      // Base positions with noise overlay
+      const baseAngle = (Math.PI * 2 / 3) * i;
+      const baseX = Math.cos(baseAngle) * radius * 0.4;
+      const baseY = Math.sin(baseAngle) * radius * 0.4;
+      
+      this.bodies[i].targetX = baseX + offsetX * radius * noiseScale;
+      this.bodies[i].targetY = baseY + offsetY * radius * noiseScale;
+    }
+  }
+
+  private applySequenceScripted(time: number, radius: number, offset: number, params?: MotionParams) {
+    // Cycle through different formations based on time
+    const cycleDuration = params?.cycleDuration ?? 8; // seconds per phase
+    const phase = Math.floor(time / cycleDuration) % 4;
+    const phaseProgress = (time % cycleDuration) / cycleDuration;
+    
+    switch (phase) {
+      case 0: // Triangle formation expanding
+        for (let i = 0; i < 3; i++) {
+          const angle = offset * i - Math.PI / 2;
+          const r = radius * (0.3 + phaseProgress * 0.4);
+          this.bodies[i].targetX = Math.cos(angle) * r;
+          this.bodies[i].targetY = Math.sin(angle) * r;
+        }
+        break;
+      
+      case 1: // Vertical line formation
+        for (let i = 0; i < 3; i++) {
+          this.bodies[i].targetX = (i - 1) * radius * 0.3 * phaseProgress;
+          this.bodies[i].targetY = (i - 1) * radius * 0.4 * (1 - phaseProgress);
+        }
+        break;
+      
+      case 2: // Horizontal wave
+        for (let i = 0; i < 3; i++) {
+          this.bodies[i].targetX = (i - 1) * radius * 0.5;
+          this.bodies[i].targetY = Math.sin(time * 2 + i * 0.5) * radius * 0.3;
+        }
+        break;
+      
+      case 3: // Converge to center then expand
+        const expandFactor = Math.sin(phaseProgress * Math.PI);
+        for (let i = 0; i < 3; i++) {
+          const angle = offset * i;
+          this.bodies[i].targetX = Math.cos(angle) * radius * 0.3 * expandFactor;
+          this.bodies[i].targetY = Math.sin(angle) * radius * 0.3 * expandFactor;
+        }
+        break;
+    }
+  }
+}
+
+// Motion pattern types
+export type MotionPattern = 
+  | 'TRIAD_SYNCHRONIZED'    // All 3 stars rotate together in formation
+  | 'DUAL_COUNTER_ROTATION' // Two stars orbit opposite directions
+  | 'CENTRAL_ORBIT'         // Two stars orbit around the third
+  | 'INDIVIDUAL_NOISE'      // Each star moves independently with noise
+  | 'SEQUENCE_SCRIPTED';    // Choreographed sequence of movements
+
+// Motion pattern parameters
+export interface MotionParams {
+  speed?: number;           // Angular velocity multiplier
+  orbitRadius?: number;     // Orbit radius as fraction of bounds (0-1)
+  centralStar?: number;     // Index of central star for CENTRAL_ORBIT
+  seed?: number;            // Random seed for INDIVIDUAL_NOISE
+  noiseScale?: number;      // Noise amplitude for INDIVIDUAL_NOISE
+  cycleDuration?: number;   // Seconds per phase for SEQUENCE_SCRIPTED
 }
 
 export const createTrinityPhysics = (config?: Partial<TrinityPhysicsConfig>) => {
   return new TrinityPhysics(config);
 };
+
+// Available motion patterns for AI Brain to choose from
+export const MOTION_PATTERNS: MotionPattern[] = [
+  'TRIAD_SYNCHRONIZED',
+  'DUAL_COUNTER_ROTATION',
+  'CENTRAL_ORBIT',
+  'INDIVIDUAL_NOISE',
+  'SEQUENCE_SCRIPTED'
+];

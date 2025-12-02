@@ -17,7 +17,83 @@ import { userActionTracker, type ActionEvent } from '@/lib/mascot/UserActionTrac
 import { emotesManager, type Emote, EMOTE_ANIMATIONS } from '@/lib/mascot/EmotesLibrary';
 import { thoughtManager } from '@/lib/mascot/ThoughtManager';
 import { MASCOT_CONFIG, getDeviceSizes } from '@/config/mascotConfig';
-import { TrinityPhysics } from '@/lib/mascot/TrinityPhysics';
+import { TrinityPhysics, MotionPattern, MOTION_PATTERNS } from '@/lib/mascot/TrinityPhysics';
+import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
+
+// Holiday decoration types for Trinity stars
+interface StarDecoration {
+  type: 'led_wrap' | 'santa_hat' | 'ornament' | 'star_topper';
+  colors?: string[];
+  ledCount?: number;
+  ledSpeed?: number;
+}
+
+// Christmas LED colors
+const CHRISTMAS_LED_COLORS = ['#ff0000', '#00ff00', '#ffff00', '#0000ff', '#ff00ff', '#00ffff', '#ffffff'];
+
+// Draw animated LED lights wrapped around a star
+function drawLEDWrap(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  radius: number,
+  time: number,
+  colors: string[] = CHRISTMAS_LED_COLORS,
+  ledCount: number = 8,
+  speed: number = 0.5
+) {
+  const ledRadius = radius * 0.08;
+  const wrapRadius = radius * 1.3;
+  
+  for (let i = 0; i < ledCount; i++) {
+    const angle = (i / ledCount) * Math.PI * 2 + time * speed;
+    const ledX = x + Math.cos(angle) * wrapRadius;
+    const ledY = y + Math.sin(angle) * wrapRadius;
+    
+    // Pulsing glow effect
+    const pulse = 0.5 + 0.5 * Math.sin(time * 3 + i * 0.5);
+    const color = colors[i % colors.length];
+    
+    // Outer glow
+    const glowGradient = ctx.createRadialGradient(ledX, ledY, 0, ledX, ledY, ledRadius * 3);
+    glowGradient.addColorStop(0, color + '80');
+    glowGradient.addColorStop(0.5, color + '30');
+    glowGradient.addColorStop(1, 'transparent');
+    
+    ctx.beginPath();
+    ctx.arc(ledX, ledY, ledRadius * 3 * pulse, 0, Math.PI * 2);
+    ctx.fillStyle = glowGradient;
+    ctx.fill();
+    
+    // LED bulb
+    ctx.beginPath();
+    ctx.arc(ledX, ledY, ledRadius * (0.8 + pulse * 0.2), 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    
+    // Highlight
+    ctx.beginPath();
+    ctx.arc(ledX - ledRadius * 0.2, ledY - ledRadius * 0.2, ledRadius * 0.3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.fill();
+  }
+  
+  // Wire connecting LEDs (subtle)
+  ctx.beginPath();
+  ctx.strokeStyle = 'rgba(0, 100, 0, 0.4)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= ledCount; i++) {
+    const angle = (i / ledCount) * Math.PI * 2 + time * speed;
+    const wireX = x + Math.cos(angle) * wrapRadius;
+    const wireY = y + Math.sin(angle) * wrapRadius;
+    if (i === 0) {
+      ctx.moveTo(wireX, wireY);
+    } else {
+      ctx.lineTo(wireX, wireY);
+    }
+  }
+  ctx.stroke();
+}
 
 export type MascotMode = 
   | 'IDLE' 
@@ -184,6 +260,14 @@ const FloatingMascot = memo(function FloatingMascot({
   ]);
   const timeRef = useRef(0);
   const particlesRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; color: string }[]>([]);
+  
+  // Motion pattern state - AI Brain can switch this
+  const [activeMotionPattern, setActiveMotionPattern] = useState<MotionPattern>('TRIAD_SYNCHRONIZED');
+  const [showHolidayDecorations, setShowHolidayDecorations] = useState(true);
+  
+  // Seasonal theme for holiday decorations
+  const { seasonId } = useSeasonalTheme();
+  const isChristmas = seasonId === 'christmas' || seasonId === 'winter' || seasonId === 'newYear';
   
   // Trinity Physics for collision detection - uses tuned defaults from TrinityPhysics.ts
   const physicsRef = useRef<TrinityPhysics | null>(null);
@@ -490,6 +574,17 @@ const FloatingMascot = memo(function FloatingMascot({
         ctx.shadowBlur = 0;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 0;
+        
+        // Christmas LED wrap decoration around each star
+        if (isChristmas && showHolidayDecorations) {
+          // Each star gets different LED colors for variety
+          const ledColorSets = [
+            ['#ff0000', '#ffffff', '#00ff00'], // Co - red/white/green
+            ['#ff00ff', '#00ffff', '#ffff00'], // AI - magenta/cyan/yellow
+            ['#ffcc00', '#ff6600', '#ffffff']  // NX - gold/orange/white
+          ];
+          drawLEDWrap(ctx, twin.x, twin.y, starSize, t, ledColorSets[index], 6, 0.4 + index * 0.1);
+        }
       });
 
       particlesRef.current = particlesRef.current.filter(p => p.life > 0);
@@ -517,7 +612,7 @@ const FloatingMascot = memo(function FloatingMascot({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [currentMode, mascotSize]);
+  }, [currentMode, mascotSize, isChristmas, showHolidayDecorations]);
 
   useEffect(() => {
     setCurrentMode(mode);

@@ -15576,3 +15576,183 @@ export const insertUsageAggregateSchema = createInsertSchema(usageAggregates).om
 
 export type InsertUsageAggregate = z.infer<typeof insertUsageAggregateSchema>;
 export type UsageAggregate = typeof usageAggregates.$inferSelect;
+
+// ============================================================================
+// TRINITY MASCOT HOLIDAY DECORATION SYSTEM
+// AI Brain orchestrated motion patterns and holiday decorations
+// ============================================================================
+
+// Motion pattern types for Trinity stars
+export const motionPatternTypeEnum = pgEnum('motion_pattern_type', [
+  'TRIAD_SYNCHRONIZED',    // All 3 stars rotate together in formation
+  'DUAL_COUNTER_ROTATION', // Two stars orbit opposite directions
+  'CENTRAL_ORBIT',         // Two stars orbit around the third
+  'INDIVIDUAL_NOISE',      // Each star moves independently with noise
+  'SEQUENCE_SCRIPTED',     // Choreographed sequence of movements
+]);
+
+// Mascot motion profiles - defines unique movement patterns for Trinity stars
+export const mascotMotionProfiles = pgTable("mascot_motion_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Profile identification
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  
+  // Motion pattern configuration (JSONB)
+  patternType: text("pattern_type").notNull(), // 'TRIAD_SYNCHRONIZED' | etc
+  starMotion: jsonb("star_motion").notNull(), // Per-star motion params
+  /*
+    starMotion: {
+      co: { angularVelocity: 0.02, orbitRadius: 0.6, phaseOffset: 0, noiseAmp: 0 },
+      ai: { angularVelocity: 0.02, orbitRadius: 0.6, phaseOffset: 2.094, noiseAmp: 0 },
+      nx: { angularVelocity: 0.02, orbitRadius: 0.6, phaseOffset: 4.188, noiseAmp: 0 }
+    }
+  */
+  
+  // Physics adjustments
+  physicsOverrides: jsonb("physics_overrides"), // Spring/dampen overrides
+  /*
+    physicsOverrides: {
+      springStrength: 0.065,
+      dampening: 0.88,
+      repulsionStrength: 2.2
+    }
+  */
+  
+  // Randomness configuration
+  randomSeed: integer("random_seed"),
+  noiseConfig: jsonb("noise_config"), // Perlin/simplex noise params
+  
+  // Easing and timing
+  easingCurve: varchar("easing_curve", { length: 50 }).default('easeInOutCubic'),
+  cycleDuration: integer("cycle_duration_ms").default(5000), // Full cycle time
+  
+  // Metadata
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("motion_profile_name_idx").on(table.name),
+  index("motion_profile_active_idx").on(table.isActive),
+]);
+
+export const insertMascotMotionProfileSchema = createInsertSchema(mascotMotionProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertMascotMotionProfile = z.infer<typeof insertMascotMotionProfileSchema>;
+export type MascotMotionProfile = typeof mascotMotionProfiles.$inferSelect;
+
+// Holiday mascot decorations - per-holiday visual attachments for Trinity stars
+export const holidayMascotDecor = pgTable("holiday_mascot_decor", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Holiday identification
+  holidayKey: varchar("holiday_key", { length: 50 }).notNull(), // 'christmas', 'halloween', etc
+  holidayName: varchar("holiday_name", { length: 100 }).notNull(),
+  
+  // Motion profile link
+  motionProfileId: varchar("motion_profile_id").references(() => mascotMotionProfiles.id, { onDelete: 'set null' }),
+  
+  // Per-star decorations (JSONB)
+  starDecorations: jsonb("star_decorations").notNull(),
+  /*
+    starDecorations: {
+      co: { 
+        attachments: ['led_wrap', 'santa_hat'],
+        glowPalette: ['#ff0000', '#00ff00', '#ffffff'],
+        ledCount: 8, 
+        ledSpacing: 0.15,
+        ledSpeed: 0.5
+      },
+      ai: { attachments: ['led_wrap', 'ornament'], ... },
+      nx: { attachments: ['led_wrap', 'star_topper'], ... }
+    }
+  */
+  
+  // Global decoration settings
+  globalGlowIntensity: doublePrecision("global_glow_intensity").default(1.0),
+  particleEffects: jsonb("particle_effects"), // Sparkles, snow, etc
+  ambientColors: text("ambient_colors").array(), // Holiday color palette
+  
+  // Priority for multiple active holidays
+  priority: integer("priority").default(0),
+  
+  // Date range for automatic activation
+  startMonth: integer("start_month"),
+  startDay: integer("start_day"),
+  endMonth: integer("end_month"),
+  endDay: integer("end_day"),
+  
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("holiday_decor_key_idx").on(table.holidayKey),
+  index("holiday_decor_active_idx").on(table.isActive),
+  index("holiday_decor_priority_idx").on(table.priority),
+]);
+
+export const insertHolidayMascotDecorSchema = createInsertSchema(holidayMascotDecor).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertHolidayMascotDecor = z.infer<typeof insertHolidayMascotDecorSchema>;
+export type HolidayMascotDecor = typeof holidayMascotDecor.$inferSelect;
+
+// Holiday mascot directive history - audit trail of AI Brain decisions
+export const holidayMascotHistory = pgTable("holiday_mascot_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Reference to what was activated
+  holidayDecorId: varchar("holiday_decor_id").references(() => holidayMascotDecor.id, { onDelete: 'set null' }),
+  motionProfileId: varchar("motion_profile_id").references(() => mascotMotionProfiles.id, { onDelete: 'set null' }),
+  
+  // Action tracking
+  action: varchar("action", { length: 50 }).notNull(), // 'activate', 'deactivate', 'switch', 'modify'
+  triggeredBy: varchar("triggered_by", { length: 50 }).notNull(), // 'ai_brain', 'orchestrator', 'manual', 'schedule'
+  
+  // Snapshot of directive at time of activation
+  directiveSnapshot: jsonb("directive_snapshot").notNull(),
+  /*
+    directiveSnapshot: {
+      motionPattern: 'TRIAD_SYNCHRONIZED',
+      decorations: { ... },
+      timestamp: '2025-12-02T...'
+    }
+  */
+  
+  // AI Brain metadata
+  aiBrainSessionId: varchar("ai_brain_session_id"),
+  reasoning: text("reasoning"), // AI's explanation for the choice
+  
+  // Duration tracking
+  activatedAt: timestamp("activated_at").defaultNow(),
+  deactivatedAt: timestamp("deactivated_at"),
+  
+  // Analytics
+  userReactions: jsonb("user_reactions"), // Aggregated user feedback
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("holiday_history_decor_idx").on(table.holidayDecorId),
+  index("holiday_history_profile_idx").on(table.motionProfileId),
+  index("holiday_history_action_idx").on(table.action),
+  index("holiday_history_activated_idx").on(table.activatedAt),
+]);
+
+export const insertHolidayMascotHistorySchema = createInsertSchema(holidayMascotHistory).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertHolidayMascotHistory = z.infer<typeof insertHolidayMascotHistorySchema>;
+export type HolidayMascotHistory = typeof holidayMascotHistory.$inferSelect;
