@@ -1203,4 +1203,594 @@ router.get('/holiday/history', requireAuth, async (req, res) => {
   }
 });
 
+// ============================================================================
+// MASCOT SESSION & INTERACTION ENDPOINTS
+// Per-org persistent mascot data with AI Brain integration
+// ============================================================================
+
+/**
+ * POST /api/mascot/sessions
+ * Create or get active session for current user/workspace
+ * Protected - requires authentication
+ */
+router.post('/sessions', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace context required' });
+    }
+    
+    const { screenWidth, screenHeight, userAgent } = req.body;
+    const sessionKey = `${workspaceId}-${userId || 'guest'}-${Date.now()}`;
+    
+    // Check for existing active session
+    const existingSession = await db.execute(sql`
+      SELECT * FROM mascot_sessions 
+      WHERE workspace_id = ${workspaceId} 
+      AND user_id = ${userId}
+      AND is_active = true
+      ORDER BY started_at DESC
+      LIMIT 1
+    `);
+    
+    if (existingSession.rows?.length > 0) {
+      return res.json({ 
+        success: true, 
+        session: existingSession.rows[0],
+        isNew: false
+      });
+    }
+    
+    // Create new session
+    const result = await db.execute(sql`
+      INSERT INTO mascot_sessions (workspace_id, user_id, session_key, user_agent, screen_width, screen_height)
+      VALUES (${workspaceId}, ${userId}, ${sessionKey}, ${userAgent || null}, ${screenWidth || null}, ${screenHeight || null})
+      RETURNING *
+    `);
+    
+    res.json({ 
+      success: true, 
+      session: result.rows?.[0],
+      isNew: true
+    });
+  } catch (error) {
+    console.error('[Mascot Sessions] Create session error:', error);
+    res.status(500).json({ error: 'Failed to create session' });
+  }
+});
+
+/**
+ * GET /api/mascot/sessions/active
+ * Get current active session for user/workspace
+ * Protected - requires authentication
+ */
+router.get('/sessions/active', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace context required' });
+    }
+    
+    const result = await db.execute(sql`
+      SELECT * FROM mascot_sessions 
+      WHERE workspace_id = ${workspaceId} 
+      AND user_id = ${userId}
+      AND is_active = true
+      ORDER BY started_at DESC
+      LIMIT 1
+    `);
+    
+    if (!result.rows?.length) {
+      return res.json({ session: null });
+    }
+    
+    res.json({ session: result.rows[0] });
+  } catch (error) {
+    console.error('[Mascot Sessions] Get active session error:', error);
+    res.status(500).json({ error: 'Failed to get session' });
+  }
+});
+
+/**
+ * PATCH /api/mascot/sessions/:id/close
+ * Close an active session
+ * Protected - requires authentication
+ */
+router.patch('/sessions/:id/close', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const userId = (req as any).user?.id;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
+    
+    await db.execute(sql`
+      UPDATE mascot_sessions 
+      SET is_active = false, ended_at = NOW(), updated_at = NOW()
+      WHERE id = ${id} 
+      AND workspace_id = ${workspaceId}
+      AND (user_id = ${userId} OR user_id IS NULL)
+    `);
+    
+    res.json({ success: true, message: 'Session closed' });
+  } catch (error) {
+    console.error('[Mascot Sessions] Close session error:', error);
+    res.status(500).json({ error: 'Failed to close session' });
+  }
+});
+
+/**
+ * POST /api/mascot/interactions
+ * Log a mascot interaction with optional AI processing
+ * Protected - requires authentication
+ */
+router.post('/interactions', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const { 
+      sessionId, 
+      source, 
+      interactionType, 
+      payload, 
+      mascotPositionX, 
+      mascotPositionY,
+      requestAiResponse 
+    } = req.body;
+    
+    if (!workspaceId || !sessionId || !source || !interactionType) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const startTime = Date.now();
+    let aiResponse = null;
+    let aiResponseType = null;
+    let aiTokensUsed = null;
+    
+    // Generate AI response if requested
+    if (requestAiResponse) {
+      try {
+        const systemPrompt = `You are CoAI, the friendly Trinity mascot for CoAIleague workforce management. 
+You observe user interactions and provide helpful, contextual thoughts and advice.
+Based on the user's action, generate a brief thought or helpful tip.
+Keep responses under 50 words, friendly and supportive.
+Source: ${source}, Action: ${interactionType}`;
+
+        const userMessage = typeof payload === 'object' ? JSON.stringify(payload) : String(payload);
+        
+        const response = await geminiClient.generate({
+          workspaceId,
+          userId,
+          featureKey: 'mascot_interaction',
+          systemPrompt,
+          userMessage: userMessage.substring(0, 500),
+          temperature: 0.8,
+          maxTokens: 100
+        });
+        
+        aiResponse = response.text;
+        aiResponseType = source === 'chat' ? 'advice' : 'thought';
+        aiTokensUsed = null; // Token usage tracking not available
+      } catch (aiError) {
+        console.warn('[Mascot Interactions] AI response failed:', aiError);
+      }
+    }
+    
+    const processingTimeMs = Date.now() - startTime;
+    
+    // Insert interaction
+    const result = await db.execute(sql`
+      INSERT INTO mascot_interactions (
+        session_id, workspace_id, user_id, source, interaction_type,
+        payload, ai_response, ai_response_type, ai_tokens_used,
+        mascot_position_x, mascot_position_y, processing_time_ms
+      ) VALUES (
+        ${sessionId}, ${workspaceId}, ${userId}, ${source}, ${interactionType},
+        ${JSON.stringify(payload) || null}, ${aiResponse}, ${aiResponseType}, ${aiTokensUsed},
+        ${mascotPositionX || null}, ${mascotPositionY || null}, ${processingTimeMs}
+      ) RETURNING *
+    `);
+    
+    // Update session stats
+    await db.execute(sql`
+      UPDATE mascot_sessions SET
+        total_interactions = total_interactions + 1,
+        total_thoughts = total_thoughts + ${aiResponseType === 'thought' ? 1 : 0},
+        total_advice = total_advice + ${aiResponseType === 'advice' ? 1 : 0},
+        updated_at = NOW()
+      WHERE id = ${sessionId}
+    `);
+    
+    res.json({ 
+      success: true, 
+      interaction: result.rows?.[0],
+      aiResponse,
+      aiResponseType
+    });
+  } catch (error) {
+    console.error('[Mascot Interactions] Log interaction error:', error);
+    res.status(500).json({ error: 'Failed to log interaction' });
+  }
+});
+
+/**
+ * POST /api/mascot/observe-chat
+ * Special endpoint for chat observation with AI-powered contextual advice
+ * Protected - requires authentication
+ */
+router.post('/observe-chat', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const { sessionId, chatMessage, chatContext } = req.body;
+    
+    if (!workspaceId || !sessionId || !chatMessage) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    const startTime = Date.now();
+    
+    // Generate contextual advice based on chat
+    const systemPrompt = `You are CoAI, the Trinity mascot observing a chat conversation.
+Based on the chat message, provide a helpful thought bubble or contextual tip.
+Be supportive and helpful without being intrusive.
+Keep response under 40 words, casual and friendly.
+${chatContext ? `Recent chat context: ${chatContext}` : ''}`;
+
+    let aiResponse = null;
+    let aiTokensUsed = null;
+    
+    try {
+      const response = await geminiClient.generate({
+        workspaceId,
+        userId,
+        featureKey: 'mascot_chat_observe',
+        systemPrompt,
+        userMessage: chatMessage.substring(0, 300),
+        temperature: 0.7,
+        maxTokens: 80
+      });
+      
+      aiResponse = response.text;
+      aiTokensUsed = null; // Token usage tracking not available
+    } catch (aiError) {
+      console.warn('[Mascot Chat] AI observation failed:', aiError);
+    }
+    
+    const processingTimeMs = Date.now() - startTime;
+    
+    // Log the interaction
+    await db.execute(sql`
+      INSERT INTO mascot_interactions (
+        session_id, workspace_id, user_id, source, interaction_type,
+        payload, ai_response, ai_response_type, ai_tokens_used, processing_time_ms
+      ) VALUES (
+        ${sessionId}, ${workspaceId}, ${userId}, 'chat', 'observe',
+        ${JSON.stringify({ chatMessage, chatContext })}, ${aiResponse}, 'advice', ${aiTokensUsed}, ${processingTimeMs}
+      )
+    `);
+    
+    // Update session
+    await db.execute(sql`
+      UPDATE mascot_sessions SET
+        total_interactions = total_interactions + 1,
+        total_advice = total_advice + ${aiResponse ? 1 : 0},
+        updated_at = NOW()
+      WHERE id = ${sessionId}
+    `);
+    
+    res.json({ 
+      success: true, 
+      advice: aiResponse,
+      processingTimeMs
+    });
+  } catch (error) {
+    console.error('[Mascot Chat] Observe chat error:', error);
+    res.status(500).json({ error: 'Failed to observe chat' });
+  }
+});
+
+/**
+ * POST /api/mascot/generate-tasks
+ * Generate AI-powered task list for user
+ * Protected - requires authentication
+ */
+router.post('/generate-tasks', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const { sessionId, context, currentPage } = req.body;
+    
+    if (!workspaceId || !sessionId) {
+      return res.status(400).json({ error: 'Missing required fields' });
+    }
+    
+    // Get workspace context for personalized tasks
+    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+    
+    const systemPrompt = `You are CoAI, generating a personalized task list for a business owner using CoAIleague workforce management.
+Generate 3-5 actionable tasks based on their context.
+Return ONLY a JSON array with objects containing: title, description, category, priority (low/medium/high), actionUrl (optional).
+${workspace?.industry ? `Industry: ${workspace.industry}` : ''}
+${currentPage ? `Current page: ${currentPage}` : ''}
+${context ? `Context: ${context}` : ''}`;
+
+    const response = await geminiClient.generate({
+      workspaceId,
+      userId,
+      featureKey: 'mascot_generate_tasks',
+      systemPrompt,
+      userMessage: 'Generate personalized tasks based on my business needs',
+      temperature: 0.7,
+      maxTokens: 500
+    });
+    
+    // Parse tasks from AI response
+    let tasks: any[] = [];
+    try {
+      const jsonMatch = response.text.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        tasks = JSON.parse(jsonMatch[0]);
+      }
+    } catch {
+      console.warn('[Mascot Tasks] Failed to parse AI tasks');
+      tasks = [
+        { title: 'Complete profile setup', description: 'Add your business details', category: 'setup', priority: 'high' },
+        { title: 'Add team members', description: 'Invite your first employee', category: 'team', priority: 'medium' }
+      ];
+    }
+    
+    // Insert tasks into database
+    const insertedTasks = [];
+    for (const task of tasks.slice(0, 5)) {
+      const result = await db.execute(sql`
+        INSERT INTO mascot_tasks (
+          session_id, workspace_id, user_id, title, description, 
+          category, priority, action_url, ai_reasoning
+        ) VALUES (
+          ${sessionId}, ${workspaceId}, ${userId}, 
+          ${task.title}, ${task.description || null},
+          ${task.category || 'general'}, ${task.priority || 'medium'},
+          ${task.actionUrl || null}, ${'AI-generated based on user context'}
+        ) RETURNING *
+      `);
+      if (result.rows?.[0]) {
+        insertedTasks.push(result.rows[0]);
+      }
+    }
+    
+    // Update session
+    await db.execute(sql`
+      UPDATE mascot_sessions SET
+        total_tasks_generated = total_tasks_generated + ${insertedTasks.length},
+        updated_at = NOW()
+      WHERE id = ${sessionId}
+    `);
+    
+    res.json({ 
+      success: true, 
+      tasks: insertedTasks 
+    });
+  } catch (error) {
+    console.error('[Mascot Tasks] Generate tasks error:', error);
+    res.status(500).json({ error: 'Failed to generate tasks' });
+  }
+});
+
+/**
+ * GET /api/mascot/tasks
+ * Get user's mascot-generated tasks
+ * Protected - requires authentication
+ */
+router.get('/generated-tasks', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const status = req.query.status as string;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace context required' });
+    }
+    
+    let statusFilter = status ? sql`AND status = ${status}` : sql``;
+    
+    const result = await db.execute(sql`
+      SELECT * FROM mascot_tasks
+      WHERE workspace_id = ${workspaceId}
+      AND (user_id = ${userId} OR user_id IS NULL)
+      ${statusFilter}
+      ORDER BY priority DESC, created_at DESC
+      LIMIT 20
+    `);
+    
+    res.json({ tasks: result.rows || [] });
+  } catch (error) {
+    console.error('[Mascot Tasks] Get tasks error:', error);
+    res.status(500).json({ error: 'Failed to get tasks' });
+  }
+});
+
+/**
+ * PATCH /api/mascot/tasks/:id/status
+ * Update task status
+ * Protected - requires authentication
+ */
+router.patch('/tasks/:id/status', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+    const userId = (req as any).user?.id;
+    const workspaceId = (req as any).session?.activeWorkspaceId;
+    
+    const validStatuses = ['pending', 'in_progress', 'completed', 'dismissed'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'Invalid status' });
+    }
+    
+    const completedAt = status === 'completed' ? sql`NOW()` : sql`NULL`;
+    
+    await db.execute(sql`
+      UPDATE mascot_tasks SET
+        status = ${status},
+        completed_at = ${completedAt},
+        updated_at = NOW()
+      WHERE id = ${id}
+      AND workspace_id = ${workspaceId}
+      AND (user_id = ${userId} OR user_id IS NULL)
+    `);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Mascot Tasks] Update status error:', error);
+    res.status(500).json({ error: 'Failed to update task' });
+  }
+});
+
+// ============================================================================
+// SUPPORT STAFF & AI BRAIN QUERY ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/mascot/sessions/query
+ * Query mascot sessions - for support staff and AI Brain
+ * Protected - requires staff role
+ */
+router.get('/sessions/query', requireAuth, async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
+    
+    if (!user?.platformRole || !staffRoles.includes(user.platformRole)) {
+      return res.status(403).json({ error: 'Staff access required' });
+    }
+    
+    const { workspaceId, userId, startDate, endDate, limit = 50 } = req.query;
+    
+    let conditions = [];
+    if (workspaceId) conditions.push(sql`workspace_id = ${workspaceId}`);
+    if (userId) conditions.push(sql`user_id = ${userId}`);
+    if (startDate) conditions.push(sql`started_at >= ${startDate}`);
+    if (endDate) conditions.push(sql`started_at <= ${endDate}`);
+    
+    const whereClause = conditions.length > 0 
+      ? sql`WHERE ${sql.join(conditions, sql` AND `)}`
+      : sql``;
+    
+    const result = await db.execute(sql`
+      SELECT s.*, 
+        u.full_name as user_name,
+        w.name as workspace_name
+      FROM mascot_sessions s
+      LEFT JOIN users u ON s.user_id = u.id
+      LEFT JOIN workspaces w ON s.workspace_id = w.id
+      ${whereClause}
+      ORDER BY s.started_at DESC
+      LIMIT ${Number(limit)}
+    `);
+    
+    res.json({ 
+      success: true,
+      sessions: result.rows || [],
+      count: result.rows?.length || 0
+    });
+  } catch (error) {
+    console.error('[Mascot Sessions] Query sessions error:', error);
+    res.status(500).json({ error: 'Failed to query sessions' });
+  }
+});
+
+/**
+ * GET /api/mascot/sessions/:id/interactions
+ * Get all interactions for a session - for support staff
+ * Protected - requires staff role
+ */
+router.get('/sessions/:id/interactions', requireAuth, async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
+    
+    if (!user?.platformRole || !staffRoles.includes(user.platformRole)) {
+      return res.status(403).json({ error: 'Staff access required' });
+    }
+    
+    const { id } = req.params;
+    const limit = parseInt(req.query.limit as string) || 100;
+    
+    const result = await db.execute(sql`
+      SELECT * FROM mascot_interactions
+      WHERE session_id = ${id}
+      ORDER BY created_at DESC
+      LIMIT ${limit}
+    `);
+    
+    res.json({ 
+      success: true,
+      interactions: result.rows || [] 
+    });
+  } catch (error) {
+    console.error('[Mascot Sessions] Get interactions error:', error);
+    res.status(500).json({ error: 'Failed to get interactions' });
+  }
+});
+
+/**
+ * GET /api/mascot/analytics
+ * Get mascot usage analytics - for support staff and AI Brain
+ * Protected - requires staff role
+ */
+router.get('/analytics', requireAuth, async (req, res) => {
+  try {
+    const user = (req as any).user;
+    const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
+    
+    if (!user?.platformRole || !staffRoles.includes(user.platformRole)) {
+      return res.status(403).json({ error: 'Staff access required' });
+    }
+    
+    const { workspaceId, days = 7 } = req.query;
+    const startDate = new Date();
+    startDate.setDate(startDate.getDate() - Number(days));
+    
+    const workspaceFilter = workspaceId ? sql`AND workspace_id = ${workspaceId}` : sql``;
+    
+    const sessionStats = await db.execute(sql`
+      SELECT 
+        COUNT(*) as total_sessions,
+        SUM(total_interactions) as total_interactions,
+        SUM(total_thoughts) as total_thoughts,
+        SUM(total_advice) as total_advice,
+        SUM(total_tasks_generated) as total_tasks,
+        COUNT(DISTINCT workspace_id) as unique_workspaces,
+        COUNT(DISTINCT user_id) as unique_users
+      FROM mascot_sessions
+      WHERE started_at >= ${startDate.toISOString()}
+      ${workspaceFilter}
+    `);
+    
+    const interactionBreakdown = await db.execute(sql`
+      SELECT 
+        source,
+        interaction_type,
+        COUNT(*) as count
+      FROM mascot_interactions
+      WHERE created_at >= ${startDate.toISOString()}
+      ${workspaceFilter}
+      GROUP BY source, interaction_type
+      ORDER BY count DESC
+    `);
+    
+    res.json({
+      success: true,
+      period: { days: Number(days), startDate: startDate.toISOString() },
+      summary: sessionStats.rows?.[0] || {},
+      interactionBreakdown: interactionBreakdown.rows || []
+    });
+  } catch (error) {
+    console.error('[Mascot Analytics] Get analytics error:', error);
+    res.status(500).json({ error: 'Failed to get analytics' });
+  }
+});
+
 export default router;

@@ -311,7 +311,7 @@ const FloatingMascot = memo(function FloatingMascot({
       // Apply motion profile if available
       if (holidayDirective.motionProfile?.patternType) {
         const pattern = holidayDirective.motionProfile.patternType as MotionPattern;
-        if (MOTION_PATTERNS[pattern]) {
+        if (pattern in MOTION_PATTERNS) {
           setActiveMotionPattern(pattern);
         }
       }
@@ -377,7 +377,8 @@ const FloatingMascot = memo(function FloatingMascot({
       timeRef.current += 0.02;
       const t = timeRef.current;
       const center = mascotSize / 2;
-      const radius = mascotSize * 0.32; // Larger radius for better star separation
+      // WIDER orbit radius for clear visual separation between stars
+      const radius = mascotSize * 0.38;
 
       ctx.clearRect(0, 0, mascotSize, mascotSize);
 
@@ -560,9 +561,10 @@ const FloatingMascot = memo(function FloatingMascot({
       const brandingColors = ['#a855f7', '#38bdf8', '#38bdf8'];
       
       twins.forEach((twin, index) => {
-        const starSize = mascotSize * 0.20;
-        const innerSize = starSize * 0.6;
-        const rimWidth = starSize * 0.08;
+        // Slightly smaller stars for clearer separation
+        const starSize = mascotSize * 0.16;
+        const innerSize = starSize * 0.55;
+        const rimWidth = starSize * 0.09;
         
         // Outer glow halo
         const haloGradient = ctx.createRadialGradient(
