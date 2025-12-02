@@ -25,6 +25,7 @@
 
 import { useEffect, useRef, useCallback, memo } from 'react';
 import { statusEmoteEffects, StatusEmoteEffects, STATUS_COLORS } from '@/lib/mascot/StatusEmoteEffects';
+import { emoteMorphingEngine, EmoteMorphingEngine, EmoteName, EmotePhase, EMOTE_FORMATIONS } from '@/lib/mascot/EmoteMorphingEngine';
 
 export type MascotMode = 
   | 'IDLE' 
@@ -90,6 +91,8 @@ interface CoAITwinMascotProps {
   mini?: boolean; // Compact mode for bubble display - no overlays
   variant?: MascotVariant; // mini (80px bubble), expanded (180px), full (original)
   emote?: EmoteState; // Current emote state for visual expression
+  triggerEmote?: EmoteName; // Trigger an emote morph animation
+  onEmoteComplete?: (emote: EmoteName) => void; // Callback when emote animation finishes
 }
 
 const MODE_COLORS: Record<MascotMode, string> = {
@@ -159,6 +162,10 @@ class CoAITwinEngine {
   private shockwaves: Shockwave[] = [];
   private isRunning = false;
   private animationFrameId: number | null = null;
+  
+  private morphEngine: EmoteMorphingEngine;
+  private lastFrameTime: number = 0;
+  private onEmoteComplete?: (emote: EmoteName) => void;
 
   constructor(container: HTMLElement, canvas: HTMLCanvasElement) {
     this.container = container;
@@ -167,8 +174,37 @@ class CoAITwinEngine {
     if (!ctx) throw new Error('Failed to get 2D context');
     this.ctx = ctx;
     
+    this.morphEngine = new EmoteMorphingEngine();
+    this.morphEngine.setCallbacks({
+      onParticle: (effect) => this.spawnEmoteParticles(effect),
+      onShockwave: (color) => this.spawnShockwave(color),
+      onShake: (intensity) => { this.state.shake = intensity; },
+      onComplete: (emote) => { this.onEmoteComplete?.(emote); },
+      onPhaseChange: (phase, emote) => {
+        console.log(`[Mascot Emote] Phase: ${phase}, Emote: ${emote}`);
+      }
+    });
+    
+    this.lastFrameTime = performance.now();
+    
     this.resize();
     this.setupTouch();
+  }
+  
+  triggerEmote(emote: EmoteName): void {
+    this.morphEngine.triggerEmote(emote);
+  }
+  
+  setEmoteCallback(callback: (emote: EmoteName) => void): void {
+    this.onEmoteComplete = callback;
+  }
+  
+  isEmoteAnimating(): boolean {
+    return this.morphEngine.isAnimating();
+  }
+  
+  getCurrentEmotePhase(): EmotePhase {
+    return this.morphEngine.getCurrentPhase();
   }
 
   private setupTouch() {
@@ -570,6 +606,12 @@ class CoAITwinEngine {
     const cx = this.state.w / 2;
     const cy = this.state.h / 2;
     
+    // Update morph engine
+    const now = performance.now();
+    const deltaMs = now - this.lastFrameTime;
+    this.lastFrameTime = now;
+    this.morphEngine.update(deltaMs);
+    
     // TRINITY: 120° offset for 3 stars (Co, AI, L) - each star gets unique position
     const TRINITY_OFFSET = (2 * Math.PI) / 3;  // 120 degrees
 
@@ -716,43 +758,53 @@ class CoAITwinEngine {
   }
 
   private drawStar(x: number, y: number, outerR: number, innerR: number, color: string, twinIndex: number = 0) {
+    // Get morph state from morphing engine
+    const morphState = this.morphEngine.getStarState(twinIndex, this.state.time);
+    
     // Apply emote behaviors - Trinity: cyan (0), purple (1), gold (2)
     const behaviors = [this.emoteState.cyanBehavior, this.emoteState.purpleBehavior, this.emoteState.goldBehavior];
     const behavior = behaviors[twinIndex] || behaviors[0];
-    const scale = behavior.scale;
-    const wobble = behavior.wobble;
-    const glow = behavior.glow;
-    const speed = behavior.speed;
+    
+    // Blend behavior with morph state
+    const scale = behavior.scale * morphState.scale;
+    const wobble = behavior.wobble * morphState.wobbleAmount;
+    const glow = Math.max(behavior.glow, morphState.glowIntensity);
+    const speed = behavior.speed * morphState.wobbleSpeed;
     
     // Apply wobble offset with unique phase per star
     const wobbleX = Math.sin(this.state.time * 0.1 * speed + twinIndex * 2.1) * wobble * 3;
     const wobbleY = Math.cos(this.state.time * 0.12 * speed + twinIndex * 2.1) * wobble * 3;
-    const drawX = x + wobbleX;
-    const drawY = y + wobbleY;
+    
+    // Apply morph offset
+    const drawX = x + wobbleX + morphState.offsetX;
+    const drawY = y + wobbleY + morphState.offsetY;
     
     // Apply scaled sizes
     const scaledOuterR = outerR * scale;
     const scaledInnerR = innerR * scale;
+    
+    // Apply morph rotation
+    const morphRotation = morphState.rotation;
     
     // Draw dark outline first for visibility on light backgrounds
     this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.6)';
     this.ctx.lineWidth = 3;
     this.ctx.beginPath();
     for (let i = 0; i < 4; i++) {
-      const angle = (i * Math.PI / 2) - (this.state.time * 0.05 * speed);
+      const angle = (i * Math.PI / 2) - (this.state.time * 0.05 * speed) + morphRotation;
       this.ctx.lineTo(drawX + Math.cos(angle) * (scaledOuterR + 2), drawY + Math.sin(angle) * (scaledOuterR + 2));
       this.ctx.lineTo(drawX + Math.cos(angle + Math.PI / 4) * (scaledInnerR + 1), drawY + Math.sin(angle + Math.PI / 4) * (scaledInnerR + 1));
     }
     this.ctx.closePath();
     this.ctx.stroke();
     
-    // Draw colored fill with glow
+    // Draw colored fill with glow - enhanced by morph glow intensity
     this.ctx.fillStyle = color;
-    this.ctx.shadowBlur = 20 + (glow * 30);
+    this.ctx.shadowBlur = 20 + (glow * 40);
     this.ctx.shadowColor = color;
     this.ctx.beginPath();
     for (let i = 0; i < 4; i++) {
-      const angle = (i * Math.PI / 2) - (this.state.time * 0.05 * speed);
+      const angle = (i * Math.PI / 2) - (this.state.time * 0.05 * speed) + morphRotation;
       this.ctx.lineTo(drawX + Math.cos(angle) * scaledOuterR, drawY + Math.sin(angle) * scaledOuterR);
       this.ctx.lineTo(drawX + Math.cos(angle + Math.PI / 4) * scaledInnerR, drawY + Math.sin(angle + Math.PI / 4) * scaledInnerR);
     }
@@ -945,11 +997,14 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
   size,
   mini = false,
   variant,
-  emote
+  emote,
+  triggerEmote,
+  onEmoteComplete
 }: CoAITwinMascotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<CoAITwinEngine | null>(null);
+  const lastTriggeredEmote = useRef<EmoteName | undefined>(undefined);
 
   useEffect(() => {
     if (!containerRef.current || !canvasRef.current) return;
@@ -957,6 +1012,11 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
     engineRef.current = new CoAITwinEngine(containerRef.current, canvasRef.current);
     engineRef.current.setMode(mode);
     engineRef.current.start();
+    
+    // Set up emote complete callback
+    if (onEmoteComplete) {
+      engineRef.current.setEmoteCallback(onEmoteComplete);
+    }
 
     const handleResize = () => {
       engineRef.current?.resize();
@@ -977,12 +1037,27 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
     }
   }, [mode]);
 
+  // Trigger emote animations when prop changes
+  useEffect(() => {
+    if (engineRef.current && triggerEmote && triggerEmote !== lastTriggeredEmote.current) {
+      lastTriggeredEmote.current = triggerEmote;
+      engineRef.current.triggerEmote(triggerEmote);
+    }
+  }, [triggerEmote]);
+
   // Apply emote state to engine
   useEffect(() => {
     if (engineRef.current && emote) {
       engineRef.current.setEmote(emote);
     }
   }, [emote]);
+  
+  // Update emote complete callback when it changes
+  useEffect(() => {
+    if (engineRef.current && onEmoteComplete) {
+      engineRef.current.setEmoteCallback(onEmoteComplete);
+    }
+  }, [onEmoteComplete]);
 
   const handleModeChange = useCallback((newMode: MascotMode) => {
     if (engineRef.current) {

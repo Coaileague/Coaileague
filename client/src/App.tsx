@@ -1,7 +1,7 @@
 // Multi-tenant SaaS Scheduling Platform
 
 import { Switch, Route, useLocation, Link } from "wouter";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -262,19 +262,23 @@ function MascotRenderer() {
   // Emote system integration
   const { emote, config: emoteConfig, triggerEmote, triggerByContext } = useMascotEmotes();
   
-  // Create emote state for passing to mascot component - gold uses cyan behavior as default
-  const emoteState = {
+  // Memoize emote state to prevent unnecessary re-renders
+  const emoteState = useMemo(() => ({
     type: emote,
     purpleBehavior: emoteConfig.starBehavior.purple,
     cyanBehavior: emoteConfig.starBehavior.cyan,
     goldBehavior: emoteConfig.starBehavior.cyan,
     particleEffect: emoteConfig.particleEffect,
-  };
+  }), [emote, emoteConfig]);
   
-  // Set global emote trigger for use outside React
+  // Stable ref for global emote trigger to prevent effect re-runs
+  const triggerByContextRef = useRef(triggerByContext);
+  triggerByContextRef.current = triggerByContext;
+  
+  // Set global emote trigger for use outside React - only run once
   useEffect(() => {
-    setGlobalEmoteTrigger(triggerByContext);
-  }, [triggerByContext]);
+    setGlobalEmoteTrigger((trigger: string) => triggerByContextRef.current(trigger));
+  }, []);
   
   const sizes = getDeviceSizes();
   const { position, isExpanded, isDragging, toggleExpanded, resetPosition, setRoamingPosition, dragHandlers } = useMascotPosition(sizes.defaultSize, isMobile);

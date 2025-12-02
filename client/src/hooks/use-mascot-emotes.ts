@@ -81,10 +81,13 @@ export function useMascotEmotes(): EmoteManager {
   
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastLocationRef = useRef(location);
+  // Use ref to track current emote without causing callback recreation
+  const currentEmoteRef = useRef(state.current);
+  currentEmoteRef.current = state.current;
   
-  // Trigger a specific emote
+  // Trigger a specific emote - stable callback that uses ref for current state
   const triggerEmote = useCallback((emote: EmoteType, force = false) => {
-    if (emote === state.current && !force) return;
+    if (emote === currentEmoteRef.current && !force) return;
     
     const config = EMOTE_CONFIGS[emote];
     
@@ -123,7 +126,7 @@ export function useMascotEmotes(): EmoteManager {
         }, 200);
       }, config.duration);
     }
-  }, [state.current]);
+  }, []); // Empty deps - uses ref for current state
   
   // Trigger emote by context
   const triggerByContext = useCallback((trigger: string) => {
@@ -166,10 +169,11 @@ export function useMascotEmotes(): EmoteManager {
   useEffect(() => {
     const checkTimeEmote = () => {
       const timeOfDay = getTimeOfDay();
-      if (timeOfDay === 'night' && state.current === 'neutral') {
+      // Use ref to check current state without causing re-runs
+      if (timeOfDay === 'night' && currentEmoteRef.current === 'neutral') {
         const emote = findEmoteForContext('time_night');
         if (emote) triggerEmote(emote);
-      } else if (timeOfDay === 'morning' && state.current === 'neutral') {
+      } else if (timeOfDay === 'morning' && currentEmoteRef.current === 'neutral') {
         const emote = findEmoteForContext('time_morning');
         if (emote) triggerEmote(emote);
       }
@@ -181,7 +185,7 @@ export function useMascotEmotes(): EmoteManager {
     // Check every 30 minutes
     const interval = setInterval(checkTimeEmote, 30 * 60 * 1000);
     return () => clearInterval(interval);
-  }, [state.current, triggerEmote]);
+  }, [triggerEmote]); // Removed state.current - now uses ref
   
   // Cleanup
   useEffect(() => {
