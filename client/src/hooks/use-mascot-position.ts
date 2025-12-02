@@ -26,8 +26,8 @@ const STORAGE_KEY = 'coaileague-mascot-position';
 const EXPANDED_STORAGE_KEY = 'coaileague-mascot-expanded';
 
 const DEFAULT_POSITION: Position = {
-  x: -24,
-  y: -24,
+  x: 24,
+  y: 24,
 };
 
 export function useMascotPosition(bubbleSize: number = 80) {
@@ -77,14 +77,14 @@ export function useMascotPosition(bubbleSize: number = 80) {
     const deltaX = clientX - dragStart.current.x;
     const deltaY = clientY - dragStart.current.y;
 
-    const newX = dragStart.current.posX - deltaX;
-    const newY = dragStart.current.posY - deltaY;
+    const newX = dragStart.current.posX + deltaX;
+    const newY = dragStart.current.posY + deltaY;
 
     const maxX = window.innerWidth - bubbleSize - 8;
     const maxY = window.innerHeight - bubbleSize - 8;
 
-    const clampedX = Math.max(-maxX, Math.min(newX, -8));
-    const clampedY = Math.max(-maxY, Math.min(newY, -8));
+    const clampedX = Math.max(8, Math.min(newX, maxX));
+    const clampedY = Math.max(8, Math.min(newY, maxY));
 
     setPosition({ x: clampedX, y: clampedY });
   }, [isDragging, bubbleSize]);

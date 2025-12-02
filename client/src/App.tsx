@@ -170,7 +170,7 @@ import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 function MascotRenderer() {
   const { currentMode } = useMascotMode();
   const [location] = useLocation();
-  const { position, isExpanded, isDragging, toggleExpanded, resetPosition, dragHandlers } = useMascotPosition(80);
+  const { position, isExpanded, isDragging, toggleExpanded, resetPosition, dragHandlers } = useMascotPosition(200);
   
   // Hide mascot only on demo and auth pages
   const hideMascotPages = ['/mascot-demo', '/login', '/register'];
@@ -178,14 +178,14 @@ function MascotRenderer() {
   
   if (shouldHideMascot) return null;
 
-  const bubbleSize = isExpanded ? 180 : 80;
+  const bubbleSize = isExpanded ? 300 : 200;
   
   return (
     <div 
       className={`fixed z-50 select-none transition-transform duration-150 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       style={{ 
-        bottom: -position.y,
-        right: -position.x,
+        bottom: position.y,
+        right: position.x,
       }}
       data-testid="mascot-container"
     >
@@ -200,34 +200,34 @@ function MascotRenderer() {
         />
         
         <div 
-          className={`absolute -top-1 -right-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-auto ${isDragging ? 'hidden' : ''}`}
+          className={`absolute top-1 right-1 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-auto ${isDragging ? 'hidden' : ''}`}
         >
           <button
             onClick={(e) => { e.stopPropagation(); toggleExpanded(); }}
-            className="w-5 h-5 rounded-full bg-slate-800/90 border border-slate-600/50 flex items-center justify-center hover:bg-slate-700 transition-colors"
+            className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 border border-slate-500 flex items-center justify-center hover:from-slate-500 hover:to-slate-700 transition-all shadow-lg hover:shadow-xl"
             title={isExpanded ? "Minimize" : "Expand"}
             data-testid="button-mascot-toggle-size"
           >
             {isExpanded ? (
-              <Minimize2 className="w-2.5 h-2.5 text-slate-300" />
+              <Minimize2 className="w-3.5 h-3.5 text-slate-100" />
             ) : (
-              <Maximize2 className="w-2.5 h-2.5 text-slate-300" />
+              <Maximize2 className="w-3.5 h-3.5 text-slate-100" />
             )}
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); resetPosition(); }}
-            className="w-5 h-5 rounded-full bg-slate-800/90 border border-slate-600/50 flex items-center justify-center hover:bg-slate-700 transition-colors"
+            className="w-7 h-7 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 border border-slate-500 flex items-center justify-center hover:from-slate-500 hover:to-slate-700 transition-all shadow-lg hover:shadow-xl"
             title="Reset position"
             data-testid="button-mascot-reset-position"
           >
-            <RotateCcw className="w-2.5 h-2.5 text-slate-300" />
+            <RotateCcw className="w-3.5 h-3.5 text-slate-100" />
           </button>
         </div>
         
         <div 
-          className={`absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-1 rounded bg-slate-900/95 border border-slate-700/50 text-[10px] text-slate-300 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none ${isDragging ? 'hidden' : ''}`}
+          className={`absolute -top-12 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-1.5 rounded-lg bg-slate-900/98 border border-slate-600 text-xs text-slate-200 opacity-0 group-hover:opacity-100 transition-all pointer-events-none font-medium shadow-lg ${isDragging ? 'hidden' : ''}`}
         >
-          Drag to move
+          🎯 Drag to move • Click to expand
         </div>
       </div>
     </div>
