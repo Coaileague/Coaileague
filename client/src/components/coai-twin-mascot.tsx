@@ -259,51 +259,51 @@ class CoAITwinEngine {
       if (this.state.isTouching && this.state.touchX !== null && this.state.touchY !== null) {
         const mx = (this.state.touchX / window.devicePixelRatio) - cx;
         const my = (this.state.touchY / window.devicePixelRatio) - cy;
-        tx = mx * 0.4 + Math.cos(this.state.time * 0.1 + i * Math.PI) * (25 * s * 0.004);
-        ty = my * 0.4 + Math.sin(this.state.time * 0.1 + i * Math.PI) * (25 * s * 0.004);
+        tx = mx * 0.4 + Math.cos(this.state.time * 0.1 + i * Math.PI) * (22 * s * 0.003);
+        ty = my * 0.4 + Math.sin(this.state.time * 0.1 + i * Math.PI) * (22 * s * 0.003);
       } else if (this.state.mode === 'IDLE') {
         const tOffset = this.state.time * 0.02 + (i * Math.PI);
-        tx = Math.cos(tOffset) * (35 * s * 0.004);
-        ty = Math.sin(tOffset * 2) * (25 * s * 0.004);
+        tx = Math.cos(tOffset) * (32 * s * 0.003);
+        ty = Math.sin(tOffset * 2) * (22 * s * 0.003);
       } else if (this.state.mode === 'SEARCHING') {
         if (i === 0) {
           tx = 0;
           ty = 0;
         } else {
           const angle = this.state.time * 0.05;
-          const rad = 45 * s * 0.004;
+          const rad = 40 * s * 0.003;
           tx = Math.cos(angle) * rad;
           ty = Math.sin(angle) * rad;
           if (this.state.time % 40 === 0) this.spawnParticle(tx, ty, t.color);
         }
       } else if (this.state.mode === 'ANALYZING') {
         const angle = i === 0 ? -Math.PI / 4 : Math.PI * 0.75;
-        const dist = 35 * s * 0.004;
+        const dist = 30 * s * 0.003;
         tx = Math.cos(angle) * dist;
         ty = Math.sin(angle) * dist;
         tx += Math.sin(this.state.time * 0.1 + i) * 5;
       } else if (this.state.mode === 'THINKING') {
         t.angle += 0.15;
-        const radius = 40 * s * 0.004;
+        const radius = 35 * s * 0.003;
         tx = Math.cos(t.angle + (i * Math.PI)) * radius;
         ty = Math.sin(t.angle + (i * Math.PI)) * radius;
       } else if (this.state.mode === 'CODING') {
-        const step = 30 * s * 0.004;
+        const step = 26 * s * 0.003;
         const speed = this.state.time * 0.05 + (i * 10);
         tx = Math.round(Math.cos(speed) * 3) * step;
         ty = Math.round(Math.sin(speed) * 3) * step;
       } else if (this.state.mode === 'UPLOADING') {
         const angle = this.state.time * 0.2 + (i * Math.PI);
-        const radius = 35 * s * 0.004;
+        const radius = 30 * s * 0.003;
         tx = Math.cos(angle) * radius;
-        ty = (Math.sin(this.state.time * 0.05) * 35) * s * 0.004;
+        ty = (Math.sin(this.state.time * 0.05) * 30) * s * 0.003;
         if (this.state.time % 5 === 0) {
           this.spawnParticle(tx, ty, t.color, 0, 2);
         }
       } else if (this.state.mode === 'LISTENING') {
         const audio = Math.sin(this.state.time * 0.2 + i) * Math.sin(this.state.time * 0.5);
-        tx = (i === 0 ? -25 : 25) * s * 0.004;
-        ty = audio * 35 * s * 0.004;
+        tx = (i === 0 ? -20 : 20) * s * 0.003;
+        ty = audio * 30 * s * 0.003;
       } else if (this.state.mode === 'SUCCESS') {
         tx = 0;
         ty = 0;
@@ -350,13 +350,13 @@ class CoAITwinEngine {
         const p2 = t.trail[i + 1];
         this.ctx.strokeStyle = t.color;
         this.ctx.globalAlpha = p1.life * 0.5;
-        this.ctx.lineWidth = p1.life * 5 * s * 0.004;
+        this.ctx.lineWidth = p1.life * 4 * s * 0.003;
         this.ctx.moveTo(p1.x, p1.y);
         this.ctx.lineTo(p2.x, p2.y);
         this.ctx.stroke();
       }
       this.ctx.globalAlpha = 1.0;
-      this.drawStar(t.x, t.y, 17 * s * 0.006, 5 * s * 0.006, t.color);
+      this.drawStar(t.x, t.y, 15 * s * 0.005, 4.5 * s * 0.005, t.color);
     });
 
     if (this.state.mode === 'ANALYZING') {
