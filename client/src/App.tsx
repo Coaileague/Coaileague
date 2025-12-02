@@ -261,11 +261,12 @@ function MascotRenderer() {
   // Emote system integration
   const { emote, config: emoteConfig, triggerEmote, triggerByContext } = useMascotEmotes();
   
-  // Create emote state for passing to mascot component
+  // Create emote state for passing to mascot component - gold uses cyan behavior as default
   const emoteState = {
     type: emote,
     purpleBehavior: emoteConfig.starBehavior.purple,
     cyanBehavior: emoteConfig.starBehavior.cyan,
+    goldBehavior: emoteConfig.starBehavior.cyan,
     particleEffect: emoteConfig.particleEffect,
   };
   
