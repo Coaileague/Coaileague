@@ -65,6 +65,7 @@ interface GeminiAgentMascotProps {
   className?: string;
   showControls?: boolean;
   onModeChange?: (mode: MascotMode) => void;
+  size?: number; // Size in pixels (default 400)
 }
 
 const MODE_COLORS: Record<MascotMode, string> = {
@@ -157,8 +158,8 @@ class GeminiAgentEngine {
 
   resize() {
     const rect = this.container.getBoundingClientRect();
-    this.state.w = rect.width;
-    this.state.h = rect.height;
+    this.state.w = Math.max(rect.width, 1);
+    this.state.h = Math.max(rect.height, 1);
     const dpr = Math.min(window.devicePixelRatio, 2);
     this.canvas.width = this.state.w * dpr;
     this.canvas.height = this.state.h * dpr;
