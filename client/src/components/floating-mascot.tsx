@@ -544,31 +544,7 @@ const FloatingMascot = memo(function FloatingMascot({
         ctx.globalAlpha = 1;
       });
 
-      // Draw three separate connecting lines between trinity stars
-      // Each pair has its own line so they appear independently connected
-      ctx.globalAlpha = 0.25;
-      ctx.strokeStyle = colors.glow;
-      ctx.lineWidth = 1;
-      
-      // Line 1: Co (cyan) to AI (purple)
-      ctx.beginPath();
-      ctx.moveTo(twins[0].x, twins[0].y);
-      ctx.lineTo(twins[1].x, twins[1].y);
-      ctx.stroke();
-      
-      // Line 2: AI (purple) to NX (gold)
-      ctx.beginPath();
-      ctx.moveTo(twins[1].x, twins[1].y);
-      ctx.lineTo(twins[2].x, twins[2].y);
-      ctx.stroke();
-      
-      // Line 3: NX (gold) to Co (cyan)
-      ctx.beginPath();
-      ctx.moveTo(twins[2].x, twins[2].y);
-      ctx.lineTo(twins[0].x, twins[0].y);
-      ctx.stroke();
-      
-      ctx.globalAlpha = 1;
+      // Stars are grouped invisibly by physics system - no visible connecting lines
 
       // Trinity branding: "Co" on cyan, "AI" on purple, "NX" on gold
       const brandingLabels = ['Co', 'AI', 'NX'];
@@ -976,18 +952,28 @@ const FloatingMascot = memo(function FloatingMascot({
               zIndex: MASCOT_CONFIG.zIndex + 1,
               maxWidth: 180
             }}
-            initial={{ opacity: 0, scale: 0.85, x: -8 }}
-            animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.85, x: -8 }}
-            transition={{ type: 'spring', stiffness: 350, damping: 28 }}
+            initial={{ opacity: 0, scale: 0.75, x: -10, y: 8 }}
+            animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
+            exit={{ opacity: 0, scale: 0.6, x: 10, y: -15 }}
+            transition={{ type: 'spring', stiffness: 400, damping: 32 }}
           >
+            <style>{`
+              @keyframes floatAway {
+                0% { opacity: 1; transform: translateY(0); }
+                100% { opacity: 0; transform: translateY(-30px); }
+              }
+              .thought-float {
+                animation: floatAway 4s ease-out forwards;
+              }
+            `}</style>
             <div
-              className="relative px-2 py-1 text-[11px] font-medium leading-relaxed"
+              className="relative px-0 py-0 text-[11px] font-medium leading-relaxed thought-float"
               style={{
                 background: 'transparent',
                 border: 'none',
                 color: '#ffffff',
-                textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8), 0 2px 6px rgba(0,0,0,0.7), 1px 1px 2px rgba(0,0,0,1)'
+                textShadow: '0 1px 3px rgba(0,0,0,0.95), 0 0 6px rgba(0,0,0,0.85), 1px 1px 2px rgba(0,0,0,0.95)',
+                filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.3))'
               }}
             >
               <AnimatedText text={currentEmote?.expression || currentThought} />
