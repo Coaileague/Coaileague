@@ -369,13 +369,26 @@ interface SparkleParticle {
   color: string;
 }
 
+interface FallingPresent {
+  id: number;
+  x: number;
+  y: number;
+  opacity: number;
+  rotation: number;
+  color: string;
+  size: number;
+  createdAt: number;
+}
+
 const SantaFlyoverScene = memo(function SantaFlyoverScene() {
   const { seasonId } = useSeasonalTheme();
   const [isFlying, setIsFlying] = useState(false);
   const [position, setPosition] = useState({ x: -200, y: 80 });
   const [sparkles, setSparkles] = useState<SparkleParticle[]>([]);
+  const [presents, setPresents] = useState<FallingPresent[]>([]);
   const [direction, setDirection] = useState<'ltr' | 'rtl'>('ltr');
   const sparkleIdRef = React.useRef(0);
+  const presentIdRef = React.useRef(0);
   const timeoutsRef = React.useRef<number[]>([]);
   
   const isChristmas = seasonId === 'christmas';
@@ -432,15 +445,18 @@ const SantaFlyoverScene = memo(function SantaFlyoverScene() {
     }
     
     const windowWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const windowHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
     const startX = direction === 'ltr' ? -200 : windowWidth + 200;
     const endX = direction === 'ltr' ? windowWidth + 200 : -200;
     const startTime = Date.now();
     const duration = 12000;
     const baseY = 50 + Math.random() * 60;
+    const presentColors = ['#c41e3a', '#228b22', '#1e90ff', '#ffd700', '#9400d3', '#ff6b6b'];
     
     let animFrame: number;
     const animate = () => {
-      const elapsed = Date.now() - startTime;
+      const now = Date.now();
+      const elapsed = now - startTime;
       const progress = Math.min(elapsed / duration, 1);
       
       const eased = 0.5 - 0.5 * Math.cos(progress * Math.PI);
@@ -466,10 +482,48 @@ const SantaFlyoverScene = memo(function SantaFlyoverScene() {
         setSparkles(prev => [...prev.slice(-50), newSparkle]);
       }
       
+      // Drop presents occasionally (roughly every 800ms when visible)
+      if (Math.random() > 0.985 && currentX > 0 && currentX < windowWidth) {
+        const newPresent: FallingPresent = {
+          id: presentIdRef.current++,
+          x: currentX + (Math.random() * 40 - 20),
+          y: currentY + 40,
+          opacity: 1,
+          rotation: Math.random() * 360,
+          color: presentColors[Math.floor(Math.random() * presentColors.length)],
+          size: 16 + Math.random() * 12,
+          createdAt: now,
+        };
+        setPresents(prev => [...prev.slice(-20), newPresent]);
+      }
+      
       setSparkles(prev => 
         prev
           .map(s => ({ ...s, opacity: s.opacity - 0.012, y: s.y + 0.6 }))
           .filter(s => s.opacity > 0)
+      );
+      
+      // Animate presents falling and fade out after 5 seconds
+      setPresents(prev => 
+        prev
+          .map(p => {
+            const age = now - p.createdAt;
+            const fadeStart = 4000; // Start fading at 4 seconds
+            const fadeEnd = 5000; // Fully gone at 5 seconds
+            let newOpacity = p.opacity;
+            
+            if (age > fadeStart) {
+              newOpacity = Math.max(0, 1 - (age - fadeStart) / (fadeEnd - fadeStart));
+            }
+            
+            return {
+              ...p,
+              y: p.y + 1.5, // Fall speed
+              rotation: p.rotation + 0.5, // Gentle tumble
+              opacity: p.y > windowHeight ? 0 : newOpacity, // Also remove if off screen
+            };
+          })
+          .filter(p => p.opacity > 0)
       );
       
       if (progress < 1) {
@@ -494,6 +548,38 @@ const SantaFlyoverScene = memo(function SantaFlyoverScene() {
       style={{ zIndex: 9997 }}
       data-testid="santa-flyover"
     >
+      {/* Falling presents */}
+      {presents.map(present => (
+        <svg
+          key={present.id}
+          className="absolute"
+          width={present.size}
+          height={present.size}
+          viewBox="0 0 24 24"
+          style={{
+            left: present.x,
+            top: present.y,
+            opacity: present.opacity,
+            transform: `translate(-50%, -50%) rotate(${present.rotation}deg)`,
+            filter: `drop-shadow(0 2px 4px rgba(0,0,0,0.3))`,
+          }}
+        >
+          {/* Gift box body */}
+          <rect x="3" y="10" width="18" height="12" rx="1" fill={present.color} />
+          {/* Gift box lid */}
+          <rect x="2" y="8" width="20" height="4" rx="1" fill={present.color} />
+          {/* Ribbon vertical */}
+          <rect x="10.5" y="8" width="3" height="14" fill="#ffd700" />
+          {/* Ribbon horizontal */}
+          <rect x="2" y="13" width="20" height="3" fill="#ffd700" />
+          {/* Bow center */}
+          <circle cx="12" cy="6" r="2" fill="#ffd700" />
+          {/* Bow loops */}
+          <ellipse cx="8" cy="6" rx="3" ry="2" fill="#ffd700" />
+          <ellipse cx="16" cy="6" rx="3" ry="2" fill="#ffd700" />
+        </svg>
+      ))}
+      
       {/* Sparkle trail */}
       {sparkles.map(sparkle => (
         <div

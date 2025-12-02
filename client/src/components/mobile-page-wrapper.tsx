@@ -4,7 +4,7 @@
  * Uses centralized MOBILE_CONFIG for all sizing and behavior
  */
 
-import { ReactNode } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { usePullToRefresh } from "@/hooks/use-touch-swipe";
 import { PullToRefreshIndicator } from "./pull-to-refresh-indicator";
 import { useIsMobile, useMobile } from "@/hooks/use-mobile";
@@ -151,6 +151,7 @@ export function MobilePageHeader({
 /**
  * MobileGrid - Responsive grid that adapts to screen size
  * Uses MOBILE_CONFIG for columns configuration
+ * Supports any column count from 1-12, responsive across breakpoints
  */
 interface MobileGridProps {
   children: ReactNode;
@@ -163,6 +164,33 @@ interface MobileGridProps {
   className?: string;
 }
 
+const TABLET_BREAKPOINT = 768;
+const DESKTOP_BREAKPOINT = 1024;
+
+function useBreakpoint() {
+  const [breakpoint, setBreakpoint] = useState<'mobile' | 'tablet' | 'desktop'>(() => {
+    if (typeof window === 'undefined') return 'mobile';
+    const width = window.innerWidth;
+    if (width >= DESKTOP_BREAKPOINT) return 'desktop';
+    if (width >= TABLET_BREAKPOINT) return 'tablet';
+    return 'mobile';
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      const width = window.innerWidth;
+      if (width >= DESKTOP_BREAKPOINT) setBreakpoint('desktop');
+      else if (width >= TABLET_BREAKPOINT) setBreakpoint('tablet');
+      else setBreakpoint('mobile');
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  return breakpoint;
+}
+
 export function MobileGrid({
   children,
   cols = {
@@ -173,14 +201,20 @@ export function MobileGrid({
   gap = MOBILE_CONFIG.spacing.md,
   className,
 }: MobileGridProps) {
+  const breakpoint = useBreakpoint();
+
+  const mobileCol = Math.max(1, Math.min(12, cols.mobile ?? 1));
+  const tabletCol = Math.max(1, Math.min(12, cols.tablet ?? 2));
+  const desktopCol = Math.max(1, Math.min(12, cols.desktop ?? 4));
+
+  const columnCount = breakpoint === 'desktop' ? desktopCol :
+                      breakpoint === 'tablet' ? tabletCol : mobileCol;
+
   return (
     <div
-      className={cn(
-        'grid w-full',
-        className
-      )}
+      className={cn('grid w-full', className)}
       style={{
-        gridTemplateColumns: `repeat(${cols.mobile}, minmax(0, 1fr))`,
+        gridTemplateColumns: `repeat(${columnCount}, minmax(0, 1fr))`,
         gap: `${gap}px`,
       }}
     >

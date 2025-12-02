@@ -413,22 +413,64 @@ export const SantaSleigh = memo(function SantaSleigh({
         filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.4))',
       }}
     >
-      {/* Reindeer silhouette */}
+      <defs>
+        <style>
+          {`
+            @keyframes reindeerGallop1 {
+              0%, 100% { transform: rotate(0deg); }
+              25% { transform: rotate(-15deg); }
+              50% { transform: rotate(0deg); }
+              75% { transform: rotate(15deg); }
+            }
+            @keyframes reindeerGallop2 {
+              0%, 100% { transform: rotate(0deg); }
+              25% { transform: rotate(15deg); }
+              50% { transform: rotate(0deg); }
+              75% { transform: rotate(-15deg); }
+            }
+            @keyframes reindeerBob {
+              0%, 100% { transform: translateY(0); }
+              50% { transform: translateY(-2px); }
+            }
+            .reindeer-body { animation: reindeerBob 0.3s ease-in-out infinite; }
+            .leg-front-1 { transform-origin: 10px 40px; animation: reindeerGallop1 0.3s ease-in-out infinite; }
+            .leg-back-1 { transform-origin: 18px 40px; animation: reindeerGallop2 0.3s ease-in-out infinite; }
+            .leg-front-2 { transform-origin: 30px 40px; animation: reindeerGallop1 0.3s ease-in-out infinite 0.15s; }
+            .leg-back-2 { transform-origin: 38px 40px; animation: reindeerGallop2 0.3s ease-in-out infinite 0.15s; }
+          `}
+        </style>
+      </defs>
+      
+      {/* Reindeer silhouette with animated legs */}
       <g fill="#4a3728">
-        {/* Lead reindeer */}
-        <ellipse cx="15" cy="35" rx="8" ry="5" />
-        <circle cx="10" cy="30" r="4" />
-        <path d="M6,26 L2,20 M8,26 L6,18 M14,26 L18,20 M12,26 L14,18" stroke="#4a3728" strokeWidth="1.5" fill="none" />
-        {/* Legs */}
-        <line x1="10" y1="40" x2="8" y2="48" stroke="#4a3728" strokeWidth="2" />
-        <line x1="18" y1="40" x2="20" y2="48" stroke="#4a3728" strokeWidth="2" />
+        {/* Lead reindeer body */}
+        <g className="reindeer-body">
+          <ellipse cx="15" cy="35" rx="8" ry="5" />
+          <circle cx="10" cy="30" r="4" />
+          {/* Antlers */}
+          <path d="M6,26 L2,20 M8,26 L6,18 M14,26 L18,20 M12,26 L14,18" stroke="#4a3728" strokeWidth="1.5" fill="none" />
+        </g>
+        {/* Animated legs - lead reindeer */}
+        <g className="leg-front-1">
+          <line x1="10" y1="40" x2="8" y2="48" stroke="#4a3728" strokeWidth="2" />
+        </g>
+        <g className="leg-back-1">
+          <line x1="18" y1="40" x2="20" y2="48" stroke="#4a3728" strokeWidth="2" />
+        </g>
         
-        {/* Second reindeer */}
-        <ellipse cx="35" cy="35" rx="8" ry="5" />
-        <circle cx="30" cy="30" r="4" />
-        <path d="M26,26 L22,20 M28,26 L26,18 M34,26 L38,20 M32,26 L34,18" stroke="#4a3728" strokeWidth="1.5" fill="none" />
-        <line x1="30" y1="40" x2="28" y2="48" stroke="#4a3728" strokeWidth="2" />
-        <line x1="38" y1="40" x2="40" y2="48" stroke="#4a3728" strokeWidth="2" />
+        {/* Second reindeer body */}
+        <g className="reindeer-body" style={{ animationDelay: '0.15s' }}>
+          <ellipse cx="35" cy="35" rx="8" ry="5" />
+          <circle cx="30" cy="30" r="4" />
+          <path d="M26,26 L22,20 M28,26 L26,18 M34,26 L38,20 M32,26 L34,18" stroke="#4a3728" strokeWidth="1.5" fill="none" />
+        </g>
+        {/* Animated legs - second reindeer */}
+        <g className="leg-front-2">
+          <line x1="30" y1="40" x2="28" y2="48" stroke="#4a3728" strokeWidth="2" />
+        </g>
+        <g className="leg-back-2">
+          <line x1="38" y1="40" x2="40" y2="48" stroke="#4a3728" strokeWidth="2" />
+        </g>
       </g>
       
       {/* Reins */}
@@ -450,18 +492,28 @@ export const SantaSleigh = memo(function SantaSleigh({
         strokeWidth="3"
       />
       
-      {/* Santa silhouette */}
+      {/* Santa silhouette - facing travel direction */}
       <g fill="#c41e3a">
         {/* Body */}
         <ellipse cx="80" cy="35" rx="12" ry="15" />
-        {/* Head */}
-        <circle cx="80" cy="18" r="8" fill="#ffd5c8" />
+        {/* Head - positioned to face forward */}
+        <circle cx="75" cy="18" r="8" fill="#ffd5c8" />
         {/* Hat */}
-        <path d="M72,18 Q72,8 80,5 Q88,8 88,18 Z" fill="#c41e3a" />
-        <ellipse cx="80" cy="18" rx="10" ry="3" fill="white" />
-        <circle cx="80" cy="5" r="3" fill="white" />
+        <path d="M67,18 Q67,8 75,5 Q83,8 83,18 Z" fill="#c41e3a" />
+        <ellipse cx="75" cy="18" rx="10" ry="3" fill="white" />
+        <circle cx="75" cy="5" r="3" fill="white" />
         {/* Beard */}
-        <ellipse cx="80" cy="24" rx="6" ry="4" fill="white" />
+        <ellipse cx="72" cy="24" rx="6" ry="4" fill="white" />
+        {/* Arm waving */}
+        <ellipse cx="68" cy="30" rx="4" ry="8" fill="#c41e3a" transform="rotate(-30 68 30)">
+          <animateTransform 
+            attributeName="transform" 
+            type="rotate" 
+            values="-30 68 30;-45 68 30;-30 68 30" 
+            dur="0.5s" 
+            repeatCount="indefinite"
+          />
+        </ellipse>
       </g>
       
       {/* Gift sack */}
