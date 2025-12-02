@@ -336,8 +336,7 @@ class CoAITwinEngine {
     const cy = h / 2;
 
     this.ctx.save();
-    this.ctx.fillStyle = '#020617';
-    this.ctx.fillRect(0, 0, w, h);
+    this.ctx.clearRect(0, 0, w, h);
 
     if (this.state.shake > 0) {
       this.ctx.translate(
@@ -347,8 +346,6 @@ class CoAITwinEngine {
     }
 
     this.ctx.translate(cx, cy);
-
-    this.drawGrid(w, h, s);
     this.drawShockwaves();
     this.drawParticles();
 
@@ -557,16 +554,16 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
     const bubbleSize = size || 80;
     return (
       <div 
-        className={`relative rounded-full overflow-hidden ${className}`}
+        className={`relative overflow-visible pointer-events-none ${className}`}
         style={{ 
           width: bubbleSize, 
           height: bubbleSize,
-          background: 'radial-gradient(circle at 35% 35%, #0f172a, #020617)'
+          background: 'transparent'
         }}
       >
         <div 
           ref={containerRef} 
-          className="w-full h-full"
+          className="w-full h-full pointer-events-none"
           style={{ 
             width: bubbleSize, 
             height: bubbleSize,
@@ -579,18 +576,12 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
             className="w-full h-full touch-none"
             style={{ 
               width: bubbleSize, 
-              height: bubbleSize
+              height: bubbleSize,
+              background: 'transparent'
             }}
             data-testid="coai-twin-mascot-canvas-mini"
           />
         </div>
-        <div 
-          className="absolute inset-0 rounded-full pointer-events-none"
-          style={{
-            boxShadow: `inset 0 0 15px rgba(${hexToRgb(color)}, 0.5), 0 0 12px rgba(${hexToRgb(color)}, 0.4)`,
-            border: `1.5px solid rgba(${hexToRgb(color)}, 0.6)`
-          }}
-        />
       </div>
     );
   }
@@ -600,16 +591,16 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
     const bubbleSize = size || 180;
     return (
       <div 
-        className={`relative rounded-full overflow-hidden ${className}`}
+        className={`relative overflow-visible pointer-events-none ${className}`}
         style={{ 
           width: bubbleSize, 
           height: bubbleSize,
-          background: 'radial-gradient(circle at 35% 35%, #0f172a, #020617)'
+          background: 'transparent'
         }}
       >
         <div 
           ref={containerRef} 
-          className="w-full h-full"
+          className="w-full h-full pointer-events-none"
           style={{ 
             width: bubbleSize, 
             height: bubbleSize,
@@ -622,33 +613,11 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
             className="w-full h-full touch-none"
             style={{ 
               width: bubbleSize, 
-              height: bubbleSize
+              height: bubbleSize,
+              background: 'transparent'
             }}
             data-testid="coai-twin-mascot-canvas-expanded"
           />
-        </div>
-        <div 
-          className="absolute inset-0 rounded-full pointer-events-none"
-          style={{
-            boxShadow: `inset 0 0 25px rgba(${hexToRgb(color)}, 0.5), 0 0 20px rgba(${hexToRgb(color)}, 0.4)`,
-            border: `2px solid rgba(${hexToRgb(color)}, 0.6)`
-          }}
-        />
-        <div 
-          className="absolute bottom-2 left-0 right-0 flex justify-center pointer-events-none"
-        >
-          <div
-            className="text-[9px] font-bold tracking-[1.5px] uppercase px-3 py-1 rounded-full backdrop-blur-xl"
-            style={{
-              color,
-              background: `rgba(${hexToRgb(color)}, 0.15)`,
-              border: `1px solid rgba(${hexToRgb(color)}, 0.3)`,
-              textShadow: `0 0 8px rgba(${hexToRgb(color)}, 0.5)`
-            }}
-            data-testid="mascot-expanded-label"
-          >
-            {label}
-          </div>
         </div>
       </div>
     );
@@ -656,11 +625,12 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
 
   // Full mode: With status badge and optional controls
   return (
-    <div className={`relative bg-[#020617] ${className}`}>
-      <div ref={containerRef} className="w-full h-full">
+    <div className={`relative ${className}`} style={{ background: 'transparent' }}>
+      <div ref={containerRef} className="w-full h-full" style={{ background: 'transparent' }}>
         <canvas
           ref={canvasRef}
           className="w-full h-full touch-none"
+          style={{ background: 'transparent' }}
           data-testid="coai-twin-mascot-canvas"
         />
       </div>
