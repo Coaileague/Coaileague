@@ -14,7 +14,8 @@ import { CHAT_SERVER_CONFIG } from './config/chatServer';
 import { ChatServerHub } from './services/ChatServerHub';
 import cookie from 'cookie';
 import { unsign } from 'cookie-signature';
-import { hasPlatformWideAccess } from './rbac';
+import { hasPlatformWideAccess, getUserPlatformRole } from './rbac';
+import { PLATFORM_WORKSPACE_ID } from './seed-platform-workspace';
 
 // ============================================================================
 // SESSION-BASED WEBSOCKET AUTHENTICATION
@@ -204,6 +205,7 @@ interface WebSocketClient extends WebSocket {
     userId: string;
     workspaceId: string;
     role: string;
+    platformRole?: string;
     sessionId: string;
     authenticatedAt: Date;
   };
@@ -640,7 +642,7 @@ async function revalidateUserAuth(ws: WebSocketClient): Promise<{
     
     // Get current platform role from database
     const role = await storage.getUserPlatformRole(ws.userId).catch(() => null);
-    const isStaff = role && ['root_admin', 'deputy_admin', 'support_agent', 'support_manager', 'sysop'].includes(role);
+    const isStaff = hasPlatformWideAccess(role);
     
     return {
       userId: user.id,
@@ -811,14 +813,19 @@ export function setupWebSocket(server: Server) {
       // Store authenticated identity on WebSocket - NEVER trust client-supplied IDs
       ws.userId = authenticatedSession.userId;
       ws.workspaceId = authenticatedSession.workspaceId;
+      
+      // Fetch platform role for platform-wide access checks (root_admin, support_agent, Bot, etc.)
+      const platformRole = await getUserPlatformRole(authenticatedSession.userId);
+      
       ws.serverAuth = {
         userId: authenticatedSession.userId,
         workspaceId: authenticatedSession.workspaceId || '',
         role: authenticatedSession.role || 'user',
+        platformRole: platformRole !== 'none' ? platformRole : undefined,
         sessionId: connectionId,
         authenticatedAt: new Date(),
       };
-      console.log(`New authenticated WebSocket connection from ${ipAddress} (user: ${authenticatedSession.userId}, connection: ${connectionId})`);
+      console.log(`New authenticated WebSocket connection from ${ipAddress} (user: ${authenticatedSession.userId}, platformRole: ${platformRole}, connection: ${connectionId})`);
     } else {
       // Guest/anonymous connection - allowed for helpdesk but limited permissions
       console.log(`New guest WebSocket connection from ${ipAddress} (connection: ${connectionId})`);
@@ -973,7 +980,7 @@ export function setupWebSocket(server: Server) {
 
               // Determine user type and set initial status
               platformRole = await storage.getUserPlatformRole(effectiveUserId).catch(() => null);
-              isStaff = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(platformRole));
+              isStaff = hasPlatformWideAccess(platformRole);
               
               if (isStaff) {
                 userType = 'staff';
@@ -1147,7 +1154,7 @@ export function setupWebSocket(server: Server) {
                 for (const client of clientArray) {
                   if (client.userId && client.readyState === WebSocket.OPEN) {
                     const userRole = await storage.getUserPlatformRole(client.userId);
-                    const isStaff = userRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(userRole);
+                    const isClientStaff = hasPlatformWideAccess(userRole);
                     
                     // SYNC FIX: Use formatUserDisplayNameForChat for consistency with messages
                     const userInfo = await storage.getUserDisplayInfo(client.userId);
@@ -1235,8 +1242,8 @@ export function setupWebSocket(server: Server) {
             // HELPDESK ANNOUNCEMENTS: System + HelpAI (only if user is joining for the first time)
             if (isMainRoom && !userAlreadyInRoom) {
               try {
-                const platformRole = await storage.getUserPlatformRole(payload.userId);
-                const isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(platformRole);
+                const announcePlatformRole = await storage.getUserPlatformRole(payload.userId);
+                const isAnnounceStaff = hasPlatformWideAccess(announcePlatformRole);
                 
                 // 1. SYSTEM announcement (IRC-style): User joined
                 // displayName already includes title for staff (e.g., "Admin Brigido", "SysOp James")
@@ -1266,7 +1273,7 @@ export function setupWebSocket(server: Server) {
                 }
 
                 // 2. HelpAI announcement (AI Bot): Only for customers (not staff)
-                if (!isStaff) {
+                if (!isAnnounceStaff) {
                   // AUTO-VOICE for public HelpDesk room: Give guests immediate ability to send messages
                   if (isMainRoom) {
                     if (ws.readyState === WebSocket.OPEN) {
@@ -1494,9 +1501,9 @@ export function setupWebSocket(server: Server) {
               // Check if user has permission for staff commands
               const commandDef = COMMAND_REGISTRY[parsedCommand.command];
               if (commandDef.requiresStaff) {
-                const platformRole = await storage.getUserPlatformRole(ws.userId);
-                const isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(platformRole);
-                if (!isStaff) {
+                const cmdPlatformRole = await storage.getUserPlatformRole(ws.userId);
+                const isCmdStaff = hasPlatformWideAccess(cmdPlatformRole);
+                if (!isCmdStaff) {
                   ws.send(JSON.stringify({
                     type: 'error',
                     message: 'You do not have permission to use this command.',
@@ -1591,7 +1598,7 @@ export function setupWebSocket(server: Server) {
                   const { userId, workspaceId, role } = ws.serverAuth;
                   
                   // SECURITY: Verify staff-only access with server-derived role
-                  const isAuthorized = ['root_admin', 'deputy_admin', 'support_agent', 'support_manager', 'sysop'].includes(role);
+                  const isAuthorized = hasPlatformWideAccess(role);
                   if (!isAuthorized) {
                     ws.send(JSON.stringify({
                       type: 'error',
@@ -1666,7 +1673,7 @@ export function setupWebSocket(server: Server) {
                   const { userId, workspaceId, role, sessionId } = ws.serverAuth;
                   
                   // SECURITY: Verify support staff role with server-derived authorization
-                  const isStaffAuthorized = ['support_agent', 'deputy_admin', 'root_admin', 'support_manager'].includes(role);
+                  const isStaffAuthorized = hasPlatformWideAccess(role);
                   if (!isStaffAuthorized) {
                     ws.send(JSON.stringify({
                       type: 'error',
@@ -2227,9 +2234,9 @@ export function setupWebSocket(server: Server) {
                 }
                 
                 case 'help': {
-                  const platformRole = await storage.getUserPlatformRole(ws.userId);
-                  const isStaff = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(platformRole));
-                  const helpText = getHelpText(isStaff);
+                  const helpPlatformRole = await storage.getUserPlatformRole(ws.userId);
+                  const isHelpStaff = hasPlatformWideAccess(helpPlatformRole);
+                  const helpText = getHelpText(isHelpStaff);
                   
                   ws.send(JSON.stringify({
                     type: 'system_message',
@@ -2513,7 +2520,7 @@ export function setupWebSocket(server: Server) {
                 
                 case 'broadcast': {
                   // Broadcast announcement to all connected users (admin only)
-                  if (!ws.serverAuth || !['root_admin', 'deputy_admin'].includes(ws.serverAuth.role)) {
+                  if (!ws.serverAuth || !['root_admin', 'deputy_admin'].includes(ws.serverAuth.platformRole || '')) {
                     ws.send(JSON.stringify({ type: 'error', message: 'Broadcast requires admin privileges' }));
                     break;
                   }
@@ -2551,7 +2558,7 @@ export function setupWebSocket(server: Server) {
                 
                 case 'suspend': {
                   // Suspend a staff member (admin only)
-                  if (!ws.serverAuth || !['root_admin', 'deputy_admin'].includes(ws.serverAuth.role)) {
+                  if (!ws.serverAuth || !['root_admin', 'deputy_admin'].includes(ws.serverAuth.platformRole || '')) {
                     ws.send(JSON.stringify({ type: 'error', message: 'Suspend requires admin privileges' }));
                     break;
                   }
@@ -2596,7 +2603,7 @@ export function setupWebSocket(server: Server) {
                 
                 case 'reactivate': {
                   // Reactivate a suspended staff member (admin only)
-                  if (!ws.serverAuth || !['root_admin', 'deputy_admin'].includes(ws.serverAuth.role)) {
+                  if (!ws.serverAuth || !['root_admin', 'deputy_admin'].includes(ws.serverAuth.platformRole || '')) {
                     ws.send(JSON.stringify({ type: 'error', message: 'Reactivate requires admin privileges' }));
                     break;
                   }
@@ -2677,7 +2684,7 @@ export function setupWebSocket(server: Server) {
                 
                 case 'restart': {
                   // Restart chat services (admin only)
-                  if (!ws.serverAuth || !['root_admin'].includes(ws.serverAuth.role)) {
+                  if (!ws.serverAuth || !['root_admin'].includes(ws.serverAuth.platformRole || '')) {
                     ws.send(JSON.stringify({ type: 'error', message: 'Restart requires root admin privileges' }));
                     break;
                   }
@@ -2983,9 +2990,9 @@ export function setupWebSocket(server: Server) {
             
             if (ws.conversationId === MAIN_ROOM_ID && shouldBotRespond(payload.message)) {
               try {
-                // Determine if user is subscriber
-                const platformRole = await storage.getUserPlatformRole(ws.userId);
-                const isSubscriber = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(platformRole));
+                // Determine if user is staff (subscriber)
+                const botPlatformRole = await storage.getUserPlatformRole(ws.userId);
+                const isSubscriber = hasPlatformWideAccess(botPlatformRole);
                 
                 // Get conversation history (last 5 messages for context)
                 const recentMessages = await storage.getChatMessagesByConversation(ws.conversationId);
@@ -3124,7 +3131,7 @@ export function setupWebSocket(server: Server) {
 
             // SECURITY: Only platform staff (root_admin, deputy admins, support managers) can kick users
             const kickerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
-            const canKick = kickerRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(kickerRole);
+            const canKick = hasPlatformWideAccess(kickerRole);
             
             if (!canKick) {
               // IRC-style command acknowledgment for permission denied
@@ -3450,7 +3457,7 @@ export function setupWebSocket(server: Server) {
 
             // SECURITY: Only platform staff can silence users
             const silencerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
-            const canSilence = silencerRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(silencerRole);
+            const canSilence = hasPlatformWideAccess(silencerRole);
             
             if (!canSilence) {
               // IRC-STYLE COMMAND ACKNOWLEDGMENT - Permission denied
@@ -3630,8 +3637,8 @@ export function setupWebSocket(server: Server) {
             }
 
             // SECURITY: Only platform staff can give voice
-            const staffRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
-            const canGiveVoice = staffRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(staffRole);
+            const voiceStaffRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
+            const canGiveVoice = hasPlatformWideAccess(voiceStaffRole);
             
             if (!canGiveVoice) {
               // IRC-STYLE COMMAND ACKNOWLEDGMENT - Permission denied
@@ -3648,12 +3655,12 @@ export function setupWebSocket(server: Server) {
 
               // Log failed attempt to AuditOS™
               try {
-                const staffInfo = await storage.getUserDisplayInfo(ws.userId);
+                const voiceStaffInfo = await storage.getUserDisplayInfo(ws.userId);
                 await storage.createAuditLog({
                   commandId: payload.commandId || null,
                   userId: ws.userId,
-                  userEmail: staffInfo?.email || ws.userName || 'unknown',
-                  userRole: staffRole || 'unknown',
+                  userEmail: voiceStaffInfo?.email || ws.userName || 'unknown',
+                  userRole: voiceStaffRole || 'unknown',
                   action: 'give_voice',
                   actionDescription: `Permission denied: ${ws.userName} attempted to unmute user`,
                   entityType: 'user',
@@ -3822,16 +3829,16 @@ export function setupWebSocket(server: Server) {
             
             const userId = ws.serverAuth.userId;
             const workspaceId = ws.serverAuth.workspaceId;
-            const role = ws.serverAuth.role;
+            const platformRole = ws.serverAuth.platformRole;
             
             // SECURITY: Require workspace context for shift updates
             // Staff can receive updates for any workspace they specify (if implemented)
             // Regular users must have workspace in session
-            const isStaff = role && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(role);
+            const isStaff = hasPlatformWideAccess(platformRole);
             if (!workspaceId) {
               if (isStaff) {
                 // Staff without workspace context get platform-wide access (logged for audit)
-                console.log(`[Shifts] Staff ${userId} (${role}) accessing shifts without workspace context`);
+                console.log(`[Shifts] Staff ${userId} (${platformRole}) accessing shifts without workspace context`);
               } else {
                 ws.send(JSON.stringify({
                   type: 'error',
@@ -3886,11 +3893,11 @@ export function setupWebSocket(server: Server) {
             // Use authenticated credentials only from session
             const userId = ws.serverAuth.userId;
             const workspaceId = ws.serverAuth.workspaceId;
-            const role = ws.serverAuth.role;
+            const platformRole = ws.serverAuth.platformRole;
             
             // SECURITY: Non-staff users require workspace context
             // Staff can receive platform-wide notifications without workspace
-            const isStaff = role && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(role);
+            const isStaff = hasPlatformWideAccess(platformRole);
             if (!isStaff && !workspaceId) {
               ws.send(JSON.stringify({
                 type: 'error',
@@ -3900,23 +3907,29 @@ export function setupWebSocket(server: Server) {
               return;
             }
             
-            console.log(`[Notifications] Authenticated subscription for ${userId} in workspace ${workspaceId || 'platform-wide (staff)'}`);
+            // Normalize workspace key for platform staff - use PLATFORM_WORKSPACE_ID
+            // This ensures platform staff are stored under the same key that platform notifications broadcast to
+            const effectiveWorkspaceId = (!workspaceId && hasPlatformWideAccess(platformRole))
+              ? PLATFORM_WORKSPACE_ID
+              : workspaceId;
+            
+            console.log(`[Notifications] Authenticated subscription for ${userId} in workspace ${effectiveWorkspaceId || 'unknown'} (platform role: ${platformRole || 'none'})`);
 
             // Add to notification clients for this workspace/user combination
-            if (!notificationClients.has(workspaceId)) {
-              notificationClients.set(workspaceId, new Map());
+            if (!notificationClients.has(effectiveWorkspaceId)) {
+              notificationClients.set(effectiveWorkspaceId, new Map());
             }
-            notificationClients.get(workspaceId)!.set(userId, ws);
+            notificationClients.get(effectiveWorkspaceId)!.set(userId, ws);
 
-            // Get initial unread count
-            const unreadCount = await storage.getUnreadNotificationCount(userId, workspaceId);
+            // Get initial unread count (use effectiveWorkspaceId for consistency)
+            const unreadCount = await storage.getUnreadNotificationCount(userId, effectiveWorkspaceId);
 
-            console.log(`✅ User ${userId} subscribed to notifications for workspace ${workspaceId} (${unreadCount} unread)`);
+            console.log(`✅ User ${userId} subscribed to notifications for workspace ${effectiveWorkspaceId} (${unreadCount} unread)`);
 
             // Send confirmation with current unread count
             ws.send(JSON.stringify({
               type: 'notifications_subscribed',
-              workspaceId: payload.workspaceId,
+              workspaceId: effectiveWorkspaceId,
               unreadCount,
             }));
             break;
@@ -3928,11 +3941,11 @@ export function setupWebSocket(server: Server) {
               return;
             }
 
-            // Check if user has staff permissions
+            // Check if user has staff permissions using centralized hasPlatformWideAccess
             const staffInfo = await storage.getUserDisplayInfo(ws.userId);
-            const isStaff = staffInfo?.platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes(staffInfo.platformRole);
+            const isBanStaff = hasPlatformWideAccess(staffInfo?.platformRole);
             
-            if (!isStaff) {
+            if (!isBanStaff) {
               ws.send(JSON.stringify({
                 type: 'error',
                 message: '⛔ Permission denied - Staff role required for banning users',
