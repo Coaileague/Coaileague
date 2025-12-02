@@ -141,7 +141,7 @@ interface FloatingMascotProps {
   userId?: string;
 }
 
-// Trinity color system: Cyan (Co), Purple (AI), Gold (NX/Nexus)
+// Trinity color system: Cyan (Co), Purple (AI), Gold (L) - spells "CoAIL"
 const MODE_COLORS: Record<MascotMode, { primary: string; secondary: string; tertiary: string; glow: string }> = {
   IDLE: { primary: '#38bdf8', secondary: '#a855f7', tertiary: '#f4c15d', glow: 'rgba(56, 189, 248, 0.6)' },
   SEARCHING: { primary: '#10b981', secondary: '#ffffff', tertiary: '#f4c15d', glow: 'rgba(16, 185, 129, 0.6)' },
@@ -275,11 +275,11 @@ const FloatingMascot = memo(function FloatingMascot({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
-  // Trinity Stars: Co (cyan), AI (purple), NX (gold) - 120° offset for triangular formation
+  // Trinity Stars: Co (cyan), AI (purple), L (gold) - 120° offset for triangular formation, spells "CoAIL"
   const twinsRef = useRef<Twin[]>([
     { x: 0, y: 0, angle: 0, color: '#38bdf8', trail: [] },                    // Cyan - "Co"
     { x: 0, y: 0, angle: (Math.PI * 2) / 3, color: '#a855f7', trail: [] },    // Purple - "AI"
-    { x: 0, y: 0, angle: (Math.PI * 4) / 3, color: '#f4c15d', trail: [] }     // Gold - "NX"
+    { x: 0, y: 0, angle: (Math.PI * 4) / 3, color: '#f4c15d', trail: [] }     // Gold - "L"
   ]);
   const timeRef = useRef(0);
   const particlesRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; color: string }[]>([]);
@@ -552,8 +552,8 @@ const FloatingMascot = memo(function FloatingMascot({
 
       // Stars are grouped invisibly by physics system - no visible connecting lines
 
-      // Trinity branding: "Co" on cyan, "AI" on purple, "NX" on gold
-      const brandingLabels = ['Co', 'AI', 'NX'];
+      // Trinity branding: "Co" on cyan, "AI" on purple, "L" on gold - spells "CoAIL"
+      const brandingLabels = ['Co', 'AI', 'L'];
       const brandingColors = ['#a855f7', '#38bdf8', '#38bdf8'];
       
       twins.forEach((twin, index) => {
