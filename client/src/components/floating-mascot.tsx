@@ -404,25 +404,25 @@ const FloatingMascot = memo(function FloatingMascot({
       switch (currentMode) {
         case 'IDLE':
           twins.forEach((twin, i) => { twin.angle += 0.015; });
-          // Equilateral triangle formation - WIDER spread to prevent overlap
+          // Equilateral triangle formation - FULL radius for clear visual separation
           const idleAngle = twins[0].angle;
-          x1 = center + Math.cos(idleAngle) * radius * 0.95;
-          y1 = center + Math.sin(idleAngle) * radius * 0.9;
-          x2 = center + Math.cos(idleAngle + trinityOffset) * radius * 0.95;
-          y2 = center + Math.sin(idleAngle + trinityOffset) * radius * 0.9;
-          x3 = center + Math.cos(idleAngle + trinityOffset * 2) * radius * 0.95;
-          y3 = center + Math.sin(idleAngle + trinityOffset * 2) * radius * 0.9;
+          x1 = center + Math.cos(idleAngle) * radius;
+          y1 = center + Math.sin(idleAngle) * radius;
+          x2 = center + Math.cos(idleAngle + trinityOffset) * radius;
+          y2 = center + Math.sin(idleAngle + trinityOffset) * radius;
+          x3 = center + Math.cos(idleAngle + trinityOffset * 2) * radius;
+          y3 = center + Math.sin(idleAngle + trinityOffset * 2) * radius;
           break;
         
         case 'THINKING':
         case 'ANALYZING':
           twins.forEach((twin, i) => { twin.angle += 0.08; });
-          x1 = center + Math.cos(twins[0].angle) * radius * 0.9;
-          y1 = center + Math.sin(twins[0].angle) * radius * 0.9;
-          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius * 0.9;
-          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius * 0.9;
-          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius * 0.9;
-          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius * 0.9;
+          x1 = center + Math.cos(twins[0].angle) * radius;
+          y1 = center + Math.sin(twins[0].angle) * radius;
+          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius;
+          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius;
+          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius;
+          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius;
           break;
         
         case 'SEARCHING':
@@ -469,12 +469,12 @@ const FloatingMascot = memo(function FloatingMascot({
         case 'SUCCESS':
         case 'CELEBRATING':
           const celebAngle = t * 3;
-          x1 = center + Math.cos(celebAngle) * radius * 0.85 * (1 + Math.sin(t * 5) * 0.15);
-          y1 = center + Math.sin(celebAngle) * radius * 0.85 - Math.abs(Math.sin(t * 4)) * radius * 0.25;
-          x2 = center + Math.cos(celebAngle + trinityOffset) * radius * 0.85 * (1 + Math.sin(t * 5 + trinityOffset) * 0.15);
-          y2 = center + Math.sin(celebAngle + trinityOffset) * radius * 0.85 - Math.abs(Math.sin(t * 4 + trinityOffset / 2)) * radius * 0.25;
-          x3 = center + Math.cos(celebAngle + trinityOffset * 2) * radius * 0.85 * (1 + Math.sin(t * 5 + trinityOffset * 2) * 0.15);
-          y3 = center + Math.sin(celebAngle + trinityOffset * 2) * radius * 0.85 - Math.abs(Math.sin(t * 4 + trinityOffset)) * radius * 0.25;
+          x1 = center + Math.cos(celebAngle) * radius * (1 + Math.sin(t * 5) * 0.15);
+          y1 = center + Math.sin(celebAngle) * radius - Math.abs(Math.sin(t * 4)) * radius * 0.25;
+          x2 = center + Math.cos(celebAngle + trinityOffset) * radius * (1 + Math.sin(t * 5 + trinityOffset) * 0.15);
+          y2 = center + Math.sin(celebAngle + trinityOffset) * radius - Math.abs(Math.sin(t * 4 + trinityOffset / 2)) * radius * 0.25;
+          x3 = center + Math.cos(celebAngle + trinityOffset * 2) * radius * (1 + Math.sin(t * 5 + trinityOffset * 2) * 0.15);
+          y3 = center + Math.sin(celebAngle + trinityOffset * 2) * radius - Math.abs(Math.sin(t * 4 + trinityOffset)) * radius * 0.25;
           break;
         
         case 'ERROR':
@@ -489,12 +489,12 @@ const FloatingMascot = memo(function FloatingMascot({
         
         default:
           twins.forEach((twin, i) => { twin.angle += 0.02; });
-          x1 = center + Math.cos(twins[0].angle) * radius * 0.9;
-          y1 = center + Math.sin(twins[0].angle) * radius * 0.9;
-          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius * 0.9;
-          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius * 0.9;
-          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius * 0.9;
-          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius * 0.9;
+          x1 = center + Math.cos(twins[0].angle) * radius;
+          y1 = center + Math.sin(twins[0].angle) * radius;
+          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius;
+          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius;
+          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius;
+          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius;
       }
 
       // Set physics target positions (relative to center)
@@ -551,8 +551,8 @@ const FloatingMascot = memo(function FloatingMascot({
       const brandingColors = ['#a855f7', '#38bdf8', '#38bdf8'];
       
       twins.forEach((twin, index) => {
-        // Slightly smaller stars for clearer separation
-        const starSize = mascotSize * 0.16;
+        // Smaller stars for clearer separation and no overlap
+        const starSize = mascotSize * 0.13;
         const innerSize = starSize * 0.55;
         const rimWidth = starSize * 0.09;
         
