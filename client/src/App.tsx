@@ -44,6 +44,7 @@ import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { ThoughtBubble } from "@/components/mascot/ThoughtBubble";
 import NotFound from "@/pages/not-found";
 // import Landing from "@/pages/landing";
 import Homepage from "@/pages/homepage";
@@ -351,8 +352,13 @@ function MascotRenderer() {
     };
   }, []);
   
+  // Guard mode thought trigger to prevent infinite loops - only trigger when mode actually changes
+  const prevModeRef = useRef<string | null>(null);
   useEffect(() => {
-    thoughtManager.triggerModeThought(currentMode);
+    if (currentMode !== prevModeRef.current) {
+      prevModeRef.current = currentMode;
+      thoughtManager.triggerModeThought(currentMode);
+    }
   }, [currentMode]);
   
   useEffect(() => {
@@ -521,44 +527,11 @@ function MascotRenderer() {
         />
         
         {currentThought && (
-          <div 
-            className={`absolute px-0 py-0 whitespace-nowrap ${getAnimationClasses(thoughtBubbleTheme.animation.enter, true)} ${isMobile ? 'text-xs max-w-[160px] whitespace-normal text-center' : 'text-sm'}`}
-            style={{
-              ...bubblePlacement.position,
-              background: 'transparent',
-              backdropFilter: 'none',
-              WebkitBackdropFilter: 'none',
-              border: 'none',
-              borderRadius: 'unset',
-              color: '#ffffff',
-              boxShadow: 'none',
-              opacity: 1,
-              transition: `all ${thoughtBubbleTheme.animation.duration}ms ${thoughtBubbleTheme.animation.easing}`,
-              textShadow: '0 1px 3px rgba(0,0,0,0.95), 0 0 6px rgba(0,0,0,0.85), 1px 1px 2px rgba(0,0,0,0.95)',
-              filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.3))',
-            }}
-            data-testid="mascot-thought-bubble"
-            data-bubble-mode={thoughtBubbleTheme.mode}
-          >
-            <div className="flex items-center gap-2 justify-center">
-              <span 
-                className={`text-lg shrink-0 ${thoughtBubbleTheme.emoticonStyle === 'animated' ? 'animate-bounce' : ''}`}
-                style={{ 
-                  filter: 'drop-shadow(0 0 4px currentColor)'
-                }}
-              >
-                {currentThought.emoticon}
-              </span>
-              <span 
-                className="font-medium"
-                style={{ 
-                  textShadow: '0 1px 2px rgba(0,0,0,0.3)' 
-                }}
-              >
-                {currentThought.text}
-              </span>
-            </div>
-          </div>
+          <ThoughtBubble
+            thought={currentThought}
+            isMobile={isMobile}
+            position={bubblePlacement.position}
+          />
         )}
         
         {!currentThought && workspaceId && (
