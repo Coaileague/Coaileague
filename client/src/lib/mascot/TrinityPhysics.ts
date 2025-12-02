@@ -32,11 +32,11 @@ export interface TrinityPhysicsConfig {
 // FULLY INDEPENDENT STARS - Maximum separation, no visual overlap possible
 // CONFIG SYNCED WITH TRINITY_STAR_CONFIG in mascotConfig.ts
 const DEFAULT_CONFIG: TrinityPhysicsConfig = {
-  repulsionStrength: 25.0,      // MAXIMUM repulsion - 3RD STAR ALWAYS VISIBLE
-  springStrength: 0.12,         // STRONG spring - pulls stars to target positions to prevent overlap
-  dampening: 0.65,              // Lower dampening for more dynamic floating
-  minDistance: 75,              // LARGE minimum gap - ALL 3 STARS VISIBLE
-  maxSpeed: 8,                  // Faster speed for quick separation
+  repulsionStrength: 50.0,      // EXTREME repulsion - ALL 3 STARS ALWAYS VISIBLE
+  springStrength: 0.08,         // Moderate spring - allows separation while keeping formation
+  dampening: 0.7,               // Moderate damping
+  minDistance: 100,             // MASSIVE minimum gap - ALL 3 STARS VISIBLE
+  maxSpeed: 10,                 // Fast for quick separation
   bounceElasticity: 1.0         // Maximum bounce for immediate hard separation
 };
 
