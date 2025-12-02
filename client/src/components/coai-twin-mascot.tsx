@@ -568,6 +568,9 @@ class CoAITwinEngine {
     const s = this.state.scale;
     const cx = this.state.w / 2;
     const cy = this.state.h / 2;
+    
+    // TRINITY: 120° offset for 3 stars (Co, AI, L) - each star gets unique position
+    const TRINITY_OFFSET = (2 * Math.PI) / 3;  // 120 degrees
 
     if (this.state.shake > 0) {
       this.state.shake *= 0.9;
@@ -576,29 +579,26 @@ class CoAITwinEngine {
 
     this.twins.forEach((t, i) => {
       let tx = 0, ty = 0;
+      const starAngle = i * TRINITY_OFFSET;  // 0°, 120°, 240° for each star
 
       if (this.state.isTouching && this.state.touchX !== null && this.state.touchY !== null) {
         const mx = (this.state.touchX / window.devicePixelRatio) - cx;
         const my = (this.state.touchY / window.devicePixelRatio) - cy;
-        tx = mx * 0.4 + Math.cos(this.state.time * 0.1 + i * Math.PI) * (22 * s * 0.003);
-        ty = my * 0.4 + Math.sin(this.state.time * 0.1 + i * Math.PI) * (22 * s * 0.003);
+        tx = mx * 0.4 + Math.cos(this.state.time * 0.1 + starAngle) * (22 * s * 0.003);
+        ty = my * 0.4 + Math.sin(this.state.time * 0.1 + starAngle) * (22 * s * 0.003);
       } else if (this.state.mode === 'IDLE') {
-        const tOffset = this.state.time * 0.02 + (i * Math.PI);
+        const tOffset = this.state.time * 0.02 + starAngle;
         tx = Math.cos(tOffset) * (32 * s * 0.003);
         ty = Math.sin(tOffset * 2) * (22 * s * 0.003);
       } else if (this.state.mode === 'SEARCHING') {
-        if (i === 0) {
-          tx = 0;
-          ty = 0;
-        } else {
-          const angle = this.state.time * 0.05;
-          const rad = 40 * s * 0.003;
-          tx = Math.cos(angle) * rad;
-          ty = Math.sin(angle) * rad;
-          if (this.state.time % 40 === 0) this.spawnParticle(tx, ty, t.color);
-        }
+        // All 3 stars orbit at different phases
+        const angle = this.state.time * 0.05 + starAngle;
+        const rad = (20 + i * 10) * s * 0.003;  // Different radius per star
+        tx = Math.cos(angle) * rad;
+        ty = Math.sin(angle) * rad;
+        if (this.state.time % 40 === 0) this.spawnParticle(tx, ty, t.color);
       } else if (this.state.mode === 'ANALYZING') {
-        const angle = i === 0 ? -Math.PI / 4 : Math.PI * 0.75;
+        const angle = starAngle - Math.PI / 6;  // Offset from base position
         const dist = 30 * s * 0.003;
         tx = Math.cos(angle) * dist;
         ty = Math.sin(angle) * dist;
@@ -606,31 +606,37 @@ class CoAITwinEngine {
       } else if (this.state.mode === 'THINKING') {
         t.angle += 0.15;
         const radius = 35 * s * 0.003;
-        tx = Math.cos(t.angle + (i * Math.PI)) * radius;
-        ty = Math.sin(t.angle + (i * Math.PI)) * radius;
+        tx = Math.cos(t.angle + starAngle) * radius;
+        ty = Math.sin(t.angle + starAngle) * radius;
       } else if (this.state.mode === 'CODING') {
         const step = 26 * s * 0.003;
-        const speed = this.state.time * 0.05 + (i * 10);
+        const speed = this.state.time * 0.05 + starAngle;
         tx = Math.round(Math.cos(speed) * 3) * step;
         ty = Math.round(Math.sin(speed) * 3) * step;
       } else if (this.state.mode === 'UPLOADING') {
-        const angle = this.state.time * 0.2 + (i * Math.PI);
+        const angle = this.state.time * 0.2 + starAngle;
         const radius = 30 * s * 0.003;
         tx = Math.cos(angle) * radius;
-        ty = (Math.sin(this.state.time * 0.05) * 30) * s * 0.003;
+        ty = (Math.sin(this.state.time * 0.05 + starAngle) * 30) * s * 0.003;
         if (this.state.time % 5 === 0) {
           this.spawnParticle(tx, ty, t.color, 0, 2);
         }
       } else if (this.state.mode === 'LISTENING') {
-        const audio = Math.sin(this.state.time * 0.2 + i) * Math.sin(this.state.time * 0.5);
-        tx = (i === 0 ? -20 : 20) * s * 0.003;
-        ty = audio * 30 * s * 0.003;
+        const audio = Math.sin(this.state.time * 0.2 + starAngle) * Math.sin(this.state.time * 0.5);
+        // Position at 120° intervals around center
+        tx = Math.cos(starAngle) * 25 * s * 0.003;
+        ty = audio * 30 * s * 0.003 + Math.sin(starAngle) * 15 * s * 0.003;
       } else if (this.state.mode === 'SUCCESS') {
-        tx = 0;
-        ty = 0;
+        // Celebration: stars spiral outward at 120° intervals
+        const celebRadius = 20 * s * 0.003;
+        tx = Math.cos(starAngle + this.state.time * 0.05) * celebRadius;
+        ty = Math.sin(starAngle + this.state.time * 0.05) * celebRadius;
       } else if (this.state.mode === 'ERROR') {
-        tx = (Math.random() - 0.5) * 20;
-        ty = (Math.random() - 0.5) * 20;
+        // Shake but maintain 120° separation
+        const baseX = Math.cos(starAngle) * 15 * s * 0.003;
+        const baseY = Math.sin(starAngle) * 15 * s * 0.003;
+        tx = baseX + (Math.random() - 0.5) * 10;
+        ty = baseY + (Math.random() - 0.5) * 10;
       }
 
       t.x += (tx - t.x) * 0.1;
