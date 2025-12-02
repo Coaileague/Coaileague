@@ -41,19 +41,20 @@ interface FloatingMascotProps {
   userId?: string;
 }
 
-const MODE_COLORS: Record<MascotMode, { primary: string; secondary: string; glow: string }> = {
-  IDLE: { primary: '#38bdf8', secondary: '#a855f7', glow: 'rgba(56, 189, 248, 0.6)' },
-  SEARCHING: { primary: '#10b981', secondary: '#ffffff', glow: 'rgba(16, 185, 129, 0.6)' },
-  THINKING: { primary: '#a855f7', secondary: '#ffffff', glow: 'rgba(168, 85, 247, 0.6)' },
-  ANALYZING: { primary: '#6366f1', secondary: '#ffffff', glow: 'rgba(99, 102, 241, 0.6)' },
-  CODING: { primary: '#34d399', secondary: '#ffffff', glow: 'rgba(52, 211, 153, 0.6)' },
-  LISTENING: { primary: '#fbbf24', secondary: '#ffffff', glow: 'rgba(251, 191, 36, 0.6)' },
-  UPLOADING: { primary: '#06b6d4', secondary: '#ffffff', glow: 'rgba(6, 182, 212, 0.6)' },
-  SUCCESS: { primary: '#f472b6', secondary: '#ffffff', glow: 'rgba(244, 114, 182, 0.6)' },
-  ERROR: { primary: '#ef4444', secondary: '#ef4444', glow: 'rgba(239, 68, 68, 0.6)' },
-  CELEBRATING: { primary: '#fbbf24', secondary: '#f472b6', glow: 'rgba(251, 191, 36, 0.6)' },
-  ADVISING: { primary: '#10b981', secondary: '#ffffff', glow: 'rgba(16, 185, 129, 0.6)' },
-  HOLIDAY: { primary: '#f472b6', secondary: '#34d399', glow: 'rgba(244, 114, 182, 0.6)' }
+// Trinity color system: Cyan (Co), Purple (AI), Gold (NX/Nexus)
+const MODE_COLORS: Record<MascotMode, { primary: string; secondary: string; tertiary: string; glow: string }> = {
+  IDLE: { primary: '#38bdf8', secondary: '#a855f7', tertiary: '#f4c15d', glow: 'rgba(56, 189, 248, 0.6)' },
+  SEARCHING: { primary: '#10b981', secondary: '#ffffff', tertiary: '#f4c15d', glow: 'rgba(16, 185, 129, 0.6)' },
+  THINKING: { primary: '#a855f7', secondary: '#ffffff', tertiary: '#f4c15d', glow: 'rgba(168, 85, 247, 0.6)' },
+  ANALYZING: { primary: '#6366f1', secondary: '#ffffff', tertiary: '#f4c15d', glow: 'rgba(99, 102, 241, 0.6)' },
+  CODING: { primary: '#34d399', secondary: '#ffffff', tertiary: '#f4c15d', glow: 'rgba(52, 211, 153, 0.6)' },
+  LISTENING: { primary: '#fbbf24', secondary: '#ffffff', tertiary: '#f4c15d', glow: 'rgba(251, 191, 36, 0.6)' },
+  UPLOADING: { primary: '#06b6d4', secondary: '#ffffff', tertiary: '#f4c15d', glow: 'rgba(6, 182, 212, 0.6)' },
+  SUCCESS: { primary: '#f472b6', secondary: '#ffffff', tertiary: '#fbbf24', glow: 'rgba(244, 114, 182, 0.6)' },
+  ERROR: { primary: '#ef4444', secondary: '#ef4444', tertiary: '#ef4444', glow: 'rgba(239, 68, 68, 0.6)' },
+  CELEBRATING: { primary: '#38bdf8', secondary: '#a855f7', tertiary: '#fbbf24', glow: 'rgba(251, 191, 36, 0.6)' },
+  ADVISING: { primary: '#10b981', secondary: '#ffffff', tertiary: '#f4c15d', glow: 'rgba(16, 185, 129, 0.6)' },
+  HOLIDAY: { primary: '#38bdf8', secondary: '#a855f7', tertiary: '#f4c15d', glow: 'rgba(244, 114, 182, 0.6)' }
 };
 
 interface Twin {
@@ -75,9 +76,11 @@ const FloatingMascot = memo(function FloatingMascot({
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
+  // Trinity Stars: Co (cyan), AI (purple), NX (gold) - 120° offset for triangular formation
   const twinsRef = useRef<Twin[]>([
-    { x: 0, y: 0, angle: 0, color: '#38bdf8', trail: [] },
-    { x: 0, y: 0, angle: Math.PI, color: '#a855f7', trail: [] }
+    { x: 0, y: 0, angle: 0, color: '#38bdf8', trail: [] },                    // Cyan - "Co"
+    { x: 0, y: 0, angle: (Math.PI * 2) / 3, color: '#a855f7', trail: [] },    // Purple - "AI"
+    { x: 0, y: 0, angle: (Math.PI * 4) / 3, color: '#f4c15d', trail: [] }     // Gold - "NX"
   ]);
   const timeRef = useRef(0);
   const particlesRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; color: string }[]>([]);
@@ -113,47 +116,55 @@ const FloatingMascot = memo(function FloatingMascot({
     const colors = MODE_COLORS[currentMode];
     twinsRef.current[0].color = colors.primary;
     twinsRef.current[1].color = colors.secondary;
+    twinsRef.current[2].color = colors.tertiary;
 
     const animate = () => {
       timeRef.current += 0.02;
       const t = timeRef.current;
       const center = mascotSize / 2;
-      const radius = mascotSize * 0.25;
+      const radius = mascotSize * 0.22; // Slightly smaller for 3 stars
 
       ctx.clearRect(0, 0, mascotSize, mascotSize);
 
       ctx.globalAlpha = 0.15;
-      const gradient = ctx.createRadialGradient(center, center, 0, center, center, radius * 1.8);
+      const gradient = ctx.createRadialGradient(center, center, 0, center, center, radius * 2);
       gradient.addColorStop(0, colors.glow);
+      gradient.addColorStop(0.5, 'rgba(244, 193, 93, 0.2)'); // Gold accent
       gradient.addColorStop(1, 'transparent');
       ctx.fillStyle = gradient;
       ctx.beginPath();
-      ctx.arc(center, center, radius * 1.8, 0, Math.PI * 2);
+      ctx.arc(center, center, radius * 2, 0, Math.PI * 2);
       ctx.fill();
       ctx.globalAlpha = 1;
 
       const twins = twinsRef.current;
       
-      let x1: number, y1: number, x2: number, y2: number;
+      // Trinity positions with 120° offset
+      let x1: number, y1: number, x2: number, y2: number, x3: number, y3: number;
+      
+      // Helper to calculate trinity positions with 120° offset
+      const trinityOffset = (Math.PI * 2) / 3;
       
       switch (currentMode) {
         case 'IDLE':
-          twins[0].angle += 0.015;
-          twins[1].angle += 0.015;
+          twins.forEach((twin, i) => { twin.angle += 0.015; });
           x1 = center + Math.cos(twins[0].angle) * radius * 0.6;
           y1 = center + Math.sin(twins[0].angle * 0.5) * radius * 0.4;
-          x2 = center + Math.cos(twins[1].angle) * radius * 0.6;
-          y2 = center + Math.sin(twins[1].angle * 0.5) * radius * 0.4;
+          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius * 0.6;
+          y2 = center + Math.sin((twins[0].angle + trinityOffset) * 0.5) * radius * 0.4;
+          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius * 0.6;
+          y3 = center + Math.sin((twins[0].angle + trinityOffset * 2) * 0.5) * radius * 0.4;
           break;
         
         case 'THINKING':
         case 'ANALYZING':
-          twins[0].angle += 0.08;
-          twins[1].angle += 0.08;
+          twins.forEach((twin, i) => { twin.angle += 0.08; });
           x1 = center + Math.cos(twins[0].angle) * radius * 0.7;
           y1 = center + Math.sin(twins[0].angle) * radius * 0.7;
-          x2 = center + Math.cos(twins[1].angle) * radius * 0.7;
-          y2 = center + Math.sin(twins[1].angle) * radius * 0.7;
+          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius * 0.7;
+          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius * 0.7;
+          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius * 0.7;
+          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius * 0.7;
           break;
         
         case 'SEARCHING':
@@ -162,6 +173,8 @@ const FloatingMascot = memo(function FloatingMascot({
           y1 = center;
           x2 = center + Math.cos(twins[0].angle) * radius;
           y2 = center + Math.sin(twins[0].angle) * radius;
+          x3 = center + Math.cos(twins[0].angle + Math.PI) * radius * 0.5;
+          y3 = center + Math.sin(twins[0].angle + Math.PI) * radius * 0.5;
           break;
         
         case 'CODING':
@@ -170,14 +183,18 @@ const FloatingMascot = memo(function FloatingMascot({
           y1 = center + (Math.floor(gridStep / 3) % 3 - 1) * (radius * 0.5);
           x2 = center - (Math.floor(gridStep) % 3 - 1) * (radius * 0.5);
           y2 = center - (Math.floor(gridStep / 3) % 3 - 1) * (radius * 0.5);
+          x3 = center + (Math.floor(gridStep + 1) % 3 - 1) * (radius * 0.5);
+          y3 = center + (Math.floor((gridStep + 1) / 3) % 3 - 1) * (radius * 0.5);
           break;
         
         case 'LISTENING':
           const wave = Math.sin(t * 4) * radius * 0.3;
-          x1 = center - radius * 0.3;
+          x1 = center - radius * 0.4;
           y1 = center + wave;
-          x2 = center + radius * 0.3;
+          x2 = center;
           y2 = center - wave;
+          x3 = center + radius * 0.4;
+          y3 = center + wave * 0.5;
           break;
         
         case 'UPLOADING':
@@ -185,8 +202,10 @@ const FloatingMascot = memo(function FloatingMascot({
           const spiralR = radius * 0.5 * (1 - (spiral % 1));
           x1 = center + Math.cos(spiral * 3) * spiralR;
           y1 = center + Math.sin(spiral * 3) * spiralR - (spiral % 1) * radius;
-          x2 = center + Math.cos(spiral * 3 + Math.PI) * spiralR;
-          y2 = center + Math.sin(spiral * 3 + Math.PI) * spiralR - (spiral % 1) * radius;
+          x2 = center + Math.cos(spiral * 3 + trinityOffset) * spiralR;
+          y2 = center + Math.sin(spiral * 3 + trinityOffset) * spiralR - (spiral % 1) * radius;
+          x3 = center + Math.cos(spiral * 3 + trinityOffset * 2) * spiralR;
+          y3 = center + Math.sin(spiral * 3 + trinityOffset * 2) * spiralR - (spiral % 1) * radius;
           break;
         
         case 'SUCCESS':
@@ -194,8 +213,10 @@ const FloatingMascot = memo(function FloatingMascot({
           const celebAngle = t * 3;
           x1 = center + Math.cos(celebAngle) * radius * 0.5 * (1 + Math.sin(t * 5) * 0.2);
           y1 = center + Math.sin(celebAngle) * radius * 0.5 - Math.abs(Math.sin(t * 4)) * radius * 0.3;
-          x2 = center + Math.cos(celebAngle + Math.PI) * radius * 0.5 * (1 + Math.sin(t * 5 + Math.PI) * 0.2);
-          y2 = center + Math.sin(celebAngle + Math.PI) * radius * 0.5 - Math.abs(Math.sin(t * 4 + Math.PI / 2)) * radius * 0.3;
+          x2 = center + Math.cos(celebAngle + trinityOffset) * radius * 0.5 * (1 + Math.sin(t * 5 + trinityOffset) * 0.2);
+          y2 = center + Math.sin(celebAngle + trinityOffset) * radius * 0.5 - Math.abs(Math.sin(t * 4 + trinityOffset / 2)) * radius * 0.3;
+          x3 = center + Math.cos(celebAngle + trinityOffset * 2) * radius * 0.5 * (1 + Math.sin(t * 5 + trinityOffset * 2) * 0.2);
+          y3 = center + Math.sin(celebAngle + trinityOffset * 2) * radius * 0.5 - Math.abs(Math.sin(t * 4 + trinityOffset)) * radius * 0.3;
           break;
         
         case 'ERROR':
@@ -204,21 +225,26 @@ const FloatingMascot = memo(function FloatingMascot({
           y1 = center + shake * 0.5;
           x2 = center + radius * 0.3 + shake;
           y2 = center - shake * 0.5;
+          x3 = center + shake;
+          y3 = center + radius * 0.3 - shake * 0.3;
           break;
         
         default:
-          twins[0].angle += 0.02;
-          twins[1].angle += 0.02;
+          twins.forEach((twin, i) => { twin.angle += 0.02; });
           x1 = center + Math.cos(twins[0].angle) * radius * 0.5;
           y1 = center + Math.sin(twins[0].angle) * radius * 0.5;
-          x2 = center + Math.cos(twins[1].angle) * radius * 0.5;
-          y2 = center + Math.sin(twins[1].angle) * radius * 0.5;
+          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius * 0.5;
+          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius * 0.5;
+          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius * 0.5;
+          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius * 0.5;
       }
 
       twins[0].x = x1;
       twins[0].y = y1;
       twins[1].x = x2;
       twins[1].y = y2;
+      twins[2].x = x3;
+      twins[2].y = y3;
 
       twins.forEach((twin, i) => {
         twin.trail.unshift({ x: twin.x, y: twin.y, opacity: 1 });
@@ -237,17 +263,21 @@ const FloatingMascot = memo(function FloatingMascot({
         ctx.globalAlpha = 1;
       });
 
-      ctx.globalAlpha = 0.3;
-      ctx.strokeStyle = colors.primary;
+      // Draw connecting triangle between trinity stars
+      ctx.globalAlpha = 0.25;
+      ctx.strokeStyle = colors.glow;
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(twins[0].x, twins[0].y);
       ctx.lineTo(twins[1].x, twins[1].y);
+      ctx.lineTo(twins[2].x, twins[2].y);
+      ctx.closePath();
       ctx.stroke();
       ctx.globalAlpha = 1;
 
-      const brandingLabels = ['Co', 'AI'];
-      const brandingColors = ['#a855f7', '#38bdf8'];
+      // Trinity branding: "Co" on cyan, "AI" on purple, "NX" on gold
+      const brandingLabels = ['Co', 'AI', 'NX'];
+      const brandingColors = ['#a855f7', '#38bdf8', '#38bdf8'];
       
       twins.forEach((twin, index) => {
         const starSize = mascotSize * 0.18;

@@ -16,6 +16,7 @@ import { helposFaqs, workspaces, employees, shifts } from '@shared/schema';
 import { eq, desc, and, gte, count, sql } from 'drizzle-orm';
 import { geminiClient } from '../services/ai-brain/providers/geminiClient';
 import { requireAuth } from '../auth';
+import { generateSeasonalProfile, getCurrentSeasonId, shouldForceDarkMode } from '../services/ai-brain/skills/seasonalOrchestrator';
 
 const router = Router();
 
@@ -616,6 +617,54 @@ router.delete('/preferences', requireAuth, async (req, res) => {
   } catch (error) {
     console.error('[Mascot] Error deleting preferences:', error);
     res.status(500).json({ error: 'Failed to delete preferences' });
+  }
+});
+
+/**
+ * GET /api/mascot/seasonal/state
+ * Get current seasonal profile with theme, effects, and mascot hints
+ * Public endpoint - no auth required for theme detection
+ */
+router.get('/seasonal/state', async (req, res) => {
+  try {
+    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const profile = await generateSeasonalProfile(workspaceId);
+    
+    res.json({
+      success: true,
+      profile,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[Seasonal] Error generating profile:', error);
+    res.status(500).json({ 
+      error: 'Failed to generate seasonal profile',
+      fallback: {
+        seasonId: 'default',
+        forceDarkMode: false,
+      }
+    });
+  }
+});
+
+/**
+ * GET /api/mascot/seasonal/quick
+ * Quick check for current season (lightweight, cached)
+ * Public endpoint
+ */
+router.get('/seasonal/quick', (req, res) => {
+  try {
+    res.json({
+      seasonId: getCurrentSeasonId(),
+      forceDarkMode: shouldForceDarkMode(),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    res.json({
+      seasonId: 'default',
+      forceDarkMode: false,
+      timestamp: new Date().toISOString(),
+    });
   }
 });
 

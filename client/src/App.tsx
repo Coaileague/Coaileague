@@ -23,6 +23,8 @@ import { UniversalLoadingGateProvider } from "@/contexts/universal-loading-gate"
 import { TransitionProvider } from "@/contexts/transition-context";
 import { LoadingProvider } from "@/contexts/loading-context";
 import { UniversalAnimationProvider } from "@/contexts/universal-animation-context";
+import { SeasonalThemeProvider } from "@/context/SeasonalThemeContext";
+import SeasonalEffectsLayer from "@/components/effects/SeasonalEffectsLayer";
 import { Button } from "@/components/ui/button";
 import { ProtectedRoute } from "@/components/protected-route";
 import { LeaderRoute } from "@/components/leader-route";
@@ -1110,15 +1112,19 @@ export default function App() {
                   <TransitionProvider>
                   <TooltipProvider>
                     <UniversalAnimationProvider>
-                      <ResponsiveAppFrame>
-                        <ChatroomNotificationListener />
-                        <AppContent />
-                        <FloatingSupportChat />
-                        <ReenableChatButton />
-                        <Toaster />
-                      </ResponsiveAppFrame>
-                      {/* CoAI Twin Mascot - UNIVERSAL visibility on ALL pages including public/guest routes */}
-                      <MascotRenderer />
+                      <SeasonalThemeProvider>
+                        <ResponsiveAppFrame>
+                          <ChatroomNotificationListener />
+                          <AppContent />
+                          <FloatingSupportChat />
+                          <ReenableChatButton />
+                          <Toaster />
+                        </ResponsiveAppFrame>
+                        {/* Seasonal effects layer - snowfall, ornaments, etc. */}
+                        <SeasonalEffectsLayer />
+                        {/* CoAI Twin Mascot - UNIVERSAL visibility on ALL pages including public/guest routes */}
+                        <MascotRenderer />
+                      </SeasonalThemeProvider>
                     </UniversalAnimationProvider>
                   </TooltipProvider>
                   </TransitionProvider>

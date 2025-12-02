@@ -76,6 +76,7 @@ interface EmoteState {
   type: string;
   purpleBehavior: EmoteBehavior;
   cyanBehavior: EmoteBehavior;
+  goldBehavior: EmoteBehavior;
   particleEffect?: 'sparkle' | 'hearts' | 'stars' | 'confetti' | 'zzz' | 'question' | 'exclaim';
 }
 
@@ -141,13 +142,16 @@ class CoAITwinEngine {
     type: 'neutral',
     purpleBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
     cyanBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
+    goldBehavior: { scale: 1, wobble: 0.5, glow: 0.5, speed: 1 },
   };
 
   private emoteParticles: { x: number; y: number; vx: number; vy: number; life: number; type: string; char?: string }[] = [];
 
+  // Trinity Stars: Co (cyan), AI (purple), NX (gold) - 120° offset for triangular formation
   private twins: Twin[] = [
-    { id: 0, x: 0, y: 0, trail: [], color: '#38bdf8', angle: 0 },
-    { id: 1, x: 0, y: 0, trail: [], color: '#a855f7', angle: Math.PI }
+    { id: 0, x: 0, y: 0, trail: [], color: '#38bdf8', angle: 0 },                    // Cyan - "Co"
+    { id: 1, x: 0, y: 0, trail: [], color: '#a855f7', angle: (Math.PI * 2) / 3 },    // Purple - "AI"  
+    { id: 2, x: 0, y: 0, trail: [], color: '#f4c15d', angle: (Math.PI * 4) / 3 }     // Gold - "NX" (Nexus)
   ];
 
   private particles: Particle[] = [];
@@ -224,19 +228,27 @@ class CoAITwinEngine {
     
     this.spawnShockwave(color);
     
-    if (mode === 'SUCCESS') this.spawnExplosion(20);
+    if (mode === 'SUCCESS') this.spawnExplosion(30);
     if (mode === 'ERROR') this.state.shake = 20;
     if (mode === 'CODING' || mode === 'UPLOADING') this.particles = [];
     
+    // Trinity colors: Cyan (Co), Purple (AI), Gold (NX)
     if (mode === 'IDLE') {
-      this.twins[0].color = '#38bdf8';
-      this.twins[1].color = '#a855f7';
+      this.twins[0].color = '#38bdf8';  // Cyan
+      this.twins[1].color = '#a855f7';  // Purple
+      this.twins[2].color = '#f4c15d';  // Gold
     } else if (mode === 'ERROR') {
       this.twins[0].color = '#ef4444';
       this.twins[1].color = '#ef4444';
+      this.twins[2].color = '#ef4444';
+    } else if (mode === 'CELEBRATING' || mode === 'SUCCESS') {
+      this.twins[0].color = '#38bdf8';
+      this.twins[1].color = '#a855f7';
+      this.twins[2].color = '#fbbf24';  // Brighter gold for celebration
     } else {
       this.twins[0].color = color;
       this.twins[1].color = '#fff';
+      this.twins[2].color = '#f4c15d';
     }
   }
 
@@ -720,16 +732,17 @@ class CoAITwinEngine {
   }
 
   private drawStar(x: number, y: number, outerR: number, innerR: number, color: string, twinIndex: number = 0) {
-    // Apply emote behaviors
-    const behavior = twinIndex === 0 ? this.emoteState.cyanBehavior : this.emoteState.purpleBehavior;
+    // Apply emote behaviors - Trinity: cyan (0), purple (1), gold (2)
+    const behaviors = [this.emoteState.cyanBehavior, this.emoteState.purpleBehavior, this.emoteState.goldBehavior];
+    const behavior = behaviors[twinIndex] || behaviors[0];
     const scale = behavior.scale;
     const wobble = behavior.wobble;
     const glow = behavior.glow;
     const speed = behavior.speed;
     
-    // Apply wobble offset
-    const wobbleX = Math.sin(this.state.time * 0.1 * speed + twinIndex * 2) * wobble * 3;
-    const wobbleY = Math.cos(this.state.time * 0.12 * speed + twinIndex * 2) * wobble * 3;
+    // Apply wobble offset with unique phase per star
+    const wobbleX = Math.sin(this.state.time * 0.1 * speed + twinIndex * 2.1) * wobble * 3;
+    const wobbleY = Math.cos(this.state.time * 0.12 * speed + twinIndex * 2.1) * wobble * 3;
     const drawX = x + wobbleX;
     const drawY = y + wobbleY;
     
@@ -779,11 +792,11 @@ class CoAITwinEngine {
     this.ctx.arc(drawX, drawY, scaledInnerR, 0, Math.PI * 2);
     this.ctx.fill();
     
-    // Draw branded text "Co" or "AI" in contrasting color
-    const brandLabels = ['Co', 'AI'];
-    const brandColors = ['#a855f7', '#38bdf8'];
-    const label = brandLabels[twinIndex];
-    const labelColor = brandColors[twinIndex];
+    // Trinity branded text: "Co" (cyan), "AI" (purple), "NX" (gold/Nexus)
+    const brandLabels = ['Co', 'AI', 'NX'];
+    const brandColors = ['#a855f7', '#38bdf8', '#1e3a5f'];  // Purple on cyan, Cyan on purple, Navy on gold
+    const label = brandLabels[twinIndex] || 'NX';
+    const labelColor = brandColors[twinIndex] || '#1e3a5f';
     
     // Scale font based on star size for readability
     const fontSize = Math.max(4, scaledOuterR * 0.55);
