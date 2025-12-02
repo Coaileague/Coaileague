@@ -134,6 +134,202 @@ export interface TransportEffectConfig {
   glowColor: string;
 }
 
+// Emote system for mascot expressions
+export type EmoteType = 
+  | 'neutral'
+  | 'happy'
+  | 'excited'
+  | 'curious'
+  | 'thinking'
+  | 'focused'
+  | 'surprised'
+  | 'sleepy'
+  | 'celebrating'
+  | 'helpful'
+  | 'waving'
+  | 'nodding'
+  | 'concerned'
+  | 'proud';
+
+export interface EmoteConfig {
+  type: EmoteType;
+  duration: number;
+  starBehavior: {
+    purple: { scale: number; wobble: number; glow: number; speed: number };
+    cyan: { scale: number; wobble: number; glow: number; speed: number };
+  };
+  particleEffect?: 'sparkle' | 'hearts' | 'stars' | 'confetti' | 'zzz' | 'question' | 'exclaim';
+  soundCue?: string;
+}
+
+export interface EmoteContext {
+  trigger: string;
+  emote: EmoteType;
+  priority: number;
+  conditions?: {
+    timeOfDay?: 'morning' | 'afternoon' | 'evening' | 'night';
+    userAction?: string;
+    pagePattern?: string;
+  };
+}
+
+export const EMOTE_CONFIGS: Record<EmoteType, EmoteConfig> = {
+  neutral: {
+    type: 'neutral',
+    duration: 0,
+    starBehavior: {
+      purple: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
+      cyan: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
+    },
+  },
+  happy: {
+    type: 'happy',
+    duration: 3000,
+    starBehavior: {
+      purple: { scale: 1.1, wobble: 0.8, glow: 0.6, speed: 1.3 },
+      cyan: { scale: 1.1, wobble: 0.8, glow: 0.6, speed: 1.3 },
+    },
+    particleEffect: 'sparkle',
+  },
+  excited: {
+    type: 'excited',
+    duration: 4000,
+    starBehavior: {
+      purple: { scale: 1.2, wobble: 1.5, glow: 0.8, speed: 2 },
+      cyan: { scale: 1.2, wobble: 1.5, glow: 0.8, speed: 2 },
+    },
+    particleEffect: 'stars',
+  },
+  curious: {
+    type: 'curious',
+    duration: 2500,
+    starBehavior: {
+      purple: { scale: 0.9, wobble: 0.3, glow: 0.5, speed: 0.7 },
+      cyan: { scale: 1.15, wobble: 0.6, glow: 0.7, speed: 1.2 },
+    },
+    particleEffect: 'question',
+  },
+  thinking: {
+    type: 'thinking',
+    duration: 3000,
+    starBehavior: {
+      purple: { scale: 1, wobble: 0.2, glow: 0.5, speed: 0.5 },
+      cyan: { scale: 1, wobble: 0.2, glow: 0.5, speed: 0.5 },
+    },
+  },
+  focused: {
+    type: 'focused',
+    duration: 0,
+    starBehavior: {
+      purple: { scale: 1.05, wobble: 0.1, glow: 0.7, speed: 0.3 },
+      cyan: { scale: 1.05, wobble: 0.1, glow: 0.7, speed: 0.3 },
+    },
+  },
+  surprised: {
+    type: 'surprised',
+    duration: 1500,
+    starBehavior: {
+      purple: { scale: 1.3, wobble: 2, glow: 0.9, speed: 2.5 },
+      cyan: { scale: 1.3, wobble: 2, glow: 0.9, speed: 2.5 },
+    },
+    particleEffect: 'exclaim',
+  },
+  sleepy: {
+    type: 'sleepy',
+    duration: 5000,
+    starBehavior: {
+      purple: { scale: 0.85, wobble: 0.2, glow: 0.2, speed: 0.3 },
+      cyan: { scale: 0.85, wobble: 0.2, glow: 0.2, speed: 0.3 },
+    },
+    particleEffect: 'zzz',
+  },
+  celebrating: {
+    type: 'celebrating',
+    duration: 5000,
+    starBehavior: {
+      purple: { scale: 1.25, wobble: 2, glow: 1, speed: 2.5 },
+      cyan: { scale: 1.25, wobble: 2, glow: 1, speed: 2.5 },
+    },
+    particleEffect: 'confetti',
+  },
+  helpful: {
+    type: 'helpful',
+    duration: 3000,
+    starBehavior: {
+      purple: { scale: 1.1, wobble: 0.6, glow: 0.6, speed: 1 },
+      cyan: { scale: 1.15, wobble: 0.7, glow: 0.7, speed: 1.2 },
+    },
+    particleEffect: 'sparkle',
+  },
+  waving: {
+    type: 'waving',
+    duration: 2000,
+    starBehavior: {
+      purple: { scale: 1, wobble: 1.5, glow: 0.5, speed: 2 },
+      cyan: { scale: 1.1, wobble: 0.8, glow: 0.6, speed: 1.5 },
+    },
+  },
+  nodding: {
+    type: 'nodding',
+    duration: 1500,
+    starBehavior: {
+      purple: { scale: 1, wobble: 0.3, glow: 0.5, speed: 1.8 },
+      cyan: { scale: 1, wobble: 0.3, glow: 0.5, speed: 1.8 },
+    },
+  },
+  concerned: {
+    type: 'concerned',
+    duration: 3000,
+    starBehavior: {
+      purple: { scale: 0.95, wobble: 0.4, glow: 0.4, speed: 0.6 },
+      cyan: { scale: 0.95, wobble: 0.4, glow: 0.4, speed: 0.6 },
+    },
+  },
+  proud: {
+    type: 'proud',
+    duration: 4000,
+    starBehavior: {
+      purple: { scale: 1.15, wobble: 0.5, glow: 0.8, speed: 0.8 },
+      cyan: { scale: 1.15, wobble: 0.5, glow: 0.8, speed: 0.8 },
+    },
+    particleEffect: 'stars',
+  },
+};
+
+// Context-based emote triggers
+export const EMOTE_CONTEXTS: EmoteContext[] = [
+  // Page navigation triggers
+  { trigger: 'page_change', emote: 'curious', priority: 1 },
+  { trigger: 'page_dashboard', emote: 'helpful', priority: 2, conditions: { pagePattern: '/dashboard' } },
+  { trigger: 'page_analytics', emote: 'focused', priority: 2, conditions: { pagePattern: '/analytics' } },
+  { trigger: 'page_schedule', emote: 'thinking', priority: 2, conditions: { pagePattern: '/schedule' } },
+  { trigger: 'page_payroll', emote: 'focused', priority: 2, conditions: { pagePattern: '/payroll' } },
+  { trigger: 'page_settings', emote: 'helpful', priority: 2, conditions: { pagePattern: '/settings' } },
+  
+  // User action triggers
+  { trigger: 'task_complete', emote: 'celebrating', priority: 5 },
+  { trigger: 'form_submit', emote: 'happy', priority: 3 },
+  { trigger: 'error_occurred', emote: 'concerned', priority: 4 },
+  { trigger: 'login_success', emote: 'waving', priority: 5 },
+  { trigger: 'first_visit', emote: 'excited', priority: 5 },
+  
+  // Time-based triggers
+  { trigger: 'time_morning', emote: 'waving', priority: 1, conditions: { timeOfDay: 'morning' } },
+  { trigger: 'time_night', emote: 'sleepy', priority: 1, conditions: { timeOfDay: 'night' } },
+  
+  // Interaction triggers
+  { trigger: 'mascot_tap', emote: 'surprised', priority: 3 },
+  { trigger: 'mascot_drag', emote: 'excited', priority: 2 },
+  { trigger: 'mascot_idle', emote: 'neutral', priority: 0 },
+  { trigger: 'roaming_start', emote: 'curious', priority: 2 },
+  { trigger: 'roaming_end', emote: 'happy', priority: 2 },
+  
+  // AI/Help triggers
+  { trigger: 'ai_response', emote: 'helpful', priority: 3 },
+  { trigger: 'faq_found', emote: 'proud', priority: 3 },
+  { trigger: 'advice_given', emote: 'nodding', priority: 2 },
+];
+
 export interface RoamingConfig {
   enabled: boolean;
   interval: { min: number; max: number };
