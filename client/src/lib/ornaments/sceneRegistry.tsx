@@ -19,18 +19,24 @@ import {
   type OrnamentPalette,
 } from './primitives';
 
-// Scene configuration types
+// Scene configuration types (aligned with server/services/ai-brain/skills/seasonalOrchestrator.ts)
+export type OrnamentType = 'ball' | 'star' | 'light' | 'snowflake' | 'sleigh' | 'giftBox' | 'candyCane' | 'wreath' | 'bow';
+export type OrnamentAnimation = 'twinkle' | 'sway' | 'bounce' | 'glow' | 'spin' | 'float' | 'pulse' | 'shimmer';
+export type PlacementZone = 'corners' | 'header' | 'inline' | 'overlay' | 'sidebar' | 'footer' | 'random';
+
 export interface OrnamentProfile {
-  type: 'ball' | 'star' | 'light' | 'snowflake';
+  type: OrnamentType;
   baseHue: string;
-  metallic?: boolean;
-  size: { min: number; max: number };
-  animationSet: ('twinkle' | 'sway' | 'bounce' | 'glow' | 'spin' | 'float')[];
+  metallic: boolean;
+  sizeRange: { min: number; max: number };
+  animationSet: OrnamentAnimation[];
+  pattern?: 'solid' | 'stripe' | 'dots' | 'swirl';
 }
 
 export interface PlacementRule {
-  zone: 'corners' | 'header' | 'inline' | 'overlay' | 'sidebar';
+  zone: PlacementZone;
   density: 'sparse' | 'medium' | 'dense';
+  maxCount: number;
   avoidZones?: { x: number; y: number; width: number; height: number }[];
 }
 
@@ -38,7 +44,9 @@ export interface OrnamentDirective {
   profiles: OrnamentProfile[];
   placements: PlacementRule[];
   spawnRate: number;
-  syncWithEffects: boolean;
+  decayRate: number;
+  syncWithSantaFlyover: boolean;
+  globalIntensity: number;
 }
 
 // Scene ID types
