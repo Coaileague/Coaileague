@@ -166,6 +166,9 @@ class CoAITwinEngine {
   private morphEngine: EmoteMorphingEngine;
   private lastFrameTime: number = 0;
   private onEmoteComplete?: (emote: EmoteName) => void;
+  private emoteQueue: EmoteName[] = [];
+  private isTransitioningToIdle: boolean = false;
+  private idleTransitionProgress: number = 0;
 
   constructor(container: HTMLElement, canvas: HTMLCanvasElement) {
     this.container = container;
@@ -179,9 +182,11 @@ class CoAITwinEngine {
       onParticle: (effect) => this.spawnEmoteParticles(effect),
       onShockwave: (color) => this.spawnShockwave(color),
       onShake: (intensity) => { this.state.shake = intensity; },
-      onComplete: (emote) => { this.onEmoteComplete?.(emote); },
+      onComplete: (emote) => { 
+        this.handleEmoteComplete(emote);
+      },
       onPhaseChange: (phase, emote) => {
-        console.log(`[Mascot Emote] Phase: ${phase}, Emote: ${emote}`);
+        this.handlePhaseChange(phase, emote);
       }
     });
     
@@ -191,8 +196,67 @@ class CoAITwinEngine {
     this.setupTouch();
   }
   
+  private handleEmoteComplete(emote: EmoteName): void {
+    this.onEmoteComplete?.(emote);
+    this.isTransitioningToIdle = true;
+    this.idleTransitionProgress = 0;
+    
+    if (this.emoteQueue.length > 0) {
+      const nextEmote = this.emoteQueue.shift()!;
+      setTimeout(() => {
+        this.isTransitioningToIdle = false;
+        this.morphEngine.triggerEmote(nextEmote);
+      }, 200);
+    }
+  }
+  
+  private handlePhaseChange(phase: EmotePhase, emote: EmoteName): void {
+    if (phase === 'IDLE' || phase === 'STANDBY') {
+      this.isTransitioningToIdle = false;
+      this.idleTransitionProgress = 1;
+      
+      this.emoteState = {
+        type: 'neutral',
+        purpleBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
+        cyanBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
+        goldBehavior: { scale: 1, wobble: 0.5, glow: 0.5, speed: 1 },
+        particleEffect: undefined
+      };
+    }
+  }
+  
   triggerEmote(emote: EmoteName): void {
+    if (this.morphEngine.isAnimating()) {
+      if (!this.emoteQueue.includes(emote)) {
+        this.emoteQueue.push(emote);
+      }
+      return;
+    }
+    
+    this.isTransitioningToIdle = false;
     this.morphEngine.triggerEmote(emote);
+  }
+  
+  returnToIdle(): void {
+    this.emoteQueue = [];
+    this.morphEngine.returnToIdle();
+    this.isTransitioningToIdle = true;
+    this.idleTransitionProgress = 0;
+  }
+  
+  forceIdle(): void {
+    this.emoteQueue = [];
+    this.morphEngine.forceIdle();
+    this.isTransitioningToIdle = false;
+    this.idleTransitionProgress = 1;
+    
+    this.emoteState = {
+      type: 'neutral',
+      purpleBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
+      cyanBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
+      goldBehavior: { scale: 1, wobble: 0.5, glow: 0.5, speed: 1 },
+      particleEffect: undefined
+    };
   }
   
   setEmoteCallback(callback: (emote: EmoteName) => void): void {
@@ -205,6 +269,10 @@ class CoAITwinEngine {
   
   getCurrentEmotePhase(): EmotePhase {
     return this.morphEngine.getCurrentPhase();
+  }
+  
+  getEmoteQueueLength(): number {
+    return this.emoteQueue.length;
   }
 
   private setupTouch() {
@@ -611,6 +679,14 @@ class CoAITwinEngine {
     const deltaMs = now - this.lastFrameTime;
     this.lastFrameTime = now;
     this.morphEngine.update(deltaMs);
+    
+    // Smooth transition back to idle rotating mode
+    if (this.isTransitioningToIdle) {
+      this.idleTransitionProgress = Math.min(1, this.idleTransitionProgress + 0.02);
+      if (this.idleTransitionProgress >= 1) {
+        this.isTransitioningToIdle = false;
+      }
+    }
     
     // TRINITY: 120° offset for 3 stars (Co, AI, L) - each star gets unique position
     const TRINITY_OFFSET = (2 * Math.PI) / 3;  // 120 degrees

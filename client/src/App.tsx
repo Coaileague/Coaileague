@@ -271,9 +271,11 @@ function MascotRenderer() {
     particleEffect: emoteConfig.particleEffect,
   }), [emote, emoteConfig]);
   
-  // Stable ref for global emote trigger to prevent effect re-runs
+  // Stable refs for emote functions to prevent effect re-runs
   const triggerByContextRef = useRef(triggerByContext);
   triggerByContextRef.current = triggerByContext;
+  const triggerEmoteRef = useRef(triggerEmote);
+  triggerEmoteRef.current = triggerEmote;
   
   // Set global emote trigger for use outside React - only run once
   useEffect(() => {
@@ -379,61 +381,106 @@ function MascotRenderer() {
     };
   }, [isDragging]);
   
+  // Track drag velocity using refs to avoid infinite loops
+  const dragVelocityRef = useRef(0);
+  const lastEmoteTriggerRef = useRef(0);
+  const prevDraggingRef = useRef(false);
+  
+  // Store current position in ref for use in effects
+  const positionRef = useRef(position);
+  positionRef.current = position;
+  
+  // Only track drag-related state changes, not position updates during roaming
   useEffect(() => {
-    if (isDragging) {
-      const now = Date.now();
-      const dx = position.x - lastPosRef.current.x;
-      const dy = position.y - lastPosRef.current.y;
-      const dt = Math.max(now - lastPosRef.current.time, 1);
-      const velocity = Math.sqrt(dx * dx + dy * dy) / dt * 16;
-      
-      setDragVelocity(velocity);
-      lastPosRef.current = { x: position.x, y: position.y, time: now };
-      
-      // Trigger surprised emote when dragged
-      if (lastPosRef.current.time === 0 || dragVelocity === 0) {
-        triggerEmote('surprised');
-      } else if (velocity > 5) {
-        triggerEmote('excited');
+    // Handle drag start
+    if (isDragging && !prevDraggingRef.current) {
+      prevDraggingRef.current = true;
+      lastPosRef.current = { x: positionRef.current.x, y: positionRef.current.y, time: Date.now() };
+      triggerEmoteRef.current?.('surprised');
+    }
+    
+    // Handle drag end
+    if (!isDragging && prevDraggingRef.current) {
+      prevDraggingRef.current = false;
+      if (dragVelocityRef.current > 0) {
+        thoughtManager.triggerReaction('drag_end', dragVelocityRef.current);
+        dragVelocityRef.current = 0;
+        setDragVelocity(0);
+        triggerEmoteRef.current?.('happy');
       }
-      
-      if (velocity > 5 && Math.random() > 0.92) {
-        thoughtManager.triggerReaction('drag_move', velocity);
-      }
-    } else if (dragVelocity > 0) {
-      thoughtManager.triggerReaction('drag_end', dragVelocity);
-      setDragVelocity(0);
-      // Return to happy after drag ends
-      triggerEmote('happy');
     }
-  }, [position, isDragging, triggerEmote]);
+  }, [isDragging]);
   
-  // Trigger emotes based on roaming state
+  // Track position during drag using a separate effect
   useEffect(() => {
-    if (isRoaming) {
-      triggerEmote('excited');
+    if (!isDragging) return;
+    
+    const now = Date.now();
+    const dx = position.x - lastPosRef.current.x;
+    const dy = position.y - lastPosRef.current.y;
+    const dt = Math.max(now - lastPosRef.current.time, 1);
+    const velocity = Math.sqrt(dx * dx + dy * dy) / dt * 16;
+    
+    dragVelocityRef.current = velocity;
+    setDragVelocity(velocity);
+    lastPosRef.current = { x: position.x, y: position.y, time: now };
+    
+    // Debounce emote triggers during drag
+    if (now - lastEmoteTriggerRef.current > 500 && velocity > 5) {
+      triggerEmoteRef.current?.('excited');
+      lastEmoteTriggerRef.current = now;
     }
-  }, [isRoaming, triggerEmote]);
-  
-  // Trigger emotes when following mouse
-  useEffect(() => {
-    if (isFollowing && !isRoaming && !isDragging) {
-      triggerEmote('curious');
+    
+    if (velocity > 5 && Math.random() > 0.92) {
+      thoughtManager.triggerReaction('drag_move', velocity);
     }
-  }, [isFollowing, isRoaming, isDragging, triggerEmote]);
+  }, [position.x, position.y, isDragging]);
   
-  // Trigger emotes based on page navigation
+  // Track roaming emote trigger state
+  const lastRoamingEmoteRef = useRef(false);
+  
+  // Trigger emotes based on roaming state (debounced)
   useEffect(() => {
-    triggerByContext('navigate');
-  }, [location, triggerByContext]);
+    if (isRoaming && !lastRoamingEmoteRef.current) {
+      lastRoamingEmoteRef.current = true;
+      triggerEmoteRef.current?.('excited');
+    } else if (!isRoaming && lastRoamingEmoteRef.current) {
+      lastRoamingEmoteRef.current = false;
+    }
+  }, [isRoaming]);
+  
+  // Track following emote trigger state  
+  const lastFollowingEmoteRef = useRef(false);
+  
+  // Trigger emotes when following mouse (debounced)
+  useEffect(() => {
+    const shouldTrigger = isFollowing && !isRoaming && !isDragging;
+    if (shouldTrigger && !lastFollowingEmoteRef.current) {
+      lastFollowingEmoteRef.current = true;
+      triggerEmoteRef.current?.('curious');
+    } else if (!shouldTrigger && lastFollowingEmoteRef.current) {
+      lastFollowingEmoteRef.current = false;
+    }
+  }, [isFollowing, isRoaming, isDragging]);
+  
+  // Track navigation for emotes
+  const lastLocationRef = useRef(location);
+  
+  // Trigger emotes based on page navigation (debounced)
+  useEffect(() => {
+    if (location !== lastLocationRef.current) {
+      lastLocationRef.current = location;
+      triggerByContextRef.current?.('navigate');
+    }
+  }, [location]);
   
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     if (!isDragging) {
       thoughtManager.triggerReaction('tap');
-      triggerEmote('happy');
+      triggerEmoteRef.current?.('happy');
     }
-  }, [isDragging, triggerEmote]);
+  }, [isDragging]);
   
   if (!MASCOT_CONFIG.enabled || shouldHideMascot(location)) return null;
   
