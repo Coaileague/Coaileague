@@ -217,6 +217,15 @@ import {
   type InsertFeedbackComment,
   type FeedbackVote,
   type InsertFeedbackVote,
+  mascotMotionProfiles,
+  holidayMascotDecor,
+  holidayMascotHistory,
+  type MascotMotionProfile,
+  type InsertMascotMotionProfile,
+  type HolidayMascotDecor,
+  type InsertHolidayMascotDecor,
+  type HolidayMascotHistory,
+  type InsertHolidayMascotHistory,
   alertConfigurations,
   alertHistory,
   alertRateLimits,
@@ -839,6 +848,35 @@ export interface IStorage {
   
   voteFeedback(feedbackId: string, userId: string, voteType: 'up' | 'down'): Promise<{ feedback: UserFeedback; userVote: string | null }>;
   getUserFeedbackVote(feedbackId: string, userId: string): Promise<FeedbackVote | undefined>;
+
+  // ========================================================================
+  // MASCOT MOTION PROFILES - AI BRAIN ORCHESTRATED MOTION PATTERNS
+  // ========================================================================
+  createMascotMotionProfile(profile: InsertMascotMotionProfile): Promise<MascotMotionProfile>;
+  getMascotMotionProfile(id: string): Promise<MascotMotionProfile | undefined>;
+  getMascotMotionProfileByName(name: string): Promise<MascotMotionProfile | undefined>;
+  getAllMascotMotionProfiles(): Promise<MascotMotionProfile[]>;
+  getActiveMascotMotionProfiles(): Promise<MascotMotionProfile[]>;
+  updateMascotMotionProfile(id: string, data: Partial<InsertMascotMotionProfile>): Promise<MascotMotionProfile | undefined>;
+  deleteMascotMotionProfile(id: string): Promise<boolean>;
+
+  // ========================================================================
+  // HOLIDAY MASCOT DECORATIONS - AI BRAIN ORCHESTRATED HOLIDAY VISUALS
+  // ========================================================================
+  createHolidayMascotDecor(decor: InsertHolidayMascotDecor): Promise<HolidayMascotDecor>;
+  getHolidayMascotDecor(id: string): Promise<HolidayMascotDecor | undefined>;
+  getHolidayMascotDecorByKey(holidayKey: string): Promise<HolidayMascotDecor | undefined>;
+  getAllHolidayMascotDecor(): Promise<HolidayMascotDecor[]>;
+  getActiveHolidayMascotDecor(): Promise<HolidayMascotDecor[]>;
+  updateHolidayMascotDecor(id: string, data: Partial<InsertHolidayMascotDecor>): Promise<HolidayMascotDecor | undefined>;
+  deleteHolidayMascotDecor(id: string): Promise<boolean>;
+
+  // ========================================================================
+  // HOLIDAY MASCOT HISTORY - AI BRAIN DIRECTIVE AUDIT TRAIL
+  // ========================================================================
+  createHolidayMascotHistory(history: InsertHolidayMascotHistory): Promise<HolidayMascotHistory>;
+  getHolidayMascotHistory(filters?: { holidayDecorId?: string; action?: string; triggeredBy?: string; limit?: number }): Promise<HolidayMascotHistory[]>;
+  getLatestHolidayDirective(): Promise<HolidayMascotHistory | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -6835,6 +6873,126 @@ export class DatabaseStorage implements IStorage {
         eq(feedbackVotes.userId, userId)
       ));
     return vote;
+  }
+
+  // ============================================================================
+  // MASCOT MOTION PROFILES - AI BRAIN ORCHESTRATED MOTION PATTERNS
+  // ============================================================================
+
+  async createMascotMotionProfile(profile: InsertMascotMotionProfile): Promise<MascotMotionProfile> {
+    const [created] = await db.insert(mascotMotionProfiles).values(profile).returning();
+    return created;
+  }
+
+  async getMascotMotionProfile(id: string): Promise<MascotMotionProfile | undefined> {
+    const [profile] = await db.select().from(mascotMotionProfiles).where(eq(mascotMotionProfiles.id, id));
+    return profile;
+  }
+
+  async getMascotMotionProfileByName(name: string): Promise<MascotMotionProfile | undefined> {
+    const [profile] = await db.select().from(mascotMotionProfiles).where(eq(mascotMotionProfiles.name, name));
+    return profile;
+  }
+
+  async getAllMascotMotionProfiles(): Promise<MascotMotionProfile[]> {
+    return await db.select().from(mascotMotionProfiles).orderBy(mascotMotionProfiles.name);
+  }
+
+  async getActiveMascotMotionProfiles(): Promise<MascotMotionProfile[]> {
+    return await db.select().from(mascotMotionProfiles).where(eq(mascotMotionProfiles.isActive, true)).orderBy(mascotMotionProfiles.name);
+  }
+
+  async updateMascotMotionProfile(id: string, data: Partial<InsertMascotMotionProfile>): Promise<MascotMotionProfile | undefined> {
+    const [updated] = await db.update(mascotMotionProfiles).set({ ...data, updatedAt: new Date() }).where(eq(mascotMotionProfiles.id, id)).returning();
+    return updated;
+  }
+
+  async deleteMascotMotionProfile(id: string): Promise<boolean> {
+    await db.delete(mascotMotionProfiles).where(eq(mascotMotionProfiles.id, id));
+    return true;
+  }
+
+  // ============================================================================
+  // HOLIDAY MASCOT DECORATIONS - AI BRAIN ORCHESTRATED HOLIDAY VISUALS
+  // ============================================================================
+
+  async createHolidayMascotDecor(decor: InsertHolidayMascotDecor): Promise<HolidayMascotDecor> {
+    const [created] = await db.insert(holidayMascotDecor).values(decor).returning();
+    return created;
+  }
+
+  async getHolidayMascotDecor(id: string): Promise<HolidayMascotDecor | undefined> {
+    const [decor] = await db.select().from(holidayMascotDecor).where(eq(holidayMascotDecor.id, id));
+    return decor;
+  }
+
+  async getHolidayMascotDecorByKey(holidayKey: string): Promise<HolidayMascotDecor | undefined> {
+    const [decor] = await db.select().from(holidayMascotDecor).where(eq(holidayMascotDecor.holidayKey, holidayKey));
+    return decor;
+  }
+
+  async getAllHolidayMascotDecor(): Promise<HolidayMascotDecor[]> {
+    return await db.select().from(holidayMascotDecor).orderBy(holidayMascotDecor.holidayName);
+  }
+
+  async getActiveHolidayMascotDecor(): Promise<HolidayMascotDecor[]> {
+    return await db.select().from(holidayMascotDecor).where(eq(holidayMascotDecor.isActive, true)).orderBy(holidayMascotDecor.holidayName);
+  }
+
+  async updateHolidayMascotDecor(id: string, data: Partial<InsertHolidayMascotDecor>): Promise<HolidayMascotDecor | undefined> {
+    const [updated] = await db.update(holidayMascotDecor).set({ ...data, updatedAt: new Date() }).where(eq(holidayMascotDecor.id, id)).returning();
+    return updated;
+  }
+
+  async deleteHolidayMascotDecor(id: string): Promise<boolean> {
+    await db.delete(holidayMascotDecor).where(eq(holidayMascotDecor.id, id));
+    return true;
+  }
+
+  // ============================================================================
+  // HOLIDAY MASCOT HISTORY - AI BRAIN DIRECTIVE AUDIT TRAIL
+  // ============================================================================
+
+  async createHolidayMascotHistory(history: InsertHolidayMascotHistory): Promise<HolidayMascotHistory> {
+    const [created] = await db.insert(holidayMascotHistory).values(history).returning();
+    return created;
+  }
+
+  async getHolidayMascotHistory(filters?: { holidayDecorId?: string; action?: string; triggeredBy?: string; limit?: number }): Promise<HolidayMascotHistory[]> {
+    let query = db.select().from(holidayMascotHistory).$dynamic();
+    
+    const conditions = [];
+    if (filters?.holidayDecorId) {
+      conditions.push(eq(holidayMascotHistory.holidayDecorId, filters.holidayDecorId));
+    }
+    if (filters?.action) {
+      conditions.push(eq(holidayMascotHistory.action, filters.action));
+    }
+    if (filters?.triggeredBy) {
+      conditions.push(eq(holidayMascotHistory.triggeredBy, filters.triggeredBy));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    query = query.orderBy(desc(holidayMascotHistory.createdAt));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+    
+    return await query;
+  }
+
+  async getLatestHolidayDirective(): Promise<HolidayMascotHistory | undefined> {
+    const [latest] = await db
+      .select()
+      .from(holidayMascotHistory)
+      .where(eq(holidayMascotHistory.action, 'activate'))
+      .orderBy(desc(holidayMascotHistory.createdAt))
+      .limit(1);
+    return latest;
   }
 }
 

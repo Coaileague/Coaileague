@@ -16,6 +16,7 @@ import { helposFaqs, workspaces, employees, shifts } from '@shared/schema';
 import { eq, desc, and, gte, count, sql } from 'drizzle-orm';
 import { geminiClient } from '../services/ai-brain/providers/geminiClient';
 import { requireAuth } from '../auth';
+import { broadcastToAllClients } from '../websocket';
 import { 
   generateSeasonalProfile, 
   getCurrentSeasonId, 
@@ -892,6 +893,312 @@ router.get('/seasonal/ornaments', (req, res) => {
         syncWithSantaFlyover: false,
         globalIntensity: 0,
       }
+    });
+  }
+});
+
+// ============================================================================
+// HOLIDAY MASCOT DIRECTIVES - AI BRAIN ORCHESTRATED MOTION & DECORATIONS
+// ============================================================================
+
+import { storage } from '../storage';
+
+/**
+ * GET /api/mascot/holiday/directives
+ * Get current active holiday directive (motion pattern + decorations)
+ * Public endpoint - used by frontend mascot component
+ */
+router.get('/holiday/directives', async (req, res) => {
+  try {
+    const seasonId = getCurrentSeasonId();
+    
+    // Get holiday decor for current season from DB
+    let holidayDecor = await storage.getHolidayMascotDecorByKey(seasonId);
+    
+    // Get latest active directive
+    const latestDirective = await storage.getLatestHolidayDirective();
+    
+    // Get motion profile if linked
+    let motionProfile = null;
+    if (holidayDecor?.motionProfileId) {
+      motionProfile = await storage.getMascotMotionProfile(holidayDecor.motionProfileId);
+    }
+    
+    // If no DB record exists, provide sensible defaults for the current season
+    if (!holidayDecor && (seasonId === 'christmas' || seasonId === 'winter' || seasonId === 'newYear')) {
+      holidayDecor = {
+        id: 'default-christmas',
+        holidayKey: seasonId,
+        holidayName: seasonId === 'christmas' ? 'Christmas' : seasonId === 'newYear' ? 'New Year' : 'Winter',
+        motionProfileId: null,
+        starDecorations: {
+          co: { attachments: ['led_wrap'], glowPalette: ['#ff0000', '#ffffff', '#00ff00'], ledCount: 6, ledSpeed: 0.4 },
+          ai: { attachments: ['led_wrap'], glowPalette: ['#ff00ff', '#00ffff', '#ffff00'], ledCount: 6, ledSpeed: 0.5 },
+          nx: { attachments: ['led_wrap'], glowPalette: ['#ffcc00', '#ff6600', '#ffffff'], ledCount: 6, ledSpeed: 0.6 },
+        },
+        globalGlowIntensity: 1.0,
+        particleEffects: null,
+        ambientColors: ['#ff0000', '#00ff00', '#ffffff'],
+        priority: 50,
+        isActive: true,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+        startMonth: null,
+        startDay: null,
+        endMonth: null,
+        endDay: null,
+      } as any;
+    }
+    
+    // Ensure starDecorations has required fields for frontend
+    if (holidayDecor?.starDecorations) {
+      const starDecor = holidayDecor.starDecorations as Record<string, any>;
+      for (const key of ['co', 'ai', 'nx']) {
+        if (!starDecor[key]) {
+          starDecor[key] = { attachments: ['led_wrap'], glowPalette: ['#ff0000', '#00ff00', '#ffffff'], ledCount: 6, ledSpeed: 0.5 };
+        } else if (!starDecor[key].glowPalette) {
+          starDecor[key].glowPalette = ['#ff0000', '#00ff00', '#ffffff'];
+        }
+      }
+    }
+    
+    res.json({
+      success: true,
+      seasonId,
+      holidayDecor,
+      motionProfile,
+      latestDirective,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[Holiday Directives] Get directives error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to get holiday directives'
+    });
+  }
+});
+
+/**
+ * GET /api/mascot/holiday/profiles
+ * Get all motion profiles available for AI Brain selection
+ * Support staff endpoint - requires auth
+ */
+router.get('/holiday/profiles', requireAuth, async (req, res) => {
+  try {
+    const profiles = await storage.getAllMascotMotionProfiles();
+    const decorations = await storage.getAllHolidayMascotDecor();
+    
+    res.json({
+      success: true,
+      profiles,
+      decorations,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[Holiday Profiles] Get profiles error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to get profiles'
+    });
+  }
+});
+
+/**
+ * POST /api/mascot/holiday/directives/apply
+ * Apply a new holiday directive (AI Brain or manual)
+ * Support staff endpoint - requires auth
+ */
+router.post('/holiday/directives/apply', requireAuth, async (req, res) => {
+  try {
+    const { holidayDecorId, motionProfileId, triggeredBy = 'manual' } = req.body;
+    
+    // Get the holiday decor
+    const holidayDecor = holidayDecorId 
+      ? await storage.getHolidayMascotDecor(holidayDecorId)
+      : null;
+    
+    // Get the motion profile
+    const motionProfile = motionProfileId
+      ? await storage.getMascotMotionProfile(motionProfileId)
+      : null;
+    
+    // Create history record
+    const historyEntry = await storage.createHolidayMascotHistory({
+      holidayDecorId: holidayDecorId || null,
+      motionProfileId: motionProfileId || null,
+      action: 'activate',
+      triggeredBy,
+      directiveSnapshot: {
+        motionPattern: motionProfile?.patternType || 'TRIAD_SYNCHRONIZED',
+        starMotion: motionProfile?.starMotion || {},
+        decorations: holidayDecor?.starDecorations || {},
+        timestamp: new Date().toISOString(),
+      },
+    });
+    
+    // Broadcast the new directive to all connected clients
+    broadcastToAllClients({
+      type: 'mascot.directive.updated',
+      payload: {
+        seasonId: getCurrentSeasonId(),
+        holidayDecor,
+        motionProfile,
+        timestamp: new Date().toISOString(),
+      },
+    });
+    
+    res.json({
+      success: true,
+      directive: historyEntry,
+      holidayDecor,
+      motionProfile,
+      message: 'Holiday directive applied successfully',
+    });
+  } catch (error) {
+    console.error('[Holiday Directives] Apply directive error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to apply holiday directive'
+    });
+  }
+});
+
+/**
+ * POST /api/mascot/holiday/profiles
+ * Create a new motion profile
+ * Support staff endpoint - requires auth
+ */
+router.post('/holiday/profiles', requireAuth, async (req, res) => {
+  try {
+    const profileData = req.body;
+    
+    const profile = await storage.createMascotMotionProfile({
+      name: profileData.name,
+      description: profileData.description,
+      patternType: profileData.patternType || 'TRIAD_SYNCHRONIZED',
+      starMotion: profileData.starMotion || {
+        co: { angularVelocity: 0.02, orbitRadius: 0.6, phaseOffset: 0, noiseAmp: 0 },
+        ai: { angularVelocity: 0.02, orbitRadius: 0.6, phaseOffset: 2.094, noiseAmp: 0 },
+        nx: { angularVelocity: 0.02, orbitRadius: 0.6, phaseOffset: 4.188, noiseAmp: 0 },
+      },
+      physicsOverrides: profileData.physicsOverrides || null,
+      randomSeed: profileData.randomSeed || null,
+      noiseConfig: profileData.noiseConfig || null,
+      isActive: profileData.isActive ?? true,
+    });
+    
+    res.json({
+      success: true,
+      profile,
+      message: 'Motion profile created successfully',
+    });
+  } catch (error) {
+    console.error('[Holiday Profiles] Create profile error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to create motion profile'
+    });
+  }
+});
+
+/**
+ * PATCH /api/mascot/holiday/profiles/:id
+ * Update an existing motion profile
+ * Support staff endpoint - requires auth
+ */
+router.patch('/holiday/profiles/:id', requireAuth, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const updateData = req.body;
+    
+    const profile = await storage.updateMascotMotionProfile(id, updateData);
+    
+    if (!profile) {
+      return res.status(404).json({ 
+        success: false,
+        error: 'Motion profile not found'
+      });
+    }
+    
+    res.json({
+      success: true,
+      profile,
+      message: 'Motion profile updated successfully',
+    });
+  } catch (error) {
+    console.error('[Holiday Profiles] Update profile error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to update motion profile'
+    });
+  }
+});
+
+/**
+ * POST /api/mascot/holiday/decorations
+ * Create a new holiday decoration config
+ * Support staff endpoint - requires auth
+ */
+router.post('/holiday/decorations', requireAuth, async (req, res) => {
+  try {
+    const decorData = req.body;
+    
+    const decor = await storage.createHolidayMascotDecor({
+      holidayKey: decorData.holidayKey,
+      holidayName: decorData.holidayName,
+      motionProfileId: decorData.motionProfileId || null,
+      starDecorations: decorData.starDecorations || {
+        co: { attachments: ['led_wrap'], glowPalette: ['#ff0000', '#00ff00'] },
+        ai: { attachments: ['led_wrap'], glowPalette: ['#ff00ff', '#00ffff'] },
+        nx: { attachments: ['led_wrap'], glowPalette: ['#ffcc00', '#ffffff'] },
+      },
+      globalGlowIntensity: decorData.globalGlowIntensity || 1.0,
+      particleEffects: decorData.particleEffects || null,
+      ambientColors: decorData.ambientColors || [],
+      priority: decorData.priority || 50,
+      isActive: decorData.isActive ?? true,
+    });
+    
+    res.json({
+      success: true,
+      decoration: decor,
+      message: 'Holiday decoration created successfully',
+    });
+  } catch (error) {
+    console.error('[Holiday Decorations] Create decoration error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to create holiday decoration'
+    });
+  }
+});
+
+/**
+ * GET /api/mascot/holiday/history
+ * Get history of directive activations
+ * Support staff endpoint - requires auth
+ */
+router.get('/holiday/history', requireAuth, async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const triggeredBy = req.query.triggeredBy as string | undefined;
+    
+    const history = await storage.getHolidayMascotHistory({ 
+      limit, 
+      triggeredBy 
+    });
+    
+    res.json({
+      success: true,
+      history,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[Holiday History] Get history error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to get history'
     });
   }
 });

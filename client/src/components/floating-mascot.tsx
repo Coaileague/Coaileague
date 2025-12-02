@@ -19,6 +19,29 @@ import { thoughtManager } from '@/lib/mascot/ThoughtManager';
 import { MASCOT_CONFIG, getDeviceSizes } from '@/config/mascotConfig';
 import { TrinityPhysics, MotionPattern, MOTION_PATTERNS } from '@/lib/mascot/TrinityPhysics';
 import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
+import { useQuery } from '@tanstack/react-query';
+
+// Holiday directive response type
+interface HolidayDirectiveResponse {
+  success: boolean;
+  seasonId: string;
+  holidayDecor: {
+    id: string;
+    holidayKey: string;
+    holidayName: string;
+    starDecorations: Record<string, { attachments: string[]; glowPalette: string[]; ledCount?: number; ledSpeed?: number }>;
+    globalGlowIntensity: number;
+    isActive: boolean;
+  } | null;
+  motionProfile: {
+    id: string;
+    name: string;
+    patternType: string;
+    starMotion: Record<string, any>;
+    physicsOverrides: Record<string, number> | null;
+  } | null;
+  latestDirective: any | null;
+}
 
 // Holiday decoration types for Trinity stars
 interface StarDecoration {
@@ -264,10 +287,52 @@ const FloatingMascot = memo(function FloatingMascot({
   // Motion pattern state - AI Brain can switch this
   const [activeMotionPattern, setActiveMotionPattern] = useState<MotionPattern>('TRIAD_SYNCHRONIZED');
   const [showHolidayDecorations, setShowHolidayDecorations] = useState(true);
+  const [holidayLedColors, setHolidayLedColors] = useState<string[][]>([
+    ['#ff0000', '#ffffff', '#00ff00'],
+    ['#ff00ff', '#00ffff', '#ffff00'],
+    ['#ffcc00', '#ff6600', '#ffffff']
+  ]);
   
   // Seasonal theme for holiday decorations
   const { seasonId } = useSeasonalTheme();
   const isChristmas = seasonId === 'christmas' || seasonId === 'winter' || seasonId === 'newYear';
+  
+  // Fetch holiday directives from AI Brain orchestrator
+  const { data: holidayDirective } = useQuery<HolidayDirectiveResponse>({
+    queryKey: ['/api/mascot/holiday/directives'],
+    refetchInterval: 30000,
+    staleTime: 15000,
+    enabled: isChristmas,
+  });
+  
+  // Apply AI Brain directives when received
+  useEffect(() => {
+    if (holidayDirective?.success) {
+      // Apply motion profile if available
+      if (holidayDirective.motionProfile?.patternType) {
+        const pattern = holidayDirective.motionProfile.patternType as MotionPattern;
+        if (MOTION_PATTERNS[pattern]) {
+          setActiveMotionPattern(pattern);
+        }
+      }
+      
+      // Apply decoration settings if available
+      if (holidayDirective.holidayDecor?.starDecorations) {
+        const decor = holidayDirective.holidayDecor.starDecorations;
+        const newColors: string[][] = [];
+        
+        for (const key of ['co', 'ai', 'nx']) {
+          if (decor[key]?.glowPalette) {
+            newColors.push(decor[key].glowPalette);
+          } else {
+            newColors.push(['#ff0000', '#00ff00', '#ffffff']);
+          }
+        }
+        setHolidayLedColors(newColors);
+        setShowHolidayDecorations(holidayDirective.holidayDecor.isActive);
+      }
+    }
+  }, [holidayDirective]);
   
   // Trinity Physics for collision detection - uses tuned defaults from TrinityPhysics.ts
   const physicsRef = useRef<TrinityPhysics | null>(null);
@@ -577,13 +642,9 @@ const FloatingMascot = memo(function FloatingMascot({
         
         // Christmas LED wrap decoration around each star
         if (isChristmas && showHolidayDecorations) {
-          // Each star gets different LED colors for variety
-          const ledColorSets = [
-            ['#ff0000', '#ffffff', '#00ff00'], // Co - red/white/green
-            ['#ff00ff', '#00ffff', '#ffff00'], // AI - magenta/cyan/yellow
-            ['#ffcc00', '#ff6600', '#ffffff']  // NX - gold/orange/white
-          ];
-          drawLEDWrap(ctx, twin.x, twin.y, starSize, t, ledColorSets[index], 6, 0.4 + index * 0.1);
+          // Use dynamic colors from AI Brain holiday directive, or fall back to defaults
+          const colors = holidayLedColors[index] || ['#ff0000', '#00ff00', '#ffffff'];
+          drawLEDWrap(ctx, twin.x, twin.y, starSize, t, colors, 6, 0.4 + index * 0.1);
         }
       });
 
@@ -612,7 +673,7 @@ const FloatingMascot = memo(function FloatingMascot({
         cancelAnimationFrame(animationRef.current);
       }
     };
-  }, [currentMode, mascotSize, isChristmas, showHolidayDecorations]);
+  }, [currentMode, mascotSize, isChristmas, showHolidayDecorations, holidayLedColors]);
 
   useEffect(() => {
     setCurrentMode(mode);

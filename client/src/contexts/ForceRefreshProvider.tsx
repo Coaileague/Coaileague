@@ -102,6 +102,23 @@ export function ForceRefreshProvider({ children }: { children: React.ReactNode }
     }
   }, [queryClient, toast]);
 
+  const handleMascotDirective = useCallback((payload: any) => {
+    console.log('[ForceRefresh] Mascot directive update:', payload);
+    
+    // Immediately update the query cache with the new directive
+    queryClient.setQueryData(['/api/mascot/holiday/directives'], {
+      success: true,
+      seasonId: payload?.seasonId || 'christmas',
+      holidayDecor: payload?.holidayDecor,
+      motionProfile: payload?.motionProfile,
+      latestDirective: null,
+      timestamp: payload?.timestamp || new Date().toISOString(),
+    });
+    
+    // Also trigger a background refetch for consistency
+    queryClient.invalidateQueries({ queryKey: ['/api/mascot/holiday/directives'] });
+  }, [queryClient]);
+
   const connect = useCallback(() => {
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       return;
@@ -137,6 +154,10 @@ export function ForceRefreshProvider({ children }: { children: React.ReactNode }
               });
             }
           }
+          
+          if (data.type === 'mascot.directive.updated') {
+            handleMascotDirective(data.payload);
+          }
         } catch (error) {
           console.error('[ForceRefresh] Parse error:', error);
         }
@@ -154,7 +175,7 @@ export function ForceRefreshProvider({ children }: { children: React.ReactNode }
       console.error('[ForceRefresh] Connection error:', error);
       reconnectTimeoutRef.current = setTimeout(() => connect(), 5000);
     }
-  }, [handleForceRefresh]);
+  }, [handleForceRefresh, handleMascotDirective]);
 
   useEffect(() => {
     connect();
