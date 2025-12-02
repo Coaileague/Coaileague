@@ -101,21 +101,7 @@ function drawLEDWrap(
     ctx.fill();
   }
   
-  // Wire connecting LEDs (subtle)
-  ctx.beginPath();
-  ctx.strokeStyle = 'rgba(0, 100, 0, 0.4)';
-  ctx.lineWidth = 1;
-  for (let i = 0; i <= ledCount; i++) {
-    const angle = (i / ledCount) * Math.PI * 2 + time * speed;
-    const wireX = x + Math.cos(angle) * wrapRadius;
-    const wireY = y + Math.sin(angle) * wrapRadius;
-    if (i === 0) {
-      ctx.moveTo(wireX, wireY);
-    } else {
-      ctx.lineTo(wireX, wireY);
-    }
-  }
-  ctx.stroke();
+  // NO wire connecting LEDs - just the dots themselves
 }
 
 export type MascotMode = 
@@ -533,90 +519,61 @@ const FloatingMascot = memo(function FloatingMascot({
       const brandingColors = ['#a855f7', '#38bdf8', '#38bdf8'];
       
       twins.forEach((twin, index) => {
-        // Compact stars - sized to never overlap at max radius
-        const starSize = mascotSize * 0.08;
-        const innerSize = starSize * 0.55;
-        const rimWidth = starSize * 0.09;
+        // Clean compact stars - NO strokes, NO lines, just fills
+        const starSize = mascotSize * 0.07;
+        const innerSize = starSize * 0.5;
         
-        // Minimal glow halo - tight around each star, no overlap
+        // Subtle glow halo - very tight, no overlap possible
         const haloGradient = ctx.createRadialGradient(
-          twin.x, twin.y, starSize * 0.3,
-          twin.x, twin.y, starSize * 1.2
+          twin.x, twin.y, 0,
+          twin.x, twin.y, starSize * 1.0
         );
-        haloGradient.addColorStop(0, `${twin.color}30`);
-        haloGradient.addColorStop(0.6, `${twin.color}10`);
+        haloGradient.addColorStop(0, `${twin.color}25`);
+        haloGradient.addColorStop(0.7, `${twin.color}08`);
         haloGradient.addColorStop(1, 'transparent');
         
         ctx.beginPath();
-        ctx.arc(twin.x, twin.y, starSize * 1.2, 0, Math.PI * 2);
+        ctx.arc(twin.x, twin.y, starSize * 1.0, 0, Math.PI * 2);
         ctx.fillStyle = haloGradient;
         ctx.fill();
         
-        // Main star body with layered gradient
+        // Main star body - simple solid colored circle
         const bodyGradient = ctx.createRadialGradient(
-          twin.x - starSize * 0.2, twin.y - starSize * 0.2, 0,
+          twin.x - starSize * 0.15, twin.y - starSize * 0.15, 0,
           twin.x, twin.y, starSize
         );
         bodyGradient.addColorStop(0, '#ffffff');
-        bodyGradient.addColorStop(0.3, twin.color);
-        bodyGradient.addColorStop(0.7, twin.color);
-        bodyGradient.addColorStop(1, `${twin.color}80`);
+        bodyGradient.addColorStop(0.25, twin.color);
+        bodyGradient.addColorStop(1, twin.color);
         
         ctx.beginPath();
         ctx.arc(twin.x, twin.y, starSize, 0, Math.PI * 2);
         ctx.fillStyle = bodyGradient;
         ctx.fill();
         
-        // Metallic rim stroke
-        ctx.beginPath();
-        ctx.arc(twin.x, twin.y, starSize - rimWidth * 0.5, 0, Math.PI * 2);
-        ctx.strokeStyle = `${twin.color}90`;
-        ctx.lineWidth = rimWidth;
-        ctx.stroke();
-        
-        // Inner highlight ring
-        ctx.beginPath();
-        ctx.arc(twin.x, twin.y, starSize * 0.75, 0, Math.PI * 2);
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-        ctx.lineWidth = 1;
-        ctx.stroke();
-        
-        // White inner core with soft edge
+        // NO STROKES - just a filled inner core
         const coreGradient = ctx.createRadialGradient(
-          twin.x - innerSize * 0.15, twin.y - innerSize * 0.15, 0,
+          twin.x, twin.y, 0,
           twin.x, twin.y, innerSize
         );
         coreGradient.addColorStop(0, '#ffffff');
-        coreGradient.addColorStop(0.7, '#ffffff');
-        coreGradient.addColorStop(1, 'rgba(255, 255, 255, 0.85)');
+        coreGradient.addColorStop(1, 'rgba(255, 255, 255, 0.8)');
         
         ctx.beginPath();
         ctx.arc(twin.x, twin.y, innerSize, 0, Math.PI * 2);
         ctx.fillStyle = coreGradient;
         ctx.fill();
         
-        // Text label with shadow
-        const fontSize = Math.max(7, mascotSize * 0.12);
+        // Text label - clean without shadow
+        const fontSize = Math.max(6, mascotSize * 0.10);
         ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
-        ctx.shadowBlur = 3;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 1;
-        
         ctx.fillStyle = brandingColors[index];
         ctx.fillText(brandingLabels[index], twin.x, twin.y + 0.5);
         
-        ctx.shadowColor = 'transparent';
-        ctx.shadowBlur = 0;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 0;
-        
         // Christmas LED wrap decoration around each star
         if (isChristmas && showHolidayDecorations) {
-          // Use dynamic colors from AI Brain holiday directive, or fall back to defaults
           const colors = holidayLedColors[index] || ['#ff0000', '#00ff00', '#ffffff'];
           drawLEDWrap(ctx, twin.x, twin.y, starSize, t, colors, 6, 0.4 + index * 0.1);
         }

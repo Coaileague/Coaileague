@@ -80,37 +80,47 @@ export interface AvoidanceConfig {
   };
 }
 
+// Detect mobile device for touch-friendly padding
+const isMobile = typeof window !== 'undefined' && (
+  window.matchMedia?.('(max-width: 768px)').matches || 
+  'ontouchstart' in window ||
+  navigator.maxTouchPoints > 0
+);
+
+// Mobile devices need larger touch target padding for accessibility
+const MOBILE_PADDING_MULTIPLIER = 1.5;
+
 const DEFAULT_CONFIG: AvoidanceConfig = {
-  mascotSize: 80,
-  scanInterval: 200,
-  minSafeDistance: 20,
+  mascotSize: isMobile ? 60 : 80,
+  scanInterval: 150, // Faster scanning for responsive UI avoidance
+  minSafeDistance: isMobile ? 30 : 20, // Larger safe distance on mobile
   preferredEdge: 'any',
   avoidFixedElements: true,
   avoidFocusedElements: true,
   padding: {
-    button: 15,
-    link: 12,
-    input: 20,
-    navigation: 25,
-    modal: 40,
-    default: 15
+    button: isMobile ? 25 : 15, // Touch targets need more space
+    link: isMobile ? 20 : 12,
+    input: isMobile ? 30 : 20,
+    navigation: isMobile ? 35 : 25,
+    modal: isMobile ? 50 : 40,
+    default: isMobile ? 20 : 15
   }
 };
 
 const UI_SELECTORS: Record<UIElementType, string> = {
-  button: 'button, [role="button"], input[type="submit"], input[type="button"]',
-  link: 'a[href], [role="link"]',
-  input: 'input:not([type="hidden"]), textarea, select, [contenteditable="true"]',
-  select: 'select, [role="listbox"], [role="combobox"]',
-  form: 'form',
-  navigation: 'nav, [role="navigation"], header nav, .sidebar-nav',
-  modal: '[role="dialog"], [role="alertdialog"], .modal, .dialog',
+  button: 'button, [role="button"], input[type="submit"], input[type="button"], [data-testid*="button"], [data-testid*="btn"]',
+  link: 'a[href], [role="link"], [data-testid*="link"]',
+  input: 'input:not([type="hidden"]), textarea, select, [contenteditable="true"], [data-testid*="input"]',
+  select: 'select, [role="listbox"], [role="combobox"], [data-testid*="select"]',
+  form: 'form, [data-testid*="form"]',
+  navigation: 'nav, [role="navigation"], header nav, .sidebar-nav, [data-testid*="nav"]',
+  modal: '[role="dialog"], [role="alertdialog"], .modal, .dialog, [data-testid*="modal"], [data-testid*="dialog"]',
   dialog: 'dialog, [role="dialog"]',
-  popover: '[role="menu"], [role="tooltip"], .popover, .dropdown-menu',
-  menu: '[role="menu"], [role="menubar"], .menu',
-  sidebar: 'aside, [role="complementary"], .sidebar',
-  header: 'header, [role="banner"]',
-  footer: 'footer, [role="contentinfo"]',
+  popover: '[role="menu"], [role="tooltip"], .popover, .dropdown-menu, [data-testid*="popover"], [data-testid*="dropdown"]',
+  menu: '[role="menu"], [role="menubar"], .menu, [data-testid*="menu"]',
+  sidebar: 'aside, [role="complementary"], .sidebar, [data-testid*="sidebar"]',
+  header: 'header, [role="banner"], [data-testid*="header"]',
+  footer: 'footer, [role="contentinfo"], [data-testid*="footer"]',
   fixed: '[style*="position: fixed"], [style*="position:fixed"]',
   sticky: '[style*="position: sticky"], [style*="position:sticky"], .sticky',
   focusable: ':focus, :focus-within'
