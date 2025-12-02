@@ -44,7 +44,7 @@ import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
-import { ThoughtBubble } from "@/components/mascot/ThoughtBubble";
+import { MagicFloatingText } from "@/components/mascot/MagicFloatingText";
 import NotFound from "@/pages/not-found";
 // import Landing from "@/pages/landing";
 import Homepage from "@/pages/homepage";
@@ -175,10 +175,7 @@ import MASCOT_CONFIG, {
   shouldHideMascot, 
   getDeviceSizes, 
   getCurrentHoliday, 
-  EMOTE_CONFIGS,
-  getCurrentThoughtBubbleTheme,
-  type ThoughtBubbleTheme,
-  type ThoughtBubbleAnimation 
+  EMOTE_CONFIGS 
 } from "@/config/mascotConfig";
 import { thoughtManager, type Thought } from "@/lib/mascot/ThoughtManager";
 import { useMascotAIIntegration } from "@/hooks/use-mascot-ai";
@@ -186,59 +183,8 @@ import { useMascotObserver } from "@/hooks/use-mascot-observer";
 import { useMascotEmotes, setGlobalEmoteTrigger } from "@/hooks/use-mascot-emotes";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 
-// Animation class mappings for thought bubbles
-const getAnimationClasses = (animation: ThoughtBubbleAnimation, isEntering: boolean): string => {
-  const baseClasses = 'pointer-events-none';
-  const animationMap: Record<ThoughtBubbleAnimation, { enter: string; exit: string }> = {
-    'fade': { 
-      enter: 'animate-in fade-in duration-300', 
-      exit: 'animate-out fade-out duration-200' 
-    },
-    'slide-up': { 
-      enter: 'animate-in fade-in slide-in-from-bottom-2 duration-300', 
-      exit: 'animate-out fade-out slide-out-to-bottom-2 duration-200' 
-    },
-    'slide-down': { 
-      enter: 'animate-in fade-in slide-in-from-top-2 duration-300', 
-      exit: 'animate-out fade-out slide-out-to-top-2 duration-200' 
-    },
-    'pop': { 
-      enter: 'animate-in fade-in zoom-in-95 duration-300', 
-      exit: 'animate-out fade-out zoom-out-95 duration-200' 
-    },
-    'float-in': { 
-      enter: 'animate-in fade-in slide-in-from-bottom-4 duration-400', 
-      exit: 'animate-out fade-out duration-200' 
-    },
-    'sparkle-in': { 
-      enter: 'animate-in fade-in zoom-in-90 duration-500', 
-      exit: 'animate-out fade-out zoom-out-90 duration-300' 
-    },
-    'snowfall': { 
-      enter: 'animate-in fade-in slide-in-from-top-4 duration-600', 
-      exit: 'animate-out fade-out duration-300' 
-    },
-    'hearts-float': { 
-      enter: 'animate-in fade-in slide-in-from-bottom-3 duration-450', 
-      exit: 'animate-out fade-out duration-200' 
-    },
-    'leaves-drift': { 
-      enter: 'animate-in fade-in slide-in-from-right-2 duration-500', 
-      exit: 'animate-out fade-out duration-300' 
-    },
-    'confetti-burst': { 
-      enter: 'animate-in fade-in zoom-in-75 duration-500', 
-      exit: 'animate-out fade-out zoom-out-95 duration-300' 
-    },
-  };
-  
-  const animConfig = animationMap[animation] || animationMap.fade;
-  return `${baseClasses} ${isEntering ? animConfig.enter : animConfig.exit}`;
-};
-
 function MascotRenderer() {
   const { user } = useAuth();
-  // Get workspace ID from user's active workspace (may be undefined for guests)
   const workspaceId = (user as any)?.activeWorkspaceId || (user as any)?.workspaceId;
   useMascotAIIntegration(workspaceId);
   useMascotObserver(true);
@@ -248,17 +194,10 @@ function MascotRenderer() {
   const [currentThought, setCurrentThought] = useState<Thought | null>(null);
   const floatOffsetRef = useRef({ x: 0, y: 0 });
   const dragVelocityRef = useRef(0);
-  const [thoughtBubbleTheme, setThoughtBubbleTheme] = useState<ThoughtBubbleTheme>(getCurrentThoughtBubbleTheme());
   const lastPosRef = useRef({ x: 0, y: 0, time: 0 });
   const floatTimeRef = useRef(0);
   const floatAnimRef = useRef<number | null>(null);
   const mascotContainerRef = useRef<HTMLDivElement>(null);
-  
-  // Update theme based on holiday/season
-  useEffect(() => {
-    const theme = getCurrentThoughtBubbleTheme();
-    setThoughtBubbleTheme(theme);
-  }, [location]);
   
   // Emote system integration
   const { emote, config: emoteConfig, triggerEmote, triggerByContext } = useMascotEmotes();
@@ -527,10 +466,11 @@ function MascotRenderer() {
         />
         
         {currentThought && (
-          <ThoughtBubble
+          <MagicFloatingText
             thought={currentThought}
+            mascotPosition={{ x: position.x, y: position.y }}
+            mascotSize={bubbleSize}
             isMobile={isMobile}
-            position={bubblePlacement.position}
           />
         )}
         
