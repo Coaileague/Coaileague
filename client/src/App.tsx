@@ -162,6 +162,7 @@ import { NotificationsPopover } from "@/components/notifications-popover";
 import { WorkspaceTabsNav } from "@/components/workspace-tabs-nav";
 import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { CoAITwinMascot } from "@/components/coai-twin-mascot";
+import { MascotTaskBox } from "@/components/mascot-task-box";
 import { useMascotMode } from "@/hooks/use-mascot-mode";
 import { useMascotPosition } from "@/hooks/use-mascot-position";
 import { useMascotRoaming } from "@/hooks/use-mascot-roaming";
@@ -299,7 +300,7 @@ function MascotRenderer() {
   return (
     <div 
       ref={mascotContainerRef}
-      className={`fixed select-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+      className={`fixed select-none pointer-events-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       style={{ 
         bottom: effectiveY,
         right: effectiveX,
@@ -311,13 +312,15 @@ function MascotRenderer() {
         transition: isDragging 
           ? 'transform 150ms ease-out' 
           : `all ${MASCOT_CONFIG.animation.transitionDuration}ms ease-out, transform 150ms ease-out`,
+        background: 'transparent',
       }}
       data-testid="mascot-container"
     >
       <div 
-        className="relative group w-full h-full" 
+        className="w-full h-full pointer-events-auto" 
         {...dragHandlers}
         onClick={handleTap}
+        style={{ background: 'transparent' }}
       >
         <CoAITwinMascot 
           mode={currentMode} 
@@ -356,32 +359,12 @@ function MascotRenderer() {
           </div>
         )}
         
-        <div className={`absolute top-1 right-1 flex gap-2 opacity-0 group-hover:opacity-100 transition-all duration-200 pointer-events-auto ${isDragging ? 'hidden' : ''}`}>
-          <button
-            onClick={(e) => { e.stopPropagation(); toggleExpanded(); }}
-            className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 border border-slate-500 flex items-center justify-center hover:from-slate-500 hover:to-slate-700 transition-all shadow-lg hover:shadow-xl"
-            title={isExpanded ? "Minimize" : "Expand"}
-            data-testid="button-mascot-toggle-size"
-          >
-            {isExpanded ? (
-              <Minimize2 className="w-3 h-3 text-slate-100" />
-            ) : (
-              <Maximize2 className="w-3 h-3 text-slate-100" />
-            )}
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); resetPosition(); }}
-            className="w-6 h-6 rounded-full bg-gradient-to-br from-slate-600 to-slate-800 border border-slate-500 flex items-center justify-center hover:from-slate-500 hover:to-slate-700 transition-all shadow-lg hover:shadow-xl"
-            title="Reset position"
-            data-testid="button-mascot-reset-position"
-          >
-            <RotateCcw className="w-3 h-3 text-slate-100" />
-          </button>
-        </div>
-        
-        <div className={`absolute -top-8 left-1/2 -translate-x-1/2 whitespace-nowrap px-2 py-1 rounded text-xs text-slate-300 opacity-0 group-hover:opacity-100 transition-all pointer-events-none font-medium ${isDragging ? 'hidden' : ''}`}>
-          Drag to move
-        </div>
+        {!currentThought && user?.workspaceId && (
+          <MascotTaskBox 
+            mascotRef={mascotContainerRef}
+            workspaceId={user.workspaceId}
+          />
+        )}
       </div>
     </div>
   );
