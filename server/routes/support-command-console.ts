@@ -433,6 +433,360 @@ supportCommandRouter.post('/animation/seasonal', requireSupportRole, async (req:
 });
 
 // ============================================================================
+// MASCOT ORCHESTRATION - HelpAI Mascot Control via Command Console
+// ============================================================================
+
+/**
+ * Mascot control state - in-memory store for real-time orchestration
+ * This is broadcast to all clients via WebSocket for instant updates
+ */
+interface MascotOrchestrationState {
+  mode: 'idle' | 'advising' | 'celebrating' | 'alerting' | 'teaching' | 'business_buddy';
+  persona: 'friendly' | 'professional' | 'playful' | 'serious' | 'motivational';
+  currentEmote: string;
+  currentSpeech: string | null;
+  speechQueue: Array<{ message: string; duration: number; type: string }>;
+  holidayTheme: string | null;
+  businessFocus: 'growth' | 'sales' | 'efficiency' | 'debt' | 'general' | null;
+  animationIntensity: 'subtle' | 'normal' | 'energetic';
+  reactToWhatsNew: boolean;
+  globalEnabled: boolean;
+  lastUpdatedBy: string;
+  lastUpdatedAt: string;
+}
+
+let mascotState: MascotOrchestrationState = {
+  mode: 'idle',
+  persona: 'friendly',
+  currentEmote: 'curious',
+  currentSpeech: null,
+  speechQueue: [],
+  holidayTheme: null,
+  businessFocus: 'general',
+  animationIntensity: 'normal',
+  reactToWhatsNew: true,
+  globalEnabled: true,
+  lastUpdatedBy: 'system',
+  lastUpdatedAt: new Date().toISOString(),
+};
+
+function broadcastMascotState() {
+  broadcastToAllClients({
+    type: 'mascot_orchestration',
+    action: 'state_update',
+    state: mascotState,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * GET /api/support/command/mascot/state
+ * Get current mascot orchestration state
+ */
+supportCommandRouter.get('/mascot/state', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    res.json({
+      success: true,
+      state: mascotState,
+      availableModes: ['idle', 'advising', 'celebrating', 'alerting', 'teaching', 'business_buddy'],
+      availablePersonas: ['friendly', 'professional', 'playful', 'serious', 'motivational'],
+      availableEmotes: ['idle', 'curious', 'happy', 'thinking', 'excited', 'concerned', 'celebrating', 'advising'],
+      availableBusinessFocus: ['growth', 'sales', 'efficiency', 'debt', 'general'],
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/support/command/mascot/control
+ * Update mascot orchestration state - controls behavior, speech, themes
+ */
+supportCommandRouter.post('/mascot/control', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { mode, persona, emote, speech, holidayTheme, businessFocus, animationIntensity, reactToWhatsNew, globalEnabled } = req.body;
+    
+    // Update state with provided values
+    if (mode) mascotState.mode = mode;
+    if (persona) mascotState.persona = persona;
+    if (emote) mascotState.currentEmote = emote;
+    if (speech !== undefined) mascotState.currentSpeech = speech;
+    if (holidayTheme !== undefined) mascotState.holidayTheme = holidayTheme;
+    if (businessFocus) mascotState.businessFocus = businessFocus;
+    if (animationIntensity) mascotState.animationIntensity = animationIntensity;
+    if (typeof reactToWhatsNew === 'boolean') mascotState.reactToWhatsNew = reactToWhatsNew;
+    if (typeof globalEnabled === 'boolean') mascotState.globalEnabled = globalEnabled;
+    
+    mascotState.lastUpdatedBy = req.user?.id || 'support-console';
+    mascotState.lastUpdatedAt = new Date().toISOString();
+    
+    // Broadcast to all clients
+    broadcastMascotState();
+    
+    await logSupportAction(req.user?.id || 'unknown', 'mascot_control', {
+      mode: mascotState.mode,
+      persona: mascotState.persona,
+      emote: mascotState.currentEmote,
+      speech: mascotState.currentSpeech?.substring(0, 50),
+    });
+    
+    res.json({
+      success: true,
+      message: 'Mascot state updated and broadcast to all clients',
+      state: mascotState,
+    });
+  } catch (error: any) {
+    console.error('[SupportConsole] Mascot control error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/support/command/mascot/speak
+ * Queue a speech message for the mascot to display
+ */
+supportCommandRouter.post('/mascot/speak', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { message, duration = 5000, type = 'announcement', immediate = false } = req.body;
+    
+    if (!message) {
+      return res.status(400).json({ error: 'Message is required' });
+    }
+    
+    if (immediate) {
+      mascotState.currentSpeech = message;
+      mascotState.speechQueue = [];
+    } else {
+      mascotState.speechQueue.push({ message, duration, type });
+      if (!mascotState.currentSpeech) {
+        mascotState.currentSpeech = message;
+      }
+    }
+    
+    mascotState.lastUpdatedBy = req.user?.id || 'support-console';
+    mascotState.lastUpdatedAt = new Date().toISOString();
+    
+    broadcastMascotState();
+    
+    await logSupportAction(req.user?.id || 'unknown', 'mascot_speak', {
+      message: message.substring(0, 100),
+      type,
+      immediate,
+    });
+    
+    res.json({
+      success: true,
+      message: 'Speech queued for mascot',
+      currentSpeech: mascotState.currentSpeech,
+      queueLength: mascotState.speechQueue.length,
+    });
+  } catch (error: any) {
+    console.error('[SupportConsole] Mascot speak error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/support/command/mascot/business-advice
+ * Trigger AI-powered business buddy advice generation
+ */
+supportCommandRouter.post('/mascot/business-advice', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { focus, workspaceId, broadcast = true, context } = req.body;
+    const { geminiClient } = await import('../services/ai-brain/providers/geminiClient');
+    
+    const businessFocus = focus || mascotState.businessFocus || 'general';
+    
+    const systemPrompt = `You are HelpAI, the AI Brain for CoAIleague workforce management platform.
+You are a business buddy who helps business owners grow their businesses.
+Current focus area: ${businessFocus.toUpperCase()}
+
+Generate 3 actionable business insights that are:
+- Specific and practical (not generic)
+- Related to workforce management and growth
+- Encouraging and motivational
+- Formatted as bullet points
+
+${context ? `Additional context: ${context}` : ''}
+
+Focus areas:
+- GROWTH: Scaling team, expanding services, market opportunities
+- SALES: Revenue optimization, client acquisition, pricing strategies  
+- EFFICIENCY: Process automation, time savings, cost reduction
+- DEBT: Cash flow management, payment collection, financial planning
+- GENERAL: Overall business health and improvement`;
+    
+    const response = await geminiClient.generate({
+      workspaceId: workspaceId || 'system',
+      userId: req.user?.id || 'support-console',
+      featureKey: 'business_buddy_advice',
+      systemPrompt,
+      userMessage: `Generate ${businessFocus} insights for the business owner`,
+      temperature: 0.8,
+      maxTokens: 500,
+    });
+    
+    const advice = response.text;
+    
+    if (broadcast) {
+      mascotState.mode = 'business_buddy';
+      mascotState.businessFocus = businessFocus;
+      mascotState.currentSpeech = advice.split('\n')[0]?.replace(/^[-*•]\s*/, '') || 'Here are some insights for your business!';
+      mascotState.currentEmote = 'advising';
+      mascotState.lastUpdatedBy = req.user?.id || 'support-console';
+      mascotState.lastUpdatedAt = new Date().toISOString();
+      
+      broadcastMascotState();
+      
+      // Also broadcast as a mascot insight event
+      broadcastToAllClients({
+        type: 'mascot_insight',
+        action: 'business_advice',
+        focus: businessFocus,
+        advice,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    
+    await logSupportAction(req.user?.id || 'unknown', 'mascot_business_advice', {
+      focus: businessFocus,
+      broadcast,
+      adviceLength: advice.length,
+    });
+    
+    res.json({
+      success: true,
+      focus: businessFocus,
+      advice,
+      broadcast,
+    });
+  } catch (error: any) {
+    console.error('[SupportConsole] Business advice error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/support/command/mascot/react-whats-new
+ * Trigger mascot reaction to a What's New announcement
+ */
+supportCommandRouter.post('/mascot/react-whats-new', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { title, description, category, celebrateLevel = 'normal' } = req.body;
+    
+    if (!title) {
+      return res.status(400).json({ error: 'Title is required' });
+    }
+    
+    // Set mascot to celebration mode
+    mascotState.mode = 'celebrating';
+    mascotState.currentEmote = celebrateLevel === 'major' ? 'excited' : 'happy';
+    mascotState.currentSpeech = `Exciting news! ${title}`;
+    mascotState.lastUpdatedBy = req.user?.id || 'support-console';
+    mascotState.lastUpdatedAt = new Date().toISOString();
+    
+    broadcastMascotState();
+    
+    // Broadcast specific What's New reaction
+    broadcastToAllClients({
+      type: 'mascot_whats_new_reaction',
+      action: 'celebrate',
+      title,
+      description,
+      category,
+      celebrateLevel,
+      emote: mascotState.currentEmote,
+      timestamp: new Date().toISOString(),
+    });
+    
+    await logSupportAction(req.user?.id || 'unknown', 'mascot_react_whats_new', {
+      title,
+      category,
+      celebrateLevel,
+    });
+    
+    res.json({
+      success: true,
+      message: 'Mascot is reacting to What\'s New',
+      title,
+      emote: mascotState.currentEmote,
+    });
+  } catch (error: any) {
+    console.error('[SupportConsole] What\'s New reaction error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/support/command/mascot/holiday-theme
+ * Set or clear holiday theme for mascot
+ */
+supportCommandRouter.post('/mascot/holiday-theme', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { theme } = req.body;
+    
+    mascotState.holidayTheme = theme || null;
+    mascotState.lastUpdatedBy = req.user?.id || 'support-console';
+    mascotState.lastUpdatedAt = new Date().toISOString();
+    
+    // Also update animation seasonal theme
+    await animationControlService.executeCommand(
+      { action: 'theme', seasonalTheme: theme || 'default', source: 'support' },
+      req.user?.id || 'support-console'
+    );
+    
+    broadcastMascotState();
+    
+    await logSupportAction(req.user?.id || 'unknown', 'mascot_holiday_theme', { theme });
+    
+    res.json({
+      success: true,
+      message: theme ? `Holiday theme set to ${theme}` : 'Holiday theme cleared',
+      holidayTheme: mascotState.holidayTheme,
+    });
+  } catch (error: any) {
+    console.error('[SupportConsole] Holiday theme error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * POST /api/support/command/mascot/reset
+ * Reset mascot to default state
+ */
+supportCommandRouter.post('/mascot/reset', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    mascotState = {
+      mode: 'idle',
+      persona: 'friendly',
+      currentEmote: 'curious',
+      currentSpeech: null,
+      speechQueue: [],
+      holidayTheme: null,
+      businessFocus: 'general',
+      animationIntensity: 'normal',
+      reactToWhatsNew: true,
+      globalEnabled: true,
+      lastUpdatedBy: req.user?.id || 'support-console',
+      lastUpdatedAt: new Date().toISOString(),
+    };
+    
+    broadcastMascotState();
+    
+    await logSupportAction(req.user?.id || 'unknown', 'mascot_reset', {});
+    
+    res.json({
+      success: true,
+      message: 'Mascot reset to default state',
+      state: mascotState,
+    });
+  } catch (error: any) {
+    console.error('[SupportConsole] Mascot reset error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
 // CODE EDITOR COMMANDS - AI Brain Code Editing via Command Console
 // ============================================================================
 
@@ -811,6 +1165,13 @@ supportCommandRouter.get('/status', requireSupportRole, async (req: Authenticate
         'animation',
         'animation/state',
         'animation/seasonal',
+        'mascot/state',
+        'mascot/control',
+        'mascot/speak',
+        'mascot/business-advice',
+        'mascot/react-whats-new',
+        'mascot/holiday-theme',
+        'mascot/reset',
         'code/stage',
         'code/stage-batch',
         'code/pending',
@@ -823,6 +1184,7 @@ supportCommandRouter.get('/status', requireSupportRole, async (req: Authenticate
         'platform/scan-history',
         'platform/changes',
       ],
+      mascotState,
       userRole: req.platformRole,
       animationState: animationControlService.getState(),
     });
