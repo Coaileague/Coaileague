@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, Home, ArrowLeft, Search, MessageSquare, FileQuestion } from "lucide-react";
 import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
-import { GeminiAgentMascot } from "@/components/gemini-agent-mascot";
+import { CoAITwinMascot } from "@/components/coai-twin-mascot";
 
 export default function NotFound() {
   const [, setLocation] = useLocation();
@@ -19,7 +19,7 @@ export default function NotFound() {
           </div>
 
           <div className="mx-auto mb-4 flex justify-center">
-            <GeminiAgentMascot mode="SEARCHING" variant="mini" size={64} />
+            <CoAITwinMascot mode="SEARCHING" variant="mini" size={64} />
           </div>
 
           <div className="bg-slate-900/50 border border-slate-700/50 rounded-lg p-3 mb-4 mx-auto max-w-sm">

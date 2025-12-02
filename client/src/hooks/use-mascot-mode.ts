@@ -1,5 +1,5 @@
 /**
- * useMascotMode - Maps application state to GeminiAgentMascot modes
+ * useMascotMode - Maps application state to CoAITwinMascot modes
  * 
  * This hook observes the global loading context and other system states
  * to determine the appropriate mascot animation mode.
@@ -16,7 +16,7 @@
  */
 
 import { useMemo } from 'react';
-import type { MascotMode } from '@/components/gemini-agent-mascot';
+import type { MascotMode } from '@/components/coai-twin-mascot';
 
 interface MascotModeOptions {
   isLoading?: boolean;

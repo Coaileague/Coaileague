@@ -572,7 +572,7 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
               width: bubbleSize, 
               height: bubbleSize
             }}
-            data-testid="gemini-mascot-canvas-mini"
+            data-testid="coai-twin-mascot-canvas-mini"
           />
         </div>
         <div 
@@ -615,7 +615,7 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
               width: bubbleSize, 
               height: bubbleSize
             }}
-            data-testid="gemini-mascot-canvas-expanded"
+            data-testid="coai-twin-mascot-canvas-expanded"
           />
         </div>
         <div 
@@ -652,7 +652,7 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
         <canvas
           ref={canvasRef}
           className="w-full h-full touch-none"
-          data-testid="gemini-mascot-canvas"
+          data-testid="coai-twin-mascot-canvas"
         />
       </div>
 
@@ -699,9 +699,9 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
               <option value="ANALYZING">ANALYZING (Neural Net)</option>
               <option value="CODING">CODING (Matrix)</option>
               <option value="LISTENING">LISTENING (Voice)</option>
-              <option value="UPLOADING">UPLOADING (Data Stream)</option>
+              <option value="UPLOADING">UPLOADING (Transfer)</option>
               <option value="SUCCESS">SUCCESS (Complete)</option>
-              <option value="ERROR">ERROR (System Fault)</option>
+              <option value="ERROR">ERROR (Alert)</option>
             </select>
           </div>
         )}

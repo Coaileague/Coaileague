@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ServerCrash, Home, RefreshCw, MessageSquare } from "lucide-react";
 import { useState } from "react";
 import { CoAIleagueStaticLogo } from "@/components/coaileague-static-logo";
-import { GeminiAgentMascot } from "@/components/gemini-agent-mascot";
+import { CoAITwinMascot } from "@/components/coai-twin-mascot";
 
 export default function Error500() {
   const [, setLocation] = useLocation();
@@ -36,7 +36,7 @@ export default function Error500() {
           </div>
 
           <div className="mx-auto mb-4 flex justify-center">
-            <GeminiAgentMascot mode="ERROR" variant="mini" size={64} />
+            <CoAITwinMascot mode="ERROR" variant="mini" size={64} />
           </div>
 
           <div className="bg-red-950/30 border border-red-800/30 rounded-lg p-3 mb-4 mx-auto max-w-sm">

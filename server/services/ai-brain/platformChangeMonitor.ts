@@ -44,7 +44,7 @@ class PlatformChangeMonitorService {
     'shared/schema.ts',
     'server/routes.ts',
     'client/src/App.tsx',
-    'client/src/components/gemini-agent-mascot.tsx',
+    'client/src/components/coai-twin-mascot.tsx',
     'client/src/hooks/use-mascot-position.ts',
     'client/src/hooks/use-mascot-mode.ts',
     'package.json',

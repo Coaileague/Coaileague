@@ -1,11 +1,11 @@
 /**
- * Mascot Demo Page - Interactive showcase of the GeminiAgentMascot
+ * Mascot Demo Page - Interactive showcase of the CoAITwinMascot
  * 
  * This page demonstrates all mascot modes and allows interactive testing.
  */
 
 import { useState, useCallback, useEffect } from 'react';
-import { GeminiAgentMascot, MascotMode, MODE_COLORS, MODE_LABELS } from '@/components/gemini-agent-mascot';
+import { CoAITwinMascot, MascotMode, MODE_COLORS, MODE_LABELS } from '@/components/coai-twin-mascot';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -147,7 +147,7 @@ export default function MascotDemoPage() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="h-[400px] sm:h-[500px] rounded-b-lg overflow-hidden">
-                <GeminiAgentMascot
+                <CoAITwinMascot
                   mode={currentMode}
                   onModeChange={handleModeChange}
                   showControls={true}
@@ -224,12 +224,12 @@ export default function MascotDemoPage() {
           <CardHeader>
             <CardTitle>Integration Guide</CardTitle>
             <CardDescription>
-              How to use the GeminiAgentMascot in your components
+              How to use the CoAITwinMascot in your components
             </CardDescription>
           </CardHeader>
           <CardContent>
             <pre className="bg-muted p-4 rounded-lg overflow-x-auto text-sm">
-              <code>{`import { GeminiAgentMascot } from '@/components/gemini-agent-mascot';
+              <code>{`import { CoAITwinMascot } from '@/components/coai-twin-mascot';
 import { useMascotMode } from '@/hooks/use-mascot-mode';
 
 function MyComponent() {
@@ -240,7 +240,7 @@ function MyComponent() {
   });
 
   return (
-    <GeminiAgentMascot 
+    <CoAITwinMascot 
       mode={mode}
       className="h-64 w-64"
     />

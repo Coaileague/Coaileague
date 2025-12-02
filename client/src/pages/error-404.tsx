@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Home, ArrowLeft, Search, FileQuestion, MessageSquare } from "lucide-react";
 import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
-import { GeminiAgentMascot } from "@/components/gemini-agent-mascot";
+import { CoAITwinMascot } from "@/components/coai-twin-mascot";
 
 export default function Error404() {
   const [, setLocation] = useLocation();
@@ -27,7 +27,7 @@ export default function Error404() {
           </div>
 
           <div className="mx-auto mb-4 flex justify-center">
-            <GeminiAgentMascot mode="SEARCHING" variant="mini" size={64} />
+            <CoAITwinMascot mode="SEARCHING" variant="mini" size={64} />
           </div>
 
           <div className="bg-slate-900/50 border border-slate-700/50 rounded-lg p-3 mb-4 mx-auto max-w-sm">

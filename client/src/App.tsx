@@ -161,7 +161,7 @@ import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { NotificationsPopover } from "@/components/notifications-popover";
 import { WorkspaceTabsNav } from "@/components/workspace-tabs-nav";
 import { FloatingSupportChat } from "@/components/floating-support-chat";
-import { GeminiAgentMascot } from "@/components/gemini-agent-mascot";
+import { CoAITwinMascot } from "@/components/coai-twin-mascot";
 import { useMascotMode } from "@/hooks/use-mascot-mode";
 import { useMascotPosition } from "@/hooks/use-mascot-position";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
@@ -193,7 +193,7 @@ function MascotRenderer() {
         className="relative group"
         {...dragHandlers}
       >
-        <GeminiAgentMascot 
+        <CoAITwinMascot 
           mode={currentMode} 
           variant={isExpanded ? 'expanded' : 'mini'}
           size={bubbleSize}
