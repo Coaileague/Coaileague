@@ -377,8 +377,8 @@ const FloatingMascot = memo(function FloatingMascot({
       timeRef.current += 0.02;
       const t = timeRef.current;
       const center = mascotSize / 2;
-      // WIDER orbit radius for clear visual separation between stars
-      const radius = mascotSize * 0.38;
+      // MAXIMUM orbit radius for clear visual separation between stars - force far apart
+      const radius = mascotSize * 0.48;
 
       ctx.clearRect(0, 0, mascotSize, mascotSize);
 
@@ -427,43 +427,47 @@ const FloatingMascot = memo(function FloatingMascot({
         
         case 'SEARCHING':
           twins[0].angle += 0.02;
-          x1 = center;
-          y1 = center;
-          x2 = center + Math.cos(twins[0].angle) * radius;
-          y2 = center + Math.sin(twins[0].angle) * radius;
-          x3 = center + Math.cos(twins[0].angle + Math.PI) * radius * 0.5;
-          y3 = center + Math.sin(twins[0].angle + Math.PI) * radius * 0.5;
+          // Maintain full separation - all 3 stars on circle
+          x1 = center + Math.cos(twins[0].angle) * radius;
+          y1 = center + Math.sin(twins[0].angle) * radius;
+          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius;
+          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius;
+          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius;
+          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius;
           break;
         
         case 'CODING':
           const gridStep = t * 2;
-          x1 = center + (Math.floor(gridStep) % 3 - 1) * (radius * 0.5);
-          y1 = center + (Math.floor(gridStep / 3) % 3 - 1) * (radius * 0.5);
-          x2 = center - (Math.floor(gridStep) % 3 - 1) * (radius * 0.5);
-          y2 = center - (Math.floor(gridStep / 3) % 3 - 1) * (radius * 0.5);
-          x3 = center + (Math.floor(gridStep + 1) % 3 - 1) * (radius * 0.5);
-          y3 = center + (Math.floor((gridStep + 1) / 3) % 3 - 1) * (radius * 0.5);
+          // Maintain full triangle separation with grid pattern animation
+          x1 = center + Math.cos(gridStep) * radius + (Math.floor(gridStep) % 2) * 5;
+          y1 = center + Math.sin(gridStep) * radius;
+          x2 = center + Math.cos(gridStep + trinityOffset) * radius - (Math.floor(gridStep) % 2) * 5;
+          y2 = center + Math.sin(gridStep + trinityOffset) * radius;
+          x3 = center + Math.cos(gridStep + trinityOffset * 2) * radius;
+          y3 = center + Math.sin(gridStep + trinityOffset * 2) * radius;
           break;
         
         case 'LISTENING':
-          const wave = Math.sin(t * 4) * radius * 0.3;
-          x1 = center - radius * 0.4;
-          y1 = center + wave;
-          x2 = center;
-          y2 = center - wave;
-          x3 = center + radius * 0.4;
-          y3 = center + wave * 0.5;
+          const wave = Math.sin(t * 4) * radius * 0.2;
+          // Full separation with wave oscillation
+          x1 = center + Math.cos(twins[0].angle) * radius + wave;
+          y1 = center + Math.sin(twins[0].angle) * radius;
+          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius - wave * 0.5;
+          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius;
+          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius + wave * 0.3;
+          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius;
+          twins[0].angle += 0.01;
           break;
         
         case 'UPLOADING':
-          const spiral = t * 2;
-          const spiralR = radius * 0.5 * (1 - (spiral % 1));
-          x1 = center + Math.cos(spiral * 3) * spiralR;
-          y1 = center + Math.sin(spiral * 3) * spiralR - (spiral % 1) * radius;
-          x2 = center + Math.cos(spiral * 3 + trinityOffset) * spiralR;
-          y2 = center + Math.sin(spiral * 3 + trinityOffset) * spiralR - (spiral % 1) * radius;
-          x3 = center + Math.cos(spiral * 3 + trinityOffset * 2) * spiralR;
-          y3 = center + Math.sin(spiral * 3 + trinityOffset * 2) * spiralR - (spiral % 1) * radius;
+          const uploadAngle = t * 3;
+          // Full separation with upward pulse animation
+          x1 = center + Math.cos(uploadAngle) * radius;
+          y1 = center + Math.sin(uploadAngle) * radius - Math.abs(Math.sin(t * 5)) * radius * 0.2;
+          x2 = center + Math.cos(uploadAngle + trinityOffset) * radius;
+          y2 = center + Math.sin(uploadAngle + trinityOffset) * radius - Math.abs(Math.sin(t * 5 + 1)) * radius * 0.2;
+          x3 = center + Math.cos(uploadAngle + trinityOffset * 2) * radius;
+          y3 = center + Math.sin(uploadAngle + trinityOffset * 2) * radius - Math.abs(Math.sin(t * 5 + 2)) * radius * 0.2;
           break;
         
         case 'SUCCESS':
@@ -478,13 +482,15 @@ const FloatingMascot = memo(function FloatingMascot({
           break;
         
         case 'ERROR':
-          const shake = Math.sin(t * 20) * radius * 0.1;
-          x1 = center - radius * 0.3 + shake;
-          y1 = center + shake * 0.5;
-          x2 = center + radius * 0.3 + shake;
-          y2 = center - shake * 0.5;
-          x3 = center + shake;
-          y3 = center + radius * 0.3 - shake * 0.3;
+          const shake = Math.sin(t * 20) * radius * 0.08;
+          // Full separation maintained with shake effect
+          x1 = center + Math.cos(twins[0].angle) * radius + shake;
+          y1 = center + Math.sin(twins[0].angle) * radius + shake * 0.5;
+          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius - shake;
+          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius - shake * 0.5;
+          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius + shake * 0.7;
+          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius - shake * 0.3;
+          twins[0].angle += 0.05;
           break;
         
         default:
@@ -551,8 +557,8 @@ const FloatingMascot = memo(function FloatingMascot({
       const brandingColors = ['#a855f7', '#38bdf8', '#38bdf8'];
       
       twins.forEach((twin, index) => {
-        // Smaller stars for clearer separation and no overlap
-        const starSize = mascotSize * 0.13;
+        // Even smaller stars for absolutely no overlap - pure separation
+        const starSize = mascotSize * 0.09;
         const innerSize = starSize * 0.55;
         const rimWidth = starSize * 0.09;
         
