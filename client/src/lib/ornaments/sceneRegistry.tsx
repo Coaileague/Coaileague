@@ -99,6 +99,10 @@ function getPalette(seasonId: SeasonId): Palette {
   };
 }
 
+// Mobile viewport threshold for reduced density
+const MOBILE_THRESHOLD = 768;
+const TABLET_THRESHOLD = 1024;
+
 // Corner cluster scene - ornaments in corners of the viewport
 const CornerClusterScene = memo(function CornerClusterScene() {
   const { seasonId } = useSeasonalTheme();
@@ -112,12 +116,19 @@ const CornerClusterScene = memo(function CornerClusterScene() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
+  // Skip dense ornaments on mobile for clean polished look
+  const isMobile = windowSize.w < MOBILE_THRESHOLD;
+  const isTablet = windowSize.w < TABLET_THRESHOLD;
+  
   const ornaments = useMemo(() => {
-    if (!enabled || seasonId === 'default') return [];
+    // Skip entirely on mobile - too cluttered
+    if (!enabled || seasonId === 'default' || isMobile) return [];
     
     const palette = getPalette(seasonId);
-    const perCorner = density === 'dense' ? 5 : density === 'medium' ? 3 : 2;
-    const cornerSize = 120;
+    // Reduce count on tablet, normal on desktop
+    const baseDensity = isTablet ? Math.max(1, Math.floor((density === 'dense' ? 5 : density === 'medium' ? 3 : 2) * 0.5)) : (density === 'dense' ? 3 : density === 'medium' ? 2 : 1);
+    const perCorner = baseDensity;
+    const cornerSize = isTablet ? 80 : 100;
     const result: Array<{
       id: string;
       type: 'ball' | 'star';
@@ -152,7 +163,7 @@ const CornerClusterScene = memo(function CornerClusterScene() {
           x: corner.baseX + Math.random() * (cornerSize - 40),
           y: corner.baseY + Math.random() * (cornerSize - 40),
           color: colors[Math.floor(Math.random() * colors.length)],
-          size: 28 + Math.random() * 18,
+          size: isTablet ? 20 + Math.random() * 12 : 24 + Math.random() * 14,
           metallic: Math.random() > 0.5,
           pattern: patterns[Math.floor(Math.random() * patterns.length)],
           animation: animations[Math.floor(Math.random() * animations.length)],
@@ -162,7 +173,7 @@ const CornerClusterScene = memo(function CornerClusterScene() {
     });
     
     return result;
-  }, [enabled, seasonId, density, windowSize]);
+  }, [enabled, seasonId, density, windowSize, isMobile, isTablet]);
   
   if (!enabled || ornaments.length === 0) return null;
   
@@ -217,11 +228,14 @@ const HeaderGarlandScene = memo(function HeaderGarlandScene() {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
   
+  // Skip header garland on mobile for clean look
+  const isMobile = windowWidth < MOBILE_THRESHOLD;
   const isChristmas = seasonId === 'christmas';
-  if (!isChristmas) return null;
+  if (!isChristmas || isMobile) return null;
   
   const palette = getPalette(seasonId);
-  const lightCount = Math.ceil(windowWidth / 50);
+  // Reduce light density for polished look
+  const lightCount = Math.ceil(windowWidth / 80);
   
   return (
     <div
@@ -244,6 +258,7 @@ const HeaderGarlandScene = memo(function HeaderGarlandScene() {
 const SnowOverlayScene = memo(function SnowOverlayScene() {
   const { seasonId } = useSeasonalTheme();
   const { type: effectType } = useSeasonalEffect();
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
   const [flakes, setFlakes] = useState<Array<{
     id: number;
     x: number;
@@ -256,6 +271,15 @@ const SnowOverlayScene = memo(function SnowOverlayScene() {
     rotationSpeed: number;
   }>>([]);
   
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  // Reduce snow on mobile for polished look
+  const isMobile = windowWidth < MOBILE_THRESHOLD;
+  const isTablet = windowWidth < TABLET_THRESHOLD;
   const isWinter = seasonId === 'winter' || seasonId === 'christmas' || seasonId === 'newYear';
   const showSnow = effectType === 'snowfall' || effectType === 'snowPiles';
   
@@ -267,18 +291,21 @@ const SnowOverlayScene = memo(function SnowOverlayScene() {
     
     injectKeyframes();
     
-    // Create initial snowflakes
-    const complexities: ('simple' | 'medium' | 'complex')[] = ['simple', 'medium', 'complex'];
-    const initialFlakes = Array.from({ length: 25 }, (_, i) => ({
+    // Reduce snowflake count and size for mobile/tablet
+    const flakeCount = isMobile ? 6 : isTablet ? 12 : 18;
+    const baseSize = isMobile ? 8 : isTablet ? 10 : 12;
+    const sizeRange = isMobile ? 12 : isTablet ? 16 : 20;
+    const complexities: ('simple' | 'medium' | 'complex')[] = isMobile ? ['simple'] : ['simple', 'medium', 'complex'];
+    const initialFlakes = Array.from({ length: flakeCount }, (_, i) => ({
       id: i,
       x: Math.random() * (typeof window !== 'undefined' ? window.innerWidth : 1200),
       y: Math.random() * (typeof window !== 'undefined' ? window.innerHeight : 800),
-      size: 15 + Math.random() * 25,
-      speed: 0.3 + Math.random() * 0.7,
+      size: baseSize + Math.random() * sizeRange,
+      speed: 0.2 + Math.random() * 0.5,
       complexity: complexities[Math.floor(Math.random() * complexities.length)],
-      opacity: 0.5 + Math.random() * 0.4,
+      opacity: 0.4 + Math.random() * 0.3,
       rotation: Math.random() * 360,
-      rotationSpeed: (Math.random() - 0.5) * 2,
+      rotationSpeed: (Math.random() - 0.5) * 1.5,
     }));
     setFlakes(initialFlakes);
     
@@ -286,7 +313,7 @@ const SnowOverlayScene = memo(function SnowOverlayScene() {
     const animate = () => {
       setFlakes(prev => prev.map(flake => {
         let newY = flake.y + flake.speed;
-        let newX = flake.x + Math.sin(flake.y * 0.02) * 0.5;
+        let newX = flake.x + Math.sin(flake.y * 0.02) * 0.3;
         let newRotation = flake.rotation + flake.rotationSpeed;
         
         if (newY > (typeof window !== 'undefined' ? window.innerHeight : 800) + 50) {
@@ -301,7 +328,7 @@ const SnowOverlayScene = memo(function SnowOverlayScene() {
     
     animFrame = requestAnimationFrame(animate);
     return () => cancelAnimationFrame(animFrame);
-  }, [isWinter, showSnow]);
+  }, [isWinter, showSnow, isMobile, isTablet]);
   
   if (!isWinter || !showSnow || flakes.length === 0) return null;
   

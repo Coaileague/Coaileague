@@ -417,34 +417,75 @@ const FloatingMascot = memo(function FloatingMascot({
       const brandingColors = ['#a855f7', '#38bdf8', '#38bdf8'];
       
       twins.forEach((twin, index) => {
-        const starSize = mascotSize * 0.18;
-        const innerSize = starSize * 0.55;
+        const starSize = mascotSize * 0.20;
+        const innerSize = starSize * 0.6;
+        const rimWidth = starSize * 0.08;
         
-        const twinGradient = ctx.createRadialGradient(
-          twin.x, twin.y, 0,
+        // Outer glow halo
+        const haloGradient = ctx.createRadialGradient(
+          twin.x, twin.y, starSize * 0.5,
+          twin.x, twin.y, starSize * 1.8
+        );
+        haloGradient.addColorStop(0, `${twin.color}40`);
+        haloGradient.addColorStop(0.5, `${twin.color}15`);
+        haloGradient.addColorStop(1, 'transparent');
+        
+        ctx.beginPath();
+        ctx.arc(twin.x, twin.y, starSize * 1.8, 0, Math.PI * 2);
+        ctx.fillStyle = haloGradient;
+        ctx.fill();
+        
+        // Main star body with layered gradient
+        const bodyGradient = ctx.createRadialGradient(
+          twin.x - starSize * 0.2, twin.y - starSize * 0.2, 0,
           twin.x, twin.y, starSize
         );
-        twinGradient.addColorStop(0, twin.color);
-        twinGradient.addColorStop(0.6, twin.color);
-        twinGradient.addColorStop(1, 'transparent');
+        bodyGradient.addColorStop(0, '#ffffff');
+        bodyGradient.addColorStop(0.3, twin.color);
+        bodyGradient.addColorStop(0.7, twin.color);
+        bodyGradient.addColorStop(1, `${twin.color}80`);
         
         ctx.beginPath();
         ctx.arc(twin.x, twin.y, starSize, 0, Math.PI * 2);
-        ctx.fillStyle = twinGradient;
+        ctx.fillStyle = bodyGradient;
         ctx.fill();
+        
+        // Metallic rim stroke
+        ctx.beginPath();
+        ctx.arc(twin.x, twin.y, starSize - rimWidth * 0.5, 0, Math.PI * 2);
+        ctx.strokeStyle = `${twin.color}90`;
+        ctx.lineWidth = rimWidth;
+        ctx.stroke();
+        
+        // Inner highlight ring
+        ctx.beginPath();
+        ctx.arc(twin.x, twin.y, starSize * 0.75, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        
+        // White inner core with soft edge
+        const coreGradient = ctx.createRadialGradient(
+          twin.x - innerSize * 0.15, twin.y - innerSize * 0.15, 0,
+          twin.x, twin.y, innerSize
+        );
+        coreGradient.addColorStop(0, '#ffffff');
+        coreGradient.addColorStop(0.7, '#ffffff');
+        coreGradient.addColorStop(1, 'rgba(255, 255, 255, 0.85)');
         
         ctx.beginPath();
         ctx.arc(twin.x, twin.y, innerSize, 0, Math.PI * 2);
-        ctx.fillStyle = '#ffffff';
+        ctx.fillStyle = coreGradient;
         ctx.fill();
         
-        const fontSize = Math.max(6, mascotSize * 0.11);
+        // Text label with shadow
+        const fontSize = Math.max(7, mascotSize * 0.12);
         ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-        ctx.shadowBlur = 2;
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+        ctx.shadowBlur = 3;
         ctx.shadowOffsetX = 0;
         ctx.shadowOffsetY = 1;
         
@@ -764,33 +805,37 @@ const FloatingMascot = memo(function FloatingMascot({
           <motion.div
             className="fixed pointer-events-none"
             style={{
-              left: springX.get() + mascotSize + 8,
-              top: springY.get() - 10,
+              left: springX.get() + mascotSize + 10,
+              top: springY.get() - 8,
               zIndex: MASCOT_CONFIG.zIndex + 1,
-              maxWidth: 200
+              maxWidth: 180
             }}
-            initial={{ opacity: 0, scale: 0.8, x: -10 }}
+            initial={{ opacity: 0, scale: 0.85, x: -8 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
-            exit={{ opacity: 0, scale: 0.8, x: -10 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 25 }}
+            exit={{ opacity: 0, scale: 0.85, x: -8 }}
+            transition={{ type: 'spring', stiffness: 350, damping: 28 }}
           >
             <div
-              className="relative px-3 py-2 rounded-xl text-xs font-medium"
+              className="relative px-3 py-2 rounded-2xl text-[11px] font-medium leading-relaxed"
               style={{
-                background: 'rgba(255, 255, 255, 0.08)',
-                backdropFilter: 'blur(6px)',
-                WebkitBackdropFilter: 'blur(6px)',
-                border: '1px solid rgba(255, 255, 255, 0.1)',
+                background: 'rgba(255, 255, 255, 0.10)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                border: '1px solid rgba(255, 255, 255, 0.15)',
+                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 16px rgba(0, 0, 0, 0.15)',
                 color: '#ffffff',
-                textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7), 0 2px 12px rgba(0,0,0,0.5)'
+                textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 6px rgba(0,0,0,0.6)'
               }}
             >
               <div
-                className="absolute -left-2 top-4 w-0 h-0"
+                className="absolute -left-[7px] top-3"
                 style={{
-                  borderTop: '6px solid transparent',
-                  borderBottom: '6px solid transparent',
-                  borderRight: '8px solid rgba(255, 255, 255, 0.08)'
+                  width: 0,
+                  height: 0,
+                  borderTop: '5px solid transparent',
+                  borderBottom: '5px solid transparent',
+                  borderRight: '7px solid rgba(255, 255, 255, 0.10)',
+                  filter: 'drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.15))'
                 }}
               />
               <AnimatedText text={currentEmote?.expression || currentThought} />
