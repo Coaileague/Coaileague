@@ -26,6 +26,8 @@
 import { useEffect, useRef, useCallback, memo } from 'react';
 import { statusEmoteEffects, StatusEmoteEffects, STATUS_COLORS } from '@/lib/mascot/StatusEmoteEffects';
 import { emoteMorphingEngine, EmoteMorphingEngine, EmoteName, EmotePhase, EMOTE_FORMATIONS } from '@/lib/mascot/EmoteMorphingEngine';
+import { EmoteTransitionRenderer } from '@/lib/mascot/EmoteTransitionRenderer';
+import { GrabSlingMechanics, GrabEvent, SlingResult } from '@/lib/mascot/GrabSlingMechanics';
 
 export type MascotMode = 
   | 'IDLE' 
@@ -164,11 +166,21 @@ class CoAITwinEngine {
   private animationFrameId: number | null = null;
   
   private morphEngine: EmoteMorphingEngine;
+  private transitionRenderer: EmoteTransitionRenderer;
+  private grabMechanics: GrabSlingMechanics;
   private lastFrameTime: number = 0;
   private onEmoteComplete?: (emote: EmoteName) => void;
   private emoteQueue: EmoteName[] = [];
   private isTransitioningToIdle: boolean = false;
   private idleTransitionProgress: number = 0;
+  
+  // Grab/sling state
+  private isBeingDragged: boolean = false;
+  private dragOffsetX: number = 0;
+  private dragOffsetY: number = 0;
+  private slingVelocityX: number = 0;
+  private slingVelocityY: number = 0;
+  private previousEmote: string = 'neutral';
 
   constructor(container: HTMLElement, canvas: HTMLCanvasElement) {
     this.container = container;
@@ -190,10 +202,67 @@ class CoAITwinEngine {
       }
     });
     
+    // Initialize transition renderer for polished emote transitions
+    this.transitionRenderer = new EmoteTransitionRenderer();
+    
+    // Initialize grab/sling mechanics with 10% catch chance
+    this.grabMechanics = new GrabSlingMechanics({
+      catchChance: 0.10,  // 10% chance to catch
+      grabRadius: 80,     // Generous grab area
+      releaseBoost: 1.8,  // Strong sling effect
+      maxSlingSpeed: 30   // Higher max for dramatic flings
+    });
+    
+    // Set up grab event listeners
+    this.grabMechanics.on('grab_success', (event) => this.handleGrabSuccess(event));
+    this.grabMechanics.on('grab_fail', (event) => this.handleGrabFail(event));
+    this.grabMechanics.on('sling_release', (event) => this.handleSlingRelease(event));
+    this.grabMechanics.on('gentle_release', (event) => this.handleGentleRelease(event));
+    
     this.lastFrameTime = performance.now();
     
     this.resize();
     this.setupTouch();
+  }
+  
+  private handleGrabSuccess(event: GrabEvent): void {
+    this.isBeingDragged = true;
+    this.triggerEmote('surprised');
+    this.transitionRenderer.spawnCatchEffect(event.x - this.state.w / 2, event.y - this.state.h / 2);
+    this.spawnShockwave('#22c55e');
+    this.state.shake = 3;
+  }
+  
+  private handleGrabFail(event: GrabEvent): void {
+    this.transitionRenderer.spawnMissEffect(event.x - this.state.w / 2, event.y - this.state.h / 2);
+    // Brief startle effect
+    this.state.shake = 1.5;
+  }
+  
+  private handleSlingRelease(event: GrabEvent): void {
+    this.isBeingDragged = false;
+    this.slingVelocityX = event.velocityX || 0;
+    this.slingVelocityY = event.velocityY || 0;
+    this.triggerEmote('excited');
+    
+    // Spawn sling visual effect
+    const cx = this.state.w / 2;
+    const cy = this.state.h / 2;
+    this.transitionRenderer.spawnSlingEffect(
+      event.x - cx, 
+      event.y - cy, 
+      this.slingVelocityX, 
+      this.slingVelocityY
+    );
+    this.spawnShockwave('#fbbf24');
+    this.state.shake = 5;
+  }
+  
+  private handleGentleRelease(event: GrabEvent): void {
+    this.isBeingDragged = false;
+    this.slingVelocityX = event.velocityX || 0;
+    this.slingVelocityY = event.velocityY || 0;
+    this.triggerEmote('happy');
   }
   
   private handleEmoteComplete(emote: EmoteName): void {
@@ -231,6 +300,13 @@ class CoAITwinEngine {
         this.emoteQueue.push(emote);
       }
       return;
+    }
+    
+    // Start transition visual effects
+    const currentEmote = this.morphEngine.getCurrentEmote();
+    if (currentEmote !== emote) {
+      this.transitionRenderer.startTransition(currentEmote, emote);
+      this.previousEmote = currentEmote;
     }
     
     this.isTransitioningToIdle = false;
@@ -276,29 +352,108 @@ class CoAITwinEngine {
   }
 
   private setupTouch() {
-    const handleTouch = (e: TouchEvent | MouseEvent) => {
+    const getPointerPos = (e: TouchEvent | MouseEvent): { x: number; y: number } => {
       const rect = this.canvas.getBoundingClientRect();
-      const touch = 'touches' in e ? e.touches[0] : e;
-      if (touch) {
-        this.state.touchX = (touch.clientX - rect.left) * (this.canvas.width / rect.width);
-        this.state.touchY = (touch.clientY - rect.top) * (this.canvas.height / rect.height);
-        this.state.isTouching = true;
+      const dpr = Math.min(window.devicePixelRatio, 2);
+      let clientX: number, clientY: number;
+      
+      if ('touches' in e && e.touches.length > 0) {
+        clientX = e.touches[0].clientX;
+        clientY = e.touches[0].clientY;
+      } else if ('changedTouches' in e && e.changedTouches.length > 0) {
+        clientX = e.changedTouches[0].clientX;
+        clientY = e.changedTouches[0].clientY;
+      } else if ('clientX' in e) {
+        clientX = e.clientX;
+        clientY = e.clientY;
+      } else {
+        return { x: 0, y: 0 };
+      }
+      
+      return {
+        x: (clientX - rect.left) * dpr,
+        y: (clientY - rect.top) * dpr
+      };
+    };
+    
+    const getMascotCenter = (): { x: number; y: number } => {
+      const dpr = Math.min(window.devicePixelRatio, 2);
+      return {
+        x: (this.state.w / 2) * dpr,
+        y: (this.state.h / 2) * dpr
+      };
+    };
+    
+    const handleTouchStart = (e: TouchEvent | MouseEvent) => {
+      const pos = getPointerPos(e);
+      const mascotCenter = getMascotCenter();
+      
+      // Try to grab the mascot (10% chance)
+      const caught = this.grabMechanics.attemptGrab(pos.x, pos.y, mascotCenter.x, mascotCenter.y);
+      
+      // Always update touch state for visual feedback
+      this.state.touchX = pos.x;
+      this.state.touchY = pos.y;
+      this.state.isTouching = true;
+      
+      if (caught) {
+        this.isBeingDragged = true;
       }
     };
     
-    const endTouch = () => {
+    const handleTouchMove = (e: TouchEvent | MouseEvent) => {
+      const pos = getPointerPos(e);
+      
+      this.state.touchX = pos.x;
+      this.state.touchY = pos.y;
+      
+      if (this.grabMechanics.isGrabbing()) {
+        this.grabMechanics.updateDrag(pos.x, pos.y);
+        
+        // Update drag offset for visual
+        const mascotCenter = getMascotCenter();
+        this.dragOffsetX = (pos.x - mascotCenter.x) * 0.5;
+        this.dragOffsetY = (pos.y - mascotCenter.y) * 0.5;
+        
+        // Add trail particles during drag
+        this.transitionRenderer.addTrailPoint(
+          this.dragOffsetX, 
+          this.dragOffsetY, 
+          Math.floor(Math.random() * 3)
+        );
+      }
+    };
+    
+    const handleTouchEnd = (e: TouchEvent | MouseEvent) => {
       this.state.isTouching = false;
+      
+      if (this.grabMechanics.isGrabbing()) {
+        const result = this.grabMechanics.release();
+        
+        if (result.caught) {
+          this.slingVelocityX = result.velocityX;
+          this.slingVelocityY = result.velocityY;
+        }
+      }
+      
+      this.isBeingDragged = false;
     };
 
-    this.canvas.addEventListener('touchstart', handleTouch as EventListener, { passive: true });
-    this.canvas.addEventListener('touchmove', handleTouch as EventListener, { passive: true });
-    this.canvas.addEventListener('touchend', endTouch);
-    this.canvas.addEventListener('mousedown', handleTouch as EventListener);
+    // Touch events
+    this.canvas.addEventListener('touchstart', handleTouchStart as EventListener, { passive: true });
+    this.canvas.addEventListener('touchmove', handleTouchMove as EventListener, { passive: true });
+    this.canvas.addEventListener('touchend', handleTouchEnd as EventListener);
+    this.canvas.addEventListener('touchcancel', handleTouchEnd as EventListener);
+    
+    // Mouse events
+    this.canvas.addEventListener('mousedown', handleTouchStart as EventListener);
     this.canvas.addEventListener('mousemove', (e: MouseEvent) => {
-      if (e.buttons === 1) handleTouch(e);
+      if (e.buttons === 1) {
+        handleTouchMove(e);
+      }
     });
-    this.canvas.addEventListener('mouseup', endTouch);
-    this.canvas.addEventListener('mouseleave', endTouch);
+    this.canvas.addEventListener('mouseup', handleTouchEnd as EventListener);
+    this.canvas.addEventListener('mouseleave', handleTouchEnd as EventListener);
   }
 
   resize() {
@@ -680,6 +835,40 @@ class CoAITwinEngine {
     this.lastFrameTime = now;
     this.morphEngine.update(deltaMs);
     
+    // Update transition renderer for polished effects
+    this.transitionRenderer.update(deltaMs);
+    
+    // Apply sling velocity physics (decays over time)
+    if (Math.abs(this.slingVelocityX) > 0.1 || Math.abs(this.slingVelocityY) > 0.1) {
+      this.dragOffsetX += this.slingVelocityX;
+      this.dragOffsetY += this.slingVelocityY;
+      
+      // Decay velocity
+      this.slingVelocityX *= 0.92;
+      this.slingVelocityY *= 0.92;
+      
+      // Bounce off edges
+      const maxOffset = Math.min(this.state.w, this.state.h) * 0.4;
+      if (Math.abs(this.dragOffsetX) > maxOffset) {
+        this.slingVelocityX *= -0.6;
+        this.dragOffsetX = Math.sign(this.dragOffsetX) * maxOffset;
+        this.spawnShockwave('#38bdf8');
+        this.state.shake = 2;
+      }
+      if (Math.abs(this.dragOffsetY) > maxOffset) {
+        this.slingVelocityY *= -0.6;
+        this.dragOffsetY = Math.sign(this.dragOffsetY) * maxOffset;
+        this.spawnShockwave('#a855f7');
+        this.state.shake = 2;
+      }
+    } else {
+      // Smoothly return to center when not being slung
+      this.dragOffsetX *= 0.95;
+      this.dragOffsetY *= 0.95;
+      if (Math.abs(this.dragOffsetX) < 0.5) this.dragOffsetX = 0;
+      if (Math.abs(this.dragOffsetY) < 0.5) this.dragOffsetY = 0;
+    }
+    
     // Smooth transition back to idle rotating mode
     if (this.isTransitioningToIdle) {
       this.idleTransitionProgress = Math.min(1, this.idleTransitionProgress + 0.02);
@@ -700,7 +889,19 @@ class CoAITwinEngine {
       let tx = 0, ty = 0;
       const starAngle = i * TRINITY_OFFSET;  // 0°, 120°, 240° for each star
 
-      if (this.state.isTouching && this.state.touchX !== null && this.state.touchY !== null) {
+      // Apply drag offset when being grabbed or slung
+      if (this.isBeingDragged || Math.abs(this.dragOffsetX) > 1 || Math.abs(this.dragOffsetY) > 1) {
+        // Stars cluster around the drag point with slight offset per star
+        const clusterOffset = 12;
+        tx = this.dragOffsetX + Math.cos(starAngle) * clusterOffset;
+        ty = this.dragOffsetY + Math.sin(starAngle) * clusterOffset;
+        
+        // Add wobble during drag
+        if (this.isBeingDragged) {
+          tx += Math.sin(this.state.time * 0.2 + i) * 3;
+          ty += Math.cos(this.state.time * 0.25 + i) * 3;
+        }
+      } else if (this.state.isTouching && this.state.touchX !== null && this.state.touchY !== null) {
         const mx = (this.state.touchX / window.devicePixelRatio) - cx;
         const my = (this.state.touchY / window.devicePixelRatio) - cy;
         tx = mx * 0.4 + Math.cos(this.state.time * 0.1 + starAngle) * (22 * s * 0.003);
@@ -814,23 +1015,59 @@ class CoAITwinEngine {
     }
 
     this.ctx.translate(cx, cy);
+    
+    // Draw transition renderer effects (background layer)
+    this.transitionRenderer.render(this.ctx, 0, 0);
+    
     this.drawShockwaves();
     this.drawParticles();
 
     this.twins.forEach((t, twinIndex) => {
-      // REMOVED: Trail lines - Trinity stars should float independently with NO visual connections
+      // Add trail points to transition renderer for polished motion trails
+      if (this.isBeingDragged || Math.abs(this.slingVelocityX) > 2 || Math.abs(this.slingVelocityY) > 2) {
+        this.transitionRenderer.addTrailPoint(t.x, t.y, twinIndex);
+      }
+      
       this.ctx.globalAlpha = 1.0;
       this.drawStar(t.x, t.y, 15 * s * 0.005, 4.5 * s * 0.005, t.color, twinIndex);
     });
 
     // Draw emote particles on top
     this.drawEmoteParticles();
-
-    // REMOVED: ANALYZING mode connection lines - Trinity stars should be independent with NO visual connections
-
-    // REMOVED: White connection line between stars - Trinity stars should be independent with NO visual connections
+    
+    // Draw grab indicator when user is trying to catch
+    if (this.grabMechanics.isGrabbing()) {
+      this.drawGrabIndicator();
+    }
 
     this.ctx.restore();
+  }
+  
+  private drawGrabIndicator(): void {
+    const feedback = this.grabMechanics.getVisualFeedback();
+    if (!feedback.isHolding) return;
+    
+    // Draw pulsing grab ring around mascot
+    const pulse = Math.sin(this.state.time * 0.15) * 0.3 + 0.7;
+    const radius = 40 * pulse;
+    
+    this.ctx.beginPath();
+    this.ctx.arc(this.dragOffsetX, this.dragOffsetY, radius, 0, Math.PI * 2);
+    this.ctx.strokeStyle = `rgba(34, 197, 94, ${0.6 * pulse})`;
+    this.ctx.lineWidth = 3;
+    this.ctx.stroke();
+    
+    // Inner glow
+    const gradient = this.ctx.createRadialGradient(
+      this.dragOffsetX, this.dragOffsetY, 0,
+      this.dragOffsetX, this.dragOffsetY, radius
+    );
+    gradient.addColorStop(0, `rgba(34, 197, 94, ${0.2 * pulse})`);
+    gradient.addColorStop(1, 'rgba(34, 197, 94, 0)');
+    this.ctx.fillStyle = gradient;
+    this.ctx.beginPath();
+    this.ctx.arc(this.dragOffsetX, this.dragOffsetY, radius, 0, Math.PI * 2);
+    this.ctx.fill();
   }
 
   private drawStar(x: number, y: number, outerR: number, innerR: number, color: string, twinIndex: number = 0) {
