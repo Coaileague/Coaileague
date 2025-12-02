@@ -12,13 +12,15 @@ import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Megaphone, Bell, RefreshCw, Wrench, AlertTriangle, 
-  Send, Loader2, CheckCircle, Radio, Zap 
+  Send, Loader2, CheckCircle, Radio, Zap, Sparkles,
+  MessageCircle, RotateCcw, TrendingUp
 } from "lucide-react";
 
 interface CommandResponse {
@@ -34,6 +36,12 @@ export function SupportCommandPanel() {
   const [whatsNewCategory, setWhatsNewCategory] = useState("announcement");
   const [systemMessage, setSystemMessage] = useState("");
   const [messageSeverity, setMessageSeverity] = useState("info");
+  
+  const [mascotMode, setMascotMode] = useState("idle");
+  const [mascotPersona, setMascotPersona] = useState("friendly");
+  const [mascotEmote, setMascotEmote] = useState("curious");
+  const [mascotSpeech, setMascotSpeech] = useState("");
+  const [businessFocus, setBusinessFocus] = useState("general");
 
   const forceWhatsNewMutation = useMutation({
     mutationFn: async (data: { title: string; description: string; category: string }): Promise<CommandResponse> => {
@@ -77,6 +85,64 @@ export function SupportCommandPanel() {
     },
   });
 
+  const mascotControlMutation = useMutation({
+    mutationFn: async (data: { mode?: string; persona?: string; emote?: string; speech?: string; businessFocus?: string }): Promise<CommandResponse> => {
+      const res = await apiRequest('POST', '/api/support/command/mascot/control', data);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Mascot Updated", description: data.message });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const mascotSpeakMutation = useMutation({
+    mutationFn: async (data: { message: string; immediate?: boolean }): Promise<CommandResponse> => {
+      const res = await apiRequest('POST', '/api/support/command/mascot/speak', data);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Mascot Speech", description: data.message });
+      setMascotSpeech("");
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const businessAdviceMutation = useMutation({
+    mutationFn: async (data: { focus: string; broadcast?: boolean }): Promise<CommandResponse> => {
+      const res = await apiRequest('POST', '/api/support/command/mascot/business-advice', data);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Business Advice Generated", description: "AI-powered insights broadcast to all clients" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const mascotResetMutation = useMutation({
+    mutationFn: async (): Promise<CommandResponse> => {
+      const res = await apiRequest('POST', '/api/support/command/mascot/reset', {});
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ title: "Mascot Reset", description: data.message });
+      setMascotMode("idle");
+      setMascotPersona("friendly");
+      setMascotEmote("curious");
+      setMascotSpeech("");
+      setBusinessFocus("general");
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    },
+  });
+
   return (
     <Card className="border-2 border-dashed border-yellow-500/50 bg-yellow-500/5">
       <CardHeader className="pb-3">
@@ -94,7 +160,7 @@ export function SupportCommandPanel() {
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="whats-new" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="whats-new" className="text-xs">
               <Megaphone className="h-3 w-3 mr-1" />
               What's New
@@ -103,9 +169,13 @@ export function SupportCommandPanel() {
               <Bell className="h-3 w-3 mr-1" />
               Broadcast
             </TabsTrigger>
+            <TabsTrigger value="mascot" className="text-xs">
+              <Sparkles className="h-3 w-3 mr-1" />
+              Mascot
+            </TabsTrigger>
             <TabsTrigger value="sync" className="text-xs">
               <RefreshCw className="h-3 w-3 mr-1" />
-              Force Sync
+              Sync
             </TabsTrigger>
           </TabsList>
 
@@ -207,6 +277,151 @@ export function SupportCommandPanel() {
                 <Megaphone className="h-4 w-4 mr-2" />
               )}
               Broadcast to All Users
+            </Button>
+          </TabsContent>
+
+          <TabsContent value="mascot" className="space-y-3 pt-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="mascot-mode">Mode</Label>
+                <Select value={mascotMode} onValueChange={setMascotMode}>
+                  <SelectTrigger data-testid="select-mascot-mode">
+                    <SelectValue placeholder="Select mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="idle">Idle</SelectItem>
+                    <SelectItem value="advising">Advising</SelectItem>
+                    <SelectItem value="celebrating">Celebrating</SelectItem>
+                    <SelectItem value="alerting">Alerting</SelectItem>
+                    <SelectItem value="teaching">Teaching</SelectItem>
+                    <SelectItem value="business_buddy">Business Buddy</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="mascot-persona">Persona</Label>
+                <Select value={mascotPersona} onValueChange={setMascotPersona}>
+                  <SelectTrigger data-testid="select-mascot-persona">
+                    <SelectValue placeholder="Select persona" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="friendly">Friendly</SelectItem>
+                    <SelectItem value="professional">Professional</SelectItem>
+                    <SelectItem value="playful">Playful</SelectItem>
+                    <SelectItem value="serious">Serious</SelectItem>
+                    <SelectItem value="motivational">Motivational</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mascot-emote">Emote</Label>
+              <Select value={mascotEmote} onValueChange={setMascotEmote}>
+                <SelectTrigger data-testid="select-mascot-emote">
+                  <SelectValue placeholder="Select emote" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="idle">Idle</SelectItem>
+                  <SelectItem value="curious">Curious</SelectItem>
+                  <SelectItem value="happy">Happy</SelectItem>
+                  <SelectItem value="thinking">Thinking</SelectItem>
+                  <SelectItem value="excited">Excited</SelectItem>
+                  <SelectItem value="concerned">Concerned</SelectItem>
+                  <SelectItem value="celebrating">Celebrating</SelectItem>
+                  <SelectItem value="advising">Advising</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="mascot-speech">Speech Message</Label>
+              <Input
+                id="mascot-speech"
+                placeholder="Make the mascot say something..."
+                value={mascotSpeech}
+                onChange={(e) => setMascotSpeech(e.target.value)}
+                data-testid="input-mascot-speech"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                onClick={() => mascotControlMutation.mutate({
+                  mode: mascotMode,
+                  persona: mascotPersona,
+                  emote: mascotEmote,
+                })}
+                disabled={mascotControlMutation.isPending}
+                variant="outline"
+                data-testid="button-update-mascot"
+              >
+                {mascotControlMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <Sparkles className="h-4 w-4 mr-2" />
+                )}
+                Update State
+              </Button>
+              <Button 
+                onClick={() => mascotSpeakMutation.mutate({
+                  message: mascotSpeech,
+                  immediate: true,
+                })}
+                disabled={!mascotSpeech || mascotSpeakMutation.isPending}
+                data-testid="button-mascot-speak"
+              >
+                {mascotSpeakMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : (
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                )}
+                Speak
+              </Button>
+            </div>
+            <Separator />
+            <div className="space-y-2">
+              <Label>Business Buddy Advice</Label>
+              <div className="flex gap-2">
+                <Select value={businessFocus} onValueChange={setBusinessFocus}>
+                  <SelectTrigger className="flex-1" data-testid="select-business-focus">
+                    <SelectValue placeholder="Focus area" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="growth">Growth</SelectItem>
+                    <SelectItem value="sales">Sales</SelectItem>
+                    <SelectItem value="efficiency">Efficiency</SelectItem>
+                    <SelectItem value="debt">Debt/AR</SelectItem>
+                    <SelectItem value="general">General</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Button 
+                  onClick={() => businessAdviceMutation.mutate({ 
+                    focus: businessFocus, 
+                    broadcast: true 
+                  })}
+                  disabled={businessAdviceMutation.isPending}
+                  data-testid="button-generate-advice"
+                >
+                  {businessAdviceMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                  ) : (
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                  )}
+                  Generate
+                </Button>
+              </div>
+            </div>
+            <Button 
+              onClick={() => mascotResetMutation.mutate()}
+              disabled={mascotResetMutation.isPending}
+              variant="outline"
+              className="w-full"
+              data-testid="button-reset-mascot"
+            >
+              {mascotResetMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <RotateCcw className="h-4 w-4 mr-2" />
+              )}
+              Reset Mascot to Default
             </Button>
           </TabsContent>
 
