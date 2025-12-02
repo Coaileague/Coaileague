@@ -396,4 +396,206 @@ router.post('/complete-task', requireAuth, async (req, res) => {
   }
 });
 
+// ============================================================================
+// USER MASCOT PREFERENCES ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/mascot/preferences
+ * Get user's mascot preferences
+ * Protected - requires authentication
+ */
+router.get('/preferences', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID required' });
+    }
+    
+    const [prefs] = await db.execute(sql`
+      SELECT * FROM user_mascot_preferences WHERE user_id = ${userId}
+    `);
+    
+    if (!prefs) {
+      // Return default preferences
+      return res.json({
+        preferences: {
+          userId,
+          positionX: 0,
+          positionY: 0,
+          isEnabled: true,
+          isMinimized: false,
+          preferredSize: 'default',
+          roamingEnabled: true,
+          reactToActions: true,
+          showThoughts: true,
+          soundEnabled: false,
+          nickname: null,
+          favoriteEmotes: [],
+          dislikedEmotes: [],
+          totalInteractions: 0,
+          totalDrags: 0,
+          totalTaps: 0,
+          customThoughts: []
+        }
+      });
+    }
+    
+    res.json({ preferences: prefs });
+  } catch (error) {
+    console.error('[Mascot] Error fetching preferences:', error);
+    res.status(500).json({ error: 'Failed to fetch preferences' });
+  }
+});
+
+/**
+ * PUT /api/mascot/preferences
+ * Update user's mascot preferences
+ * Protected - requires authentication
+ */
+router.put('/preferences', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const updates = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID required' });
+    }
+    
+    // Build update query dynamically based on provided fields
+    const allowedFields = [
+      'position_x', 'position_y', 'is_enabled', 'is_minimized', 
+      'preferred_size', 'roaming_enabled', 'react_to_actions', 
+      'show_thoughts', 'sound_enabled', 'nickname'
+    ];
+    
+    const updateParts: string[] = [];
+    const values: any[] = [];
+    
+    Object.entries(updates).forEach(([key, value]) => {
+      const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      if (allowedFields.includes(snakeKey)) {
+        updateParts.push(`${snakeKey} = $${values.length + 1}`);
+        values.push(value);
+      }
+    });
+    
+    if (updateParts.length === 0) {
+      return res.status(400).json({ error: 'No valid fields to update' });
+    }
+    
+    updateParts.push('updated_at = NOW()');
+    values.push(userId);
+    
+    // Upsert: insert if not exists, update if exists
+    await db.execute(sql`
+      INSERT INTO user_mascot_preferences (user_id, updated_at)
+      VALUES (${userId}, NOW())
+      ON CONFLICT (user_id) DO UPDATE SET
+        ${sql.raw(updateParts.join(', ').replace(/\$(\d+)/g, (_, n) => '$' + n))}
+    `);
+    
+    res.json({ success: true, message: 'Preferences updated' });
+  } catch (error) {
+    console.error('[Mascot] Error updating preferences:', error);
+    res.status(500).json({ error: 'Failed to update preferences' });
+  }
+});
+
+/**
+ * POST /api/mascot/preferences/position
+ * Update mascot position (separate endpoint for frequent updates)
+ * Protected - requires authentication
+ */
+router.post('/preferences/position', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const { x, y } = req.body;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID required' });
+    }
+    
+    if (typeof x !== 'number' || typeof y !== 'number') {
+      return res.status(400).json({ error: 'Position x and y must be numbers' });
+    }
+    
+    await db.execute(sql`
+      INSERT INTO user_mascot_preferences (user_id, position_x, position_y, updated_at)
+      VALUES (${userId}, ${Math.round(x)}, ${Math.round(y)}, NOW())
+      ON CONFLICT (user_id) DO UPDATE SET
+        position_x = ${Math.round(x)},
+        position_y = ${Math.round(y)},
+        total_drags = user_mascot_preferences.total_drags + 1,
+        last_interaction_at = NOW(),
+        updated_at = NOW()
+    `);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Mascot] Error updating position:', error);
+    res.status(500).json({ error: 'Failed to update position' });
+  }
+});
+
+/**
+ * POST /api/mascot/preferences/interaction
+ * Record a mascot interaction (tap, hover, etc.)
+ * Protected - requires authentication
+ */
+router.post('/preferences/interaction', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    const { type } = req.body; // 'tap', 'drag', 'general'
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID required' });
+    }
+    
+    let updateField = 'total_interactions';
+    if (type === 'tap') updateField = 'total_taps';
+    else if (type === 'drag') updateField = 'total_drags';
+    
+    await db.execute(sql`
+      INSERT INTO user_mascot_preferences (user_id, ${sql.raw(updateField)}, total_interactions, last_interaction_at, updated_at)
+      VALUES (${userId}, 1, 1, NOW(), NOW())
+      ON CONFLICT (user_id) DO UPDATE SET
+        ${sql.raw(updateField)} = user_mascot_preferences.${sql.raw(updateField)} + 1,
+        total_interactions = user_mascot_preferences.total_interactions + 1,
+        last_interaction_at = NOW(),
+        updated_at = NOW()
+    `);
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('[Mascot] Error recording interaction:', error);
+    res.status(500).json({ error: 'Failed to record interaction' });
+  }
+});
+
+/**
+ * DELETE /api/mascot/preferences
+ * Delete user's mascot preferences (called on user termination)
+ * Protected - requires authentication
+ */
+router.delete('/preferences', requireAuth, async (req, res) => {
+  try {
+    const userId = (req as any).user?.id;
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'User ID required' });
+    }
+    
+    await db.execute(sql`
+      DELETE FROM user_mascot_preferences WHERE user_id = ${userId}
+    `);
+    
+    res.json({ success: true, message: 'Preferences deleted' });
+  } catch (error) {
+    console.error('[Mascot] Error deleting preferences:', error);
+    res.status(500).json({ error: 'Failed to delete preferences' });
+  }
+});
+
 export default router;

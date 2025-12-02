@@ -117,6 +117,53 @@ export const insertUserOnboardingSchema = createInsertSchema(userOnboarding).omi
 export type InsertUserOnboarding = z.infer<typeof insertUserOnboardingSchema>;
 export type UserOnboarding = typeof userOnboarding.$inferSelect;
 
+// User Mascot Preferences - Per-user isolated mascot settings
+export const userMascotPreferences = pgTable("user_mascot_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }).unique(),
+  
+  // Position preferences
+  positionX: integer("position_x").default(0),
+  positionY: integer("position_y").default(0),
+  
+  // Display settings
+  isEnabled: boolean("is_enabled").default(true),
+  isMinimized: boolean("is_minimized").default(false),
+  preferredSize: varchar("preferred_size").default('default'), // 'small', 'default', 'large'
+  
+  // Behavior settings
+  roamingEnabled: boolean("roaming_enabled").default(true),
+  reactToActions: boolean("react_to_actions").default(true),
+  showThoughts: boolean("show_thoughts").default(true),
+  soundEnabled: boolean("sound_enabled").default(false),
+  
+  // Personalization
+  nickname: varchar("nickname"), // User's custom name for the mascot
+  favoriteEmotes: text("favorite_emotes").array().default(sql`ARRAY[]::text[]`),
+  dislikedEmotes: text("disliked_emotes").array().default(sql`ARRAY[]::text[]`),
+  
+  // Interaction history summary
+  totalInteractions: integer("total_interactions").default(0),
+  totalDrags: integer("total_drags").default(0),
+  totalTaps: integer("total_taps").default(0),
+  lastInteractionAt: timestamp("last_interaction_at"),
+  
+  // Custom thoughts from AI
+  customThoughts: text("custom_thoughts").array().default(sql`ARRAY[]::text[]`),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertUserMascotPreferencesSchema = createInsertSchema(userMascotPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserMascotPreferences = z.infer<typeof insertUserMascotPreferencesSchema>;
+export type UserMascotPreferences = typeof userMascotPreferences.$inferSelect;
+
 // ============================================================================
 // MULTI-TENANT CORE TABLES
 // ============================================================================
