@@ -362,6 +362,7 @@ const FloatingMascot = memo(function FloatingMascot({
   const [isDragging, setIsDragging] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [currentEmote, setCurrentEmote] = useState<Emote | null>(null);
+  const [tapRipple, setTapRipple] = useState<{ x: number; y: number; active: boolean } | null>(null);
   const [currentThought, setCurrentThought] = useState<string>('');
   const [showThought, setShowThought] = useState(false);
   
@@ -918,10 +919,21 @@ const FloatingMascot = memo(function FloatingMascot({
     emotesManager.triggerById('drag-end-nice');
   }, [posX, posY, onPositionChange, userId]);
 
-  const handleTap = useCallback(() => {
+  const handleTap = useCallback((event: MouseEvent | TouchEvent | PointerEvent) => {
     triggerHaptic(10); // Light haptic on tap
     emotesManager.triggerByCategory('clicking');
     spawnParticles(5);
+    
+    // Trigger visual tap ripple for mobile feedback
+    const isMobile = 'ontouchstart' in window;
+    if (isMobile && containerRef.current) {
+      const rect = containerRef.current.getBoundingClientRect();
+      const point = 'touches' in event ? event.touches[0] : event;
+      const x = (point as { clientX: number }).clientX - rect.left;
+      const y = (point as { clientY: number }).clientY - rect.top;
+      setTapRipple({ x, y, active: true });
+      setTimeout(() => setTapRipple(null), 400);
+    }
   }, [spawnParticles]);
 
   const getEmoteAnimation = useCallback(() => {
@@ -991,6 +1003,11 @@ const FloatingMascot = memo(function FloatingMascot({
           30% { transform: scale(1.5); filter: brightness(2); }
           100% { transform: scale(1); filter: brightness(1); }
         }
+        @keyframes tapRipple {
+          0% { transform: scale(0); opacity: 0.6; }
+          50% { opacity: 0.4; }
+          100% { transform: scale(2.5); opacity: 0; }
+        }
       `}</style>
 
       <motion.div
@@ -1013,8 +1030,8 @@ const FloatingMascot = memo(function FloatingMascot({
         onTap={handleTap}
         onHoverStart={() => setIsHovered(true)}
         onHoverEnd={() => setIsHovered(false)}
-        whileHover={{ scale: 1.05 }}
-        whileTap={{ scale: 0.95 }}
+        whileHover={{ scale: 1.05, transition: { duration: 0.15 } }}
+        whileTap={{ scale: 0.92, transition: { duration: 0.08 } }}
         data-testid="floating-mascot"
       >
         <motion.div
@@ -1032,6 +1049,23 @@ const FloatingMascot = memo(function FloatingMascot({
             }}
             data-testid="mascot-canvas"
           />
+          
+          {/* Mobile tap ripple effect */}
+          {tapRipple?.active && (
+            <div
+              className="absolute pointer-events-none rounded-full"
+              style={{
+                left: tapRipple.x,
+                top: tapRipple.y,
+                width: 40,
+                height: 40,
+                marginLeft: -20,
+                marginTop: -20,
+                background: `radial-gradient(circle, ${MODE_COLORS[currentMode].primary}40 0%, transparent 70%)`,
+                animation: 'tapRipple 400ms ease-out forwards'
+              }}
+            />
+          )}
           
           {isHovered && (
             <motion.div
