@@ -836,8 +836,6 @@ export default function App() {
                         <ReenableChatButton />
                         <Toaster />
                       </ResponsiveAppFrame>
-                      {/* Mascot globally visible on ALL pages (public and authenticated) */}
-                      <MascotRenderer />
                     </UniversalAnimationProvider>
                   </TooltipProvider>
                   </TransitionProvider>
@@ -848,6 +846,8 @@ export default function App() {
         </ForceRefreshProvider>
         </ServiceHealthProvider>
       </QueryClientProvider>
+      {/* Mascot globally visible on ALL pages (public and authenticated) - OUTSIDE all constraints */}
+      <MascotRenderer />
     </GlobalErrorBoundary>
   );
 }
