@@ -776,10 +776,10 @@ class CoAITwinEngine {
     this.ctx.arc(drawX, drawY, scaledInnerR, 0, Math.PI * 2);
     this.ctx.fill();
     
-    // Trinity branded text: "Co" (cyan), "AI" (purple), "L" (gold) - spells "CoAIL"
-    const brandLabels = ['Co', 'AI', 'L'];
+    // Trinity branded text: "Co" (cyan), "AI" (purple), "LE" (gold) - spells "CoAILE" (CoAILeague)
+    const brandLabels = ['Co', 'AI', 'LE'];
     const brandColors = ['#a855f7', '#38bdf8', '#1e3a5f'];  // Purple on cyan, Cyan on purple, Navy on gold
-    const label = brandLabels[twinIndex] || 'L';
+    const label = brandLabels[twinIndex] || 'LE';
     const labelColor = brandColors[twinIndex] || '#1e3a5f';
     
     // Scale font based on star size for readability
