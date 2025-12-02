@@ -471,18 +471,20 @@ function MascotRenderer() {
         
         {currentThought && (
           <div 
-            className={`absolute px-3 py-2 whitespace-nowrap ${getAnimationClasses(thoughtBubbleTheme.animation.enter, true)} ${isMobile ? 'text-xs max-w-[160px] whitespace-normal text-center' : 'text-sm'}`}
+            className={`absolute px-0 py-0 whitespace-nowrap ${getAnimationClasses(thoughtBubbleTheme.animation.enter, true)} ${isMobile ? 'text-xs max-w-[160px] whitespace-normal text-center' : 'text-sm'}`}
             style={{
               ...bubblePlacement.position,
-              background: thoughtBubbleTheme.style.background,
-              backdropFilter: thoughtBubbleTheme.style.backdropBlur,
-              WebkitBackdropFilter: thoughtBubbleTheme.style.backdropBlur,
-              border: thoughtBubbleTheme.style.border,
-              borderRadius: thoughtBubbleTheme.style.borderRadius,
-              color: thoughtBubbleTheme.style.textColor,
-              boxShadow: `${thoughtBubbleTheme.style.shadow}, 0 0 ${thoughtBubbleTheme.style.glowIntensity * 20}px ${thoughtBubbleTheme.style.glowColor}`,
-              opacity: thoughtBubbleTheme.style.opacity,
+              background: 'transparent',
+              backdropFilter: 'none',
+              WebkitBackdropFilter: 'none',
+              border: 'none',
+              borderRadius: 'unset',
+              color: '#ffffff',
+              boxShadow: 'none',
+              opacity: 1,
               transition: `all ${thoughtBubbleTheme.animation.duration}ms ${thoughtBubbleTheme.animation.easing}`,
+              textShadow: '0 1px 3px rgba(0,0,0,0.95), 0 0 6px rgba(0,0,0,0.85), 1px 1px 2px rgba(0,0,0,0.95)',
+              filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.3))',
             }}
             data-testid="mascot-thought-bubble"
             data-bubble-mode={thoughtBubbleTheme.mode}
@@ -491,7 +493,7 @@ function MascotRenderer() {
               <span 
                 className={`text-lg shrink-0 ${thoughtBubbleTheme.emoticonStyle === 'animated' ? 'animate-bounce' : ''}`}
                 style={{ 
-                  filter: thoughtBubbleTheme.mode === 'holiday' ? 'drop-shadow(0 0 4px currentColor)' : 'none' 
+                  filter: 'drop-shadow(0 0 4px currentColor)'
                 }}
               >
                 {currentThought.emoticon}
@@ -499,23 +501,12 @@ function MascotRenderer() {
               <span 
                 className="font-medium"
                 style={{ 
-                  textShadow: thoughtBubbleTheme.mode !== 'normal' 
-                    ? `0 1px 2px rgba(0,0,0,0.3)` 
-                    : 'none' 
+                  textShadow: '0 1px 2px rgba(0,0,0,0.3)' 
                 }}
               >
                 {currentThought.text}
               </span>
             </div>
-            <div 
-              className={`${arrowStyles.position} w-2 h-2 ${arrowStyles.borderClasses}`}
-              style={{
-                background: thoughtBubbleTheme.style.background,
-                backdropFilter: thoughtBubbleTheme.style.backdropBlur,
-                borderColor: thoughtBubbleTheme.style.border.replace('1px solid ', ''),
-                transform: arrowStyles.transform,
-              }}
-            />
           </div>
         )}
         
