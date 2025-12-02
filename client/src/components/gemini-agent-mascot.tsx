@@ -343,7 +343,7 @@ class CoAITwinEngine {
     this.drawShockwaves();
     this.drawParticles();
 
-    this.twins.forEach(t => {
+    this.twins.forEach((t, twinIndex) => {
       this.ctx.beginPath();
       for (let i = 0; i < t.trail.length - 1; i++) {
         const p1 = t.trail[i];
@@ -356,7 +356,7 @@ class CoAITwinEngine {
         this.ctx.stroke();
       }
       this.ctx.globalAlpha = 1.0;
-      this.drawStar(t.x, t.y, 15 * s * 0.002, 4 * s * 0.002, t.color);
+      this.drawStar(t.x, t.y, 15 * s * 0.002, 4 * s * 0.002, t.color, twinIndex);
     });
 
     if (this.state.mode === 'ANALYZING') {
@@ -396,7 +396,7 @@ class CoAITwinEngine {
     this.ctx.restore();
   }
 
-  private drawStar(x: number, y: number, outerR: number, innerR: number, color: string) {
+  private drawStar(x: number, y: number, outerR: number, innerR: number, color: string, twinIndex: number = 0) {
     this.ctx.fillStyle = color;
     this.ctx.shadowBlur = 20;
     this.ctx.shadowColor = color;
@@ -413,6 +413,27 @@ class CoAITwinEngine {
     this.ctx.beginPath();
     this.ctx.arc(x, y, innerR, 0, Math.PI * 2);
     this.ctx.fill();
+    
+    // Draw branded text "Co" or "AI" in contrasting color
+    const brandLabels = ['Co', 'AI'];
+    const brandColors = ['#a855f7', '#38bdf8'];
+    const label = brandLabels[twinIndex];
+    const labelColor = brandColors[twinIndex];
+    
+    // Scale font based on star size
+    const fontSize = Math.max(3, outerR * 0.5);
+    this.ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+    this.ctx.shadowBlur = 1;
+    
+    this.ctx.fillStyle = labelColor;
+    this.ctx.fillText(label, x, y + 0.5);
+    
+    this.ctx.shadowColor = 'transparent';
+    this.ctx.shadowBlur = 0;
   }
 
   private drawGrid(w: number, h: number, s: number) {

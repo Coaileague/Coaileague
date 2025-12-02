@@ -246,24 +246,48 @@ const FloatingMascot = memo(function FloatingMascot({
       ctx.stroke();
       ctx.globalAlpha = 1;
 
-      twins.forEach((twin) => {
+      const brandingLabels = ['Co', 'AI'];
+      const brandingColors = ['#a855f7', '#38bdf8'];
+      
+      twins.forEach((twin, index) => {
+        const starSize = mascotSize * 0.18;
+        const innerSize = starSize * 0.55;
+        
         const twinGradient = ctx.createRadialGradient(
           twin.x, twin.y, 0,
-          twin.x, twin.y, 10
+          twin.x, twin.y, starSize
         );
         twinGradient.addColorStop(0, twin.color);
-        twinGradient.addColorStop(0.5, twin.color);
+        twinGradient.addColorStop(0.6, twin.color);
         twinGradient.addColorStop(1, 'transparent');
         
         ctx.beginPath();
-        ctx.arc(twin.x, twin.y, 10, 0, Math.PI * 2);
+        ctx.arc(twin.x, twin.y, starSize, 0, Math.PI * 2);
         ctx.fillStyle = twinGradient;
         ctx.fill();
         
         ctx.beginPath();
-        ctx.arc(twin.x, twin.y, 5, 0, Math.PI * 2);
+        ctx.arc(twin.x, twin.y, innerSize, 0, Math.PI * 2);
         ctx.fillStyle = '#ffffff';
         ctx.fill();
+        
+        const fontSize = Math.max(6, mascotSize * 0.11);
+        ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+        ctx.shadowBlur = 2;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 1;
+        
+        ctx.fillStyle = brandingColors[index];
+        ctx.fillText(brandingLabels[index], twin.x, twin.y + 0.5);
+        
+        ctx.shadowColor = 'transparent';
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetX = 0;
+        ctx.shadowOffsetY = 0;
       });
 
       particlesRef.current = particlesRef.current.filter(p => p.life > 0);
@@ -580,14 +604,15 @@ const FloatingMascot = memo(function FloatingMascot({
             transition={{ type: 'spring', stiffness: 400, damping: 25 }}
           >
             <div
-              className="relative px-3 py-2 rounded-xl text-xs font-medium shadow-xl"
+              className="relative px-3 py-2 rounded-xl text-xs font-medium"
               style={{
-                background: 'rgba(15, 23, 42, 0.25)',
-                backdropFilter: 'blur(16px)',
-                WebkitBackdropFilter: 'blur(16px)',
-                border: `1.5px solid ${MODE_COLORS[currentMode].primary}50`,
+                background: 'rgba(15, 23, 42, 0.12)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                border: `1px solid rgba(255, 255, 255, 0.15)`,
                 color: '#ffffff',
-                textShadow: '0 1px 3px rgba(0,0,0,0.5), 0 0 8px rgba(168, 85, 247, 0.3)'
+                textShadow: '0 1px 4px rgba(0,0,0,0.8), 0 0 12px rgba(0,0,0,0.5)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
               }}
             >
               <div
@@ -595,7 +620,7 @@ const FloatingMascot = memo(function FloatingMascot({
                 style={{
                   borderTop: '6px solid transparent',
                   borderBottom: '6px solid transparent',
-                  borderRight: `8px solid rgba(15, 23, 42, 0.25)`
+                  borderRight: `8px solid rgba(15, 23, 42, 0.12)`
                 }}
               />
               {currentEmote?.expression || currentThought}

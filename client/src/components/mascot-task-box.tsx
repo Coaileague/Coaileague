@@ -240,16 +240,18 @@ export function MascotTaskBox({
   
   return (
     <div 
-      className={`absolute px-4 py-3 rounded-xl border-2 ${priorityBorder} text-slate-100 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-300`}
+      className={`absolute px-4 py-3 rounded-xl border ${priorityBorder} text-slate-100 animate-in fade-in slide-in-from-bottom-2 duration-300`}
       style={{
         ...bubblePlacement.position,
         width: `${TASK_BOX_CONFIG.boxWidth}px`,
         maxWidth: '90vw',
         opacity: bubblePlacement.opacity,
         zIndex: 10001,
-        background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.35), rgba(30, 41, 59, 0.35))',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
+        background: 'rgba(15, 23, 42, 0.12)',
+        backdropFilter: 'blur(8px)',
+        WebkitBackdropFilter: 'blur(8px)',
+        boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+        borderColor: 'rgba(255, 255, 255, 0.15)',
       }}
       data-testid="mascot-task-box"
     >
@@ -257,16 +259,19 @@ export function MascotTaskBox({
         <div 
           className="flex-shrink-0 p-2 rounded-lg border"
           style={{
-            background: 'rgba(100, 116, 139, 0.2)',
-            borderColor: 'rgba(148, 163, 184, 0.3)'
+            background: 'rgba(100, 116, 139, 0.15)',
+            borderColor: 'rgba(255, 255, 255, 0.1)'
           }}
         >
-          <TaskIcon className="w-4 h-4 text-emerald-400" style={{ filter: 'drop-shadow(0 0 4px rgba(52, 211, 153, 0.4))' }} />
+          <TaskIcon className="w-4 h-4 text-emerald-400" style={{ filter: 'drop-shadow(0 0 6px rgba(52, 211, 153, 0.6))' }} />
         </div>
         
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
-            <h4 className="font-semibold text-sm text-slate-100 leading-tight">
+            <h4 
+              className="font-semibold text-sm text-white leading-tight"
+              style={{ textShadow: '0 1px 4px rgba(0,0,0,0.8), 0 0 8px rgba(0,0,0,0.4)' }}
+            >
               {currentTask.title}
             </h4>
             <button
@@ -278,7 +283,10 @@ export function MascotTaskBox({
             </button>
           </div>
           
-          <p className="mt-1 text-xs text-slate-300 leading-relaxed line-clamp-2">
+          <p 
+            className="mt-1 text-xs text-white/90 leading-relaxed line-clamp-2"
+            style={{ textShadow: '0 1px 3px rgba(0,0,0,0.7)' }}
+          >
             {currentTask.message}
           </p>
           

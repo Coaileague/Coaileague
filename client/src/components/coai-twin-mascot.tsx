@@ -778,6 +778,31 @@ class CoAITwinEngine {
     this.ctx.beginPath();
     this.ctx.arc(drawX, drawY, scaledInnerR, 0, Math.PI * 2);
     this.ctx.fill();
+    
+    // Draw branded text "Co" or "AI" in contrasting color
+    const brandLabels = ['Co', 'AI'];
+    const brandColors = ['#a855f7', '#38bdf8'];
+    const label = brandLabels[twinIndex];
+    const labelColor = brandColors[twinIndex];
+    
+    // Scale font based on star size for readability
+    const fontSize = Math.max(4, scaledOuterR * 0.55);
+    this.ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    
+    // Subtle shadow for depth
+    this.ctx.shadowColor = 'rgba(0, 0, 0, 0.25)';
+    this.ctx.shadowBlur = 1;
+    this.ctx.shadowOffsetY = 0.5;
+    
+    this.ctx.fillStyle = labelColor;
+    this.ctx.fillText(label, drawX, drawY + 0.5);
+    
+    // Reset shadow
+    this.ctx.shadowColor = 'transparent';
+    this.ctx.shadowBlur = 0;
+    this.ctx.shadowOffsetY = 0;
   }
 
   private drawEmoteParticles() {
