@@ -536,35 +536,43 @@ export const GeminiAgentMascot = memo(function GeminiAgentMascot({
   const color = MODE_COLORS[mode];
   const label = MODE_LABELS[mode];
 
-  // Mini mode: Clean bubble display without overlays
+  // Mini mode: Clean bubble display without overlays - zoomed in on animation
   if (mini) {
-    const bubbleSize = size || 100;
+    const bubbleSize = size || 70;
     return (
       <div 
         className={`relative rounded-full overflow-hidden ${className}`}
         style={{ 
           width: bubbleSize, 
           height: bubbleSize,
-          background: 'radial-gradient(circle at 30% 30%, #1e293b, #020617)'
+          background: 'radial-gradient(circle at 35% 35%, #0f172a, #020617)'
         }}
       >
         <div 
           ref={containerRef} 
           className="w-full h-full"
-          style={{ width: bubbleSize, height: bubbleSize }}
+          style={{ 
+            width: bubbleSize, 
+            height: bubbleSize,
+            transform: 'scale(1.3)',
+            transformOrigin: 'center',
+          }}
         >
           <canvas
             ref={canvasRef}
             className="w-full h-full touch-none"
-            style={{ width: bubbleSize, height: bubbleSize }}
+            style={{ 
+              width: bubbleSize, 
+              height: bubbleSize
+            }}
             data-testid="gemini-mascot-canvas-mini"
           />
         </div>
         <div 
           className="absolute inset-0 rounded-full pointer-events-none"
           style={{
-            boxShadow: `inset 0 0 20px rgba(${hexToRgb(color)}, 0.3), 0 0 15px rgba(${hexToRgb(color)}, 0.2)`,
-            border: `2px solid rgba(${hexToRgb(color)}, 0.4)`
+            boxShadow: `inset 0 0 15px rgba(${hexToRgb(color)}, 0.4), 0 0 12px rgba(${hexToRgb(color)}, 0.3)`,
+            border: `1.5px solid rgba(${hexToRgb(color)}, 0.5)`
           }}
         />
       </div>

@@ -177,7 +177,7 @@ function MascotRenderer() {
   
   return (
     <div className="fixed bottom-6 right-6 z-40 pointer-events-none select-none">
-      <GeminiAgentMascot mode={currentMode} size={100} mini />
+      <GeminiAgentMascot mode={currentMode} size={70} mini />
     </div>
   );
 }
