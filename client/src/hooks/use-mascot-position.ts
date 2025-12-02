@@ -77,14 +77,15 @@ export function useMascotPosition(bubbleSize: number = 80) {
     const deltaX = clientX - dragStart.current.x;
     const deltaY = clientY - dragStart.current.y;
 
-    const newX = dragStart.current.posX + deltaX;
-    const newY = dragStart.current.posY + deltaY;
+    // For right/bottom anchored positioning: subtract deltas (inverted)
+    const newX = dragStart.current.posX - deltaX;
+    const newY = dragStart.current.posY - deltaY;
 
-    const maxX = window.innerWidth - bubbleSize - 8;
-    const maxY = window.innerHeight - bubbleSize - 8;
+    const maxX = window.innerWidth - bubbleSize - 16;
+    const maxY = window.innerHeight - bubbleSize - 16;
 
-    const clampedX = Math.max(8, Math.min(newX, maxX));
-    const clampedY = Math.max(8, Math.min(newY, maxY));
+    const clampedX = Math.max(16, Math.min(newX, maxX));
+    const clampedY = Math.max(16, Math.min(newY, maxY));
 
     setPosition({ x: clampedX, y: clampedY });
   }, [isDragging, bubbleSize]);
