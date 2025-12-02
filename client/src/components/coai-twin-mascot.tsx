@@ -147,11 +147,11 @@ class CoAITwinEngine {
 
   private emoteParticles: { x: number; y: number; vx: number; vy: number; life: number; type: string; char?: string }[] = [];
 
-  // Trinity Stars: Co (cyan), AI (purple), NX (gold) - 120° offset for triangular formation
+  // Trinity Stars: Co (cyan), AI (purple), L (gold) - 120° offset for triangular formation - spells "CoAIL"
   private twins: Twin[] = [
     { id: 0, x: 0, y: 0, trail: [], color: '#38bdf8', angle: 0 },                    // Cyan - "Co"
     { id: 1, x: 0, y: 0, trail: [], color: '#a855f7', angle: (Math.PI * 2) / 3 },    // Purple - "AI"  
-    { id: 2, x: 0, y: 0, trail: [], color: '#f4c15d', angle: (Math.PI * 4) / 3 }     // Gold - "NX" (Nexus)
+    { id: 2, x: 0, y: 0, trail: [], color: '#f4c15d', angle: (Math.PI * 4) / 3 }     // Gold - "L"
   ];
 
   private particles: Particle[] = [];
@@ -232,7 +232,7 @@ class CoAITwinEngine {
     if (mode === 'ERROR') this.state.shake = 20;
     if (mode === 'CODING' || mode === 'UPLOADING') this.particles = [];
     
-    // Trinity colors: Cyan (Co), Purple (AI), Gold (NX)
+    // Trinity colors: Cyan (Co), Purple (AI), Gold (L) - spells "CoAIL"
     if (mode === 'IDLE') {
       this.twins[0].color = '#38bdf8';  // Cyan
       this.twins[1].color = '#a855f7';  // Purple
@@ -662,31 +662,7 @@ class CoAITwinEngine {
     this.drawParticles();
 
     this.twins.forEach((t, twinIndex) => {
-      // Draw dark outline trail for visibility on light backgrounds
-      for (let i = 0; i < t.trail.length - 1; i++) {
-        const p1 = t.trail[i];
-        const p2 = t.trail[i + 1];
-        this.ctx.beginPath();
-        this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.3)';
-        this.ctx.globalAlpha = p1.life * 0.4;
-        this.ctx.lineWidth = p1.life * 6 * s * 0.003;
-        this.ctx.moveTo(p1.x, p1.y);
-        this.ctx.lineTo(p2.x, p2.y);
-        this.ctx.stroke();
-      }
-      
-      // Draw colored trail
-      for (let i = 0; i < t.trail.length - 1; i++) {
-        const p1 = t.trail[i];
-        const p2 = t.trail[i + 1];
-        this.ctx.beginPath();
-        this.ctx.strokeStyle = t.color;
-        this.ctx.globalAlpha = p1.life * 0.5;
-        this.ctx.lineWidth = p1.life * 4 * s * 0.003;
-        this.ctx.moveTo(p1.x, p1.y);
-        this.ctx.lineTo(p2.x, p2.y);
-        this.ctx.stroke();
-      }
+      // REMOVED: Trail lines - Trinity stars should float independently with NO visual connections
       this.ctx.globalAlpha = 1.0;
       this.drawStar(t.x, t.y, 15 * s * 0.005, 4.5 * s * 0.005, t.color, twinIndex);
     });
@@ -694,39 +670,9 @@ class CoAITwinEngine {
     // Draw emote particles on top
     this.drawEmoteParticles();
 
-    if (this.state.mode === 'ANALYZING') {
-      this.ctx.strokeStyle = this.twins[0].color;
-      this.ctx.lineWidth = 1;
-      this.ctx.globalAlpha = 0.3;
-      const pts = 6;
-      for (let i = 0; i < pts; i++) {
-        const a = (Math.PI * 2 / pts) * i + this.state.time * 0.01;
-        const r = 100 * s * 0.002;
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.twins[0].x, this.twins[0].y);
-        this.ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-        this.ctx.stroke();
-        this.ctx.beginPath();
-        this.ctx.moveTo(this.twins[1].x, this.twins[1].y);
-        this.ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
-        this.ctx.stroke();
-      }
-      this.ctx.globalAlpha = 1.0;
-    }
+    // REMOVED: ANALYZING mode connection lines - Trinity stars should be independent with NO visual connections
 
-    if (this.state.mode !== 'ERROR' && this.state.mode !== 'SEARCHING') {
-      const t1 = this.twins[0];
-      const t2 = this.twins[1];
-      const dist = Math.hypot(t1.x - t2.x, t1.y - t2.y);
-      if (dist < 150 * s * 0.002) {
-        this.ctx.strokeStyle = `rgba(255,255,255,${1 - dist / (150 * s * 0.002)})`;
-        this.ctx.lineWidth = 1;
-        this.ctx.beginPath();
-        this.ctx.moveTo(t1.x, t1.y);
-        this.ctx.lineTo(t2.x, t2.y);
-        this.ctx.stroke();
-      }
-    }
+    // REMOVED: White connection line between stars - Trinity stars should be independent with NO visual connections
 
     this.ctx.restore();
   }
@@ -792,10 +738,10 @@ class CoAITwinEngine {
     this.ctx.arc(drawX, drawY, scaledInnerR, 0, Math.PI * 2);
     this.ctx.fill();
     
-    // Trinity branded text: "Co" (cyan), "AI" (purple), "NX" (gold/Nexus)
-    const brandLabels = ['Co', 'AI', 'NX'];
+    // Trinity branded text: "Co" (cyan), "AI" (purple), "L" (gold) - spells "CoAIL"
+    const brandLabels = ['Co', 'AI', 'L'];
     const brandColors = ['#a855f7', '#38bdf8', '#1e3a5f'];  // Purple on cyan, Cyan on purple, Navy on gold
-    const label = brandLabels[twinIndex] || 'NX';
+    const label = brandLabels[twinIndex] || 'L';
     const labelColor = brandColors[twinIndex] || '#1e3a5f';
     
     // Scale font based on star size for readability
