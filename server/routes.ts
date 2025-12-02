@@ -140,7 +140,7 @@ import {
 import { scheduleSmartAI, isScheduleSmartAvailable } from './services/scheduleSmartAI';
 import { seedAnchor } from './services/utils/scheduling';
 import { configRegistry } from './services/configRegistry';
-import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, attachWorkspaceId, type AuthenticatedRequest } from "./rbac";
+import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, attachWorkspaceId, hasPlatformWideAccess, type AuthenticatedRequest } from "./rbac";
 import { requireStarter, requireProfessional, requireEnterprise } from "./tierGuards";
 import { clientsQuerySchema } from "../shared/validation/pagination";
 import bcrypt from 'bcryptjs';
@@ -482,7 +482,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get user's workspace
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       const member = await storage.getWorkspaceMemberByUserId(userId);
-      const workspaceId = workspace?.id || member?.workspaceId;
+      let workspaceId = workspace?.id || member?.workspaceId;
+
+      // Get user's platform role to check for platform-wide access
+      const platformRole = await getUserPlatformRole(userId);
+      
+      // Platform-wide users (support agents, bots, etc.) get access to system notifications
+      // even without a workspace - use the platform workspace
+      if (!workspaceId && hasPlatformWideAccess(platformRole)) {
+        workspaceId = 'coaileague-platform-workspace';
+      }
 
       if (!workspaceId) {
         return res.json({

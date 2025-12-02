@@ -14,6 +14,7 @@ import { CHAT_SERVER_CONFIG } from './config/chatServer';
 import { ChatServerHub } from './services/ChatServerHub';
 import cookie from 'cookie';
 import { unsign } from 'cookie-signature';
+import { hasPlatformWideAccess } from './rbac';
 
 // ============================================================================
 // SESSION-BASED WEBSOCKET AUTHENTICATION
@@ -972,7 +973,7 @@ export function setupWebSocket(server: Server) {
 
               // Determine user type and set initial status
               platformRole = await storage.getUserPlatformRole(effectiveUserId).catch(() => null);
-              isStaff = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole));
+              isStaff = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(platformRole));
               
               if (isStaff) {
                 userType = 'staff';
@@ -1146,7 +1147,7 @@ export function setupWebSocket(server: Server) {
                 for (const client of clientArray) {
                   if (client.userId && client.readyState === WebSocket.OPEN) {
                     const userRole = await storage.getUserPlatformRole(client.userId);
-                    const isStaff = userRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(userRole);
+                    const isStaff = userRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(userRole);
                     
                     // SYNC FIX: Use formatUserDisplayNameForChat for consistency with messages
                     const userInfo = await storage.getUserDisplayInfo(client.userId);
@@ -1235,7 +1236,7 @@ export function setupWebSocket(server: Server) {
             if (isMainRoom && !userAlreadyInRoom) {
               try {
                 const platformRole = await storage.getUserPlatformRole(payload.userId);
-                const isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole);
+                const isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(platformRole);
                 
                 // 1. SYSTEM announcement (IRC-style): User joined
                 // displayName already includes title for staff (e.g., "Admin Brigido", "SysOp James")
@@ -1494,7 +1495,7 @@ export function setupWebSocket(server: Server) {
               const commandDef = COMMAND_REGISTRY[parsedCommand.command];
               if (commandDef.requiresStaff) {
                 const platformRole = await storage.getUserPlatformRole(ws.userId);
-                const isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole);
+                const isStaff = platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(platformRole);
                 if (!isStaff) {
                   ws.send(JSON.stringify({
                     type: 'error',
@@ -2227,7 +2228,7 @@ export function setupWebSocket(server: Server) {
                 
                 case 'help': {
                   const platformRole = await storage.getUserPlatformRole(ws.userId);
-                  const isStaff = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole));
+                  const isStaff = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(platformRole));
                   const helpText = getHelpText(isStaff);
                   
                   ws.send(JSON.stringify({
@@ -2984,7 +2985,7 @@ export function setupWebSocket(server: Server) {
               try {
                 // Determine if user is subscriber
                 const platformRole = await storage.getUserPlatformRole(ws.userId);
-                const isSubscriber = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(platformRole));
+                const isSubscriber = !!(platformRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(platformRole));
                 
                 // Get conversation history (last 5 messages for context)
                 const recentMessages = await storage.getChatMessagesByConversation(ws.conversationId);
@@ -3123,7 +3124,7 @@ export function setupWebSocket(server: Server) {
 
             // SECURITY: Only platform staff (root_admin, deputy admins, support managers) can kick users
             const kickerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
-            const canKick = kickerRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(kickerRole);
+            const canKick = kickerRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(kickerRole);
             
             if (!canKick) {
               // IRC-style command acknowledgment for permission denied
@@ -3449,7 +3450,7 @@ export function setupWebSocket(server: Server) {
 
             // SECURITY: Only platform staff can silence users
             const silencerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
-            const canSilence = silencerRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(silencerRole);
+            const canSilence = silencerRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(silencerRole);
             
             if (!canSilence) {
               // IRC-STYLE COMMAND ACKNOWLEDGMENT - Permission denied
@@ -3630,7 +3631,7 @@ export function setupWebSocket(server: Server) {
 
             // SECURITY: Only platform staff can give voice
             const staffRole = await storage.getUserPlatformRole(ws.userId).catch(() => null);
-            const canGiveVoice = staffRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(staffRole);
+            const canGiveVoice = staffRole && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(staffRole);
             
             if (!canGiveVoice) {
               // IRC-STYLE COMMAND ACKNOWLEDGMENT - Permission denied
@@ -3826,7 +3827,7 @@ export function setupWebSocket(server: Server) {
             // SECURITY: Require workspace context for shift updates
             // Staff can receive updates for any workspace they specify (if implemented)
             // Regular users must have workspace in session
-            const isStaff = role && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(role);
+            const isStaff = role && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(role);
             if (!workspaceId) {
               if (isStaff) {
                 // Staff without workspace context get platform-wide access (logged for audit)
@@ -3889,7 +3890,7 @@ export function setupWebSocket(server: Server) {
             
             // SECURITY: Non-staff users require workspace context
             // Staff can receive platform-wide notifications without workspace
-            const isStaff = role && ['root_admin', 'deputy_admin', 'support_manager', 'sysop'].includes(role);
+            const isStaff = role && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent', 'Bot'].includes(role);
             if (!isStaff && !workspaceId) {
               ws.send(JSON.stringify({
                 type: 'error',

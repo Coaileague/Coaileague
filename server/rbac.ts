@@ -5,7 +5,16 @@ import { eq, and, isNull } from 'drizzle-orm';
 import './types';
 
 export type WorkspaceRole = 'org_owner' | 'org_admin' | 'department_manager' | 'supervisor' | 'staff' | 'auditor' | 'contractor';
-export type PlatformRole = 'root_admin' | 'deputy_admin' | 'sysop' | 'support_manager' | 'support_agent' | 'compliance_officer' | 'none';
+export type PlatformRole = 'root_admin' | 'deputy_admin' | 'sysop' | 'support_manager' | 'support_agent' | 'compliance_officer' | 'Bot' | 'none';
+
+// Platform-level roles that have platform-wide access (bypass workspace requirements)
+export const PLATFORM_WIDE_ROLES: PlatformRole[] = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'Bot'];
+
+// Check if a platform role has platform-wide access (bypasses workspace requirements)
+export function hasPlatformWideAccess(platformRole?: PlatformRole | string): boolean {
+  if (!platformRole) return false;
+  return PLATFORM_WIDE_ROLES.includes(platformRole as PlatformRole);
+}
 
 export interface AuthenticatedRequest extends Request {
   user?: User;
