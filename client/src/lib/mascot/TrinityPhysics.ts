@@ -29,14 +29,14 @@ export interface TrinityPhysicsConfig {
   bounceElasticity: number;     // How bouncy collisions are
 }
 
-// Optimized for smooth 60fps/30fps rendering with refined dampening
+// Optimized for smooth 60fps/30fps rendering - STRONGER separation to prevent overlap
 const DEFAULT_CONFIG: TrinityPhysicsConfig = {
-  repulsionStrength: 2.2,       // Slightly softer repulsion for smoother movement
-  springStrength: 0.065,        // Gentler spring for natural feel
-  dampening: 0.88,              // Higher dampening for smoother deceleration
-  minDistance: 14,              // Slightly larger gap for cleaner separation
-  maxSpeed: 6,                  // Lower max speed for polished motion
-  bounceElasticity: 0.45        // Less bouncy for refined feel
+  repulsionStrength: 4.5,       // Strong repulsion to push stars apart
+  springStrength: 0.05,         // Gentler spring so repulsion wins
+  dampening: 0.85,              // Higher dampening for smoother deceleration
+  minDistance: 22,              // Larger minimum gap - stars CANNOT overlap
+  maxSpeed: 5,                  // Lower max speed for polished motion
+  bounceElasticity: 0.6         // More bouncy to separate faster
 };
 
 export class TrinityPhysics {
@@ -48,15 +48,15 @@ export class TrinityPhysics {
     this.config = { ...DEFAULT_CONFIG, ...config };
     this.bounds = { width: 100, height: 100, centerX: 50, centerY: 50 };
     
-    // Initialize 3 Trinity bodies with 120° offset positions (spread out initially)
-    const initRadius = 15;
+    // Initialize 3 Trinity bodies with 120° offset positions - WIDER spread to prevent overlap
+    const initRadius = 20;
     const angles = [0, (Math.PI * 2) / 3, (Math.PI * 4) / 3];
     this.bodies = angles.map((angle, i) => ({
       x: Math.cos(angle) * initRadius,
       y: Math.sin(angle) * initRadius,
       vx: 0,
       vy: 0,
-      radius: 8,
+      radius: 10,  // Slightly larger radius for better collision detection
       mass: 1,
       targetX: Math.cos(angle) * initRadius,
       targetY: Math.sin(angle) * initRadius

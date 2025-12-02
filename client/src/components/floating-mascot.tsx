@@ -377,7 +377,7 @@ const FloatingMascot = memo(function FloatingMascot({
       timeRef.current += 0.02;
       const t = timeRef.current;
       const center = mascotSize / 2;
-      const radius = mascotSize * 0.22; // Slightly smaller for 3 stars
+      const radius = mascotSize * 0.32; // Larger radius for better star separation
 
       ctx.clearRect(0, 0, mascotSize, mascotSize);
 
@@ -403,25 +403,25 @@ const FloatingMascot = memo(function FloatingMascot({
       switch (currentMode) {
         case 'IDLE':
           twins.forEach((twin, i) => { twin.angle += 0.015; });
-          // Equilateral triangle formation - all 3 stars use consistent 120° offsets
+          // Equilateral triangle formation - WIDER spread to prevent overlap
           const idleAngle = twins[0].angle;
-          x1 = center + Math.cos(idleAngle) * radius * 0.6;
-          y1 = center + Math.sin(idleAngle) * radius * 0.5;
-          x2 = center + Math.cos(idleAngle + trinityOffset) * radius * 0.6;
-          y2 = center + Math.sin(idleAngle + trinityOffset) * radius * 0.5;
-          x3 = center + Math.cos(idleAngle + trinityOffset * 2) * radius * 0.6;
-          y3 = center + Math.sin(idleAngle + trinityOffset * 2) * radius * 0.5;
+          x1 = center + Math.cos(idleAngle) * radius * 0.95;
+          y1 = center + Math.sin(idleAngle) * radius * 0.9;
+          x2 = center + Math.cos(idleAngle + trinityOffset) * radius * 0.95;
+          y2 = center + Math.sin(idleAngle + trinityOffset) * radius * 0.9;
+          x3 = center + Math.cos(idleAngle + trinityOffset * 2) * radius * 0.95;
+          y3 = center + Math.sin(idleAngle + trinityOffset * 2) * radius * 0.9;
           break;
         
         case 'THINKING':
         case 'ANALYZING':
           twins.forEach((twin, i) => { twin.angle += 0.08; });
-          x1 = center + Math.cos(twins[0].angle) * radius * 0.7;
-          y1 = center + Math.sin(twins[0].angle) * radius * 0.7;
-          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius * 0.7;
-          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius * 0.7;
-          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius * 0.7;
-          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius * 0.7;
+          x1 = center + Math.cos(twins[0].angle) * radius * 0.9;
+          y1 = center + Math.sin(twins[0].angle) * radius * 0.9;
+          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius * 0.9;
+          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius * 0.9;
+          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius * 0.9;
+          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius * 0.9;
           break;
         
         case 'SEARCHING':
@@ -468,12 +468,12 @@ const FloatingMascot = memo(function FloatingMascot({
         case 'SUCCESS':
         case 'CELEBRATING':
           const celebAngle = t * 3;
-          x1 = center + Math.cos(celebAngle) * radius * 0.5 * (1 + Math.sin(t * 5) * 0.2);
-          y1 = center + Math.sin(celebAngle) * radius * 0.5 - Math.abs(Math.sin(t * 4)) * radius * 0.3;
-          x2 = center + Math.cos(celebAngle + trinityOffset) * radius * 0.5 * (1 + Math.sin(t * 5 + trinityOffset) * 0.2);
-          y2 = center + Math.sin(celebAngle + trinityOffset) * radius * 0.5 - Math.abs(Math.sin(t * 4 + trinityOffset / 2)) * radius * 0.3;
-          x3 = center + Math.cos(celebAngle + trinityOffset * 2) * radius * 0.5 * (1 + Math.sin(t * 5 + trinityOffset * 2) * 0.2);
-          y3 = center + Math.sin(celebAngle + trinityOffset * 2) * radius * 0.5 - Math.abs(Math.sin(t * 4 + trinityOffset)) * radius * 0.3;
+          x1 = center + Math.cos(celebAngle) * radius * 0.85 * (1 + Math.sin(t * 5) * 0.15);
+          y1 = center + Math.sin(celebAngle) * radius * 0.85 - Math.abs(Math.sin(t * 4)) * radius * 0.25;
+          x2 = center + Math.cos(celebAngle + trinityOffset) * radius * 0.85 * (1 + Math.sin(t * 5 + trinityOffset) * 0.15);
+          y2 = center + Math.sin(celebAngle + trinityOffset) * radius * 0.85 - Math.abs(Math.sin(t * 4 + trinityOffset / 2)) * radius * 0.25;
+          x3 = center + Math.cos(celebAngle + trinityOffset * 2) * radius * 0.85 * (1 + Math.sin(t * 5 + trinityOffset * 2) * 0.15);
+          y3 = center + Math.sin(celebAngle + trinityOffset * 2) * radius * 0.85 - Math.abs(Math.sin(t * 4 + trinityOffset)) * radius * 0.25;
           break;
         
         case 'ERROR':
@@ -488,12 +488,12 @@ const FloatingMascot = memo(function FloatingMascot({
         
         default:
           twins.forEach((twin, i) => { twin.angle += 0.02; });
-          x1 = center + Math.cos(twins[0].angle) * radius * 0.5;
-          y1 = center + Math.sin(twins[0].angle) * radius * 0.5;
-          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius * 0.5;
-          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius * 0.5;
-          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius * 0.5;
-          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius * 0.5;
+          x1 = center + Math.cos(twins[0].angle) * radius * 0.9;
+          y1 = center + Math.sin(twins[0].angle) * radius * 0.9;
+          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius * 0.9;
+          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius * 0.9;
+          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius * 0.9;
+          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius * 0.9;
       }
 
       // Set physics target positions (relative to center)
@@ -966,28 +966,14 @@ const FloatingMascot = memo(function FloatingMascot({
             transition={{ type: 'spring', stiffness: 350, damping: 28 }}
           >
             <div
-              className="relative px-3 py-2 rounded-2xl text-[11px] font-medium leading-relaxed"
+              className="relative px-2 py-1 text-[11px] font-medium leading-relaxed"
               style={{
-                background: 'rgba(255, 255, 255, 0.10)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                border: '1px solid rgba(255, 255, 255, 0.15)',
-                boxShadow: 'inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 4px 16px rgba(0, 0, 0, 0.15)',
+                background: 'transparent',
+                border: 'none',
                 color: '#ffffff',
-                textShadow: '0 1px 3px rgba(0,0,0,0.8), 0 0 6px rgba(0,0,0,0.6)'
+                textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.8), 0 2px 6px rgba(0,0,0,0.7), 1px 1px 2px rgba(0,0,0,1)'
               }}
             >
-              <div
-                className="absolute -left-[7px] top-3"
-                style={{
-                  width: 0,
-                  height: 0,
-                  borderTop: '5px solid transparent',
-                  borderBottom: '5px solid transparent',
-                  borderRight: '7px solid rgba(255, 255, 255, 0.10)',
-                  filter: 'drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.15))'
-                }}
-              />
               <AnimatedText text={currentEmote?.expression || currentThought} />
             </div>
           </motion.div>
