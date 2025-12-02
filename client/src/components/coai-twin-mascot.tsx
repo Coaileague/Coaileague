@@ -65,6 +65,20 @@ interface Shockwave {
 
 type MascotVariant = 'mini' | 'expanded' | 'full';
 
+interface EmoteBehavior {
+  scale: number;
+  wobble: number;
+  glow: number;
+  speed: number;
+}
+
+interface EmoteState {
+  type: string;
+  purpleBehavior: EmoteBehavior;
+  cyanBehavior: EmoteBehavior;
+  particleEffect?: 'sparkle' | 'hearts' | 'stars' | 'confetti' | 'zzz' | 'question' | 'exclaim';
+}
+
 interface CoAITwinMascotProps {
   mode?: MascotMode;
   className?: string;
@@ -73,6 +87,7 @@ interface CoAITwinMascotProps {
   size?: number; // Size in pixels (default 400)
   mini?: boolean; // Compact mode for bubble display - no overlays
   variant?: MascotVariant; // mini (80px bubble), expanded (180px), full (original)
+  emote?: EmoteState; // Current emote state for visual expression
 }
 
 const MODE_COLORS: Record<MascotMode, string> = {
@@ -121,6 +136,14 @@ class CoAITwinEngine {
     isTouching: false,
     shake: 0
   };
+
+  private emoteState: EmoteState = {
+    type: 'neutral',
+    purpleBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
+    cyanBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
+  };
+
+  private emoteParticles: { x: number; y: number; vx: number; vy: number; life: number; type: string; char?: string }[] = [];
 
   private twins: Twin[] = [
     { id: 0, x: 0, y: 0, trail: [], color: '#38bdf8', angle: 0 },
@@ -219,6 +242,46 @@ class CoAITwinEngine {
 
   getMode(): MascotMode {
     return this.state.mode;
+  }
+
+  setEmote(emote: EmoteState) {
+    const prevType = this.emoteState.type;
+    this.emoteState = emote;
+    
+    // Spawn emote particles on change
+    if (emote.type !== prevType && emote.particleEffect) {
+      this.spawnEmoteParticles(emote.particleEffect);
+    }
+  }
+
+  private spawnEmoteParticles(effect: string) {
+    const count = effect === 'confetti' ? 20 : effect === 'zzz' ? 3 : 8;
+    
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 / count) * i + Math.random() * 0.5;
+      const speed = 1.5 + Math.random() * 2;
+      
+      let char = '';
+      switch (effect) {
+        case 'sparkle': char = '✨'; break;
+        case 'hearts': char = '❤️'; break;
+        case 'stars': char = '⭐'; break;
+        case 'confetti': char = ['🎊', '🎉', '✨', '💫'][Math.floor(Math.random() * 4)]; break;
+        case 'zzz': char = 'Z'; break;
+        case 'question': char = '?'; break;
+        case 'exclaim': char = '!'; break;
+      }
+      
+      this.emoteParticles.push({
+        x: 0,
+        y: 0,
+        vx: Math.cos(angle) * speed * (effect === 'zzz' ? 0.3 : 1),
+        vy: Math.sin(angle) * speed * (effect === 'zzz' ? -1 : 1) - (effect === 'zzz' ? 1 : 0),
+        life: 1.0,
+        type: effect,
+        char,
+      });
+    }
   }
 
   private spawnShockwave(color: string) {
@@ -349,7 +412,7 @@ class CoAITwinEngine {
     this.drawShockwaves();
     this.drawParticles();
 
-    this.twins.forEach(t => {
+    this.twins.forEach((t, twinIndex) => {
       this.ctx.beginPath();
       for (let i = 0; i < t.trail.length - 1; i++) {
         const p1 = t.trail[i];
@@ -362,8 +425,11 @@ class CoAITwinEngine {
         this.ctx.stroke();
       }
       this.ctx.globalAlpha = 1.0;
-      this.drawStar(t.x, t.y, 15 * s * 0.005, 4.5 * s * 0.005, t.color);
+      this.drawStar(t.x, t.y, 15 * s * 0.005, 4.5 * s * 0.005, t.color, twinIndex);
     });
+
+    // Draw emote particles on top
+    this.drawEmoteParticles();
 
     if (this.state.mode === 'ANALYZING') {
       this.ctx.strokeStyle = this.twins[0].color;
@@ -402,23 +468,63 @@ class CoAITwinEngine {
     this.ctx.restore();
   }
 
-  private drawStar(x: number, y: number, outerR: number, innerR: number, color: string) {
+  private drawStar(x: number, y: number, outerR: number, innerR: number, color: string, twinIndex: number = 0) {
+    // Apply emote behaviors
+    const behavior = twinIndex === 0 ? this.emoteState.cyanBehavior : this.emoteState.purpleBehavior;
+    const scale = behavior.scale;
+    const wobble = behavior.wobble;
+    const glow = behavior.glow;
+    const speed = behavior.speed;
+    
+    // Apply wobble offset
+    const wobbleX = Math.sin(this.state.time * 0.1 * speed + twinIndex * 2) * wobble * 3;
+    const wobbleY = Math.cos(this.state.time * 0.12 * speed + twinIndex * 2) * wobble * 3;
+    const drawX = x + wobbleX;
+    const drawY = y + wobbleY;
+    
+    // Apply scaled sizes
+    const scaledOuterR = outerR * scale;
+    const scaledInnerR = innerR * scale;
+    
     this.ctx.fillStyle = color;
-    this.ctx.shadowBlur = 20;
+    this.ctx.shadowBlur = 20 + (glow * 30);
     this.ctx.shadowColor = color;
     this.ctx.beginPath();
     for (let i = 0; i < 4; i++) {
-      const angle = (i * Math.PI / 2) - (this.state.time * 0.05);
-      this.ctx.lineTo(x + Math.cos(angle) * outerR, y + Math.sin(angle) * outerR);
-      this.ctx.lineTo(x + Math.cos(angle + Math.PI / 4) * innerR, y + Math.sin(angle + Math.PI / 4) * innerR);
+      const angle = (i * Math.PI / 2) - (this.state.time * 0.05 * speed);
+      this.ctx.lineTo(drawX + Math.cos(angle) * scaledOuterR, drawY + Math.sin(angle) * scaledOuterR);
+      this.ctx.lineTo(drawX + Math.cos(angle + Math.PI / 4) * scaledInnerR, drawY + Math.sin(angle + Math.PI / 4) * scaledInnerR);
     }
     this.ctx.closePath();
     this.ctx.fill();
     this.ctx.shadowBlur = 0;
     this.ctx.fillStyle = '#fff';
     this.ctx.beginPath();
-    this.ctx.arc(x, y, innerR, 0, Math.PI * 2);
+    this.ctx.arc(drawX, drawY, scaledInnerR, 0, Math.PI * 2);
     this.ctx.fill();
+  }
+
+  private drawEmoteParticles() {
+    for (let i = this.emoteParticles.length - 1; i >= 0; i--) {
+      const p = this.emoteParticles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += p.type === 'zzz' ? -0.02 : 0.05; // Gravity or float up for zzz
+      p.life -= 0.02;
+      
+      if (p.life <= 0) {
+        this.emoteParticles.splice(i, 1);
+        continue;
+      }
+      
+      this.ctx.globalAlpha = p.life;
+      this.ctx.font = `${12 + p.life * 8}px sans-serif`;
+      this.ctx.textAlign = 'center';
+      this.ctx.textBaseline = 'middle';
+      this.ctx.fillStyle = '#fff';
+      this.ctx.fillText(p.char || '', p.x, p.y);
+    }
+    this.ctx.globalAlpha = 1.0;
   }
 
   private drawGrid(w: number, h: number, s: number) {
@@ -504,7 +610,8 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
   onModeChange,
   size,
   mini = false,
-  variant
+  variant,
+  emote
 }: CoAITwinMascotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -535,6 +642,13 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
       engineRef.current.setMode(mode);
     }
   }, [mode]);
+
+  // Apply emote state to engine
+  useEffect(() => {
+    if (engineRef.current && emote) {
+      engineRef.current.setEmote(emote);
+    }
+  }, [emote]);
 
   const handleModeChange = useCallback((newMode: MascotMode) => {
     if (engineRef.current) {

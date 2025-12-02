@@ -167,9 +167,10 @@ import { useMascotMode } from "@/hooks/use-mascot-mode";
 import { useMascotPosition } from "@/hooks/use-mascot-position";
 import { useMascotRoaming } from "@/hooks/use-mascot-roaming";
 import { useSmartBubblePlacement, getArrowStyles } from "@/hooks/use-smart-bubble-placement";
-import MASCOT_CONFIG, { shouldHideMascot, getDeviceSizes, getCurrentHoliday } from "@/config/mascotConfig";
+import MASCOT_CONFIG, { shouldHideMascot, getDeviceSizes, getCurrentHoliday, EMOTE_CONFIGS } from "@/config/mascotConfig";
 import { thoughtManager, type Thought } from "@/lib/mascot/ThoughtManager";
 import { useMascotAIIntegration } from "@/hooks/use-mascot-ai";
+import { useMascotEmotes, setGlobalEmoteTrigger } from "@/hooks/use-mascot-emotes";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 
 function MascotRenderer() {
@@ -187,6 +188,22 @@ function MascotRenderer() {
   const floatTimeRef = useRef(0);
   const floatAnimRef = useRef<number | null>(null);
   const mascotContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Emote system integration
+  const { emote, config: emoteConfig, triggerEmote, triggerByContext } = useMascotEmotes();
+  
+  // Create emote state for passing to mascot component
+  const emoteState = {
+    type: emote,
+    purpleBehavior: emoteConfig.starBehavior.purple,
+    cyanBehavior: emoteConfig.starBehavior.cyan,
+    particleEffect: emoteConfig.particleEffect,
+  };
+  
+  // Set global emote trigger for use outside React
+  useEffect(() => {
+    setGlobalEmoteTrigger(triggerByContext);
+  }, [triggerByContext]);
   
   const sizes = getDeviceSizes();
   const { position, isExpanded, isDragging, toggleExpanded, resetPosition, setRoamingPosition, dragHandlers } = useMascotPosition(sizes.defaultSize, isMobile);
@@ -290,21 +307,43 @@ function MascotRenderer() {
       setDragVelocity(velocity);
       lastPosRef.current = { x: position.x, y: position.y, time: now };
       
+      // Trigger surprised emote when dragged
+      if (lastPosRef.current.time === 0 || dragVelocity === 0) {
+        triggerEmote('surprised');
+      } else if (velocity > 5) {
+        triggerEmote('excited');
+      }
+      
       if (velocity > 5 && Math.random() > 0.92) {
         thoughtManager.triggerReaction('drag_move', velocity);
       }
     } else if (dragVelocity > 0) {
       thoughtManager.triggerReaction('drag_end', dragVelocity);
       setDragVelocity(0);
+      // Return to happy after drag ends
+      triggerEmote('happy');
     }
-  }, [position, isDragging]);
+  }, [position, isDragging, triggerEmote]);
+  
+  // Trigger emotes based on roaming state
+  useEffect(() => {
+    if (isRoaming) {
+      triggerEmote('playful');
+    }
+  }, [isRoaming, triggerEmote]);
+  
+  // Trigger emotes based on page navigation
+  useEffect(() => {
+    triggerByContext('navigate', location);
+  }, [location, triggerByContext]);
   
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     if (!isDragging) {
       thoughtManager.triggerReaction('tap');
+      triggerEmote('happy');
     }
-  }, [isDragging]);
+  }, [isDragging, triggerEmote]);
   
   if (!MASCOT_CONFIG.enabled || shouldHideMascot(location)) return null;
   
@@ -327,8 +366,6 @@ function MascotRenderer() {
           ? 'transform 150ms ease-out' 
           : `all ${MASCOT_CONFIG.animation.transitionDuration}ms ease-out, transform 150ms ease-out`,
         background: 'transparent',
-        boxShadow: getTransportGlow(),
-        borderRadius: '50%',
       }}
       data-testid="mascot-container"
       data-transport-effect={currentEffect || undefined}
@@ -343,6 +380,7 @@ function MascotRenderer() {
           mode={currentMode} 
           variant={isExpanded ? 'expanded' : 'mini'}
           size={bubbleSize}
+          emote={emoteState}
         />
         
         {currentThought && (
