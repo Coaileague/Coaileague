@@ -168,7 +168,7 @@ import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 
 // Dynamic Draggable Mascot Renderer - AI-connected bubble that follows user everywhere
 function MascotRenderer() {
-  const { currentMode } = useMascotMode();
+  const currentMode = useMascotMode();
   const [location] = useLocation();
   const { position, isExpanded, isDragging, toggleExpanded, resetPosition, dragHandlers } = useMascotPosition(200);
   
