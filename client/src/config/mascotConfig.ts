@@ -350,6 +350,330 @@ export interface RoamingConfig {
   };
 }
 
+// Thought Bubble Styling System
+export type ThoughtBubbleMode = 'normal' | 'seasonal' | 'holiday';
+export type ThoughtBubbleAnimation = 
+  | 'fade' 
+  | 'slide-up' 
+  | 'slide-down' 
+  | 'pop' 
+  | 'float-in' 
+  | 'sparkle-in'
+  | 'snowfall'
+  | 'hearts-float'
+  | 'leaves-drift'
+  | 'confetti-burst';
+
+export interface ThoughtBubbleStyle {
+  background: string;
+  backdropBlur: string;
+  border: string;
+  borderRadius: string;
+  textColor: string;
+  glowColor: string;
+  glowIntensity: number;
+  opacity: number;
+  shadow: string;
+}
+
+export interface ThoughtBubbleAnimationConfig {
+  enter: ThoughtBubbleAnimation;
+  exit: ThoughtBubbleAnimation;
+  duration: number;
+  easing: string;
+  particleEffect?: 'snowflakes' | 'hearts' | 'leaves' | 'sparkles' | 'confetti';
+}
+
+export interface ThoughtBubbleTheme {
+  mode: ThoughtBubbleMode;
+  style: ThoughtBubbleStyle;
+  animation: ThoughtBubbleAnimationConfig;
+  emoticonStyle?: 'default' | 'seasonal' | 'animated';
+}
+
+// Seasonal thought bubble configurations
+export const THOUGHT_BUBBLE_THEMES: Record<HolidayKey, ThoughtBubbleTheme> = {
+  default: {
+    mode: 'normal',
+    style: {
+      background: 'rgba(15, 23, 42, 0.15)',
+      backdropBlur: 'blur(8px)',
+      border: '1px solid rgba(148, 163, 184, 0.2)',
+      borderRadius: '12px',
+      textColor: 'rgba(241, 245, 249, 0.95)',
+      glowColor: 'rgba(168, 85, 247, 0.3)',
+      glowIntensity: 0.4,
+      opacity: 0.9,
+      shadow: '0 4px 16px rgba(0, 0, 0, 0.1)',
+    },
+    animation: {
+      enter: 'fade',
+      exit: 'fade',
+      duration: 300,
+      easing: 'ease-out',
+    },
+    emoticonStyle: 'default',
+  },
+  new_year: {
+    mode: 'holiday',
+    style: {
+      background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(56, 189, 248, 0.1))',
+      backdropBlur: 'blur(12px)',
+      border: '1px solid rgba(255, 215, 0, 0.3)',
+      borderRadius: '16px',
+      textColor: 'rgba(255, 255, 255, 0.95)',
+      glowColor: 'rgba(255, 215, 0, 0.4)',
+      glowIntensity: 0.6,
+      opacity: 0.85,
+      shadow: '0 4px 20px rgba(255, 215, 0, 0.15)',
+    },
+    animation: {
+      enter: 'confetti-burst',
+      exit: 'sparkle-in',
+      duration: 500,
+      easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+      particleEffect: 'confetti',
+    },
+    emoticonStyle: 'animated',
+  },
+  valentines: {
+    mode: 'holiday',
+    style: {
+      background: 'rgba(236, 72, 153, 0.1)',
+      backdropBlur: 'blur(10px)',
+      border: '1px solid rgba(236, 72, 153, 0.3)',
+      borderRadius: '20px',
+      textColor: 'rgba(255, 255, 255, 0.95)',
+      glowColor: 'rgba(236, 72, 153, 0.4)',
+      glowIntensity: 0.5,
+      opacity: 0.85,
+      shadow: '0 4px 18px rgba(236, 72, 153, 0.2)',
+    },
+    animation: {
+      enter: 'hearts-float',
+      exit: 'fade',
+      duration: 450,
+      easing: 'ease-out',
+      particleEffect: 'hearts',
+    },
+    emoticonStyle: 'seasonal',
+  },
+  spring: {
+    mode: 'seasonal',
+    style: {
+      background: 'rgba(74, 222, 128, 0.08)',
+      backdropBlur: 'blur(8px)',
+      border: '1px solid rgba(74, 222, 128, 0.25)',
+      borderRadius: '14px',
+      textColor: 'rgba(241, 245, 249, 0.95)',
+      glowColor: 'rgba(74, 222, 128, 0.3)',
+      glowIntensity: 0.4,
+      opacity: 0.88,
+      shadow: '0 4px 16px rgba(74, 222, 128, 0.1)',
+    },
+    animation: {
+      enter: 'float-in',
+      exit: 'fade',
+      duration: 400,
+      easing: 'ease-out',
+      particleEffect: 'sparkles',
+    },
+    emoticonStyle: 'seasonal',
+  },
+  easter: {
+    mode: 'holiday',
+    style: {
+      background: 'linear-gradient(135deg, rgba(251, 207, 232, 0.1), rgba(196, 181, 253, 0.1))',
+      backdropBlur: 'blur(10px)',
+      border: '1px solid rgba(196, 181, 253, 0.3)',
+      borderRadius: '18px',
+      textColor: 'rgba(255, 255, 255, 0.95)',
+      glowColor: 'rgba(196, 181, 253, 0.4)',
+      glowIntensity: 0.45,
+      opacity: 0.87,
+      shadow: '0 4px 16px rgba(196, 181, 253, 0.15)',
+    },
+    animation: {
+      enter: 'pop',
+      exit: 'fade',
+      duration: 350,
+      easing: 'cubic-bezier(0.34, 1.56, 0.64, 1)',
+    },
+    emoticonStyle: 'seasonal',
+  },
+  summer: {
+    mode: 'seasonal',
+    style: {
+      background: 'rgba(251, 191, 36, 0.08)',
+      backdropBlur: 'blur(6px)',
+      border: '1px solid rgba(251, 191, 36, 0.2)',
+      borderRadius: '12px',
+      textColor: 'rgba(255, 255, 255, 0.95)',
+      glowColor: 'rgba(251, 191, 36, 0.35)',
+      glowIntensity: 0.5,
+      opacity: 0.85,
+      shadow: '0 4px 20px rgba(251, 191, 36, 0.15)',
+    },
+    animation: {
+      enter: 'slide-up',
+      exit: 'slide-down',
+      duration: 300,
+      easing: 'ease-out',
+    },
+    emoticonStyle: 'default',
+  },
+  halloween: {
+    mode: 'holiday',
+    style: {
+      background: 'rgba(249, 115, 22, 0.1)',
+      backdropBlur: 'blur(8px)',
+      border: '1px solid rgba(249, 115, 22, 0.3)',
+      borderRadius: '10px',
+      textColor: 'rgba(255, 255, 255, 0.95)',
+      glowColor: 'rgba(249, 115, 22, 0.5)',
+      glowIntensity: 0.6,
+      opacity: 0.9,
+      shadow: '0 4px 18px rgba(249, 115, 22, 0.25)',
+    },
+    animation: {
+      enter: 'pop',
+      exit: 'fade',
+      duration: 400,
+      easing: 'cubic-bezier(0.68, -0.55, 0.265, 1.55)',
+    },
+    emoticonStyle: 'animated',
+  },
+  thanksgiving: {
+    mode: 'holiday',
+    style: {
+      background: 'rgba(180, 83, 9, 0.1)',
+      backdropBlur: 'blur(8px)',
+      border: '1px solid rgba(217, 119, 6, 0.25)',
+      borderRadius: '14px',
+      textColor: 'rgba(255, 255, 255, 0.95)',
+      glowColor: 'rgba(217, 119, 6, 0.35)',
+      glowIntensity: 0.4,
+      opacity: 0.88,
+      shadow: '0 4px 16px rgba(180, 83, 9, 0.15)',
+    },
+    animation: {
+      enter: 'leaves-drift',
+      exit: 'fade',
+      duration: 500,
+      easing: 'ease-out',
+      particleEffect: 'leaves',
+    },
+    emoticonStyle: 'seasonal',
+  },
+  christmas: {
+    mode: 'holiday',
+    style: {
+      background: 'linear-gradient(135deg, rgba(220, 38, 38, 0.08), rgba(22, 163, 74, 0.08))',
+      backdropBlur: 'blur(12px)',
+      border: '1px solid rgba(255, 255, 255, 0.2)',
+      borderRadius: '16px',
+      textColor: 'rgba(255, 255, 255, 0.95)',
+      glowColor: 'rgba(255, 255, 255, 0.4)',
+      glowIntensity: 0.5,
+      opacity: 0.85,
+      shadow: '0 4px 20px rgba(255, 255, 255, 0.1)',
+    },
+    animation: {
+      enter: 'snowfall',
+      exit: 'sparkle-in',
+      duration: 600,
+      easing: 'ease-out',
+      particleEffect: 'snowflakes',
+    },
+    emoticonStyle: 'animated',
+  },
+};
+
+// Get current thought bubble theme based on date
+export function getCurrentThoughtBubbleTheme(): ThoughtBubbleTheme {
+  const holiday = getCurrentHoliday();
+  if (holiday) {
+    return THOUGHT_BUBBLE_THEMES[holiday.key] || THOUGHT_BUBBLE_THEMES.default;
+  }
+  return THOUGHT_BUBBLE_THEMES.default;
+}
+
+// Thought content handler - decides what content to show
+export interface ThoughtContentHandler {
+  shouldShowThought: (context: ThoughtContext) => boolean;
+  getThoughtContent: (context: ThoughtContext) => ThoughtContent | null;
+  getTheme: () => ThoughtBubbleTheme;
+}
+
+export interface ThoughtContext {
+  currentPage: string;
+  userRole?: string;
+  timeOfDay: 'morning' | 'afternoon' | 'evening' | 'night';
+  isHoliday: boolean;
+  holidayKey?: HolidayKey;
+  mascotMode: MascotMode;
+  lastInteraction?: InteractionType;
+  isRoaming: boolean;
+  emote?: EmoteType;
+}
+
+export interface ThoughtContent {
+  text: string;
+  emoticon: string;
+  priority: 'low' | 'normal' | 'high' | 'urgent';
+  source: 'default' | 'reaction' | 'holiday' | 'ai' | 'task' | 'contextual';
+  displayDuration?: number;
+}
+
+// Create thought content handler
+export function createThoughtContentHandler(): ThoughtContentHandler {
+  return {
+    shouldShowThought: (context: ThoughtContext): boolean => {
+      // Always allow holiday thoughts
+      if (context.isHoliday) return true;
+      // Allow based on mode
+      if (context.mascotMode !== 'IDLE' && context.mascotMode !== 'ERROR') return true;
+      // Allow roaming thoughts
+      if (context.isRoaming) return true;
+      // Random chance for idle thoughts
+      return Math.random() > 0.7;
+    },
+    
+    getThoughtContent: (context: ThoughtContext): ThoughtContent | null => {
+      // Holiday-specific content
+      if (context.isHoliday && context.holidayKey) {
+        const holiday = MASCOT_CONFIG.holidays.find(h => h.key === context.holidayKey);
+        if (holiday) {
+          const text = holiday.thoughts[Math.floor(Math.random() * holiday.thoughts.length)];
+          return {
+            text,
+            emoticon: getEmoticon('HOLIDAY'),
+            priority: 'high',
+            source: 'holiday',
+          };
+        }
+      }
+      
+      // Get contextual thought based on current state
+      const thought = getRandomThought(context.mascotMode);
+      if (thought) {
+        return {
+          text: thought,
+          emoticon: getEmoticon(context.mascotMode),
+          priority: 'normal',
+          source: 'contextual',
+        };
+      }
+      
+      return null;
+    },
+    
+    getTheme: (): ThoughtBubbleTheme => {
+      return getCurrentThoughtBubbleTheme();
+    },
+  };
+}
+
 export interface MascotConfig {
   enabled: boolean;
   desktop: MascotSizes;

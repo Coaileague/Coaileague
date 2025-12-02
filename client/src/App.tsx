@@ -167,11 +167,69 @@ import { useMascotMode } from "@/hooks/use-mascot-mode";
 import { useMascotPosition } from "@/hooks/use-mascot-position";
 import { useMascotRoaming } from "@/hooks/use-mascot-roaming";
 import { useSmartBubblePlacement, getArrowStyles } from "@/hooks/use-smart-bubble-placement";
-import MASCOT_CONFIG, { shouldHideMascot, getDeviceSizes, getCurrentHoliday, EMOTE_CONFIGS } from "@/config/mascotConfig";
+import MASCOT_CONFIG, { 
+  shouldHideMascot, 
+  getDeviceSizes, 
+  getCurrentHoliday, 
+  EMOTE_CONFIGS,
+  getCurrentThoughtBubbleTheme,
+  type ThoughtBubbleTheme,
+  type ThoughtBubbleAnimation 
+} from "@/config/mascotConfig";
 import { thoughtManager, type Thought } from "@/lib/mascot/ThoughtManager";
 import { useMascotAIIntegration } from "@/hooks/use-mascot-ai";
 import { useMascotEmotes, setGlobalEmoteTrigger } from "@/hooks/use-mascot-emotes";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
+
+// Animation class mappings for thought bubbles
+const getAnimationClasses = (animation: ThoughtBubbleAnimation, isEntering: boolean): string => {
+  const baseClasses = 'pointer-events-none';
+  const animationMap: Record<ThoughtBubbleAnimation, { enter: string; exit: string }> = {
+    'fade': { 
+      enter: 'animate-in fade-in duration-300', 
+      exit: 'animate-out fade-out duration-200' 
+    },
+    'slide-up': { 
+      enter: 'animate-in fade-in slide-in-from-bottom-2 duration-300', 
+      exit: 'animate-out fade-out slide-out-to-bottom-2 duration-200' 
+    },
+    'slide-down': { 
+      enter: 'animate-in fade-in slide-in-from-top-2 duration-300', 
+      exit: 'animate-out fade-out slide-out-to-top-2 duration-200' 
+    },
+    'pop': { 
+      enter: 'animate-in fade-in zoom-in-95 duration-300', 
+      exit: 'animate-out fade-out zoom-out-95 duration-200' 
+    },
+    'float-in': { 
+      enter: 'animate-in fade-in slide-in-from-bottom-4 duration-400', 
+      exit: 'animate-out fade-out duration-200' 
+    },
+    'sparkle-in': { 
+      enter: 'animate-in fade-in zoom-in-90 duration-500', 
+      exit: 'animate-out fade-out zoom-out-90 duration-300' 
+    },
+    'snowfall': { 
+      enter: 'animate-in fade-in slide-in-from-top-4 duration-600', 
+      exit: 'animate-out fade-out duration-300' 
+    },
+    'hearts-float': { 
+      enter: 'animate-in fade-in slide-in-from-bottom-3 duration-450', 
+      exit: 'animate-out fade-out duration-200' 
+    },
+    'leaves-drift': { 
+      enter: 'animate-in fade-in slide-in-from-right-2 duration-500', 
+      exit: 'animate-out fade-out duration-300' 
+    },
+    'confetti-burst': { 
+      enter: 'animate-in fade-in zoom-in-75 duration-500', 
+      exit: 'animate-out fade-out zoom-out-95 duration-300' 
+    },
+  };
+  
+  const animConfig = animationMap[animation] || animationMap.fade;
+  return `${baseClasses} ${isEntering ? animConfig.enter : animConfig.exit}`;
+};
 
 function MascotRenderer() {
   const { user } = useAuth();
@@ -184,10 +242,17 @@ function MascotRenderer() {
   const [currentThought, setCurrentThought] = useState<Thought | null>(null);
   const [floatOffset, setFloatOffset] = useState({ x: 0, y: 0 });
   const [dragVelocity, setDragVelocity] = useState(0);
+  const [thoughtBubbleTheme, setThoughtBubbleTheme] = useState<ThoughtBubbleTheme>(getCurrentThoughtBubbleTheme());
   const lastPosRef = useRef({ x: 0, y: 0, time: 0 });
   const floatTimeRef = useRef(0);
   const floatAnimRef = useRef<number | null>(null);
   const mascotContainerRef = useRef<HTMLDivElement>(null);
+  
+  // Update theme based on holiday/season
+  useEffect(() => {
+    const theme = getCurrentThoughtBubbleTheme();
+    setThoughtBubbleTheme(theme);
+  }, [location]);
   
   // Emote system integration
   const { emote, config: emoteConfig, triggerEmote, triggerByContext } = useMascotEmotes();
@@ -385,29 +450,48 @@ function MascotRenderer() {
         
         {currentThought && (
           <div 
-            className={`absolute px-3 py-2 rounded-lg border border-slate-600/80 text-slate-100 whitespace-nowrap shadow-lg pointer-events-none animate-in fade-in duration-300 ${isMobile ? 'text-xs max-w-[160px] whitespace-normal text-center' : 'text-sm'} ${bubblePlacement.isColliding ? 'backdrop-blur-md' : ''}`}
+            className={`absolute px-3 py-2 whitespace-nowrap ${getAnimationClasses(thoughtBubbleTheme.animation.enter, true)} ${isMobile ? 'text-xs max-w-[160px] whitespace-normal text-center' : 'text-sm'}`}
             style={{
               ...bubblePlacement.position,
-              backgroundColor: bubblePlacement.isColliding 
-                ? `rgba(15, 23, 42, ${bubblePlacement.opacity})` 
-                : 'rgba(15, 23, 42, 0.95)',
-              boxShadow: bubblePlacement.isColliding 
-                ? '0 4px 20px rgba(0,0,0,0.25)' 
-                : '0 4px 20px rgba(0,0,0,0.4)',
-              transition: 'opacity 200ms ease, background-color 200ms ease',
+              background: thoughtBubbleTheme.style.background,
+              backdropFilter: thoughtBubbleTheme.style.backdropBlur,
+              WebkitBackdropFilter: thoughtBubbleTheme.style.backdropBlur,
+              border: thoughtBubbleTheme.style.border,
+              borderRadius: thoughtBubbleTheme.style.borderRadius,
+              color: thoughtBubbleTheme.style.textColor,
+              boxShadow: `${thoughtBubbleTheme.style.shadow}, 0 0 ${thoughtBubbleTheme.style.glowIntensity * 20}px ${thoughtBubbleTheme.style.glowColor}`,
+              opacity: thoughtBubbleTheme.style.opacity,
+              transition: `all ${thoughtBubbleTheme.animation.duration}ms ${thoughtBubbleTheme.animation.easing}`,
             }}
             data-testid="mascot-thought-bubble"
+            data-bubble-mode={thoughtBubbleTheme.mode}
           >
             <div className="flex items-center gap-2 justify-center">
-              <span className="text-lg shrink-0">{currentThought.emoticon}</span>
-              <span className="font-medium">{currentThought.text}</span>
+              <span 
+                className={`text-lg shrink-0 ${thoughtBubbleTheme.emoticonStyle === 'animated' ? 'animate-bounce' : ''}`}
+                style={{ 
+                  filter: thoughtBubbleTheme.mode === 'holiday' ? 'drop-shadow(0 0 4px currentColor)' : 'none' 
+                }}
+              >
+                {currentThought.emoticon}
+              </span>
+              <span 
+                className="font-medium"
+                style={{ 
+                  textShadow: thoughtBubbleTheme.mode !== 'normal' 
+                    ? `0 1px 2px rgba(0,0,0,0.3)` 
+                    : 'none' 
+                }}
+              >
+                {currentThought.text}
+              </span>
             </div>
             <div 
-              className={`${arrowStyles.position} w-2 h-2 ${arrowStyles.borderClasses} border-slate-600/80`}
+              className={`${arrowStyles.position} w-2 h-2 ${arrowStyles.borderClasses}`}
               style={{
-                backgroundColor: bubblePlacement.isColliding 
-                  ? `rgba(15, 23, 42, ${bubblePlacement.opacity})` 
-                  : 'rgba(15, 23, 42, 0.95)',
+                background: thoughtBubbleTheme.style.background,
+                backdropFilter: thoughtBubbleTheme.style.backdropBlur,
+                borderColor: thoughtBubbleTheme.style.border.replace('1px solid ', ''),
                 transform: arrowStyles.transform,
               }}
             />
