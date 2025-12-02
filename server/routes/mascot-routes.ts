@@ -7,16 +7,114 @@
  * - Task suggestions for account setup and growth
  * - AI-driven contextual responses
  * 
+ * AI Brain Authority Chain:
+ * - All mascot actions orchestrated by Gemini/HelpAI/Bot systems
+ * - Root authority prevents blocking - only missing/broken actions stopped
+ * - Errors auto-reported to support staff and AI Brain for fix workflow
+ * 
  * Leverages Gemini AI and existing platform services for intelligence.
  */
 
 import { Router } from 'express';
 import { db } from '../db';
-import { helposFaqs, workspaces, employees, shifts } from '@shared/schema';
+import { helposFaqs, workspaces, employees, shifts, notifications } from '@shared/schema';
 import { eq, desc, and, gte, count, sql } from 'drizzle-orm';
 import { geminiClient } from '../services/ai-brain/providers/geminiClient';
 import { requireAuth } from '../auth';
 import { broadcastToAllClients } from '../websocket';
+
+// ============================================================================
+// AI BRAIN AUTHORITY CHAIN
+// Mascot actions have root authority - only block if broken/missing
+// ============================================================================
+
+interface MascotActionResult {
+  success: boolean;
+  action: string;
+  data?: any;
+  error?: string;
+  reportedToSupport?: boolean;
+}
+
+// AI Brain authorities that cannot be blocked
+const AI_BRAIN_AUTHORITIES = ['gemini', 'helpai', 'mascot', 'bot', 'root_admin'];
+
+// Report mascot action errors to support staff and AI Brain for automated fixing
+async function reportMascotError(
+  action: string, 
+  error: string, 
+  context?: Record<string, any>
+): Promise<void> {
+  const errorId = `mascot-error-${Date.now()}`;
+  
+  try {
+    // Log to console for immediate visibility
+    console.error(`[Mascot AI Brain] Action failed: ${action}`, { error, context, errorId });
+    
+    // Create support notification for human review
+    await db.insert(notifications).values({
+      userId: 0, // System notification
+      type: 'system_alert',
+      title: `Mascot Action Failed: ${action}`,
+      message: `Error: ${error}\n\nContext: ${JSON.stringify(context || {}, null, 2)}`,
+      priority: 'high',
+      metadata: {
+        errorId,
+        action,
+        error,
+        context,
+        source: 'ai_brain_mascot',
+        requiresWorkflowApproval: true,
+        suggestedFix: 'Review mascot orchestration code and console commands',
+      },
+      isRead: false,
+      createdAt: new Date(),
+    });
+    
+    // Broadcast to support staff via WebSocket for real-time alert
+    broadcastToAllClients({
+      type: 'mascot_error',
+      payload: {
+        errorId,
+        action,
+        error,
+        timestamp: new Date().toISOString(),
+        severity: 'high',
+        requiresReview: true,
+      },
+    });
+  } catch (reportError) {
+    console.error('[Mascot AI Brain] Failed to report error:', reportError);
+  }
+}
+
+// Execute mascot action with AI Brain authority - only block if truly broken
+async function executeMascotAction<T>(
+  action: string,
+  executor: () => Promise<T>,
+  context?: Record<string, any>
+): Promise<MascotActionResult> {
+  try {
+    const result = await executor();
+    return {
+      success: true,
+      action,
+      data: result,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    
+    // Report error to support for workflow approval to fix
+    await reportMascotError(action, errorMessage, context);
+    
+    return {
+      success: false,
+      action,
+      error: errorMessage,
+      reportedToSupport: true,
+    };
+  }
+}
 import { 
   generateSeasonalProfile, 
   getCurrentSeasonId, 
@@ -62,12 +160,13 @@ interface MascotTask {
  * GET /api/mascot/insights
  * Get AI-generated insights for the current user/workspace
  * Protected - requires authentication
+ * Wrapped with AI Brain authority chain
  */
 router.get('/insights', requireAuth, async (req, res) => {
-  try {
-    const userId = (req as any).user?.id;
-    const workspaceId = (req as any).session?.activeWorkspaceId;
-    
+  const userId = (req as any).user?.id;
+  const workspaceId = (req as any).session?.activeWorkspaceId;
+  
+  const result = await executeMascotAction('mascot.get_insights', async () => {
     const insights: MascotInsight[] = [];
     
     // Get workspace stats for contextual insights
@@ -149,21 +248,25 @@ router.get('/insights', requireAuth, async (req, res) => {
       priority: 'low'
     });
     
-    res.json({ insights });
-  } catch (error) {
-    console.error('[Mascot] Error fetching insights:', error);
-    res.status(500).json({ error: 'Failed to fetch insights' });
+    return { insights };
+  }, { userId, workspaceId });
+  
+  if (result.success) {
+    res.json(result.data);
+  } else {
+    res.status(500).json({ error: result.error, reportedToSupport: result.reportedToSupport });
   }
 });
 
 /**
  * GET /api/mascot/faqs
  * Get relevant FAQ data for the mascot to reference
+ * Wrapped with AI Brain authority chain
  */
 router.get('/faqs', async (req, res) => {
-  try {
-    const { category, limit = 10 } = req.query;
-    
+  const { category, limit = 10 } = req.query;
+  
+  const result = await executeMascotAction('mascot.get_faqs', async () => {
     let query = db.select({
       id: helposFaqs.id,
       question: helposFaqs.question,
@@ -177,11 +280,13 @@ router.get('/faqs', async (req, res) => {
     .limit(Number(limit));
     
     const faqs = await query;
-    
-    res.json({ faqs });
-  } catch (error) {
-    console.error('[Mascot] Error fetching FAQs:', error);
-    res.status(500).json({ error: 'Failed to fetch FAQs' });
+    return { faqs };
+  }, { category, limit });
+  
+  if (result.success) {
+    res.json(result.data);
+  } else {
+    res.status(500).json({ error: result.error, reportedToSupport: result.reportedToSupport });
   }
 });
 
@@ -189,12 +294,13 @@ router.get('/faqs', async (req, res) => {
  * GET /api/mascot/tasks
  * Get suggested tasks for the user based on their progress
  * Protected - requires authentication
+ * Wrapped with AI Brain authority chain
  */
 router.get('/tasks', requireAuth, async (req, res) => {
-  try {
-    const userId = (req as any).user?.id;
-    const workspaceId = (req as any).session?.activeWorkspaceId;
-    
+  const userId = (req as any).user?.id;
+  const workspaceId = (req as any).session?.activeWorkspaceId;
+  
+  const result = await executeMascotAction('mascot.get_tasks', async () => {
     const tasks: MascotTask[] = [];
     
     // Suggest account setup tasks
@@ -243,10 +349,13 @@ router.get('/tasks', requireAuth, async (req, res) => {
     });
     
     // Return all incomplete tasks
-    res.json({ tasks: tasks.filter(t => !t.completed) });
-  } catch (error) {
-    console.error('[Mascot] Error fetching tasks:', error);
-    res.status(500).json({ error: 'Failed to fetch tasks' });
+    return { tasks: tasks.filter(t => !t.completed) };
+  }, { userId, workspaceId });
+  
+  if (result.success) {
+    res.json(result.data);
+  } else {
+    res.status(500).json({ error: result.error, reportedToSupport: result.reportedToSupport });
   }
 });
 
@@ -254,17 +363,18 @@ router.get('/tasks', requireAuth, async (req, res) => {
  * POST /api/mascot/advice
  * Get AI-generated business advice based on context
  * Protected - requires authentication
+ * Wrapped with AI Brain authority chain
  */
 router.post('/advice', requireAuth, async (req, res) => {
-  try {
-    const { context, businessCategory, question } = req.body;
-    const userId = (req as any).user?.id;
-    const workspaceId = (req as any).session?.activeWorkspaceId;
-    
-    if (!question) {
-      return res.status(400).json({ error: 'Question is required' });
-    }
-    
+  const { context, businessCategory, question } = req.body;
+  const userId = (req as any).user?.id;
+  const workspaceId = (req as any).session?.activeWorkspaceId;
+  
+  if (!question) {
+    return res.status(400).json({ error: 'Question is required' });
+  }
+  
+  const result = await executeMascotAction('mascot.generate_advice', async () => {
     // Use Gemini to generate contextual advice
     const systemPrompt = `You are CoAI, a friendly and helpful AI assistant mascot for CoAIleague, a workforce management platform. 
 You help business owners grow their businesses with practical advice.
@@ -287,22 +397,26 @@ Keep your responses:
       maxTokens: 200
     });
     
-    res.json({ 
+    return { 
       advice: response.text,
       category: businessCategory || 'general'
-    });
-  } catch (error) {
-    console.error('[Mascot] Error generating advice:', error);
-    res.status(500).json({ error: 'Failed to generate advice' });
+    };
+  }, { userId, workspaceId, question, businessCategory });
+  
+  if (result.success) {
+    res.json(result.data);
+  } else {
+    res.status(500).json({ error: result.error, reportedToSupport: result.reportedToSupport });
   }
 });
 
 /**
  * GET /api/mascot/holiday
  * Get current holiday information for holiday-aware thoughts
+ * Wrapped with AI Brain authority chain
  */
 router.get('/holiday', async (_req, res) => {
-  try {
+  const result = await executeMascotAction('mascot.get_holiday', async () => {
     const now = new Date();
     const month = now.getMonth() + 1;
     const day = now.getDate();
@@ -324,20 +438,23 @@ router.get('/holiday', async (_req, res) => {
       if (startMonth <= endMonth) {
         if ((month > startMonth || (month === startMonth && day >= startDay)) &&
             (month < endMonth || (month === endMonth && day <= endDay))) {
-          return res.json({ holiday, isHoliday: true });
+          return { holiday, isHoliday: true };
         }
       } else {
         if ((month > startMonth || (month === startMonth && day >= startDay)) ||
             (month < endMonth || (month === endMonth && day <= endDay))) {
-          return res.json({ holiday, isHoliday: true });
+          return { holiday, isHoliday: true };
         }
       }
     }
     
-    res.json({ holiday: null, isHoliday: false });
-  } catch (error) {
-    console.error('[Mascot] Error checking holiday:', error);
-    res.status(500).json({ error: 'Failed to check holiday' });
+    return { holiday: null, isHoliday: false };
+  }, {});
+  
+  if (result.success) {
+    res.json(result.data);
+  } else {
+    res.status(500).json({ error: result.error, reportedToSupport: result.reportedToSupport });
   }
 });
 
@@ -345,17 +462,18 @@ router.get('/holiday', async (_req, res) => {
  * POST /api/mascot/ask
  * Alias for /advice endpoint - used by frontend hooks
  * Protected - requires authentication
+ * Wrapped with AI Brain authority chain
  */
 router.post('/ask', requireAuth, async (req, res) => {
-  try {
-    const { question, context, businessCategory } = req.body;
-    const userId = (req as any).user?.id;
-    const workspaceId = (req as any).session?.activeWorkspaceId;
-    
-    if (!question) {
-      return res.status(400).json({ error: 'Question is required' });
-    }
-    
+  const { question, context, businessCategory } = req.body;
+  const userId = (req as any).user?.id;
+  const workspaceId = (req as any).session?.activeWorkspaceId;
+  
+  if (!question) {
+    return res.status(400).json({ error: 'Question is required' });
+  }
+  
+  const result = await executeMascotAction('mascot.ask', async () => {
     const systemPrompt = `You are CoAI, a friendly and helpful AI assistant mascot for CoAIleague, a workforce management platform. 
 You help business owners grow their businesses with practical advice.
 ${businessCategory ? `The user's business is in the ${businessCategory} industry.` : ''}
@@ -377,13 +495,16 @@ Keep your responses:
       maxTokens: 200
     });
     
-    res.json({ 
+    return { 
       advice: response.text,
       category: businessCategory || 'general'
-    });
-  } catch (error) {
-    console.error('[Mascot] Error generating advice:', error);
-    res.status(500).json({ error: 'Failed to generate advice' });
+    };
+  }, { userId, workspaceId, question, businessCategory });
+  
+  if (result.success) {
+    res.json(result.data);
+  } else {
+    res.status(500).json({ error: result.error, reportedToSupport: result.reportedToSupport });
   }
 });
 
@@ -391,24 +512,28 @@ Keep your responses:
  * POST /api/mascot/complete-task
  * Mark a mascot-suggested task as complete
  * Protected - requires authentication
+ * Wrapped with AI Brain authority chain
  */
 router.post('/complete-task', requireAuth, async (req, res) => {
-  try {
-    const { taskId } = req.body;
-    const userId = (req as any).user?.id;
-    
-    if (!taskId || !userId) {
-      return res.status(400).json({ error: 'Task ID and user ID required' });
-    }
-    
+  const { taskId } = req.body;
+  const userId = (req as any).user?.id;
+  
+  if (!taskId || !userId) {
+    return res.status(400).json({ error: 'Task ID and user ID required' });
+  }
+  
+  const result = await executeMascotAction('mascot.complete_task', async () => {
     // For now, just acknowledge the completion
     // Future: integrate with gamification system
     console.log(`[Mascot] Task ${taskId} completed by user ${userId}`);
     
-    res.json({ success: true, message: 'Task completed!' });
-  } catch (error) {
-    console.error('[Mascot] Error completing task:', error);
-    res.status(500).json({ error: 'Failed to complete task' });
+    return { success: true, message: 'Task completed!' };
+  }, { userId, taskId });
+  
+  if (result.success) {
+    res.json(result.data);
+  } else {
+    res.status(500).json({ error: result.error, reportedToSupport: result.reportedToSupport });
   }
 });
 
@@ -420,24 +545,25 @@ router.post('/complete-task', requireAuth, async (req, res) => {
  * GET /api/mascot/preferences
  * Get user's mascot preferences
  * Protected - requires authentication
+ * Wrapped with AI Brain authority chain
  */
 router.get('/preferences', requireAuth, async (req, res) => {
-  try {
-    const userId = (req as any).user?.id;
-    
-    if (!userId) {
-      return res.status(401).json({ error: 'User ID required' });
-    }
-    
-    const result = await db.execute(sql`
+  const userId = (req as any).user?.id;
+  
+  if (!userId) {
+    return res.status(401).json({ error: 'User ID required' });
+  }
+  
+  const result = await executeMascotAction('mascot.get_preferences', async () => {
+    const dbResult = await db.execute(sql`
       SELECT * FROM user_mascot_preferences WHERE user_id = ${userId}
     `);
     
-    const prefs = result.rows?.[0];
+    const prefs = dbResult.rows?.[0];
     
     if (!prefs) {
       // Return default preferences
-      return res.json({
+      return {
         preferences: {
           userId,
           positionX: 0,
@@ -457,13 +583,16 @@ router.get('/preferences', requireAuth, async (req, res) => {
           totalTaps: 0,
           customThoughts: []
         }
-      });
+      };
     }
     
-    res.json({ preferences: prefs });
-  } catch (error) {
-    console.error('[Mascot] Error fetching preferences:', error);
-    res.status(500).json({ error: 'Failed to fetch preferences' });
+    return { preferences: prefs };
+  }, { userId });
+  
+  if (result.success) {
+    res.json(result.data);
+  } else {
+    res.status(500).json({ error: result.error, reportedToSupport: result.reportedToSupport });
   }
 });
 
