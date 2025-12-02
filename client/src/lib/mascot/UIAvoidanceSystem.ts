@@ -6,7 +6,23 @@
  * - Modals, dialogs, popovers
  * - Fixed/sticky elements
  * - Keyboard focus areas
+ * - ENHANCED: Heatmap-based danger zones for comprehensive coverage
+ * - ENHANCED: White space detection for optimal mascot positioning
  */
+
+export interface HeatmapCell {
+  x: number;
+  y: number;
+  danger: number;
+  types: Set<UIElementType>;
+}
+
+export interface HeatmapGrid {
+  cells: HeatmapCell[][];
+  cellSize: number;
+  cols: number;
+  rows: number;
+}
 
 export interface UIElement {
   id: string;
@@ -127,9 +143,208 @@ class UIAvoidanceSystem {
   private lastScanTime = 0;
   private currentPosition: MascotPosition = { x: 0, y: 0 };
   private listeners: Set<(position: MascotPosition) => void> = new Set();
+  private heatmap: HeatmapGrid | null = null;
+  private heatmapCellSize = 40;
 
   constructor(config: Partial<AvoidanceConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+
+  generateHeatmap(): HeatmapGrid {
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const cellSize = this.heatmapCellSize;
+    const cols = Math.ceil(viewportWidth / cellSize);
+    const rows = Math.ceil(viewportHeight / cellSize);
+    
+    const cells: HeatmapCell[][] = [];
+    
+    for (let row = 0; row < rows; row++) {
+      cells[row] = [];
+      for (let col = 0; col < cols; col++) {
+        cells[row][col] = {
+          x: col * cellSize,
+          y: row * cellSize,
+          danger: 0,
+          types: new Set()
+        };
+      }
+    }
+    
+    for (const el of this.elements) {
+      const startCol = Math.max(0, Math.floor((el.rect.left - el.padding) / cellSize));
+      const endCol = Math.min(cols - 1, Math.ceil((el.rect.right + el.padding) / cellSize));
+      const startRow = Math.max(0, Math.floor((el.rect.top - el.padding) / cellSize));
+      const endRow = Math.min(rows - 1, Math.ceil((el.rect.bottom + el.padding) / cellSize));
+      
+      for (let row = startRow; row <= endRow; row++) {
+        for (let col = startCol; col <= endCol; col++) {
+          if (cells[row] && cells[row][col]) {
+            cells[row][col].danger = Math.max(cells[row][col].danger, el.priority / 100);
+            cells[row][col].types.add(el.type);
+          }
+        }
+      }
+    }
+    
+    this.heatmap = { cells, cellSize, cols, rows };
+    return this.heatmap;
+  }
+
+  getHeatmap(): HeatmapGrid | null {
+    return this.heatmap;
+  }
+
+  getDangerAt(x: number, y: number): number {
+    if (!this.heatmap) {
+      this.generateHeatmap();
+    }
+    if (!this.heatmap) return 0;
+    
+    const col = Math.floor(x / this.heatmap.cellSize);
+    const row = Math.floor(y / this.heatmap.cellSize);
+    
+    if (row >= 0 && row < this.heatmap.rows && col >= 0 && col < this.heatmap.cols) {
+      return this.heatmap.cells[row][col].danger;
+    }
+    return 0;
+  }
+
+  findWhiteSpace(): SafeZone[] {
+    if (!this.heatmap) {
+      this.generateHeatmap();
+    }
+    if (!this.heatmap) return [];
+    
+    const safeZones: SafeZone[] = [];
+    const visited = new Set<string>();
+    
+    for (let row = 0; row < this.heatmap.rows; row++) {
+      for (let col = 0; col < this.heatmap.cols; col++) {
+        const key = `${row},${col}`;
+        if (visited.has(key)) continue;
+        
+        const cell = this.heatmap.cells[row][col];
+        if (cell.danger < 0.2) {
+          const zone = this.floodFillSafeZone(row, col, visited);
+          if (zone.width >= this.config.mascotSize && zone.height >= this.config.mascotSize) {
+            safeZones.push(zone);
+          }
+        } else {
+          visited.add(key);
+        }
+      }
+    }
+    
+    return safeZones.sort((a, b) => b.score - a.score);
+  }
+
+  private floodFillSafeZone(startRow: number, startCol: number, visited: Set<string>): SafeZone {
+    if (!this.heatmap) {
+      return { x: 0, y: 0, width: 0, height: 0, score: 0 };
+    }
+    
+    let minCol = startCol, maxCol = startCol;
+    let minRow = startRow, maxRow = startRow;
+    const queue: [number, number][] = [[startRow, startCol]];
+    let totalDanger = 0;
+    let cellCount = 0;
+    
+    while (queue.length > 0) {
+      const [row, col] = queue.shift()!;
+      const key = `${row},${col}`;
+      
+      if (visited.has(key)) continue;
+      if (row < 0 || row >= this.heatmap.rows || col < 0 || col >= this.heatmap.cols) continue;
+      
+      const cell = this.heatmap.cells[row][col];
+      if (cell.danger >= 0.3) continue;
+      
+      visited.add(key);
+      totalDanger += cell.danger;
+      cellCount++;
+      
+      minCol = Math.min(minCol, col);
+      maxCol = Math.max(maxCol, col);
+      minRow = Math.min(minRow, row);
+      maxRow = Math.max(maxRow, row);
+      
+      queue.push([row - 1, col], [row + 1, col], [row, col - 1], [row, col + 1]);
+    }
+    
+    const x = minCol * this.heatmap.cellSize;
+    const y = minRow * this.heatmap.cellSize;
+    const width = (maxCol - minCol + 1) * this.heatmap.cellSize;
+    const height = (maxRow - minRow + 1) * this.heatmap.cellSize;
+    
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const centerX = x + width / 2;
+    const centerY = y + height / 2;
+    const edgeBonus = Math.min(centerX, centerY, viewportWidth - centerX, viewportHeight - centerY) / 100;
+    const sizeBonus = (width * height) / 10000;
+    const safetyScore = cellCount > 0 ? (1 - totalDanger / cellCount) : 0;
+    
+    return {
+      x,
+      y,
+      width,
+      height,
+      score: safetyScore * 50 + sizeBonus * 30 + edgeBonus * 20
+    };
+  }
+
+  findBestPositionInWhiteSpace(): MascotPosition | null {
+    const whiteSpaces = this.findWhiteSpace();
+    if (whiteSpaces.length === 0) return null;
+    
+    const bestZone = whiteSpaces[0];
+    const mascotSize = this.config.mascotSize;
+    
+    const preferCorners = true;
+    let x: number, y: number;
+    
+    if (preferCorners) {
+      const corners = [
+        { x: bestZone.x + 10, y: bestZone.y + 10 },
+        { x: bestZone.x + bestZone.width - mascotSize - 10, y: bestZone.y + 10 },
+        { x: bestZone.x + 10, y: bestZone.y + bestZone.height - mascotSize - 10 },
+        { x: bestZone.x + bestZone.width - mascotSize - 10, y: bestZone.y + bestZone.height - mascotSize - 10 }
+      ];
+      
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      let bestCorner = corners[0];
+      let bestDistance = Infinity;
+      
+      for (const corner of corners) {
+        if (corner.x < 0 || corner.y < 0 || 
+            corner.x > viewportWidth - mascotSize || 
+            corner.y > viewportHeight - mascotSize) continue;
+        
+        const edgeDistance = Math.min(
+          corner.x, corner.y,
+          viewportWidth - corner.x - mascotSize,
+          viewportHeight - corner.y - mascotSize
+        );
+        
+        if (edgeDistance < bestDistance && this.isPositionSafe({ x: corner.x, y: corner.y })) {
+          bestDistance = edgeDistance;
+          bestCorner = corner;
+        }
+      }
+      
+      x = bestCorner.x;
+      y = bestCorner.y;
+    } else {
+      x = bestZone.x + (bestZone.width - mascotSize) / 2;
+      y = bestZone.y + (bestZone.height - mascotSize) / 2;
+    }
+    
+    return {
+      x: Math.max(10, Math.min(x, window.innerWidth - mascotSize - 10)),
+      y: Math.max(10, Math.min(y, window.innerHeight - mascotSize - 10))
+    };
   }
 
   start(): void {
@@ -224,6 +439,8 @@ class UIAvoidanceSystem {
 
     this.addComputedFixedElements();
     this.elements.sort((a, b) => b.priority - a.priority);
+    
+    this.generateHeatmap();
   }
 
   private addComputedFixedElements(): void {
