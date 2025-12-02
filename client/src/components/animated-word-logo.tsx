@@ -75,6 +75,8 @@ class DecorationEngine {
     this.canvas.height = this.height * dpr;
     this.canvas.style.width = `${this.width}px`;
     this.canvas.style.height = `${this.height}px`;
+    // Reset transform before scaling to prevent cumulative scaling
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0);
     this.ctx.scale(dpr, dpr);
   }
   
@@ -464,21 +466,28 @@ export const AnimatedWordLogo = memo(function AnimatedWordLogo({
   
   // Initialize decoration engine
   useEffect(() => {
+    // Skip entirely for reduced motion or no decorations
     if (!canvasRef.current || prefersReducedMotion || !showDecorations) return;
     if (config.decorations.type === 'none') return;
     
-    engineRef.current = new DecorationEngine(canvasRef.current, config.decorations);
-    engineRef.current.start();
+    const engine = new DecorationEngine(canvasRef.current, config.decorations);
+    engineRef.current = engine;
+    engine.start();
     
     const handleResize = () => {
-      engineRef.current?.resize();
+      engine.resize();
     };
     
-    window.addEventListener('resize', handleResize);
+    // Use ResizeObserver for more accurate sizing
+    const resizeObserver = new ResizeObserver(handleResize);
+    if (canvasRef.current.parentElement) {
+      resizeObserver.observe(canvasRef.current.parentElement);
+    }
     
     return () => {
-      window.removeEventListener('resize', handleResize);
-      engineRef.current?.destroy();
+      resizeObserver.disconnect();
+      engine.destroy();
+      engineRef.current = null;
     };
   }, [config.decorations, prefersReducedMotion, showDecorations]);
   

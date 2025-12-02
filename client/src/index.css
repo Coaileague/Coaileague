@@ -511,6 +511,179 @@
 }
 
 /* ============================================================================
+   ANIMATED WORD LOGO - Google Doodle-style seasonal animations
+   ============================================================================ */
+
+/* Wave animation - letters rise and fall in sequence */
+@keyframes logoWave {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+/* Subtle bounce - gentle vertical movement */
+@keyframes logoBounceSubtle {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  25% {
+    transform: translateY(-2px) scale(1.02);
+  }
+  50% {
+    transform: translateY(0) scale(1);
+  }
+  75% {
+    transform: translateY(1px) scale(0.99);
+  }
+}
+
+/* Glow animation - pulsing text shadow */
+@keyframes logoGlow {
+  0%, 100% {
+    filter: brightness(1);
+    text-shadow: 0 0 10px currentColor;
+  }
+  50% {
+    filter: brightness(1.2);
+    text-shadow: 0 0 20px currentColor, 0 0 30px currentColor;
+  }
+}
+
+/* Shimmer animation - moving highlight effect */
+@keyframes logoShimmer {
+  0% {
+    background-position: -200% center;
+  }
+  100% {
+    background-position: 200% center;
+  }
+}
+
+/* Shimmer gradient background for letters */
+@keyframes logoShimmerGradient {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.85;
+  }
+}
+
+.animate-wave {
+  animation: logoWave 2s ease-in-out infinite;
+}
+
+.animate-bounce-subtle {
+  animation: logoBounceSubtle 2.5s ease-in-out infinite;
+}
+
+.animate-glow {
+  animation: logoGlow 2s ease-in-out infinite;
+}
+
+.animate-shimmer {
+  animation: logoShimmerGradient 3s ease-in-out infinite;
+  background-size: 200% 100%;
+}
+
+/* Christmas lights wire path */
+@keyframes lightsWireSwing {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(2px);
+  }
+}
+
+/* Snowflake falling */
+@keyframes snowflakeFall {
+  0% {
+    transform: translateY(-10px) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(100%) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Leaf falling with wind sway */
+@keyframes leafFall {
+  0% {
+    transform: translateY(-20px) translateX(0) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  50% {
+    transform: translateY(50%) translateX(10px) rotate(180deg);
+  }
+  100% {
+    transform: translateY(120%) translateX(-5px) rotate(360deg);
+    opacity: 0;
+  }
+}
+
+/* Flower bloom */
+@keyframes flowerBloom {
+  0%, 100% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+}
+
+/* Heart float */
+@keyframes heartFloat {
+  0% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(-30px) scale(0.5);
+    opacity: 0;
+  }
+}
+
+/* Sun ray pulse */
+@keyframes sunRayPulse {
+  0%, 100% {
+    opacity: 0.3;
+    transform: scaleX(1);
+  }
+  50% {
+    opacity: 0.6;
+    transform: scaleX(1.1);
+  }
+}
+
+/* Light bulb twinkle */
+@keyframes lightTwinkle {
+  0%, 100% {
+    opacity: 0.4;
+    filter: blur(0px);
+  }
+  50% {
+    opacity: 1;
+    filter: blur(2px);
+  }
+}
+
+/* ============================================================================
    SPLAT & PARTICLE ANIMATIONS - Professional Burst Effects
    ============================================================================ */
 
