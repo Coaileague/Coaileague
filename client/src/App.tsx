@@ -174,7 +174,9 @@ import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 
 function MascotRenderer() {
   const { user } = useAuth();
-  useMascotAIIntegration(user?.workspaceId);
+  // Get workspace ID from user's active workspace (may be undefined for guests)
+  const workspaceId = (user as any)?.activeWorkspaceId || (user as any)?.workspaceId;
+  useMascotAIIntegration(workspaceId);
   const currentMode = useMascotMode();
   const [location] = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -191,7 +193,7 @@ function MascotRenderer() {
   
   const bubbleSize = isExpanded ? sizes.expandedSize : sizes.defaultSize;
   
-  const { isRoaming } = useMascotRoaming(
+  const { isRoaming, currentEffect, effectConfig } = useMascotRoaming(
     position,
     setRoamingPosition,
     bubbleSize,
@@ -199,6 +201,18 @@ function MascotRenderer() {
     isExpanded
   );
   const zoomScale = isDragging ? MASCOT_CONFIG.floatMotion.dragZoomScale : 1;
+  
+  // Transport effect visual styling
+  const getTransportGlow = () => {
+    if (!isRoaming || !effectConfig) return '';
+    switch (currentEffect) {
+      case 'zap': return '0 0 20px 5px #a855f7, 0 0 40px 10px rgba(168, 85, 247, 0.5)';
+      case 'dash': return '0 0 15px 3px #a855f7, 0 0 30px 6px rgba(168, 85, 247, 0.4)';
+      case 'glide': return '0 0 10px 2px #38bdf8, 0 0 20px 4px rgba(56, 189, 248, 0.3)';
+      case 'float': return '0 0 8px 2px #38bdf8, 0 0 16px 4px rgba(56, 189, 248, 0.2)';
+      default: return '';
+    }
+  };
   
   const bubblePlacement = useSmartBubblePlacement(mascotContainerRef, !!currentThought);
   const arrowStyles = getArrowStyles(bubblePlacement.direction);
@@ -313,8 +327,11 @@ function MascotRenderer() {
           ? 'transform 150ms ease-out' 
           : `all ${MASCOT_CONFIG.animation.transitionDuration}ms ease-out, transform 150ms ease-out`,
         background: 'transparent',
+        boxShadow: getTransportGlow(),
+        borderRadius: '50%',
       }}
       data-testid="mascot-container"
+      data-transport-effect={currentEffect || undefined}
     >
       <div 
         className="w-full h-full pointer-events-auto" 
@@ -359,10 +376,10 @@ function MascotRenderer() {
           </div>
         )}
         
-        {!currentThought && user?.workspaceId && (
+        {!currentThought && workspaceId && (
           <MascotTaskBox 
             mascotRef={mascotContainerRef}
-            workspaceId={user.workspaceId}
+            workspaceId={workspaceId}
           />
         )}
       </div>
@@ -496,7 +513,11 @@ function AppContent() {
                 <a href="/" data-testid="link-logo-mobile" className="flex-shrink-0">
                   <CoAIleagueLogo width={140} height={46} showTagline={false} className="h-11 w-auto" />
                 </a>
-                <NotificationsPopover />
+                <div className="flex items-center gap-2">
+                  {/* Chat Button - Header mounted for easy access */}
+                  <HeaderChatButton />
+                  <NotificationsPopover />
+                </div>
               </div>
             </div>
           )}

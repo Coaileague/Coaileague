@@ -413,9 +413,11 @@ router.get('/preferences', requireAuth, async (req, res) => {
       return res.status(401).json({ error: 'User ID required' });
     }
     
-    const [prefs] = await db.execute(sql`
+    const result = await db.execute(sql`
       SELECT * FROM user_mascot_preferences WHERE user_id = ${userId}
     `);
+    
+    const prefs = result.rows?.[0];
     
     if (!prefs) {
       // Return default preferences
@@ -463,37 +465,34 @@ router.put('/preferences', requireAuth, async (req, res) => {
       return res.status(401).json({ error: 'User ID required' });
     }
     
-    // Build update query dynamically based on provided fields
-    const allowedFields = [
-      'position_x', 'position_y', 'is_enabled', 'is_minimized', 
-      'preferred_size', 'roaming_enabled', 'react_to_actions', 
-      'show_thoughts', 'sound_enabled', 'nickname'
-    ];
+    // Validate and extract allowed fields with strict whitelist
+    const positionX = typeof updates.positionX === 'number' ? Math.round(updates.positionX) : null;
+    const positionY = typeof updates.positionY === 'number' ? Math.round(updates.positionY) : null;
+    const isEnabled = typeof updates.isEnabled === 'boolean' ? updates.isEnabled : null;
+    const isMinimized = typeof updates.isMinimized === 'boolean' ? updates.isMinimized : null;
+    const preferredSize = ['small', 'default', 'large'].includes(updates.preferredSize) ? updates.preferredSize : null;
+    const roamingEnabled = typeof updates.roamingEnabled === 'boolean' ? updates.roamingEnabled : null;
+    const reactToActions = typeof updates.reactToActions === 'boolean' ? updates.reactToActions : null;
+    const showThoughts = typeof updates.showThoughts === 'boolean' ? updates.showThoughts : null;
+    const soundEnabled = typeof updates.soundEnabled === 'boolean' ? updates.soundEnabled : null;
+    const nickname = typeof updates.nickname === 'string' && updates.nickname.length <= 50 ? updates.nickname : null;
     
-    const updateParts: string[] = [];
-    const values: any[] = [];
-    
-    Object.entries(updates).forEach(([key, value]) => {
-      const snakeKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-      if (allowedFields.includes(snakeKey)) {
-        updateParts.push(`${snakeKey} = $${values.length + 1}`);
-        values.push(value);
-      }
-    });
-    
-    if (updateParts.length === 0) {
-      return res.status(400).json({ error: 'No valid fields to update' });
-    }
-    
-    updateParts.push('updated_at = NOW()');
-    values.push(userId);
-    
-    // Upsert: insert if not exists, update if exists
+    // Upsert with parameterized values - each field explicitly handled
     await db.execute(sql`
       INSERT INTO user_mascot_preferences (user_id, updated_at)
       VALUES (${userId}, NOW())
       ON CONFLICT (user_id) DO UPDATE SET
-        ${sql.raw(updateParts.join(', ').replace(/\$(\d+)/g, (_, n) => '$' + n))}
+        position_x = COALESCE(${positionX}, user_mascot_preferences.position_x),
+        position_y = COALESCE(${positionY}, user_mascot_preferences.position_y),
+        is_enabled = COALESCE(${isEnabled}, user_mascot_preferences.is_enabled),
+        is_minimized = COALESCE(${isMinimized}, user_mascot_preferences.is_minimized),
+        preferred_size = COALESCE(${preferredSize}, user_mascot_preferences.preferred_size),
+        roaming_enabled = COALESCE(${roamingEnabled}, user_mascot_preferences.roaming_enabled),
+        react_to_actions = COALESCE(${reactToActions}, user_mascot_preferences.react_to_actions),
+        show_thoughts = COALESCE(${showThoughts}, user_mascot_preferences.show_thoughts),
+        sound_enabled = COALESCE(${soundEnabled}, user_mascot_preferences.sound_enabled),
+        nickname = COALESCE(${nickname}, user_mascot_preferences.nickname),
+        updated_at = NOW()
     `);
     
     res.json({ success: true, message: 'Preferences updated' });
@@ -547,25 +546,47 @@ router.post('/preferences/position', requireAuth, async (req, res) => {
 router.post('/preferences/interaction', requireAuth, async (req, res) => {
   try {
     const userId = (req as any).user?.id;
-    const { type } = req.body; // 'tap', 'drag', 'general'
+    const { type } = req.body;
     
     if (!userId) {
       return res.status(401).json({ error: 'User ID required' });
     }
     
-    let updateField = 'total_interactions';
-    if (type === 'tap') updateField = 'total_taps';
-    else if (type === 'drag') updateField = 'total_drags';
+    // Validate type with strict whitelist - no dynamic SQL field names
+    const validTypes = ['tap', 'drag', 'general'] as const;
+    const interactionType = validTypes.includes(type) ? type : 'general';
     
-    await db.execute(sql`
-      INSERT INTO user_mascot_preferences (user_id, ${sql.raw(updateField)}, total_interactions, last_interaction_at, updated_at)
-      VALUES (${userId}, 1, 1, NOW(), NOW())
-      ON CONFLICT (user_id) DO UPDATE SET
-        ${sql.raw(updateField)} = user_mascot_preferences.${sql.raw(updateField)} + 1,
-        total_interactions = user_mascot_preferences.total_interactions + 1,
-        last_interaction_at = NOW(),
-        updated_at = NOW()
-    `);
+    // Use separate parameterized queries for each interaction type
+    if (interactionType === 'tap') {
+      await db.execute(sql`
+        INSERT INTO user_mascot_preferences (user_id, total_taps, total_interactions, last_interaction_at, updated_at)
+        VALUES (${userId}, 1, 1, NOW(), NOW())
+        ON CONFLICT (user_id) DO UPDATE SET
+          total_taps = user_mascot_preferences.total_taps + 1,
+          total_interactions = user_mascot_preferences.total_interactions + 1,
+          last_interaction_at = NOW(),
+          updated_at = NOW()
+      `);
+    } else if (interactionType === 'drag') {
+      await db.execute(sql`
+        INSERT INTO user_mascot_preferences (user_id, total_drags, total_interactions, last_interaction_at, updated_at)
+        VALUES (${userId}, 1, 1, NOW(), NOW())
+        ON CONFLICT (user_id) DO UPDATE SET
+          total_drags = user_mascot_preferences.total_drags + 1,
+          total_interactions = user_mascot_preferences.total_interactions + 1,
+          last_interaction_at = NOW(),
+          updated_at = NOW()
+      `);
+    } else {
+      await db.execute(sql`
+        INSERT INTO user_mascot_preferences (user_id, total_interactions, last_interaction_at, updated_at)
+        VALUES (${userId}, 1, NOW(), NOW())
+        ON CONFLICT (user_id) DO UPDATE SET
+          total_interactions = user_mascot_preferences.total_interactions + 1,
+          last_interaction_at = NOW(),
+          updated_at = NOW()
+      `);
+    }
     
     res.json({ success: true });
   } catch (error) {

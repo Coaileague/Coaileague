@@ -124,6 +124,16 @@ export interface TaskTemplate {
   priority: 'low' | 'medium' | 'high';
 }
 
+export type TransportEffect = 'glide' | 'zap' | 'float' | 'dash';
+
+export interface TransportEffectConfig {
+  type: TransportEffect;
+  duration: number;
+  trailEnabled: boolean;
+  sparkleEnabled: boolean;
+  glowColor: string;
+}
+
 export interface RoamingConfig {
   enabled: boolean;
   interval: { min: number; max: number };
@@ -132,6 +142,11 @@ export interface RoamingConfig {
   boundsPadding: number;
   avoidEdges: boolean;
   preferCorners: boolean;
+  transportEffects: {
+    enabled: boolean;
+    effects: TransportEffectConfig[];
+    randomizeEffect: boolean;
+  };
   reactions: {
     startMoving: string[];
     reachedDestination: string[];
@@ -271,6 +286,16 @@ export const MASCOT_CONFIG: MascotConfig = {
     boundsPadding: 100,
     avoidEdges: true,
     preferCorners: false,
+    transportEffects: {
+      enabled: true,
+      randomizeEffect: true,
+      effects: [
+        { type: 'glide', duration: 2000, trailEnabled: true, sparkleEnabled: false, glowColor: '#38bdf8' },
+        { type: 'zap', duration: 300, trailEnabled: false, sparkleEnabled: true, glowColor: '#a855f7' },
+        { type: 'float', duration: 2500, trailEnabled: false, sparkleEnabled: false, glowColor: '#38bdf8' },
+        { type: 'dash', duration: 800, trailEnabled: true, sparkleEnabled: true, glowColor: '#a855f7' },
+      ],
+    },
     reactions: {
       startMoving: [
         "Time to explore!",
@@ -278,6 +303,8 @@ export const MASCOT_CONFIG: MascotConfig = {
         "Adventure awaits!",
         "Let me check things out...",
         "Wandering around...",
+        "Zooming over!",
+        "Gliding across!",
       ],
       reachedDestination: [
         "Nice spot!",
@@ -285,6 +312,7 @@ export const MASCOT_CONFIG: MascotConfig = {
         "Found a cozy corner!",
         "This looks interesting...",
         "Setting up here!",
+        "Landed safely!",
       ],
       exploring: [
         "Checking the platform...",
