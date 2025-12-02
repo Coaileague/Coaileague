@@ -8,7 +8,7 @@
  * - Persistent state management for smooth transitions
  */
 
-import { memo, Suspense, lazy, useEffect, useState, useMemo } from 'react';
+import { memo, Suspense, lazy, useEffect, useState, useMemo, useRef } from 'react';
 import { useSeasonalTheme, useSeasonalEffect, useSeasonalOrnaments, type SeasonId } from '@/context/SeasonalThemeContext';
 
 const SnowfallEngine = lazy(() => import('./SnowfallEngine'));
@@ -170,6 +170,267 @@ const WinterBackgroundOverlay = memo(function WinterBackgroundOverlay() {
   );
 });
 
+interface SparkleParticle {
+  id: number;
+  x: number;
+  y: number;
+  opacity: number;
+  size: number;
+  color: string;
+}
+
+const SantaFlyover = memo(function SantaFlyover() {
+  const { seasonId } = useSeasonalTheme();
+  const [isFlying, setIsFlying] = useState(false);
+  const [position, setPosition] = useState({ x: -200, y: 80 });
+  const [sparkles, setSparkles] = useState<SparkleParticle[]>([]);
+  const [direction, setDirection] = useState<'ltr' | 'rtl'>('ltr');
+  const animationRef = useRef<number | null>(null);
+  const sparkleIdRef = useRef(0);
+  const timeoutsRef = useRef<number[]>([]);
+  
+  const isChristmas = seasonId === 'christmas';
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  const santaSize = isMobile ? 40 : 60;
+  
+  useEffect(() => {
+    if (!isChristmas) return;
+    
+    const clearAllTimeouts = () => {
+      timeoutsRef.current.forEach(t => clearTimeout(t));
+      timeoutsRef.current = [];
+    };
+    
+    const scheduleNextFlyover = () => {
+      const delay = 20000 + Math.random() * 40000;
+      
+      const timeout = window.setTimeout(() => {
+        setDirection(Math.random() > 0.5 ? 'ltr' : 'rtl');
+        setIsFlying(true);
+        
+        const endTimeout = window.setTimeout(() => {
+          setIsFlying(false);
+          scheduleNextFlyover();
+        }, 8000);
+        timeoutsRef.current.push(endTimeout);
+      }, delay);
+      
+      timeoutsRef.current.push(timeout);
+    };
+    
+    setDirection('ltr');
+    setIsFlying(true);
+    
+    const initialTimeout = window.setTimeout(() => {
+      setIsFlying(false);
+      scheduleNextFlyover();
+    }, 8000);
+    timeoutsRef.current.push(initialTimeout);
+    
+    return () => {
+      clearAllTimeouts();
+    };
+  }, [isChristmas]);
+  
+  useEffect(() => {
+    if (!isFlying) {
+      setPosition({ x: direction === 'ltr' ? -200 : window.innerWidth + 200, y: 60 + Math.random() * 80 });
+      setSparkles([]);
+      return;
+    }
+    
+    const startX = direction === 'ltr' ? -200 : window.innerWidth + 200;
+    const endX = direction === 'ltr' ? window.innerWidth + 200 : -200;
+    const startTime = Date.now();
+    const duration = 8000;
+    const baseY = 60 + Math.random() * 80;
+    
+    const animate = () => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      
+      const eased = 0.5 - 0.5 * Math.cos(progress * Math.PI);
+      const currentX = startX + (endX - startX) * eased;
+      
+      const wave = Math.sin(progress * Math.PI * 6) * 15;
+      const currentY = baseY + wave;
+      
+      setPosition({ x: currentX, y: currentY });
+      
+      if (Math.random() > 0.6) {
+        const sparkleColors = ['#ffd700', '#ff6b6b', '#38bdf8', '#ffffff', '#f4c15d'];
+        const newSparkle: SparkleParticle = {
+          id: sparkleIdRef.current++,
+          x: currentX - (direction === 'ltr' ? 30 : -30) + Math.random() * 20 - 10,
+          y: currentY + 10 + Math.random() * 15,
+          opacity: 1,
+          size: 3 + Math.random() * 4,
+          color: sparkleColors[Math.floor(Math.random() * sparkleColors.length)]
+        };
+        
+        setSparkles(prev => [...prev.slice(-30), newSparkle]);
+      }
+      
+      setSparkles(prev => 
+        prev
+          .map(s => ({ ...s, opacity: s.opacity - 0.02, y: s.y + 0.5 }))
+          .filter(s => s.opacity > 0)
+      );
+      
+      if (progress < 1) {
+        animationRef.current = requestAnimationFrame(animate);
+      }
+    };
+    
+    animationRef.current = requestAnimationFrame(animate);
+    
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+    };
+  }, [isFlying, direction]);
+  
+  if (!isChristmas) return null;
+  
+  return (
+    <div
+      className="fixed inset-0 pointer-events-none overflow-hidden"
+      style={{ zIndex: 9997 }}
+      data-testid="santa-flyover"
+    >
+      {sparkles.map(sparkle => (
+        <div
+          key={sparkle.id}
+          className="absolute"
+          style={{
+            left: sparkle.x,
+            top: sparkle.y,
+            width: sparkle.size,
+            height: sparkle.size,
+            opacity: sparkle.opacity,
+            transform: 'translate(-50%, -50%)',
+          }}
+        >
+          <span
+            style={{
+              color: sparkle.color,
+              fontSize: sparkle.size * 2,
+              textShadow: `0 0 ${sparkle.size}px ${sparkle.color}`
+            }}
+          >
+            *
+          </span>
+        </div>
+      ))}
+      
+      {isFlying && (
+        <div
+          className="absolute transition-none"
+          style={{
+            left: position.x,
+            top: position.y,
+            transform: `translate(-50%, -50%) scaleX(${direction === 'ltr' ? 1 : -1})`,
+            fontSize: santaSize,
+            filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.3))',
+            transition: 'none'
+          }}
+        >
+          <div className="relative whitespace-nowrap" style={{ fontFamily: 'monospace' }}>
+            <span style={{ color: '#ef4444', textShadow: '0 0 8px #ef4444' }}>o</span>
+            <span style={{ color: '#f5f5dc' }}>&lt;</span>
+            <span style={{ color: '#8b4513' }}>=</span>
+            <span style={{ color: '#ffd700', textShadow: '0 0 6px #ffd700' }}>*</span>
+            <span style={{ color: '#654321' }}>~</span>
+            <span style={{ color: '#8b4513' }}>{'>'}</span>
+            <span style={{ color: '#ffd700', textShadow: '0 0 4px #ffd700' }}>.</span>
+          </div>
+          <div 
+            className="absolute -bottom-2 left-1/2 transform -translate-x-1/2"
+            style={{ 
+              fontSize: santaSize * 0.3,
+              color: '#654321',
+              letterSpacing: '2px'
+            }}
+          >
+            ====
+          </div>
+        </div>
+      )}
+    </div>
+  );
+});
+
+const HolidayLights = memo(function HolidayLights() {
+  const { seasonId } = useSeasonalTheme();
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1200);
+  
+  useEffect(() => {
+    const handleResize = () => setWindowWidth(window.innerWidth);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+  
+  const isChristmas = seasonId === 'christmas';
+  if (!isChristmas) return null;
+  
+  const lightColors = ['#ef4444', '#22c55e', '#3b82f6', '#fbbf24', '#f472b6', '#a855f7'];
+  const lightCount = Math.floor(windowWidth / 40);
+  
+  return (
+    <div
+      className="fixed top-0 left-0 right-0 pointer-events-none overflow-hidden"
+      style={{ zIndex: 9995, height: 30 }}
+      data-testid="holiday-lights"
+    >
+      <div className="flex justify-between px-2" style={{ marginTop: -5 }}>
+        {Array.from({ length: lightCount }).map((_, i) => {
+          const color = lightColors[i % lightColors.length];
+          const delay = i * 0.15;
+          return (
+            <div
+              key={i}
+              className="relative"
+              style={{
+                animation: `lightGlow 1.5s ease-in-out ${delay}s infinite alternate`,
+              }}
+            >
+              <span
+                style={{
+                  fontSize: 14,
+                  color: '#1a1a1a',
+                  display: 'block',
+                  textAlign: 'center',
+                }}
+              >
+                |
+              </span>
+              <span
+                style={{
+                  fontSize: 12,
+                  color: color,
+                  display: 'block',
+                  textAlign: 'center',
+                  marginTop: -2,
+                  textShadow: `0 0 6px ${color}, 0 0 12px ${color}`,
+                }}
+              >
+                o
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      <style>{`
+        @keyframes lightGlow {
+          0% { opacity: 0.4; filter: brightness(0.6); }
+          100% { opacity: 1; filter: brightness(1.3); }
+        }
+      `}</style>
+    </div>
+  );
+});
+
 const SeasonalEffectsLayer = memo(function SeasonalEffectsLayer() {
   const { seasonId, effectsEnabled, forceDarkMode } = useSeasonalTheme();
   const { type: effectType } = useSeasonalEffect();
@@ -211,6 +472,8 @@ const SeasonalEffectsLayer = memo(function SeasonalEffectsLayer() {
   const showSnow = effectType === 'snowfall' || effectType === 'snowPiles';
   const isWinter = seasonId === 'winter' || seasonId === 'christmas' || seasonId === 'newYear';
   
+  const isChristmas = seasonId === 'christmas';
+  
   return (
     <>
       {isWinter && <WinterBackgroundOverlay />}
@@ -220,6 +483,9 @@ const SeasonalEffectsLayer = memo(function SeasonalEffectsLayer() {
           <SnowfallEngine />
         </Suspense>
       )}
+      
+      {isChristmas && <HolidayLights />}
+      {isChristmas && <SantaFlyover />}
       
       <CornerOrnaments />
     </>

@@ -10,13 +10,14 @@
  * - Thought bubbles with AI insights
  */
 
-import { useEffect, useRef, useCallback, useState, memo } from 'react';
+import { useEffect, useRef, useCallback, useState, memo, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
 import { uiAvoidanceSystem, type MascotPosition } from '@/lib/mascot/UIAvoidanceSystem';
 import { userActionTracker, type ActionEvent } from '@/lib/mascot/UserActionTracker';
 import { emotesManager, type Emote, EMOTE_ANIMATIONS } from '@/lib/mascot/EmotesLibrary';
 import { thoughtManager } from '@/lib/mascot/ThoughtManager';
 import { MASCOT_CONFIG, getDeviceSizes } from '@/config/mascotConfig';
+import { TrinityPhysics } from '@/lib/mascot/TrinityPhysics';
 
 export type MascotMode = 
   | 'IDLE' 
@@ -65,6 +66,105 @@ interface Twin {
   trail: { x: number; y: number; opacity: number }[];
 }
 
+// Text animation variants for thought bubbles - gives alive human feel
+type TextAnimationType = 'typewriter' | 'fadeIn' | 'slideUp' | 'pop' | 'wave';
+
+const AnimatedText = memo(function AnimatedText({ text }: { text: string }) {
+  const [displayedChars, setDisplayedChars] = useState<string[]>([]);
+  const [animationType] = useState<TextAnimationType>(() => {
+    const types: TextAnimationType[] = ['typewriter', 'fadeIn', 'slideUp', 'pop', 'wave'];
+    return types[Math.floor(Math.random() * types.length)];
+  });
+  
+  useEffect(() => {
+    if (!text) {
+      setDisplayedChars([]);
+      return;
+    }
+    
+    const chars = text.split('');
+    setDisplayedChars([]);
+    
+    if (animationType === 'typewriter') {
+      let index = 0;
+      const interval = setInterval(() => {
+        if (index < chars.length) {
+          setDisplayedChars(prev => [...prev, chars[index]]);
+          index++;
+        } else {
+          clearInterval(interval);
+        }
+      }, 25 + Math.random() * 15);
+      return () => clearInterval(interval);
+    } else {
+      // For other animations, show all chars immediately with staggered animation
+      setDisplayedChars(chars);
+    }
+  }, [text, animationType]);
+  
+  const getCharStyle = (index: number): React.CSSProperties => {
+    const delay = index * 0.03;
+    
+    switch (animationType) {
+      case 'fadeIn':
+        return {
+          animation: `charFadeIn 0.4s ease-out ${delay}s both`,
+          display: 'inline-block'
+        };
+      case 'slideUp':
+        return {
+          animation: `charSlideUp 0.3s ease-out ${delay}s both`,
+          display: 'inline-block'
+        };
+      case 'pop':
+        return {
+          animation: `charPop 0.25s ease-out ${delay}s both`,
+          display: 'inline-block'
+        };
+      case 'wave':
+        return {
+          animation: `charWave 0.5s ease-in-out ${delay}s both`,
+          display: 'inline-block'
+        };
+      default:
+        return { display: 'inline' };
+    }
+  };
+  
+  return (
+    <>
+      <style>{`
+        @keyframes charFadeIn {
+          from { opacity: 0; transform: scale(0.5); }
+          to { opacity: 1; transform: scale(1); }
+        }
+        @keyframes charSlideUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes charPop {
+          0% { opacity: 0; transform: scale(0); }
+          60% { opacity: 1; transform: scale(1.2); }
+          100% { opacity: 1; transform: scale(1); }
+        }
+        @keyframes charWave {
+          0% { transform: translateY(0); }
+          30% { transform: translateY(-3px); }
+          60% { transform: translateY(1px); }
+          100% { transform: translateY(0); }
+        }
+      `}</style>
+      <span>
+        {displayedChars.map((char, i) => (
+          <span key={`${i}-${char}`} style={getCharStyle(i)}>
+            {char === ' ' ? '\u00A0' : char}
+          </span>
+        ))}
+      </span>
+    </>
+  );
+});
+
 const FloatingMascot = memo(function FloatingMascot({
   mode = 'IDLE',
   initialPosition,
@@ -84,6 +184,18 @@ const FloatingMascot = memo(function FloatingMascot({
   ]);
   const timeRef = useRef(0);
   const particlesRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; color: string }[]>([]);
+  
+  // Trinity Physics for collision detection
+  const physicsRef = useRef<TrinityPhysics | null>(null);
+  if (!physicsRef.current) {
+    physicsRef.current = new TrinityPhysics({
+      repulsionStrength: 3.0,
+      springStrength: 0.12,
+      dampening: 0.88,
+      minDistance: 14,
+      bounceElasticity: 0.7
+    });
+  }
 
   const [currentMode, setCurrentMode] = useState<MascotMode>(mode);
   const [isDragging, setIsDragging] = useState(false);
@@ -239,12 +351,35 @@ const FloatingMascot = memo(function FloatingMascot({
           y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius * 0.5;
       }
 
-      twins[0].x = x1;
-      twins[0].y = y1;
-      twins[1].x = x2;
-      twins[1].y = y2;
-      twins[2].x = x3;
-      twins[2].y = y3;
+      // Set physics target positions (relative to center)
+      const physics = physicsRef.current;
+      if (physics) {
+        physics.setBounds(mascotSize, mascotSize);
+        physics.setTargetPositions([
+          { x: x1 - center, y: y1 - center },
+          { x: x2 - center, y: y2 - center },
+          { x: x3 - center, y: y3 - center }
+        ]);
+        
+        // Run physics simulation with collision detection
+        const positions = physics.update(1);
+        
+        // Apply physics positions (converted back to screen coords)
+        twins[0].x = center + positions[0].x;
+        twins[0].y = center + positions[0].y;
+        twins[1].x = center + positions[1].x;
+        twins[1].y = center + positions[1].y;
+        twins[2].x = center + positions[2].x;
+        twins[2].y = center + positions[2].y;
+      } else {
+        // Fallback to direct assignment
+        twins[0].x = x1;
+        twins[0].y = y1;
+        twins[1].x = x2;
+        twins[1].y = y2;
+        twins[2].x = x3;
+        twins[2].y = y3;
+      }
 
       twins.forEach((twin, i) => {
         twin.trail.unshift({ x: twin.x, y: twin.y, opacity: 1 });
@@ -626,7 +761,7 @@ const FloatingMascot = memo(function FloatingMascot({
               left: springX.get() + mascotSize + 8,
               top: springY.get() - 10,
               zIndex: MASCOT_CONFIG.zIndex + 1,
-              maxWidth: 180
+              maxWidth: 200
             }}
             initial={{ opacity: 0, scale: 0.8, x: -10 }}
             animate={{ opacity: 1, scale: 1, x: 0 }}
@@ -636,13 +771,12 @@ const FloatingMascot = memo(function FloatingMascot({
             <div
               className="relative px-3 py-2 rounded-xl text-xs font-medium"
               style={{
-                background: 'rgba(15, 23, 42, 0.12)',
-                backdropFilter: 'blur(8px)',
-                WebkitBackdropFilter: 'blur(8px)',
-                border: `1px solid rgba(255, 255, 255, 0.15)`,
+                background: 'rgba(255, 255, 255, 0.08)',
+                backdropFilter: 'blur(6px)',
+                WebkitBackdropFilter: 'blur(6px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 color: '#ffffff',
-                textShadow: '0 1px 4px rgba(0,0,0,0.8), 0 0 12px rgba(0,0,0,0.5)',
-                boxShadow: '0 4px 12px rgba(0,0,0,0.15)'
+                textShadow: '0 1px 4px rgba(0,0,0,0.9), 0 0 8px rgba(0,0,0,0.7), 0 2px 12px rgba(0,0,0,0.5)'
               }}
             >
               <div
@@ -650,10 +784,10 @@ const FloatingMascot = memo(function FloatingMascot({
                 style={{
                   borderTop: '6px solid transparent',
                   borderBottom: '6px solid transparent',
-                  borderRight: `8px solid rgba(15, 23, 42, 0.12)`
+                  borderRight: '8px solid rgba(255, 255, 255, 0.08)'
                 }}
               />
-              {currentEmote?.expression || currentThought}
+              <AnimatedText text={currentEmote?.expression || currentThought} />
             </div>
           </motion.div>
         )}

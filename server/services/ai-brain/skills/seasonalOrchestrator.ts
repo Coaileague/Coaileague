@@ -382,3 +382,224 @@ export function shouldForceDarkMode(): boolean {
   if (holiday) return holiday.forceDarkMode;
   return detectCurrentSeason(now).forceDarkMode;
 }
+
+// AI Brain Health Check System for Seasonal Effects
+export interface SeasonalHealthCheck {
+  status: 'healthy' | 'degraded' | 'missing_effects';
+  seasonId: SeasonId;
+  timestamp: string;
+  activeManagers: string[];
+  missingEffects: string[];
+  recommendations: string[];
+  supportActions: string[];
+}
+
+// Expected effects for each season
+const EXPECTED_EFFECTS: Record<SeasonId, string[]> = {
+  christmas: ['snowfall', 'ornaments', 'lights', 'santaFlyover', 'snowPiles', 'darkMode'],
+  winter: ['snowfall', 'snowPiles', 'darkMode'],
+  newYear: ['fireworks', 'ornaments', 'darkMode'],
+  valentines: ['hearts', 'ornaments'],
+  spring: ['flowers', 'ornaments'],
+  easter: ['flowers', 'ornaments'],
+  summer: ['sunrays'],
+  fall: ['leaves', 'ornaments'],
+  halloween: ['pumpkins', 'ornaments', 'darkMode'],
+  thanksgiving: ['leaves', 'ornaments'],
+  default: [],
+};
+
+// Active seasonal managers registry
+let activeManagers: Set<string> = new Set();
+
+export function registerSeasonalManager(managerId: string) {
+  activeManagers.add(managerId);
+  console.log(`[SeasonalOrchestrator] Registered manager: ${managerId}`);
+}
+
+export function unregisterSeasonalManager(managerId: string) {
+  activeManagers.delete(managerId);
+  console.log(`[SeasonalOrchestrator] Unregistered manager: ${managerId}`);
+}
+
+export function getActiveManagers(): string[] {
+  return Array.from(activeManagers);
+}
+
+export async function runSeasonalHealthCheck(): Promise<SeasonalHealthCheck> {
+  const now = new Date();
+  const seasonId = getCurrentSeasonId();
+  const expected = EXPECTED_EFFECTS[seasonId] || [];
+  const active = Array.from(activeManagers);
+  
+  // Check for missing effects
+  const missing = expected.filter(effect => !active.includes(effect));
+  
+  const recommendations: string[] = [];
+  const supportActions: string[] = [];
+  
+  if (missing.length > 0) {
+    recommendations.push(`Missing ${missing.length} seasonal effect(s): ${missing.join(', ')}`);
+    supportActions.push('trigger_seasonal_refresh');
+    
+    // Specific recommendations based on what's missing
+    if (missing.includes('santaFlyover') && seasonId === 'christmas') {
+      recommendations.push('Santa flyover effect not active - verify SeasonalEffectsLayer is mounted');
+    }
+    if (missing.includes('ornaments')) {
+      recommendations.push('Corner ornaments not rendering - check ornament density configuration');
+    }
+    if (missing.includes('lights') && seasonId === 'christmas') {
+      recommendations.push('Holiday lights not active - verify HolidayLights component is enabled');
+    }
+    if (missing.includes('snowfall')) {
+      recommendations.push('Snowfall engine not running - check SnowfallEngine lazy loading');
+    }
+  }
+  
+  // Determine overall status
+  let status: 'healthy' | 'degraded' | 'missing_effects';
+  if (missing.length === 0) {
+    status = 'healthy';
+  } else if (missing.length < expected.length / 2) {
+    status = 'degraded';
+  } else {
+    status = 'missing_effects';
+  }
+  
+  const healthCheck: SeasonalHealthCheck = {
+    status,
+    seasonId,
+    timestamp: now.toISOString(),
+    activeManagers: active,
+    missingEffects: missing,
+    recommendations,
+    supportActions,
+  };
+  
+  console.log(`[SeasonalOrchestrator] Health check: ${status}, missing: ${missing.length}/${expected.length}`);
+  
+  return healthCheck;
+}
+
+// Support Command Console Actions
+export interface SeasonalCommand {
+  action: 'refresh' | 'force_holiday' | 'clear_holiday' | 'toggle_effect' | 'increase_intensity' | 'decrease_intensity';
+  params?: Record<string, string | number | boolean>;
+}
+
+export interface SeasonalCommandResult {
+  success: boolean;
+  message: string;
+  newState?: Partial<SeasonalProfile>;
+}
+
+// In-memory state for support overrides
+let supportOverrides: {
+  forceHoliday?: SeasonId;
+  disabledEffects?: Set<string>;
+  intensityMultiplier?: number;
+} = {};
+
+export async function executeSeasonalCommand(command: SeasonalCommand): Promise<SeasonalCommandResult> {
+  console.log(`[SeasonalOrchestrator] Executing command: ${command.action}`, command.params);
+  
+  switch (command.action) {
+    case 'refresh':
+      // Clear overrides and regenerate profile
+      supportOverrides = {};
+      const refreshedProfile = await generateSeasonalProfile();
+      return {
+        success: true,
+        message: `Seasonal profile refreshed for ${refreshedProfile.seasonId}`,
+        newState: refreshedProfile,
+      };
+      
+    case 'force_holiday':
+      const holidayId = command.params?.holidayId as SeasonId;
+      if (!holidayId || !THEME_PALETTES[holidayId]) {
+        return { success: false, message: `Invalid holiday ID: ${holidayId}` };
+      }
+      supportOverrides.forceHoliday = holidayId;
+      return {
+        success: true,
+        message: `Forced holiday: ${holidayId}`,
+        newState: { seasonId: holidayId },
+      };
+      
+    case 'clear_holiday':
+      supportOverrides.forceHoliday = undefined;
+      return {
+        success: true,
+        message: 'Holiday override cleared',
+      };
+      
+    case 'toggle_effect':
+      const effectName = command.params?.effect as string;
+      if (!effectName) {
+        return { success: false, message: 'Effect name required' };
+      }
+      if (!supportOverrides.disabledEffects) {
+        supportOverrides.disabledEffects = new Set();
+      }
+      if (supportOverrides.disabledEffects.has(effectName)) {
+        supportOverrides.disabledEffects.delete(effectName);
+        return { success: true, message: `Effect enabled: ${effectName}` };
+      } else {
+        supportOverrides.disabledEffects.add(effectName);
+        return { success: true, message: `Effect disabled: ${effectName}` };
+      }
+      
+    case 'increase_intensity':
+      supportOverrides.intensityMultiplier = Math.min(2.0, (supportOverrides.intensityMultiplier || 1.0) + 0.25);
+      return {
+        success: true,
+        message: `Intensity increased to ${supportOverrides.intensityMultiplier}x`,
+      };
+      
+    case 'decrease_intensity':
+      supportOverrides.intensityMultiplier = Math.max(0.25, (supportOverrides.intensityMultiplier || 1.0) - 0.25);
+      return {
+        success: true,
+        message: `Intensity decreased to ${supportOverrides.intensityMultiplier}x`,
+      };
+      
+    default:
+      return { success: false, message: `Unknown command: ${command.action}` };
+  }
+}
+
+export function getSupportOverrides() {
+  return {
+    forceHoliday: supportOverrides.forceHoliday,
+    disabledEffects: supportOverrides.disabledEffects ? Array.from(supportOverrides.disabledEffects) : [],
+    intensityMultiplier: supportOverrides.intensityMultiplier || 1.0,
+  };
+}
+
+// Generate AI-powered health report
+export async function generateAIHealthReport(): Promise<string> {
+  const healthCheck = await runSeasonalHealthCheck();
+  
+  if (healthCheck.status === 'healthy') {
+    return `Seasonal system healthy. ${healthCheck.activeManagers.length} managers active for ${healthCheck.seasonId}.`;
+  }
+  
+  try {
+    const prompt = `The seasonal effects system has ${healthCheck.missingEffects.length} missing effects for ${healthCheck.seasonId}: ${healthCheck.missingEffects.join(', ')}.
+Active managers: ${healthCheck.activeManagers.join(', ') || 'none'}.
+Generate a brief diagnostic message (max 100 chars) explaining the issue.`;
+
+    const result = await geminiClient.generate({
+      featureKey: 'seasonal_health',
+      systemPrompt: 'You are a diagnostic AI. Provide brief, actionable status messages.',
+      userMessage: prompt,
+      maxTokens: 50,
+      temperature: 0.3,
+    });
+    
+    return result.text || `${healthCheck.status}: ${healthCheck.missingEffects.length} effects missing`;
+  } catch (e) {
+    return `${healthCheck.status}: ${healthCheck.missingEffects.join(', ')} not active`;
+  }
+}

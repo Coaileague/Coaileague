@@ -16,7 +16,19 @@ import { helposFaqs, workspaces, employees, shifts } from '@shared/schema';
 import { eq, desc, and, gte, count, sql } from 'drizzle-orm';
 import { geminiClient } from '../services/ai-brain/providers/geminiClient';
 import { requireAuth } from '../auth';
-import { generateSeasonalProfile, getCurrentSeasonId, shouldForceDarkMode } from '../services/ai-brain/skills/seasonalOrchestrator';
+import { 
+  generateSeasonalProfile, 
+  getCurrentSeasonId, 
+  shouldForceDarkMode,
+  runSeasonalHealthCheck,
+  executeSeasonalCommand,
+  getSupportOverrides,
+  generateAIHealthReport,
+  registerSeasonalManager,
+  unregisterSeasonalManager,
+  getActiveManagers,
+  type SeasonalCommand
+} from '../services/ai-brain/skills/seasonalOrchestrator';
 
 const router = Router();
 
@@ -664,6 +676,187 @@ router.get('/seasonal/quick', (req, res) => {
       seasonId: 'default',
       forceDarkMode: false,
       timestamp: new Date().toISOString(),
+    });
+  }
+});
+
+/**
+ * GET /api/mascot/seasonal/health
+ * Run AI Brain health check on seasonal effects
+ * Support staff endpoint - requires auth
+ */
+router.get('/seasonal/health', requireAuth, async (req, res) => {
+  try {
+    const healthCheck = await runSeasonalHealthCheck();
+    res.json({
+      success: true,
+      ...healthCheck,
+    });
+  } catch (error) {
+    console.error('[Seasonal] Health check error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Health check failed',
+      status: 'unknown'
+    });
+  }
+});
+
+/**
+ * GET /api/mascot/seasonal/health/report
+ * Generate AI-powered health report
+ * Support staff endpoint - requires auth
+ */
+router.get('/seasonal/health/report', requireAuth, async (req, res) => {
+  try {
+    const report = await generateAIHealthReport();
+    res.json({
+      success: true,
+      report,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[Seasonal] Health report error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Report generation failed'
+    });
+  }
+});
+
+/**
+ * POST /api/mascot/seasonal/command
+ * Execute seasonal command from support console
+ * Support staff endpoint - requires auth
+ */
+router.post('/seasonal/command', requireAuth, async (req, res) => {
+  try {
+    const command = req.body as SeasonalCommand;
+    
+    if (!command.action) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Action required' 
+      });
+    }
+    
+    const result = await executeSeasonalCommand(command);
+    res.json({
+      success: result.success,
+      message: result.message,
+      newState: result.newState,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[Seasonal] Command error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Command execution failed'
+    });
+  }
+});
+
+/**
+ * GET /api/mascot/seasonal/overrides
+ * Get current support overrides for seasonal effects
+ * Support staff endpoint - requires auth
+ */
+router.get('/seasonal/overrides', requireAuth, (req, res) => {
+  try {
+    const overrides = getSupportOverrides();
+    res.json({
+      success: true,
+      overrides,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[Seasonal] Get overrides error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to get overrides'
+    });
+  }
+});
+
+/**
+ * POST /api/mascot/seasonal/managers/register
+ * Register a seasonal effect manager (called by frontend components)
+ * Public endpoint - called by frontend on component mount
+ */
+router.post('/seasonal/managers/register', (req, res) => {
+  try {
+    const { managerId } = req.body;
+    
+    if (!managerId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Manager ID required' 
+      });
+    }
+    
+    registerSeasonalManager(managerId);
+    res.json({
+      success: true,
+      message: `Manager ${managerId} registered`,
+      activeManagers: getActiveManagers(),
+    });
+  } catch (error) {
+    console.error('[Seasonal] Register manager error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to register manager'
+    });
+  }
+});
+
+/**
+ * POST /api/mascot/seasonal/managers/unregister
+ * Unregister a seasonal effect manager (called by frontend components)
+ * Public endpoint - called by frontend on component unmount
+ */
+router.post('/seasonal/managers/unregister', (req, res) => {
+  try {
+    const { managerId } = req.body;
+    
+    if (!managerId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Manager ID required' 
+      });
+    }
+    
+    unregisterSeasonalManager(managerId);
+    res.json({
+      success: true,
+      message: `Manager ${managerId} unregistered`,
+      activeManagers: getActiveManagers(),
+    });
+  } catch (error) {
+    console.error('[Seasonal] Unregister manager error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to unregister manager'
+    });
+  }
+});
+
+/**
+ * GET /api/mascot/seasonal/managers
+ * Get list of active seasonal managers
+ * Support staff endpoint - requires auth
+ */
+router.get('/seasonal/managers', requireAuth, (req, res) => {
+  try {
+    res.json({
+      success: true,
+      managers: getActiveManagers(),
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[Seasonal] Get managers error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to get managers'
     });
   }
 });
