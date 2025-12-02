@@ -332,19 +332,16 @@ export function getCurrentSeasonalTheme(date: Date = new Date()): SeasonalTheme 
     return 'valentines';
   }
   
-  // Easter (approximate - late March/April)
-  if ((month === 3 && day >= 20) || (month === 4 && day <= 25)) {
-    // Check if it's Easter weekend (simplified)
-    const year = date.getFullYear();
-    const easter = calculateEaster(year);
-    const easterStart = new Date(easter);
-    easterStart.setDate(easterStart.getDate() - 2);
-    const easterEnd = new Date(easter);
-    easterEnd.setDate(easterEnd.getDate() + 1);
-    
-    if (date >= easterStart && date <= easterEnd) {
-      return 'easter';
-    }
+  // Easter (approximate - late March/April) - check before spring
+  const year = date.getFullYear();
+  const easter = calculateEaster(year);
+  const easterStart = new Date(easter);
+  easterStart.setDate(easterStart.getDate() - 2);
+  const easterEnd = new Date(easter);
+  easterEnd.setDate(easterEnd.getDate() + 1);
+  
+  if (date >= easterStart && date <= easterEnd) {
+    return 'easter';
   }
   
   // Halloween: Oct 25 - Nov 1
@@ -353,8 +350,8 @@ export function getCurrentSeasonalTheme(date: Date = new Date()): SeasonalTheme 
   }
   
   // Thanksgiving: 4th Thursday of November (approximate Nov 22-28)
-  if (month === 11 && day >= 22 && day <= 28) {
-    const thanksgiving = getNthWeekdayOfMonth(date.getFullYear(), 10, 4, 4); // 4th Thursday
+  if (month === 11) {
+    const thanksgiving = getNthWeekdayOfMonth(year, 10, 4, 4); // 4th Thursday
     const thanksgivingStart = new Date(thanksgiving);
     thanksgivingStart.setDate(thanksgivingStart.getDate() - 1);
     const thanksgivingEnd = new Date(thanksgiving);
