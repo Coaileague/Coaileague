@@ -24,6 +24,7 @@
  */
 
 import { useEffect, useRef, useCallback, memo } from 'react';
+import { statusEmoteEffects, StatusEmoteEffects, STATUS_COLORS } from '@/lib/mascot/StatusEmoteEffects';
 
 export type MascotMode = 
   | 'IDLE' 
@@ -637,6 +638,37 @@ class CoAITwinEngine {
         const baseY = Math.sin(starAngle) * 15 * s * 0.003;
         tx = baseX + (Math.random() - 0.5) * 10;
         ty = baseY + (Math.random() - 0.5) * 10;
+      } else if (this.state.mode === 'ADVISING') {
+        // Professional smooth orbit - wisdom emanating
+        const adviseAngle = this.state.time * 0.025 + starAngle;
+        const adviseRadius = 28 * s * 0.003;
+        tx = Math.cos(adviseAngle) * adviseRadius;
+        ty = Math.sin(adviseAngle) * adviseRadius * 0.7;
+        // Occasional wisdom particle
+        if (this.state.time % 60 === 0 && i === 2) {
+          this.spawnParticle(tx, ty, '#f4c15d');
+        }
+      } else if (this.state.mode === 'HOLIDAY') {
+        // Festive bouncy movement with joy
+        const bouncePhase = this.state.time * 0.08 + starAngle;
+        const bounceAmp = 25 * s * 0.003;
+        tx = Math.cos(bouncePhase) * bounceAmp;
+        ty = Math.sin(bouncePhase * 1.5) * bounceAmp * 0.6 + Math.abs(Math.sin(this.state.time * 0.15)) * 8;
+        // Festive particles
+        if (this.state.time % 30 === 0) {
+          this.spawnParticle(tx, ty, ['#ff6b6b', '#4ecdc4', '#ffe66d'][i % 3]);
+        }
+      } else if (this.state.mode === 'CELEBRATING') {
+        // Extra celebratory with confetti-like bursts
+        const celebAngle = this.state.time * 0.06 + starAngle;
+        const celebRadius = 30 * s * 0.003;
+        const pulse = Math.sin(this.state.time * 0.2) * 0.3;
+        tx = Math.cos(celebAngle) * celebRadius * (1 + pulse);
+        ty = Math.sin(celebAngle) * celebRadius * (1 + pulse);
+        // Confetti particles
+        if (this.state.time % 20 === 0) {
+          this.spawnParticle(tx, ty, t.color, (Math.random() - 0.5) * 3, -2);
+        }
       }
 
       t.x += (tx - t.x) * 0.1;

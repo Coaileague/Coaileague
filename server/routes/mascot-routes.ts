@@ -53,7 +53,7 @@ async function reportMascotError(
     
     // Create support notification for human review
     await db.insert(notifications).values({
-      userId: 0, // System notification
+      userId: '0', // System notification (string ID)
       type: 'system_alert',
       title: `Mascot Action Failed: ${action}`,
       message: `Error: ${error}\n\nContext: ${JSON.stringify(context || {}, null, 2)}`,
@@ -500,6 +500,227 @@ Keep your responses:
       category: businessCategory || 'general'
     };
   }, { userId, workspaceId, question, businessCategory });
+  
+  if (result.success) {
+    res.json(result.data);
+  } else {
+    res.status(500).json({ error: result.error, reportedToSupport: result.reportedToSupport });
+  }
+});
+
+/**
+ * POST /api/mascot/business-advisor
+ * Get comprehensive AI-powered business success advisory
+ * Returns insights, thought bubbles, action items, and emote suggestions
+ * Protected - requires authentication
+ * Wrapped with AI Brain authority chain
+ */
+router.post('/business-advisor', requireAuth, async (req, res) => {
+  const { 
+    businessType, 
+    currentChallenges, 
+    goals, 
+    metrics,
+    requestType = 'insights' // 'insights' | 'thought' | 'actions' | 'full'
+  } = req.body;
+  const userId = (req as any).user?.id;
+  const workspaceId = (req as any).session?.activeWorkspaceId;
+  
+  const result = await executeMascotAction('mascot.business_advisor', async () => {
+    // Build context from workspace data
+    let businessContext = '';
+    
+    if (workspaceId) {
+      try {
+        const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+        if (workspace) {
+          businessContext = `Business: ${workspace.name || 'Unnamed'}\nIndustry: ${workspace.industry || 'General'}`;
+        }
+        
+        // Get recent metrics
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        
+        const employeeCount = await db.select({ count: count() })
+          .from(employees)
+          .where(eq(employees.workspaceId, workspaceId));
+        
+        const shiftCount = await db.select({ count: count() })
+          .from(shifts)
+          .where(and(
+            eq(shifts.workspaceId, workspaceId),
+            gte(shifts.startTime, thirtyDaysAgo)
+          ));
+        
+        businessContext += `\nTeam Size: ${employeeCount[0]?.count || 0} employees`;
+        businessContext += `\nRecent Activity: ${shiftCount[0]?.count || 0} shifts in 30 days`;
+      } catch (e) {
+        console.log('[BusinessAdvisor] Context gathering error:', e);
+      }
+    }
+    
+    const systemPrompt = `You are CoAI, an expert AI Business Success Advisor for CoAIleague workforce management platform.
+Your role is to provide actionable, personalized business growth insights.
+
+${businessContext}
+${businessType ? `Business Type: ${businessType}` : ''}
+${currentChallenges ? `Current Challenges: ${currentChallenges}` : ''}
+${goals ? `Business Goals: ${goals}` : ''}
+${metrics ? `Key Metrics: ${JSON.stringify(metrics)}` : ''}
+
+Based on the request type, provide:
+- insights: Strategic business insights (2-3 key points)
+- thought: A single encouraging thought bubble message (15 words max)
+- actions: 3 specific action items with priority levels
+- full: All of the above
+
+Format your response as JSON with these fields:
+{
+  "insights": ["insight1", "insight2", "insight3"],
+  "thought": "encouraging message",
+  "actions": [
+    {"title": "Action title", "description": "Brief description", "priority": "high|medium|low", "category": "category"},
+  ],
+  "emote": "suggested_emote",
+  "mode": "suggested_mascot_mode"
+}
+
+Emote options: sparkle, stars, hearts, confetti, question, exclaim
+Mode options: ADVISING, THINKING, CELEBRATING, IDLE`;
+
+    const userMessage = requestType === 'thought' 
+      ? 'Generate an encouraging thought bubble for the user right now.'
+      : requestType === 'actions'
+      ? 'What are the top 3 actions this business should take?'
+      : requestType === 'insights'
+      ? 'Provide strategic business insights based on the context.'
+      : 'Provide a full business advisory package with insights, thoughts, and actions.';
+
+    const response = await geminiClient.generate({
+      workspaceId,
+      userId,
+      featureKey: 'mascot_business_advisor',
+      systemPrompt,
+      userMessage,
+      temperature: 0.7,
+      maxTokens: 500
+    });
+    
+    // Parse JSON response
+    let parsedResponse;
+    try {
+      const jsonMatch = response.text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        parsedResponse = JSON.parse(jsonMatch[0]);
+      } else {
+        parsedResponse = {
+          insights: [response.text],
+          thought: "Let's grow your business together!",
+          actions: [],
+          emote: 'sparkle',
+          mode: 'ADVISING'
+        };
+      }
+    } catch (e) {
+      parsedResponse = {
+        insights: [response.text],
+        thought: "Let's grow your business together!",
+        actions: [],
+        emote: 'sparkle',
+        mode: 'ADVISING'
+      };
+    }
+    
+    return {
+      ...parsedResponse,
+      requestType,
+      timestamp: new Date().toISOString()
+    };
+  }, { userId, workspaceId, businessType, requestType });
+  
+  if (result.success) {
+    res.json(result.data);
+  } else {
+    res.status(500).json({ error: result.error, reportedToSupport: result.reportedToSupport });
+  }
+});
+
+/**
+ * GET /api/mascot/emote-cycles
+ * Get emote animation cycle configurations for the mascot
+ * Returns full animation sequences with effects, transitions, and timing
+ */
+router.get('/emote-cycles', async (_req, res) => {
+  const result = await executeMascotAction('mascot.get_emote_cycles', async () => {
+    return {
+      cycles: {
+        idle: {
+          sequence: ['float', 'bob', 'sparkle_small'],
+          duration: 3000,
+          loop: true,
+          effects: { particles: 'occasional_sparkle', glow: 0.4 }
+        },
+        thinking: {
+          sequence: ['spin_slow', 'pulse', 'question_mark'],
+          duration: 2000,
+          loop: true,
+          effects: { particles: 'thought_bubbles', glow: 0.6, orbit: true }
+        },
+        celebrating: {
+          sequence: ['bounce', 'sparkle_burst', 'confetti_shower'],
+          duration: 4000,
+          loop: false,
+          effects: { particles: 'confetti', glow: 1.0, shake: 'happy' }
+        },
+        advising: {
+          sequence: ['float_steady', 'glow_pulse', 'wisdom_sparkle'],
+          duration: 3500,
+          loop: true,
+          effects: { particles: 'star_trail', glow: 0.8, halo: true }
+        },
+        error: {
+          sequence: ['shake', 'red_flash', 'concerned'],
+          duration: 1500,
+          loop: false,
+          effects: { particles: 'error_sparks', glow: 0.3, shake: 'urgent' }
+        },
+        success: {
+          sequence: ['expand', 'star_spiral', 'celebration_burst'],
+          duration: 2500,
+          loop: false,
+          effects: { particles: 'success_confetti', glow: 1.2, shockwave: true }
+        },
+        searching: {
+          sequence: ['radar_sweep', 'ping', 'scan_line'],
+          duration: 2000,
+          loop: true,
+          effects: { particles: 'search_dots', glow: 0.5, radar: true }
+        },
+        listening: {
+          sequence: ['wave_react', 'pulse_audio', 'attentive'],
+          duration: 1500,
+          loop: true,
+          effects: { particles: 'sound_waves', glow: 0.6, waveform: true }
+        },
+        holiday: {
+          sequence: ['festive_bounce', 'seasonal_sparkle', 'joy_burst'],
+          duration: 4000,
+          loop: true,
+          effects: { particles: 'seasonal', glow: 0.9, decorations: true }
+        }
+      },
+      transitions: {
+        default: { duration: 300, easing: 'ease-out' },
+        dramatic: { duration: 600, easing: 'ease-in-out', shockwave: true },
+        instant: { duration: 50, easing: 'linear' }
+      },
+      starBehaviors: {
+        cyan: { label: 'Co', baseGlow: '#38bdf8', role: 'leader' },
+        purple: { label: 'AI', baseGlow: '#a855f7', role: 'processor' },
+        gold: { label: 'L', baseGlow: '#f4c15d', role: 'wisdom' }
+      }
+    };
+  }, {});
   
   if (result.success) {
     res.json(result.data);

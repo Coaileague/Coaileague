@@ -186,28 +186,42 @@ function MobileSeasonalEffects({
   if (effectType === 'none' || particles.length === 0) return null;
   
   return (
-    <div 
-      className="pointer-events-none fixed inset-0 overflow-hidden z-10"
-      data-testid="mobile-seasonal-effects"
-    >
-      {particles.map((p) => (
-        <div
-          key={p.id}
-          className="absolute animate-float-down"
-          style={{
-            left: `${p.x}%`,
-            top: `${p.y}%`,
-            animationDelay: `${p.delay}s`,
-            animationDuration: '8s',
-          }}
-        >
+    <>
+      <div 
+        className="pointer-events-none fixed inset-0 overflow-hidden z-10"
+        data-testid="mobile-seasonal-effects"
+      >
+        {particles.map((p) => (
           <div
-            className="w-2 h-2 rounded-full opacity-60"
-            style={{ backgroundColor: config.particleColor }}
-          />
-        </div>
-      ))}
-    </div>
+            key={p.id}
+            className="absolute animate-mobile-float-down"
+            style={{
+              left: `${p.x}%`,
+              top: `${p.y}%`,
+              animationDelay: `${p.delay}s`,
+              animationDuration: '8s',
+            }}
+          >
+            <div
+              className="w-2 h-2 rounded-full opacity-60"
+              style={{ backgroundColor: config.particleColor }}
+            />
+          </div>
+        ))}
+      </div>
+      <style dangerouslySetInnerHTML={{ __html: `
+        @keyframes mobile-float-down {
+          0% { transform: translateY(-10px) translateX(0); opacity: 0; }
+          10% { opacity: 0.6; }
+          50% { transform: translateY(50vh) translateX(15px); }
+          90% { opacity: 0.4; }
+          100% { transform: translateY(100vh) translateX(-8px); opacity: 0; }
+        }
+        .animate-mobile-float-down {
+          animation: mobile-float-down ease-in-out infinite;
+        }
+      `}} />
+    </>
   );
 }
 
