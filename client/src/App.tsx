@@ -163,7 +163,7 @@ import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { NotificationsPopover } from "@/components/notifications-popover";
 import { WorkspaceTabsNav } from "@/components/workspace-tabs-nav";
 import { FloatingSupportChat } from "@/components/floating-support-chat";
-import { CoAITwinMascot } from "@/components/coai-twin-mascot";
+import FloatingMascot from "@/components/floating-mascot";
 import { MascotTaskBox } from "@/components/mascot-task-box";
 import { useMascotMode } from "@/hooks/use-mascot-mode";
 import { useMascotPosition } from "@/hooks/use-mascot-position";
@@ -462,11 +462,8 @@ function MascotRenderer() {
         onClick={handleTap}
         style={{ background: 'transparent' }}
       >
-        <CoAITwinMascot 
-          mode={currentMode} 
-          variant={isExpanded ? 'expanded' : 'mini'}
-          size={bubbleSize}
-          emote={emoteState}
+        <FloatingMascot 
+          mode={currentMode}
         />
         
         {currentThought && (
