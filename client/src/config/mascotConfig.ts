@@ -206,19 +206,19 @@ export const MASCOT_CONFIG: MascotConfig = {
   enabled: true,
   
   desktop: {
-    bubble: 90,
-    defaultSize: 90,
-    expandedSize: 140,
-    minSize: 70,
-    maxSize: 180,
+    bubble: 120,
+    defaultSize: 120,
+    expandedSize: 180,
+    minSize: 100,
+    maxSize: 220,
   },
   
   mobile: {
-    bubble: 65,
-    defaultSize: 65,
-    expandedSize: 100,
-    minSize: 50,
-    maxSize: 130,
+    bubble: 90,
+    defaultSize: 90,
+    expandedSize: 140,
+    minSize: 75,
+    maxSize: 170,
   },
   
   defaultPosition: {
@@ -255,11 +255,11 @@ export const MASCOT_CONFIG: MascotConfig = {
   defaultMode: 'IDLE',
   
   colors: {
-    primary: '#3B82F6',
-    secondary: '#8B5CF6',
-    accent: '#10B981',
+    primary: '#a855f7',      // Purple star
+    secondary: '#38bdf8',    // Cyan star
+    accent: '#a855f7',       // Purple accent
     bubble: 'rgba(15, 23, 42, 0.95)',
-    bubbleGlow: 'rgba(59, 130, 246, 0.3)',
+    bubbleGlow: 'rgba(168, 85, 247, 0.4)',
   },
   
   animation: {
@@ -280,20 +280,20 @@ export const MASCOT_CONFIG: MascotConfig = {
   
   roaming: {
     enabled: true,
-    interval: { min: 8000, max: 20000 },
-    moveDuration: 2000,
-    pauseDuration: { min: 5000, max: 15000 },
-    boundsPadding: 100,
+    interval: { min: 12000, max: 30000 },
+    moveDuration: 2500,
+    pauseDuration: { min: 8000, max: 20000 },
+    boundsPadding: 150,
     avoidEdges: true,
     preferCorners: false,
     transportEffects: {
       enabled: true,
       randomizeEffect: true,
       effects: [
-        { type: 'glide', duration: 2000, trailEnabled: true, sparkleEnabled: false, glowColor: '#38bdf8' },
-        { type: 'zap', duration: 300, trailEnabled: false, sparkleEnabled: true, glowColor: '#a855f7' },
-        { type: 'float', duration: 2500, trailEnabled: false, sparkleEnabled: false, glowColor: '#38bdf8' },
-        { type: 'dash', duration: 800, trailEnabled: true, sparkleEnabled: true, glowColor: '#a855f7' },
+        { type: 'glide', duration: 2200, trailEnabled: true, sparkleEnabled: false, glowColor: '#38bdf8' },
+        { type: 'zap', duration: 400, trailEnabled: false, sparkleEnabled: true, glowColor: '#a855f7' },
+        { type: 'float', duration: 3000, trailEnabled: false, sparkleEnabled: false, glowColor: '#38bdf8' },
+        { type: 'dash', duration: 900, trailEnabled: true, sparkleEnabled: true, glowColor: '#a855f7' },
       ],
     },
     reactions: {

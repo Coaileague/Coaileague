@@ -565,6 +565,73 @@ export const BOT_CONFIG = {
 } as const;
 
 // ============================================================================
+// COAI TWIN - INTERACTIVE AI MASCOT WITH BOT-LEVEL AUTHORITY
+// ============================================================================
+export const COAI_TWIN = {
+  // Bot Identity - Same authority as HelpAI (one level under root_admin)
+  name: "CoAI Twin",
+  fullName: "CoAI Twin Mascot",
+  description: "Interactive AI mascot with BOT-level platform authority",
+  workId: "CoAI-00-BOT-01-0001",
+  
+  // Platform Role - Same as HelpAI Bot
+  role: {
+    platformRole: "Bot" as const,
+    authorityLevel: 2, // Level 1: root_admin, Level 2: Bot (same as HelpAI)
+    workspaceAccess: "platform_wide" as const,
+    supportOrgMember: true,
+  },
+  
+  // Visual Identity - Two glowing stars
+  visual: {
+    primaryColor: "#a855f7",   // Purple star
+    secondaryColor: "#38bdf8", // Cyan star
+    glowIntensity: 0.6,
+    backgroundTransparent: true,
+    sizes: {
+      desktop: { default: 120, expanded: 180 },
+      mobile: { default: 90, expanded: 140 },
+    },
+  },
+  
+  // AI Model Configuration (uses Gemini via AI Brain)
+  model: {
+    provider: "gemini" as const,
+    modelId: "gemini-2.0-flash-exp",
+    maxTokens: 256,
+    temperature: 0.8,
+  },
+  
+  // Bot Feature Flags
+  capabilities: {
+    enabled: true,
+    followUsers: true,
+    contextualAdvice: true,
+    taskCreation: true,
+    navigationTracking: true,
+    autonomousRoaming: true,
+    transportEffects: true,
+    smartMovement: true,
+  },
+  
+  // Transport Effects
+  transportEffects: {
+    glide: { duration: 2200, glowColor: "#38bdf8" },
+    zap: { duration: 400, glowColor: "#a855f7" },
+    float: { duration: 3000, glowColor: "#38bdf8" },
+    dash: { duration: 900, glowColor: "#a855f7" },
+  },
+  
+  // Greeting Templates
+  greetings: {
+    default: "Hi! I'm your CoAI Twin, here to help navigate and assist!",
+    returning: "Welcome back! Ready to help you today.",
+    newPage: "I see you're exploring. Need any guidance?",
+    idle: "Just floating around... tap me if you need anything!",
+  },
+} as const;
+
+// ============================================================================
 // HELPAI - UNIVERSAL AI ASSISTANT & ORCHESTRATION SYSTEM
 // ============================================================================
 export const HELPAI = {
