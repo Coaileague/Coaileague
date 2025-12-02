@@ -1080,9 +1080,32 @@ export function getCurrentHoliday(): HolidayConfig | null {
 
 export function getDeviceSizes(): MascotSizes {
   if (typeof window === 'undefined') return MASCOT_CONFIG.desktop;
-  return window.innerWidth < MASCOT_CONFIG.breakpoints.mobile 
-    ? MASCOT_CONFIG.mobile 
-    : MASCOT_CONFIG.desktop;
+  
+  const width = window.innerWidth;
+  const { mobile, tablet } = MASCOT_CONFIG.breakpoints;
+  
+  // Mobile: compact mascot for small screens
+  if (width < mobile) {
+    return MASCOT_CONFIG.mobile;
+  }
+  
+  // Tablet: interpolated sizing between mobile and desktop
+  if (width < tablet) {
+    const factor = (width - mobile) / (tablet - mobile);
+    const m = MASCOT_CONFIG.mobile;
+    const d = MASCOT_CONFIG.desktop;
+    
+    return {
+      bubble: Math.round(m.bubble + (d.bubble - m.bubble) * factor * 0.6),
+      defaultSize: Math.round(m.defaultSize + (d.defaultSize - m.defaultSize) * factor * 0.6),
+      expandedSize: Math.round(m.expandedSize + (d.expandedSize - m.expandedSize) * factor * 0.6),
+      minSize: Math.round(m.minSize + (d.minSize - m.minSize) * factor * 0.5),
+      maxSize: Math.round(m.maxSize + (d.maxSize - m.maxSize) * factor * 0.5),
+    };
+  }
+  
+  // Desktop: full-sized mascot
+  return MASCOT_CONFIG.desktop;
 }
 
 export function getRandomReaction(type: keyof Reactions, intensity?: string): string {

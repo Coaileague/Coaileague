@@ -185,16 +185,10 @@ const FloatingMascot = memo(function FloatingMascot({
   const timeRef = useRef(0);
   const particlesRef = useRef<{ x: number; y: number; vx: number; vy: number; life: number; color: string }[]>([]);
   
-  // Trinity Physics for collision detection
+  // Trinity Physics for collision detection - uses tuned defaults from TrinityPhysics.ts
   const physicsRef = useRef<TrinityPhysics | null>(null);
   if (!physicsRef.current) {
-    physicsRef.current = new TrinityPhysics({
-      repulsionStrength: 3.0,
-      springStrength: 0.12,
-      dampening: 0.88,
-      minDistance: 14,
-      bounceElasticity: 0.7
-    });
+    physicsRef.current = new TrinityPhysics();
   }
 
   const [currentMode, setCurrentMode] = useState<MascotMode>(mode);

@@ -29,13 +29,14 @@ export interface TrinityPhysicsConfig {
   bounceElasticity: number;     // How bouncy collisions are
 }
 
+// Optimized for smooth 60fps/30fps rendering with refined dampening
 const DEFAULT_CONFIG: TrinityPhysicsConfig = {
-  repulsionStrength: 2.5,
-  springStrength: 0.08,
-  dampening: 0.85,
-  minDistance: 12,
-  maxSpeed: 8,
-  bounceElasticity: 0.6
+  repulsionStrength: 2.2,       // Slightly softer repulsion for smoother movement
+  springStrength: 0.065,        // Gentler spring for natural feel
+  dampening: 0.88,              // Higher dampening for smoother deceleration
+  minDistance: 14,              // Slightly larger gap for cleaner separation
+  maxSpeed: 6,                  // Lower max speed for polished motion
+  bounceElasticity: 0.45        // Less bouncy for refined feel
 };
 
 export class TrinityPhysics {
