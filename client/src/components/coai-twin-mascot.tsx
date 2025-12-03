@@ -29,6 +29,7 @@ import { emoteMorphingEngine, EmoteMorphingEngine, EmoteName, EmotePhase, EMOTE_
 import { EmoteTransitionRenderer, WarpPhase, WarpColors } from '@/lib/mascot/EmoteTransitionRenderer';
 import { GrabSlingMechanics, GrabEvent, SlingResult } from '@/lib/mascot/GrabSlingMechanics';
 import { WarpMutationOverlay } from '@/components/mascot/WarpMutationOverlay';
+import { MutationFlashOverlay } from '@/components/mascot/MutationFlashOverlay';
 
 export type MascotMode = 
   | 'IDLE' 
@@ -541,6 +542,9 @@ class CoAITwinEngine {
     }
   }
 
+  // Warp phase timeout IDs for cleanup
+  private warpTimeouts: number[] = [];
+  
   setMode(mode: MascotMode) {
     // 1. DECONSTRUCT EFFECT: Explode particles at current twin positions with OLD colors
     this.twins.forEach(t => {
@@ -550,40 +554,27 @@ class CoAITwinEngine {
     this.state.mode = mode;
     const color = MODE_COLORS[mode];
     
-    // 2. TRIGGER MUTATION: Start mutation intensity for visual effects
-    this.state.mutation = 1.0;
-    this.spawnShockwave(color);
-    
-    if (mode === 'SUCCESS') this.spawnExplosion(30);
-    if (mode === 'ERROR') this.state.shake = 20;
-    if (mode === 'CODING' || mode === 'UPLOADING') this.particles = [];
-    
-    // 3. SET TARGET COLORS for smooth lerping (instead of immediate color change)
+    // 2. SET TARGET COLORS FIRST so warp uses correct colors
     // Trinity colors: Cyan (Co), Purple (AI), Gold (L) - spells "CoAIL"
     if (mode === 'IDLE') {
       this.twins[0].targetColor = '#38bdf8';  // Cyan
       this.twins[1].targetColor = '#a855f7';  // Purple
       this.twins[2].targetColor = '#f4c15d';  // Gold
-      // Set warp colors for IDLE mode
       this.warpColors = { primary: '#38bdf8', secondary: '#a855f7', accent: '#f4c15d' };
     } else if (mode === 'ERROR') {
       this.twins[0].targetColor = '#ef4444';
       this.twins[1].targetColor = '#ef4444';
       this.twins[2].targetColor = '#ef4444';
-      // Error mode uses red tones for warp
       this.warpColors = { primary: '#ef4444', secondary: '#dc2626', accent: '#f87171' };
     } else if (mode === 'CELEBRATING' || mode === 'SUCCESS') {
       this.twins[0].targetColor = '#38bdf8';
       this.twins[1].targetColor = '#a855f7';
-      this.twins[2].targetColor = '#fbbf24';  // Brighter gold for celebration
-      // Celebration uses festive colors
+      this.twins[2].targetColor = '#fbbf24';
       this.warpColors = { primary: '#fbbf24', secondary: '#a855f7', accent: '#f472b6' };
     } else if (mode === 'HOLIDAY') {
-      // Christmas colors: Red, Green, Gold - festive glow
-      this.twins[0].targetColor = CHRISTMAS_COLORS.red;    // Christmas Red
-      this.twins[1].targetColor = CHRISTMAS_COLORS.green;  // Christmas Green
-      this.twins[2].targetColor = CHRISTMAS_COLORS.gold;   // Christmas Gold
-      // Christmas warp colors - festive red, green, gold
+      this.twins[0].targetColor = CHRISTMAS_COLORS.red;
+      this.twins[1].targetColor = CHRISTMAS_COLORS.green;
+      this.twins[2].targetColor = CHRISTMAS_COLORS.gold;
       this.warpColors = { 
         primary: CHRISTMAS_COLORS.red, 
         secondary: CHRISTMAS_COLORS.green, 
@@ -593,7 +584,51 @@ class CoAITwinEngine {
       this.twins[0].targetColor = color;
       this.twins[1].targetColor = '#fff';
       this.twins[2].targetColor = '#f4c15d';
+      this.warpColors = { primary: color, secondary: '#ffffff', accent: '#f4c15d' };
     }
+    
+    // 3. TRIGGER MUTATION: Start mutation intensity for visual effects
+    this.state.mutation = 1.0;
+    this.spawnShockwave(color);
+    
+    if (mode === 'SUCCESS') this.spawnExplosion(30);
+    if (mode === 'ERROR') this.state.shake = 20;
+    if (mode === 'CODING' || mode === 'UPLOADING') this.particles = [];
+    
+    // 4. TRIGGER WARP OVERLAY: Clear any previous warp timeouts to prevent overlap
+    this.warpTimeouts.forEach(t => clearTimeout(t));
+    this.warpTimeouts = [];
+    
+    // Start warp phases with correct colors
+    this.warpPhase = 'enter';
+    this.warpIntensity = 1.0;
+    if (this.onWarpStateChange) {
+      this.onWarpStateChange('enter', 1.0, this.warpColors);
+    }
+    
+    // Auto-transition through warp phases
+    this.warpTimeouts.push(window.setTimeout(() => {
+      this.warpPhase = 'peak';
+      if (this.onWarpStateChange) {
+        this.onWarpStateChange('peak', 0.8, this.warpColors);
+      }
+    }, 150));
+    
+    this.warpTimeouts.push(window.setTimeout(() => {
+      this.warpPhase = 'exit';
+      this.warpIntensity = 0.4;
+      if (this.onWarpStateChange) {
+        this.onWarpStateChange('exit', 0.4, this.warpColors);
+      }
+    }, 350));
+    
+    this.warpTimeouts.push(window.setTimeout(() => {
+      this.warpPhase = 'idle';
+      this.warpIntensity = 0;
+      if (this.onWarpStateChange) {
+        this.onWarpStateChange('idle', 0, this.warpColors);
+      }
+    }, 600));
   }
 
   getMode(): MascotMode {
@@ -1549,6 +1584,8 @@ class CoAITwinEngine {
 
   destroy() {
     this.stop();
+    this.warpTimeouts.forEach(t => clearTimeout(t));
+    this.warpTimeouts = [];
   }
 }
 
@@ -1743,6 +1780,10 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
             colors={warpState.colors}
             size={bubbleSize}
           />
+          <MutationFlashOverlay
+            isActive={warpState.phase === 'enter' || warpState.phase === 'peak'}
+            colors={warpState.colors}
+          />
         </div>
       </div>
     );
@@ -1814,6 +1855,10 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
             colors={warpState.colors}
             size={bubbleSize}
           />
+          <MutationFlashOverlay
+            isActive={warpState.phase === 'enter' || warpState.phase === 'peak'}
+            colors={warpState.colors}
+          />
         </div>
       </div>
     );
@@ -1841,6 +1886,10 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
           intensity={warpState.intensity}
           colors={warpState.colors}
           size={fullSize}
+        />
+        <MutationFlashOverlay
+          isActive={warpState.phase === 'enter' || warpState.phase === 'peak'}
+          colors={warpState.colors}
         />
       </div>
 

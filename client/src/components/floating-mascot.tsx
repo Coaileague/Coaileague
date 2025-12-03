@@ -1292,7 +1292,7 @@ const FloatingMascot = memo(function FloatingMascot({
               left: springX.get() + mascotSize + 10,
               top: springY.get() - 8,
               zIndex: MASCOT_CONFIG.zIndex + 1,
-              maxWidth: 180
+              maxWidth: 280
             }}
             initial={{ opacity: 0, scale: 0.75, x: -10, y: 8 }}
             animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}

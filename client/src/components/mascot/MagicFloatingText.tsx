@@ -37,8 +37,8 @@ const LETTER_EXIT_ANIMATIONS = [
   'dissolve', 'sparkleOut', 'driftAway', 'burstOut', 'slideOut', 'glitchOut'
 ];
 
-// Universal font style for mascot - consistent and readable
-const MASCOT_FONT_STYLE = { fontWeight: 600, fontStyle: 'normal' };
+// Universal font style for mascot - BOLD for maximum visibility
+const MASCOT_FONT_STYLE = { fontWeight: 800, fontStyle: 'normal' };
 
 interface LetterState {
   char: string;
@@ -108,19 +108,19 @@ const calculateAnchoredPosition = (
   const mascotTopY = viewportHeight - mascotPos.y - mascotSize;
   
   // MAGNET POSITIONING: Bubble sits RIGHT on top of mascot with minimal gap
-  // Reduced from 8px to just 2px for tight magnet-style anchoring
-  const magnetGap = isMobile ? 4 : 2; // Slightly more gap on mobile for touch
+  // Very tight for mobile (2px) and desktop (1px)
+  const magnetGap = isMobile ? 2 : 1; 
   const bubbleBottomY = mascotTopY - magnetGap;
   
   // Center bubble horizontally on mascot center
   let bubbleLeftX = mascotCenterX - (bubbleWidth / 2);
   
   // Clamp to viewport bounds with minimal padding
-  const padding = 8;
+  const padding = 4;
   bubbleLeftX = Math.max(padding, Math.min(bubbleLeftX, viewportWidth - bubbleWidth - padding));
   
-  // Estimate bubble height based on content (compact positioning)
-  const estimatedBubbleHeight = isMobile ? 50 : 55;
+  // Estimate bubble height based on content (very compact positioning)
+  const estimatedBubbleHeight = isMobile ? 32 : 38;
   const bubbleTop = Math.max(padding, bubbleBottomY - estimatedBubbleHeight);
   
   return {
@@ -128,7 +128,7 @@ const calculateAnchoredPosition = (
     top: bubbleTop,
     left: bubbleLeftX,
     maxWidth: bubbleWidth,
-    minWidth: isMobile ? 100 : 120,
+    minWidth: isMobile ? 120 : 140,
   };
 };
 
@@ -254,8 +254,8 @@ export function MagicFloatingText({
     return `${anim} ${duration}s ease-out forwards`;
   };
   
-  // Responsive font size
-  const fontSize = isMobile ? 'clamp(14px, 4vw, 18px)' : 'clamp(16px, 1.5vw, 22px)';
+  // Responsive font size - BIGGER, BOLDER, ALL CAPS for visibility
+  const fontSize = isMobile ? 'clamp(14px, 3.8vw, 18px)' : 'clamp(16px, 1.5vw, 22px)';
   
   if (!isActive || letters.length === 0) return null;
   
@@ -409,8 +409,8 @@ export function MagicFloatingText({
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
-          gap: '8px',
-          transition: 'top 0.1s ease-out, left 0.1s ease-out',
+          gap: isMobile ? '2px' : '3px',
+          transition: 'top 0.08s ease-out, left 0.08s ease-out',
         }}
         data-testid="magic-floating-text"
         data-anchored="true"
@@ -422,22 +422,22 @@ export function MagicFloatingText({
             style={{
               background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
               color: '#fff',
-              fontSize: isMobile ? '10px' : '11px',
+              fontSize: isMobile ? '8px' : '9px',
               fontWeight: 700,
-              padding: '3px 10px',
-              borderRadius: '12px',
+              padding: isMobile ? '2px 6px' : '2px 8px',
+              borderRadius: '10px',
               textTransform: 'uppercase',
-              letterSpacing: '0.05em',
-              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4), 0 0 12px rgba(245, 158, 11, 0.3)',
+              letterSpacing: '0.03em',
+              boxShadow: '0 1px 4px rgba(245, 158, 11, 0.4)',
               animation: 'promoGlow 2s ease-in-out infinite',
               display: 'flex',
               alignItems: 'center',
-              gap: '4px',
+              gap: '2px',
               whiteSpace: 'nowrap',
             }}
             data-testid="promo-discount-badge"
           >
-            <span style={{ fontSize: '14px' }}>&#127873;</span>
+            <span style={{ fontSize: isMobile ? '10px' : '11px' }}>&#127873;</span>
             {PUBLIC_PAGE_PROMO_CONFIG.discountLabel}
           </div>
         )}
@@ -461,9 +461,11 @@ export function MagicFloatingText({
                 fontSize,
                 fontWeight: letter.fontStyle.fontWeight,
                 fontStyle: letter.fontStyle.fontStyle,
+                textTransform: 'uppercase',
                 textShadow: `
-                  0 1px 2px rgba(0,0,0,0.6),
-                  0 0 4px ${letter.glowColor}50
+                  0 2px 4px rgba(0,0,0,0.8),
+                  0 0 8px ${letter.glowColor}70,
+                  0 0 16px ${letter.glowColor}40
                 `,
                 transform: `
                   scale(${letter.scale})
@@ -477,10 +479,10 @@ export function MagicFloatingText({
                   ? `${getEnterAnimation(letter.enterAnim, 0)}, letterFloat 3s ease-in-out infinite ${letter.delay}ms`
                   : 'none',
                 whiteSpace: letter.char === ' ' ? 'pre' : 'normal',
-                minWidth: letter.char === ' ' ? '0.3em' : 'auto',
+                minWidth: letter.char === ' ' ? '0.35em' : 'auto',
                 willChange: 'transform, opacity, filter',
-                letterSpacing: '0.02em',
-                lineHeight: 1.4,
+                letterSpacing: '0.05em',
+                lineHeight: 1.5,
               }}
               data-char={letter.char}
               data-enter-anim={letter.enterAnim}
@@ -501,15 +503,15 @@ export function MagicFloatingText({
               zIndex: 10000,
               display: 'inline-flex',
               alignItems: 'center',
-              gap: '6px',
+              gap: isMobile ? '3px' : '4px',
               background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
               color: '#fff',
-              fontSize: isMobile ? '12px' : '13px',
+              fontSize: isMobile ? '9px' : '10px',
               fontWeight: 600,
-              padding: isMobile ? '6px 14px' : '8px 18px',
-              borderRadius: '20px',
+              padding: isMobile ? '3px 8px' : '4px 10px',
+              borderRadius: '12px',
               textDecoration: 'none',
-              boxShadow: '0 4px 12px rgba(168, 85, 247, 0.4), 0 0 20px rgba(168, 85, 247, 0.2)',
+              boxShadow: '0 2px 6px rgba(168, 85, 247, 0.4)',
               border: '1px solid rgba(255, 255, 255, 0.2)',
               animation: 'ctaPulse 2s ease-in-out infinite',
               transition: 'transform 0.2s, box-shadow 0.2s',
@@ -517,16 +519,16 @@ export function MagicFloatingText({
             }}
             onMouseEnter={(e) => {
               e.currentTarget.style.transform = 'scale(1.05)';
-              e.currentTarget.style.boxShadow = '0 6px 16px rgba(168, 85, 247, 0.5), 0 0 30px rgba(168, 85, 247, 0.3)';
+              e.currentTarget.style.boxShadow = '0 3px 8px rgba(168, 85, 247, 0.5)';
             }}
             onMouseLeave={(e) => {
               e.currentTarget.style.transform = 'scale(1)';
-              e.currentTarget.style.boxShadow = '0 4px 12px rgba(168, 85, 247, 0.4), 0 0 20px rgba(168, 85, 247, 0.2)';
+              e.currentTarget.style.boxShadow = '0 2px 6px rgba(168, 85, 247, 0.4)';
             }}
             data-testid="promo-cta-button"
           >
             {thought.ctaText}
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width={isMobile ? "10" : "11"} height={isMobile ? "10" : "11"} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M5 12h14M12 5l7 7-7 7"/>
             </svg>
           </a>

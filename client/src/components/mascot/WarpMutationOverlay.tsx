@@ -48,10 +48,12 @@ const WarpMutationOverlay = memo(function WarpMutationOverlay({
   
   const isActive = true;
   const isPeak = phase === 'peak';
+  const isEnter = phase === 'enter';
   
-  const warpScale = isPeak ? 1.08 : (phase === 'enter' ? 0.95 + intensity * 0.05 : 1.0 - intensity * 0.03);
-  const warpSkew = isPeak ? 3 : intensity * 2;
-  const blurAmount = isPeak ? 12 : intensity * 8;
+  // More dramatic scaling and effects
+  const warpScale = isPeak ? 1.15 : (isEnter ? 0.9 + intensity * 0.1 : 1.05 - intensity * 0.05);
+  const warpSkew = isPeak ? 5 : intensity * 4;
+  const blurAmount = isPeak ? 18 : intensity * 12;
   
   return (
     <div
@@ -68,25 +70,25 @@ const WarpMutationOverlay = memo(function WarpMutationOverlay({
       data-warp-accent={colors.accent}
       data-testid="warp-mutation-overlay"
     >
-      {/* Primary warp gradient layer */}
+      {/* Primary warp gradient layer - enhanced visibility */}
       <div
-        className="absolute inset-0 rounded-full transition-opacity duration-150"
+        className="absolute inset-0 rounded-full transition-opacity duration-100"
         style={{
-          opacity: intensity * 0.35,
+          opacity: isPeak ? 0.7 : intensity * 0.55,
           background: `
-            radial-gradient(ellipse at 30% 30%, ${colors.primary}40 0%, transparent 50%),
-            radial-gradient(ellipse at 70% 70%, ${colors.secondary}40 0%, transparent 50%),
+            radial-gradient(ellipse at 30% 30%, ${colors.primary}70 0%, transparent 50%),
+            radial-gradient(ellipse at 70% 70%, ${colors.secondary}70 0%, transparent 50%),
             conic-gradient(from ${intensity * 360}deg at 50% 50%, 
-              ${colors.primary}20 0deg, 
-              ${colors.accent}30 120deg, 
-              ${colors.secondary}20 240deg, 
-              ${colors.primary}20 360deg
+              ${colors.primary}40 0deg, 
+              ${colors.accent}50 120deg, 
+              ${colors.secondary}40 240deg, 
+              ${colors.primary}40 360deg
             )
           `,
-          filter: `blur(${blurAmount}px) saturate(1.3) contrast(1.1)`,
+          filter: `blur(${blurAmount}px) saturate(1.5) contrast(1.2)`,
           mixBlendMode: 'screen',
           transform: `scale(${warpScale}) skew(${warpSkew}deg, ${warpSkew * 0.5}deg)`,
-          transition: 'transform 100ms ease-out, opacity 100ms ease-out',
+          transition: 'transform 80ms ease-out, opacity 80ms ease-out',
         }}
       />
       
@@ -108,69 +110,91 @@ const WarpMutationOverlay = memo(function WarpMutationOverlay({
         }}
       />
       
-      {/* Chromatic aberration simulation */}
+      {/* Chromatic aberration simulation - enhanced */}
       <div
         className="absolute inset-0 rounded-full"
         style={{
-          opacity: isPeak ? 0.25 : intensity * 0.15,
+          opacity: isPeak ? 0.5 : intensity * 0.35,
           background: `
-            radial-gradient(ellipse at 45% 45%, ${colors.primary}50 0%, transparent 40%),
-            radial-gradient(ellipse at 55% 55%, ${colors.secondary}50 0%, transparent 40%)
+            radial-gradient(ellipse at 40% 40%, ${colors.primary}80 0%, transparent 45%),
+            radial-gradient(ellipse at 60% 60%, ${colors.secondary}80 0%, transparent 45%)
           `,
           mixBlendMode: 'color-dodge',
-          transform: `translate(${isPeak ? 3 : intensity * 2}px, ${isPeak ? -2 : -intensity}px)`,
-          filter: 'blur(4px)',
+          transform: `translate(${isPeak ? 5 : intensity * 4}px, ${isPeak ? -3 : -intensity * 2}px)`,
+          filter: 'blur(3px)',
+          animation: isActive ? 'chromatic-shift 200ms ease-in-out infinite' : 'none',
         }}
       />
       
-      {/* Scanline shimmer effect */}
+      {/* Scanline shimmer effect - enhanced */}
       <div
         className="absolute inset-0 rounded-full overflow-hidden"
         style={{
-          opacity: isPeak ? 0.15 : intensity * 0.08,
+          opacity: isPeak ? 0.25 : intensity * 0.15,
           background: `
             repeating-linear-gradient(
               0deg,
               transparent 0px,
               transparent 2px,
-              ${colors.accent}15 2px,
-              ${colors.accent}15 4px
+              ${colors.accent}30 2px,
+              ${colors.accent}30 4px
             )
           `,
-          animation: isActive ? 'scanline-sweep 300ms linear infinite' : 'none',
+          animation: isActive ? 'scanline-sweep 200ms linear infinite' : 'none',
           mixBlendMode: 'overlay',
         }}
       />
       
-      {/* Edge refraction glow */}
+      {/* Edge refraction glow - enhanced */}
       <div
         className="absolute inset-0 rounded-full"
         style={{
-          opacity: intensity * 0.4,
+          opacity: isPeak ? 0.7 : intensity * 0.55,
           boxShadow: `
-            inset 0 0 ${20 * intensity}px ${colors.primary}40,
-            inset 0 0 ${40 * intensity}px ${colors.accent}20,
-            0 0 ${30 * intensity}px ${colors.primary}30,
-            0 0 ${60 * intensity}px ${colors.secondary}15
+            inset 0 0 ${30 * intensity}px ${colors.primary}60,
+            inset 0 0 ${50 * intensity}px ${colors.accent}40,
+            0 0 ${40 * intensity}px ${colors.primary}50,
+            0 0 ${80 * intensity}px ${colors.secondary}30
           `,
-          backdropFilter: isPeak ? 'contrast(1.15) saturate(1.2)' : `contrast(${1 + intensity * 0.1}) saturate(${1 + intensity * 0.15})`,
+          backdropFilter: isPeak ? 'contrast(1.25) saturate(1.4)' : `contrast(${1 + intensity * 0.15}) saturate(${1 + intensity * 0.25})`,
         }}
       />
       
-      {/* Peak burst effect */}
+      {/* Peak burst effect - more dramatic */}
       {isPeak && (
         <div
           className="absolute inset-0 rounded-full"
           style={{
             background: `
               radial-gradient(circle at center,
-                ${colors.primary}60 0%,
-                ${colors.accent}40 20%,
-                transparent 50%
+                ${colors.primary}90 0%,
+                ${colors.accent}70 25%,
+                ${colors.secondary}40 45%,
+                transparent 60%
               )
             `,
-            animation: 'warp-burst 200ms ease-out forwards',
+            animation: 'warp-burst 250ms ease-out forwards',
             mixBlendMode: 'screen',
+          }}
+        />
+      )}
+      
+      {/* Glitch distortion layer */}
+      {isActive && (
+        <div
+          className="absolute inset-0 rounded-full"
+          style={{
+            opacity: isPeak ? 0.3 : intensity * 0.2,
+            background: `
+              linear-gradient(${intensity * 180}deg, 
+                transparent 30%, 
+                ${colors.primary}20 45%, 
+                ${colors.secondary}20 55%, 
+                transparent 70%
+              )
+            `,
+            animation: 'distortion-wave 300ms ease-in-out infinite',
+            mixBlendMode: 'overlay',
           }}
         />
       )}

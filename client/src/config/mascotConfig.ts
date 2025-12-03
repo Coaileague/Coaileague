@@ -680,10 +680,10 @@ export type ThoughtBubbleAnimation =
 
 // Thought bubble boundary - keeps bubble anchored and unified with mascot
 export const THOUGHT_BUBBLE_BOUNDARY_CONFIG = {
-  offsetAbove: 10, // pixels above mascot
-  maxWidth: 280,   // max bubble width on desktop
-  mobileMaxWidth: 200, // max bubble width on mobile
-  padding: 8,
+  offsetAbove: 6, // pixels above mascot
+  maxWidth: 280,   // max bubble width on desktop - larger for BOLD ALL CAPS
+  mobileMaxWidth: 200, // max bubble width on mobile - larger for visibility
+  padding: 6,
   anchorToMascot: true, // always stay attached to mascot position
   followMascotDrag: true, // move with mascot when dragged
 };
