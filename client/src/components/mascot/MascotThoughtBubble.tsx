@@ -101,18 +101,18 @@ export function MascotThoughtBubble({
       const displayDuration = Math.min(readingTime, maxDuration);
       
       // Start exit animation before hiding
-      exitTimerRef.current = setTimeout(() => {
+      exitTimerRef.current = window.setTimeout(() => {
         setIsExiting(true);
       }, displayDuration - 500);
       
       // Hide completely after animation
-      hideTimerRef.current = setTimeout(() => {
+      hideTimerRef.current = window.setTimeout(() => {
         setIsVisible(false);
         setDisplayedThought(null);
       }, displayDuration);
     } else {
       setIsExiting(true);
-      hideTimerRef.current = setTimeout(() => {
+      hideTimerRef.current = window.setTimeout(() => {
         setIsVisible(false);
         setDisplayedThought(null);
       }, 500);
@@ -151,14 +151,14 @@ export function MascotThoughtBubble({
         }
         @keyframes bubblePulse {
           0%, 100% {
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15), 
-                        0 0 30px rgba(147, 51, 234, 0.1),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12), 
+                        0 0 40px rgba(147, 51, 234, 0.15),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.8);
           }
           50% {
-            box-shadow: 0 4px 25px rgba(0, 0, 0, 0.2), 
-                        0 0 40px rgba(147, 51, 234, 0.15),
-                        inset 0 1px 0 rgba(255, 255, 255, 0.3);
+            box-shadow: 0 4px 28px rgba(0, 0, 0, 0.15), 
+                        0 0 50px rgba(147, 51, 234, 0.2),
+                        inset 0 1px 0 rgba(255, 255, 255, 0.9);
           }
         }
       `}</style>
@@ -171,30 +171,29 @@ export function MascotThoughtBubble({
         }}
         data-testid="mascot-thought-bubble"
       >
-        {/* Main bubble */}
+        {/* Main bubble - Light glassmorphism */}
         <div
           style={{
-            background: 'linear-gradient(135deg, rgba(30, 30, 40, 0.92) 0%, rgba(20, 20, 30, 0.95) 100%)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
+            background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.92) 100%)',
+            backdropFilter: 'blur(16px)',
+            WebkitBackdropFilter: 'blur(16px)',
             borderRadius: isMobile ? '14px' : '16px',
             padding: isMobile ? '12px 14px' : '14px 18px',
-            border: '1px solid rgba(147, 51, 234, 0.3)',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.25), 0 0 30px rgba(147, 51, 234, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+            border: '1px solid rgba(147, 51, 234, 0.4)',
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.12), 0 0 40px rgba(147, 51, 234, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8)',
             animation: isExiting 
               ? 'bubbleExit 0.4s ease-out forwards' 
               : 'bubbleEnter 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards, bubblePulse 3s ease-in-out infinite 0.4s',
           }}
         >
-          {/* Message text */}
+          {/* Message text - dark for contrast on light background */}
           <p
             style={{
               margin: 0,
               fontSize: isMobile ? '13px' : '14px',
               lineHeight: 1.5,
-              color: '#ffffff',
+              color: '#1e293b',
               fontWeight: 500,
-              textShadow: '0 1px 2px rgba(0, 0, 0, 0.3)',
               letterSpacing: '0.01em',
             }}
           >
@@ -225,8 +224,8 @@ export function MascotThoughtBubble({
             height: 0,
             borderLeft: '8px solid transparent',
             borderRight: '8px solid transparent',
-            borderTop: '10px solid rgba(25, 25, 35, 0.93)',
-            filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))',
+            borderTop: '10px solid rgba(248, 250, 252, 0.95)',
+            filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))',
           }}
         />
       </div>
