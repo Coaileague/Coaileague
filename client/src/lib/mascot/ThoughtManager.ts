@@ -46,6 +46,17 @@ export interface UserInfo {
   email?: string | null;
 }
 
+// Credit status for Business Buddy awareness
+export interface CreditStatus {
+  currentBalance: number;
+  monthlyAllocation: number;
+  usedThisMonth: number;
+  percentUsed: number;
+  isLow: boolean;      // Below 20%
+  isCritical: boolean; // Below 5%
+  tier: string;
+}
+
 export interface ThoughtManagerState {
   currentThought: Thought | null;
   queue: Thought[];
@@ -65,6 +76,9 @@ export interface ThoughtManagerState {
   onboardingProgress: { completed: number; total: number } | null;
   isOnboardingComplete: boolean;
   advisorMode: boolean;
+  // Credit awareness for Business Buddy
+  creditStatus: CreditStatus | null;
+  lastCreditWarningAt: number | null;
 }
 
 type ThoughtListener = (thought: Thought | null) => void;
@@ -97,6 +111,8 @@ class ThoughtManager {
       onboardingProgress: null,
       isOnboardingComplete: false,
       advisorMode: false,
+      creditStatus: null,
+      lastCreditWarningAt: null,
     };
   }
   
@@ -610,6 +626,115 @@ class ThoughtManager {
     const text = tips[Math.floor(Math.random() * tips.length)];
     const thought = this.createThought(text, 'ADVISING', 'default', 'low');
     this.queueThought(thought);
+  }
+
+  // ============================================================================
+  // BUSINESS BUDDY CREDIT AWARENESS
+  // ============================================================================
+  
+  /**
+   * Update credit status and trigger warnings if needed
+   */
+  updateCreditStatus(status: CreditStatus): void {
+    const previousStatus = this.state.creditStatus;
+    this.state.creditStatus = status;
+    
+    // Skip if on public page or no user
+    if (this.state.isOnPublicPage || !this.state.user) return;
+    
+    // Don't spam warnings - max once per 10 minutes
+    const now = Date.now();
+    const MIN_WARNING_INTERVAL = 10 * 60 * 1000; // 10 minutes
+    
+    if (this.state.lastCreditWarningAt && (now - this.state.lastCreditWarningAt) < MIN_WARNING_INTERVAL) {
+      return;
+    }
+    
+    // Critical warning (below 5%)
+    if (status.isCritical && (!previousStatus || !previousStatus.isCritical)) {
+      this.triggerCriticalCreditWarning(status);
+      this.state.lastCreditWarningAt = now;
+      return;
+    }
+    
+    // Low warning (below 20%)
+    if (status.isLow && (!previousStatus || !previousStatus.isLow)) {
+      this.triggerLowCreditWarning(status);
+      this.state.lastCreditWarningAt = now;
+    }
+  }
+  
+  /**
+   * Get current credit status
+   */
+  getCreditStatus(): CreditStatus | null {
+    return this.state.creditStatus;
+  }
+  
+  /**
+   * Trigger critical credit warning (below 5%)
+   */
+  private triggerCriticalCreditWarning(status: CreditStatus): void {
+    const displayName = this.getUserDisplayName();
+    
+    const warnings = [
+      `${displayName}, urgent: Only ${status.currentBalance} credits left! AI features may pause soon.`,
+      `Running very low on credits (${status.currentBalance} remaining). Consider adding more!`,
+      `${displayName}, heads up - credits critically low! Add more to keep AI features running.`,
+      `Credit alert: ${status.currentBalance} left. Check Billing to purchase more credits!`,
+    ];
+    
+    const text = warnings[Math.floor(Math.random() * warnings.length)];
+    const thought = this.createThought(text, 'WARNING' as MascotMode, 'default', 'urgent');
+    this.showThought(thought);
+  }
+  
+  /**
+   * Trigger low credit warning (below 20%)
+   */
+  private triggerLowCreditWarning(status: CreditStatus): void {
+    const displayName = this.getUserDisplayName();
+    const percentRemaining = Math.round((1 - status.percentUsed) * 100);
+    
+    const warnings = [
+      `${displayName}, your credits are at ${percentRemaining}%. Consider topping up!`,
+      `Friendly reminder: ${status.currentBalance} credits remaining (${percentRemaining}%).`,
+      `${displayName}, running a bit low on AI credits. Visit Billing to add more!`,
+      `Credit check: ${percentRemaining}% remaining. Need more AI power?`,
+    ];
+    
+    const text = warnings[Math.floor(Math.random() * warnings.length)];
+    const thought = this.createThought(text, 'ADVISING', 'default', 'normal');
+    this.queueThought(thought);
+  }
+  
+  /**
+   * Trigger credit purchase celebration
+   */
+  triggerCreditPurchaseCelebration(amount: number): void {
+    const displayName = this.getUserDisplayName();
+    
+    const celebrations = [
+      `Thanks ${displayName}! ${amount.toLocaleString()} credits added. AI features are fully powered!`,
+      `Credit purchase confirmed! ${amount.toLocaleString()} credits ready to go, ${displayName}!`,
+      `${displayName}, your account has ${amount.toLocaleString()} fresh credits. Let's get to work!`,
+      `Excellent! ${amount.toLocaleString()} credits added. Your AI automation is supercharged!`,
+    ];
+    
+    const text = celebrations[Math.floor(Math.random() * celebrations.length)];
+    const thought = this.createThought(text, 'HAPPY' as MascotMode, 'default', 'high');
+    this.showThought(thought);
+  }
+  
+  /**
+   * Get credit status summary for display
+   */
+  getCreditSummary(): string | null {
+    const status = this.state.creditStatus;
+    if (!status) return null;
+    
+    const percentRemaining = Math.round((1 - status.percentUsed) * 100);
+    return `${status.currentBalance.toLocaleString()} credits (${percentRemaining}%)`;
   }
   
   /**
