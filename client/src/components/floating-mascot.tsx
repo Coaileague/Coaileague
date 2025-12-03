@@ -15,6 +15,7 @@
 
 import { useEffect, useRef, useCallback, useState, memo, useMemo } from 'react';
 import { motion, AnimatePresence, useMotionValue, useSpring } from 'framer-motion';
+import { useLocation } from 'wouter';
 import { uiAvoidanceSystem, type MascotPosition } from '@/lib/mascot/UIAvoidanceSystem';
 import { userActionTracker, type ActionEvent } from '@/lib/mascot/UserActionTracker';
 import { emotesManager, type Emote, EMOTE_ANIMATIONS } from '@/lib/mascot/EmotesLibrary';
@@ -296,6 +297,7 @@ const FloatingMascot = memo(function FloatingMascot({
   disabled = false,
   userId
 }: FloatingMascotProps) {
+  const [, setLocation] = useLocation();
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const animationRef = useRef<number | null>(null);
@@ -315,6 +317,29 @@ const FloatingMascot = memo(function FloatingMascot({
   // Mutation state for smooth transitions between modes
   // Based on user's reference: mutation decays at 0.94 rate, triggers jitter and chromatic aberration
   const mutationRef = useRef<number>(0);
+  
+  // SHOCKWAVE SYSTEM - Ripple effect on mode transitions (from user's reference)
+  const shockwavesRef = useRef<{ r: number; opacity: number; color: string }[]>([]);
+  
+  // SCREEN SHAKE - For ERROR mode (from user's reference)
+  const shakeRef = useRef<number>(0);
+  
+  // TARGET COLORS - For smooth color lerping between states (from user's reference)
+  const targetColorsRef = useRef<string[]>(['#38bdf8', '#a855f7', '#f4c15d']);
+  
+  // MODE COLORS - State-specific colors matching user's reference
+  const STATE_COLORS: Record<string, string> = {
+    IDLE: '#38bdf8',      // Sky Blue
+    SEARCHING: '#10b981', // Emerald
+    THINKING: '#a855f7',  // Purple
+    ANALYZING: '#6366f1', // Indigo
+    CODING: '#34d399',    // Green
+    LISTENING: '#fbbf24', // Amber
+    UPLOADING: '#06b6d4', // Cyan
+    SUCCESS: '#f472b6',   // Pink
+    CELEBRATING: '#f472b6', // Pink
+    ERROR: '#ef4444'      // Red
+  };
   
   // Motion pattern state - AI Brain can switch this
   const [activeMotionPattern, setActiveMotionPattern] = useState<MotionPattern>('TRIAD_SYNCHRONIZED');
@@ -392,6 +417,81 @@ const FloatingMascot = memo(function FloatingMascot({
   const [tapRipple, setTapRipple] = useState<{ x: number; y: number; active: boolean } | null>(null);
   const [currentThought, setCurrentThought] = useState<string>('');
   const [showThought, setShowThought] = useState(false);
+  
+  // ============================================================================
+  // MUTATION EFFECT FUNCTIONS - Must be defined before useEffects that use them
+  // From user's reference implementation
+  // ============================================================================
+  
+  // COLOR LERPING - Smooth color transitions (from user's reference)
+  const lerpColor = useCallback((a: string, b: string, amount: number): string => {
+    const ar = parseInt(a.substring(1, 3), 16);
+    const ag = parseInt(a.substring(3, 5), 16);
+    const ab = parseInt(a.substring(5, 7), 16);
+    const br = parseInt(b.substring(1, 3), 16);
+    const bg = parseInt(b.substring(3, 5), 16);
+    const bb = parseInt(b.substring(5, 7), 16);
+    const rr = Math.round(ar + amount * (br - ar));
+    const rg = Math.round(ag + amount * (bg - ag));
+    const rb = Math.round(ab + amount * (bb - ab));
+    return '#' + ((1 << 24) + (rr << 16) + (rg << 8) + rb).toString(16).slice(1);
+  }, []);
+  
+  // SPAWN SHOCKWAVE - Ripple effect on mode change (from user's reference)
+  const spawnShockwave = useCallback((color: string) => {
+    shockwavesRef.current.push({ r: 0, opacity: 1, color });
+  }, []);
+  
+  // SPAWN EXPLOSION - Particles at specific position (from user's reference)
+  const spawnExplosionAt = useCallback((x: number, y: number, color: string, count: number) => {
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const velocity = 2 + Math.random() * 3;
+      particlesRef.current.push({
+        x,
+        y,
+        vx: Math.cos(angle) * velocity,
+        vy: Math.sin(angle) * velocity,
+        life: 1.0,
+        color
+      });
+    }
+  }, []);
+  
+  // TRIGGER MODE TRANSITION EFFECTS - Complete mutation system (from user's reference)
+  const triggerModeTransition = useCallback((newMode: MascotMode) => {
+    const twins = twinsRef.current;
+    const center = mascotSize / 2;
+    const modeColor = STATE_COLORS[newMode] || STATE_COLORS.IDLE;
+    
+    // 1. DECONSTRUCT EFFECT - Explode old state particles at current positions
+    twins.forEach(t => {
+      spawnExplosionAt(t.x || center, t.y || center, t.color, 8);
+    });
+    
+    // 2. TRIGGER MUTATION - Full intensity
+    mutationRef.current = 1.0;
+    
+    // 3. SPAWN SHOCKWAVE - Ripple effect
+    spawnShockwave(modeColor);
+    
+    // 4. SPECIAL CASE EFFECTS
+    if (newMode === 'SUCCESS' || newMode === 'CELEBRATING') {
+      spawnExplosionAt(center, center, modeColor, 30);
+    }
+    if (newMode === 'ERROR') {
+      shakeRef.current = 25; // Screen shake intensity
+    }
+    
+    // 5. SET TARGET COLORS for smooth lerping
+    if (newMode === 'IDLE') {
+      targetColorsRef.current = ['#38bdf8', '#a855f7', '#f4c15d']; // Original trinity colors
+    } else if (newMode === 'ERROR') {
+      targetColorsRef.current = ['#ef4444', '#ef4444', '#ef4444']; // All red
+    } else {
+      targetColorsRef.current = [modeColor, '#ffffff', modeColor]; // Mode color + white accent
+    }
+  }, [mascotSize, spawnExplosionAt, spawnShockwave]);
   
   // ============================================================================
   // EMOTE PHASE STATE MACHINE
@@ -661,11 +761,22 @@ const FloatingMascot = memo(function FloatingMascot({
       }
       const mutation = mutationRef.current;
       
+      // Decay screen shake (0.9 rate per frame - matches user's reference)
+      if (shakeRef.current > 0) {
+        shakeRef.current *= 0.9;
+        if (shakeRef.current < 0.5) shakeRef.current = 0;
+      }
+      
       // Update status effects each frame
       statusEffects.update(currentMode, center, center, 1);
       
-      // Apply screen shake from status effects (for ERROR mode)
-      const shakeOffset = statusEffects.getShakeOffset();
+      // Apply screen shake from shakeRef AND status effects (for ERROR mode)
+      const statusShake = statusEffects.getShakeOffset();
+      const shakeIntensity = shakeRef.current;
+      const shakeOffset = {
+        x: statusShake.x + (shakeIntensity > 0 ? (Math.random() - 0.5) * shakeIntensity : 0),
+        y: statusShake.y + (shakeIntensity > 0 ? (Math.random() - 0.5) * shakeIntensity : 0)
+      };
       const applyShake = shakeOffset.x !== 0 || shakeOffset.y !== 0;
       if (applyShake) {
         ctx.save();
@@ -675,11 +786,48 @@ const FloatingMascot = memo(function FloatingMascot({
       // Draw shockwaves and particles BEHIND stars
       statusEffects.drawEffects(ctx, center, center, currentMode);
       
+      // DRAW SHOCKWAVES - Ripple effect from mode transitions (from user's reference)
+      const shockwaves = shockwavesRef.current;
+      for (let i = shockwaves.length - 1; i >= 0; i--) {
+        const sw = shockwaves[i];
+        sw.r += 8; // Faster ripple expansion
+        sw.opacity -= 0.04;
+        if (sw.opacity <= 0) {
+          shockwaves.splice(i, 1);
+          continue;
+        }
+        ctx.strokeStyle = sw.color;
+        ctx.globalAlpha = sw.opacity;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(center, center, sw.r, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+      
       // INDEPENDENT STARS - No connections, no central glow, fully separate entities
       ctx.globalAlpha = 1;
       ctx.globalCompositeOperation = 'source-over'; // No additive blending
 
       const twins = twinsRef.current;
+      
+      // COLOR LERPING - Smooth color transitions between states (from user's reference)
+      const targetColors = targetColorsRef.current;
+      twins.forEach((twin, i) => {
+        if (targetColors[i] && twin.color !== targetColors[i]) {
+          // Lerp color towards target (0.05 rate - matches user's reference)
+          const ar = parseInt(twin.color.substring(1, 3), 16);
+          const ag = parseInt(twin.color.substring(3, 5), 16);
+          const ab = parseInt(twin.color.substring(5, 7), 16);
+          const br = parseInt(targetColors[i].substring(1, 3), 16);
+          const bg = parseInt(targetColors[i].substring(3, 5), 16);
+          const bb = parseInt(targetColors[i].substring(5, 7), 16);
+          const rr = Math.round(ar + 0.05 * (br - ar));
+          const rg = Math.round(ag + 0.05 * (bg - ag));
+          const rb = Math.round(ab + 0.05 * (bb - ab));
+          twin.color = '#' + ((1 << 24) + (rr << 16) + (rg << 8) + rb).toString(16).slice(1);
+        }
+      });
       
       // Trinity positions with 120° offset - each star floats independently
       let x1: number, y1: number, x2: number, y2: number, x3: number, y3: number;
@@ -798,15 +946,18 @@ const FloatingMascot = memo(function FloatingMascot({
       }
 
       // MUTATION JITTER: Random scatter during mode transitions (per user's reference)
-      // Stars jitter randomly before settling into new pattern
+      // Stars jitter randomly before settling into new pattern - ENHANCED for visibility
       if (mutation > 0.01) {
-        const jitterStrength = 50 * mutation; // Max 50px jitter at peak mutation
-        const jitter1X = (Math.random() - 0.5) * jitterStrength;
-        const jitter1Y = (Math.random() - 0.5) * jitterStrength;
-        const jitter2X = (Math.random() - 0.5) * jitterStrength;
-        const jitter2Y = (Math.random() - 0.5) * jitterStrength;
-        const jitter3X = (Math.random() - 0.5) * jitterStrength;
-        const jitter3Y = (Math.random() - 0.5) * jitterStrength;
+        // Enhanced jitter: stronger at peak mutation, visible at lower thresholds
+        const jitterStrength = 80 * mutation * mutation; // Quadratic scaling for more dramatic peak
+        const jitterFrequency = Math.sin(timeRef.current * 20) * 0.3 + 0.7; // Oscillating intensity
+        
+        const jitter1X = (Math.random() - 0.5) * jitterStrength * jitterFrequency;
+        const jitter1Y = (Math.random() - 0.5) * jitterStrength * jitterFrequency;
+        const jitter2X = (Math.random() - 0.5) * jitterStrength * jitterFrequency;
+        const jitter2Y = (Math.random() - 0.5) * jitterStrength * jitterFrequency;
+        const jitter3X = (Math.random() - 0.5) * jitterStrength * jitterFrequency;
+        const jitter3Y = (Math.random() - 0.5) * jitterStrength * jitterFrequency;
         
         x1 += jitter1X;
         y1 += jitter1Y;
@@ -858,26 +1009,36 @@ const FloatingMascot = memo(function FloatingMascot({
       const brandingColors = [colors.primary, colors.secondary, colors.tertiary];
       
       // CHROMATIC ABERRATION during mutation (per user's reference implementation)
-      // Draw R and B shifted ghost stars during mode transitions
-      const chromaticShift = mutation * 8; // Max 8px shift at peak mutation
-      if (mutation > 0.01 && chromaticShift > 0.5) {
+      // Draw R and B shifted ghost stars during mode transitions - ENHANCED visibility
+      const chromaticShift = mutation * 15; // Max 15px shift at peak mutation (increased from 8)
+      if (mutation > 0.01 && chromaticShift > 0.3) {
         const starSize = mascotSize * trinityConfig.starSizeMultiplier;
         
-        // RED channel - shifted left
+        // RED channel - shifted left with pulsing opacity
         ctx.globalCompositeOperation = 'screen';
-        ctx.globalAlpha = 0.5 * mutation;
+        const pulseAlpha = 0.6 + Math.sin(timeRef.current * 15) * 0.2;
+        ctx.globalAlpha = pulseAlpha * mutation;
         twins.forEach((twin) => {
           ctx.beginPath();
-          ctx.arc(twin.x - chromaticShift, twin.y, starSize, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+          ctx.arc(twin.x - chromaticShift, twin.y - chromaticShift * 0.3, starSize * 1.1, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 50, 50, 0.7)';
           ctx.fill();
         });
         
-        // BLUE channel - shifted right
+        // BLUE channel - shifted right with offset
         twins.forEach((twin) => {
           ctx.beginPath();
-          ctx.arc(twin.x + chromaticShift, twin.y, starSize, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
+          ctx.arc(twin.x + chromaticShift, twin.y + chromaticShift * 0.3, starSize * 1.1, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(50, 50, 255, 0.7)';
+          ctx.fill();
+        });
+        
+        // GREEN channel - center stabilizer (subtle)
+        ctx.globalAlpha = pulseAlpha * mutation * 0.4;
+        twins.forEach((twin) => {
+          ctx.beginPath();
+          ctx.arc(twin.x, twin.y, starSize * 0.9, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(50, 255, 50, 0.5)';
           ctx.fill();
         });
         
@@ -885,20 +1046,40 @@ const FloatingMascot = memo(function FloatingMascot({
         ctx.globalAlpha = 1;
       }
       
-      // DIGITAL GLITCH LINES during mutation (per user's reference)
-      if (mutation > 0.1) {
-        ctx.fillStyle = `rgba(255, 255, 255, ${mutation * 0.1})`;
-        const glitchY = (Math.random() - 0.5) * mascotSize + center;
-        const glitchH = Math.random() * 10;
-        ctx.fillRect(0, glitchY, mascotSize, glitchH);
+      // DIGITAL GLITCH LINES during mutation (per user's reference) - ENHANCED
+      if (mutation > 0.05) {
+        // Multiple glitch lines with varying intensity
+        const glitchCount = Math.floor(mutation * 5) + 1;
+        for (let i = 0; i < glitchCount; i++) {
+          const glitchAlpha = mutation * 0.25 * (Math.random() * 0.5 + 0.5);
+          ctx.fillStyle = `rgba(255, 255, 255, ${glitchAlpha})`;
+          const glitchY = (Math.random() - 0.5) * mascotSize + center;
+          const glitchH = Math.random() * 6 + 2;
+          const glitchW = mascotSize * (0.3 + Math.random() * 0.7);
+          const glitchX = Math.random() * (mascotSize - glitchW);
+          ctx.fillRect(glitchX, glitchY, glitchW, glitchH);
+        }
+        
+        // Occasional color glitch bars
+        if (Math.random() < mutation * 0.3) {
+          const barColor = ['rgba(255,0,0,0.2)', 'rgba(0,255,0,0.2)', 'rgba(0,0,255,0.2)'][Math.floor(Math.random() * 3)];
+          ctx.fillStyle = barColor;
+          const barY = Math.random() * mascotSize;
+          ctx.fillRect(0, barY, mascotSize, 3);
+        }
       }
       
       // INDEPENDENT STAR RENDERING - Each star is a distinct entity with NO visual overlap
       const qs = qualitySettings;
       
+      // STAR PULSE during mutation (from user's reference: 1 + mutation * 0.5 * sin(t))
+      const starPulse = 1 + (mutation * 0.5 * Math.sin(timeRef.current * 10));
+      
       twins.forEach((twin, index) => {
         // DYNAMIC star sizing from config - compact and never overlaps
-        const starSize = mascotSize * trinityConfig.starSizeMultiplier;
+        // Apply pulse scaling during mutation for visual feedback
+        const baseStarSize = mascotSize * trinityConfig.starSizeMultiplier;
+        const starSize = baseStarSize * starPulse;
         const innerSize = starSize * 0.5;
         
         // MINIMAL glow from config - tight around star, no overlap possible
@@ -1048,12 +1229,17 @@ const FloatingMascot = memo(function FloatingMascot({
   }, [currentMode, mascotSize, isChristmas, showHolidayDecorations, holidayLedColors, qualitySettings, qualityTier, isDragging, isHovered]);
 
   useEffect(() => {
+    // Trigger mutation effects when mode changes
+    if (mode !== lastModeRef.current) {
+      triggerModeTransition(mode);
+      lastModeRef.current = mode;
+    }
     setCurrentMode(mode);
     // Reset physics to prevent residual overlap when switching modes
     if (physicsRef.current) {
       physicsRef.current.resetToTargets();
     }
-  }, [mode]);
+  }, [mode, triggerModeTransition]);
 
   useEffect(() => {
     uiAvoidanceSystem.updateConfig({ mascotSize });
@@ -1095,46 +1281,133 @@ const FloatingMascot = memo(function FloatingMascot({
     };
   }, [mascotSize, isDragging]);
 
+  // Helper to change mode AND trigger mutation effects
+  const changeModeWithMutation = useCallback((newMode: MascotMode, force = false) => {
+    const prevMode = currentMode;
+    if (newMode !== prevMode || force) {
+      triggerModeTransition(newMode);
+      setCurrentMode(newMode);
+      onModeChange?.(newMode);
+    }
+  }, [currentMode, onModeChange, triggerModeTransition]);
+
   const handleUserAction = useCallback((event: ActionEvent) => {
     switch (event.action) {
+      // USER ACTIVITY - Reacts to end user behavior
+      case 'hover':
+      case 'scroll':
+      case 'scroll_fast':
+        // Brief SEARCHING mode for active user movement
+        if (currentMode === 'IDLE') {
+          changeModeWithMutation('SEARCHING');
+        }
+        break;
+      
+      case 'scroll_stop':
+        // Return to IDLE after movement stops
+        if (currentMode === 'SEARCHING') {
+          changeModeWithMutation('IDLE');
+        }
+        break;
+      
+      case 'click':
+        // Brief THINKING mode for clicks - shows mascot is paying attention
+        changeModeWithMutation('THINKING');
+        setTimeout(() => {
+          if (currentMode === 'THINKING') changeModeWithMutation('IDLE');
+        }, 2000);
+        break;
+      
+      // SYSTEM ACTIVITY - Reacts to loading/operations
       case 'loading_start':
-        setCurrentMode('THINKING');
-        onModeChange?.('THINKING');
+        changeModeWithMutation('ANALYZING');
         break;
+      
+      case 'loading_end':
+        // Only return to IDLE if still in loading state
+        if (currentMode === 'ANALYZING' || currentMode === 'THINKING') {
+          changeModeWithMutation('IDLE');
+        }
+        break;
+      
       case 'success':
-        setCurrentMode('SUCCESS');
-        onModeChange?.('SUCCESS');
+        changeModeWithMutation('SUCCESS');
         spawnParticles(10);
-        setTimeout(() => {
-          setCurrentMode('IDLE');
-          onModeChange?.('IDLE');
-        }, 2000);
+        setTimeout(() => changeModeWithMutation('IDLE'), 2000);
         break;
+      
       case 'error':
-        setCurrentMode('ERROR');
-        onModeChange?.('ERROR');
-        setTimeout(() => {
-          setCurrentMode('IDLE');
-          onModeChange?.('IDLE');
-        }, 2000);
+        changeModeWithMutation('ERROR');
+        setTimeout(() => changeModeWithMutation('IDLE'), 2000);
         break;
+      
+      // USER INPUT - Typing detection
       case 'typing':
-        setCurrentMode('LISTENING');
-        onModeChange?.('LISTENING');
+      case 'typing_fast':
+        changeModeWithMutation('LISTENING');
         break;
+      
       case 'typing_stop':
-        setCurrentMode('IDLE');
-        onModeChange?.('IDLE');
+        if (currentMode === 'LISTENING') {
+          changeModeWithMutation('IDLE');
+        }
         break;
+      
+      // FORM ACTIVITY
+      case 'form_start':
+      case 'focus':
+        // User focusing on form elements
+        if (currentMode === 'IDLE') {
+          changeModeWithMutation('LISTENING');
+        }
+        break;
+      
       case 'form_submit':
-        setCurrentMode('UPLOADING');
-        onModeChange?.('UPLOADING');
+        changeModeWithMutation('UPLOADING');
         break;
+      
+      case 'blur':
+        // User left form field
+        if (currentMode === 'LISTENING') {
+          setTimeout(() => {
+            if (currentMode === 'LISTENING') changeModeWithMutation('IDLE');
+          }, 500);
+        }
+        break;
+      
+      // NAVIGATION
+      case 'navigate':
+        changeModeWithMutation('SEARCHING');
+        setTimeout(() => changeModeWithMutation('IDLE'), 1500);
+        break;
+      
+      // TAB VISIBILITY
+      case 'tab_visible':
+        // User returned - friendly greeting
+        mutationRef.current = 0.3;
+        spawnShockwave('#38bdf8');
+        break;
+      
+      case 'tab_hidden':
+        // User left - gentle farewell pulse
+        mutationRef.current = 0.2;
+        break;
+      
+      // IDLE PERIOD - Growth buddy initiates conversation
+      case 'idle':
+        // Short idle - subtle attention grab
+        mutationRef.current = 0.3;
+        break;
+      
       case 'idle_long':
+        // Mascot becomes conversational when user is idle
         thoughtManager.triggerModeThought('IDLE');
+        // Trigger a subtle mutation to draw attention
+        mutationRef.current = 0.5; // Gentle pulse
+        spawnShockwave('#38bdf8'); // Friendly blue ripple
         break;
     }
-  }, [onModeChange]);
+  }, [currentMode, changeModeWithMutation, spawnParticles, spawnShockwave]);
 
   const spawnParticles = useCallback((count: number) => {
     const colors = MODE_COLORS[currentMode];
@@ -1203,7 +1476,24 @@ const FloatingMascot = memo(function FloatingMascot({
       setTapRipple({ x, y, active: true });
       setTimeout(() => setTapRipple(null), 400);
     }
-  }, [spawnParticles]);
+    
+    // IDLE MODE: Tapping the mascot opens the chat for end users
+    // This allows users to interact with CoAI by clicking the floating stars
+    if (currentMode === 'IDLE') {
+      // Trigger mutation effect for visual feedback during transition
+      mutationRef.current = 1.0;
+      
+      // Detect mobile/desktop and navigate to appropriate chat
+      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      const isSmallScreen = window.innerWidth <= 768;
+      
+      if (isMobileDevice || isSmallScreen) {
+        setLocation("/mobile-chat");
+      } else {
+        setLocation("/chat");
+      }
+    }
+  }, [spawnParticles, currentMode, setLocation]);
 
   const getEmoteAnimation = useCallback(() => {
     if (!currentEmote) return {};
