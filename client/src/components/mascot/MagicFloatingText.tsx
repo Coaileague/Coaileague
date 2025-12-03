@@ -88,9 +88,9 @@ const generateLetterStates = (text: string, colorPalette: string[]): LetterState
   });
 };
 
-// Calculate position to keep bubble ABOVE mascot without covering it
+// Calculate position to keep bubble VERY CLOSE to mascot (just above it)
 // mascotPos is in BOTTOM-RIGHT coordinates (distance from bottom-right corner)
-// Bubble sits close to mascot but wraps/avoids on sudden movement
+// Uses minimal gap for tight anchoring - bubble hugs the mascot
 const calculateAnchoredPosition = (
   mascotPos: { x: number; y: number },
   mascotSize: number,
@@ -111,10 +111,12 @@ const calculateAnchoredPosition = (
   const mascotRightX = mascotCenterX + (mascotSize / 2);
   const mascotBottomY = mascotTopY + mascotSize;
   
-  // CLEAR GAP: Bubble sits close to mascot but never overlaps
-  // Reduced gap for tight positioning without covering mascot
-  const clearanceGap = isMobile ? 26 : 32;
-  const bubbleBottomY = mascotTopY - clearanceGap;
+  // TIGHT GAP: Bubble sits VERY close to mascot - just 6-8px clearance
+  const clearanceGap = isMobile ? 6 : 8;
+  const estimatedBubbleHeight = isMobile ? 32 : 38;
+  
+  // Target position: directly above mascot with minimal gap
+  let bubbleTop = mascotTopY - clearanceGap - estimatedBubbleHeight;
   
   // Center bubble horizontally on mascot center
   let bubbleLeftX = mascotCenterX - (bubbleWidth / 2);
@@ -123,41 +125,32 @@ const calculateAnchoredPosition = (
   const padding = 4;
   bubbleLeftX = Math.max(padding, Math.min(bubbleLeftX, viewportWidth - bubbleWidth - padding));
   
-  // Estimate bubble height based on content
-  const estimatedBubbleHeight = isMobile ? 35 : 42;
-  let bubbleTop = Math.max(padding, bubbleBottomY - estimatedBubbleHeight);
-  
-  // Collision avoidance: if bubble would overlap mascot, shift it
-  const bubbleBottom = bubbleTop + estimatedBubbleHeight;
-  const bubbleRight = bubbleLeftX + bubbleWidth;
-  
-  // Check if bubble intersects with mascot bounds (with small tolerance)
-  const tolerance = 8;
-  const wouldOverlap = (
-    bubbleBottom > mascotTopY - tolerance &&
-    bubbleTop < mascotBottomY + tolerance &&
-    bubbleRight > mascotLeftX - tolerance &&
-    bubbleLeftX < mascotRightX + tolerance
-  );
-  
-  if (wouldOverlap) {
-    // Shift bubble up to avoid mascot
-    bubbleTop = Math.max(padding, mascotTopY - estimatedBubbleHeight - clearanceGap);
+  // Handle edge cases: if mascot is near top of screen, position bubble below or to side
+  if (bubbleTop < padding) {
+    // Check if we can position to the left or right of mascot instead
+    const leftSpace = mascotLeftX - padding;
+    const rightSpace = viewportWidth - mascotRightX - padding;
     
-    // If still overlapping horizontally, shift left or right
-    if (bubbleRight > mascotLeftX && bubbleLeftX < mascotRightX) {
-      // Prefer shifting to whichever side has more room
-      const leftSpace = mascotLeftX - padding;
-      const rightSpace = viewportWidth - mascotRightX - padding;
-      
-      if (leftSpace >= bubbleWidth) {
-        bubbleLeftX = mascotLeftX - bubbleWidth - 8;
-      } else if (rightSpace >= bubbleWidth) {
-        bubbleLeftX = mascotRightX + 8;
-      }
-      // Re-clamp after shift
-      bubbleLeftX = Math.max(padding, Math.min(bubbleLeftX, viewportWidth - bubbleWidth - padding));
+    if (rightSpace >= bubbleWidth) {
+      // Position to the right of mascot
+      bubbleLeftX = mascotRightX + clearanceGap;
+      bubbleTop = mascotCenterX > viewportHeight / 2 
+        ? mascotTopY 
+        : mascotTopY + (mascotSize / 2) - (estimatedBubbleHeight / 2);
+    } else if (leftSpace >= bubbleWidth) {
+      // Position to the left of mascot
+      bubbleLeftX = mascotLeftX - bubbleWidth - clearanceGap;
+      bubbleTop = mascotCenterX > viewportHeight / 2 
+        ? mascotTopY 
+        : mascotTopY + (mascotSize / 2) - (estimatedBubbleHeight / 2);
+    } else {
+      // Fallback: position below mascot if no horizontal room
+      bubbleTop = mascotBottomY + clearanceGap;
     }
+    
+    // Re-clamp positions
+    bubbleTop = Math.max(padding, Math.min(bubbleTop, viewportHeight - estimatedBubbleHeight - padding));
+    bubbleLeftX = Math.max(padding, Math.min(bubbleLeftX, viewportWidth - bubbleWidth - padding));
   }
   
   return {
@@ -165,7 +158,7 @@ const calculateAnchoredPosition = (
     top: bubbleTop,
     left: bubbleLeftX,
     maxWidth: bubbleWidth,
-    minWidth: isMobile ? 100 : 120,
+    minWidth: isMobile ? 90 : 110,
   };
 };
 

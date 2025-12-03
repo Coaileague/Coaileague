@@ -681,19 +681,19 @@ export type ThoughtBubbleAnimation =
 // Thought bubble boundary - keeps bubble anchored and unified with mascot
 // DESIGN NOTES for future handlers:
 // - Background is nearly transparent (0.14 to 0.04 radial gradient) so mascot is always visible
-// - Clearance gap is tight (32px desktop, 26px mobile) to position text close to mascot
-// - Collision avoidance shifts bubble up/left/right when mascot moves suddenly
+// - Clearance gap is VERY TIGHT (8px desktop, 6px mobile) - bubble hugs the mascot
+// - Collision avoidance shifts bubble left/right/below when mascot is near screen edges
 // - Text uses subtle shadow (0.35 opacity) for readability without blocking mascot
 // - No borders, no box shadows - pure glassmorphism with 2px blur
 export const THOUGHT_BUBBLE_BOUNDARY_CONFIG = {
   offsetAbove: 6, // pixels above mascot
-  maxWidth: 280,   // max bubble width on desktop - larger for BOLD ALL CAPS
-  mobileMaxWidth: 200, // max bubble width on mobile - larger for visibility
-  padding: 6,
+  maxWidth: 260,   // max bubble width on desktop - tighter for close anchoring
+  mobileMaxWidth: 180, // max bubble width on mobile - compact for small screens
+  padding: 4,
   anchorToMascot: true, // always stay attached to mascot position
   followMascotDrag: true, // move with mascot when dragged
-  clearanceGap: { desktop: 32, mobile: 26 }, // pixels between bubble and mascot top
-  collisionAvoidance: true, // shift bubble to avoid covering mascot on sudden moves
+  clearanceGap: { desktop: 8, mobile: 6 }, // TIGHT gap - bubble hugs the mascot
+  collisionAvoidance: true, // shift bubble to avoid covering mascot on edge cases
   backgroundOpacity: { center: 0.14, edge: 0.04 }, // nearly transparent radial gradient
   backdropBlur: 2, // minimal blur in pixels
 };
