@@ -320,10 +320,10 @@ export function MagicFloatingText({
           100% { opacity: 0; transform: translateX(0); }
         }
         
-        /* Idle glow animation */
+        /* Subtle idle shimmer - very reduced for readability */
         @keyframes letterGlow {
-          0%, 100% { filter: drop-shadow(0 0 3px currentColor); }
-          50% { filter: drop-shadow(0 0 8px currentColor) drop-shadow(0 0 12px currentColor); }
+          0%, 100% { filter: none; }
+          50% { filter: brightness(1.1); }
         }
         
         /* Gentle float */
@@ -358,10 +358,8 @@ export function MagicFloatingText({
               fontWeight: letter.fontStyle.fontWeight,
               fontStyle: letter.fontStyle.fontStyle,
               textShadow: `
-                0 0 10px ${letter.glowColor},
-                0 0 20px ${letter.glowColor},
-                0 0 30px ${letter.glowColor}40,
-                0 2px 4px rgba(0,0,0,0.5)
+                0 1px 2px rgba(0,0,0,0.6),
+                0 0 4px ${letter.glowColor}50
               `,
               transform: `
                 scale(${letter.scale})
@@ -372,7 +370,7 @@ export function MagicFloatingText({
               animation: letter.isExiting
                 ? getExitAnimation(letter.exitAnim)
                 : letter.isVisible
-                ? `${getEnterAnimation(letter.enterAnim, 0)}, letterGlow 2s ease-in-out infinite ${letter.delay * 0.5}ms, letterFloat 3s ease-in-out infinite ${letter.delay}ms`
+                ? `${getEnterAnimation(letter.enterAnim, 0)}, letterFloat 3s ease-in-out infinite ${letter.delay}ms`
                 : 'none',
               whiteSpace: letter.char === ' ' ? 'pre' : 'normal',
               minWidth: letter.char === ' ' ? '0.3em' : 'auto',

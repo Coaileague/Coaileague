@@ -15,6 +15,7 @@ import {
   EmoteType, 
   EMOTE_CONFIGS, 
   EMOTE_CONTEXTS,
+  getRandomEmoteVariation,
   type EmoteConfig 
 } from '@/config/mascotConfig';
 
@@ -86,10 +87,12 @@ export function useMascotEmotes(): EmoteManager {
   currentEmoteRef.current = state.current;
   
   // Trigger a specific emote - stable callback that uses ref for current state
+  // Uses random variation for personality and unpredictability
   const triggerEmote = useCallback((emote: EmoteType, force = false) => {
     if (emote === currentEmoteRef.current && !force) return;
     
-    const config = EMOTE_CONFIGS[emote];
+    // Get a random variation for this emote type
+    const config = getRandomEmoteVariation(emote);
     
     setState(prev => ({
       current: emote,

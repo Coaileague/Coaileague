@@ -381,6 +381,92 @@ export const EMOTE_CONFIGS: Record<EmoteType, EmoteConfig> = {
   },
 };
 
+// Random variations for each emote type - gives personality through variety
+export const EMOTE_VARIATIONS: Record<EmoteType, EmoteConfig[]> = {
+  neutral: [
+    EMOTE_CONFIGS.neutral, // Base neutral
+    { type: 'neutral', duration: 0, starBehavior: { purple: { scale: 0.95, wobble: 0.3, glow: 0.35, speed: 0.8 }, cyan: { scale: 1.05, wobble: 0.4, glow: 0.45, speed: 0.9 } } },
+    { type: 'neutral', duration: 0, starBehavior: { purple: { scale: 1.02, wobble: 0.6, glow: 0.38, speed: 1.1 }, cyan: { scale: 0.98, wobble: 0.55, glow: 0.42, speed: 1.05 } } },
+  ],
+  happy: [
+    EMOTE_CONFIGS.happy, // Base happy with sparkle
+    { type: 'happy', duration: 2500, starBehavior: { purple: { scale: 1.3, wobble: 1.4, glow: 0.9, speed: 1.8 }, cyan: { scale: 1.2, wobble: 1.0, glow: 0.8, speed: 1.5 } }, particleEffect: 'hearts' },
+    { type: 'happy', duration: 3500, starBehavior: { purple: { scale: 1.15, wobble: 0.9, glow: 0.75, speed: 1.4 }, cyan: { scale: 1.35, wobble: 1.5, glow: 0.95, speed: 1.9 } }, particleEffect: 'sparkle' },
+    { type: 'happy', duration: 2800, starBehavior: { purple: { scale: 1.28, wobble: 1.3, glow: 0.88, speed: 1.7 }, cyan: { scale: 1.22, wobble: 1.1, glow: 0.82, speed: 1.55 } }, particleEffect: 'stars' },
+  ],
+  excited: [
+    EMOTE_CONFIGS.excited, // Base excited with stars
+    { type: 'excited', duration: 3500, starBehavior: { purple: { scale: 1.5, wobble: 2.5, glow: 1.1, speed: 2.8 }, cyan: { scale: 1.3, wobble: 2.0, glow: 0.95, speed: 2.3 } }, particleEffect: 'confetti' },
+    { type: 'excited', duration: 4500, starBehavior: { purple: { scale: 1.35, wobble: 2.0, glow: 0.9, speed: 2.2 }, cyan: { scale: 1.45, wobble: 2.4, glow: 1.05, speed: 2.7 } }, particleEffect: 'sparkle' },
+    { type: 'excited', duration: 3800, starBehavior: { purple: { scale: 1.42, wobble: 2.3, glow: 1.0, speed: 2.6 }, cyan: { scale: 1.38, wobble: 2.1, glow: 0.98, speed: 2.45 } }, particleEffect: 'stars' },
+  ],
+  curious: [
+    EMOTE_CONFIGS.curious, // Base curious with question
+    { type: 'curious', duration: 2800, starBehavior: { purple: { scale: 0.9, wobble: 0.6, glow: 0.7, speed: 0.9 }, cyan: { scale: 1.25, wobble: 0.8, glow: 0.8, speed: 1.3 } } },
+    { type: 'curious', duration: 2200, starBehavior: { purple: { scale: 0.8, wobble: 0.4, glow: 0.6, speed: 0.7 }, cyan: { scale: 1.35, wobble: 1.0, glow: 0.9, speed: 1.5 } }, particleEffect: 'question' },
+  ],
+  thinking: [
+    EMOTE_CONFIGS.thinking, // Base thinking
+    { type: 'thinking', duration: 3500, starBehavior: { purple: { scale: 1.05, wobble: 0.25, glow: 0.55, speed: 0.6 }, cyan: { scale: 0.95, wobble: 0.18, glow: 0.48, speed: 0.45 } } },
+    { type: 'thinking', duration: 2800, starBehavior: { purple: { scale: 0.98, wobble: 0.15, glow: 0.52, speed: 0.4 }, cyan: { scale: 1.02, wobble: 0.22, glow: 0.5, speed: 0.55 } }, particleEffect: 'question' },
+  ],
+  focused: [
+    EMOTE_CONFIGS.focused, // Base focused
+    { type: 'focused', duration: 0, starBehavior: { purple: { scale: 1.08, wobble: 0.08, glow: 0.75, speed: 0.25 }, cyan: { scale: 1.02, wobble: 0.12, glow: 0.68, speed: 0.35 } } },
+    { type: 'focused', duration: 0, starBehavior: { purple: { scale: 1.03, wobble: 0.15, glow: 0.72, speed: 0.28 }, cyan: { scale: 1.07, wobble: 0.08, glow: 0.74, speed: 0.32 } } },
+  ],
+  surprised: [
+    EMOTE_CONFIGS.surprised, // Base surprised with exclaim
+    { type: 'surprised', duration: 1200, starBehavior: { purple: { scale: 1.6, wobble: 3.0, glow: 1.1, speed: 3.2 }, cyan: { scale: 1.4, wobble: 2.6, glow: 0.95, speed: 2.8 } }, particleEffect: 'exclaim' },
+    { type: 'surprised', duration: 1800, starBehavior: { purple: { scale: 1.45, wobble: 2.5, glow: 0.95, speed: 2.8 }, cyan: { scale: 1.55, wobble: 3.0, glow: 1.05, speed: 3.1 } }, particleEffect: 'stars' },
+  ],
+  sleepy: [
+    EMOTE_CONFIGS.sleepy, // Base sleepy with zzz
+    { type: 'sleepy', duration: 6000, starBehavior: { purple: { scale: 0.8, wobble: 0.15, glow: 0.18, speed: 0.25 }, cyan: { scale: 0.9, wobble: 0.22, glow: 0.22, speed: 0.35 } }, particleEffect: 'zzz' },
+    { type: 'sleepy', duration: 4500, starBehavior: { purple: { scale: 0.88, wobble: 0.18, glow: 0.2, speed: 0.28 }, cyan: { scale: 0.82, wobble: 0.2, glow: 0.18, speed: 0.3 } }, particleEffect: 'zzz' },
+  ],
+  celebrating: [
+    EMOTE_CONFIGS.celebrating, // Base celebrating with confetti
+    { type: 'celebrating', duration: 4500, starBehavior: { purple: { scale: 1.3, wobble: 2.2, glow: 1.1, speed: 2.7 }, cyan: { scale: 1.2, wobble: 1.8, glow: 0.95, speed: 2.3 } }, particleEffect: 'stars' },
+    { type: 'celebrating', duration: 5500, starBehavior: { purple: { scale: 1.35, wobble: 2.3, glow: 1.05, speed: 2.6 }, cyan: { scale: 1.15, wobble: 1.7, glow: 0.9, speed: 2.4 } }, particleEffect: 'confetti' },
+    { type: 'celebrating', duration: 4800, starBehavior: { purple: { scale: 1.28, wobble: 2.1, glow: 1.02, speed: 2.55 }, cyan: { scale: 1.22, wobble: 1.9, glow: 0.98, speed: 2.45 } }, particleEffect: 'sparkle' },
+  ],
+  helpful: [
+    EMOTE_CONFIGS.helpful, // Base helpful with sparkle
+    { type: 'helpful', duration: 3500, starBehavior: { purple: { scale: 1.15, wobble: 0.7, glow: 0.65, speed: 1.1 }, cyan: { scale: 1.1, wobble: 0.6, glow: 0.65, speed: 1.0 } }, particleEffect: 'hearts' },
+    { type: 'helpful', duration: 2800, starBehavior: { purple: { scale: 1.08, wobble: 0.55, glow: 0.58, speed: 0.95 }, cyan: { scale: 1.18, wobble: 0.75, glow: 0.72, speed: 1.25 } }, particleEffect: 'sparkle' },
+  ],
+  waving: [
+    EMOTE_CONFIGS.waving, // Base waving
+    { type: 'waving', duration: 2500, starBehavior: { purple: { scale: 1.05, wobble: 1.7, glow: 0.55, speed: 2.2 }, cyan: { scale: 1.15, wobble: 0.9, glow: 0.65, speed: 1.7 } } },
+    { type: 'waving', duration: 1800, starBehavior: { purple: { scale: 0.95, wobble: 1.3, glow: 0.48, speed: 1.8 }, cyan: { scale: 1.2, wobble: 1.0, glow: 0.7, speed: 1.9 } }, particleEffect: 'sparkle' },
+  ],
+  nodding: [
+    EMOTE_CONFIGS.nodding, // Base nodding
+    { type: 'nodding', duration: 1800, starBehavior: { purple: { scale: 1.05, wobble: 0.35, glow: 0.52, speed: 1.9 }, cyan: { scale: 0.95, wobble: 0.28, glow: 0.48, speed: 1.7 } } },
+    { type: 'nodding', duration: 1200, starBehavior: { purple: { scale: 0.98, wobble: 0.25, glow: 0.48, speed: 2.0 }, cyan: { scale: 1.02, wobble: 0.35, glow: 0.52, speed: 1.85 } } },
+  ],
+  concerned: [
+    EMOTE_CONFIGS.concerned, // Base concerned
+    { type: 'concerned', duration: 3500, starBehavior: { purple: { scale: 0.9, wobble: 0.35, glow: 0.38, speed: 0.55 }, cyan: { scale: 1.0, wobble: 0.45, glow: 0.42, speed: 0.65 } } },
+    { type: 'concerned', duration: 2800, starBehavior: { purple: { scale: 0.92, wobble: 0.38, glow: 0.35, speed: 0.5 }, cyan: { scale: 0.98, wobble: 0.42, glow: 0.45, speed: 0.7 } }, particleEffect: 'question' },
+  ],
+  proud: [
+    EMOTE_CONFIGS.proud, // Base proud with stars
+    { type: 'proud', duration: 4500, starBehavior: { purple: { scale: 1.2, wobble: 0.55, glow: 0.85, speed: 0.85 }, cyan: { scale: 1.1, wobble: 0.45, glow: 0.75, speed: 0.75 } }, particleEffect: 'sparkle' },
+    { type: 'proud', duration: 3500, starBehavior: { purple: { scale: 1.12, wobble: 0.48, glow: 0.78, speed: 0.78 }, cyan: { scale: 1.18, wobble: 0.52, glow: 0.82, speed: 0.82 } }, particleEffect: 'stars' },
+  ],
+};
+
+// Get a random variation for an emote type
+export function getRandomEmoteVariation(emoteType: EmoteType): EmoteConfig {
+  const variations = EMOTE_VARIATIONS[emoteType];
+  if (!variations || variations.length === 0) {
+    return EMOTE_CONFIGS[emoteType];
+  }
+  return variations[Math.floor(Math.random() * variations.length)];
+}
+
 // Context-based emote triggers
 export const EMOTE_CONTEXTS: EmoteContext[] = [
   // Page navigation triggers
