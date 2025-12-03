@@ -442,7 +442,7 @@ export function MagicFloatingText({
           </div>
         )}
         
-        {/* Letter text container - SEMI-TRANSPARENT BACKGROUND for visibility */}
+        {/* Letter text container - very subtle background for visibility */}
         <div
           style={{
             display: 'flex',
@@ -450,13 +450,13 @@ export function MagicFloatingText({
             gap: '0',
             justifyContent: 'center',
             textAlign: 'center',
-            background: 'linear-gradient(135deg, rgba(15, 23, 42, 0.75) 0%, rgba(30, 41, 59, 0.65) 100%)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-            padding: isMobile ? '8px 12px' : '10px 16px',
-            borderRadius: isMobile ? '12px' : '16px',
-            border: '1px solid rgba(255, 255, 255, 0.15)',
-            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.1)',
+            background: 'rgba(0, 0, 0, 0.25)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+            padding: isMobile ? '6px 10px' : '8px 12px',
+            borderRadius: isMobile ? '10px' : '12px',
+            border: '1px solid rgba(255, 255, 255, 0.08)',
+            boxShadow: '0 2px 12px rgba(0, 0, 0, 0.2)',
           }}
         >
           {letters.map((letter, index) => (

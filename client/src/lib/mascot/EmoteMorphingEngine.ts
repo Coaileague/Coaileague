@@ -98,12 +98,12 @@ export const EMOTE_FORMATIONS: Record<EmoteName, EmoteFormation> = {
   
   happy: {
     name: 'happy',
-    duration: 3000,
-    phaseTiming: { enter: 0.15, active: 0.5, peak: 0.2, exit: 0.15 },
+    duration: 6000,
+    phaseTiming: { enter: 0.2, active: 0.5, peak: 0.15, exit: 0.15 },
     stars: {
-      cyan: { offsetX: -15, offsetY: -8, scale: 1.15, rotation: -0.2, glowIntensity: 0.7, wobbleSpeed: 1.4, wobbleAmount: 0.8 },
-      purple: { offsetX: 15, offsetY: -8, scale: 1.15, rotation: 0.2, glowIntensity: 0.7, wobbleSpeed: 1.4, wobbleAmount: 0.8 },
-      gold: { offsetX: 0, offsetY: 12, scale: 1.2, rotation: 0, glowIntensity: 0.8, wobbleSpeed: 1.5, wobbleAmount: 1 },
+      cyan: { offsetX: -15, offsetY: -8, scale: 1.15, rotation: -0.2, glowIntensity: 0.7, wobbleSpeed: 0.8, wobbleAmount: 0.8 },
+      purple: { offsetX: 15, offsetY: -8, scale: 1.15, rotation: 0.2, glowIntensity: 0.7, wobbleSpeed: 0.8, wobbleAmount: 0.8 },
+      gold: { offsetX: 0, offsetY: 12, scale: 1.2, rotation: 0, glowIntensity: 0.8, wobbleSpeed: 0.9, wobbleAmount: 1 },
     },
     particleEffect: 'sparkle',
     shockwaveColor: '#fbbf24'
@@ -111,12 +111,12 @@ export const EMOTE_FORMATIONS: Record<EmoteName, EmoteFormation> = {
   
   excited: {
     name: 'excited',
-    duration: 4000,
-    phaseTiming: { enter: 0.1, active: 0.5, peak: 0.25, exit: 0.15 },
+    duration: 8000,
+    phaseTiming: { enter: 0.15, active: 0.5, peak: 0.2, exit: 0.15 },
     stars: {
-      cyan: { offsetX: -20, offsetY: -15, scale: 1.3, rotation: -0.4, glowIntensity: 0.9, wobbleSpeed: 2.2, wobbleAmount: 1.8 },
-      purple: { offsetX: 20, offsetY: -15, scale: 1.3, rotation: 0.4, glowIntensity: 0.9, wobbleSpeed: 2.2, wobbleAmount: 1.8 },
-      gold: { offsetX: 0, offsetY: 18, scale: 1.4, rotation: 0, glowIntensity: 1, wobbleSpeed: 2.5, wobbleAmount: 2 },
+      cyan: { offsetX: -20, offsetY: -15, scale: 1.3, rotation: -0.4, glowIntensity: 0.9, wobbleSpeed: 1.2, wobbleAmount: 1.8 },
+      purple: { offsetX: 20, offsetY: -15, scale: 1.3, rotation: 0.4, glowIntensity: 0.9, wobbleSpeed: 1.2, wobbleAmount: 1.8 },
+      gold: { offsetX: 0, offsetY: 18, scale: 1.4, rotation: 0, glowIntensity: 1, wobbleSpeed: 1.4, wobbleAmount: 2 },
     },
     particleEffect: 'confetti',
     shockwaveColor: '#a855f7',
@@ -125,36 +125,36 @@ export const EMOTE_FORMATIONS: Record<EmoteName, EmoteFormation> = {
   
   thinking: {
     name: 'thinking',
-    duration: 5000,
-    phaseTiming: { enter: 0.2, active: 0.6, peak: 0.1, exit: 0.1 },
+    duration: 10000,
+    phaseTiming: { enter: 0.15, active: 0.6, peak: 0.1, exit: 0.15 },
     stars: {
-      cyan: { offsetX: 18, offsetY: -5, scale: 0.9, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 0.4, wobbleAmount: 0.2 },
-      purple: { offsetX: -5, offsetY: 0, scale: 1.1, rotation: 0.1, glowIntensity: 0.6, wobbleSpeed: 0.5, wobbleAmount: 0.3 },
-      gold: { offsetX: 10, offsetY: 10, scale: 0.85, rotation: 0, glowIntensity: 0.4, wobbleSpeed: 0.3, wobbleAmount: 0.2 },
+      cyan: { offsetX: 18, offsetY: -5, scale: 0.9, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 0.25, wobbleAmount: 0.2 },
+      purple: { offsetX: -5, offsetY: 0, scale: 1.1, rotation: 0.1, glowIntensity: 0.6, wobbleSpeed: 0.3, wobbleAmount: 0.3 },
+      gold: { offsetX: 10, offsetY: 10, scale: 0.85, rotation: 0, glowIntensity: 0.4, wobbleSpeed: 0.2, wobbleAmount: 0.2 },
     },
     particleEffect: 'question'
   },
   
   curious: {
     name: 'curious',
-    duration: 3000,
+    duration: 6000,
     phaseTiming: { enter: 0.2, active: 0.5, peak: 0.15, exit: 0.15 },
     stars: {
-      cyan: { offsetX: 20, offsetY: -12, scale: 1.2, rotation: 0.3, glowIntensity: 0.7, wobbleSpeed: 1.2, wobbleAmount: 0.6 },
-      purple: { offsetX: -8, offsetY: 5, scale: 0.9, rotation: -0.1, glowIntensity: 0.5, wobbleSpeed: 0.8, wobbleAmount: 0.4 },
-      gold: { offsetX: -15, offsetY: -5, scale: 0.95, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 0.9, wobbleAmount: 0.5 },
+      cyan: { offsetX: 20, offsetY: -12, scale: 1.2, rotation: 0.3, glowIntensity: 0.7, wobbleSpeed: 0.7, wobbleAmount: 0.6 },
+      purple: { offsetX: -8, offsetY: 5, scale: 0.9, rotation: -0.1, glowIntensity: 0.5, wobbleSpeed: 0.5, wobbleAmount: 0.4 },
+      gold: { offsetX: -15, offsetY: -5, scale: 0.95, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 0.5, wobbleAmount: 0.5 },
     },
     particleEffect: 'question'
   },
   
   surprised: {
     name: 'surprised',
-    duration: 2000,
-    phaseTiming: { enter: 0.1, active: 0.4, peak: 0.3, exit: 0.2 },
+    duration: 5000,
+    phaseTiming: { enter: 0.15, active: 0.4, peak: 0.25, exit: 0.2 },
     stars: {
-      cyan: { offsetX: -25, offsetY: 0, scale: 1.4, rotation: -0.5, glowIntensity: 1, wobbleSpeed: 3, wobbleAmount: 2.5 },
-      purple: { offsetX: 25, offsetY: 0, scale: 1.4, rotation: 0.5, glowIntensity: 1, wobbleSpeed: 3, wobbleAmount: 2.5 },
-      gold: { offsetX: 0, offsetY: -20, scale: 1.5, rotation: 0, glowIntensity: 1.2, wobbleSpeed: 3.5, wobbleAmount: 3 },
+      cyan: { offsetX: -25, offsetY: 0, scale: 1.4, rotation: -0.5, glowIntensity: 1, wobbleSpeed: 1.5, wobbleAmount: 2.5 },
+      purple: { offsetX: 25, offsetY: 0, scale: 1.4, rotation: 0.5, glowIntensity: 1, wobbleSpeed: 1.5, wobbleAmount: 2.5 },
+      gold: { offsetX: 0, offsetY: -20, scale: 1.5, rotation: 0, glowIntensity: 1.2, wobbleSpeed: 1.8, wobbleAmount: 3 },
     },
     particleEffect: 'exclaim',
     shockwaveColor: '#fbbf24',
@@ -163,12 +163,12 @@ export const EMOTE_FORMATIONS: Record<EmoteName, EmoteFormation> = {
   
   celebrating: {
     name: 'celebrating',
-    duration: 5000,
+    duration: 10000,
     phaseTiming: { enter: 0.1, active: 0.55, peak: 0.25, exit: 0.1 },
     stars: {
-      cyan: { offsetX: -18, offsetY: -20, scale: 1.35, rotation: -0.6, glowIntensity: 1.1, wobbleSpeed: 2.8, wobbleAmount: 2.2 },
-      purple: { offsetX: 18, offsetY: -20, scale: 1.35, rotation: 0.6, glowIntensity: 1.1, wobbleSpeed: 2.8, wobbleAmount: 2.2 },
-      gold: { offsetX: 0, offsetY: 15, scale: 1.5, rotation: 0, glowIntensity: 1.3, wobbleSpeed: 3, wobbleAmount: 2.5 },
+      cyan: { offsetX: -18, offsetY: -20, scale: 1.35, rotation: -0.6, glowIntensity: 1.1, wobbleSpeed: 1.4, wobbleAmount: 2.2 },
+      purple: { offsetX: 18, offsetY: -20, scale: 1.35, rotation: 0.6, glowIntensity: 1.1, wobbleSpeed: 1.4, wobbleAmount: 2.2 },
+      gold: { offsetX: 0, offsetY: 15, scale: 1.5, rotation: 0, glowIntensity: 1.3, wobbleSpeed: 1.6, wobbleAmount: 2.5 },
     },
     particleEffect: 'confetti',
     shockwaveColor: '#f472b6',
@@ -177,46 +177,46 @@ export const EMOTE_FORMATIONS: Record<EmoteName, EmoteFormation> = {
   
   sleepy: {
     name: 'sleepy',
-    duration: 6000,
-    phaseTiming: { enter: 0.25, active: 0.5, peak: 0.1, exit: 0.15 },
+    duration: 12000,
+    phaseTiming: { enter: 0.2, active: 0.55, peak: 0.1, exit: 0.15 },
     stars: {
-      cyan: { offsetX: -8, offsetY: 5, scale: 0.8, rotation: -0.15, glowIntensity: 0.2, wobbleSpeed: 0.25, wobbleAmount: 0.15 },
-      purple: { offsetX: 8, offsetY: 5, scale: 0.8, rotation: 0.15, glowIntensity: 0.2, wobbleSpeed: 0.25, wobbleAmount: 0.15 },
-      gold: { offsetX: 0, offsetY: 10, scale: 0.75, rotation: 0, glowIntensity: 0.15, wobbleSpeed: 0.2, wobbleAmount: 0.1 },
+      cyan: { offsetX: -8, offsetY: 5, scale: 0.8, rotation: -0.15, glowIntensity: 0.2, wobbleSpeed: 0.15, wobbleAmount: 0.15 },
+      purple: { offsetX: 8, offsetY: 5, scale: 0.8, rotation: 0.15, glowIntensity: 0.2, wobbleSpeed: 0.15, wobbleAmount: 0.15 },
+      gold: { offsetX: 0, offsetY: 10, scale: 0.75, rotation: 0, glowIntensity: 0.15, wobbleSpeed: 0.12, wobbleAmount: 0.1 },
     },
     particleEffect: 'zzz'
   },
   
   focused: {
     name: 'focused',
-    duration: 4000,
-    phaseTiming: { enter: 0.2, active: 0.6, peak: 0.1, exit: 0.1 },
+    duration: 8000,
+    phaseTiming: { enter: 0.2, active: 0.55, peak: 0.1, exit: 0.15 },
     stars: {
-      cyan: { offsetX: -12, offsetY: 0, scale: 1.05, rotation: 0, glowIntensity: 0.7, wobbleSpeed: 0.3, wobbleAmount: 0.1 },
-      purple: { offsetX: 12, offsetY: 0, scale: 1.05, rotation: 0, glowIntensity: 0.7, wobbleSpeed: 0.3, wobbleAmount: 0.1 },
-      gold: { offsetX: 0, offsetY: -8, scale: 1.1, rotation: 0, glowIntensity: 0.8, wobbleSpeed: 0.4, wobbleAmount: 0.15 },
+      cyan: { offsetX: -12, offsetY: 0, scale: 1.05, rotation: 0, glowIntensity: 0.7, wobbleSpeed: 0.2, wobbleAmount: 0.1 },
+      purple: { offsetX: 12, offsetY: 0, scale: 1.05, rotation: 0, glowIntensity: 0.7, wobbleSpeed: 0.2, wobbleAmount: 0.1 },
+      gold: { offsetX: 0, offsetY: -8, scale: 1.1, rotation: 0, glowIntensity: 0.8, wobbleSpeed: 0.25, wobbleAmount: 0.15 },
     }
   },
   
   concerned: {
     name: 'concerned',
-    duration: 3500,
+    duration: 7000,
     phaseTiming: { enter: 0.2, active: 0.5, peak: 0.15, exit: 0.15 },
     stars: {
-      cyan: { offsetX: -10, offsetY: 8, scale: 0.9, rotation: 0.2, glowIntensity: 0.4, wobbleSpeed: 0.6, wobbleAmount: 0.4 },
-      purple: { offsetX: 10, offsetY: 8, scale: 0.9, rotation: -0.2, glowIntensity: 0.4, wobbleSpeed: 0.6, wobbleAmount: 0.4 },
-      gold: { offsetX: 0, offsetY: -5, scale: 0.95, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 0.5, wobbleAmount: 0.3 },
+      cyan: { offsetX: -10, offsetY: 8, scale: 0.9, rotation: 0.2, glowIntensity: 0.4, wobbleSpeed: 0.4, wobbleAmount: 0.4 },
+      purple: { offsetX: 10, offsetY: 8, scale: 0.9, rotation: -0.2, glowIntensity: 0.4, wobbleSpeed: 0.4, wobbleAmount: 0.4 },
+      gold: { offsetX: 0, offsetY: -5, scale: 0.95, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 0.35, wobbleAmount: 0.3 },
     }
   },
   
   proud: {
     name: 'proud',
-    duration: 4000,
+    duration: 8000,
     phaseTiming: { enter: 0.15, active: 0.55, peak: 0.2, exit: 0.1 },
     stars: {
-      cyan: { offsetX: -15, offsetY: -10, scale: 1.15, rotation: -0.15, glowIntensity: 0.8, wobbleSpeed: 0.8, wobbleAmount: 0.5 },
-      purple: { offsetX: 15, offsetY: -10, scale: 1.15, rotation: 0.15, glowIntensity: 0.8, wobbleSpeed: 0.8, wobbleAmount: 0.5 },
-      gold: { offsetX: 0, offsetY: 5, scale: 1.25, rotation: 0, glowIntensity: 1, wobbleSpeed: 1, wobbleAmount: 0.6 },
+      cyan: { offsetX: -15, offsetY: -10, scale: 1.15, rotation: -0.15, glowIntensity: 0.8, wobbleSpeed: 0.5, wobbleAmount: 0.5 },
+      purple: { offsetX: 15, offsetY: -10, scale: 1.15, rotation: 0.15, glowIntensity: 0.8, wobbleSpeed: 0.5, wobbleAmount: 0.5 },
+      gold: { offsetX: 0, offsetY: 5, scale: 1.25, rotation: 0, glowIntensity: 1, wobbleSpeed: 0.6, wobbleAmount: 0.6 },
     },
     particleEffect: 'stars',
     shockwaveColor: '#f4c15d'
@@ -224,35 +224,35 @@ export const EMOTE_FORMATIONS: Record<EmoteName, EmoteFormation> = {
   
   waving: {
     name: 'waving',
-    duration: 2500,
+    duration: 5000,
     phaseTiming: { enter: 0.15, active: 0.55, peak: 0.15, exit: 0.15 },
     stars: {
-      cyan: { offsetX: 25, offsetY: -15, scale: 1.2, rotation: 0.8, glowIntensity: 0.7, wobbleSpeed: 2.5, wobbleAmount: 1.5 },
-      purple: { offsetX: -10, offsetY: 5, scale: 1, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 1, wobbleAmount: 0.5 },
-      gold: { offsetX: -5, offsetY: 10, scale: 0.95, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 1, wobbleAmount: 0.5 },
+      cyan: { offsetX: 25, offsetY: -15, scale: 1.2, rotation: 0.8, glowIntensity: 0.7, wobbleSpeed: 1.4, wobbleAmount: 1.5 },
+      purple: { offsetX: -10, offsetY: 5, scale: 1, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 0.6, wobbleAmount: 0.5 },
+      gold: { offsetX: -5, offsetY: 10, scale: 0.95, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 0.6, wobbleAmount: 0.5 },
     },
     particleEffect: 'sparkle'
   },
   
   nodding: {
     name: 'nodding',
-    duration: 2000,
-    phaseTiming: { enter: 0.1, active: 0.6, peak: 0.15, exit: 0.15 },
+    duration: 4000,
+    phaseTiming: { enter: 0.15, active: 0.55, peak: 0.15, exit: 0.15 },
     stars: {
-      cyan: { offsetX: -12, offsetY: 0, scale: 1, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 2.2, wobbleAmount: 0.3 },
-      purple: { offsetX: 12, offsetY: 0, scale: 1, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 2.2, wobbleAmount: 0.3 },
-      gold: { offsetX: 0, offsetY: 8, scale: 1.1, rotation: 0, glowIntensity: 0.6, wobbleSpeed: 2.5, wobbleAmount: 0.8 },
+      cyan: { offsetX: -12, offsetY: 0, scale: 1, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 1.2, wobbleAmount: 0.3 },
+      purple: { offsetX: 12, offsetY: 0, scale: 1, rotation: 0, glowIntensity: 0.5, wobbleSpeed: 1.2, wobbleAmount: 0.3 },
+      gold: { offsetX: 0, offsetY: 8, scale: 1.1, rotation: 0, glowIntensity: 0.6, wobbleSpeed: 1.4, wobbleAmount: 0.8 },
     }
   },
   
   alert: {
     name: 'alert',
-    duration: 2500,
-    phaseTiming: { enter: 0.1, active: 0.5, peak: 0.25, exit: 0.15 },
+    duration: 5000,
+    phaseTiming: { enter: 0.15, active: 0.5, peak: 0.2, exit: 0.15 },
     stars: {
-      cyan: { offsetX: -20, offsetY: -5, scale: 1.25, rotation: -0.3, glowIntensity: 0.9, wobbleSpeed: 3, wobbleAmount: 1.8 },
-      purple: { offsetX: 20, offsetY: -5, scale: 1.25, rotation: 0.3, glowIntensity: 0.9, wobbleSpeed: 3, wobbleAmount: 1.8 },
-      gold: { offsetX: 0, offsetY: -15, scale: 1.35, rotation: 0, glowIntensity: 1.1, wobbleSpeed: 3.5, wobbleAmount: 2 },
+      cyan: { offsetX: -20, offsetY: -5, scale: 1.25, rotation: -0.3, glowIntensity: 0.9, wobbleSpeed: 1.5, wobbleAmount: 1.8 },
+      purple: { offsetX: 20, offsetY: -5, scale: 1.25, rotation: 0.3, glowIntensity: 0.9, wobbleSpeed: 1.5, wobbleAmount: 1.8 },
+      gold: { offsetX: 0, offsetY: -15, scale: 1.35, rotation: 0, glowIntensity: 1.1, wobbleSpeed: 1.8, wobbleAmount: 2 },
     },
     particleEffect: 'exclaim',
     shockwaveColor: '#ef4444',
@@ -261,11 +261,11 @@ export const EMOTE_FORMATIONS: Record<EmoteName, EmoteFormation> = {
   
   love: {
     name: 'love',
-    duration: 4000,
+    duration: 8000,
     phaseTiming: { enter: 0.15, active: 0.55, peak: 0.2, exit: 0.1 },
     stars: {
-      cyan: { offsetX: -18, offsetY: 5, scale: 1.2, rotation: 0.4, glowIntensity: 0.8, wobbleSpeed: 1.2, wobbleAmount: 0.8 },
-      purple: { offsetX: 18, offsetY: 5, scale: 1.2, rotation: -0.4, glowIntensity: 0.8, wobbleSpeed: 1.2, wobbleAmount: 0.8 },
+      cyan: { offsetX: -18, offsetY: 5, scale: 1.2, rotation: 0.4, glowIntensity: 0.8, wobbleSpeed: 0.7, wobbleAmount: 0.8 },
+      purple: { offsetX: 18, offsetY: 5, scale: 1.2, rotation: -0.4, glowIntensity: 0.8, wobbleSpeed: 0.7, wobbleAmount: 0.8 },
       gold: { offsetX: 0, offsetY: -15, scale: 1.3, rotation: 0, glowIntensity: 1, wobbleSpeed: 1.5, wobbleAmount: 1 },
     },
     particleEffect: 'hearts',

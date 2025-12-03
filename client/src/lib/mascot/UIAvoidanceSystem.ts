@@ -155,9 +155,110 @@ class UIAvoidanceSystem {
   private listeners: Set<(position: MascotPosition) => void> = new Set();
   private heatmap: HeatmapGrid | null = null;
   private heatmapCellSize = 40;
+  
+  private mousePosition: MascotPosition = { x: -1000, y: -1000 };
+  private mouseAvoidanceRadius = 120;
+  private seasonalElements: UIElement[] = [];
 
   constructor(config: Partial<AvoidanceConfig> = {}) {
     this.config = { ...DEFAULT_CONFIG, ...config };
+  }
+  
+  updateMousePosition(x: number, y: number): void {
+    this.mousePosition = { x, y };
+  }
+  
+  getMousePosition(): MascotPosition {
+    return this.mousePosition;
+  }
+  
+  isNearMouse(position: MascotPosition, threshold?: number): boolean {
+    const radius = threshold || this.mouseAvoidanceRadius;
+    const dx = position.x - this.mousePosition.x;
+    const dy = position.y - this.mousePosition.y;
+    return Math.sqrt(dx * dx + dy * dy) < radius;
+  }
+  
+  getAvoidanceVectorFromMouse(position: MascotPosition): { x: number, y: number } {
+    const dx = position.x - this.mousePosition.x;
+    const dy = position.y - this.mousePosition.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    
+    if (distance < this.mouseAvoidanceRadius && distance > 0) {
+      const force = (this.mouseAvoidanceRadius - distance) / this.mouseAvoidanceRadius;
+      return {
+        x: (dx / distance) * force * 50,
+        y: (dy / distance) * force * 50
+      };
+    }
+    return { x: 0, y: 0 };
+  }
+  
+  scanSeasonalDecorations(): void {
+    this.seasonalElements = [];
+    
+    const seasonalSelectors = [
+      '[data-seasonal]',
+      '[data-testid*="santa"]',
+      '[data-testid*="snowflake"]',
+      '[data-testid*="christmas"]',
+      '[data-testid*="seasonal"]',
+      '.seasonal-decoration',
+      '.santa-decoration',
+      '.snowflake',
+      '.christmas-decoration',
+      'canvas[data-seasonal-effects]',
+      '[class*="seasonal"]',
+      '[class*="snowflake"]',
+      '[class*="santa"]'
+    ];
+    
+    for (const selector of seasonalSelectors) {
+      try {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach((el) => {
+          if (this.isElementVisible(el as HTMLElement)) {
+            const rect = el.getBoundingClientRect();
+            if (rect.width > 0 && rect.height > 0) {
+              this.seasonalElements.push({
+                id: `seasonal-${Date.now()}-${Math.random()}`,
+                type: 'fixed',
+                rect,
+                priority: 75,
+                padding: 40
+              });
+            }
+          }
+        });
+      } catch (e) {
+        // Ignore invalid selectors
+      }
+    }
+  }
+  
+  isNearSeasonalDecoration(position: MascotPosition, padding = 50): boolean {
+    const mascotSize = this.config.mascotSize;
+    
+    for (const el of this.seasonalElements) {
+      const elLeft = el.rect.left - padding;
+      const elRight = el.rect.right + padding;
+      const elTop = el.rect.top - padding;
+      const elBottom = el.rect.bottom + padding;
+      
+      if (
+        position.x + mascotSize > elLeft &&
+        position.x < elRight &&
+        position.y + mascotSize > elTop &&
+        position.y < elBottom
+      ) {
+        return true;
+      }
+    }
+    return false;
+  }
+  
+  getSeasonalElements(): UIElement[] {
+    return this.seasonalElements;
   }
 
   generateHeatmap(): HeatmapGrid {
@@ -359,16 +460,19 @@ class UIAvoidanceSystem {
 
   start(): void {
     this.scanElements();
+    this.scanSeasonalDecorations();
     this.setupMutationObserver();
     
     this.scanIntervalId = window.setInterval(() => {
       this.scanElements();
+      this.scanSeasonalDecorations();
     }, this.config.scanInterval);
 
     window.addEventListener('resize', this.handleResize);
     window.addEventListener('scroll', this.handleScroll, { passive: true });
     document.addEventListener('focusin', this.handleFocusChange);
     document.addEventListener('focusout', this.handleFocusChange);
+    document.addEventListener('mousemove', this.handleMouseMove, { passive: true });
   }
 
   stop(): void {
@@ -384,7 +488,12 @@ class UIAvoidanceSystem {
     window.removeEventListener('scroll', this.handleScroll);
     document.removeEventListener('focusin', this.handleFocusChange);
     document.removeEventListener('focusout', this.handleFocusChange);
+    document.removeEventListener('mousemove', this.handleMouseMove);
   }
+  
+  private handleMouseMove = (e: MouseEvent): void => {
+    this.mousePosition = { x: e.clientX, y: e.clientY };
+  };
 
   private handleResize = (): void => {
     this.scanElements();
@@ -504,6 +613,14 @@ class UIAvoidanceSystem {
   }
 
   isPositionSafe(pos: MascotPosition): boolean {
+    if (this.isNearMouse(pos)) {
+      return false;
+    }
+    
+    if (this.isNearSeasonalDecoration(pos)) {
+      return false;
+    }
+    
     const mascotRect = {
       left: pos.x,
       top: pos.y,
