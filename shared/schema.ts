@@ -410,6 +410,45 @@ export const workspaces = pgTable("workspaces", {
   onboardingCompletedAt: timestamp("onboarding_completed_at"),
   totalOnboardingPoints: integer("total_onboarding_points").default(0), // Gamification points earned
   
+  // ============================================================================
+  // COMPREHENSIVE ONBOARDING STEPS & AUTOMATION UNLOCK
+  // ============================================================================
+  
+  // Step-by-step completion tracking (JSONB for flexibility)
+  // Format: { profile: true, payment: true, org_setup: false, employees: false, ... }
+  onboardingStepsCompleted: jsonb("onboarding_steps_completed").default('{}'),
+  
+  // Required steps for full automation unlock
+  // profile, payment, org_setup, first_employee, first_schedule, first_client, role_invites, api_integrations
+  onboardingFullyComplete: boolean("onboarding_fully_complete").default(false), // All required steps done
+  onboardingFullyCompleteAt: timestamp("onboarding_fully_complete_at"),
+  
+  // Automation feature gating - LOCKED until onboarding complete
+  automationUnlocked: boolean("automation_unlocked").default(false), // Master automation unlock
+  automationUnlockedAt: timestamp("automation_unlocked_at"),
+  automationUnlockedBy: varchar("automation_unlocked_by"), // User who completed final step
+  
+  // First-time signup discount (10% off for completing onboarding)
+  isFirstTimeOrg: boolean("is_first_time_org").default(true), // First org for this owner
+  discountEligible: boolean("discount_eligible").default(true), // Eligible for 10% off
+  discountRedeemed: boolean("discount_redeemed").default(false), // Already used discount
+  discountRedeemedAt: timestamp("discount_redeemed_at"),
+  discountCode: varchar("discount_code"), // Unique discount code
+  discountPercentage: integer("discount_percentage").default(10), // Default 10% off
+  
+  // Business Buddy AI Credits
+  businessBuddyEnabled: boolean("business_buddy_enabled").default(true), // Org can use Business Buddy
+  businessBuddyCreditsBalance: integer("business_buddy_credits_balance").default(100), // Starting credits
+  businessBuddyCreditsUsed: integer("business_buddy_credits_used").default(0), // Total consumed
+  businessBuddyLastUsedAt: timestamp("business_buddy_last_used_at"),
+  businessBuddySpawnedFor: text("business_buddy_spawned_for").array().default(sql`ARRAY[]::text[]`), // User IDs buddy is visible for
+  
+  // AI Usage Tracking & Billing
+  aiUsageThisWeek: integer("ai_usage_this_week").default(0), // Tokens/calls this billing week
+  aiUsageAllTime: integer("ai_usage_all_time").default(0), // Lifetime usage
+  aiOverageChargedAt: timestamp("ai_overage_charged_at"), // Last overage billing
+  aiOverageAmount: decimal("ai_overage_amount", { precision: 10, scale: 2 }).default("0.00"), // Pending overage charges
+  
   // Conversion tracking
   acceptedAt: timestamp("accepted_at"), // When they subscribed
   rejectedAt: timestamp("rejected_at"), // When they declined
