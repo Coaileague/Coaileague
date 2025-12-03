@@ -140,8 +140,10 @@ export function MagicFloatingText({
 }: MagicFloatingTextProps) {
   const [letters, setLetters] = useState<LetterState[]>([]);
   const [isActive, setIsActive] = useState(false);
+  const [livePosition, setLivePosition] = useState<React.CSSProperties>({});
   const lastThoughtIdRef = useRef<string | null>(null);
   const timersRef = useRef<number[]>([]);
+  const animFrameRef = useRef<number | null>(null);
   
   // Choose color palette based on thought type or random
   const colorPalette = useMemo(() => {
@@ -149,11 +151,24 @@ export function MagicFloatingText({
     return pickRandom(palettes);
   }, [thought?.id]);
   
-  // Calculate anchored position - stays unified with mascot
-  const bubblePosition = useMemo(() => 
-    calculateAnchoredPosition(mascotPosition, mascotSize, isMobile),
-    [mascotPosition.x, mascotPosition.y, mascotSize, isMobile]
-  );
+  // Real-time position tracking - bubble follows mascot smoothly
+  useEffect(() => {
+    if (!isActive) return;
+    
+    const updatePosition = () => {
+      const newPos = calculateAnchoredPosition(mascotPosition, mascotSize, isMobile);
+      setLivePosition(newPos);
+      animFrameRef.current = requestAnimationFrame(updatePosition);
+    };
+    
+    animFrameRef.current = requestAnimationFrame(updatePosition);
+    
+    return () => {
+      if (animFrameRef.current) {
+        cancelAnimationFrame(animFrameRef.current);
+      }
+    };
+  }, [isActive, mascotPosition.x, mascotPosition.y, mascotSize, isMobile]);
   
   // Clear all timers
   const clearAllTimers = useCallback(() => {
@@ -173,6 +188,10 @@ export function MagicFloatingText({
       setLetters(newLetters);
       setIsActive(true);
       
+      // Initialize position immediately when thought becomes active
+      const initialPos = calculateAnchoredPosition(mascotPosition, mascotSize, isMobile);
+      setLivePosition(initialPos);
+      
       // Stagger letter appearances
       newLetters.forEach((letter, index) => {
         const timer = window.setTimeout(() => {
@@ -183,13 +202,14 @@ export function MagicFloatingText({
         timersRef.current.push(timer);
       });
       
-      // Calculate duration - longer for better readability
+      // Calculate duration - MUCH longer for comfortable reading (20+ seconds)
       const now = Date.now();
       const textLength = thought.text.length;
-      const baseDuration = 5000; // 5 seconds minimum
-      const readingTime = Math.max(baseDuration, textLength * 80); // 80ms per character
-      const duration = thought.expiresAt ? Math.max(thought.expiresAt - now, readingTime) : Math.min(readingTime, 10000);
-      const exitStartTime = Math.max(duration - 1500, 2000);
+      const baseDuration = 18000; // 18 seconds minimum for reading
+      const readingTime = Math.max(baseDuration, textLength * 150); // 150ms per character
+      // Use expiresAt if set, otherwise use generous reading time (max 25 seconds)
+      const duration = thought.expiresAt ? Math.max(thought.expiresAt - now, readingTime) : Math.min(readingTime, 25000);
+      const exitStartTime = Math.max(duration - 2500, 15000); // Start exit 2.5s before end, minimum 15s display
       
       // Start exit animations with stagger
       const exitTimer = window.setTimeout(() => {
@@ -380,19 +400,21 @@ export function MagicFloatingText({
         }
       `}</style>
       
-      {/* Unified bubble container - anchored to mascot */}
+      {/* Unified bubble container - clamped to mascot and follows in real-time */}
       <div
         className="pointer-events-none"
         style={{
-          ...bubblePosition,
+          ...livePosition,
           zIndex: 9999,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
           gap: '8px',
+          transition: 'top 0.1s ease-out, left 0.1s ease-out',
         }}
         data-testid="magic-floating-text"
         data-anchored="true"
+        data-follows-mascot="true"
       >
         {/* Discount badge for promo thoughts */}
         {thought?.showDiscount && (

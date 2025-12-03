@@ -9,7 +9,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, LogOut, LayoutDashboard } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { performLogout } from "@/lib/logoutHandler";
 import { NotificationsPopover } from "@/components/notifications-popover";
@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { HEADER_CONFIG, HEADER_SPACING, HEADER_HEIGHTS } from "@/config/headerConfig";
+import { getCurrentHoliday } from "@/config/mascotConfig";
 
 interface UniversalHeaderProps {
   variant?: "public" | "workspace";
@@ -32,6 +33,30 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isChristmas, setIsChristmas] = useState(false);
+  const [lightPhase, setLightPhase] = useState(0);
+
+  // Detect Christmas season (universal - works every year)
+  useEffect(() => {
+    const holiday = getCurrentHoliday();
+    setIsChristmas(holiday?.key === 'christmas');
+  }, []);
+
+  // Animate Christmas light colors on mobile word logo
+  useEffect(() => {
+    if (!isChristmas) return;
+    const interval = setInterval(() => {
+      setLightPhase(prev => (prev + 1) % 6);
+    }, 600); // Fast twinkling for mobile lights
+    return () => clearInterval(interval);
+  }, [isChristmas]);
+
+  // Christmas light colors for each letter position
+  const mobileChristmasColors = useMemo(() => {
+    const colors = ['#dc2626', '#16a34a', '#eab308', '#3b82f6', '#a855f7', '#f97316'];
+    // Rotate colors based on phase for twinkling effect
+    return colors.map((_, i) => colors[(i + lightPhase) % colors.length]);
+  }, [lightPhase]);
 
   // RBAC-controlled: Only show notification features to authenticated users
   const showNotificationFeatures = !!user;
@@ -101,7 +126,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                 showWordmark={true}
               />
             </div>
-            {/* Mobile: Icon with text for visibility */}
+            {/* Mobile: Icon with text for visibility + Christmas lights */}
             <div className="flex sm:hidden items-center gap-2">
               <CoAIleagueLogo 
                 width={36} 
@@ -109,9 +134,27 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                 onlyIcon={true}
                 className="flex-shrink-0"
               />
-              <span className="font-bold text-base bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
-                CoAIleague
-              </span>
+              {isChristmas ? (
+                <span className="font-bold text-base relative">
+                  {/* Christmas lights version - each letter has its own color */}
+                  {'CoAIleague'.split('').map((char, i) => (
+                    <span
+                      key={i}
+                      style={{
+                        color: mobileChristmasColors[i % mobileChristmasColors.length],
+                        textShadow: `0 0 8px ${mobileChristmasColors[i % mobileChristmasColors.length]}80, 0 0 16px ${mobileChristmasColors[i % mobileChristmasColors.length]}40`,
+                        transition: 'color 0.3s ease, text-shadow 0.3s ease',
+                      }}
+                    >
+                      {char}
+                    </span>
+                  ))}
+                </span>
+              ) : (
+                <span className="font-bold text-base bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
+                  CoAIleague
+                </span>
+              )}
             </div>
           </button>
 

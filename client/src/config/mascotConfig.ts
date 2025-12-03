@@ -1450,8 +1450,8 @@ export const MASCOT_CONFIG: MascotConfig = {
   
   thoughts: {
     enabled: true,
-    displayDuration: 10000, // 10 seconds - enough time for humans to read
-    rotateInterval: 20000, // 20 seconds between auto thoughts
+    displayDuration: 22000, // 22 seconds - plenty of time for humans to read
+    rotateInterval: 30000, // 30 seconds between auto thoughts
     emoticons: {
       IDLE: '✨',
       SEARCHING: '🔍',
