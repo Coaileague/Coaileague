@@ -23,11 +23,12 @@
  * - Dark theme optimized
  */
 
-import { useEffect, useRef, useCallback, memo } from 'react';
+import { useEffect, useRef, useCallback, memo, useState } from 'react';
 import { statusEmoteEffects, StatusEmoteEffects, STATUS_COLORS } from '@/lib/mascot/StatusEmoteEffects';
 import { emoteMorphingEngine, EmoteMorphingEngine, EmoteName, EmotePhase, EMOTE_FORMATIONS } from '@/lib/mascot/EmoteMorphingEngine';
-import { EmoteTransitionRenderer } from '@/lib/mascot/EmoteTransitionRenderer';
+import { EmoteTransitionRenderer, WarpPhase, WarpColors } from '@/lib/mascot/EmoteTransitionRenderer';
 import { GrabSlingMechanics, GrabEvent, SlingResult } from '@/lib/mascot/GrabSlingMechanics';
+import { WarpMutationOverlay } from '@/components/mascot/WarpMutationOverlay';
 
 export type MascotMode = 
   | 'IDLE' 
@@ -49,6 +50,7 @@ interface Twin {
   y: number;
   trail: { x: number; y: number; life: number }[];
   color: string;
+  targetColor: string;  // Target color for smooth lerping during mutations
   angle: number;
   currentScale: number; // Smoothly lerped scale to prevent size glitches
 }
@@ -150,7 +152,8 @@ class CoAITwinEngine {
     touchX: null as number | null,
     touchY: null as number | null,
     isTouching: false,
-    shake: 0
+    shake: 0,
+    mutation: 0  // Mutation intensity for warp/transition effects (0-1)
   };
 
   private emoteState: EmoteState = {
@@ -168,9 +171,9 @@ class CoAITwinEngine {
   private static readonly SCALE_LERP_SPEED = 0.12; // Smooth lerp factor for scale transitions
   
   private twins: Twin[] = [
-    { id: 0, x: 0, y: 0, trail: [], color: '#38bdf8', angle: 0, currentScale: 1.0 },                    // Cyan - "Co"
-    { id: 1, x: 0, y: 0, trail: [], color: '#a855f7', angle: (Math.PI * 2) / 3, currentScale: 1.0 },    // Purple - "AI"  
-    { id: 2, x: 0, y: 0, trail: [], color: '#f4c15d', angle: (Math.PI * 4) / 3, currentScale: 1.0 }     // Gold - "L"
+    { id: 0, x: 0, y: 0, trail: [], color: '#38bdf8', targetColor: '#38bdf8', angle: 0, currentScale: 1.0 },                    // Cyan - "Co"
+    { id: 1, x: 0, y: 0, trail: [], color: '#a855f7', targetColor: '#a855f7', angle: (Math.PI * 2) / 3, currentScale: 1.0 },    // Purple - "AI"  
+    { id: 2, x: 0, y: 0, trail: [], color: '#f4c15d', targetColor: '#f4c15d', angle: (Math.PI * 4) / 3, currentScale: 1.0 }     // Gold - "L"
   ];
 
   private particles: Particle[] = [];
@@ -194,6 +197,12 @@ class CoAITwinEngine {
   private slingVelocityX: number = 0;
   private slingVelocityY: number = 0;
   private previousEmote: string = 'neutral';
+  
+  // Warp mutation state
+  private warpPhase: WarpPhase = 'idle';
+  private warpIntensity: number = 0;
+  private warpColors: WarpColors = { primary: '#38bdf8', secondary: '#a855f7', accent: '#f4c15d' };
+  private onWarpStateChange?: (phase: WarpPhase, intensity: number, colors: WarpColors) => void;
 
   constructor(container: HTMLElement, canvas: HTMLCanvasElement) {
     this.container = container;
@@ -217,6 +226,23 @@ class CoAITwinEngine {
     
     // Initialize transition renderer for polished emote transitions
     this.transitionRenderer = new EmoteTransitionRenderer();
+    
+    // Set up warp mutation callbacks for CSS overlay effects
+    this.transitionRenderer.setWarpCallbacks({
+      onPhaseChange: (phase, _fromEmote, _toEmote, colors) => {
+        this.warpPhase = phase;
+        this.warpColors = colors;
+        if (this.onWarpStateChange) {
+          this.onWarpStateChange(phase, this.warpIntensity, colors);
+        }
+      },
+      onWarpIntensityChange: (intensity) => {
+        this.warpIntensity = intensity;
+        if (this.onWarpStateChange) {
+          this.onWarpStateChange(this.warpPhase, intensity, this.warpColors);
+        }
+      }
+    });
     
     // Initialize grab/sling mechanics with 10% catch chance
     this.grabMechanics = new GrabSlingMechanics({
@@ -355,6 +381,18 @@ class CoAITwinEngine {
   
   setEmoteCallback(callback: (emote: EmoteName) => void): void {
     this.onEmoteComplete = callback;
+  }
+  
+  setWarpStateCallback(callback: (phase: WarpPhase, intensity: number, colors: WarpColors) => void): void {
+    this.onWarpStateChange = callback;
+  }
+  
+  getWarpState(): { phase: WarpPhase; intensity: number; colors: WarpColors } {
+    return {
+      phase: this.warpPhase,
+      intensity: this.warpIntensity,
+      colors: this.warpColors
+    };
   }
   
   isEmoteAnimating(): boolean {
@@ -501,37 +539,57 @@ class CoAITwinEngine {
   }
 
   setMode(mode: MascotMode) {
+    // 1. DECONSTRUCT EFFECT: Explode particles at current twin positions with OLD colors
+    this.twins.forEach(t => {
+      this.spawnExplosionAt(t.x, t.y, t.color, 6);
+    });
+    
     this.state.mode = mode;
     const color = MODE_COLORS[mode];
     
+    // 2. TRIGGER MUTATION: Start mutation intensity for visual effects
+    this.state.mutation = 1.0;
     this.spawnShockwave(color);
     
     if (mode === 'SUCCESS') this.spawnExplosion(30);
     if (mode === 'ERROR') this.state.shake = 20;
     if (mode === 'CODING' || mode === 'UPLOADING') this.particles = [];
     
+    // 3. SET TARGET COLORS for smooth lerping (instead of immediate color change)
     // Trinity colors: Cyan (Co), Purple (AI), Gold (L) - spells "CoAIL"
     if (mode === 'IDLE') {
-      this.twins[0].color = '#38bdf8';  // Cyan
-      this.twins[1].color = '#a855f7';  // Purple
-      this.twins[2].color = '#f4c15d';  // Gold
+      this.twins[0].targetColor = '#38bdf8';  // Cyan
+      this.twins[1].targetColor = '#a855f7';  // Purple
+      this.twins[2].targetColor = '#f4c15d';  // Gold
+      // Set warp colors for IDLE mode
+      this.warpColors = { primary: '#38bdf8', secondary: '#a855f7', accent: '#f4c15d' };
     } else if (mode === 'ERROR') {
-      this.twins[0].color = '#ef4444';
-      this.twins[1].color = '#ef4444';
-      this.twins[2].color = '#ef4444';
+      this.twins[0].targetColor = '#ef4444';
+      this.twins[1].targetColor = '#ef4444';
+      this.twins[2].targetColor = '#ef4444';
+      // Error mode uses red tones for warp
+      this.warpColors = { primary: '#ef4444', secondary: '#dc2626', accent: '#f87171' };
     } else if (mode === 'CELEBRATING' || mode === 'SUCCESS') {
-      this.twins[0].color = '#38bdf8';
-      this.twins[1].color = '#a855f7';
-      this.twins[2].color = '#fbbf24';  // Brighter gold for celebration
+      this.twins[0].targetColor = '#38bdf8';
+      this.twins[1].targetColor = '#a855f7';
+      this.twins[2].targetColor = '#fbbf24';  // Brighter gold for celebration
+      // Celebration uses festive colors
+      this.warpColors = { primary: '#fbbf24', secondary: '#a855f7', accent: '#f472b6' };
     } else if (mode === 'HOLIDAY') {
       // Christmas colors: Red, Green, Gold - festive glow
-      this.twins[0].color = CHRISTMAS_COLORS.red;    // Christmas Red
-      this.twins[1].color = CHRISTMAS_COLORS.green;  // Christmas Green
-      this.twins[2].color = CHRISTMAS_COLORS.gold;   // Christmas Gold
+      this.twins[0].targetColor = CHRISTMAS_COLORS.red;    // Christmas Red
+      this.twins[1].targetColor = CHRISTMAS_COLORS.green;  // Christmas Green
+      this.twins[2].targetColor = CHRISTMAS_COLORS.gold;   // Christmas Gold
+      // Christmas warp colors - festive red, green, gold
+      this.warpColors = { 
+        primary: CHRISTMAS_COLORS.red, 
+        secondary: CHRISTMAS_COLORS.green, 
+        accent: CHRISTMAS_COLORS.gold 
+      };
     } else {
-      this.twins[0].color = color;
-      this.twins[1].color = '#fff';
-      this.twins[2].color = '#f4c15d';
+      this.twins[0].targetColor = color;
+      this.twins[1].targetColor = '#fff';
+      this.twins[2].targetColor = '#f4c15d';
     }
   }
 
@@ -846,6 +904,40 @@ class CoAITwinEngine {
     });
   }
 
+  // Spawn explosion particles at a specific position (for deconstruct effects)
+  private spawnExplosionAt(x: number, y: number, color: string, count: number) {
+    for (let i = 0; i < count; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const v = 2 + Math.random() * 3;
+      this.particles.push({
+        x,
+        y,
+        vx: Math.cos(a) * v,
+        vy: Math.sin(a) * v,
+        life: 1.0,
+        color
+      });
+    }
+  }
+
+  // Linear interpolation for smooth color transitions during mutations
+  private lerpColor(colorA: string, colorB: string, amount: number): string {
+    const parseHex = (hex: string) => {
+      const clean = hex.replace('#', '');
+      return {
+        r: parseInt(clean.substring(0, 2), 16),
+        g: parseInt(clean.substring(2, 4), 16),
+        b: parseInt(clean.substring(4, 6), 16)
+      };
+    };
+    const ca = parseHex(colorA);
+    const cb = parseHex(colorB);
+    const rr = Math.round(ca.r + amount * (cb.r - ca.r));
+    const gg = Math.round(ca.g + amount * (cb.g - ca.g));
+    const bb = Math.round(ca.b + amount * (cb.b - ca.b));
+    return '#' + ((1 << 24) + (rr << 16) + (gg << 8) + bb).toString(16).slice(1);
+  }
+
   private update() {
     this.state.time += 1;
     const s = this.state.scale;
@@ -903,14 +995,28 @@ class CoAITwinEngine {
     // TRINITY: 120° offset for 3 stars (Co, AI, L) - each star gets unique position
     const TRINITY_OFFSET = (2 * Math.PI) / 3;  // 120 degrees
 
+    // Physics decay for shake and mutation
     if (this.state.shake > 0) {
       this.state.shake *= 0.9;
       if (this.state.shake < 0.5) this.state.shake = 0;
     }
+    
+    // Mutation intensity decay (creates "rewriting" visual phase)
+    if (this.state.mutation > 0) {
+      this.state.mutation *= 0.94;
+      if (this.state.mutation < 0.01) this.state.mutation = 0;
+    }
 
     this.twins.forEach((t, i) => {
+      // COLOR MORPHING: Smooth lerp toward target color during mutations
+      t.color = this.lerpColor(t.color, t.targetColor, 0.05);
+      
       let tx = 0, ty = 0;
       const starAngle = i * TRINITY_OFFSET;  // 0°, 120°, 240° for each star
+      
+      // MUTATION JITTER: Random scatter during the "rewriting" phase
+      const mutationJitterX = (Math.random() - 0.5) * 50 * this.state.mutation;
+      const mutationJitterY = (Math.random() - 0.5) * 50 * this.state.mutation;
 
       // Apply drag offset when being grabbed or slung
       if (this.isBeingDragged || Math.abs(this.dragOffsetX) > 1 || Math.abs(this.dragOffsetY) > 1) {
@@ -1014,8 +1120,14 @@ class CoAITwinEngine {
         }
       }
 
-      t.x += (tx - t.x) * 0.1;
-      t.y += (ty - t.y) * 0.1;
+      // Apply mutation jitter for "rewriting" visual scatter effect
+      tx += mutationJitterX;
+      ty += mutationJitterY;
+
+      // Physics lerp - slower during mutation for floaty feel
+      const lerpSpeed = this.state.mutation > 0 ? 0.05 : 0.1;
+      t.x += (tx - t.x) * lerpSpeed;
+      t.y += (ty - t.y) * lerpSpeed;
 
       t.trail.push({ x: t.x, y: t.y, life: 1.0 });
       if (t.trail.length > 20) t.trail.shift();
@@ -1040,6 +1152,28 @@ class CoAITwinEngine {
 
     this.ctx.translate(cx, cy);
     
+    // CHROMATIC ABERRATION (RGB shift) during mutation - with intensity falloff
+    if (this.state.mutation > 0.05) {
+      const shift = this.state.mutation * 5;
+      const aberrationAlpha = Math.min(0.35, this.state.mutation * 0.4);
+      
+      // Red channel shift (left)
+      this.ctx.save();
+      this.ctx.globalCompositeOperation = 'screen';
+      this.ctx.globalAlpha = aberrationAlpha;
+      this.ctx.translate(-shift, 0);
+      this.drawMutationGhostStars('#ff3333');
+      this.ctx.restore();
+      
+      // Blue channel shift (right)  
+      this.ctx.save();
+      this.ctx.globalCompositeOperation = 'screen';
+      this.ctx.globalAlpha = aberrationAlpha;
+      this.ctx.translate(shift, 0);
+      this.drawMutationGhostStars('#3333ff');
+      this.ctx.restore();
+    }
+    
     // Draw transition renderer effects (background layer)
     this.transitionRenderer.render(this.ctx, 0, 0);
     
@@ -1063,8 +1197,49 @@ class CoAITwinEngine {
     if (this.grabMechanics.isGrabbing()) {
       this.drawGrabIndicator();
     }
+    
+    // DIGITAL GLITCH LINES during mutation - intensity-gated with falloff
+    if (this.state.mutation > 0.15) {
+      // Primary glitch line - appears when mutation is moderate
+      const glitchOpacity = Math.min(0.25, this.state.mutation * 0.2);
+      this.ctx.fillStyle = `rgba(255, 255, 255, ${glitchOpacity})`;
+      const glitchY = (Math.random() - 0.5) * h;
+      const glitchH = Math.random() * (12 * this.state.mutation) + 2;
+      this.ctx.fillRect(-w / 2, glitchY, w, glitchH);
+      
+      // Secondary glitch line - only at high mutation intensity
+      if (this.state.mutation > 0.4) {
+        this.ctx.fillStyle = `rgba(255, 255, 255, ${this.state.mutation * 0.06})`;
+        const glitch2Y = (Math.random() - 0.5) * h;
+        const glitch2H = Math.random() * 6 + 1;
+        this.ctx.fillRect(-w / 2, glitch2Y, w, glitch2H);
+      }
+    }
 
     this.ctx.restore();
+  }
+  
+  // Helper method for chromatic aberration ghost stars
+  private drawMutationGhostStars(color: string): void {
+    const s = this.state.scale;
+    // Mutation scale pulse - stars pulse during mutation
+    const mutationPulse = 1 + this.state.mutation * 0.3 * Math.sin(this.state.time * 0.3);
+    
+    this.twins.forEach((t) => {
+      const outerR = 15 * s * 0.005 * mutationPulse;
+      const innerR = 4.5 * s * 0.005 * mutationPulse;
+      
+      // Simple star shape for ghost effect
+      this.ctx.fillStyle = color;
+      this.ctx.beginPath();
+      for (let i = 0; i < 4; i++) {
+        const angle = (i * Math.PI / 2) - (this.state.time * 0.05);
+        this.ctx.lineTo(t.x + Math.cos(angle) * outerR, t.y + Math.sin(angle) * outerR);
+        this.ctx.lineTo(t.x + Math.cos(angle + Math.PI / 4) * innerR, t.y + Math.sin(angle + Math.PI / 4) * innerR);
+      }
+      this.ctx.closePath();
+      this.ctx.fill();
+    });
   }
   
   private drawGrabIndicator(): void {
@@ -1116,7 +1291,9 @@ class CoAITwinEngine {
     }
     
     // Use smoothly interpolated scale instead of raw target
-    const scale = twin?.currentScale ?? targetScale;
+    // Add mutation pulse for dramatic effect during mode transitions
+    const mutationPulse = 1 + this.state.mutation * 0.15 * Math.sin(this.state.time * 0.4);
+    const scale = (twin?.currentScale ?? targetScale) * mutationPulse;
     const wobble = behavior.wobble * morphState.wobbleAmount;
     const glow = Math.max(behavior.glow, morphState.glowIntensity);
     const speed = behavior.speed * morphState.wobbleSpeed;
@@ -1395,6 +1572,17 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const engineRef = useRef<CoAITwinEngine | null>(null);
   const lastTriggeredEmote = useRef<EmoteName | undefined>(undefined);
+  
+  // Warp mutation overlay state
+  const [warpState, setWarpState] = useState<{
+    phase: WarpPhase;
+    intensity: number;
+    colors: WarpColors;
+  }>({
+    phase: 'idle',
+    intensity: 0,
+    colors: { primary: '#38bdf8', secondary: '#a855f7', accent: '#f4c15d' }
+  });
 
   useEffect(() => {
     if (!containerRef.current || !canvasRef.current) return;
@@ -1407,6 +1595,15 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
     if (onEmoteComplete) {
       engineRef.current.setEmoteCallback(onEmoteComplete);
     }
+    
+    // Set up warp state callback for CSS overlay effects
+    engineRef.current.setWarpStateCallback((phase, intensity, colors) => {
+      setWarpState({ phase, intensity, colors });
+    });
+    
+    // Initialize warp state from engine
+    const initialWarpState = engineRef.current.getWarpState();
+    setWarpState(initialWarpState);
 
     const handleResize = () => {
       engineRef.current?.resize();
@@ -1473,10 +1670,13 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
           height: bubbleSize,
           background: 'transparent'
         }}
+        data-mascot-variant="mini"
+        data-mascot-mode={mode}
+        data-warp-active={warpState.phase !== 'idle'}
       >
         <div 
           ref={containerRef} 
-          className="w-full h-full pointer-events-none"
+          className="w-full h-full pointer-events-none relative"
           style={{ 
             width: bubbleSize, 
             height: bubbleSize,
@@ -1494,6 +1694,12 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
             }}
             data-testid="coai-twin-mascot-canvas-mini"
           />
+          <WarpMutationOverlay
+            phase={warpState.phase}
+            intensity={warpState.intensity}
+            colors={warpState.colors}
+            size={bubbleSize}
+          />
         </div>
       </div>
     );
@@ -1510,10 +1716,13 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
           height: bubbleSize,
           background: 'transparent'
         }}
+        data-mascot-variant="expanded"
+        data-mascot-mode={mode}
+        data-warp-active={warpState.phase !== 'idle'}
       >
         <div 
           ref={containerRef} 
-          className="w-full h-full pointer-events-none"
+          className="w-full h-full pointer-events-none relative"
           style={{ 
             width: bubbleSize, 
             height: bubbleSize,
@@ -1531,20 +1740,39 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
             }}
             data-testid="coai-twin-mascot-canvas-expanded"
           />
+          <WarpMutationOverlay
+            phase={warpState.phase}
+            intensity={warpState.intensity}
+            colors={warpState.colors}
+            size={bubbleSize}
+          />
         </div>
       </div>
     );
   }
 
   // Full mode: With status badge and optional controls
+  const fullSize = size || 400;
   return (
-    <div className={`relative ${className}`} style={{ background: 'transparent' }}>
-      <div ref={containerRef} className="w-full h-full" style={{ background: 'transparent' }}>
+    <div 
+      className={`relative ${className}`} 
+      style={{ background: 'transparent' }}
+      data-mascot-variant="full"
+      data-mascot-mode={mode}
+      data-warp-active={warpState.phase !== 'idle'}
+    >
+      <div ref={containerRef} className="w-full h-full relative" style={{ background: 'transparent' }}>
         <canvas
           ref={canvasRef}
           className="w-full h-full touch-none"
           style={{ background: 'transparent' }}
           data-testid="coai-twin-mascot-canvas"
+        />
+        <WarpMutationOverlay
+          phase={warpState.phase}
+          intensity={warpState.intensity}
+          colors={warpState.colors}
+          size={fullSize}
         />
       </div>
 

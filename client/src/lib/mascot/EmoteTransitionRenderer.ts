@@ -68,6 +68,19 @@ const EMOTE_COLORS: Record<string, string> = {
   love: '#ec4899'
 };
 
+export type WarpPhase = 'idle' | 'enter' | 'peak' | 'exit';
+
+export interface WarpCallbacks {
+  onPhaseChange?: (phase: WarpPhase, fromEmote: string, toEmote: string, colors: WarpColors) => void;
+  onWarpIntensityChange?: (intensity: number) => void;
+}
+
+export interface WarpColors {
+  primary: string;
+  secondary: string;
+  accent: string;
+}
+
 export class EmoteTransitionRenderer {
   private particles: TransitionParticle[] = [];
   private waves: EnergyWave[] = [];
@@ -84,6 +97,10 @@ export class EmoteTransitionRenderer {
   private glowPulse: number = 0;
   private spiralAngle: number = 0;
   private trailHistory: { x: number; y: number; time: number }[] = [];
+  
+  private warpCallbacks: WarpCallbacks = {};
+  private lastPhase: WarpPhase = 'idle';
+  private warpIntensity: number = 0;
   
   /**
    * Start a new emote transition with visual effects
@@ -232,15 +249,47 @@ export class EmoteTransitionRenderer {
       const duration = 800; // ms for full transition
       this.transitionState.progress = Math.min(elapsed / duration, 1);
       
+      let newPhase: WarpPhase = 'idle';
       if (this.transitionState.progress < 0.3) {
-        this.transitionState.phase = 'enter';
+        newPhase = 'enter';
       } else if (this.transitionState.progress < 0.7) {
-        this.transitionState.phase = 'peak';
+        newPhase = 'peak';
       } else if (this.transitionState.progress < 1) {
-        this.transitionState.phase = 'exit';
+        newPhase = 'exit';
       } else {
         this.transitionState.active = false;
-        this.transitionState.phase = 'idle';
+        newPhase = 'idle';
+      }
+      
+      this.transitionState.phase = newPhase;
+      
+      // Calculate warp intensity based on phase
+      if (newPhase === 'enter') {
+        this.warpIntensity = this.transitionState.progress / 0.3;
+      } else if (newPhase === 'peak') {
+        this.warpIntensity = 1.0;
+      } else if (newPhase === 'exit') {
+        this.warpIntensity = 1.0 - ((this.transitionState.progress - 0.7) / 0.3);
+      } else {
+        this.warpIntensity = 0;
+      }
+      
+      // Fire phase change callback
+      if (newPhase !== this.lastPhase) {
+        this.lastPhase = newPhase;
+        if (this.warpCallbacks.onPhaseChange) {
+          this.warpCallbacks.onPhaseChange(
+            newPhase,
+            this.transitionState.fromEmote,
+            this.transitionState.toEmote,
+            this.getWarpColors()
+          );
+        }
+      }
+      
+      // Fire intensity change callback
+      if (this.warpCallbacks.onWarpIntensityChange) {
+        this.warpCallbacks.onWarpIntensityChange(this.warpIntensity);
       }
       
       // Update morph field
@@ -680,6 +729,62 @@ export class EmoteTransitionRenderer {
   }
   
   /**
+   * Get current warp phase
+   */
+  getPhase(): WarpPhase {
+    return this.transitionState.phase as WarpPhase;
+  }
+  
+  /**
+   * Get current warp intensity (0-1)
+   */
+  getWarpIntensity(): number {
+    return this.warpIntensity;
+  }
+  
+  /**
+   * Get current transition colors for warp effects
+   */
+  getWarpColors(): WarpColors {
+    const fromColor = EMOTE_COLORS[this.transitionState.fromEmote] || '#38bdf8';
+    const toColor = EMOTE_COLORS[this.transitionState.toEmote] || '#38bdf8';
+    return {
+      primary: toColor,
+      secondary: fromColor,
+      accent: this.blendColors(fromColor, toColor, 0.5)
+    };
+  }
+  
+  /**
+   * Set warp effect callbacks
+   */
+  setWarpCallbacks(callbacks: WarpCallbacks): void {
+    this.warpCallbacks = callbacks;
+  }
+  
+  /**
+   * Blend two hex colors
+   */
+  private blendColors(color1: string, color2: string, ratio: number): string {
+    const hex1 = color1.replace('#', '');
+    const hex2 = color2.replace('#', '');
+    
+    const r1 = parseInt(hex1.substring(0, 2), 16);
+    const g1 = parseInt(hex1.substring(2, 4), 16);
+    const b1 = parseInt(hex1.substring(4, 6), 16);
+    
+    const r2 = parseInt(hex2.substring(0, 2), 16);
+    const g2 = parseInt(hex2.substring(2, 4), 16);
+    const b2 = parseInt(hex2.substring(4, 6), 16);
+    
+    const r = Math.round(r1 + (r2 - r1) * ratio);
+    const g = Math.round(g1 + (g2 - g1) * ratio);
+    const b = Math.round(b1 + (b2 - b1) * ratio);
+    
+    return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
+  }
+  
+  /**
    * Clear all effects
    */
   clear(): void {
@@ -695,6 +800,8 @@ export class EmoteTransitionRenderer {
       startTime: 0
     };
     this.trailHistory = [];
+    this.warpIntensity = 0;
+    this.lastPhase = 'idle';
   }
 }
 
