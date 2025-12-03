@@ -183,6 +183,7 @@ import { useMascotObserver } from "@/hooks/use-mascot-observer";
 import { useMascotEmotes, setGlobalEmoteTrigger } from "@/hooks/use-mascot-emotes";
 import { useMascotShowcase } from "@/hooks/use-mascot-showcase";
 import { useCreditAwareness } from "@/hooks/use-credit-awareness";
+import { useBusinessBuddyTier, getAllowedModes, getUpgradeNudgeMessage } from "@/hooks/use-business-buddy-tier";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 
 // Demo mode cycling - all modes to cycle through on tap
@@ -199,8 +200,15 @@ function MascotRenderer() {
   useMascotObserver(true);
   useCreditAwareness(); // Business Buddy credit awareness for low balance warnings
   
+  // Business Buddy tier system - controls mascot features based on subscription
+  const { tier, isDemo, hasFullAccess, shouldShowUpgradeNudge, tierLabel } = useBusinessBuddyTier();
+  const allowedModes = useMemo(() => getAllowedModes(tier), [tier]);
+  
   // Demo mode cycling state - tap mascot to see different formations
   const [demoModeIndex, setDemoModeIndex] = useState<number | null>(null);
+  
+  // Upgrade nudge timer - periodically remind non-subscribers
+  const lastNudgeRef = useRef<number>(0);
   
   // Get mascot mode - loading state handled internally by observer
   const baseMode = useMascotMode();
@@ -208,15 +216,20 @@ function MascotRenderer() {
   // Apply HOLIDAY mode during Christmas season when mascot is idle
   const holiday = getCurrentHoliday();
   const currentMode = useMemo(() => {
-    // If demo mode is active, use that
+    // If demo mode is active, use that (respecting tier restrictions)
     if (demoModeIndex !== null) {
-      return DEMO_MODES[demoModeIndex] as any;
+      const demoMode = DEMO_MODES[demoModeIndex];
+      // For demo tier, only allow demo modes
+      if (isDemo && !allowedModes.includes(demoMode)) {
+        return 'IDLE'; // Fall back to IDLE if mode not allowed
+      }
+      return demoMode as any;
     }
     if (baseMode === 'IDLE' && holiday?.key === 'christmas') {
       return 'HOLIDAY';
     }
     return baseMode;
-  }, [baseMode, holiday, demoModeIndex]);
+  }, [baseMode, holiday, demoModeIndex, isDemo, allowedModes]);
   
   const [location] = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -488,6 +501,47 @@ function MascotRenderer() {
     }
   }, [location]);
   
+  // Upgrade nudge for non-Business Buddy subscribers
+  // Shows periodic reminders to upgrade to full AI assistant
+  // Only shows when no higher-priority thought is active
+  useEffect(() => {
+    if (!shouldShowUpgradeNudge) return;
+    
+    const nudgeInterval = setInterval(() => {
+      const now = Date.now();
+      // Only nudge every 60 seconds minimum and when no current thought active
+      if (now - lastNudgeRef.current > 60000 && !currentThought) {
+        lastNudgeRef.current = now;
+        const nudgeMessage = getUpgradeNudgeMessage('general');
+        thoughtManager.showThought({
+          text: nudgeMessage,
+          priority: 'low',
+          duration: 8000,
+          source: 'upgrade_nudge',
+        });
+      }
+    }, 45000); // Check every 45 seconds
+    
+    // Show initial nudge after 30 seconds (if no thought active)
+    const initialTimer = setTimeout(() => {
+      if (!currentThought) {
+        const nudgeMessage = getUpgradeNudgeMessage('general');
+        thoughtManager.showThought({
+          text: nudgeMessage,
+          priority: 'low',
+          duration: 10000,
+          source: 'upgrade_nudge',
+        });
+        lastNudgeRef.current = Date.now();
+      }
+    }, 30000);
+    
+    return () => {
+      clearInterval(nudgeInterval);
+      clearTimeout(initialTimer);
+    };
+  }, [shouldShowUpgradeNudge, currentThought]);
+  
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     if (!isDragging) {
@@ -498,6 +552,19 @@ function MascotRenderer() {
       setDemoModeIndex(prev => {
         if (prev === null) return 0;
         const next = (prev + 1) % DEMO_MODES.length;
+        
+        // Check if next mode is restricted for demo tier
+        const nextMode = DEMO_MODES[next];
+        if (isDemo && !allowedModes.includes(nextMode)) {
+          // Show upgrade hint when trying restricted mode
+          thoughtManager.showThought({
+            text: 'Upgrade to Business Buddy for all modes!',
+            priority: 'low',
+            duration: 3000,
+            source: 'upgrade_hint',
+          });
+        }
+        
         // After cycling through all modes, return to auto mode
         if (next === 0) {
           setTimeout(() => setDemoModeIndex(null), 3000);
@@ -505,7 +572,7 @@ function MascotRenderer() {
         return next;
       });
     }
-  }, [isDragging]);
+  }, [isDragging, isDemo, allowedModes]);
   
   if (!MASCOT_CONFIG.enabled || shouldHideMascot(location)) return null;
   
@@ -550,7 +617,7 @@ function MascotRenderer() {
             warpIntensity={showcaseControl.warpIntensity}
           />
           
-          {/* Demo mode indicator - shows current mode when cycling */}
+          {/* Demo mode indicator - shows current mode and tier when cycling */}
           {demoModeIndex !== null && (
             <div 
               className="absolute -top-6 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm 
@@ -559,6 +626,7 @@ function MascotRenderer() {
               data-testid="demo-mode-indicator"
             >
               {currentMode} ({demoModeIndex + 1}/{DEMO_MODES.length})
+              {isDemo && <span className="ml-1 text-muted-foreground">| {tierLabel}</span>}
             </div>
           )}
           
@@ -578,6 +646,7 @@ function MascotRenderer() {
           thought={currentThought}
           mascotPosition={{ x: effectiveX, y: effectiveY }}
           mascotSize={bubbleSize}
+          mode={currentMode}
           isMobile={isMobile}
         />
       )}

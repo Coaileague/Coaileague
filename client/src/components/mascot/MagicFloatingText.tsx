@@ -13,8 +13,43 @@ import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import type { Thought } from '@/lib/mascot/ThoughtManager';
 import { THOUGHT_BUBBLE_BOUNDARY_CONFIG, PUBLIC_PAGE_PROMO_CONFIG } from '@/config/mascotConfig';
+import type { MascotMode } from '@/components/coai-twin-mascot';
 
-// Color palettes for letter variety
+// Mode-specific color palettes for state-aware bubble theming
+const MODE_COLOR_PALETTES: Record<MascotMode, string[]> = {
+  IDLE: ['#38bdf8', '#06b6d4', '#22d3ee', '#a855f7', '#c084fc'],
+  SEARCHING: ['#10b981', '#34d399', '#6ee7b7', '#059669', '#047857'],
+  THINKING: ['#a855f7', '#9333ea', '#7c3aed', '#8b5cf6', '#c084fc'],
+  ANALYZING: ['#6366f1', '#4f46e5', '#818cf8', '#a5b4fc', '#3b82f6'],
+  CODING: ['#34d399', '#10b981', '#22c55e', '#4ade80', '#059669'],
+  LISTENING: ['#fbbf24', '#f59e0b', '#fcd34d', '#fde68a', '#d97706'],
+  UPLOADING: ['#06b6d4', '#22d3ee', '#67e8f9', '#0ea5e9', '#38bdf8'],
+  SUCCESS: ['#f472b6', '#ec4899', '#f9a8d4', '#fda4af', '#fb7185'],
+  ERROR: ['#ef4444', '#dc2626', '#f87171', '#fca5a5', '#b91c1c'],
+  CELEBRATING: ['#fbbf24', '#f59e0b', '#fcd34d', '#a855f7', '#ec4899'],
+  ADVISING: ['#10b981', '#34d399', '#6ee7b7', '#047857', '#064e3b'],
+  HOLIDAY: ['#c41e3a', '#165b33', '#ffd700', '#ffffff', '#ff69b4'],
+  GREETING: ['#f472b6', '#ec4899', '#f9a8d4', '#a855f7', '#c084fc']
+};
+
+// Mode-specific bubble background colors (gradient stops)
+const MODE_BUBBLE_COLORS: Record<MascotMode, { bg: string; border: string; glow: string }> = {
+  IDLE: { bg: 'rgba(56, 189, 248, 0.12)', border: 'rgba(56, 189, 248, 0.25)', glow: 'rgba(56, 189, 248, 0.3)' },
+  SEARCHING: { bg: 'rgba(16, 185, 129, 0.15)', border: 'rgba(16, 185, 129, 0.35)', glow: 'rgba(16, 185, 129, 0.4)' },
+  THINKING: { bg: 'rgba(168, 85, 247, 0.15)', border: 'rgba(168, 85, 247, 0.35)', glow: 'rgba(168, 85, 247, 0.4)' },
+  ANALYZING: { bg: 'rgba(99, 102, 241, 0.15)', border: 'rgba(99, 102, 241, 0.35)', glow: 'rgba(99, 102, 241, 0.4)' },
+  CODING: { bg: 'rgba(52, 211, 153, 0.15)', border: 'rgba(52, 211, 153, 0.35)', glow: 'rgba(52, 211, 153, 0.4)' },
+  LISTENING: { bg: 'rgba(251, 191, 36, 0.15)', border: 'rgba(251, 191, 36, 0.35)', glow: 'rgba(251, 191, 36, 0.4)' },
+  UPLOADING: { bg: 'rgba(6, 182, 212, 0.15)', border: 'rgba(6, 182, 212, 0.35)', glow: 'rgba(6, 182, 212, 0.4)' },
+  SUCCESS: { bg: 'rgba(244, 114, 182, 0.18)', border: 'rgba(244, 114, 182, 0.4)', glow: 'rgba(244, 114, 182, 0.5)' },
+  ERROR: { bg: 'rgba(239, 68, 68, 0.2)', border: 'rgba(239, 68, 68, 0.45)', glow: 'rgba(239, 68, 68, 0.5)' },
+  CELEBRATING: { bg: 'rgba(251, 191, 36, 0.18)', border: 'rgba(251, 191, 36, 0.4)', glow: 'rgba(251, 191, 36, 0.5)' },
+  ADVISING: { bg: 'rgba(16, 185, 129, 0.12)', border: 'rgba(16, 185, 129, 0.3)', glow: 'rgba(16, 185, 129, 0.35)' },
+  HOLIDAY: { bg: 'rgba(196, 30, 58, 0.15)', border: 'rgba(196, 30, 58, 0.35)', glow: 'rgba(196, 30, 58, 0.4)' },
+  GREETING: { bg: 'rgba(244, 114, 182, 0.12)', border: 'rgba(244, 114, 182, 0.3)', glow: 'rgba(244, 114, 182, 0.35)' }
+};
+
+// Legacy color palettes (fallback when no mode specified)
 const LETTER_COLORS = {
   cyan: ['#00d4ff', '#00bcd4', '#26c6da', '#4dd0e1', '#80deea'],
   purple: ['#a855f7', '#9333ea', '#7c3aed', '#8b5cf6', '#c084fc'],
@@ -61,6 +96,7 @@ interface MagicFloatingTextProps {
   mascotPosition: { x: number; y: number };
   mascotSize: number;
   isMobile?: boolean;
+  mode?: MascotMode; // Current mascot mode for state-aware bubble theming
 }
 
 // Pick random item from array
@@ -167,6 +203,7 @@ export function MagicFloatingText({
   mascotPosition,
   mascotSize,
   isMobile = false,
+  mode = 'IDLE',
 }: MagicFloatingTextProps) {
   const [letters, setLetters] = useState<LetterState[]>([]);
   const [isActive, setIsActive] = useState(false);
@@ -178,6 +215,9 @@ export function MagicFloatingText({
   // Animated ellipsis for action states (thinking... coding... etc.)
   const [dotCount, setDotCount] = useState(0);
   const isActionState = thought?.isActionState || thought?.source === 'action';
+  
+  // Get mode-specific bubble styling
+  const bubbleColors = MODE_BUBBLE_COLORS[mode] || MODE_BUBBLE_COLORS.IDLE;
   
   // Cycle through ellipsis dots (0 → 1 → 2 → 3 → 0...) for action states
   useEffect(() => {
@@ -193,11 +233,11 @@ export function MagicFloatingText({
     return () => clearInterval(intervalId);
   }, [isActionState, isActive]);
   
-  // Choose color palette based on thought type or random
+  // Choose color palette based on mode for state-aware theming
   const colorPalette = useMemo(() => {
-    const palettes = Object.values(LETTER_COLORS);
-    return pickRandom(palettes);
-  }, [thought?.id]);
+    // Use mode-specific palette for state-aware bubble colors
+    return MODE_COLOR_PALETTES[mode] || MODE_COLOR_PALETTES.IDLE;
+  }, [mode, thought?.id]);
   
   // Real-time position tracking - bubble follows mascot smoothly
   useEffect(() => {
@@ -490,7 +530,7 @@ export function MagicFloatingText({
           </div>
         )}
         
-        {/* Letter text container - nearly transparent glassmorphism for minimal blocking */}
+        {/* Letter text container - mode-aware glassmorphism with state-specific colors */}
         <div
           style={{
             display: 'flex',
@@ -498,14 +538,16 @@ export function MagicFloatingText({
             gap: '0',
             justifyContent: 'center',
             textAlign: 'center',
-            background: 'radial-gradient(closest-side, rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.04))',
-            backdropFilter: 'blur(2px)',
-            WebkitBackdropFilter: 'blur(2px)',
+            background: `radial-gradient(closest-side, ${bubbleColors.bg}, rgba(0, 0, 0, 0.06))`,
+            backdropFilter: 'blur(4px)',
+            WebkitBackdropFilter: 'blur(4px)',
             padding: isMobile ? '4px 8px' : '5px 10px',
             borderRadius: '9999px',
-            border: 'none',
-            boxShadow: 'none',
+            border: `1px solid ${bubbleColors.border}`,
+            boxShadow: `0 2px 8px ${bubbleColors.glow}, inset 0 1px 2px rgba(255,255,255,0.1)`,
+            transition: 'background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease',
           }}
+          data-mode={mode}
         >
           {letters.map((letter, index) => (
             <span
