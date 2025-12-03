@@ -15332,6 +15332,34 @@ export const changeSeverityEnum = pgEnum("change_severity", [
   'info'        // Informational updates
 ]);
 
+// Change source type enum - Who/what initiated the change
+export const changeSourceTypeEnum = pgEnum("change_source_type", [
+  'system',           // Platform system process
+  'ai_brain',         // AI Brain automation
+  'support_staff',    // Human support staff
+  'developer',        // Developer/engineering team
+  'automated_job',    // Scheduled automation job
+  'user_request',     // User-initiated feature request
+  'external_service'  // Third-party integration
+]);
+
+// Detailed change category enum
+export const changeDetailedCategoryEnum = pgEnum("change_detailed_category", [
+  'feature',          // New feature added
+  'service',          // Service modification
+  'bot_automation',   // AI/bot automation changes
+  'bugfix',           // Bug fix - something was broken
+  'security',         // Security update
+  'improvement',      // Enhancement to existing feature
+  'deprecation',      // Feature removal or deprecation
+  'hotpatch',         // Urgent fix
+  'integration',      // Third-party integration change
+  'ui_update',        // Frontend/UI change
+  'backend_update',   // Backend/API change
+  'performance',      // Performance optimization
+  'documentation'     // Documentation update
+]);
+
 // Platform scan snapshots - stores point-in-time platform state
 export const platformScanSnapshots = pgTable("platform_scan_snapshots", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -15389,10 +15417,25 @@ export const platformChangeEvents = pgTable("platform_change_events", {
   changeType: varchar("change_type", { length: 100 }).notNull(), // 'feature_added', 'bug_fixed', 'hotpatch', 'enhancement', 'security_fix'
   severity: changeSeverityEnum("severity").notNull().default('info'),
   
+  // ENHANCED: Detailed category for better organization
+  detailedCategory: changeDetailedCategoryEnum("detailed_category").default('improvement'),
+  
+  // ENHANCED: Source attribution - WHO made this change
+  sourceType: changeSourceTypeEnum("source_type").default('system'),
+  sourceName: varchar("source_name", { length: 100 }), // e.g., "Billing Automation", "HelpAI", "John Smith"
+  sourceUserId: varchar("source_user_id").references(() => users.id), // If human-initiated
+  
   // AI-generated content (Gemini summaries)
   title: varchar("title", { length: 255 }).notNull(),
   summary: text("summary").notNull(), // AI-generated user-friendly summary
   technicalDetails: text("technical_details"), // Technical description for support staff
+  
+  // ENHANCED: End-user friendly summary (plain English, non-technical)
+  endUserSummary: text("end_user_summary"), // Simple explanation for non-technical users
+  
+  // ENHANCED: What was broken (for bugfixes)
+  brokenDescription: text("broken_description"), // What issue this fixes, for bugfix category
+  impactDescription: text("impact_description"), // Who/what was affected
   
   // Affected areas
   affectedModules: jsonb("affected_modules"), // ['scheduling', 'payroll', 'chat']
@@ -15408,8 +15451,16 @@ export const platformChangeEvents = pgTable("platform_change_events", {
   notificationSentAt: timestamp("notification_sent_at"),
   notificationCount: integer("notification_count").default(0), // How many users were notified
   
+  // ENHANCED: Real-time broadcast tracking
+  broadcastedViaWebSocket: boolean("broadcasted_via_websocket").default(false),
+  broadcastedAt: timestamp("broadcasted_at"),
+  
   // What's New integration
   whatsNewId: varchar("whats_new_id").references(() => platformUpdates.id),
+  
+  // ENHANCED: Version info
+  versionFrom: varchar("version_from", { length: 50 }), // Previous version
+  versionTo: varchar("version_to", { length: 50 }), // New version after change
   
   // Metadata
   metadata: jsonb("metadata"),
@@ -15423,11 +15474,14 @@ export const platformChangeEvents = pgTable("platform_change_events", {
   index("platform_change_events_status_idx").on(table.platformStatus),
   index("platform_change_events_notified_idx").on(table.notifiedAllUsers),
   index("platform_change_events_created_idx").on(table.createdAt),
+  index("platform_change_events_category_idx").on(table.detailedCategory),
+  index("platform_change_events_source_idx").on(table.sourceType),
 ]);
 
 export const insertPlatformChangeEventSchema = createInsertSchema(platformChangeEvents).omit({
   id: true,
   notificationSentAt: true,
+  broadcastedAt: true,
   notificationCount: true,
   whatsNewId: true,
   createdAt: true,

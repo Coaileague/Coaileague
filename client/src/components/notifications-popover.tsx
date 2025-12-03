@@ -32,6 +32,16 @@ interface PlatformUpdate {
   isNew: boolean;
   isViewed: boolean;
   createdAt: string;
+  metadata?: {
+    endUserSummary?: string;
+    technicalSummary?: string;
+    brokenDescription?: string;
+    impactDescription?: string;
+    detailedCategory?: string;
+    sourceType?: string;
+    sourceName?: string;
+    timestamp?: string;
+  };
 }
 
 interface MaintenanceAlert {
@@ -54,6 +64,17 @@ interface Notification {
   isRead: boolean;
   actionUrl?: string;
   createdAt: string;
+  metadata?: {
+    endUserSummary?: string;
+    technicalSummary?: string;
+    brokenDescription?: string;
+    impactDescription?: string;
+    detailedCategory?: string;
+    sourceType?: string;
+    sourceName?: string;
+    timestamp?: string;
+    changeEventId?: string;
+  };
 }
 
 interface NotificationsData {
@@ -87,12 +108,34 @@ const severityConfig = {
   },
 };
 
-const categoryConfig: Record<string, { icon: typeof Sparkles; color: string }> = {
-  feature: { icon: Sparkles, color: "text-purple-500" },
-  improvement: { icon: Check, color: "text-green-500" },
-  fix: { icon: Wrench, color: "text-blue-500" },
-  security: { icon: AlertTriangle, color: "text-red-500" },
-  announcement: { icon: MessageSquare, color: "text-amber-500" },
+import { Bot, Code, Zap, Settings, Users, Globe, FileText, Shield, TrendingUp, Server, Layout, Database } from "lucide-react";
+
+const categoryConfig: Record<string, { icon: typeof Sparkles; color: string; label: string }> = {
+  feature: { icon: Sparkles, color: "text-purple-500", label: "New Feature" },
+  improvement: { icon: Check, color: "text-green-500", label: "Improvement" },
+  fix: { icon: Wrench, color: "text-blue-500", label: "Fix" },
+  bugfix: { icon: Wrench, color: "text-blue-500", label: "Bug Fix" },
+  security: { icon: Shield, color: "text-red-500", label: "Security" },
+  announcement: { icon: MessageSquare, color: "text-amber-500", label: "Announcement" },
+  service: { icon: Server, color: "text-cyan-500", label: "Service Update" },
+  bot_automation: { icon: Bot, color: "text-violet-500", label: "Bot Automation" },
+  deprecation: { icon: AlertTriangle, color: "text-orange-500", label: "Deprecation" },
+  hotpatch: { icon: Zap, color: "text-yellow-500", label: "Hotpatch" },
+  integration: { icon: Globe, color: "text-teal-500", label: "Integration" },
+  ui_update: { icon: Layout, color: "text-pink-500", label: "UI Update" },
+  backend_update: { icon: Database, color: "text-slate-500", label: "Backend" },
+  performance: { icon: TrendingUp, color: "text-emerald-500", label: "Performance" },
+  documentation: { icon: FileText, color: "text-gray-500", label: "Documentation" },
+};
+
+const sourceTypeLabels: Record<string, { icon: typeof Bot; label: string }> = {
+  system: { icon: Settings, label: "System" },
+  ai_brain: { icon: Bot, label: "AI Brain" },
+  support_staff: { icon: Users, label: "Support Staff" },
+  developer: { icon: Code, label: "Developer" },
+  automated_job: { icon: Zap, label: "Automation" },
+  user_request: { icon: Users, label: "User Request" },
+  external_service: { icon: Globe, label: "External Service" },
 };
 
 const statusLabels: Record<string, string> = {
@@ -335,8 +378,13 @@ export function NotificationsPopover() {
               {filteredPlatformUpdates.length > 0 ? (
                 <div className="divide-y">
                   {filteredPlatformUpdates.map((update) => {
-                    const config = categoryConfig[update.category] || categoryConfig.announcement;
+                    const detailedCat = update.metadata?.detailedCategory || update.category;
+                    const config = categoryConfig[detailedCat] || categoryConfig.announcement;
                     const IconComponent = config.icon;
+                    const sourceType = update.metadata?.sourceType;
+                    const sourceName = update.metadata?.sourceName;
+                    const sourceConfig = sourceType ? sourceTypeLabels[sourceType] : null;
+                    const SourceIcon = sourceConfig?.icon;
                     return (
                       <div
                         key={update.id}
@@ -373,12 +421,18 @@ export function NotificationsPopover() {
                               </div>
                             </div>
                             <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-                              {update.description}
+                              {update.metadata?.endUserSummary || update.description}
                             </p>
                             <div className="flex items-center gap-2 flex-wrap">
-                              <Badge variant="outline" className="text-[10px] capitalize px-2 py-0.5">
-                                {update.category}
+                              <Badge variant="outline" className={`text-[10px] px-2 py-0.5 ${config.color} border-current/30`}>
+                                {config.label}
                               </Badge>
+                              {sourceConfig && SourceIcon && (
+                                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 gap-1">
+                                  <SourceIcon className="h-3 w-3" />
+                                  {sourceName || sourceConfig.label}
+                                </Badge>
+                              )}
                               {update.version && (
                                 <span className="text-[10px] text-muted-foreground font-mono">v{update.version}</span>
                               )}
@@ -386,6 +440,24 @@ export function NotificationsPopover() {
                                 {formatDistanceToNow(new Date(update.createdAt), { addSuffix: true })}
                               </span>
                             </div>
+                            {(update.metadata?.brokenDescription || update.metadata?.impactDescription) && (
+                              <div className="mt-2 space-y-1">
+                                {update.metadata.brokenDescription && (
+                                  <div className="p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-900">
+                                    <p className="text-[11px] text-red-700 dark:text-red-300">
+                                      <span className="font-medium">What was fixed:</span> {update.metadata.brokenDescription}
+                                    </p>
+                                  </div>
+                                )}
+                                {update.metadata.impactDescription && (
+                                  <div className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded-md border border-blue-200 dark:border-blue-900">
+                                    <p className="text-[11px] text-blue-700 dark:text-blue-300">
+                                      <span className="font-medium">Impact:</span> {update.metadata.impactDescription}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -406,57 +478,98 @@ export function NotificationsPopover() {
             <TabsContent value="notifications" className="mt-0 focus-visible:outline-none">
               {filteredNotifications.length > 0 ? (
                 <div className="divide-y">
-                  {filteredNotifications.map((notification) => (
-                    <div
-                      key={notification.id}
-                      className={`px-4 py-4 hover:bg-muted/40 transition-colors cursor-pointer ${!notification.isRead ? 'bg-primary/5' : 'opacity-70'}`}
-                      onClick={() => {
-                        if (!notification.isRead) {
-                          markAsReadMutation.mutate(notification.id);
-                        }
-                        if (notification.actionUrl) {
-                          window.location.href = notification.actionUrl;
-                        }
-                      }}
-                      data-testid={`notification-item-${notification.id}`}
-                    >
-                      <div className="flex gap-3">
-                        <div className="shrink-0 text-primary mt-0.5">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Bell className="h-4 w-4" />
+                  {filteredNotifications.map((notification) => {
+                    const detailedCat = notification.metadata?.detailedCategory;
+                    const config = detailedCat ? categoryConfig[detailedCat] : null;
+                    const IconComponent = config?.icon || Bell;
+                    const iconColor = config?.color || "text-primary";
+                    const sourceType = notification.metadata?.sourceType;
+                    const sourceName = notification.metadata?.sourceName;
+                    const sourceConfig = sourceType ? sourceTypeLabels[sourceType] : null;
+                    const SourceIcon = sourceConfig?.icon;
+                    return (
+                      <div
+                        key={notification.id}
+                        className={`px-4 py-4 hover:bg-muted/40 transition-colors cursor-pointer ${!notification.isRead ? 'bg-primary/5' : 'opacity-70'}`}
+                        onClick={() => {
+                          if (!notification.isRead) {
+                            markAsReadMutation.mutate(notification.id);
+                          }
+                          if (notification.actionUrl) {
+                            window.location.href = notification.actionUrl;
+                          }
+                        }}
+                        data-testid={`notification-item-${notification.id}`}
+                      >
+                        <div className="flex gap-3">
+                          <div className={`shrink-0 ${iconColor} mt-0.5`}>
+                            <div className="w-8 h-8 rounded-full bg-current/10 flex items-center justify-center">
+                              <IconComponent className="h-4 w-4" />
+                            </div>
                           </div>
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-1">
-                            <span className="font-medium text-sm leading-tight">{notification.title}</span>
-                            {!notification.isRead && (
-                              <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5 animate-pulse" />
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <span className="font-medium text-sm leading-tight">{notification.title}</span>
+                              {!notification.isRead && (
+                                <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5 animate-pulse" />
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+                              {notification.metadata?.endUserSummary || notification.message}
+                            </p>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              {config && (
+                                <Badge variant="outline" className={`text-[10px] px-2 py-0.5 ${iconColor} border-current/30`}>
+                                  {config.label}
+                                </Badge>
+                              )}
+                              {sourceConfig && SourceIcon && (
+                                <Badge variant="secondary" className="text-[10px] px-2 py-0.5 gap-1">
+                                  <SourceIcon className="h-3 w-3" />
+                                  {sourceName || sourceConfig.label}
+                                </Badge>
+                              )}
+                              <span className="text-[10px] text-muted-foreground">
+                                {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                              </span>
+                            </div>
+                            {(notification.metadata?.brokenDescription || notification.metadata?.impactDescription) && (
+                              <div className="mt-2 space-y-1">
+                                {notification.metadata.brokenDescription && (
+                                  <div className="p-2 bg-red-50 dark:bg-red-950/30 rounded-md border border-red-200 dark:border-red-900">
+                                    <p className="text-[11px] text-red-700 dark:text-red-300">
+                                      <span className="font-medium">Issue resolved:</span> {notification.metadata.brokenDescription}
+                                    </p>
+                                  </div>
+                                )}
+                                {notification.metadata.impactDescription && (
+                                  <div className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded-md border border-blue-200 dark:border-blue-900">
+                                    <p className="text-[11px] text-blue-700 dark:text-blue-300">
+                                      <span className="font-medium">Impact:</span> {notification.metadata.impactDescription}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
-                          <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-                            {notification.message}
-                          </p>
-                          <span className="text-[10px] text-muted-foreground">
-                            {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
-                          </span>
+                          {!notification.isRead && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0 hover:bg-muted"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markAsReadMutation.mutate(notification.id);
+                              }}
+                              data-testid={`button-dismiss-${notification.id}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
-                        {!notification.isRead && (
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8 shrink-0 hover:bg-muted"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              markAsReadMutation.mutate(notification.id);
-                            }}
-                            data-testid={`button-dismiss-${notification.id}`}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        )}
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">

@@ -34,6 +34,10 @@ interface DetectedChange {
   affectedModules: string[];
   affectedFiles: string[];
   rawDiff: string;
+  // Enhanced fields for detailed notifications
+  detailedCategory?: 'feature' | 'service' | 'bot_automation' | 'bugfix' | 'security' | 'improvement' | 'deprecation' | 'hotpatch' | 'integration' | 'ui_update' | 'backend_update' | 'performance' | 'documentation';
+  sourceType?: 'system' | 'ai_brain' | 'support_staff' | 'developer' | 'automated_job' | 'user_request' | 'external_service';
+  sourceName?: string;
 }
 
 class PlatformChangeMonitorService {
@@ -113,6 +117,13 @@ class PlatformChangeMonitorService {
             platformStatus: 'operational',
             requiresAction: aiSummary.requiresAction,
             actionRequired: aiSummary.actionRequired,
+            // Enhanced fields for detailed notifications
+            detailedCategory: aiSummary.detailedCategory as any,
+            sourceType: aiSummary.sourceType as any,
+            sourceName: aiSummary.sourceName,
+            endUserSummary: aiSummary.endUserSummary,
+            brokenDescription: aiSummary.brokenDescription,
+            impactDescription: aiSummary.impactDescription,
             metadata: { rawDiff: change.rawDiff.substring(0, 5000) },
           }).returning();
 
@@ -308,6 +319,12 @@ class PlatformChangeMonitorService {
     technicalDetails: string;
     requiresAction: boolean;
     actionRequired: string | null;
+    endUserSummary: string;
+    brokenDescription: string | null;
+    impactDescription: string;
+    detailedCategory: string;
+    sourceType: string;
+    sourceName: string;
   }> {
     try {
       const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
@@ -328,7 +345,7 @@ Change Analysis:
 - Impact Analysis: ${impactAnalysis}
 - Module Context: ${moduleContext}
 
-Your task - Create a detailed, specific platform update announcement:
+Your task - Create a detailed, specific platform update announcement with FULL CATEGORIZATION:
 
 TITLE REQUIREMENTS:
 - Max 70 characters
@@ -336,32 +353,50 @@ TITLE REQUIREMENTS:
 - Include the module affected if applicable
 - Examples: "AI Scheduling Optimization Released", "Security Patch: Session Management", "New Mobile Calendar Sync"
 
-SUMMARY REQUIREMENTS:
+SUMMARY REQUIREMENTS (for technical staff):
 - 3-4 sentences, NOT generic
 - Explain WHAT specifically was changed
 - Explain WHY it matters to users
 - Highlight the BUSINESS IMPACT
-- If bug fix: Explain what issue was resolved and who was affected
-- If feature: Explain the use case and expected benefit
-- If enhancement: Explain the improvement and performance gains
-- Include specific numbers/metrics if applicable (e.g., "20% faster", "reduces manual work by 15 hours/week")
+- Include specific numbers/metrics if applicable
+
+END USER SUMMARY REQUIREMENTS (for non-technical users):
+- 2-3 sentences in PLAIN ENGLISH
+- No technical jargon
+- Focus on the benefit to the user
+- Example: "Your schedule loads faster now" instead of "Optimized query caching"
+
+BROKEN DESCRIPTION (for bugfixes only):
+- If this is a bug fix, explain what was broken
+- What symptoms did users experience?
+- Set to null if not a bug fix
+
+IMPACT DESCRIPTION:
+- Who is affected by this change?
+- What parts of the platform are impacted?
+
+CATEGORIZATION:
+- detailedCategory: One of: feature, service, bot_automation, bugfix, security, improvement, deprecation, hotpatch, integration, ui_update, backend_update, performance, documentation
+- sourceType: One of: system, ai_brain, support_staff, developer, automated_job, user_request, external_service
+- sourceName: Specific name like "Billing Automation", "HelpAI Orchestrator", "Security Team", etc.
 
 TECHNICAL DETAILS REQUIREMENTS:
 - For support staff and developers
 - List specific components modified
 - Note database/schema changes if any
 - Mention affected APIs or services
-- Include rollout plan if phased
-
-Action Required:
-- Set to true ONLY if users must take action
-- Provide clear, concise action steps if needed
 
 Respond ONLY with valid JSON (no markdown, no explanations):
 {
   "title": "Specific module change title (NOT generic)",
-  "summary": "Detailed 3-4 sentence summary explaining what, why, and impact",
+  "summary": "Detailed 3-4 sentence summary for technical staff",
+  "endUserSummary": "Plain English 2-3 sentence summary for non-technical users",
   "technicalDetails": "Specific technical changes and affected components",
+  "brokenDescription": "What was broken (for bugfixes) or null",
+  "impactDescription": "Who/what is affected by this change",
+  "detailedCategory": "feature|service|bot_automation|bugfix|security|improvement|deprecation|hotpatch|integration|ui_update|backend_update|performance|documentation",
+  "sourceType": "system|ai_brain|support_staff|developer|automated_job|user_request|external_service",
+  "sourceName": "Specific source name",
   "requiresAction": boolean,
   "actionRequired": "Clear action steps if required, otherwise null"
 }`;
@@ -382,6 +417,12 @@ Respond ONLY with valid JSON (no markdown, no explanations):
             technicalDetails: parsed.technicalDetails || change.rawDiff,
             requiresAction: parsed.requiresAction === true,
             actionRequired: parsed.actionRequired || null,
+            endUserSummary: parsed.endUserSummary || this.generateEndUserSummary(change),
+            brokenDescription: parsed.brokenDescription || null,
+            impactDescription: parsed.impactDescription || this.analyzeImpact(change),
+            detailedCategory: parsed.detailedCategory || this.mapToDetailedCategory(change.type),
+            sourceType: parsed.sourceType || change.sourceType || 'system',
+            sourceName: parsed.sourceName || change.sourceName || 'AI Brain Platform Monitor',
           };
         } catch (parseError) {
           console.error('[PlatformChangeMonitor] JSON parse error:', parseError);
@@ -392,6 +433,34 @@ Respond ONLY with valid JSON (no markdown, no explanations):
     }
 
     return this.generateFallbackResponse(change);
+  }
+  
+  private generateEndUserSummary(change: DetectedChange): string {
+    const moduleList = change.affectedModules.join(', ') || 'the platform';
+    switch (change.type) {
+      case 'bug_fixed':
+        return `We fixed an issue that was affecting ${moduleList}. Everything should work smoothly now.`;
+      case 'feature_added':
+        return `We added a new feature to ${moduleList}! Check it out to see what's new.`;
+      case 'security_fix':
+        return `We made security improvements to keep your data safe. No action needed from you.`;
+      case 'enhancement':
+        return `We improved ${moduleList} to make it work better and faster for you.`;
+      default:
+        return `We made updates to ${moduleList} to improve your experience.`;
+    }
+  }
+  
+  private mapToDetailedCategory(changeType: string): string {
+    const mapping: Record<string, string> = {
+      'feature_added': 'feature',
+      'bug_fixed': 'bugfix',
+      'hotpatch': 'hotpatch',
+      'enhancement': 'improvement',
+      'security_fix': 'security',
+      'update': 'improvement',
+    };
+    return mapping[changeType] || 'improvement';
   }
 
   private buildModuleContext(modules: string[]): string {
@@ -450,6 +519,12 @@ Respond ONLY with valid JSON (no markdown, no explanations):
       technicalDetails: `Modified: ${change.affectedFiles.join(', ')}. Severity: ${change.severity}. Type: ${change.type}`,
       requiresAction: false,
       actionRequired: null,
+      endUserSummary: this.generateEndUserSummary(change),
+      brokenDescription: change.type === 'bug_fixed' ? 'An issue was detected and resolved.' : null,
+      impactDescription: this.analyzeImpact(change),
+      detailedCategory: this.mapToDetailedCategory(change.type),
+      sourceType: change.sourceType || 'system',
+      sourceName: change.sourceName || 'AI Brain Platform Monitor',
     };
   }
 
@@ -459,6 +534,12 @@ Respond ONLY with valid JSON (no markdown, no explanations):
     technicalDetails: string;
     requiresAction: boolean;
     actionRequired: string | null;
+    endUserSummary: string;
+    brokenDescription: string | null;
+    impactDescription: string;
+    detailedCategory: string;
+    sourceType: string;
+    sourceName: string;
   }): Promise<number> {
     try {
       const allUsers = await db
@@ -489,12 +570,22 @@ Respond ONLY with valid JSON (no markdown, no explanations):
           userId: user.id,
           workspaceId: user.workspaceId!,
           type: 'system' as const,
-          message: summary.summary,
+          message: summary.endUserSummary || summary.summary,
           title: summary.title,
           metadata: {
             changeEventId,
             requiresAction: summary.requiresAction,
             actionRequired: summary.actionRequired,
+            // Enhanced fields for detailed display
+            endUserSummary: summary.endUserSummary,
+            technicalSummary: summary.summary,
+            technicalDetails: summary.technicalDetails,
+            brokenDescription: summary.brokenDescription,
+            impactDescription: summary.impactDescription,
+            detailedCategory: summary.detailedCategory,
+            sourceType: summary.sourceType,
+            sourceName: summary.sourceName,
+            timestamp: new Date().toISOString(),
           },
         }));
 
@@ -525,8 +616,8 @@ Respond ONLY with valid JSON (no markdown, no explanations):
       await publishPlatformUpdate({
         type: 'announcement',
         title: summary.title,
-        description: summary.summary,
-        category: 'announcement',
+        description: summary.endUserSummary || summary.summary,
+        category: summary.detailedCategory as any || 'announcement',
         visibility: 'all',
         priority: 1, // 1=high, 2=normal, 3=low
         metadata: {
@@ -534,6 +625,14 @@ Respond ONLY with valid JSON (no markdown, no explanations):
           changeEventId,
           notifiedCount: allUsers.length,
           forceRefresh: true,
+          // Enhanced attribution
+          sourceType: summary.sourceType,
+          sourceName: summary.sourceName,
+          detailedCategory: summary.detailedCategory,
+          technicalSummary: summary.summary,
+          brokenDescription: summary.brokenDescription,
+          impactDescription: summary.impactDescription,
+          timestamp: new Date().toISOString(),
         },
       });
 
