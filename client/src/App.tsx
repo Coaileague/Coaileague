@@ -185,22 +185,38 @@ import { useMascotShowcase } from "@/hooks/use-mascot-showcase";
 import { useCreditAwareness } from "@/hooks/use-credit-awareness";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 
+// Demo mode cycling - all modes to cycle through on tap
+const DEMO_MODES = [
+  'IDLE', 'SEARCHING', 'THINKING', 'ANALYZING', 'CODING', 
+  'UPLOADING', 'LISTENING', 'SUCCESS', 'ERROR', 'ADVISING',
+  'HOLIDAY', 'CELEBRATING', 'GREETING'
+] as const;
+
 function MascotRenderer() {
   const { user } = useAuth();
   const workspaceId = (user as any)?.activeWorkspaceId || (user as any)?.workspaceId;
   useMascotAIIntegration(workspaceId);
   useMascotObserver(true);
   useCreditAwareness(); // Business Buddy credit awareness for low balance warnings
+  
+  // Demo mode cycling state - tap mascot to see different formations
+  const [demoModeIndex, setDemoModeIndex] = useState<number | null>(null);
+  
+  // Get mascot mode - loading state handled internally by observer
   const baseMode = useMascotMode();
   
   // Apply HOLIDAY mode during Christmas season when mascot is idle
   const holiday = getCurrentHoliday();
   const currentMode = useMemo(() => {
+    // If demo mode is active, use that
+    if (demoModeIndex !== null) {
+      return DEMO_MODES[demoModeIndex] as any;
+    }
     if (baseMode === 'IDLE' && holiday?.key === 'christmas') {
       return 'HOLIDAY';
     }
     return baseMode;
-  }, [baseMode, holiday]);
+  }, [baseMode, holiday, demoModeIndex]);
   
   const [location] = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -477,6 +493,17 @@ function MascotRenderer() {
     if (!isDragging) {
       thoughtManager.triggerReaction('tap');
       triggerEmoteRef.current?.('happy');
+      
+      // Cycle through demo modes on tap to showcase all formations
+      setDemoModeIndex(prev => {
+        if (prev === null) return 0;
+        const next = (prev + 1) % DEMO_MODES.length;
+        // After cycling through all modes, return to auto mode
+        if (next === 0) {
+          setTimeout(() => setDemoModeIndex(null), 3000);
+        }
+        return next;
+      });
     }
   }, [isDragging]);
   
@@ -522,6 +549,18 @@ function MascotRenderer() {
             glitchEffect={showcaseControl.glitchEffect}
             warpIntensity={showcaseControl.warpIntensity}
           />
+          
+          {/* Demo mode indicator - shows current mode when cycling */}
+          {demoModeIndex !== null && (
+            <div 
+              className="absolute -top-6 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm 
+                         text-xs font-medium px-2 py-1 rounded-full border border-primary/20 shadow-sm
+                         text-primary whitespace-nowrap"
+              data-testid="demo-mode-indicator"
+            >
+              {currentMode} ({demoModeIndex + 1}/{DEMO_MODES.length})
+            </div>
+          )}
           
           {!currentThought && workspaceId && (
             <MascotTaskBox 
