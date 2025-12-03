@@ -1652,10 +1652,11 @@ const FloatingMascot = memo(function FloatingMascot({
           <motion.div
             className="fixed pointer-events-none"
             style={{
-              left: springX.get() + mascotSize + 10,
-              top: springY.get() - 8,
+              left: springX.get() + mascotSize + 12,
+              top: springY.get() - 4,
               zIndex: MASCOT_CONFIG.zIndex + 1,
-              maxWidth: 280
+              maxWidth: 240,
+              minWidth: 120
             }}
             initial={{ opacity: 0, scale: 0.75, x: -10, y: 8 }}
             animate={{ opacity: 1, scale: 1, x: 0, y: 0 }}
@@ -1668,17 +1669,23 @@ const FloatingMascot = memo(function FloatingMascot({
                 100% { opacity: 0; transform: translateY(-30px); }
               }
               .thought-float {
-                animation: floatAway 4s ease-out forwards;
+                animation: floatAway 5s ease-out forwards;
               }
             `}</style>
             <div
-              className="relative px-0 py-0 text-[11px] font-medium leading-relaxed thought-float"
+              className="relative px-3 py-2 text-[13px] font-medium leading-snug thought-float rounded-lg"
               style={{
-                background: 'transparent',
-                border: 'none',
+                background: 'rgba(0, 0, 0, 0.75)',
+                backdropFilter: 'blur(8px)',
+                WebkitBackdropFilter: 'blur(8px)',
+                border: `1px solid ${MODE_COLORS[currentMode].primary}50`,
                 color: '#ffffff',
-                textShadow: '0 1px 3px rgba(0,0,0,0.95), 0 0 6px rgba(0,0,0,0.85), 1px 1px 2px rgba(0,0,0,0.95)',
-                filter: 'drop-shadow(0 0 4px rgba(255,255,255,0.3))'
+                textShadow: '0 1px 2px rgba(0,0,0,0.8)',
+                wordWrap: 'break-word',
+                overflowWrap: 'break-word',
+                wordBreak: 'normal',
+                hyphens: 'auto',
+                whiteSpace: 'pre-wrap'
               }}
             >
               <AnimatedText text={currentEmote?.expression || currentThought} />
