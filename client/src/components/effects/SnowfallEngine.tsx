@@ -56,10 +56,11 @@ const SnowfallEngine = memo(function SnowfallEngine() {
   
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   
+  // PERFORMANCE: Reduced spawn rates for less lag
   const SPEEDS = {
-    fast: { min: 3, max: 6, spawnRate: 0.4 },
-    medium: { min: 1.5, max: 3.5, spawnRate: 0.25 },
-    slow: { min: 0.5, max: 1.5, spawnRate: 0.15 },
+    fast: { min: 2.5, max: 5, spawnRate: 0.15 },    // Reduced from 0.4
+    medium: { min: 1.2, max: 3, spawnRate: 0.08 },   // Reduced from 0.25
+    slow: { min: 0.4, max: 1.2, spawnRate: 0.04 },   // Reduced from 0.15
   };
   
   const cycleDurations = accumulationCycle || {
@@ -171,7 +172,8 @@ const SnowfallEngine = memo(function SnowfallEngine() {
     canvas.height = dimensions.height * dpr;
     ctx.scale(dpr, dpr);
     
-    const maxSnowflakes = Math.floor(150 * intensity);
+    // PERFORMANCE: Reduced max snowflakes for less lag (was 150 * intensity)
+    const maxSnowflakes = Math.floor(50 * intensity);
     
     const animate = () => {
       ctx.clearRect(0, 0, dimensions.width, dimensions.height);

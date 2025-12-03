@@ -1124,9 +1124,9 @@ export const MASCOT_CONFIG: MascotConfig = {
   
   roaming: {
     enabled: true,
-    interval: { min: 6000, max: 15000 },
-    moveDuration: 1600,
-    pauseDuration: { min: 5000, max: 12000 },
+    interval: { min: 15000, max: 28000 }, // 15-28 seconds between moves - much calmer
+    moveDuration: 2800, // 2.8 seconds - slower, smoother movement
+    pauseDuration: { min: 8000, max: 18000 }, // Longer pauses between roams
     boundsPadding: 120,
     avoidEdges: true,
     preferCorners: false,
@@ -1134,10 +1134,10 @@ export const MASCOT_CONFIG: MascotConfig = {
       enabled: true,
       randomizeEffect: true,
       effects: [
-        { type: 'glide', duration: 1400, trailEnabled: true, sparkleEnabled: true, glowColor: '#38bdf8' },
-        { type: 'zap', duration: 350, trailEnabled: true, sparkleEnabled: true, glowColor: '#a855f7' },
-        { type: 'float', duration: 2000, trailEnabled: true, sparkleEnabled: true, glowColor: '#38bdf8' },
-        { type: 'dash', duration: 700, trailEnabled: true, sparkleEnabled: true, glowColor: '#a855f7' },
+        { type: 'glide', duration: 2800, trailEnabled: true, sparkleEnabled: true, glowColor: '#38bdf8' },
+        { type: 'zap', duration: 1200, trailEnabled: true, sparkleEnabled: true, glowColor: '#a855f7' },
+        { type: 'float', duration: 3500, trailEnabled: true, sparkleEnabled: true, glowColor: '#38bdf8' },
+        { type: 'dash', duration: 1600, trailEnabled: true, sparkleEnabled: true, glowColor: '#a855f7' },
       ],
     },
     reactions: {
@@ -1327,8 +1327,8 @@ export const MASCOT_CONFIG: MascotConfig = {
   
   thoughts: {
     enabled: true,
-    displayDuration: 6000, // Longer display time for readability
-    rotateInterval: 15000, // Slower rotation - less interruption
+    displayDuration: 10000, // 10 seconds - enough time for humans to read
+    rotateInterval: 20000, // 20 seconds between auto thoughts
     emoticons: {
       IDLE: '✨',
       SEARCHING: '🔍',

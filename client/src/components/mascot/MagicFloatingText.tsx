@@ -87,8 +87,9 @@ const generateLetterStates = (text: string, colorPalette: string[]): LetterState
   });
 };
 
-// Calculate position to keep bubble anchored directly above mascot
+// Calculate position to keep bubble anchored VERY close to mascot (magnet-style)
 // mascotPos is in BOTTOM-RIGHT coordinates (distance from bottom-right corner)
+// This positioning stays tight even during mutations/transforms/emote changes
 const calculateAnchoredPosition = (
   mascotPos: { x: number; y: number },
   mascotSize: number,
@@ -105,16 +106,21 @@ const calculateAnchoredPosition = (
   const mascotCenterX = viewportWidth - mascotPos.x - (mascotSize / 2);
   const mascotTopY = viewportHeight - mascotPos.y - mascotSize;
   
-  // Position bubble ABOVE mascot with small gap (offsetAbove reduced for closeness)
-  const bubbleBottomY = mascotTopY - 8; // 8px gap above mascot
+  // MAGNET POSITIONING: Bubble sits RIGHT on top of mascot with minimal gap
+  // Reduced from 8px to just 2px for tight magnet-style anchoring
+  const magnetGap = isMobile ? 4 : 2; // Slightly more gap on mobile for touch
+  const bubbleBottomY = mascotTopY - magnetGap;
   
-  // Center bubble horizontally on mascot
+  // Center bubble horizontally on mascot center
   let bubbleLeftX = mascotCenterX - (bubbleWidth / 2);
   
-  // Clamp to viewport bounds with padding
-  const padding = 10;
+  // Clamp to viewport bounds with minimal padding
+  const padding = 8;
   bubbleLeftX = Math.max(padding, Math.min(bubbleLeftX, viewportWidth - bubbleWidth - padding));
-  const bubbleTop = Math.max(padding, bubbleBottomY - 60); // Estimate bubble height ~60px
+  
+  // Estimate bubble height based on content (compact positioning)
+  const estimatedBubbleHeight = isMobile ? 50 : 55;
+  const bubbleTop = Math.max(padding, bubbleBottomY - estimatedBubbleHeight);
   
   return {
     position: 'fixed',

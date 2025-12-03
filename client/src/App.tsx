@@ -181,6 +181,7 @@ import { thoughtManager, type Thought } from "@/lib/mascot/ThoughtManager";
 import { useMascotAIIntegration } from "@/hooks/use-mascot-ai";
 import { useMascotObserver } from "@/hooks/use-mascot-observer";
 import { useMascotEmotes, setGlobalEmoteTrigger } from "@/hooks/use-mascot-emotes";
+import { useMascotShowcase } from "@/hooks/use-mascot-showcase";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 
 function MascotRenderer() {
@@ -237,7 +238,7 @@ function MascotRenderer() {
   
   const bubbleSize = isExpanded ? sizes.expandedSize : sizes.defaultSize;
   
-  const { isRoaming, currentEffect, effectConfig } = useMascotRoaming(
+  const { isRoaming, currentEffect, effectConfig, triggerRoam } = useMascotRoaming(
     position,
     setRoamingPosition,
     bubbleSize,
@@ -250,6 +251,27 @@ function MascotRenderer() {
     bubbleSize,
     isDragging,
     isRoaming
+  );
+  
+  // PUBLIC ROUTES for showcase mode detection
+  const PUBLIC_ROUTES = useMemo(() => new Set([
+    "/", "/login", "/register", "/pricing", "/contact", "/support",
+    "/terms", "/privacy", "/chat", "/mobile-chat", "/live-chat",
+    "/helpdesk5", "/support/chat", "/logo-showcase", "/mascot-demo"
+  ]), []);
+  
+  const isPublicPage = PUBLIC_ROUTES.has(location) || 
+                       location.startsWith("/onboarding/") ||
+                       location.startsWith("/pay-invoice/");
+  
+  const isAuthenticated = !!user;
+  
+  // Showcase mode - shows off mascot animations on public pages
+  const showcaseControl = useMascotShowcase(
+    triggerEmote,
+    triggerRoam,
+    isPublicPage,
+    isAuthenticated
   );
   
   const zoomScale = isDragging ? MASCOT_CONFIG.floatMotion.dragZoomScale : 1;
@@ -475,6 +497,9 @@ function MascotRenderer() {
             variant={isExpanded ? 'expanded' : 'mini'}
             size={bubbleSize}
             emote={emoteState}
+            chromaticAberration={showcaseControl.chromaticAberration}
+            glitchEffect={showcaseControl.glitchEffect}
+            warpIntensity={showcaseControl.warpIntensity}
           />
           
           {!currentThought && workspaceId && (

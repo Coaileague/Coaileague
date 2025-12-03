@@ -98,6 +98,9 @@ interface CoAITwinMascotProps {
   emote?: EmoteState; // Current emote state for visual expression
   triggerEmote?: EmoteName; // Trigger an emote morph animation
   onEmoteComplete?: (emote: EmoteName) => void; // Callback when emote animation finishes
+  chromaticAberration?: boolean; // Enable chromatic aberration effect
+  glitchEffect?: boolean; // Enable glitch/distortion effect
+  warpIntensity?: number; // Warp mutation intensity (0-1)
 }
 
 const MODE_COLORS: Record<MascotMode, string> = {
@@ -1566,7 +1569,10 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
   variant,
   emote,
   triggerEmote,
-  onEmoteComplete
+  onEmoteComplete,
+  chromaticAberration = false,
+  glitchEffect = false,
+  warpIntensity = 0
 }: CoAITwinMascotProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -1659,6 +1665,17 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
   // Determine which variant to render
   const effectiveVariant: MascotVariant = variant || (mini ? 'mini' : 'full');
 
+  // Build CSS filter for showcase effects
+  const showcaseFilter = [
+    chromaticAberration ? 'url(#chromatic-aberration)' : '',
+    glitchEffect ? 'url(#glitch-effect)' : '',
+    warpIntensity > 0 ? `hue-rotate(${warpIntensity * 45}deg) saturate(${1 + warpIntensity * 0.5})` : ''
+  ].filter(Boolean).join(' ') || undefined;
+  
+  // Glitch animation class
+  const glitchClass = glitchEffect ? 'animate-glitch' : '';
+  const chromaticClass = chromaticAberration ? 'animate-chromatic' : '';
+
   // Mini mode: Small 80px bubble for corner placement
   if (effectiveVariant === 'mini') {
     const bubbleSize = size || 80;
@@ -1673,15 +1690,41 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
         data-mascot-variant="mini"
         data-mascot-mode={mode}
         data-warp-active={warpState.phase !== 'idle'}
+        data-chromatic={chromaticAberration}
+        data-glitch={glitchEffect}
+        data-warp-intensity={warpIntensity > 0 ? warpIntensity : undefined}
       >
+        {/* SVG filters for visual effects */}
+        <svg className="absolute w-0 h-0" aria-hidden="true">
+          <defs>
+            <filter id="chromatic-aberration" x="-20%" y="-20%" width="140%" height="140%">
+              <feColorMatrix type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red" />
+              <feOffset in="red" dx="2" dy="0" result="red-shifted" />
+              <feColorMatrix type="matrix" in="SourceGraphic" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="green" />
+              <feColorMatrix type="matrix" in="SourceGraphic" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="blue" />
+              <feOffset in="blue" dx="-2" dy="0" result="blue-shifted" />
+              <feBlend mode="screen" in="red-shifted" in2="green" result="red-green" />
+              <feBlend mode="screen" in="red-green" in2="blue-shifted" />
+            </filter>
+            <filter id="glitch-effect" x="-10%" y="-10%" width="120%" height="120%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.01" numOctaves="1" result="noise" seed="0">
+                <animate attributeName="seed" from="0" to="100" dur="0.5s" repeatCount="indefinite" />
+              </feTurbulence>
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale="5" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+          </defs>
+        </svg>
+        
         <div 
           ref={containerRef} 
-          className="w-full h-full pointer-events-none relative"
+          className={`w-full h-full pointer-events-none relative ${glitchClass} ${chromaticClass}`}
           style={{ 
             width: bubbleSize, 
             height: bubbleSize,
-            transform: 'scale(2.2)',
+            transform: `scale(2.2) ${warpIntensity > 0 ? `rotate(${warpIntensity * 5}deg)` : ''}`,
             transformOrigin: 'center',
+            filter: showcaseFilter,
+            transition: 'filter 0.3s ease-out, transform 0.3s ease-out',
           }}
         >
           <canvas
@@ -1695,8 +1738,8 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
             data-testid="coai-twin-mascot-canvas-mini"
           />
           <WarpMutationOverlay
-            phase={warpState.phase}
-            intensity={warpState.intensity}
+            phase={warpIntensity > 0 ? 'peak' : warpState.phase}
+            intensity={warpIntensity > 0 ? warpIntensity : warpState.intensity}
             colors={warpState.colors}
             size={bubbleSize}
           />
@@ -1719,15 +1762,40 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
         data-mascot-variant="expanded"
         data-mascot-mode={mode}
         data-warp-active={warpState.phase !== 'idle'}
+        data-chromatic={chromaticAberration}
+        data-glitch={glitchEffect}
       >
+        {/* SVG filters for visual effects */}
+        <svg className="absolute w-0 h-0" aria-hidden="true">
+          <defs>
+            <filter id="chromatic-aberration-exp" x="-20%" y="-20%" width="140%" height="140%">
+              <feColorMatrix type="matrix" values="1 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 1 0" result="red" />
+              <feOffset in="red" dx="3" dy="0" result="red-shifted" />
+              <feColorMatrix type="matrix" in="SourceGraphic" values="0 0 0 0 0  0 1 0 0 0  0 0 0 0 0  0 0 0 1 0" result="green" />
+              <feColorMatrix type="matrix" in="SourceGraphic" values="0 0 0 0 0  0 0 0 0 0  0 0 1 0 0  0 0 0 1 0" result="blue" />
+              <feOffset in="blue" dx="-3" dy="0" result="blue-shifted" />
+              <feBlend mode="screen" in="red-shifted" in2="green" result="red-green" />
+              <feBlend mode="screen" in="red-green" in2="blue-shifted" />
+            </filter>
+            <filter id="glitch-effect-exp" x="-10%" y="-10%" width="120%" height="120%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.015" numOctaves="1" result="noise" seed="0">
+                <animate attributeName="seed" from="0" to="100" dur="0.4s" repeatCount="indefinite" />
+              </feTurbulence>
+              <feDisplacementMap in="SourceGraphic" in2="noise" scale="8" xChannelSelector="R" yChannelSelector="G" />
+            </filter>
+          </defs>
+        </svg>
+        
         <div 
           ref={containerRef} 
-          className="w-full h-full pointer-events-none relative"
+          className={`w-full h-full pointer-events-none relative ${glitchClass} ${chromaticClass}`}
           style={{ 
             width: bubbleSize, 
             height: bubbleSize,
-            transform: 'scale(1.4)',
+            transform: `scale(1.4) ${warpIntensity > 0 ? `rotate(${warpIntensity * 5}deg)` : ''}`,
             transformOrigin: 'center',
+            filter: chromaticAberration ? 'url(#chromatic-aberration-exp)' : glitchEffect ? 'url(#glitch-effect-exp)' : showcaseFilter,
+            transition: 'filter 0.3s ease-out, transform 0.3s ease-out',
           }}
         >
           <canvas
@@ -1741,8 +1809,8 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
             data-testid="coai-twin-mascot-canvas-expanded"
           />
           <WarpMutationOverlay
-            phase={warpState.phase}
-            intensity={warpState.intensity}
+            phase={warpIntensity > 0 ? 'peak' : warpState.phase}
+            intensity={warpIntensity > 0 ? warpIntensity : warpState.intensity}
             colors={warpState.colors}
             size={bubbleSize}
           />

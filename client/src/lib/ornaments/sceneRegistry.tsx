@@ -143,15 +143,16 @@ const CornerClusterScene = memo(function CornerClusterScene() {
   const isTablet = windowSize.w < TABLET_THRESHOLD;
   
   const ornaments = useMemo(() => {
-    // Skip entirely on mobile - too cluttered
-    if (!enabled || seasonId === 'default' || isMobile) return [];
+    // Skip on default season only - mobile gets lighter decorations
+    if (!enabled || seasonId === 'default') return [];
     
     const palette = getPalette(seasonId);
-    // Determine count per corner based on density
-    const perCorner = density === 'dense' ? 3 : density === 'medium' ? 2 : 1;
-    // Scale for tablet
-    const sizeScale = isTablet ? 0.85 : 1;
-    const posScale = isTablet ? 0.8 : 1;
+    // Determine count per corner based on density - mobile gets minimal decorations
+    const basePerCorner = density === 'dense' ? 3 : density === 'medium' ? 2 : 1;
+    const perCorner = isMobile ? Math.min(1, basePerCorner) : basePerCorner;
+    // Scale for mobile/tablet
+    const sizeScale = isMobile ? 0.7 : isTablet ? 0.85 : 1;
+    const posScale = isMobile ? 0.6 : isTablet ? 0.8 : 1;
     
     const result: Array<{
       id: string;
@@ -301,10 +302,13 @@ const HeaderGarlandScene = memo(function HeaderGarlandScene() {
     setSafePositions(safe.slice(0, 8));
   }, [exclusionZones, windowWidth]);
   
-  // Skip header garland on mobile for clean look
+  // Show header garland on all devices (mobile gets fewer lights)
   const isMobile = windowWidth < MOBILE_THRESHOLD;
   const isChristmas = seasonId === 'christmas';
-  if (!isChristmas || isMobile || safePositions.length === 0) return null;
+  if (!isChristmas || safePositions.length === 0) return null;
+  
+  // Limit lights on mobile for performance
+  const maxLights = isMobile ? 4 : 8;
   
   const palette = getPalette(seasonId);
   
@@ -315,7 +319,7 @@ const HeaderGarlandScene = memo(function HeaderGarlandScene() {
       data-testid="header-garland"
     >
       {/* Individual lights at safe positions only - avoiding UI elements */}
-      {safePositions.map((x, i) => (
+      {safePositions.slice(0, maxLights).map((x, i) => (
         <div
           key={`light-${i}`}
           className="absolute"
@@ -489,8 +493,8 @@ const SantaFlyoverScene = memo(function SantaFlyoverScene() {
     };
     
     const scheduleNextFlyover = () => {
-      // PERFORMANCE: Reduced frequency from 30-60s to 90-180s
-      const delay = 90000 + Math.random() * 90000;
+      // PERFORMANCE: Santa appears ~twice per hour (25-35 mins between flyovers)
+      const delay = 1500000 + Math.random() * 600000; // 25-35 minutes
       
       const timeout = window.setTimeout(() => {
         setDirection(Math.random() > 0.5 ? 'ltr' : 'rtl');

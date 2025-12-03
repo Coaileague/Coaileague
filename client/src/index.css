@@ -398,6 +398,72 @@
   animation: starSparkle 2s ease-in-out infinite;
 }
 
+/* Mascot showcase effects */
+@keyframes mascotGlitch {
+  0%, 90%, 100% { 
+    transform: translate(0);
+    filter: none;
+  }
+  92% { 
+    transform: translate(-2px, 1px);
+    filter: hue-rotate(90deg);
+  }
+  94% { 
+    transform: translate(2px, -1px);
+    filter: hue-rotate(-90deg);
+  }
+  96% { 
+    transform: translate(-1px, -1px);
+    filter: hue-rotate(180deg);
+  }
+  98% { 
+    transform: translate(1px, 1px);
+    filter: hue-rotate(-180deg);
+  }
+}
+
+@keyframes mascotChromatic {
+  0%, 100% { 
+    filter: url(#chromatic-aberration);
+    opacity: 1;
+  }
+  50% { 
+    filter: url(#chromatic-aberration) brightness(1.1);
+    opacity: 0.95;
+  }
+}
+
+@keyframes mascotWarpPulse {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    filter: hue-rotate(0deg) saturate(1);
+  }
+  25% {
+    transform: scale(1.02) rotate(1deg);
+    filter: hue-rotate(15deg) saturate(1.2);
+  }
+  50% {
+    transform: scale(1.05) rotate(-1deg);
+    filter: hue-rotate(30deg) saturate(1.4);
+  }
+  75% {
+    transform: scale(1.02) rotate(0.5deg);
+    filter: hue-rotate(15deg) saturate(1.2);
+  }
+}
+
+.animate-glitch {
+  animation: mascotGlitch 0.5s ease-in-out infinite;
+}
+
+.animate-chromatic {
+  animation: mascotChromatic 1s ease-in-out infinite;
+}
+
+.animate-warp-pulse {
+  animation: mascotWarpPulse 2s ease-in-out infinite;
+}
+
 .sparkle-star {
   position: relative;
   width: 6px;

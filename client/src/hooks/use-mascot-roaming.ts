@@ -33,6 +33,11 @@ function easeInOutCubic(t: number): number {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
+// Smoother sine-based easing for natural movement
+function easeInOutSine(t: number): number {
+  return -(Math.cos(Math.PI * t) - 1) / 2;
+}
+
 function getRandomInRange(min: number, max: number): number {
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
@@ -221,17 +226,21 @@ export function useMascotRoaming(
       let easedProgress: number;
       switch (currentEffect) {
         case 'zap':
-          easedProgress = 1 - Math.pow(1 - progress, 3);
+          // Smoother zap with gentle ease-out
+          easedProgress = easeInOutSine(progress);
           break;
         case 'dash':
-          easedProgress = progress < 0.3 ? progress * 2 : 0.6 + (progress - 0.3) * 0.57;
+          // Smooth acceleration then coast
+          easedProgress = easeInOutSine(progress);
           break;
         case 'float':
-          easedProgress = progress + Math.sin(progress * Math.PI * 2) * 0.05;
+          // Gentle floating with subtle wave motion
+          easedProgress = easeInOutSine(progress) + Math.sin(progress * Math.PI * 2) * 0.03;
           break;
         case 'glide':
         default:
-          easedProgress = easeInOutCubic(progress);
+          // Smoothest possible movement
+          easedProgress = easeInOutSine(progress);
       }
       
       const newX = lerp(startPos.x, targetPos.x, easedProgress);
