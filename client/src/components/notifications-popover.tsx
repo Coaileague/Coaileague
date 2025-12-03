@@ -163,15 +163,21 @@ export function NotificationsPopover() {
   // This syncs notifications in real-time and updates the cache directly
   const { isConnected, unreadCount: wsUnreadCount } = useNotificationWebSocket(userId, workspaceId);
 
+  // Get cached data for initial render to prevent showing 0 on cold start
+  const cachedData = queryClient.getQueryData<NotificationsData>(["/api/notifications/combined"]);
+
   // WebSocket delivers live updates now - polling is just a fallback
   // Live updates insert directly into cache via use-notification-websocket hook
-  const { data, isLoading, refetch } = useQuery<NotificationsData>({
+  const { data: fetchedData, isLoading, refetch } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications/combined"],
     enabled: !!user, // Only fetch when user is authenticated
     staleTime: 10000, // 10 seconds - trust WebSocket for fresh data
     refetchInterval: isConnected ? 60000 : 15000, // Slower polling when WS is connected
     refetchIntervalInBackground: false, // Only poll when visible
   });
+  
+  // Use fetched data, falling back to cached data for immediate display
+  const data = fetchedData || cachedData;
 
   useEffect(() => {
     if (open) {
@@ -290,22 +296,38 @@ export function NotificationsPopover() {
   const rawMaintenanceAlerts = data?.maintenanceAlerts || [];
   const rawNotifications = data?.notifications || [];
   
-  const filteredPlatformUpdates = rawPlatformUpdates.filter(u => !acknowledgedIds.has(u.id));
+  // Show all platform updates but mark locally acknowledged ones as viewed
+  // This prevents "No updates yet" when user has acknowledged previous updates
+  const filteredPlatformUpdates = rawPlatformUpdates.map(u => ({
+    ...u,
+    isViewed: u.isViewed || acknowledgedIds.has(u.id) // Mark as viewed if locally acknowledged
+  }));
   const filteredMaintenanceAlerts = rawMaintenanceAlerts.filter(a => !acknowledgedAlertIds.has(a.id));
   const filteredNotifications = rawNotifications.filter(n => !acknowledgedIds.has(n.id));
   
+  // Use API's pre-computed counts as baseline when data is available
+  // This ensures counts show immediately when cache is available
+  const apiUnreadPlatformUpdates = data?.unreadPlatformUpdates ?? 0;
+  const apiUnreadNotifications = data?.unreadNotifications ?? 0;
+  const apiUnreadAlerts = data?.unreadAlerts ?? 0;
+  const apiTotalUnread = data?.totalUnread ?? 0;
+  
+  // For display in tabs, compute from filtered data (excludes locally acknowledged)
   const unreadPlatformUpdates = filteredPlatformUpdates.filter(u => !u.isViewed).length;
   const unreadAlerts = filteredMaintenanceAlerts.filter(a => !a.isAcknowledged).length;
   
   // Use WebSocket count for notifications only (more accurate real-time data)
-  // Fall back to calculated count from data when WS is not connected
+  // Fall back to API count, then to calculated count
   const calculatedNotificationCount = filteredNotifications.filter(n => !n.isRead).length;
-  const unreadNotifications = isConnected && wsUnreadCount !== undefined 
+  const unreadNotifications = isConnected && wsUnreadCount > 0 
     ? wsUnreadCount 
-    : calculatedNotificationCount;
+    : (apiUnreadNotifications > 0 ? apiUnreadNotifications : calculatedNotificationCount);
   
-  // Total unread includes platform updates + notifications + alerts
-  const totalUnread = unreadPlatformUpdates + unreadNotifications + unreadAlerts;
+  // Total unread: Use API total when loading, otherwise compute from components
+  // This ensures the badge shows correct count immediately from cache
+  const totalUnread = data 
+    ? (unreadPlatformUpdates + unreadNotifications + unreadAlerts)
+    : (isConnected && wsUnreadCount > 0 ? wsUnreadCount : apiTotalUnread);
 
   const unviewedUpdates = filteredPlatformUpdates.filter(u => !u.isViewed);
   const allUnviewedSelected = unviewedUpdates.length > 0 && selectedIds.size === unviewedUpdates.length;
