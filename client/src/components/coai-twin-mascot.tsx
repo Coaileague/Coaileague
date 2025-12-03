@@ -997,21 +997,80 @@ class CoAITwinEngine {
   }
 
   // Linear interpolation for smooth color transitions during mutations
+  // With validation to prevent corrupted color values
   private lerpColor(colorA: string, colorB: string, amount: number): string {
     const parseHex = (hex: string) => {
+      // Validate hex format - must be 7 chars (#RRGGBB) or 4 chars (#RGB)
+      if (!hex || typeof hex !== 'string') return { r: 128, g: 128, b: 128 };
+      
       const clean = hex.replace('#', '');
-      return {
-        r: parseInt(clean.substring(0, 2), 16),
-        g: parseInt(clean.substring(2, 4), 16),
-        b: parseInt(clean.substring(4, 6), 16)
-      };
+      if (!/^[0-9a-fA-F]+$/.test(clean)) {
+        // Invalid hex characters - return fallback gray
+        return { r: 128, g: 128, b: 128 };
+      }
+      
+      // Handle shorthand (#RGB) and full (#RRGGBB) formats
+      if (clean.length === 3) {
+        return {
+          r: parseInt(clean[0] + clean[0], 16) || 0,
+          g: parseInt(clean[1] + clean[1], 16) || 0,
+          b: parseInt(clean[2] + clean[2], 16) || 0
+        };
+      }
+      
+      if (clean.length >= 6) {
+        return {
+          r: parseInt(clean.substring(0, 2), 16) || 0,
+          g: parseInt(clean.substring(2, 4), 16) || 0,
+          b: parseInt(clean.substring(4, 6), 16) || 0
+        };
+      }
+      
+      // Invalid length - return fallback
+      return { r: 128, g: 128, b: 128 };
     };
+    
     const ca = parseHex(colorA);
     const cb = parseHex(colorB);
-    const rr = Math.round(ca.r + amount * (cb.r - ca.r));
-    const gg = Math.round(ca.g + amount * (cb.g - ca.g));
-    const bb = Math.round(ca.b + amount * (cb.b - ca.b));
-    return '#' + ((1 << 24) + (rr << 16) + (gg << 8) + bb).toString(16).slice(1);
+    
+    // Clamp amount to valid range
+    const t = Math.max(0, Math.min(1, amount || 0));
+    
+    // Lerp and clamp to 0-255
+    const rr = Math.max(0, Math.min(255, Math.round(ca.r + t * (cb.r - ca.r))));
+    const gg = Math.max(0, Math.min(255, Math.round(ca.g + t * (cb.g - ca.g))));
+    const bb = Math.max(0, Math.min(255, Math.round(ca.b + t * (cb.b - ca.b))));
+    
+    // Return properly formatted hex color
+    return '#' + rr.toString(16).padStart(2, '0') + gg.toString(16).padStart(2, '0') + bb.toString(16).padStart(2, '0');
+  }
+  
+  // Convert hex color to RGB object (with validation)
+  private hexToRgb(hex: string): { r: number; g: number; b: number } {
+    if (!hex || typeof hex !== 'string') return { r: 128, g: 128, b: 128 };
+    
+    const clean = hex.replace('#', '');
+    if (!/^[0-9a-fA-F]+$/.test(clean)) {
+      return { r: 128, g: 128, b: 128 };
+    }
+    
+    if (clean.length === 3) {
+      return {
+        r: parseInt(clean[0] + clean[0], 16) || 0,
+        g: parseInt(clean[1] + clean[1], 16) || 0,
+        b: parseInt(clean[2] + clean[2], 16) || 0
+      };
+    }
+    
+    if (clean.length >= 6) {
+      return {
+        r: parseInt(clean.substring(0, 2), 16) || 0,
+        g: parseInt(clean.substring(2, 4), 16) || 0,
+        b: parseInt(clean.substring(4, 6), 16) || 0
+      };
+    }
+    
+    return { r: 128, g: 128, b: 128 };
   }
 
   private update() {
@@ -1291,8 +1350,10 @@ class CoAITwinEngine {
       if (modeGlow > 0.1) {
         const glowSize = 25 * s * 0.005 * finalScale * (1 + modeGlow * 0.5);
         const gradient = this.ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, glowSize);
-        gradient.addColorStop(0, `${t.color}${Math.floor(modeGlow * 80).toString(16).padStart(2, '0')}`);
-        gradient.addColorStop(0.5, `${t.color}${Math.floor(modeGlow * 40).toString(16).padStart(2, '0')}`);
+        // Use rgba format for reliable alpha blending (avoids hex color corruption)
+        const rgb = this.hexToRgb(t.color);
+        gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${modeGlow * 0.32})`);
+        gradient.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${modeGlow * 0.16})`);
         gradient.addColorStop(1, 'transparent');
         this.ctx.fillStyle = gradient;
         this.ctx.beginPath();
