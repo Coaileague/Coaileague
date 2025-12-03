@@ -1245,7 +1245,7 @@ export const MASCOT_CONFIG: MascotConfig = {
     {
       key: 'christmas',
       name: 'Christmas',
-      dateRange: { startMonth: 12, startDay: 20, endMonth: 12, endDay: 26 },
+      dateRange: { startMonth: 12, startDay: 1, endMonth: 12, endDay: 26 },
       thoughts: ['Ho ho ho!', 'Merry and bright!', 'Tis the season!', 'Gift of success!'],
       greeting: 'Merry Christmas! May your business be merry and profitable!',
     },

@@ -110,7 +110,15 @@ const MODE_COLORS: Record<MascotMode, string> = {
   ERROR: '#ef4444',     // Red
   CELEBRATING: '#fbbf24', // Amber/Gold
   ADVISING: '#10b981',    // Emerald
-  HOLIDAY: '#f472b6'      // Pink
+  HOLIDAY: '#c41e3a'      // Christmas Red
+};
+
+const CHRISTMAS_COLORS = {
+  red: '#c41e3a',      // Christmas red
+  green: '#165b33',    // Christmas green
+  gold: '#ffd700',     // Christmas gold
+  white: '#ffffff',    // Snow white
+  particles: ['#ff0000', '#00ff00', '#ffd700', '#ffffff', '#ff69b4', '#00bfff']
 };
 
 const MODE_LABELS: Record<MascotMode, string> = {
@@ -515,6 +523,11 @@ class CoAITwinEngine {
       this.twins[0].color = '#38bdf8';
       this.twins[1].color = '#a855f7';
       this.twins[2].color = '#fbbf24';  // Brighter gold for celebration
+    } else if (mode === 'HOLIDAY') {
+      // Christmas colors: Red, Green, Gold - festive glow
+      this.twins[0].color = CHRISTMAS_COLORS.red;    // Christmas Red
+      this.twins[1].color = CHRISTMAS_COLORS.green;  // Christmas Green
+      this.twins[2].color = CHRISTMAS_COLORS.gold;   // Christmas Gold
     } else {
       this.twins[0].color = color;
       this.twins[1].color = '#fff';
@@ -978,14 +991,15 @@ class CoAITwinEngine {
           this.spawnParticle(tx, ty, '#f4c15d');
         }
       } else if (this.state.mode === 'HOLIDAY') {
-        // Festive bouncy movement with joy
+        // Festive bouncy movement with joy - Christmas spirit!
         const bouncePhase = this.state.time * 0.08 + starAngle;
         const bounceAmp = 25 * s * 0.003;
         tx = Math.cos(bouncePhase) * bounceAmp;
         ty = Math.sin(bouncePhase * 1.5) * bounceAmp * 0.6 + Math.abs(Math.sin(this.state.time * 0.15)) * 8;
-        // Festive particles
-        if (this.state.time % 30 === 0) {
-          this.spawnParticle(tx, ty, ['#ff6b6b', '#4ecdc4', '#ffe66d'][i % 3]);
+        // Christmas particles - Red, Green, Gold, White
+        if (this.state.time % 25 === 0) {
+          const xmasColors = CHRISTMAS_COLORS.particles;
+          this.spawnParticle(tx, ty, xmasColors[Math.floor(Math.random() * xmasColors.length)]);
         }
       } else if (this.state.mode === 'CELEBRATING') {
         // Extra celebratory with confetti-like bursts
