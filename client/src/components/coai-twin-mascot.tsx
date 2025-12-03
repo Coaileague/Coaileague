@@ -171,6 +171,75 @@ export const MODE_VISUAL_CONFIG: Record<MascotMode, ModeVisualConfig> = {
   GREETING: { scale: 1.4, glow: 0.8, distortion: 0.2, pulseSpeed: 1.0, trailLength: 16, bubbleGradient: 'from-pink-500/25 to-purple-500/15' }
 };
 
+// PHYSICAL GEOMETRY MORPHING - changes the actual shape of stars per mode
+interface ModeGeometryConfig {
+  points: number;           // Number of star points (3-12)
+  innerRatio: number;       // Inner radius as fraction of outer (0.2-0.8)
+  twist: number;            // Rotation twist per point (0-1)
+  axialStretch: { x: number; y: number };  // Axis stretch for elongation
+  noiseAmp: number;         // Vertex noise amplitude (0-1)
+  noiseFreq: number;        // Noise frequency
+  roundness: number;        // Smooth curves vs sharp points (0=sharp, 1=round)
+  swirl: number;            // Spiral arm effect (0-1)
+  skipSegments: number[];   // Segments to skip (for cracked effect)
+  subSpikes: boolean;       // Add sub-spikes between main points
+}
+
+export const MODE_GEOMETRY_CONFIG: Record<MascotMode, ModeGeometryConfig> = {
+  IDLE: { 
+    points: 5, innerRatio: 0.4, twist: 0, axialStretch: { x: 1, y: 1 }, 
+    noiseAmp: 0.05, noiseFreq: 1, roundness: 0.3, swirl: 0, skipSegments: [], subSpikes: false 
+  },
+  SEARCHING: { 
+    points: 4, innerRatio: 0.25, twist: 0.2, axialStretch: { x: 1.4, y: 0.8 },
+    noiseAmp: 0.1, noiseFreq: 2, roundness: 0.1, swirl: 0.3, skipSegments: [], subSpikes: false 
+  },
+  THINKING: { 
+    points: 8, innerRatio: 0.5, twist: 0.15, axialStretch: { x: 1, y: 1 },
+    noiseAmp: 0.2, noiseFreq: 3, roundness: 0, swirl: 0, skipSegments: [], subSpikes: true 
+  },
+  ANALYZING: { 
+    points: 6, innerRatio: 0.55, twist: 0, axialStretch: { x: 1.1, y: 1.1 },
+    noiseAmp: 0.08, noiseFreq: 1.5, roundness: 0.4, swirl: 0, skipSegments: [], subSpikes: false 
+  },
+  CODING: { 
+    points: 4, innerRatio: 0.6, twist: 0, axialStretch: { x: 1, y: 1 },
+    noiseAmp: 0, noiseFreq: 0, roundness: 0.8, swirl: 0, skipSegments: [], subSpikes: false 
+  },
+  LISTENING: { 
+    points: 6, innerRatio: 0.35, twist: 0.1, axialStretch: { x: 0.8, y: 1.5 },
+    noiseAmp: 0.25, noiseFreq: 4, roundness: 0.5, swirl: 0, skipSegments: [], subSpikes: false 
+  },
+  UPLOADING: { 
+    points: 5, innerRatio: 0.3, twist: 0.4, axialStretch: { x: 1, y: 1.2 },
+    noiseAmp: 0.15, noiseFreq: 2, roundness: 0.2, swirl: 0.6, skipSegments: [], subSpikes: false 
+  },
+  SUCCESS: { 
+    points: 6, innerRatio: 0.5, twist: 0, axialStretch: { x: 1.2, y: 1.2 },
+    noiseAmp: 0.05, noiseFreq: 1, roundness: 0.6, swirl: 0, skipSegments: [], subSpikes: true 
+  },
+  ERROR: { 
+    points: 5, innerRatio: 0.45, twist: 0.3, axialStretch: { x: 1, y: 1 },
+    noiseAmp: 0.5, noiseFreq: 5, roundness: 0, swirl: 0, skipSegments: [1, 3], subSpikes: false 
+  },
+  CELEBRATING: { 
+    points: 10, innerRatio: 0.35, twist: 0.1, axialStretch: { x: 1, y: 1 },
+    noiseAmp: 0.15, noiseFreq: 2, roundness: 0.1, swirl: 0, skipSegments: [], subSpikes: true 
+  },
+  ADVISING: { 
+    points: 8, innerRatio: 0.45, twist: 0, axialStretch: { x: 1, y: 1 },
+    noiseAmp: 0.05, noiseFreq: 1, roundness: 0.3, swirl: 0, skipSegments: [], subSpikes: true 
+  },
+  HOLIDAY: { 
+    points: 6, innerRatio: 0.4, twist: 0.05, axialStretch: { x: 1, y: 1 },
+    noiseAmp: 0.1, noiseFreq: 2, roundness: 0.2, swirl: 0, skipSegments: [], subSpikes: true 
+  },
+  GREETING: { 
+    points: 4, innerRatio: 0.5, twist: 0, axialStretch: { x: 1, y: 1 },
+    noiseAmp: 0.1, noiseFreq: 1.5, roundness: 0.7, swirl: 0, skipSegments: [], subSpikes: false 
+  }
+};
+
 // Export helper to get bubble colors for current mode
 export function getModeTheme(mode: MascotMode) {
   return {
@@ -1462,76 +1531,148 @@ class CoAITwinEngine {
     // Get current twin and smoothly lerp its scale toward target
     const twin = this.twins[twinIndex];
     if (twin) {
-      // Smooth lerp to prevent size glitches during state transitions
       twin.currentScale = twin.currentScale + (targetScale - twin.currentScale) * CoAITwinEngine.SCALE_LERP_SPEED;
-      
-      // Clamp to prevent extreme values
       twin.currentScale = Math.max(0.5, Math.min(twin.currentScale, 2.0));
     }
     
-    // Use smoothly interpolated scale instead of raw target
-    // Add mutation pulse for dramatic effect during mode transitions
+    // Mutation pulse for dramatic effect during mode transitions
     const mutationPulse = 1 + this.state.mutation * 0.15 * Math.sin(this.state.time * 0.4);
     const scale = (twin?.currentScale ?? targetScale) * mutationPulse;
     const wobble = behavior.wobble * morphState.wobbleAmount;
     const glow = Math.max(behavior.glow, morphState.glowIntensity);
     const speed = behavior.speed * morphState.wobbleSpeed;
     
-    // Apply wobble offset with unique phase per star
+    // Apply wobble offset
     const wobbleX = Math.sin(this.state.time * 0.1 * speed + twinIndex * 2.1) * wobble * 3;
     const wobbleY = Math.cos(this.state.time * 0.12 * speed + twinIndex * 2.1) * wobble * 3;
-    
-    // Apply morph offset
     const drawX = x + wobbleX + morphState.offsetX;
     const drawY = y + wobbleY + morphState.offsetY;
     
-    // Apply scaled sizes
+    // ====== PHYSICAL GEOMETRY MORPHING ======
+    const geo = MODE_GEOMETRY_CONFIG[this.state.mode];
+    const visualConfig = MODE_VISUAL_CONFIG[this.state.mode];
+    
+    // Calculate morphed radii with geometry config
     const scaledOuterR = outerR * scale;
-    const scaledInnerR = innerR * scale;
+    const scaledInnerR = scaledOuterR * geo.innerRatio;
     
-    // Apply morph rotation
-    const morphRotation = morphState.rotation;
+    // Morph rotation with twist
+    const baseRotation = morphState.rotation - (this.state.time * 0.05 * speed);
+    const twistOffset = geo.twist * Math.sin(this.state.time * 0.1);
     
-    // Draw dark outline first for visibility on light backgrounds
+    // Generate morphed star path with variable geometry
+    const generateMorphPath = (radiusOffset: number = 0): { x: number; y: number }[] => {
+      const points: { x: number; y: number }[] = [];
+      const numPoints = geo.points;
+      const angleStep = (Math.PI * 2) / numPoints;
+      
+      for (let i = 0; i < numPoints; i++) {
+        // Skip segments for cracked effect (ERROR mode)
+        if (geo.skipSegments.includes(i)) continue;
+        
+        const baseAngle = i * angleStep + baseRotation + (twistOffset * i);
+        
+        // Apply noise to vertex positions
+        const noiseX = geo.noiseAmp * Math.sin(this.state.time * geo.noiseFreq + i * 3.7 + twinIndex) * scaledOuterR;
+        const noiseY = geo.noiseAmp * Math.cos(this.state.time * geo.noiseFreq * 1.3 + i * 2.3 + twinIndex) * scaledOuterR;
+        
+        // Apply swirl (spiral arm effect)
+        const swirlRadius = geo.swirl > 0 ? (1 + geo.swirl * (i / numPoints)) : 1;
+        
+        // Calculate outer point with axial stretch
+        const outerRadius = (scaledOuterR + radiusOffset) * swirlRadius;
+        const outerX = Math.cos(baseAngle) * outerRadius * geo.axialStretch.x + noiseX;
+        const outerY = Math.sin(baseAngle) * outerRadius * geo.axialStretch.y + noiseY;
+        points.push({ x: drawX + outerX, y: drawY + outerY });
+        
+        // Calculate inner point (valley between spikes)
+        const innerAngle = baseAngle + angleStep / 2;
+        const innerRadius = scaledInnerR + radiusOffset * 0.5;
+        const innerNoiseX = geo.noiseAmp * 0.5 * Math.sin(this.state.time * geo.noiseFreq + i * 5.1) * scaledInnerR;
+        const innerNoiseY = geo.noiseAmp * 0.5 * Math.cos(this.state.time * geo.noiseFreq + i * 4.3) * scaledInnerR;
+        const innerX = Math.cos(innerAngle) * innerRadius * geo.axialStretch.x + innerNoiseX;
+        const innerY = Math.sin(innerAngle) * innerRadius * geo.axialStretch.y + innerNoiseY;
+        points.push({ x: drawX + innerX, y: drawY + innerY });
+        
+        // Add sub-spikes between main points (for THINKING, CELEBRATING, ADVISING, HOLIDAY)
+        if (geo.subSpikes && i < numPoints - 1) {
+          const subAngle = baseAngle + angleStep * 0.25;
+          const subRadius = scaledOuterR * 0.4;
+          const subX = Math.cos(subAngle) * subRadius * geo.axialStretch.x;
+          const subY = Math.sin(subAngle) * subRadius * geo.axialStretch.y;
+          points.push({ x: drawX + subX, y: drawY + subY });
+        }
+      }
+      return points;
+    };
+    
+    // Draw path with optional roundness (curved vs sharp)
+    const drawMorphPath = (points: { x: number; y: number }[]) => {
+      if (points.length === 0) return;
+      
+      this.ctx.beginPath();
+      if (geo.roundness > 0 && points.length > 2) {
+        // Smooth curved path using quadratic bezier
+        this.ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 0; i < points.length; i++) {
+          const curr = points[i];
+          const next = points[(i + 1) % points.length];
+          const midX = (curr.x + next.x) / 2;
+          const midY = (curr.y + next.y) / 2;
+          
+          // Blend between sharp and curved based on roundness
+          const cpX = curr.x + (midX - curr.x) * geo.roundness;
+          const cpY = curr.y + (midY - curr.y) * geo.roundness;
+          
+          if (geo.roundness > 0.5) {
+            this.ctx.quadraticCurveTo(cpX, cpY, midX, midY);
+          } else {
+            this.ctx.lineTo(curr.x, curr.y);
+          }
+        }
+      } else {
+        // Sharp pointed path
+        this.ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+          this.ctx.lineTo(points[i].x, points[i].y);
+        }
+      }
+      this.ctx.closePath();
+    };
+    
+    // Generate morphed path
+    const morphPath = generateMorphPath(0);
+    const outlinePath = generateMorphPath(2);
+    
+    // Draw dark outline for visibility
     this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.6)';
     this.ctx.lineWidth = 3;
-    this.ctx.beginPath();
-    for (let i = 0; i < 4; i++) {
-      const angle = (i * Math.PI / 2) - (this.state.time * 0.05 * speed) + morphRotation;
-      this.ctx.lineTo(drawX + Math.cos(angle) * (scaledOuterR + 2), drawY + Math.sin(angle) * (scaledOuterR + 2));
-      this.ctx.lineTo(drawX + Math.cos(angle + Math.PI / 4) * (scaledInnerR + 1), drawY + Math.sin(angle + Math.PI / 4) * (scaledInnerR + 1));
-    }
-    this.ctx.closePath();
+    drawMorphPath(outlinePath);
     this.ctx.stroke();
     
-    // Draw colored fill with glow - enhanced by morph glow intensity
+    // Draw colored fill with glow
     this.ctx.fillStyle = color;
-    this.ctx.shadowBlur = 20 + (glow * 40);
+    this.ctx.shadowBlur = 20 + (glow * 40) + (visualConfig.distortion * 20);
     this.ctx.shadowColor = color;
-    this.ctx.beginPath();
-    for (let i = 0; i < 4; i++) {
-      const angle = (i * Math.PI / 2) - (this.state.time * 0.05 * speed) + morphRotation;
-      this.ctx.lineTo(drawX + Math.cos(angle) * scaledOuterR, drawY + Math.sin(angle) * scaledOuterR);
-      this.ctx.lineTo(drawX + Math.cos(angle + Math.PI / 4) * scaledInnerR, drawY + Math.sin(angle + Math.PI / 4) * scaledInnerR);
-    }
-    this.ctx.closePath();
+    drawMorphPath(morphPath);
     this.ctx.fill();
     
-    // Add darker stroke around star for contrast
+    // Add darker stroke around star
     this.ctx.shadowBlur = 0;
     this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.4)';
     this.ctx.lineWidth = 1.5;
     this.ctx.stroke();
     
     // Draw center dot with dark ring
+    const centerRadius = scaledInnerR * 0.6;
     this.ctx.beginPath();
-    this.ctx.arc(drawX, drawY, scaledInnerR + 1, 0, Math.PI * 2);
+    this.ctx.arc(drawX, drawY, centerRadius + 1, 0, Math.PI * 2);
     this.ctx.fillStyle = 'rgba(15, 23, 42, 0.3)';
     this.ctx.fill();
     
     this.ctx.fillStyle = '#fff';
     this.ctx.beginPath();
-    this.ctx.arc(drawX, drawY, scaledInnerR, 0, Math.PI * 2);
+    this.ctx.arc(drawX, drawY, centerRadius, 0, Math.PI * 2);
     this.ctx.fill();
     
     // Trinity branded text: "Co" (cyan), "AI" (purple), "LE" (gold) - spells "CoAILE" (CoAILeague)
