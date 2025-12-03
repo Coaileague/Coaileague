@@ -610,6 +610,88 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Clear all notifications (with enhanced AI Brain sync for Trinity/HelpAI)
+  app.post("/api/notifications/clear-all", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      if (!userId) {
+        return res.json({ success: true, cleared: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
+      
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      const member = await storage.getWorkspaceMemberByUserId(userId);
+      const workspaceId = workspace?.id || member?.workspaceId;
+      
+      if (!workspaceId) {
+        return res.json({ success: true, cleared: { platformUpdates: 0, notifications: 0, alerts: 0 } });
+      }
+      
+      // Clear all platform updates
+      const platformUpdatesCleared = await storage.markAllPlatformUpdatesAsViewed(userId, workspaceId);
+      
+      // Clear all notifications
+      const notificationsCleared = await storage.markAllNotificationsAsRead(userId, workspaceId);
+      
+      // Acknowledge all maintenance alerts
+      const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+      let alertsCleared = 0;
+      for (const alert of alerts) {
+        if (!(alert as any).isAcknowledged) {
+          await aiNotificationService.acknowledgeMaintenanceAlert(alert.id, userId);
+          alertsCleared++;
+        }
+      }
+      
+      // WebSocket broadcast for real-time sync
+      broadcastNotification(workspaceId, userId, 'notification_read_bulk', { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        unreadCount: 0 
+      }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      
+      // AI Brain notification for Trinity/HelpAI awareness
+      try {
+        const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
+        await aiBrainAuthorizationService.logCommandExecution({
+          userId,
+          userRole: req.user?.platformRole as string || 'employee',
+          actionId: 'system.clear_all_notifications',
+          category: 'notifications',
+          parameters: { workspaceId, action: 'clear_all' },
+          result: { success: true, cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared } }
+        });
+        
+        // Emit event for mascot/HelpAI awareness
+        eventBus.emit('notification_state_changed', {
+          userId,
+          workspaceId,
+          action: 'cleared_all',
+          timestamp: new Date().toISOString(),
+          unreadCount: 0
+        });
+      } catch (logError) {
+        console.warn('[Clear All] Failed to notify AI Brain:', logError);
+      }
+      
+      console.log("[Clear All] User " + userId + " cleared all notifications: " + platformUpdatesCleared + " updates, " + notificationsCleared + " notifications, " + alertsCleared + " alerts");
+      
+      res.json({ 
+        success: true, 
+        cleared: { 
+          platformUpdates: platformUpdatesCleared, 
+          notifications: notificationsCleared, 
+          alerts: alertsCleared 
+        },
+        unreadCount: 0
+      });
+    } catch (error) {
+      console.error('Error clearing all notifications:', error);
+      res.status(500).json({ message: 'Failed to clear notifications' });
+    }
+  });
   // Acknowledge maintenance alert
   app.post('/api/maintenance-alerts/:id/acknowledge', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {

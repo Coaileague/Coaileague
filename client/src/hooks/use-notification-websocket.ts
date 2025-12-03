@@ -39,13 +39,14 @@ interface PlatformUpdate {
 }
 
 interface NotificationWebSocketMessage {
-  type: 'notification_new' | 'notification_read' | 'notification_count_updated' | 'notifications_subscribed' | 'platform_update' | 'error';
+  type: 'notification_new' | 'notification_read' | 'notification_read_bulk' | 'notification_count_updated' | 'notifications_subscribed' | 'platform_update' | 'error';
   notification?: EnhancedNotification;
   update?: PlatformUpdate;
   unreadCount?: number;
   timestamp?: string;
   workspaceId?: string;
   message?: string;
+  cleared?: { platformUpdates: number; notifications: number; alerts: number };
 }
 
 export function useNotificationWebSocket(userId: string | undefined, workspaceId: string | undefined) {
@@ -223,6 +224,31 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               if (data.unreadCount !== undefined) {
                 setUnreadCount(data.unreadCount);
               }
+              break;
+
+            case 'notification_read_bulk':
+              console.log('🧹 All notifications cleared:', data.cleared);
+              // Clear all cached notification data optimistically
+              queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
+                if (!oldData) return oldData;
+                return {
+                  ...oldData,
+                  notifications: oldData.notifications?.map((n: any) => ({ ...n, isRead: true })) || [],
+                  platformUpdates: oldData.platformUpdates?.map((u: any) => ({ ...u, isViewed: true })) || [],
+                  maintenanceAlerts: oldData.maintenanceAlerts?.map((a: any) => ({ ...a, isAcknowledged: true })) || [],
+                  unreadNotifications: 0,
+                  unreadPlatformUpdates: 0,
+                  unreadAlerts: 0,
+                  totalUnread: 0,
+                };
+              });
+              setUnreadCount(0);
+              // Invalidate all notification caches to refresh from server
+              queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
               break;
 
             case 'notification_count_updated':

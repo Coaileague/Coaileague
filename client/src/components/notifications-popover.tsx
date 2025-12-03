@@ -329,9 +329,27 @@ export function NotificationsPopover() {
   const unviewedUpdates = filteredPlatformUpdates.filter(u => !u.isViewed);
   const allUnviewedSelected = unviewedUpdates.length > 0 && selectedIds.size === unviewedUpdates.length;
 
+  const clearAllMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/notifications/clear-all");
+      return response.json();
+    },
+    onSuccess: (data) => {
+      localStorage.removeItem('notifications-acknowledged');
+      localStorage.removeItem('alerts-acknowledged');
+      setSelectedIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
+      refetch();
+    },
+  });
+
   const NotificationsContent = () => (
-    <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-5 py-4 border-b bg-gradient-to-r from-background to-muted/30">
+    <div className="flex flex-col h-full max-h-[inherit]">
+      <div className="flex items-center justify-between px-5 py-4 border-b bg-gradient-to-r from-background to-muted/30 shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
             <Bell className="h-4 w-4 text-primary" />
@@ -343,25 +361,46 @@ export function NotificationsPopover() {
             )}
           </div>
         </div>
-        {selectedIds.size > 0 && (
-          <Button
-            variant="default"
-            size="sm"
-            className="text-xs h-8 px-3"
-            onClick={() => acknowledgeSelectedMutation.mutate()}
-            disabled={acknowledgeSelectedMutation.isPending}
-            data-testid="button-acknowledge-selected"
-          >
-            <Check className="h-3.5 w-3.5 mr-1.5" />
-            Acknowledge ({selectedIds.size})
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {selectedIds.size > 0 ? (
+            <Button
+              variant="default"
+              size="sm"
+              className="text-xs h-8 px-3"
+              onClick={() => acknowledgeSelectedMutation.mutate()}
+              disabled={acknowledgeSelectedMutation.isPending}
+              data-testid="button-acknowledge-selected"
+            >
+              <Check className="h-3.5 w-3.5 mr-1.5" />
+              Acknowledge ({selectedIds.size})
+            </Button>
+          ) : totalUnread > 0 && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-xs h-8 px-3"
+              onClick={() => clearAllMutation.mutate()}
+              disabled={clearAllMutation.isPending}
+              data-testid="button-clear-all-notifications"
+            >
+              {clearAllMutation.isPending ? (
+                <div className="animate-spin rounded-full h-3 w-3 border border-current border-t-transparent mr-1.5" />
+              ) : (
+                <Check className="h-3.5 w-3.5 mr-1.5" />
+              )}
+              Clear All
+            </Button>
+          )}
+        </div>
       </div>
 
       <div 
         ref={scrollRef}
-        className="flex-1 overflow-y-auto scroll-smooth"
-        style={{ maxHeight: isMobile ? 'calc(70vh - 140px)' : '420px' }}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+        style={{ 
+          maxHeight: isMobile ? 'calc(80vh - 180px)' : '420px',
+          WebkitOverflowScrolling: 'touch'
+        }}
       >
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -742,8 +781,9 @@ export function NotificationsPopover() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent 
-            className="w-[calc(100vw-2rem)] max-w-[480px] max-h-[80vh] p-0 gap-0 overflow-hidden"
+            className="w-[calc(100vw-1rem)] max-w-[480px] h-[85vh] max-h-[85vh] p-0 gap-0 flex flex-col"
             showHomeButton={false}
+            style={{ overflow: 'hidden' }}
           >
             <NotificationsContent />
           </DialogContent>
