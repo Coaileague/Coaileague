@@ -979,8 +979,9 @@ export function setupWebSocket(server: Server) {
               }) : 'User';
 
               // Determine user type and set initial status
-              platformRole = await storage.getUserPlatformRole(effectiveUserId).catch(() => null) ?? undefined;
-              isStaff = hasPlatformWideAccess(platformRole);
+              const fetchedRole = await storage.getUserPlatformRole(effectiveUserId).catch(() => null);
+              platformRole = fetchedRole ?? null;
+              isStaff = hasPlatformWideAccess(platformRole ?? undefined);
               
               if (isStaff) {
                 userType = 'staff';

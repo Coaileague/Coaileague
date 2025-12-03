@@ -39,9 +39,10 @@ interface PlatformUpdate {
 }
 
 interface NotificationWebSocketMessage {
-  type: 'notification_new' | 'notification_read' | 'notification_read_bulk' | 'notification_count_updated' | 'notifications_subscribed' | 'platform_update' | 'all_notifications_cleared' | 'whats_new_cleared' | 'error';
+  type: 'notification_new' | 'notification_read' | 'notification_read_bulk' | 'notification_count_updated' | 'notifications_subscribed' | 'platform_update' | 'all_notifications_cleared' | 'whats_new_cleared' | 'whats_new_viewed' | 'error';
   notification?: EnhancedNotification & { counts?: { notifications: number; platformUpdates: number; total: number; lastUpdated: string } };
   update?: PlatformUpdate;
+  updateId?: string;
   unreadCount?: number;
   timestamp?: string;
   workspaceId?: string;
@@ -208,9 +209,15 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
                   };
                 });
                 
-                // Also invalidate to ensure sync
+                // Also invalidate to ensure sync - include all notification and whats-new endpoints
+                queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
                 queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
+                queryClient.invalidateQueries({ queryKey: ["/api/whats-new/new-features"] });
+                
+                // Dispatch event for WhatsNewBadge and NotificationsPopover components
+                window.dispatchEvent(new CustomEvent('platform_update', { detail: data.update }));
                 
                 // Show toast for platform update
                 toast({
@@ -219,6 +226,16 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
                   variant: "info" as any,
                 });
               }
+              break;
+
+            case 'whats_new_viewed':
+              console.log('👁️ What\'s New item viewed:', data.updateId);
+              // Invalidate all whats-new queries to sync view state across tabs
+              queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
+              // Dispatch event for WhatsNewBadge component
+              window.dispatchEvent(new CustomEvent('whats_new_viewed', { detail: data }));
               break;
 
             case 'notification_read':
@@ -315,10 +332,15 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               // Clear localStorage acknowledgments since server has cleared
               localStorage.removeItem('notifications-acknowledged');
               localStorage.removeItem('alerts-acknowledged');
+              localStorage.removeItem('whats-new-acknowledged');
               // Invalidate all caches
               queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
               queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
               queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
+              // Dispatch event for WhatsNewBadge component
+              window.dispatchEvent(new CustomEvent('whats_new_cleared', { detail: data }));
               break;
 
             case 'whats_new_cleared':
@@ -327,6 +349,10 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
               queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
               queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
+              // Also clear localStorage
+              localStorage.removeItem('whats-new-acknowledged');
+              // Dispatch event for WhatsNewBadge component
+              window.dispatchEvent(new CustomEvent('whats_new_cleared', { detail: data }));
               break;
 
             case 'error':
