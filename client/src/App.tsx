@@ -323,6 +323,11 @@ function MascotRenderer() {
     };
   }, []);
   
+  // Track page changes for promotional thoughts on public pages
+  useEffect(() => {
+    thoughtManager.setCurrentPath(location);
+  }, [location]);
+  
   // Guard mode thought trigger to prevent infinite loops - only trigger when mode actually changes
   const prevModeRef = useRef<string | null>(null);
   useEffect(() => {

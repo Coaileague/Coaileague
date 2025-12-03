@@ -16,8 +16,12 @@ import {
   getRandomThought,
   getRandomReaction,
   getEmoticon,
+  isPublicPage,
+  getRandomPromoThought,
+  PUBLIC_PAGE_PROMO_CONFIG,
   type HolidayConfig,
-  type InteractionType 
+  type InteractionType,
+  type PromoThought 
 } from '@/config/mascotConfig';
 
 export interface Thought {
@@ -26,8 +30,12 @@ export interface Thought {
   emoticon: string;
   mode: MascotMode;
   priority: 'low' | 'normal' | 'high' | 'urgent';
-  source: 'default' | 'reaction' | 'holiday' | 'ai' | 'task';
+  source: 'default' | 'reaction' | 'holiday' | 'ai' | 'task' | 'promo';
   expiresAt: number;
+  // Promotional thought extras
+  ctaText?: string;          // Call-to-action button text
+  ctaLink?: string;          // Navigation link for CTA
+  showDiscount?: boolean;    // Show 10% discount badge
 }
 
 export interface ThoughtManagerState {
@@ -38,6 +46,10 @@ export interface ThoughtManagerState {
   currentHoliday: HolidayConfig | null;
   lastInteraction: InteractionType | null;
   dragVelocity: number;
+  // Public page tracking
+  currentPath: string;
+  isOnPublicPage: boolean;
+  promoRotationTimer: ReturnType<typeof setInterval> | null;
 }
 
 type ThoughtListener = (thought: Thought | null) => void;
@@ -50,6 +62,7 @@ class ThoughtManager {
   
   constructor() {
     const holiday = getCurrentHoliday();
+    const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
     this.state = {
       currentThought: null,
       queue: [],
@@ -58,6 +71,9 @@ class ThoughtManager {
       currentHoliday: holiday,
       lastInteraction: null,
       dragVelocity: 0,
+      currentPath,
+      isOnPublicPage: isPublicPage(currentPath),
+      promoRotationTimer: null,
     };
   }
   
@@ -230,6 +246,110 @@ class ThoughtManager {
       'normal'
     );
     this.queueThought(thought);
+  }
+  
+  // ============================================================================
+  // PUBLIC PAGE PROMOTIONAL THOUGHTS
+  // ============================================================================
+  
+  /**
+   * Update the current page path and trigger promo mode if on public page
+   */
+  setCurrentPath(path: string): void {
+    this.state.currentPath = path;
+    const wasOnPublicPage = this.state.isOnPublicPage;
+    this.state.isOnPublicPage = isPublicPage(path);
+    
+    // Transition to/from public page promo mode
+    if (this.state.isOnPublicPage && !wasOnPublicPage) {
+      this.startPromoRotation();
+      // Show welcome promo on entering public page
+      this.triggerPromoThought();
+    } else if (!this.state.isOnPublicPage && wasOnPublicPage) {
+      this.stopPromoRotation();
+    }
+  }
+  
+  /**
+   * Trigger a promotional thought for the current public page
+   */
+  triggerPromoThought(): void {
+    if (!this.state.isOnPublicPage || !PUBLIC_PAGE_PROMO_CONFIG.enabled) return;
+    
+    const promo = getRandomPromoThought(this.state.currentPath);
+    if (!promo) return;
+    
+    // Create promo thought with CTA extras
+    const thought: Thought = {
+      id: `promo-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      text: promo.text,
+      emoticon: promo.emote ? this.getEmoteEmoticon(promo.emote) : '✨',
+      mode: 'ADVISING',
+      priority: promo.priority,
+      source: 'promo',
+      expiresAt: Date.now() + MASCOT_CONFIG.thoughts.displayDuration,
+      ctaText: promo.ctaText,
+      ctaLink: promo.ctaLink,
+      showDiscount: promo.showDiscount,
+    };
+    
+    this.queueThought(thought);
+  }
+  
+  /**
+   * Get emoticon for emote type
+   */
+  private getEmoteEmoticon(emote: string): string {
+    const emoteIcons: Record<string, string> = {
+      waving: '👋',
+      helpful: '💡',
+      curious: '🤔',
+      excited: '🎉',
+      nodding: '✅',
+      proud: '⭐',
+      happy: '😊',
+    };
+    return emoteIcons[emote] || '✨';
+  }
+  
+  /**
+   * Start promotional thought rotation (on public pages)
+   */
+  startPromoRotation(): void {
+    if (this.state.promoRotationTimer) return;
+    
+    this.state.promoRotationTimer = setInterval(() => {
+      if (this.state.isOnPublicPage && !this.state.currentThought && this.state.queue.length === 0) {
+        // On public pages, alternate between promo thoughts and regular ones
+        if (Math.random() > 0.3) { // 70% chance for promo
+          this.triggerPromoThought();
+        } else if (this.state.isHoliday && this.state.currentHoliday) {
+          const thoughts = this.state.currentHoliday.thoughts;
+          const text = thoughts[Math.floor(Math.random() * thoughts.length)];
+          const thought = this.createThought(text, 'HOLIDAY', 'holiday', 'low');
+          this.queueThought(thought);
+        } else {
+          this.triggerModeThought('IDLE');
+        }
+      }
+    }, PUBLIC_PAGE_PROMO_CONFIG.rotateInterval);
+  }
+  
+  /**
+   * Stop promotional thought rotation
+   */
+  stopPromoRotation(): void {
+    if (this.state.promoRotationTimer) {
+      clearInterval(this.state.promoRotationTimer);
+      this.state.promoRotationTimer = null;
+    }
+  }
+  
+  /**
+   * Check if currently on a public page
+   */
+  isOnPublicPage(): boolean {
+    return this.state.isOnPublicPage;
   }
   
   startRotation(): void {

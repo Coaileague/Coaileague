@@ -10,8 +10,9 @@
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useLocation } from 'wouter';
 import type { Thought } from '@/lib/mascot/ThoughtManager';
-import { THOUGHT_BUBBLE_BOUNDARY_CONFIG } from '@/config/mascotConfig';
+import { THOUGHT_BUBBLE_BOUNDARY_CONFIG, PUBLIC_PAGE_PROMO_CONFIG } from '@/config/mascotConfig';
 
 // Color palettes for letter variety
 const LETTER_COLORS = {
@@ -355,6 +356,28 @@ export function MagicFloatingText({
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-3px); }
         }
+        
+        /* Promo badge glow animation */
+        @keyframes promoGlow {
+          0%, 100% { 
+            box-shadow: 0 2px 8px rgba(245, 158, 11, 0.4), 0 0 12px rgba(245, 158, 11, 0.3);
+            transform: scale(1);
+          }
+          50% { 
+            box-shadow: 0 3px 12px rgba(245, 158, 11, 0.6), 0 0 20px rgba(245, 158, 11, 0.5);
+            transform: scale(1.02);
+          }
+        }
+        
+        /* CTA button pulse animation */
+        @keyframes ctaPulse {
+          0%, 100% { 
+            box-shadow: 0 4px 12px rgba(168, 85, 247, 0.4), 0 0 20px rgba(168, 85, 247, 0.2);
+          }
+          50% { 
+            box-shadow: 0 4px 16px rgba(168, 85, 247, 0.6), 0 0 30px rgba(168, 85, 247, 0.4);
+          }
+        }
       `}</style>
       
       {/* Unified bubble container - anchored to mascot */}
@@ -364,51 +387,128 @@ export function MagicFloatingText({
           ...bubblePosition,
           zIndex: 9999,
           display: 'flex',
-          flexWrap: 'wrap',
-          gap: '0',
-          justifyContent: 'center',
-          textAlign: 'center',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '8px',
         }}
         data-testid="magic-floating-text"
         data-anchored="true"
       >
-        {letters.map((letter, index) => (
-          <span
-            key={`${thought?.id}-${index}`}
+        {/* Discount badge for promo thoughts */}
+        {thought?.showDiscount && (
+          <div
             style={{
-              display: 'inline-block',
-              color: letter.color,
-              fontSize,
-              fontWeight: letter.fontStyle.fontWeight,
-              fontStyle: letter.fontStyle.fontStyle,
-              textShadow: `
-                0 1px 2px rgba(0,0,0,0.6),
-                0 0 4px ${letter.glowColor}50
-              `,
-              transform: `
-                scale(${letter.scale})
-                rotate(${letter.rotation}deg)
-                translate(${letter.offsetX}px, ${letter.offsetY}px)
-              `,
-              opacity: letter.isVisible ? 1 : 0,
-              animation: letter.isExiting
-                ? getExitAnimation(letter.exitAnim)
-                : letter.isVisible
-                ? `${getEnterAnimation(letter.enterAnim, 0)}, letterFloat 3s ease-in-out infinite ${letter.delay}ms`
-                : 'none',
-              whiteSpace: letter.char === ' ' ? 'pre' : 'normal',
-              minWidth: letter.char === ' ' ? '0.3em' : 'auto',
-              willChange: 'transform, opacity, filter',
-              letterSpacing: '0.02em',
-              lineHeight: 1.4,
+              background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
+              color: '#fff',
+              fontSize: isMobile ? '10px' : '11px',
+              fontWeight: 700,
+              padding: '3px 10px',
+              borderRadius: '12px',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em',
+              boxShadow: '0 2px 8px rgba(245, 158, 11, 0.4), 0 0 12px rgba(245, 158, 11, 0.3)',
+              animation: 'promoGlow 2s ease-in-out infinite',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '4px',
+              whiteSpace: 'nowrap',
             }}
-            data-char={letter.char}
-            data-enter-anim={letter.enterAnim}
-            data-exit-anim={letter.exitAnim}
+            data-testid="promo-discount-badge"
           >
-            {letter.char}
-          </span>
-        ))}
+            <span style={{ fontSize: '14px' }}>&#127873;</span>
+            {PUBLIC_PAGE_PROMO_CONFIG.discountLabel}
+          </div>
+        )}
+        
+        {/* Letter text container */}
+        <div
+          style={{
+            display: 'flex',
+            flexWrap: 'wrap',
+            gap: '0',
+            justifyContent: 'center',
+            textAlign: 'center',
+          }}
+        >
+          {letters.map((letter, index) => (
+            <span
+              key={`${thought?.id}-${index}`}
+              style={{
+                display: 'inline-block',
+                color: letter.color,
+                fontSize,
+                fontWeight: letter.fontStyle.fontWeight,
+                fontStyle: letter.fontStyle.fontStyle,
+                textShadow: `
+                  0 1px 2px rgba(0,0,0,0.6),
+                  0 0 4px ${letter.glowColor}50
+                `,
+                transform: `
+                  scale(${letter.scale})
+                  rotate(${letter.rotation}deg)
+                  translate(${letter.offsetX}px, ${letter.offsetY}px)
+                `,
+                opacity: letter.isVisible ? 1 : 0,
+                animation: letter.isExiting
+                  ? getExitAnimation(letter.exitAnim)
+                  : letter.isVisible
+                  ? `${getEnterAnimation(letter.enterAnim, 0)}, letterFloat 3s ease-in-out infinite ${letter.delay}ms`
+                  : 'none',
+                whiteSpace: letter.char === ' ' ? 'pre' : 'normal',
+                minWidth: letter.char === ' ' ? '0.3em' : 'auto',
+                willChange: 'transform, opacity, filter',
+                letterSpacing: '0.02em',
+                lineHeight: 1.4,
+              }}
+              data-char={letter.char}
+              data-enter-anim={letter.enterAnim}
+              data-exit-anim={letter.exitAnim}
+            >
+              {letter.char}
+            </span>
+          ))}
+        </div>
+        
+        {/* CTA button for promo thoughts */}
+        {thought?.ctaText && thought?.ctaLink && (
+          <a
+            href={thought.ctaLink}
+            style={{
+              pointerEvents: 'auto',
+              position: 'relative',
+              zIndex: 10000,
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px',
+              background: 'linear-gradient(135deg, #a855f7 0%, #7c3aed 100%)',
+              color: '#fff',
+              fontSize: isMobile ? '12px' : '13px',
+              fontWeight: 600,
+              padding: isMobile ? '6px 14px' : '8px 18px',
+              borderRadius: '20px',
+              textDecoration: 'none',
+              boxShadow: '0 4px 12px rgba(168, 85, 247, 0.4), 0 0 20px rgba(168, 85, 247, 0.2)',
+              border: '1px solid rgba(255, 255, 255, 0.2)',
+              animation: 'ctaPulse 2s ease-in-out infinite',
+              transition: 'transform 0.2s, box-shadow 0.2s',
+              cursor: 'pointer',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.transform = 'scale(1.05)';
+              e.currentTarget.style.boxShadow = '0 6px 16px rgba(168, 85, 247, 0.5), 0 0 30px rgba(168, 85, 247, 0.3)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.transform = 'scale(1)';
+              e.currentTarget.style.boxShadow = '0 4px 12px rgba(168, 85, 247, 0.4), 0 0 20px rgba(168, 85, 247, 0.2)';
+            }}
+            data-testid="promo-cta-button"
+          >
+            {thought.ctaText}
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M5 12h14M12 5l7 7-7 7"/>
+            </svg>
+          </a>
+        )}
       </div>
     </>
   );

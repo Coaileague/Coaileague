@@ -998,6 +998,115 @@ export function createThoughtContentHandler(): ThoughtContentHandler {
   };
 }
 
+// ============================================================================
+// PUBLIC PAGE PROMOTIONAL CONFIGURATION (Sales/Onboarding System)
+// Mascot acts as a friendly sales guide on public pages
+// ============================================================================
+
+export interface PromoThought {
+  text: string;
+  ctaText?: string;          // Call-to-action button text
+  ctaLink?: string;          // Navigation link for CTA
+  priority: 'low' | 'normal' | 'high';
+  emote?: EmoteType;
+  showDiscount?: boolean;    // Show 10% first-time discount badge
+}
+
+export interface PublicPagePromoConfig {
+  enabled: boolean;
+  discountPercentage: number;
+  discountLabel: string;
+  rotateInterval: number;    // ms between promo rotations
+  pageSpecificThoughts: Record<string, PromoThought[]>;
+  generalPromos: PromoThought[];
+  greetingThoughts: PromoThought[];  // First-visit welcome
+}
+
+export const PUBLIC_PAGE_PROMO_CONFIG: PublicPagePromoConfig = {
+  enabled: true,
+  discountPercentage: 10,
+  discountLabel: '10% OFF First Month',
+  rotateInterval: 25000, // 25 seconds between promo thoughts
+  
+  // Page-specific promotional thoughts
+  pageSpecificThoughts: {
+    '/': [
+      { text: "Welcome! Ready to transform your workforce management?", ctaText: "See Plans", ctaLink: "/pricing", priority: 'high', emote: 'waving', showDiscount: true },
+      { text: "I'm Trinity, your AI business buddy! Tap me anytime for help.", priority: 'normal', emote: 'helpful' },
+      { text: "Did you know? CoAIleague automates scheduling, payroll, and more!", ctaText: "Learn More", ctaLink: "/pricing", priority: 'normal', emote: 'curious' },
+      { text: "Join hundreds of businesses already saving time with AI!", ctaText: "Start Free", ctaLink: "/register", priority: 'high', emote: 'excited', showDiscount: true },
+    ],
+    '/pricing': [
+      { text: "Great choice looking at our plans! Questions? Just ask me.", priority: 'normal', emote: 'helpful' },
+      { text: "Pro tip: The Professional plan includes unlimited AI scheduling!", priority: 'normal', emote: 'nodding' },
+      { text: "First-time signup? You'll get 10% off your first month!", priority: 'high', emote: 'excited', showDiscount: true },
+      { text: "Need help choosing? I can compare plans for your business size.", priority: 'normal', emote: 'helpful' },
+      { text: "Enterprise needs? We offer custom pricing and dedicated support!", ctaText: "Contact Sales", ctaLink: "/contact", priority: 'normal', emote: 'proud' },
+    ],
+    '/contact': [
+      { text: "Looking to chat with our team? Great idea!", priority: 'normal', emote: 'happy' },
+      { text: "Fun fact: Our support team responds in under 2 hours on average!", priority: 'normal', emote: 'proud' },
+      { text: "Have questions about enterprise features? Our team loves helping!", priority: 'normal', emote: 'helpful' },
+    ],
+    '/support': [
+      { text: "Need help? I'm here! Or fill out the form for our support team.", priority: 'normal', emote: 'helpful' },
+      { text: "Quick questions? Ask me anything about CoAIleague!", priority: 'normal', emote: 'waving' },
+    ],
+    '/features': [
+      { text: "Exploring features? Smart! Let me highlight the best ones.", priority: 'normal', emote: 'excited' },
+      { text: "AI-powered scheduling saves businesses 8+ hours per week!", priority: 'high', emote: 'proud' },
+      { text: "Love what you see? Start your free trial today!", ctaText: "Try Free", ctaLink: "/register", priority: 'high', emote: 'excited', showDiscount: true },
+    ],
+    '/homepage': [
+      { text: "Hi there! I'm your AI workforce assistant. Need anything?", priority: 'normal', emote: 'waving' },
+      { text: "Ready to streamline your business operations?", ctaText: "Get Started", ctaLink: "/register", priority: 'high', emote: 'excited', showDiscount: true },
+    ],
+  },
+  
+  // General promo thoughts (used on any public page)
+  generalPromos: [
+    { text: "Automate scheduling, payroll, invoicing, and more with AI!", priority: 'normal', emote: 'helpful' },
+    { text: "Join the workforce revolution - hundreds of businesses trust us!", priority: 'normal', emote: 'proud' },
+    { text: "First-timers get 10% off! Start your journey today.", ctaText: "Claim Discount", ctaLink: "/register", priority: 'high', emote: 'excited', showDiscount: true },
+    { text: "Have questions? Tap me anytime - I love helping!", priority: 'normal', emote: 'happy' },
+    { text: "Curious about AI workforce management? I can explain!", priority: 'normal', emote: 'curious' },
+  ],
+  
+  // First-time visitor greeting
+  greetingThoughts: [
+    { text: "Hey there! Welcome to CoAIleague! I'm Trinity, your AI guide.", priority: 'high', emote: 'waving' },
+    { text: "First time here? Awesome! Let me show you around.", ctaText: "Take Tour", ctaLink: "/pricing", priority: 'high', emote: 'excited' },
+  ],
+};
+
+// Helper to check if a path is a public page
+export function isPublicPage(pathname: string): boolean {
+  const publicPaths = ['/', '/homepage', '/pricing', '/contact', '/support', '/features', '/terms-of-service', '/privacy-policy', '/about'];
+  return publicPaths.some(path => pathname === path || pathname.startsWith(path + '/'));
+}
+
+// Get promotional thoughts for current page
+export function getPromoThoughts(pathname: string): PromoThought[] {
+  if (!PUBLIC_PAGE_PROMO_CONFIG.enabled) return [];
+  
+  const pageSpecific = PUBLIC_PAGE_PROMO_CONFIG.pageSpecificThoughts[pathname] || [];
+  return [...pageSpecific, ...PUBLIC_PAGE_PROMO_CONFIG.generalPromos];
+}
+
+// Get a random promo thought
+export function getRandomPromoThought(pathname: string): PromoThought | null {
+  const thoughts = getPromoThoughts(pathname);
+  if (thoughts.length === 0) return null;
+  
+  // Prefer high-priority thoughts more often (60% chance)
+  const highPriority = thoughts.filter(t => t.priority === 'high');
+  if (highPriority.length > 0 && Math.random() < 0.6) {
+    return highPriority[Math.floor(Math.random() * highPriority.length)];
+  }
+  
+  return thoughts[Math.floor(Math.random() * thoughts.length)];
+}
+
 export interface MascotConfig {
   enabled: boolean;
   desktop: MascotSizes;
@@ -1012,6 +1121,7 @@ export interface MascotConfig {
   };
   hiddenRoutes: string[];
   idleModeRoutes: string[];
+  publicPageRoutes: string[];  // Public pages for promo mode
   defaultMode: MascotMode;
   colors: {
     primary: string;
@@ -1093,6 +1203,18 @@ export const MASCOT_CONFIG: MascotConfig = {
     '/',
     '/pricing',
     '/features',
+    '/about',
+  ],
+  
+  publicPageRoutes: [
+    '/',
+    '/homepage',
+    '/pricing',
+    '/contact',
+    '/support',
+    '/features',
+    '/terms-of-service',
+    '/privacy-policy',
     '/about',
   ],
   
