@@ -39,14 +39,18 @@ interface PlatformUpdate {
 }
 
 interface NotificationWebSocketMessage {
-  type: 'notification_new' | 'notification_read' | 'notification_read_bulk' | 'notification_count_updated' | 'notifications_subscribed' | 'platform_update' | 'error';
-  notification?: EnhancedNotification;
+  type: 'notification_new' | 'notification_read' | 'notification_read_bulk' | 'notification_count_updated' | 'notifications_subscribed' | 'platform_update' | 'all_notifications_cleared' | 'whats_new_cleared' | 'error';
+  notification?: EnhancedNotification & { counts?: { notifications: number; platformUpdates: number; total: number; lastUpdated: string } };
   update?: PlatformUpdate;
   unreadCount?: number;
   timestamp?: string;
   workspaceId?: string;
   message?: string;
   cleared?: { platformUpdates: number; notifications: number; alerts: number };
+  markedRead?: { platformUpdates: number; notifications: number; alerts: number };
+  counts?: { notifications: number; platformUpdates: number; total: number; lastUpdated: string };
+  count?: number;
+  source?: string;
 }
 
 export function useNotificationWebSocket(userId: string | undefined, workspaceId: string | undefined) {
@@ -252,14 +256,32 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               break;
 
             case 'notification_count_updated':
-              console.log('🔢 Notification count updated:', data.unreadCount);
+              console.log('🔢 Notification count updated:', data.unreadCount, data.counts);
               if (data.unreadCount !== undefined) {
                 setUnreadCount(data.unreadCount);
+              }
+              // Handle clear_all source - optimistically clear cache
+              if (data.source === 'clear_all' || (data.counts && data.counts.total === 0)) {
+                console.log('🧹 Clear all detected via notification_count_updated');
+                queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
+                  if (!oldData) return oldData;
+                  return {
+                    ...oldData,
+                    notifications: oldData.notifications?.map((n: any) => ({ ...n, isRead: true })) || [],
+                    platformUpdates: oldData.platformUpdates?.map((u: any) => ({ ...u, isViewed: true })) || [],
+                    maintenanceAlerts: oldData.maintenanceAlerts?.map((a: any) => ({ ...a, isAcknowledged: true })) || [],
+                    unreadNotifications: 0,
+                    unreadPlatformUpdates: 0,
+                    unreadAlerts: 0,
+                    totalUnread: 0,
+                  };
+                });
+                setUnreadCount(0);
               }
               // Dispatch event for useNotificationState hook
               const countUpdateEvent = new CustomEvent('notification_count_updated', {
                 detail: {
-                  counts: (data as any).notification?.counts || {
+                  counts: data.counts || (data as any).notification?.counts || {
                     notifications: (data as any).notification?.notifications || 0,
                     platformUpdates: (data as any).notification?.platformUpdates || 0,
                     total: data.unreadCount || 0,
@@ -271,6 +293,40 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               // Refresh combined data to get accurate counts
               queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
               queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-counts"] });
+              break;
+
+            case 'all_notifications_cleared':
+              console.log('🧹 All notifications cleared broadcast received:', data.markedRead);
+              // Optimistically mark all as read in cache
+              queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
+                if (!oldData) return oldData;
+                return {
+                  ...oldData,
+                  notifications: oldData.notifications?.map((n: any) => ({ ...n, isRead: true })) || [],
+                  platformUpdates: oldData.platformUpdates?.map((u: any) => ({ ...u, isViewed: true })) || [],
+                  maintenanceAlerts: oldData.maintenanceAlerts?.map((a: any) => ({ ...a, isAcknowledged: true })) || [],
+                  unreadNotifications: 0,
+                  unreadPlatformUpdates: 0,
+                  unreadAlerts: 0,
+                  totalUnread: 0,
+                };
+              });
+              setUnreadCount(0);
+              // Clear localStorage acknowledgments since server has cleared
+              localStorage.removeItem('notifications-acknowledged');
+              localStorage.removeItem('alerts-acknowledged');
+              // Invalidate all caches
+              queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
+              break;
+
+            case 'whats_new_cleared':
+              console.log('🧹 What\'s New cleared broadcast received:', data.count);
+              // Update what's new count
+              queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
               break;
 
             case 'error':

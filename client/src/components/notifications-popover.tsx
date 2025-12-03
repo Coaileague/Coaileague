@@ -179,21 +179,34 @@ export function NotificationsPopover() {
   // Use fetched data, falling back to cached data for immediate display
   const data = fetchedData || cachedData;
 
+  // Track if this is the first open to prevent scroll reset on every render
+  const hasOpenedRef = useRef(false);
+  
+  // Live timestamp ticker - forces re-render every 60s for "live" relative timestamps
+  const [timestampTick, setTimestampTick] = useState(0);
+  useEffect(() => {
+    const ticker = setInterval(() => {
+      setTimestampTick(t => t + 1);
+    }, 60000); // Update every minute for live timestamps
+    return () => clearInterval(ticker);
+  }, []);
+
   useEffect(() => {
     if (open) {
       // Refresh data when popover opens
       refetch();
-      if (scrollRef.current) {
+      // Only scroll to top on first open, not on every re-render or tab change
+      if (!hasOpenedRef.current && scrollRef.current) {
         scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
+        hasOpenedRef.current = true;
       }
+    } else {
+      // Reset the flag when popover closes so next open scrolls to top
+      hasOpenedRef.current = false;
     }
   }, [open, refetch]);
   
-  useEffect(() => {
-    if (open && scrollRef.current) {
-      scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
-    }
-  }, [activeTab]);
+  // REMOVED: No longer scroll to top on tab change to prevent glitchy scroll reset
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
@@ -334,16 +347,51 @@ export function NotificationsPopover() {
       const response = await apiRequest("POST", "/api/notifications/clear-all");
       return response.json();
     },
-    onSuccess: (data) => {
+    onMutate: async () => {
+      // Cancel any outgoing queries
+      await queryClient.cancelQueries({ queryKey: ["/api/notifications/combined"] });
+      
+      // Snapshot current data
+      const previousData = queryClient.getQueryData(["/api/notifications/combined"]);
+      
+      // Optimistically update cache IMMEDIATELY for instant feedback
+      queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
+        if (!oldData) return oldData;
+        return {
+          ...oldData,
+          notifications: oldData.notifications?.map((n: any) => ({ ...n, isRead: true })) || [],
+          platformUpdates: oldData.platformUpdates?.map((u: any) => ({ ...u, isViewed: true })) || [],
+          maintenanceAlerts: oldData.maintenanceAlerts?.map((a: any) => ({ ...a, isAcknowledged: true })) || [],
+          unreadNotifications: 0,
+          unreadPlatformUpdates: 0,
+          unreadAlerts: 0,
+          totalUnread: 0,
+        };
+      });
+      
+      // Clear localStorage immediately
       localStorage.removeItem('notifications-acknowledged');
       localStorage.removeItem('alerts-acknowledged');
       setSelectedIds(new Set());
+      
+      console.log('🧹 Clear All: Optimistic update applied');
+      return { previousData };
+    },
+    onSuccess: (data) => {
+      console.log('🧹 Clear All: Server confirmed', data);
+      // Server confirmed - invalidate to sync with real data
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
-      refetch();
+    },
+    onError: (err, _, context) => {
+      console.error('🧹 Clear All: Error, rolling back', err);
+      // Rollback on error
+      if (context?.previousData) {
+        queryClient.setQueryData(["/api/notifications/combined"], context.previousData);
+      }
     },
   });
 
