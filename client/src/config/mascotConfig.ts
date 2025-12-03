@@ -1153,6 +1153,23 @@ export const PUBLIC_PAGE_PROMO_CONFIG: PublicPagePromoConfig = {
       { text: "Hi there! I'm your AI workforce assistant. Need anything?", priority: 'normal', emote: 'waving' },
       { text: "Ready to streamline your business operations?", ctaText: "Get Started", ctaLink: "/register", priority: 'high', emote: 'excited', showDiscount: true },
     ],
+    '/login': [
+      { text: "Welcome back! I'm Trinity, here to help you sign in.", priority: 'normal', emote: 'waving' },
+      { text: "Need help with your password? Click 'Forgot Password' below.", priority: 'normal', emote: 'helpful' },
+      { text: "First time here? Create an account to get started!", ctaText: "Sign Up", ctaLink: "/register", priority: 'normal', emote: 'excited' },
+      { text: "Having trouble logging in? I'm here to help!", priority: 'normal', emote: 'helpful' },
+    ],
+    '/register': [
+      { text: "Great choice joining CoAIleague! Let me guide you through signup.", priority: 'normal', emote: 'excited' },
+      { text: "Quick tip: Use a strong password to keep your account secure.", priority: 'normal', emote: 'helpful' },
+      { text: "Already have an account? You can sign in instead!", ctaText: "Sign In", ctaLink: "/login", priority: 'normal', emote: 'waving' },
+      { text: "Questions about our plans? I can help you choose the right one.", priority: 'normal', emote: 'helpful' },
+      { text: "Welcome! In just a minute, you'll be managing your workforce with AI.", priority: 'high', emote: 'proud' },
+    ],
+    '/forgot-password': [
+      { text: "No worries, we all forget sometimes! Enter your email to reset.", priority: 'normal', emote: 'helpful' },
+      { text: "Check your inbox after submitting - the reset link arrives quickly!", priority: 'normal', emote: 'nodding' },
+    ],
   },
   
   // General promo thoughts (used on any public page)
@@ -1287,8 +1304,6 @@ export const MASCOT_CONFIG: MascotConfig = {
   
   hiddenRoutes: [
     '/mascot-demo',
-    '/login',
-    '/register',
   ],
   
   idleModeRoutes: [
@@ -1308,6 +1323,10 @@ export const MASCOT_CONFIG: MascotConfig = {
     '/terms-of-service',
     '/privacy-policy',
     '/about',
+    '/login',
+    '/register',
+    '/forgot-password',
+    '/reset-password',
   ],
   
   defaultMode: 'IDLE',

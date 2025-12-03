@@ -754,7 +754,7 @@ const FloatingMascot = memo(function FloatingMascot({
         mutationRef.current = 1.0;
       }
       
-      // Decay mutation over time (0.94 rate per frame - matches user's reference)
+      // Decay mutation over time (0.94 rate - matches user's reference exactly)
       if (mutationRef.current > 0) {
         mutationRef.current *= 0.94;
         if (mutationRef.current < 0.01) mutationRef.current = 0;
@@ -840,124 +840,168 @@ const FloatingMascot = memo(function FloatingMascot({
       const floatOffset2 = Math.sin(t * 1.1 + 1.5) * floatAmp + Math.cos(t * 0.9 + 0.8) * (floatAmp * 0.66);
       const floatOffset3 = Math.sin(t * 0.9 + 3.0) * floatAmp + Math.cos(t * 1.2 + 2.1) * (floatAmp * 0.66);
       
+      // ========== USER'S GEMINI AGENT STATE PATTERNS (EXACT IMPLEMENTATION) ==========
+      // Each mode has DISTINCT motion matching the user's reference code
+      
       switch (currentMode) {
-        case 'IDLE':
-          // Each star rotates at slightly different speeds for organic independent motion
-          twins[0].angle += 0.012;
-          twins[1].angle += 0.014;
-          twins[2].angle += 0.011;
+        case 'IDLE': {
+          // HYPER-IDLE: Complex spirograph screensaver pattern (from user's code)
+          // Smoother, deeper breathing motion for organic "Cool Down" feel
+          const t1 = timeRef.current * 0.01;  // Slow primary harmonic
+          const t2 = timeRef.current * 0.03;  // Faster secondary harmonic
+          const spirographRadius = radius * 1.2;
           
-          // Stars float independently around their base triangle positions
-          x1 = center + Math.cos(twins[0].angle) * radius + floatOffset1;
-          y1 = center + Math.sin(twins[0].angle) * radius + floatOffset2 * 0.6;
-          x2 = center + Math.cos(twins[1].angle + trinityOffset) * radius + floatOffset2;
-          y2 = center + Math.sin(twins[1].angle + trinityOffset) * radius + floatOffset3 * 0.6;
-          x3 = center + Math.cos(twins[2].angle + trinityOffset * 2) * radius + floatOffset3;
-          y3 = center + Math.sin(twins[2].angle + trinityOffset * 2) * radius + floatOffset1 * 0.6;
+          // Star 1: Primary spirograph pattern
+          x1 = center + Math.cos(t1) * spirographRadius + Math.sin(t2) * (radius * 0.4);
+          y1 = center + Math.sin(t1) * (spirographRadius * 0.7) + Math.cos(t2) * (radius * 0.4);
+          
+          // Star 2: Inverse spirograph (phase offset)
+          x2 = center + Math.sin(t1) * spirographRadius - Math.cos(t2) * (radius * 0.4);
+          y2 = center + Math.cos(t1) * (spirographRadius * 0.7) - Math.sin(t2) * (radius * 0.4);
+          
+          // Star 3: Third harmonic for trinity balance
+          x3 = center + Math.cos(t1 + Math.PI * 0.66) * spirographRadius + Math.sin(t2 + Math.PI) * (radius * 0.3);
+          y3 = center + Math.sin(t1 + Math.PI * 0.66) * (spirographRadius * 0.7) + Math.cos(t2 + Math.PI) * (radius * 0.3);
           break;
+        }
         
-        case 'THINKING':
-        case 'ANALYZING':
-          twins.forEach((twin, i) => { twin.angle += 0.08; });
-          x1 = center + Math.cos(twins[0].angle) * radius;
-          y1 = center + Math.sin(twins[0].angle) * radius;
-          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius;
-          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius;
-          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius;
-          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius;
+        case 'SEARCHING': {
+          // One star fixed at center, others orbit around it (from user's code)
+          x1 = center;  // Fixed scanner core
+          y1 = center;
+          
+          const searchAngle = timeRef.current * 0.05;
+          const searchRadius = radius * 1.5;
+          x2 = center + Math.cos(searchAngle) * searchRadius;
+          y2 = center + Math.sin(searchAngle) * searchRadius;
+          x3 = center + Math.cos(searchAngle + Math.PI) * searchRadius;
+          y3 = center + Math.sin(searchAngle + Math.PI) * searchRadius;
           break;
+        }
         
-        case 'SEARCHING':
-          twins[0].angle += 0.02;
-          // Maintain full separation - all 3 stars on circle
-          x1 = center + Math.cos(twins[0].angle) * radius;
-          y1 = center + Math.sin(twins[0].angle) * radius;
-          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius;
-          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius;
-          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius;
-          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius;
+        case 'THINKING': {
+          // Fast rotating with pulsing radius (from user's code)
+          twins.forEach(twin => { twin.angle += 0.2; }); // Fast for processing look
+          const thinkRadius = (radius + Math.sin(timeRef.current * 0.2) * radius * 0.3);
+          
+          x1 = center + Math.cos(twins[0].angle) * thinkRadius;
+          y1 = center + Math.sin(twins[0].angle) * thinkRadius;
+          x2 = center + Math.cos(twins[0].angle + trinityOffset) * thinkRadius;
+          y2 = center + Math.sin(twins[0].angle + trinityOffset) * thinkRadius;
+          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * thinkRadius;
+          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * thinkRadius;
           break;
+        }
         
-        case 'CODING':
-          const gridStep = t * 2;
-          // Maintain full triangle separation with grid pattern animation
-          x1 = center + Math.cos(gridStep) * radius + (Math.floor(gridStep) % 2) * 5;
-          y1 = center + Math.sin(gridStep) * radius;
-          x2 = center + Math.cos(gridStep + trinityOffset) * radius - (Math.floor(gridStep) % 2) * 5;
-          y2 = center + Math.sin(gridStep + trinityOffset) * radius;
-          x3 = center + Math.cos(gridStep + trinityOffset * 2) * radius;
-          y3 = center + Math.sin(gridStep + trinityOffset * 2) * radius;
+        case 'ANALYZING': {
+          // Fixed corner positions with micro-jitter (from user's code)
+          const analyzeJitter = Math.sin(timeRef.current * 0.1) * 5;
+          const analyzeRadius = radius * 0.9;
+          
+          x1 = center + Math.cos(-Math.PI / 4) * analyzeRadius + analyzeJitter;
+          y1 = center + Math.sin(-Math.PI / 4) * analyzeRadius;
+          x2 = center + Math.cos(Math.PI * 0.75) * analyzeRadius + analyzeJitter;
+          y2 = center + Math.sin(Math.PI * 0.75) * analyzeRadius;
+          x3 = center + Math.cos(Math.PI * 1.5) * analyzeRadius - analyzeJitter;
+          y3 = center + Math.sin(Math.PI * 1.5) * analyzeRadius;
           break;
+        }
         
-        case 'LISTENING':
-          const wave = Math.sin(t * 4) * radius * 0.2;
-          // Full separation with wave oscillation
-          x1 = center + Math.cos(twins[0].angle) * radius + wave;
-          y1 = center + Math.sin(twins[0].angle) * radius;
-          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius - wave * 0.5;
-          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius;
-          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius + wave * 0.3;
-          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius;
-          twins[0].angle += 0.01;
+        case 'CODING': {
+          // Hard snapping grid movement for digital feel (from user's code)
+          const step = radius * 0.6;
+          const codeSpeed = timeRef.current * 0.08;
+          
+          // Snap to discrete grid positions
+          x1 = center + Math.round(Math.cos(codeSpeed) * 3.5) * step * 0.4;
+          y1 = center + Math.round(Math.sin(codeSpeed) * 3.5) * step * 0.4;
+          x2 = center + Math.round(Math.cos(codeSpeed + 2) * 3.5) * step * 0.4;
+          y2 = center + Math.round(Math.sin(codeSpeed + 2) * 3.5) * step * 0.4;
+          x3 = center + Math.round(Math.cos(codeSpeed + 4) * 3.5) * step * 0.4;
+          y3 = center + Math.round(Math.sin(codeSpeed + 4) * 3.5) * step * 0.4;
           break;
+        }
         
-        case 'UPLOADING':
-          const uploadAngle = t * 3;
-          // Full separation with upward pulse animation
-          x1 = center + Math.cos(uploadAngle) * radius;
-          y1 = center + Math.sin(uploadAngle) * radius - Math.abs(Math.sin(t * 5)) * radius * 0.2;
-          x2 = center + Math.cos(uploadAngle + trinityOffset) * radius;
-          y2 = center + Math.sin(uploadAngle + trinityOffset) * radius - Math.abs(Math.sin(t * 5 + 1)) * radius * 0.2;
-          x3 = center + Math.cos(uploadAngle + trinityOffset * 2) * radius;
-          y3 = center + Math.sin(uploadAngle + trinityOffset * 2) * radius - Math.abs(Math.sin(t * 5 + 2)) * radius * 0.2;
+        case 'LISTENING': {
+          // Audio wave visualization (from user's code)
+          const audioWave = Math.sin(timeRef.current * 0.2) * Math.sin(timeRef.current * 0.5);
+          const waveAmplitude = radius * 0.8;
+          
+          x1 = center - radius * 0.5;
+          y1 = center + audioWave * waveAmplitude;
+          x2 = center;
+          y2 = center + Math.sin(timeRef.current * 0.2 + 1) * Math.sin(timeRef.current * 0.5 + 1) * waveAmplitude;
+          x3 = center + radius * 0.5;
+          y3 = center + Math.sin(timeRef.current * 0.2 + 2) * Math.sin(timeRef.current * 0.5 + 2) * waveAmplitude;
           break;
+        }
+        
+        case 'UPLOADING': {
+          // Helical upward motion (from user's code)
+          const uploadAngle = timeRef.current * 0.3;
+          const uploadRadius = radius * 0.5;
+          const uploadY = (Math.sin(timeRef.current * 0.05) * radius * 0.8);
+          
+          x1 = center + Math.cos(uploadAngle) * uploadRadius;
+          y1 = center + uploadY;
+          x2 = center + Math.cos(uploadAngle + trinityOffset) * uploadRadius;
+          y2 = center + uploadY - radius * 0.3;
+          x3 = center + Math.cos(uploadAngle + trinityOffset * 2) * uploadRadius;
+          y3 = center + uploadY + radius * 0.3;
+          break;
+        }
         
         case 'SUCCESS':
-        case 'CELEBRATING':
-          const celebAngle = t * 3;
-          x1 = center + Math.cos(celebAngle) * radius * (1 + Math.sin(t * 5) * 0.15);
-          y1 = center + Math.sin(celebAngle) * radius - Math.abs(Math.sin(t * 4)) * radius * 0.25;
-          x2 = center + Math.cos(celebAngle + trinityOffset) * radius * (1 + Math.sin(t * 5 + trinityOffset) * 0.15);
-          y2 = center + Math.sin(celebAngle + trinityOffset) * radius - Math.abs(Math.sin(t * 4 + trinityOffset / 2)) * radius * 0.25;
-          x3 = center + Math.cos(celebAngle + trinityOffset * 2) * radius * (1 + Math.sin(t * 5 + trinityOffset * 2) * 0.15);
-          y3 = center + Math.sin(celebAngle + trinityOffset * 2) * radius - Math.abs(Math.sin(t * 4 + trinityOffset)) * radius * 0.25;
+        case 'CELEBRATING': {
+          // Converged celebration at center (from user's code)
+          const celebPulse = 1 + Math.sin(timeRef.current * 0.3) * 0.2;
+          const celebRadius = radius * 0.3 * celebPulse;
+          
+          x1 = center + Math.cos(timeRef.current * 0.1) * celebRadius;
+          y1 = center + Math.sin(timeRef.current * 0.1) * celebRadius;
+          x2 = center + Math.cos(timeRef.current * 0.1 + trinityOffset) * celebRadius;
+          y2 = center + Math.sin(timeRef.current * 0.1 + trinityOffset) * celebRadius;
+          x3 = center + Math.cos(timeRef.current * 0.1 + trinityOffset * 2) * celebRadius;
+          y3 = center + Math.sin(timeRef.current * 0.1 + trinityOffset * 2) * celebRadius;
           break;
+        }
         
-        case 'ERROR':
-          const shake = Math.sin(t * 20) * radius * 0.08;
-          // Full separation maintained with shake effect
-          x1 = center + Math.cos(twins[0].angle) * radius + shake;
-          y1 = center + Math.sin(twins[0].angle) * radius + shake * 0.5;
-          x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius - shake;
-          y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius - shake * 0.5;
-          x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius + shake * 0.7;
-          y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius - shake * 0.3;
-          twins[0].angle += 0.05;
+        case 'ERROR': {
+          // CHAOTIC random scatter (from user's code) - stars shake violently
+          x1 = center + (Math.random() - 0.5) * radius * 0.6;
+          y1 = center + (Math.random() - 0.5) * radius * 0.6;
+          x2 = center + (Math.random() - 0.5) * radius * 0.6;
+          y2 = center + (Math.random() - 0.5) * radius * 0.6;
+          x3 = center + (Math.random() - 0.5) * radius * 0.6;
+          y3 = center + (Math.random() - 0.5) * radius * 0.6;
           break;
+        }
         
-        default:
-          twins.forEach((twin, i) => { twin.angle += 0.02; });
+        default: {
+          // Fallback to simple orbit
+          twins.forEach(twin => { twin.angle += 0.02; });
           x1 = center + Math.cos(twins[0].angle) * radius;
           y1 = center + Math.sin(twins[0].angle) * radius;
           x2 = center + Math.cos(twins[0].angle + trinityOffset) * radius;
           y2 = center + Math.sin(twins[0].angle + trinityOffset) * radius;
           x3 = center + Math.cos(twins[0].angle + trinityOffset * 2) * radius;
           y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius;
+        }
       }
 
-      // MUTATION JITTER: Random scatter during mode transitions (per user's reference)
-      // Stars jitter randomly before settling into new pattern - ENHANCED for visibility
+      // MUTATION JITTER: Physics-based scatter during mode transitions (from user's code)
+      // Stars shake and scatter representing "AI rewriting neural pathways" before snapping to new formation
+      // Uses 50px jitter exactly as specified in user's reference implementation
       if (mutation > 0.01) {
-        // Enhanced jitter: stronger at peak mutation, visible at lower thresholds
-        const jitterStrength = 80 * mutation * mutation; // Quadratic scaling for more dramatic peak
-        const jitterFrequency = Math.sin(timeRef.current * 20) * 0.3 + 0.7; // Oscillating intensity
+        const jitterStrength = 50 * mutation;  // 50px max jitter (matches user's code exactly)
         
-        const jitter1X = (Math.random() - 0.5) * jitterStrength * jitterFrequency;
-        const jitter1Y = (Math.random() - 0.5) * jitterStrength * jitterFrequency;
-        const jitter2X = (Math.random() - 0.5) * jitterStrength * jitterFrequency;
-        const jitter2Y = (Math.random() - 0.5) * jitterStrength * jitterFrequency;
-        const jitter3X = (Math.random() - 0.5) * jitterStrength * jitterFrequency;
-        const jitter3Y = (Math.random() - 0.5) * jitterStrength * jitterFrequency;
+        // Each star gets unique random jitter - "The Rewriting Phase"
+        const jitter1X = (Math.random() - 0.5) * jitterStrength;
+        const jitter1Y = (Math.random() - 0.5) * jitterStrength;
+        const jitter2X = (Math.random() - 0.5) * jitterStrength;
+        const jitter2Y = (Math.random() - 0.5) * jitterStrength;
+        const jitter3X = (Math.random() - 0.5) * jitterStrength;
+        const jitter3Y = (Math.random() - 0.5) * jitterStrength;
         
         x1 += jitter1X;
         y1 += jitter1Y;
@@ -1008,37 +1052,28 @@ const FloatingMascot = memo(function FloatingMascot({
       // FIXED: Each star has DISTINCT text color matching its identity - gold star (#f4c15d) was incorrectly cyan!
       const brandingColors = [colors.primary, colors.secondary, colors.tertiary];
       
-      // CHROMATIC ABERRATION during mutation (per user's reference implementation)
-      // Draw R and B shifted ghost stars during mode transitions - ENHANCED visibility
-      const chromaticShift = mutation * 15; // Max 15px shift at peak mutation (increased from 8)
-      if (mutation > 0.01 && chromaticShift > 0.3) {
+      // CHROMATIC ABERRATION during mutation (from user's code exactly)
+      // RGB SHIFT based on mutation - 8px max shift as per user's reference
+      const chromaticShift = mutation * 8;  // 8px shift (matches user's code)
+      if (mutation > 0.01) {
         const starSize = mascotSize * trinityConfig.starSizeMultiplier;
         
-        // RED channel - shifted left with pulsing opacity
         ctx.globalCompositeOperation = 'screen';
-        const pulseAlpha = 0.6 + Math.sin(timeRef.current * 15) * 0.2;
-        ctx.globalAlpha = pulseAlpha * mutation;
+        
+        // RED channel - shifted left (from user's code)
+        ctx.globalAlpha = 0.5;
         twins.forEach((twin) => {
           ctx.beginPath();
-          ctx.arc(twin.x - chromaticShift, twin.y - chromaticShift * 0.3, starSize * 1.1, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(255, 50, 50, 0.7)';
+          ctx.arc(twin.x - chromaticShift, twin.y, starSize * 1.1, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
           ctx.fill();
         });
         
-        // BLUE channel - shifted right with offset
+        // BLUE channel - shifted right (from user's code)
         twins.forEach((twin) => {
           ctx.beginPath();
-          ctx.arc(twin.x + chromaticShift, twin.y + chromaticShift * 0.3, starSize * 1.1, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(50, 50, 255, 0.7)';
-          ctx.fill();
-        });
-        
-        // GREEN channel - center stabilizer (subtle)
-        ctx.globalAlpha = pulseAlpha * mutation * 0.4;
-        twins.forEach((twin) => {
-          ctx.beginPath();
-          ctx.arc(twin.x, twin.y, starSize * 0.9, 0, Math.PI * 2);
-          ctx.fillStyle = 'rgba(50, 255, 50, 0.5)';
+          ctx.arc(twin.x + chromaticShift, twin.y, starSize * 1.1, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
           ctx.fill();
         });
         
@@ -1046,27 +1081,13 @@ const FloatingMascot = memo(function FloatingMascot({
         ctx.globalAlpha = 1;
       }
       
-      // DIGITAL GLITCH LINES during mutation (per user's reference) - ENHANCED
-      if (mutation > 0.05) {
-        // Multiple glitch lines with varying intensity
-        const glitchCount = Math.floor(mutation * 5) + 1;
-        for (let i = 0; i < glitchCount; i++) {
-          const glitchAlpha = mutation * 0.25 * (Math.random() * 0.5 + 0.5);
-          ctx.fillStyle = `rgba(255, 255, 255, ${glitchAlpha})`;
-          const glitchY = (Math.random() - 0.5) * mascotSize + center;
-          const glitchH = Math.random() * 6 + 2;
-          const glitchW = mascotSize * (0.3 + Math.random() * 0.7);
-          const glitchX = Math.random() * (mascotSize - glitchW);
-          ctx.fillRect(glitchX, glitchY, glitchW, glitchH);
-        }
-        
-        // Occasional color glitch bars
-        if (Math.random() < mutation * 0.3) {
-          const barColor = ['rgba(255,0,0,0.2)', 'rgba(0,255,0,0.2)', 'rgba(0,0,255,0.2)'][Math.floor(Math.random() * 3)];
-          ctx.fillStyle = barColor;
-          const barY = Math.random() * mascotSize;
-          ctx.fillRect(0, barY, mascotSize, 3);
-        }
+      // DIGITAL GLITCH LINES during mutation (from user's code exactly)
+      // Horizontal scan lines that appear during transition
+      if (mutation > 0.1) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${mutation * 0.1})`;
+        const glitchY = (Math.random() - 0.5) * mascotSize + center;
+        const glitchH = Math.random() * 20;
+        ctx.fillRect(0, glitchY, mascotSize, glitchH);
       }
       
       // INDEPENDENT STAR RENDERING - Each star is a distinct entity with NO visual overlap
