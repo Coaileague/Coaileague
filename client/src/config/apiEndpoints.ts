@@ -176,6 +176,16 @@ export const API_ENDPOINTS = {
     unfreezeAccount: "/api/admin/users/:id/unfreeze",
   },
   
+  // Platform Staff Management
+  platform: {
+    staff: "/api/platform/staff",
+    grantRole: "/api/platform/staff/grant-role",
+    revokeRole: "/api/platform/staff/:userId/revoke-role",
+    suspendStaff: "/api/platform/staff/:userId/suspend",
+    unsuspendStaff: "/api/platform/staff/:userId/unsuspend",
+    changeRole: "/api/platform/staff/:userId/change-role",
+  },
+  
   // Analytics
   analytics: {
     getStats: "/api/analytics/stats",

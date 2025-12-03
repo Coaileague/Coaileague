@@ -18580,6 +18580,198 @@ Summary:`;
     }
   });
 
+
+  // ============================================================================
+  // PLATFORM STAFF MANAGEMENT ENDPOINTS
+  // ============================================================================
+
+  app.get('/api/platform/staff', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const activePlatformRoles = await db
+        .select()
+        .from(platformRoles)
+        .where(isNull(platformRoles.revokedAt));
+      
+      const userIds = activePlatformRoles.map(r => r.userId);
+      
+      if (userIds.length === 0) {
+        return res.json({ staff: [] });
+      }
+      
+      const staffUsers = await db.select().from(users).where(inArray(users.id, userIds));
+      
+      const staff = staffUsers.map(user => {
+        const roleRecord = activePlatformRoles.find(r => r.userId === user.id);
+        return {
+          userId: user.id,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          role: roleRecord?.role || 'none',
+          grantedAt: roleRecord?.grantedAt,
+          grantedBy: roleRecord?.grantedBy,
+          isSuspended: roleRecord?.isSuspended || false,
+          suspendedAt: roleRecord?.suspendedAt,
+          suspendedReason: roleRecord?.suspendedReason,
+        };
+      });
+      
+      res.json({ staff });
+    } catch (error: any) {
+      console.error("Error fetching platform staff:", error);
+      res.status(500).json({ error: "Failed to fetch platform staff" });
+    }
+  });
+
+  app.post('/api/platform/staff/grant-role', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { email, role } = req.body;
+      
+      if (!email) {
+        return res.status(400).json({ error: "Email is required" });
+      }
+      
+      const validRoles = ['deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
+      if (!role || !validRoles.includes(role)) {
+        return res.status(400).json({ error: `Invalid platform role. Valid roles: ${validRoles.join(', ')}` });
+      }
+
+      const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      
+      if (!user) {
+        return res.status(404).json({ error: "User not found. They must have an existing account." });
+      }
+
+      const [existingRole] = await db
+        .select()
+        .from(platformRoles)
+        .where(and(eq(platformRoles.userId, user.id), isNull(platformRoles.revokedAt)))
+        .limit(1);
+      
+      if (existingRole) {
+        return res.status(400).json({ error: "User already has a platform role. Use change role instead." });
+      }
+
+      const [newRole] = await db
+        .insert(platformRoles)
+        .values({
+          userId: user.id,
+          role,
+          grantedBy: req.user!.id,
+          grantedReason: `Granted by ${req.user!.email}`,
+        })
+        .returning();
+
+      res.json({ success: true, message: `Platform role '${role}' granted to ${email}`, role: newRole });
+    } catch (error: any) {
+      console.error("Error granting platform role:", error);
+      res.status(500).json({ error: "Failed to grant platform role" });
+    }
+  });
+
+  app.post('/api/platform/staff/:userId/revoke-role', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      
+      await db
+        .update(platformRoles)
+        .set({
+          revokedAt: new Date(),
+          revokedBy: req.user!.id,
+          revokedReason: 'Role revoked by admin',
+        })
+        .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
+
+      res.json({ success: true, message: "Platform role revoked successfully" });
+    } catch (error: any) {
+      console.error("Error revoking platform role:", error);
+      res.status(500).json({ error: "Failed to revoke platform role" });
+    }
+  });
+
+  app.post('/api/platform/staff/:userId/suspend', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const { reason } = req.body;
+      
+      if (!reason) {
+        return res.status(400).json({ error: "Suspension reason is required for audit trail" });
+      }
+
+      await db
+        .update(platformRoles)
+        .set({
+          isSuspended: true,
+          suspendedAt: new Date(),
+          suspendedBy: req.user!.id,
+          suspendedReason: reason,
+        })
+        .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
+
+      res.json({ success: true, message: "Staff member suspended for investigation" });
+    } catch (error: any) {
+      console.error("Error suspending staff:", error);
+      res.status(500).json({ error: "Failed to suspend staff member" });
+    }
+  });
+
+  app.post('/api/platform/staff/:userId/unsuspend', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+
+      await db
+        .update(platformRoles)
+        .set({
+          isSuspended: false,
+          suspendedAt: null,
+          suspendedBy: null,
+          suspendedReason: null,
+        })
+        .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
+
+      res.json({ success: true, message: "Staff member reinstated" });
+    } catch (error: any) {
+      console.error("Error unsuspending staff:", error);
+      res.status(500).json({ error: "Failed to reinstate staff member" });
+    }
+  });
+
+  app.post('/api/platform/staff/:userId/change-role', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId } = req.params;
+      const { newRole } = req.body;
+      
+      const validRoles = ['deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
+      if (!newRole || !validRoles.includes(newRole)) {
+        return res.status(400).json({ error: `Invalid platform role. Valid roles: ${validRoles.join(', ')}` });
+      }
+
+      await db
+        .update(platformRoles)
+        .set({
+          revokedAt: new Date(),
+          revokedBy: req.user!.id,
+          revokedReason: `Role changed to ${newRole}`,
+        })
+        .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
+
+      const [newRoleRecord] = await db
+        .insert(platformRoles)
+        .values({
+          userId,
+          role: newRole,
+          grantedBy: req.user!.id,
+          grantedReason: 'Role changed from previous role',
+        })
+        .returning();
+
+      res.json({ success: true, message: `Platform role changed to '${newRole}'`, role: newRoleRecord });
+    } catch (error: any) {
+      console.error("Error changing platform role:", error);
+      res.status(500).json({ error: "Failed to change platform role" });
+    }
+  });
+
   // ============================================================================
   // LIVE CHAT ROUTES (WebSocket Support System)
   // ============================================================================

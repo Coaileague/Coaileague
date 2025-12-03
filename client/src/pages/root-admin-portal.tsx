@@ -87,6 +87,31 @@ interface WorkspaceDetail {
   };
 }
 
+interface PlatformStaffUser {
+  userId: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  role: string;
+  grantedAt?: string;
+  grantedBy?: string;
+  isSuspended?: boolean;
+  suspendedReason?: string;
+  suspendedAt?: string;
+  lastLoginAt?: string;
+}
+
+type PlatformRoleType = 'root_admin' | 'deputy_admin' | 'sysop' | 'support_manager' | 'support_agent' | 'compliance_officer';
+
+const PLATFORM_ROLES: { value: PlatformRoleType; label: string; description: string }[] = [
+  { value: 'root_admin', label: 'Root Admin', description: 'Full platform access including destructive operations' },
+  { value: 'deputy_admin', label: 'Deputy Admin', description: 'Full ops control, day-to-day platform management' },
+  { value: 'sysop', label: 'System Operator', description: 'Backend, deployment, diagnostics, service restarts' },
+  { value: 'support_manager', label: 'Support Manager', description: 'Manage support team and escalated tickets' },
+  { value: 'support_agent', label: 'Support Agent', description: 'Handle customer support tickets and chat' },
+  { value: 'compliance_officer', label: 'Compliance Officer', description: 'Audit access and compliance oversight' },
+];
+
 export default function RootAdminPortal() {
   const [, setLocation] = useLocation();
   const { user, isLoading } = useAuth();
@@ -102,6 +127,14 @@ export default function RootAdminPortal() {
   const [selectedConversation, setSelectedConversation] = useState<string | null>(null);
   const [messageText, setMessageText] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  // Support Staff Management State
+  const [staffSearchQuery, setStaffSearchQuery] = useState("");
+  const [selectedStaffUser, setSelectedStaffUser] = useState<PlatformStaffUser | null>(null);
+  const [staffActionDialog, setStaffActionDialog] = useState<string | null>(null);
+  const [newStaffEmail, setNewStaffEmail] = useState("");
+  const [newStaffRole, setNewStaffRole] = useState<PlatformRoleType>("support_agent");
+  const [suspendReason, setSuspendReason] = useState("");
 
   // GATEKEEPER: Microsoft-style access control - Block unauthorized users
   useEffect(() => {
@@ -174,6 +207,24 @@ export default function RootAdminPortal() {
     queryKey: ["/api/chat/conversations", selectedConversation, "messages"],
     enabled: !!selectedConversation,
     refetchInterval: 2000,
+  });
+
+  // Platform Staff Query
+  const { data: staffData, isLoading: staffLoading, refetch: refetchStaff } = useQuery<{ staff: PlatformStaffUser[] }>({
+    queryKey: ["/api/platform/staff", refreshKey],
+  });
+  const platformStaff = staffData?.staff || [];
+
+  // Filter staff by search query
+  const filteredStaff = platformStaff.filter((staff) => {
+    if (!staffSearchQuery) return true;
+    const query = staffSearchQuery.toLowerCase();
+    return (
+      staff.email?.toLowerCase().includes(query) ||
+      staff.firstName?.toLowerCase().includes(query) ||
+      staff.lastName?.toLowerCase().includes(query) ||
+      staff.role?.toLowerCase().includes(query)
+    );
   });
 
   // System health metrics - fetched from real monitoring API
@@ -300,6 +351,75 @@ export default function RootAdminPortal() {
     },
   });
 
+  // Support Staff Management Mutations
+  const grantPlatformRoleMutation = useMutation({
+    mutationFn: (data: { email: string; role: PlatformRoleType }) =>
+      apiPost('platform.grantRole', data),
+    onSuccess: () => {
+      toast({ title: "Role Granted", description: "Platform role has been granted successfully" });
+      setStaffActionDialog(null);
+      setNewStaffEmail("");
+      refetchStaff();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to grant role", variant: "destructive" });
+    },
+  });
+
+  const revokePlatformRoleMutation = useMutation({
+    mutationFn: (data: { userId: string }) =>
+      apiPost('platform.revokeRole', data),
+    onSuccess: () => {
+      toast({ title: "Role Revoked", description: "Platform role has been revoked" });
+      setStaffActionDialog(null);
+      setSelectedStaffUser(null);
+      refetchStaff();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to revoke role", variant: "destructive" });
+    },
+  });
+
+  const suspendStaffMutation = useMutation({
+    mutationFn: (data: { userId: string; reason: string }) =>
+      apiPost('platform.suspendStaff', data),
+    onSuccess: () => {
+      toast({ title: "Staff Suspended", description: "Support staff member has been suspended for investigation" });
+      setStaffActionDialog(null);
+      setSuspendReason("");
+      refetchStaff();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to suspend staff", variant: "destructive" });
+    },
+  });
+
+  const unsuspendStaffMutation = useMutation({
+    mutationFn: (data: { userId: string }) =>
+      apiPost('platform.unsuspendStaff', data),
+    onSuccess: () => {
+      toast({ title: "Staff Reinstated", description: "Support staff member has been reinstated" });
+      setStaffActionDialog(null);
+      refetchStaff();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to reinstate staff", variant: "destructive" });
+    },
+  });
+
+  const changePlatformRoleMutation = useMutation({
+    mutationFn: (data: { userId: string; newRole: PlatformRoleType }) =>
+      apiPost('platform.changeRole', data),
+    onSuccess: () => {
+      toast({ title: "Role Changed", description: "Platform role has been updated" });
+      setStaffActionDialog(null);
+      refetchStaff();
+    },
+    onError: (error: any) => {
+      toast({ title: "Error", description: error.message || "Failed to change role", variant: "destructive" });
+    },
+  });
+
   // Helper functions
   const getActivityIcon = (type: LiveActivity["type"]) => {
     switch (type) {
@@ -378,10 +498,14 @@ export default function RootAdminPortal() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="overview" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-5 lg:w-auto">
+          <TabsList className="grid w-full grid-cols-6 lg:w-auto">
             <TabsTrigger value="overview" data-testid="tab-platform-overview">
               <BarChart3 className="mr-2 h-4 w-4" />
               Platform Overview
+            </TabsTrigger>
+            <TabsTrigger value="staff" data-testid="tab-support-staff">
+              <Shield className="mr-2 h-4 w-4" />
+              Support Staff
             </TabsTrigger>
             <TabsTrigger value="support" data-testid="tab-customer-support">
               <UserCog className="mr-2 h-4 w-4" />
@@ -588,6 +712,221 @@ export default function RootAdminPortal() {
                 </div>
               </div>
             </div>
+          </TabsContent>
+
+          {/* SUPPORT STAFF MANAGEMENT TAB */}
+          <TabsContent value="staff" className="space-y-6">
+            {/* Header with Add Staff Button */}
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-2xl font-bold">Support Staff Management</h2>
+                <p className="text-muted-foreground">Manage platform support staff roles, permissions, and access</p>
+              </div>
+              <Button onClick={() => setStaffActionDialog('add')} data-testid="button-add-staff">
+                <UserPlus className="mr-2 h-4 w-4" />
+                Add Support Staff
+              </Button>
+            </div>
+
+            {/* Staff Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Total Staff</CardTitle>
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="stat-total-staff">{platformStaff.length}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Active</CardTitle>
+                  <UserCheck className="h-4 w-4 text-green-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-600" data-testid="stat-active-staff">
+                    {platformStaff.filter(s => !s.isSuspended).length}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Suspended</CardTitle>
+                  <Ban className="h-4 w-4 text-red-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-red-600" data-testid="stat-suspended-staff">
+                    {platformStaff.filter(s => s.isSuspended).length}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
+                  <CardTitle className="text-sm font-medium">Support Agents</CardTitle>
+                  <Headphones className="h-4 w-4 text-blue-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold" data-testid="stat-support-agents">
+                    {platformStaff.filter(s => s.role === 'support_agent' || s.role === 'support_manager').length}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Search and Staff List */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between gap-4">
+                  <CardTitle>Platform Staff Directory</CardTitle>
+                  <div className="relative w-72">
+                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Search staff by name, email, or role..."
+                      value={staffSearchQuery}
+                      onChange={(e) => setStaffSearchQuery(e.target.value)}
+                      className="pl-9"
+                      data-testid="input-staff-search"
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <ScrollArea className="h-[500px]">
+                  {staffLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <RefreshCw className="h-6 w-6 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : filteredStaff.length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      {staffSearchQuery ? "No staff members match your search" : "No support staff configured yet"}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {filteredStaff.map((staff) => (
+                        <div
+                          key={staff.userId}
+                          data-testid={`staff-row-${staff.userId}`}
+                          className={`flex items-center justify-between p-4 rounded-lg border transition-colors ${
+                            staff.isSuspended 
+                              ? 'bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-900' 
+                              : 'hover:bg-muted/50'
+                          }`}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                              staff.isSuspended 
+                                ? 'bg-red-100 dark:bg-red-900' 
+                                : 'bg-primary/10'
+                            }`}>
+                              {staff.isSuspended ? (
+                                <Ban className="h-5 w-5 text-red-600" />
+                              ) : (
+                                <User className="h-5 w-5 text-primary" />
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-medium flex items-center gap-2">
+                                {staff.firstName || staff.lastName 
+                                  ? `${staff.firstName || ''} ${staff.lastName || ''}`.trim() 
+                                  : 'Unnamed User'}
+                                {staff.isSuspended && (
+                                  <Badge variant="destructive" className="text-xs">Suspended</Badge>
+                                )}
+                              </div>
+                              <div className="text-sm text-muted-foreground">{staff.email}</div>
+                              {staff.isSuspended && staff.suspendedReason && (
+                                <div className="text-xs text-red-600 mt-1">
+                                  Reason: {staff.suspendedReason}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <Badge variant="outline" className="capitalize">
+                              {PLATFORM_ROLES.find(r => r.value === staff.role)?.label || staff.role.replace('_', ' ')}
+                            </Badge>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setSelectedStaffUser(staff);
+                                  setStaffActionDialog('change-role');
+                                }}
+                                data-testid={`button-change-role-${staff.userId}`}
+                              >
+                                <Settings className="h-4 w-4" />
+                              </Button>
+                              {staff.isSuspended ? (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-green-600"
+                                  onClick={() => {
+                                    setSelectedStaffUser(staff);
+                                    unsuspendStaffMutation.mutate({ userId: staff.userId });
+                                  }}
+                                  data-testid={`button-unsuspend-${staff.userId}`}
+                                >
+                                  <Play className="h-4 w-4" />
+                                </Button>
+                              ) : (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="text-amber-600"
+                                  onClick={() => {
+                                    setSelectedStaffUser(staff);
+                                    setStaffActionDialog('suspend');
+                                  }}
+                                  data-testid={`button-suspend-${staff.userId}`}
+                                >
+                                  <Pause className="h-4 w-4" />
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="text-red-600"
+                                onClick={() => {
+                                  setSelectedStaffUser(staff);
+                                  setStaffActionDialog('revoke');
+                                }}
+                                data-testid={`button-revoke-${staff.userId}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </ScrollArea>
+              </CardContent>
+            </Card>
+
+            {/* Role Reference */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-base">Platform Role Reference</CardTitle>
+                <CardDescription>Understanding support staff role hierarchy and permissions</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {PLATFORM_ROLES.map((role) => (
+                    <div key={role.value} className="p-3 border rounded-lg">
+                      <div className="font-medium flex items-center gap-2">
+                        <Shield className="h-4 w-4 text-primary" />
+                        {role.label}
+                      </div>
+                      <p className="text-sm text-muted-foreground mt-1">{role.description}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* CUSTOMER SUPPORT TAB */}
@@ -1200,6 +1539,203 @@ export default function RootAdminPortal() {
                 data-testid="button-confirm-lock"
               >
                 Lock Account
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Staff Management Dialogs */}
+        <Dialog open={staffActionDialog === 'add'} onOpenChange={() => setStaffActionDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Add Support Staff</DialogTitle>
+              <DialogDescription>
+                Grant platform access to a new support staff member. They must have an existing account.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Email Address</Label>
+                <Input
+                  type="email"
+                  placeholder="staff@example.com"
+                  value={newStaffEmail}
+                  onChange={(e) => setNewStaffEmail(e.target.value)}
+                  data-testid="input-new-staff-email"
+                />
+              </div>
+              <div>
+                <Label>Platform Role</Label>
+                <Select value={newStaffRole} onValueChange={(value) => setNewStaffRole(value as PlatformRoleType)}>
+                  <SelectTrigger data-testid="select-new-staff-role">
+                    <SelectValue placeholder="Select a role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PLATFORM_ROLES.filter(r => r.value !== 'root_admin').map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        <div className="flex flex-col">
+                          <span>{role.label}</span>
+                          <span className="text-xs text-muted-foreground">{role.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStaffActionDialog(null)} data-testid="button-cancel-add-staff">
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (newStaffEmail && newStaffRole) {
+                    grantPlatformRoleMutation.mutate({ email: newStaffEmail, role: newStaffRole });
+                  }
+                }}
+                disabled={!newStaffEmail || grantPlatformRoleMutation.isPending}
+                data-testid="button-confirm-add-staff"
+              >
+                {grantPlatformRoleMutation.isPending ? 'Adding...' : 'Add Staff Member'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={staffActionDialog === 'suspend'} onOpenChange={() => setStaffActionDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Suspend Staff Member</DialogTitle>
+              <DialogDescription>
+                Suspend {selectedStaffUser?.firstName || selectedStaffUser?.email} for investigation. 
+                They will lose all platform access until reinstated.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div>
+                <Label>Investigation Reason</Label>
+                <Textarea
+                  placeholder="Enter detailed reason for suspension (required for audit trail)..."
+                  value={suspendReason}
+                  onChange={(e) => setSuspendReason(e.target.value)}
+                  rows={4}
+                  data-testid="input-staff-suspend-reason"
+                />
+              </div>
+              <div className="bg-amber-50 dark:bg-amber-950/20 border border-amber-200 dark:border-amber-800 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-4 w-4 text-amber-600 mt-0.5" />
+                  <div className="text-sm text-amber-800 dark:text-amber-200">
+                    This action will be logged and the staff member will receive a notification via the universal notification system.
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStaffActionDialog(null)} data-testid="button-cancel-staff-suspend">
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (selectedStaffUser && suspendReason) {
+                    suspendStaffMutation.mutate({ userId: selectedStaffUser.userId, reason: suspendReason });
+                  }
+                }}
+                disabled={!suspendReason || suspendStaffMutation.isPending}
+                data-testid="button-confirm-staff-suspend"
+              >
+                {suspendStaffMutation.isPending ? 'Suspending...' : 'Suspend Staff Member'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={staffActionDialog === 'change-role'} onOpenChange={() => setStaffActionDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Change Platform Role</DialogTitle>
+              <DialogDescription>
+                Update the platform role for {selectedStaffUser?.firstName || selectedStaffUser?.email}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="p-3 bg-muted rounded-lg">
+                <div className="text-sm text-muted-foreground">Current Role</div>
+                <div className="font-medium capitalize">
+                  {PLATFORM_ROLES.find(r => r.value === selectedStaffUser?.role)?.label || selectedStaffUser?.role}
+                </div>
+              </div>
+              <div>
+                <Label>New Role</Label>
+                <Select value={newStaffRole} onValueChange={(value) => setNewStaffRole(value as PlatformRoleType)}>
+                  <SelectTrigger data-testid="select-change-role">
+                    <SelectValue placeholder="Select new role" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PLATFORM_ROLES.filter(r => r.value !== 'root_admin' && r.value !== selectedStaffUser?.role).map((role) => (
+                      <SelectItem key={role.value} value={role.value}>
+                        <div className="flex flex-col">
+                          <span>{role.label}</span>
+                          <span className="text-xs text-muted-foreground">{role.description}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStaffActionDialog(null)} data-testid="button-cancel-change-role">
+                Cancel
+              </Button>
+              <Button
+                onClick={() => {
+                  if (selectedStaffUser && newStaffRole) {
+                    changePlatformRoleMutation.mutate({ userId: selectedStaffUser.userId, newRole: newStaffRole });
+                  }
+                }}
+                disabled={!newStaffRole || changePlatformRoleMutation.isPending}
+                data-testid="button-confirm-change-role"
+              >
+                {changePlatformRoleMutation.isPending ? 'Updating...' : 'Update Role'}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={staffActionDialog === 'revoke'} onOpenChange={() => setStaffActionDialog(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Revoke Platform Access</DialogTitle>
+              <DialogDescription>
+                Remove all platform access for {selectedStaffUser?.firstName || selectedStaffUser?.email}. 
+                They will no longer be able to access support tools.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-800 rounded-lg p-3">
+              <div className="flex items-start gap-2">
+                <XCircle className="h-4 w-4 text-red-600 mt-0.5" />
+                <div className="text-sm text-red-800 dark:text-red-200">
+                  This action cannot be undone. The staff member will need to be re-added to regain access.
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStaffActionDialog(null)} data-testid="button-cancel-revoke">
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={() => {
+                  if (selectedStaffUser) {
+                    revokePlatformRoleMutation.mutate({ userId: selectedStaffUser.userId });
+                  }
+                }}
+                disabled={revokePlatformRoleMutation.isPending}
+                data-testid="button-confirm-revoke"
+              >
+                {revokePlatformRoleMutation.isPending ? 'Revoking...' : 'Revoke Access'}
               </Button>
             </DialogFooter>
           </DialogContent>

@@ -4113,6 +4113,12 @@ export const platformRoles = pgTable("platform_roles", {
   revokedBy: varchar("revoked_by").references(() => users.id),
   revokedReason: text("revoked_reason"),
 
+  // Suspension tracking for investigations
+  isSuspended: boolean("is_suspended").default(false),
+  suspendedAt: timestamp("suspended_at"),
+  suspendedBy: varchar("suspended_by").references(() => users.id),
+  suspendedReason: text("suspended_reason"),
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
@@ -5766,6 +5772,12 @@ export const chatGuestTokens = pgTable("chat_guest_tokens", {
   revokedAt: timestamp("revoked_at"),
   revokedBy: varchar("revoked_by").references(() => users.id, { onDelete: 'set null' }),
   revokedReason: text("revoked_reason"),
+
+  // Suspension tracking for investigations
+  isSuspended: boolean("is_suspended").default(false),
+  suspendedAt: timestamp("suspended_at"),
+  suspendedBy: varchar("suspended_by").references(() => users.id),
+  suspendedReason: text("suspended_reason"),
   
   // Status
   isActive: boolean("is_active").default(true),
@@ -6507,6 +6519,12 @@ export const supportTicketAccess = pgTable("support_ticket_access", {
   revokedAt: timestamp("revoked_at"),
   revokedBy: varchar("revoked_by").references(() => users.id),
   revokedReason: text("revoked_reason"),
+
+  // Suspension tracking for investigations
+  isSuspended: boolean("is_suspended").default(false),
+  suspendedAt: timestamp("suspended_at"),
+  suspendedBy: varchar("suspended_by").references(() => users.id),
+  suspendedReason: text("suspended_reason"),
 
   createdAt: timestamp("created_at").defaultNow(),
 });
