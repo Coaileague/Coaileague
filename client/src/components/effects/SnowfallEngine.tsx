@@ -85,16 +85,19 @@ const SnowfallEngine = memo(function SnowfallEngine() {
   const initSnowPiles = useCallback(() => {
     if (!accumulation) return;
     
-    const pileCount = Math.floor(dimensions.width / 120);
+    // Mobile gets larger, more visible snow piles
+    const isMobile = dimensions.width < 768;
+    const pileCount = Math.floor(dimensions.width / (isMobile ? 80 : 120));
     const piles: SnowPile[] = [];
     
     for (let i = 0; i < pileCount; i++) {
       const x = (i / pileCount) * dimensions.width + Math.random() * 60;
       piles.push({
         x,
-        width: 80 + Math.random() * 60,
+        width: isMobile ? 100 + Math.random() * 80 : 80 + Math.random() * 60,
         height: 0,
-        targetHeight: 20 + Math.random() * 40,
+        // Mobile: taller snow piles (60-120px), Desktop: normal (20-60px)
+        targetHeight: isMobile ? 60 + Math.random() * 60 : 20 + Math.random() * 40,
         phase: 'forming',
         phaseStart: Date.now(),
       });
