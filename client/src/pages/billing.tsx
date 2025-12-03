@@ -739,9 +739,98 @@ export default function Billing() {
 
         {/* Usage Tab */}
         <TabsContent value="usage" className="space-y-6">
+          {/* Monthly Allowance Meter */}
           <Card>
             <CardHeader>
-              <CardTitle>AI Token Usage</CardTitle>
+              <CardTitle className="flex items-center gap-2">
+                <Sparkles className="h-5 w-5 text-primary" />
+                Monthly AI Token Allowance
+              </CardTitle>
+              <CardDescription>
+                Your plan includes a monthly token allocation. Usage beyond this incurs overage charges.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {usageLoading ? (
+                <div className="flex items-center justify-center py-4">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {(() => {
+                    const monthlyAllowance = subscriptionDetails?.credits?.total || 100000;
+                    const totalUsed = (usageData as any)?.totalTokens || 0;
+                    const usagePercent = Math.min(100, (totalUsed / monthlyAllowance) * 100);
+                    const isOverage = totalUsed > monthlyAllowance;
+                    const overageAmount = Math.max(0, totalUsed - monthlyAllowance);
+                    
+                    return (
+                      <>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-muted-foreground">Tokens Used</span>
+                          <span className={`font-medium ${isOverage ? 'text-destructive' : ''}`}>
+                            {totalUsed.toLocaleString()} / {monthlyAllowance.toLocaleString()}
+                          </span>
+                        </div>
+                        
+                        {/* Usage Progress Bar */}
+                        <div className="relative h-4 rounded-full bg-muted overflow-hidden">
+                          <div 
+                            className={`h-full transition-all duration-500 ${
+                              isOverage 
+                                ? 'bg-gradient-to-r from-primary via-yellow-500 to-destructive' 
+                                : usagePercent > 80 
+                                  ? 'bg-gradient-to-r from-primary to-yellow-500'
+                                  : 'bg-primary'
+                            }`}
+                            style={{ width: `${Math.min(100, usagePercent)}%` }}
+                          />
+                          {/* 80% warning marker */}
+                          <div className="absolute top-0 left-[80%] h-full w-0.5 bg-yellow-500/50" />
+                        </div>
+                        
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-muted-foreground">
+                            {usagePercent.toFixed(1)}% of allowance used
+                          </span>
+                          {isOverage ? (
+                            <Badge variant="destructive" className="text-xs">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              {overageAmount.toLocaleString()} overage tokens
+                            </Badge>
+                          ) : usagePercent > 80 ? (
+                            <Badge variant="secondary" className="text-xs bg-yellow-500/10 text-yellow-600 dark:text-yellow-400">
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                              Approaching limit
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">
+                              <CheckCircle2 className="h-3 w-3 mr-1" />
+                              Within allowance
+                            </Badge>
+                          )}
+                        </div>
+                        
+                        {isOverage && (
+                          <div className="p-3 rounded-md bg-destructive/10 border border-destructive/20 mt-2">
+                            <p className="text-sm text-destructive flex items-center gap-2">
+                              <AlertTriangle className="h-4 w-4" />
+                              Overage charges: ~${((overageAmount / 1000) * 0.03).toFixed(2)} (billed weekly)
+                            </p>
+                          </div>
+                        )}
+                      </>
+                    );
+                  })()}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Usage by Feature */}
+          <Card>
+            <CardHeader>
+              <CardTitle>AI Token Usage by Feature</CardTitle>
               <CardDescription>
                 Track your AI-powered feature consumption across OS modules
               </CardDescription>
@@ -789,12 +878,18 @@ export default function Billing() {
                     </div>
                   </div>
 
-                  {/* Usage Chart Placeholder */}
-                  <div className="p-8 rounded-md border border-dashed text-center">
-                    <Database className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-sm text-muted-foreground">
-                      Usage charts coming soon
-                    </p>
+                  {/* Weekly Billing Info */}
+                  <div className="p-4 rounded-md border bg-muted/30">
+                    <div className="flex items-start gap-3">
+                      <RefreshCw className="h-5 w-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="text-sm font-medium">Weekly Overage Billing</p>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          AI token overages are billed automatically every Sunday at midnight. 
+                          Overage rate: $0.03 per 1,000 tokens beyond your monthly allowance.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               )}

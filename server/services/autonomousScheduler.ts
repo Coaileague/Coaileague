@@ -1618,6 +1618,112 @@ export function startAutonomousScheduler() {
   console.log('   Schedule: */5 * * * * (every 5 minutes)');
   console.log('   Sends shift reminders based on user preferences\n');
 
+  // Weekly AI Overage Billing - Every Sunday at midnight
+  cron.schedule("0 0 * * 0", () => {
+    console.log(`💰 [AI BILLING] Weekly overage billing triggered at ${new Date().toISOString()}`);
+    (async () => {
+      try {
+        const { usageMeteringService } = await import('./billing/usageMetering');
+        const { workspaces, billingAuditLog, invoices } = await import('@shared/schema');
+        const { db } = await import('../db');
+        const { eq, and } = await import('drizzle-orm');
+        
+        // Get all active workspaces (not suspended or frozen)
+        const activeWorkspaces = await db.select().from(workspaces).where(
+          and(
+            eq(workspaces.subscriptionStatus, 'active'),
+            eq(workspaces.isSuspended, false),
+            eq(workspaces.isFrozen, false)
+          )
+        );
+        let totalBilled = 0;
+        let workspacesBilled = 0;
+        let invoicesCreated = 0;
+        
+        const weekEnd = new Date();
+        const weekStart = new Date(weekEnd);
+        weekStart.setDate(weekStart.getDate() - 7);
+        const weekKey = `ai-overage-${weekStart.toISOString().split('T')[0]}`;
+        
+        for (const workspace of activeWorkspaces) {
+          try {
+            // Check idempotency - skip if already processed this week
+            const [existingAudit] = await db.select().from(billingAuditLog).where(
+              and(
+                eq(billingAuditLog.workspaceId, workspace.id),
+                eq(billingAuditLog.eventType, 'weekly_ai_overage_processed'),
+                eq(billingAuditLog.idempotencyKey, weekKey)
+              )
+            ).limit(1);
+            
+            if (existingAudit) {
+              console.log(`💰 [AI BILLING] Skipping ${workspace.name} - already processed for ${weekKey}`);
+              continue;
+            }
+            
+            // Get this week's usage metrics
+            const metrics = await usageMeteringService.getUsageMetrics(workspace.id, weekStart, weekEnd);
+            
+            if (metrics.totalCost > 0) {
+              // Create invoice line item for AI overage
+              const [invoice] = await db.insert(invoices).values({
+                workspaceId: workspace.id,
+                invoiceNumber: `AI-${Date.now()}-${workspace.id.substring(0, 8)}`,
+                status: 'pending',
+                totalAmount: metrics.totalCost.toString(),
+                subtotal: metrics.totalCost.toString(),
+                taxAmount: '0',
+                lineItems: [{
+                  description: `AI Token Overage (${metrics.totalUsage.toLocaleString()} tokens)`,
+                  quantity: 1,
+                  unitPrice: metrics.totalCost,
+                  totalPrice: metrics.totalCost,
+                  type: 'ai_overage'
+                }],
+                periodStart: weekStart,
+                periodEnd: weekEnd,
+              }).returning();
+              
+              invoicesCreated++;
+              totalBilled += metrics.totalCost;
+              workspacesBilled++;
+              
+              // Log audit event with idempotency key
+              await db.insert(billingAuditLog).values({
+                workspaceId: workspace.id,
+                eventType: 'weekly_ai_overage_processed',
+                eventCategory: 'billing',
+                actorType: 'system',
+                description: `Weekly AI overage invoice created: $${metrics.totalCost.toFixed(2)} for ${metrics.totalUsage.toLocaleString()} tokens`,
+                relatedEntityType: 'invoice',
+                relatedEntityId: invoice.id,
+                idempotencyKey: weekKey,
+                newState: {
+                  invoiceId: invoice.id,
+                  totalCost: metrics.totalCost,
+                  totalTokens: metrics.totalUsage,
+                  periodStart: weekStart.toISOString(),
+                  periodEnd: weekEnd.toISOString(),
+                },
+              });
+              
+              console.log(`💰 [AI BILLING] Workspace ${workspace.name}: Created invoice $${metrics.totalCost.toFixed(2)} for ${metrics.totalUsage.toLocaleString()} tokens`);
+            }
+          } catch (wsError) {
+            console.error(`💰 [AI BILLING] Error processing workspace ${workspace.id}:`, wsError);
+          }
+        }
+        
+        console.log(`💰 [AI BILLING] Weekly billing complete: ${workspacesBilled} workspaces, ${invoicesCreated} invoices, $${totalBilled.toFixed(2)} total`);
+      } catch (error) {
+        console.error('💰 [AI BILLING] Weekly billing error:', error);
+      }
+    })();
+  });
+  console.log('✅ AI Overage Billing Automation:');
+  console.log('   Schedule: 0 0 * * 0 (every Sunday at midnight)');
+  console.log('   Creates weekly AI token overage invoices with idempotency\n');
+
   // Platform Change Monitor - Every 15 minutes
   cron.schedule("*/15 * * * *", () => {
     console.log(`🧠 [AI BRAIN] 🕐 Scheduled platform scan triggered at ${new Date().toISOString()}`);
@@ -1672,4 +1778,66 @@ export const manualTriggers = {
   creditReset: resetMonthlyCredits,
   shiftReminders: async () => { const { processShiftReminders } = await import('./shiftRemindersService'); return processShiftReminders(); },
   platformScan: async () => platformChangeMonitor.triggerManualScan(),
+  aiOverageBilling: async () => {
+    const { usageMeteringService } = await import('./billing/usageMetering');
+    const { workspaces, billingAuditLog, invoices } = await import('@shared/schema');
+    const { db } = await import('../db');
+    const { eq, and } = await import('drizzle-orm');
+    
+    const activeWorkspaces = await db.select().from(workspaces).where(
+      and(
+        eq(workspaces.subscriptionStatus, 'active'),
+        eq(workspaces.isSuspended, false),
+        eq(workspaces.isFrozen, false)
+      )
+    );
+    
+    const weekEnd = new Date();
+    const weekStart = new Date(weekEnd);
+    weekStart.setDate(weekStart.getDate() - 7);
+    const weekKey = `ai-overage-manual-${Date.now()}`;
+    
+    let totalBilled = 0;
+    let invoicesCreated = 0;
+    
+    for (const workspace of activeWorkspaces) {
+      const metrics = await usageMeteringService.getUsageMetrics(workspace.id, weekStart, weekEnd);
+      
+      if (metrics.totalCost > 0) {
+        const [invoice] = await db.insert(invoices).values({
+          workspaceId: workspace.id,
+          invoiceNumber: `AI-MANUAL-${Date.now()}-${workspace.id.substring(0, 8)}`,
+          status: 'pending',
+          totalAmount: metrics.totalCost.toString(),
+          subtotal: metrics.totalCost.toString(),
+          taxAmount: '0',
+          lineItems: [{
+            description: `AI Token Overage (${metrics.totalUsage.toLocaleString()} tokens)`,
+            quantity: 1,
+            unitPrice: metrics.totalCost,
+            totalPrice: metrics.totalCost,
+            type: 'ai_overage'
+          }],
+          periodStart: weekStart,
+          periodEnd: weekEnd,
+        }).returning();
+        
+        await db.insert(billingAuditLog).values({
+          workspaceId: workspace.id,
+          eventType: 'manual_ai_overage_processed',
+          eventCategory: 'billing',
+          actorType: 'system',
+          description: `Manual AI overage invoice: $${metrics.totalCost.toFixed(2)}`,
+          relatedEntityType: 'invoice',
+          relatedEntityId: invoice.id,
+          idempotencyKey: weekKey,
+        });
+        
+        invoicesCreated++;
+        totalBilled += metrics.totalCost;
+      }
+    }
+    
+    return { workspacesProcessed: activeWorkspaces.length, invoicesCreated, totalBilled };
+  },
 };
