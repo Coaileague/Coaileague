@@ -34,8 +34,8 @@ whatsNewRouter.get('/', async (req, res) => {
     const category = req.query.category as string | undefined;
     const includeAll = req.query.all === 'true';
     
-    // Get user info for RBAC filtering and view tracking
-    const userId = authReq.user?.id;
+    // Get user info from session for RBAC filtering and view tracking
+    const userId = (req.session as any)?.userId || authReq.user?.id;
     const userRole = authReq.workspaceRole || 'staff';
 
     const updates = await getUpdates({ limit, category, includeAll, userId, userRole });
@@ -59,7 +59,8 @@ whatsNewRouter.get('/latest', async (req, res) => {
 
     const authReq = req as AuthenticatedRequest;
     const count = req.query.count ? parseInt(req.query.count as string) : 5;
-    const userId = authReq.user?.id;
+    // Get user from session for view tracking
+    const userId = (req.session as any)?.userId || authReq.user?.id;
     const userRole = authReq.workspaceRole || 'staff';
     
     const updates = await getLatestUpdates(count, userId, userRole);
@@ -80,7 +81,8 @@ whatsNewRouter.get('/new-features', async (req, res) => {
     }
 
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id;
+    // Get user from session for view tracking
+    const userId = (req.session as any)?.userId || authReq.user?.id;
     const userRole = authReq.workspaceRole || 'staff';
     const updates = await getNewFeatures(userId, userRole);
 
@@ -101,7 +103,8 @@ whatsNewRouter.get('/unviewed-count', async (req, res) => {
     }
 
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id;
+    // Get user from session - this is key for proper count!
+    const userId = (req.session as any)?.userId || authReq.user?.id;
     if (!userId) {
       return res.json({ count: 0, message: 'Not authenticated' });
     }
@@ -145,7 +148,8 @@ whatsNewRouter.get('/category/:category', async (req, res) => {
 
     const authReq = req as AuthenticatedRequest;
     const category = req.params.category as 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement';
-    const userId = authReq.user?.id;
+    // Get user from session for view tracking
+    const userId = (req.session as any)?.userId || authReq.user?.id;
     const userRole = authReq.workspaceRole || 'staff';
     
     const updates = await getUpdatesByCategory(category, userId, userRole);
@@ -164,7 +168,8 @@ whatsNewRouter.get('/category/:category', async (req, res) => {
 whatsNewRouter.post('/mark-all-viewed', async (req, res) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id;
+    // Get user from session for marking as viewed
+    const userId = (req.session as any)?.userId || authReq.user?.id;
     const updateIds = req.body.updateIds || [];
     const viewSource = req.body.source || 'badge-clear-all';
     
@@ -195,7 +200,8 @@ whatsNewRouter.post('/mark-all-viewed', async (req, res) => {
 whatsNewRouter.post('/:id/viewed', async (req, res) => {
   try {
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id;
+    // Get user from session for marking as viewed
+    const userId = (req.session as any)?.userId || authReq.user?.id;
     if (!userId) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -221,7 +227,8 @@ whatsNewRouter.get('/:id', async (req, res) => {
     }
 
     const authReq = req as AuthenticatedRequest;
-    const userId = authReq.user?.id;
+    // Get user from session for view status
+    const userId = (req.session as any)?.userId || authReq.user?.id;
     const update = await getUpdateById(req.params.id, userId);
 
     if (!update) {

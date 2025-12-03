@@ -443,55 +443,60 @@ function MascotRenderer() {
   const effectiveY = position.y + (isDragging ? 0 : floatOffsetRef.current.y + targetInfluence.y);
   
   return (
-    <div 
-      ref={mascotContainerRef}
-      className={`fixed select-none pointer-events-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
-      style={{ 
-        bottom: effectiveY,
-        right: effectiveX,
-        width: bubbleSize,
-        height: bubbleSize,
-        zIndex: MASCOT_CONFIG.zIndex,
-        transform: `scale(${zoomScale})`,
-        transformOrigin: 'center',
-        transition: isDragging 
-          ? 'transform 150ms ease-out' 
-          : `all ${MASCOT_CONFIG.animation.transitionDuration}ms ease-out, transform 150ms ease-out`,
-        background: 'transparent',
-      }}
-      data-testid="mascot-container"
-      data-transport-effect={currentEffect || undefined}
-    >
+    <>
+      {/* Mascot visual container with transforms */}
       <div 
-        className="w-full h-full pointer-events-auto" 
-        {...dragHandlers}
-        onClick={handleTap}
-        style={{ background: 'transparent' }}
+        ref={mascotContainerRef}
+        className={`fixed select-none pointer-events-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        style={{ 
+          bottom: effectiveY,
+          right: effectiveX,
+          width: bubbleSize,
+          height: bubbleSize,
+          zIndex: MASCOT_CONFIG.zIndex,
+          transform: `scale(${zoomScale})`,
+          transformOrigin: 'center',
+          transition: isDragging 
+            ? 'transform 150ms ease-out' 
+            : `all ${MASCOT_CONFIG.animation.transitionDuration}ms ease-out, transform 150ms ease-out`,
+          background: 'transparent',
+        }}
+        data-testid="mascot-container"
+        data-transport-effect={currentEffect || undefined}
       >
-        <CoAITwinMascot 
-          mode={currentMode} 
-          variant={isExpanded ? 'expanded' : 'mini'}
-          size={bubbleSize}
-          emote={emoteState}
-        />
-        
-        {currentThought && (
-          <MagicFloatingText
-            thought={currentThought}
-            mascotPosition={{ x: effectiveX, y: effectiveY }}
-            mascotSize={bubbleSize}
-            isMobile={isMobile}
+        <div 
+          className="w-full h-full pointer-events-auto" 
+          {...dragHandlers}
+          onClick={handleTap}
+          style={{ background: 'transparent' }}
+        >
+          <CoAITwinMascot 
+            mode={currentMode} 
+            variant={isExpanded ? 'expanded' : 'mini'}
+            size={bubbleSize}
+            emote={emoteState}
           />
-        )}
-        
-        {!currentThought && workspaceId && (
-          <MascotTaskBox 
-            mascotRef={mascotContainerRef}
-            workspaceId={workspaceId}
-          />
-        )}
+          
+          {!currentThought && workspaceId && (
+            <MascotTaskBox 
+              mascotRef={mascotContainerRef}
+              workspaceId={workspaceId}
+            />
+          )}
+        </div>
       </div>
-    </div>
+      
+      {/* MagicFloatingText MUST be OUTSIDE the transformed container for correct fixed positioning */}
+      {/* This ensures bubbles anchor correctly to mascot regardless of container transforms */}
+      {currentThought && (
+        <MagicFloatingText
+          thought={currentThought}
+          mascotPosition={{ x: effectiveX, y: effectiveY }}
+          mascotSize={bubbleSize}
+          isMobile={isMobile}
+        />
+      )}
+    </>
   );
 }
 

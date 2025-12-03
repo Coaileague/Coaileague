@@ -1,16 +1,24 @@
 /**
- * Mascot Demo Page - Interactive showcase of the CoAITwinMascot
+ * Mascot Demo Page - SUPPORT STAFF ONLY
  * 
- * This page demonstrates all mascot modes and allows interactive testing.
+ * Internal testing tool for CoAITwinMascot development.
+ * Features:
+ * - Live preview of all mascot modes and animations
+ * - Hot-reload capability for testing changes
+ * - Suggestion system for code edits and improvements
+ * - NOT for public or end-user access
  */
 
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { CoAITwinMascot, MascotMode, MODE_COLORS, MODE_LABELS } from '@/components/coai-twin-mascot';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, ArrowLeft, Play, Pause, RotateCcw, Zap } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Sparkles, ArrowLeft, Play, Pause, RotateCcw, Zap, RefreshCw, Code, MessageSquare, HeadphonesIcon, AlertTriangle, CheckCircle } from 'lucide-react';
 import { Link } from 'wouter';
+import { SupportStaffRoute } from '@/components/support-staff-route';
+import { useToast } from '@/hooks/use-toast';
 
 const ALL_MODES: MascotMode[] = [
   'IDLE',
@@ -27,10 +35,14 @@ const ALL_MODES: MascotMode[] = [
   'HOLIDAY'
 ];
 
-export default function MascotDemoPage() {
+function MascotDemoContent() {
   const [currentMode, setCurrentMode] = useState<MascotMode>('IDLE');
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
   const [autoPlayIndex, setAutoPlayIndex] = useState(0);
+  const [suggestion, setSuggestion] = useState('');
+  const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+  const [refreshKey, setRefreshKey] = useState(0);
+  const { toast } = useToast();
 
   useEffect(() => {
     if (!isAutoPlaying) return;
@@ -79,10 +91,60 @@ export default function MascotDemoPage() {
     runStep();
   }, []);
 
+  const handleHotReload = useCallback(() => {
+    setRefreshKey(prev => prev + 1);
+    setLastRefresh(new Date());
+    toast({
+      title: "Preview Refreshed",
+      description: "Mascot component has been hot-reloaded with latest changes.",
+    });
+  }, [toast]);
+
+  const handleSubmitSuggestion = useCallback(async () => {
+    if (!suggestion.trim()) {
+      toast({
+        title: "Empty Suggestion",
+        description: "Please enter a suggestion before submitting.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    try {
+      const response = await fetch('/api/mascot/suggestion', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          suggestion: suggestion.trim(),
+          currentMode,
+          timestamp: new Date().toISOString()
+        }),
+        credentials: 'include'
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Suggestion Submitted",
+          description: "Your feedback has been recorded for review.",
+        });
+        setSuggestion('');
+      } else {
+        throw new Error('Failed to submit');
+      }
+    } catch (error) {
+      toast({
+        title: "Submission Failed",
+        description: "Could not submit suggestion. It will be logged locally.",
+        variant: "destructive",
+      });
+      console.log('[MascotDemo] Suggestion (local log):', { suggestion, currentMode });
+    }
+  }, [suggestion, currentMode, toast]);
+
   return (
     <div className="min-h-screen bg-background p-4 sm:p-6">
       <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between flex-wrap gap-2">
           <div className="flex items-center gap-3">
             <Link href="/dashboard">
               <Button variant="ghost" size="icon" data-testid="button-back">
@@ -91,18 +153,41 @@ export default function MascotDemoPage() {
             </Link>
             <div>
               <h1 className="text-2xl font-bold flex items-center gap-2">
-                <Sparkles className="h-6 w-6 text-primary" />
-                Gemini Agent Mascot
+                <HeadphonesIcon className="h-6 w-6 text-primary" />
+                Mascot Testing Lab
               </h1>
               <p className="text-sm text-muted-foreground">
-                Interactive twin-star mascot with state-reactive animations
+                Support Staff Internal Tool - Test animations before production
               </p>
             </div>
           </div>
-          <Badge variant="secondary" className="hidden sm:flex">
-            AI-Powered Visual Feedback
-          </Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant="outline" className="bg-amber-500/10 text-amber-600 border-amber-500/30">
+              <AlertTriangle className="w-3 h-3 mr-1" />
+              Internal Only
+            </Badge>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleHotReload}
+              data-testid="button-hot-reload"
+              className="gap-1"
+            >
+              <RefreshCw className="h-4 w-4" />
+              Hot Reload
+            </Button>
+          </div>
         </div>
+        
+        <Card className="bg-amber-500/5 border-amber-500/20">
+          <CardContent className="py-3 flex items-center gap-2 text-sm">
+            <AlertTriangle className="h-4 w-4 text-amber-500" />
+            <span className="text-muted-foreground">
+              Last refreshed: {lastRefresh.toLocaleTimeString()} • 
+              Changes to mascot code will appear after hot reload
+            </span>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-2">
@@ -151,6 +236,7 @@ export default function MascotDemoPage() {
             <CardContent className="p-0">
               <div className="h-[400px] sm:h-[500px] rounded-b-lg overflow-hidden">
                 <CoAITwinMascot
+                  key={refreshKey}
                   mode={currentMode}
                   onModeChange={handleModeChange}
                   showControls={true}
@@ -223,6 +309,40 @@ export default function MascotDemoPage() {
           </div>
         </div>
 
+        <Card className="border-primary/20">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <MessageSquare className="h-5 w-5 text-primary" />
+              Submit Feedback / Suggestions
+            </CardTitle>
+            <CardDescription>
+              Share ideas for code edits, new animations, bug fixes, or improvements
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Textarea
+              placeholder="Describe the issue, suggestion, or code change you'd like to propose. Include specific details about which mode, animation, or behavior needs modification..."
+              value={suggestion}
+              onChange={(e) => setSuggestion(e.target.value)}
+              className="min-h-[100px]"
+              data-testid="input-suggestion"
+            />
+            <div className="flex justify-between items-center">
+              <p className="text-xs text-muted-foreground">
+                Suggestions are logged for development review
+              </p>
+              <Button 
+                onClick={handleSubmitSuggestion}
+                data-testid="button-submit-suggestion"
+                className="gap-2"
+              >
+                <Code className="h-4 w-4" />
+                Submit Suggestion
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+        
         <Card>
           <CardHeader>
             <CardTitle>Integration Guide</CardTitle>
@@ -273,4 +393,12 @@ function getModeDescription(mode: MascotMode): string {
     HOLIDAY: 'Festive bouncy movement with joyful colorful particles.'
   };
   return descriptions[mode];
+}
+
+export default function MascotDemoPage() {
+  return (
+    <SupportStaffRoute>
+      <MascotDemoContent />
+    </SupportStaffRoute>
+  );
 }
