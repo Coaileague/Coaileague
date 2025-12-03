@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { useNavigationProtection } from "@/hooks/use-navigation-protection";
@@ -123,6 +123,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     message?: string;
   } | null>(null);
   const [kickDialogUser, setKickDialogUser] = useState<{ userId: string; userName: string } | null>(null);
+  const readReceipts = useMemo(() => new Map<string, { readByName: string; readAt: Date }>(), []);
   const [silenceDialogUser, setSilenceDialogUser] = useState<{ userId: string; userName: string } | null>(null);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showRoomStatus, setShowRoomStatus] = useState(false);
@@ -1067,7 +1068,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           sendMessage(`/voice ${userId}`, userName, 'system');
           toast({ title: "Voice Granted", description: `User can now speak` });
         }}
-        onExit={() => setLocation("/")}
+        onExit={() => navigate("/")}
       />
     );
   }
