@@ -156,19 +156,19 @@ interface ModeVisualConfig {
 }
 
 export const MODE_VISUAL_CONFIG: Record<MascotMode, ModeVisualConfig> = {
-  IDLE: { scale: 1.0, glow: 0.3, distortion: 0, pulseSpeed: 0.5, trailLength: 15, bubbleGradient: 'from-sky-500/20 to-purple-500/20' },
-  SEARCHING: { scale: 1.1, glow: 0.6, distortion: 0.2, pulseSpeed: 1.2, trailLength: 25, bubbleGradient: 'from-emerald-500/30 to-teal-500/20' },
-  THINKING: { scale: 1.15, glow: 0.7, distortion: 0.3, pulseSpeed: 1.5, trailLength: 30, bubbleGradient: 'from-purple-500/30 to-indigo-500/20' },
-  ANALYZING: { scale: 1.1, glow: 0.5, distortion: 0.25, pulseSpeed: 1.0, trailLength: 20, bubbleGradient: 'from-indigo-500/30 to-blue-500/20' },
-  CODING: { scale: 1.05, glow: 0.4, distortion: 0.15, pulseSpeed: 0.8, trailLength: 18, bubbleGradient: 'from-green-500/30 to-emerald-500/20' },
-  LISTENING: { scale: 1.2, glow: 0.65, distortion: 0.2, pulseSpeed: 1.3, trailLength: 22, bubbleGradient: 'from-amber-500/30 to-yellow-500/20' },
-  UPLOADING: { scale: 1.1, glow: 0.55, distortion: 0.3, pulseSpeed: 1.4, trailLength: 28, bubbleGradient: 'from-cyan-500/30 to-sky-500/20' },
-  SUCCESS: { scale: 1.3, glow: 0.9, distortion: 0.1, pulseSpeed: 0.6, trailLength: 12, bubbleGradient: 'from-pink-500/30 to-rose-500/20' },
-  ERROR: { scale: 0.9, glow: 0.8, distortion: 0.5, pulseSpeed: 2.0, trailLength: 10, bubbleGradient: 'from-red-500/40 to-rose-600/30' },
-  CELEBRATING: { scale: 1.25, glow: 0.85, distortion: 0.15, pulseSpeed: 1.0, trailLength: 20, bubbleGradient: 'from-amber-500/30 to-yellow-400/20' },
-  ADVISING: { scale: 1.1, glow: 0.5, distortion: 0.1, pulseSpeed: 0.7, trailLength: 18, bubbleGradient: 'from-emerald-500/25 to-green-500/15' },
-  HOLIDAY: { scale: 1.2, glow: 0.75, distortion: 0.2, pulseSpeed: 0.9, trailLength: 22, bubbleGradient: 'from-red-500/30 to-green-500/20' },
-  GREETING: { scale: 1.15, glow: 0.6, distortion: 0.1, pulseSpeed: 0.8, trailLength: 16, bubbleGradient: 'from-pink-500/25 to-purple-500/15' }
+  IDLE: { scale: 1.0, glow: 0.4, distortion: 0, pulseSpeed: 0.5, trailLength: 15, bubbleGradient: 'from-sky-500/20 to-purple-500/20' },
+  SEARCHING: { scale: 1.4, glow: 0.85, distortion: 0.3, pulseSpeed: 1.5, trailLength: 25, bubbleGradient: 'from-emerald-500/30 to-teal-500/20' },
+  THINKING: { scale: 1.6, glow: 0.95, distortion: 0.4, pulseSpeed: 2.0, trailLength: 30, bubbleGradient: 'from-purple-500/30 to-indigo-500/20' },
+  ANALYZING: { scale: 1.35, glow: 0.75, distortion: 0.35, pulseSpeed: 1.3, trailLength: 20, bubbleGradient: 'from-indigo-500/30 to-blue-500/20' },
+  CODING: { scale: 1.25, glow: 0.65, distortion: 0.25, pulseSpeed: 1.0, trailLength: 18, bubbleGradient: 'from-green-500/30 to-emerald-500/20' },
+  LISTENING: { scale: 1.5, glow: 0.9, distortion: 0.3, pulseSpeed: 1.6, trailLength: 22, bubbleGradient: 'from-amber-500/30 to-yellow-500/20' },
+  UPLOADING: { scale: 1.3, glow: 0.8, distortion: 0.4, pulseSpeed: 1.8, trailLength: 28, bubbleGradient: 'from-cyan-500/30 to-sky-500/20' },
+  SUCCESS: { scale: 1.8, glow: 1.0, distortion: 0.2, pulseSpeed: 0.8, trailLength: 12, bubbleGradient: 'from-pink-500/30 to-rose-500/20' },
+  ERROR: { scale: 0.7, glow: 1.0, distortion: 0.7, pulseSpeed: 3.0, trailLength: 10, bubbleGradient: 'from-red-500/40 to-rose-600/30' },
+  CELEBRATING: { scale: 1.7, glow: 1.0, distortion: 0.25, pulseSpeed: 1.2, trailLength: 20, bubbleGradient: 'from-amber-500/30 to-yellow-400/20' },
+  ADVISING: { scale: 1.3, glow: 0.7, distortion: 0.15, pulseSpeed: 0.9, trailLength: 18, bubbleGradient: 'from-emerald-500/25 to-green-500/15' },
+  HOLIDAY: { scale: 1.5, glow: 0.95, distortion: 0.3, pulseSpeed: 1.1, trailLength: 22, bubbleGradient: 'from-red-500/30 to-green-500/20' },
+  GREETING: { scale: 1.4, glow: 0.8, distortion: 0.2, pulseSpeed: 1.0, trailLength: 16, bubbleGradient: 'from-pink-500/25 to-purple-500/15' }
 };
 
 // Export helper to get bubble colors for current mode
@@ -1171,103 +1171,100 @@ class CoAITwinEngine {
         tx = mx * 0.4 + Math.cos(this.state.time * 0.1 + starAngle) * (22 * s * 0.003);
         ty = my * 0.4 + Math.sin(this.state.time * 0.1 + starAngle) * (22 * s * 0.003);
       } else if (this.state.mode === 'IDLE') {
-        // HYPER-IDLE: Complex spirograph screensaver pattern - DRAMATIC scale
-        const t1 = this.state.time * 0.015;  // Primary harmonic
-        const t2 = this.state.time * 0.04;   // Secondary harmonic
-        const baseRadius = 50;  // Much larger base radius for visibility
-        
-        // Each star traces unique spirograph path at 120° offsets
+        // IDLE: Gentle spirograph pattern - stars stay close together
+        const t1 = this.state.time * 0.015;
+        const t2 = this.state.time * 0.04;
+        const baseRadius = 22;  // Compact radius keeps stars close
         const phaseOffset = starAngle;
-        tx = Math.cos(t1 + phaseOffset) * baseRadius + Math.sin(t2 + phaseOffset) * (baseRadius * 0.5);
-        ty = Math.sin(t1 + phaseOffset) * (baseRadius * 0.7) + Math.cos(t2 + phaseOffset) * (baseRadius * 0.5);
+        tx = Math.cos(t1 + phaseOffset) * baseRadius + Math.sin(t2 + phaseOffset) * (baseRadius * 0.4);
+        ty = Math.sin(t1 + phaseOffset) * (baseRadius * 0.6) + Math.cos(t2 + phaseOffset) * (baseRadius * 0.4);
       } else if (this.state.mode === 'SEARCHING') {
-        // SEARCHING: One star FIXED at center, others orbit WIDE - very distinct
+        // SEARCHING: Cyan at center, others orbit tightly
         if (i === 0) {
-          tx = 0;  // Cyan star locked at center
+          tx = 0;
           ty = 0;
         } else {
-          // Purple and Gold orbit in wide circle
           const searchAngle = this.state.time * 0.08 + starAngle;
-          const searchRadius = 60;  // Wide orbit
+          const searchRadius = 28;  // Tighter orbit
           tx = Math.cos(searchAngle) * searchRadius;
           ty = Math.sin(searchAngle) * searchRadius;
         }
         if (this.state.time % 30 === 0) this.spawnParticle(tx, ty, t.color);
       } else if (this.state.mode === 'ANALYZING') {
-        // ANALYZING: Fixed triangle corners with micro-jitter
-        const cornerRadius = 55;
-        const jitter = Math.sin(this.state.time * 0.15 + i) * 4;
+        // ANALYZING: Compact triangle with micro-jitter
+        const cornerRadius = 25;
+        const jitter = Math.sin(this.state.time * 0.15 + i) * 3;
         tx = Math.cos(starAngle) * cornerRadius + jitter;
         ty = Math.sin(starAngle) * cornerRadius;
       } else if (this.state.mode === 'THINKING') {
-        // THINKING: FAST spinning with pulsing radius - very visible
-        t.angle += 0.25;  // Fast spin
-        const thinkRadius = 45 + Math.sin(this.state.time * 0.3) * 15;  // Big pulse
+        // THINKING: Fast spin with pulsing - compact radius
+        t.angle += 0.25;
+        const thinkRadius = 20 + Math.sin(this.state.time * 0.3) * 8;
         tx = Math.cos(t.angle + starAngle) * thinkRadius;
         ty = Math.sin(t.angle + starAngle) * thinkRadius;
       } else if (this.state.mode === 'CODING') {
-        // CODING: Hard-snap grid movement - digital stepping
-        const gridSize = 25;
+        // CODING: Compact grid movement
+        const gridSize = 15;
         const speed = this.state.time * 0.08 + i * 2;
-        tx = Math.round(Math.cos(speed) * 2.5) * gridSize;
-        ty = Math.round(Math.sin(speed) * 2.5) * gridSize;
+        tx = Math.round(Math.cos(speed) * 1.8) * gridSize;
+        ty = Math.round(Math.sin(speed) * 1.8) * gridSize;
       } else if (this.state.mode === 'UPLOADING') {
-        // UPLOADING: Helical upward wave motion
+        // UPLOADING: Compact helical wave
         const uploadAngle = this.state.time * 0.25 + starAngle;
-        const helixRadius = 35;
+        const helixRadius = 18;
         tx = Math.cos(uploadAngle) * helixRadius;
-        ty = Math.sin(this.state.time * 0.08 + i) * 40;  // Vertical wave
+        ty = Math.sin(this.state.time * 0.08 + i) * 20;
         if (this.state.time % 4 === 0) {
-          this.spawnParticle(tx, ty - 20, t.color, 0, -3);
+          this.spawnParticle(tx, ty - 15, t.color, 0, -3);
         }
       } else if (this.state.mode === 'LISTENING') {
-        // LISTENING: Audio waveform - horizontal line with wave
+        // LISTENING: Compact waveform
         const waveAmp = Math.sin(this.state.time * 0.3 + i * 1.5) * Math.sin(this.state.time * 0.7);
-        tx = (i - 1) * 40;  // Spread horizontally: -40, 0, 40
-        ty = waveAmp * 45;  // Vertical wave motion
+        tx = (i - 1) * 22;  // Tighter spread: -22, 0, 22
+        ty = waveAmp * 25;
       } else if (this.state.mode === 'SUCCESS') {
-        // SUCCESS: Stars converge to center, pulsing together
-        const convergeRadius = 15 + Math.sin(this.state.time * 0.4) * 8;
+        // SUCCESS: Stars converge tightly, pulsing
+        const convergeRadius = 12 + Math.sin(this.state.time * 0.4) * 6;
         tx = Math.cos(starAngle + this.state.time * 0.08) * convergeRadius;
         ty = Math.sin(starAngle + this.state.time * 0.08) * convergeRadius;
       } else if (this.state.mode === 'ERROR') {
-        // ERROR: Chaotic random scatter - very obvious shake
-        tx = (Math.random() - 0.5) * 60;
-        ty = (Math.random() - 0.5) * 60;
+        // ERROR: Compact chaotic shake
+        tx = (Math.random() - 0.5) * 30;
+        ty = (Math.random() - 0.5) * 30;
       } else if (this.state.mode === 'ADVISING') {
-        // ADVISING: Smooth professional orbit - wisdom emanating
+        // ADVISING: Compact professional orbit
         const adviseAngle = this.state.time * 0.04 + starAngle;
-        const adviseRadius = 45;
+        const adviseRadius = 24;
         tx = Math.cos(adviseAngle) * adviseRadius;
         ty = Math.sin(adviseAngle) * adviseRadius * 0.6;
         if (this.state.time % 40 === 0 && i === 2) {
           this.spawnParticle(tx, ty, '#f4c15d');
         }
       } else if (this.state.mode === 'HOLIDAY') {
-        // HOLIDAY: Festive bouncy figure-8 with Christmas joy
+        // HOLIDAY: Compact festive figure-8
         const bouncePhase = this.state.time * 0.1 + starAngle;
-        const bounceAmp = 50;
+        const bounceAmp = 25;
         tx = Math.cos(bouncePhase) * bounceAmp;
-        ty = Math.sin(bouncePhase * 2) * bounceAmp * 0.5 + Math.abs(Math.sin(this.state.time * 0.2)) * 15;
+        ty = Math.sin(bouncePhase * 2) * bounceAmp * 0.5 + Math.abs(Math.sin(this.state.time * 0.2)) * 10;
         if (this.state.time % 20 === 0) {
           const xmasColors = CHRISTMAS_COLORS.particles;
           this.spawnParticle(tx, ty, xmasColors[Math.floor(Math.random() * xmasColors.length)]);
         }
       } else if (this.state.mode === 'CELEBRATING') {
-        // CELEBRATING: Expanding outward bursts with confetti
+        // CELEBRATING: Compact expanding bursts
         const celebAngle = this.state.time * 0.1 + starAngle;
         const pulse = 1 + Math.sin(this.state.time * 0.3) * 0.4;
-        const celebRadius = 40 * pulse;
+        const celebRadius = 22 * pulse;
         tx = Math.cos(celebAngle) * celebRadius;
         ty = Math.sin(celebAngle) * celebRadius;
         if (this.state.time % 15 === 0) {
           this.spawnParticle(tx, ty, t.color, (Math.random() - 0.5) * 4, -3);
         }
       } else if (this.state.mode === 'GREETING') {
-        // GREETING: Friendly wave motion - stars bob up and down
-        const waveOffset = Math.sin(this.state.time * 0.15 + i * 0.8) * 20;
-        tx = Math.cos(starAngle) * 40;
-        ty = Math.sin(starAngle) * 40 + waveOffset;
+        // GREETING: Compact wave motion
+        const waveOffset = Math.sin(this.state.time * 0.15 + i * 0.8) * 12;
+        tx = Math.cos(starAngle) * 22;
+        ty = Math.sin(starAngle) * 22 + waveOffset;
       }
 
       // Apply mutation jitter for "rewriting" visual scatter effect
@@ -1336,9 +1333,14 @@ class CoAITwinEngine {
     const modeGlow = visualConfig.glow;
     const modePulseSpeed = visualConfig.pulseSpeed;
     
-    // Animated pulse based on mode pulse speed
-    const modePulse = 1 + Math.sin(this.state.time * modePulseSpeed * 0.1) * 0.08;
+    // DRAMATIC pulse effect - higher amplitude for visible breathing
+    const pulseAmplitude = 0.15 + (modeGlow * 0.1); // More glow = more pulse
+    const modePulse = 1 + Math.sin(this.state.time * modePulseSpeed * 0.1) * pulseAmplitude;
     const finalScale = modeScale * modePulse;
+    
+    // MUTATION SCALE BOOST - during mode transition, scale up extra for emphasis
+    const mutationBoost = 1 + (this.state.mutation * 0.4);
+    const morphScale = finalScale * mutationBoost;
     
     this.twins.forEach((t, twinIndex) => {
       // Add trail points to transition renderer for polished motion trails
@@ -1346,14 +1348,15 @@ class CoAITwinEngine {
         this.transitionRenderer.addTrailPoint(t.x, t.y, twinIndex);
       }
       
-      // Mode-specific glow layer (drawn behind stars)
-      if (modeGlow > 0.1) {
-        const glowSize = 25 * s * 0.005 * finalScale * (1 + modeGlow * 0.5);
+      // DRAMATIC glow layer - scales with mode and mutation
+      const glowIntensity = modeGlow + (this.state.mutation * 0.3); // Extra glow during transition
+      if (glowIntensity > 0.1) {
+        const glowSize = 35 * s * 0.005 * morphScale * (1 + glowIntensity * 0.8);
         const gradient = this.ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, glowSize);
-        // Use rgba format for reliable alpha blending (avoids hex color corruption)
         const rgb = this.hexToRgb(t.color);
-        gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${modeGlow * 0.32})`);
-        gradient.addColorStop(0.5, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${modeGlow * 0.16})`);
+        gradient.addColorStop(0, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${glowIntensity * 0.45})`);
+        gradient.addColorStop(0.4, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${glowIntensity * 0.25})`);
+        gradient.addColorStop(0.7, `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, ${glowIntensity * 0.1})`);
         gradient.addColorStop(1, 'transparent');
         this.ctx.fillStyle = gradient;
         this.ctx.beginPath();
@@ -1362,8 +1365,8 @@ class CoAITwinEngine {
       }
       
       this.ctx.globalAlpha = 1.0;
-      // Apply mode-based scale to star rendering
-      this.drawStar(t.x, t.y, 15 * s * 0.005 * finalScale, 4.5 * s * 0.005 * finalScale, t.color, twinIndex);
+      // Apply DRAMATIC mode-based scale to star rendering
+      this.drawStar(t.x, t.y, 15 * s * 0.005 * morphScale, 4.5 * s * 0.005 * morphScale, t.color, twinIndex);
     });
 
     // Draw emote particles on top
