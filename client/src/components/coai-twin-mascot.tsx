@@ -145,6 +145,41 @@ const MODE_LABELS: Record<MascotMode, string> = {
   GREETING: 'Hello!'
 };
 
+// Visual morph config per mode - controls appearance during state transitions
+interface ModeVisualConfig {
+  scale: number;           // Star size multiplier (1.0 = normal)
+  glow: number;            // Glow intensity (0-1)
+  distortion: number;      // Warp distortion level (0-1)
+  pulseSpeed: number;      // Pulsing animation speed
+  trailLength: number;     // Trail persistence
+  bubbleGradient: string;  // Gradient for thought bubble theming
+}
+
+export const MODE_VISUAL_CONFIG: Record<MascotMode, ModeVisualConfig> = {
+  IDLE: { scale: 1.0, glow: 0.3, distortion: 0, pulseSpeed: 0.5, trailLength: 15, bubbleGradient: 'from-sky-500/20 to-purple-500/20' },
+  SEARCHING: { scale: 1.1, glow: 0.6, distortion: 0.2, pulseSpeed: 1.2, trailLength: 25, bubbleGradient: 'from-emerald-500/30 to-teal-500/20' },
+  THINKING: { scale: 1.15, glow: 0.7, distortion: 0.3, pulseSpeed: 1.5, trailLength: 30, bubbleGradient: 'from-purple-500/30 to-indigo-500/20' },
+  ANALYZING: { scale: 1.1, glow: 0.5, distortion: 0.25, pulseSpeed: 1.0, trailLength: 20, bubbleGradient: 'from-indigo-500/30 to-blue-500/20' },
+  CODING: { scale: 1.05, glow: 0.4, distortion: 0.15, pulseSpeed: 0.8, trailLength: 18, bubbleGradient: 'from-green-500/30 to-emerald-500/20' },
+  LISTENING: { scale: 1.2, glow: 0.65, distortion: 0.2, pulseSpeed: 1.3, trailLength: 22, bubbleGradient: 'from-amber-500/30 to-yellow-500/20' },
+  UPLOADING: { scale: 1.1, glow: 0.55, distortion: 0.3, pulseSpeed: 1.4, trailLength: 28, bubbleGradient: 'from-cyan-500/30 to-sky-500/20' },
+  SUCCESS: { scale: 1.3, glow: 0.9, distortion: 0.1, pulseSpeed: 0.6, trailLength: 12, bubbleGradient: 'from-pink-500/30 to-rose-500/20' },
+  ERROR: { scale: 0.9, glow: 0.8, distortion: 0.5, pulseSpeed: 2.0, trailLength: 10, bubbleGradient: 'from-red-500/40 to-rose-600/30' },
+  CELEBRATING: { scale: 1.25, glow: 0.85, distortion: 0.15, pulseSpeed: 1.0, trailLength: 20, bubbleGradient: 'from-amber-500/30 to-yellow-400/20' },
+  ADVISING: { scale: 1.1, glow: 0.5, distortion: 0.1, pulseSpeed: 0.7, trailLength: 18, bubbleGradient: 'from-emerald-500/25 to-green-500/15' },
+  HOLIDAY: { scale: 1.2, glow: 0.75, distortion: 0.2, pulseSpeed: 0.9, trailLength: 22, bubbleGradient: 'from-red-500/30 to-green-500/20' },
+  GREETING: { scale: 1.15, glow: 0.6, distortion: 0.1, pulseSpeed: 0.8, trailLength: 16, bubbleGradient: 'from-pink-500/25 to-purple-500/15' }
+};
+
+// Export helper to get bubble colors for current mode
+export function getModeTheme(mode: MascotMode) {
+  return {
+    color: MODE_COLORS[mode],
+    label: MODE_LABELS[mode],
+    visual: MODE_VISUAL_CONFIG[mode],
+  };
+}
+
 class CoAITwinEngine {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -1236,14 +1271,38 @@ class CoAITwinEngine {
     this.drawShockwaves();
     this.drawParticles();
 
+    // Get visual config for current mode - applies scale/glow morph
+    const visualConfig = MODE_VISUAL_CONFIG[this.state.mode];
+    const modeScale = visualConfig.scale;
+    const modeGlow = visualConfig.glow;
+    const modePulseSpeed = visualConfig.pulseSpeed;
+    
+    // Animated pulse based on mode pulse speed
+    const modePulse = 1 + Math.sin(this.state.time * modePulseSpeed * 0.1) * 0.08;
+    const finalScale = modeScale * modePulse;
+    
     this.twins.forEach((t, twinIndex) => {
       // Add trail points to transition renderer for polished motion trails
       if (this.isBeingDragged || Math.abs(this.slingVelocityX) > 2 || Math.abs(this.slingVelocityY) > 2) {
         this.transitionRenderer.addTrailPoint(t.x, t.y, twinIndex);
       }
       
+      // Mode-specific glow layer (drawn behind stars)
+      if (modeGlow > 0.1) {
+        const glowSize = 25 * s * 0.005 * finalScale * (1 + modeGlow * 0.5);
+        const gradient = this.ctx.createRadialGradient(t.x, t.y, 0, t.x, t.y, glowSize);
+        gradient.addColorStop(0, `${t.color}${Math.floor(modeGlow * 80).toString(16).padStart(2, '0')}`);
+        gradient.addColorStop(0.5, `${t.color}${Math.floor(modeGlow * 40).toString(16).padStart(2, '0')}`);
+        gradient.addColorStop(1, 'transparent');
+        this.ctx.fillStyle = gradient;
+        this.ctx.beginPath();
+        this.ctx.arc(t.x, t.y, glowSize, 0, Math.PI * 2);
+        this.ctx.fill();
+      }
+      
       this.ctx.globalAlpha = 1.0;
-      this.drawStar(t.x, t.y, 15 * s * 0.005, 4.5 * s * 0.005, t.color, twinIndex);
+      // Apply mode-based scale to star rendering
+      this.drawStar(t.x, t.y, 15 * s * 0.005 * finalScale, 4.5 * s * 0.005 * finalScale, t.color, twinIndex);
     });
 
     // Draw emote particles on top
