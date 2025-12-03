@@ -188,7 +188,17 @@ function MascotRenderer() {
   const workspaceId = (user as any)?.activeWorkspaceId || (user as any)?.workspaceId;
   useMascotAIIntegration(workspaceId);
   useMascotObserver(true);
-  const currentMode = useMascotMode();
+  const baseMode = useMascotMode();
+  
+  // Apply HOLIDAY mode during Christmas season when mascot is idle
+  const holiday = getCurrentHoliday();
+  const currentMode = useMemo(() => {
+    if (baseMode === 'IDLE' && holiday?.key === 'christmas') {
+      return 'HOLIDAY';
+    }
+    return baseMode;
+  }, [baseMode, holiday]);
+  
   const [location] = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [currentThought, setCurrentThought] = useState<Thought | null>(null);
