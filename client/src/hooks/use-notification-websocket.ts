@@ -275,19 +275,21 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
         }
       };
 
-      ws.onclose = () => {
-        console.log('🔔 Notification WebSocket disconnected');
+      ws.onclose = (event) => {
+        console.log('🔔 Notification WebSocket disconnected', event.wasClean ? '(clean)' : '(unexpected)');
         setIsConnected(false);
         isConnectingRef.current = false;
 
-        // Attempt to reconnect with exponential backoff
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-        reconnectAttemptsRef.current++;
+        // Only reconnect if it was an unexpected close and we haven't exceeded max attempts
+        if (!event.wasClean && reconnectAttemptsRef.current < 5) {
+          const delay = Math.min(5000 * Math.pow(2, reconnectAttemptsRef.current), 60000);
+          reconnectAttemptsRef.current++;
 
-        reconnectTimeoutRef.current = setTimeout(() => {
-          console.log(`Notification WS: Reconnecting... (attempt ${reconnectAttemptsRef.current})`);
-          connect();
-        }, delay);
+          reconnectTimeoutRef.current = setTimeout(() => {
+            console.log(`Notification WS: Reconnecting... (attempt ${reconnectAttemptsRef.current})`);
+            connect();
+          }, delay);
+        }
       };
 
       ws.onerror = (error) => {

@@ -209,9 +209,14 @@ export function ForceRefreshProvider({ children }: { children: React.ReactNode }
         }
       };
 
-      wsRef.current.onclose = () => {
-        console.log('[ForceRefresh] WebSocket closed, reconnecting...');
-        reconnectTimeoutRef.current = setTimeout(() => connect(), 5000);
+      wsRef.current.onclose = (event) => {
+        // Only reconnect if it was an unexpected close (not user-initiated)
+        if (!event.wasClean) {
+          console.log('[ForceRefresh] WebSocket closed unexpectedly, reconnecting in 10s...');
+          reconnectTimeoutRef.current = setTimeout(() => connect(), 10000);
+        } else {
+          console.log('[ForceRefresh] WebSocket closed cleanly');
+        }
       };
 
       wsRef.current.onerror = (error) => {

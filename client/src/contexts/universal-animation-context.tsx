@@ -204,11 +204,14 @@ export function UniversalAnimationProvider({ children }: { children: ReactNode }
           // Silent error handling
         };
 
-        wsRef.current.onclose = () => {
-          console.log('[AnimationContext] WebSocket closed');
-          if (reconnectAttempts < maxReconnectAttempts) {
+        wsRef.current.onclose = (event) => {
+          // Only reconnect if it was an unexpected close
+          if (!event.wasClean && reconnectAttempts < maxReconnectAttempts) {
+            console.log('[AnimationContext] WebSocket closed unexpectedly, reconnecting...');
             reconnectAttempts++;
-            reconnectTimeout = setTimeout(connect, 2000 * reconnectAttempts);
+            reconnectTimeout = setTimeout(connect, 5000 * reconnectAttempts);
+          } else {
+            console.log('[AnimationContext] WebSocket closed cleanly');
           }
         };
       } catch (err) {
