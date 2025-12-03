@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,59 @@ interface UnviewedCountResponse {
 export function WhatsNewBadge() {
   const [open, setOpen] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  
+  // Live timestamp ticker - forces re-render every 60s for fresh relative times
+  const [timestampTick, setTimestampTick] = useState(0);
+  
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      setTimestampTick(prev => prev + 1);
+    }, 60000); // Update every minute
+    
+    return () => clearInterval(intervalId);
+  }, []);
+  
+  // Listen for WebSocket events for real-time updates
+  useEffect(() => {
+    const handlePlatformUpdate = (event: CustomEvent) => {
+      console.log('[WhatsNew] Platform update received via WebSocket:', event.detail);
+      // Invalidate all queries to fetch fresh data including combined notifications
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/new-features'] });
+    };
+    
+    const handleWhatsNewCleared = (event: CustomEvent) => {
+      console.log('[WhatsNew] All cleared via WebSocket:', event.detail);
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/new-features'] });
+    };
+    
+    const handleWhatsNewViewed = (event: CustomEvent) => {
+      console.log('[WhatsNew] Item viewed via WebSocket (cross-tab sync):', event.detail);
+      // Sync view state across tabs by refetching
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/latest'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/unviewed-count'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/whats-new/new-features'] });
+    };
+    
+    window.addEventListener('platform_update' as any, handlePlatformUpdate);
+    window.addEventListener('whats_new_cleared' as any, handleWhatsNewCleared);
+    window.addEventListener('whats_new_viewed' as any, handleWhatsNewViewed);
+    
+    return () => {
+      window.removeEventListener('platform_update' as any, handlePlatformUpdate);
+      window.removeEventListener('whats_new_cleared' as any, handleWhatsNewCleared);
+      window.removeEventListener('whats_new_viewed' as any, handleWhatsNewViewed);
+    };
+  }, []);
 
   const { data: updatesData, refetch: refetchUpdates } = useQuery<UpdatesResponse>({
     queryKey: ['/api/whats-new/latest'],

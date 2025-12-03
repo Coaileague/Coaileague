@@ -679,6 +679,12 @@ export type ThoughtBubbleAnimation =
   | 'confetti-burst';
 
 // Thought bubble boundary - keeps bubble anchored and unified with mascot
+// DESIGN NOTES for future handlers:
+// - Background is nearly transparent (0.14 to 0.04 radial gradient) so mascot is always visible
+// - Clearance gap is tight (32px desktop, 26px mobile) to position text close to mascot
+// - Collision avoidance shifts bubble up/left/right when mascot moves suddenly
+// - Text uses subtle shadow (0.35 opacity) for readability without blocking mascot
+// - No borders, no box shadows - pure glassmorphism with 2px blur
 export const THOUGHT_BUBBLE_BOUNDARY_CONFIG = {
   offsetAbove: 6, // pixels above mascot
   maxWidth: 280,   // max bubble width on desktop - larger for BOLD ALL CAPS
@@ -686,6 +692,10 @@ export const THOUGHT_BUBBLE_BOUNDARY_CONFIG = {
   padding: 6,
   anchorToMascot: true, // always stay attached to mascot position
   followMascotDrag: true, // move with mascot when dragged
+  clearanceGap: { desktop: 32, mobile: 26 }, // pixels between bubble and mascot top
+  collisionAvoidance: true, // shift bubble to avoid covering mascot on sudden moves
+  backgroundOpacity: { center: 0.14, edge: 0.04 }, // nearly transparent radial gradient
+  backdropBlur: 2, // minimal blur in pixels
 };
 
 export interface ThoughtBubbleStyle {

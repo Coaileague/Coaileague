@@ -90,11 +90,12 @@ const generateLetterStates = (text: string, colorPalette: string[]): LetterState
 
 // Calculate position to keep bubble ABOVE mascot without covering it
 // mascotPos is in BOTTOM-RIGHT coordinates (distance from bottom-right corner)
-// The bubble sits WELL ABOVE the mascot so Trinity and all emotes/transformations stay visible
+// Bubble sits close to mascot but wraps/avoids on sudden movement
 const calculateAnchoredPosition = (
   mascotPos: { x: number; y: number },
   mascotSize: number,
-  isMobile: boolean
+  isMobile: boolean,
+  prevBubblePos?: { top: number; left: number }
 ): React.CSSProperties => {
   const config = THOUGHT_BUBBLE_BOUNDARY_CONFIG;
   const bubbleWidth = isMobile ? config.mobileMaxWidth : config.maxWidth;
@@ -103,13 +104,16 @@ const calculateAnchoredPosition = (
   const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 400;
   const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
   
-  // Mascot center in screen coordinates
+  // Mascot bounds in screen coordinates
   const mascotCenterX = viewportWidth - mascotPos.x - (mascotSize / 2);
   const mascotTopY = viewportHeight - mascotPos.y - mascotSize;
+  const mascotLeftX = mascotCenterX - (mascotSize / 2);
+  const mascotRightX = mascotCenterX + (mascotSize / 2);
+  const mascotBottomY = mascotTopY + mascotSize;
   
-  // CLEAR GAP: Bubble sits WELL ABOVE mascot - never overlap with mascot or emotes
-  // Much larger gap to ensure mascot is never hidden by bubble background
-  const clearanceGap = isMobile ? 55 : 70;
+  // CLEAR GAP: Bubble sits close to mascot but never overlaps
+  // Reduced gap for tight positioning without covering mascot
+  const clearanceGap = isMobile ? 26 : 32;
   const bubbleBottomY = mascotTopY - clearanceGap;
   
   // Center bubble horizontally on mascot center
@@ -120,15 +124,48 @@ const calculateAnchoredPosition = (
   bubbleLeftX = Math.max(padding, Math.min(bubbleLeftX, viewportWidth - bubbleWidth - padding));
   
   // Estimate bubble height based on content
-  const estimatedBubbleHeight = isMobile ? 45 : 55;
-  const bubbleTop = Math.max(padding, bubbleBottomY - estimatedBubbleHeight);
+  const estimatedBubbleHeight = isMobile ? 35 : 42;
+  let bubbleTop = Math.max(padding, bubbleBottomY - estimatedBubbleHeight);
+  
+  // Collision avoidance: if bubble would overlap mascot, shift it
+  const bubbleBottom = bubbleTop + estimatedBubbleHeight;
+  const bubbleRight = bubbleLeftX + bubbleWidth;
+  
+  // Check if bubble intersects with mascot bounds (with small tolerance)
+  const tolerance = 8;
+  const wouldOverlap = (
+    bubbleBottom > mascotTopY - tolerance &&
+    bubbleTop < mascotBottomY + tolerance &&
+    bubbleRight > mascotLeftX - tolerance &&
+    bubbleLeftX < mascotRightX + tolerance
+  );
+  
+  if (wouldOverlap) {
+    // Shift bubble up to avoid mascot
+    bubbleTop = Math.max(padding, mascotTopY - estimatedBubbleHeight - clearanceGap);
+    
+    // If still overlapping horizontally, shift left or right
+    if (bubbleRight > mascotLeftX && bubbleLeftX < mascotRightX) {
+      // Prefer shifting to whichever side has more room
+      const leftSpace = mascotLeftX - padding;
+      const rightSpace = viewportWidth - mascotRightX - padding;
+      
+      if (leftSpace >= bubbleWidth) {
+        bubbleLeftX = mascotLeftX - bubbleWidth - 8;
+      } else if (rightSpace >= bubbleWidth) {
+        bubbleLeftX = mascotRightX + 8;
+      }
+      // Re-clamp after shift
+      bubbleLeftX = Math.max(padding, Math.min(bubbleLeftX, viewportWidth - bubbleWidth - padding));
+    }
+  }
   
   return {
     position: 'fixed',
     top: bubbleTop,
     left: bubbleLeftX,
     maxWidth: bubbleWidth,
-    minWidth: isMobile ? 120 : 140,
+    minWidth: isMobile ? 100 : 120,
   };
 };
 
@@ -442,7 +479,7 @@ export function MagicFloatingText({
           </div>
         )}
         
-        {/* Letter text container - very subtle background for visibility */}
+        {/* Letter text container - nearly transparent glassmorphism for minimal blocking */}
         <div
           style={{
             display: 'flex',
@@ -450,13 +487,13 @@ export function MagicFloatingText({
             gap: '0',
             justifyContent: 'center',
             textAlign: 'center',
-            background: 'rgba(0, 0, 0, 0.25)',
-            backdropFilter: 'blur(8px)',
-            WebkitBackdropFilter: 'blur(8px)',
-            padding: isMobile ? '6px 10px' : '8px 12px',
-            borderRadius: isMobile ? '10px' : '12px',
-            border: '1px solid rgba(255, 255, 255, 0.08)',
-            boxShadow: '0 2px 12px rgba(0, 0, 0, 0.2)',
+            background: 'radial-gradient(closest-side, rgba(0, 0, 0, 0.14), rgba(0, 0, 0, 0.04))',
+            backdropFilter: 'blur(2px)',
+            WebkitBackdropFilter: 'blur(2px)',
+            padding: isMobile ? '4px 8px' : '5px 10px',
+            borderRadius: '9999px',
+            border: 'none',
+            boxShadow: 'none',
           }}
         >
           {letters.map((letter, index) => (
@@ -470,9 +507,8 @@ export function MagicFloatingText({
                 fontStyle: letter.fontStyle.fontStyle,
                 textTransform: 'uppercase',
                 textShadow: `
-                  0 2px 4px rgba(0,0,0,0.8),
-                  0 0 8px ${letter.glowColor}70,
-                  0 0 16px ${letter.glowColor}40
+                  0 1px 2px rgba(0,0,0,0.35),
+                  0 0 4px ${letter.glowColor}50
                 `,
                 transform: `
                   scale(${letter.scale})
