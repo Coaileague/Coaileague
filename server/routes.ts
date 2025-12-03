@@ -582,7 +582,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // WebSocket broadcast for real-time client updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log to audit trail for command console
@@ -654,7 +654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
         unreadCount: 0 
       }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       
       // AI Brain notification for Trinity/HelpAI awareness
       try {
@@ -902,7 +902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -1071,7 +1071,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -1202,7 +1202,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -1262,7 +1262,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -1366,7 +1366,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (result.success) {
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -1422,7 +1422,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -1467,7 +1467,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (result) {
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -2028,7 +2028,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -2456,7 +2456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -7937,7 +7937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -8713,7 +8713,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`📅 Schedule published: ${employeesAffected} employees, ${shiftIds.length} shifts`);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -16884,7 +16884,7 @@ Summary:`;
       
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -16924,7 +16924,7 @@ Summary:`;
       
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -16964,7 +16964,7 @@ Summary:`;
       
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -17003,7 +17003,7 @@ Summary:`;
       
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -17043,7 +17043,7 @@ Summary:`;
       
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -17082,7 +17082,7 @@ Summary:`;
       
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -18292,7 +18292,7 @@ Summary:`;
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -18339,7 +18339,7 @@ Summary:`;
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -18406,7 +18406,7 @@ Summary:`;
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -18451,7 +18451,7 @@ Summary:`;
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -18525,7 +18525,7 @@ Summary:`;
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -20520,7 +20520,7 @@ Return ONLY valid JSON array with this exact structure:
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -21058,7 +21058,7 @@ Return ONLY valid JSON array with this exact structure:
       if (existing) {
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -28582,7 +28582,7 @@ app.post("/api/sales/invitations/send", requireAuth, async (req, res) => {
     }).returning();
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -28632,7 +28632,7 @@ app.post("/api/sales/proposals", requireAuth, async (req, res) => {
     }).returning();
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -28771,7 +28771,7 @@ app.get("/api/time-entries", requireAuth, async (req: AuthenticatedRequest, res)
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -28813,7 +28813,7 @@ app.post("/api/time-entries", requireAuth, mutationLimiter, async (req: Authenti
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -28847,7 +28847,7 @@ app.patch("/api/time-entries/:id/approve", requireAuth, mutationLimiter, async (
     const entry = await approveTimeEntry(id, userId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -28882,7 +28882,7 @@ app.patch("/api/time-entries/:id/reject", requireAuth, mutationLimiter, async (r
     const entry = await rejectTimeEntry(id, userId, reason || 'No reason provided');
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -28915,7 +28915,7 @@ app.get("/api/time-entries/pending", requireAuth, async (req: AuthenticatedReque
     const entries = await getPendingTimeEntries(workspaceId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -28948,7 +28948,7 @@ app.post("/api/time-entries/calculate-hours", requireAuth, async (req: Authentic
     const hours = await calculatePayrollHours(employeeId, new Date(startDate), new Date(endDate));
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -28986,7 +28986,7 @@ app.post("/api/billing/adjust-invoice/credit", requireAuth, mutationLimiter, asy
     const result = await creditInvoice(invoiceId, amount, description || 'Manual credit', userId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29020,7 +29020,7 @@ app.post("/api/billing/adjust-invoice/discount", requireAuth, mutationLimiter, a
     const result = await discountInvoice(invoiceId, discountPercent, reason || 'No reason provided', userId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29054,7 +29054,7 @@ app.post("/api/billing/adjust-invoice/refund", requireAuth, mutationLimiter, asy
     const result = await refundInvoice(invoiceId, refundAmount, reason || 'No reason provided', userId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29088,7 +29088,7 @@ app.post("/api/billing/adjust-invoice/correct-line-item", requireAuth, mutationL
     const result = await correctInvoiceLineItem(invoiceId, lineItemIndex, newQuantity, newUnitPrice, reason, userId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29119,7 +29119,7 @@ app.get("/api/billing/adjust-invoice/:invoiceId/history", requireAuth, async (re
     const history = await getInvoiceAdjustmentHistory(invoiceId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29154,7 +29154,7 @@ app.post("/api/billing/adjust-invoice/bulk-credit", requireAuth, mutationLimiter
     const result = await bulkCreditInvoices(workspaceId, invoiceIds, creditPerInvoice, reason || 'Bulk credit', userId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29277,7 +29277,7 @@ app.post("/api/export/anonymize-employee/:employeeId", requireAuth, mutationLimi
     const result = await anonymizeEmployeeData(workspaceId, employeeId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29314,7 +29314,7 @@ app.get("/api/shifts/pending", requireAuth, async (req: AuthenticatedRequest, re
     const shifts = await getPendingShifts(workspaceId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29349,7 +29349,7 @@ app.patch("/api/shifts/:shiftId/approve", requireAuth, mutationLimiter, async (r
     const shift = await approveShift(shiftId, userId, notes);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29384,7 +29384,7 @@ app.patch("/api/shifts/:shiftId/reject", requireAuth, mutationLimiter, async (re
     const shift = await rejectShift(shiftId, userId, reason || 'No reason provided', autoReplace);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29418,7 +29418,7 @@ app.post("/api/shifts/bulk-approve", requireAuth, mutationLimiter, async (req: A
     const result = await bulkApproveShifts(shiftIds, userId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29451,7 +29451,7 @@ app.get("/api/shifts/stats", requireAuth, async (req: AuthenticatedRequest, res)
     const stats = await getApprovalStats(workspaceId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29488,7 +29488,7 @@ app.get("/api/disputes/pending", requireAuth, async (req: AuthenticatedRequest, 
     const disputes = await getPendingDisputes(workspaceId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29521,7 +29521,7 @@ app.get("/api/disputes/assigned-to-me", requireAuth, async (req: AuthenticatedRe
     const disputes = await getDisputesAssignedToUser(userId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29561,7 +29561,7 @@ app.patch("/api/disputes/:disputeId/approve", requireAuth, mutationLimiter, asyn
     });
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29601,7 +29601,7 @@ app.patch("/api/disputes/:disputeId/reject", requireAuth, mutationLimiter, async
     });
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29648,7 +29648,7 @@ app.post("/api/payroll/deductions/:payrollEntryId", requireAuth, mutationLimiter
     );
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29692,7 +29692,7 @@ app.post("/api/payroll/garnishments/:payrollEntryId", requireAuth, mutationLimit
     );
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29796,7 +29796,7 @@ app.get("/api/ratings/employer/trends", requireAuth, readLimiter, async (req: Au
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29859,7 +29859,7 @@ app.get("/api/analytics/composite-score", requireAuth, readLimiter, async (req: 
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29920,7 +29920,7 @@ app.get("/api/analytics/employee-rank/:employeeId", requireAuth, readLimiter, as
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -29969,7 +29969,7 @@ app.post("/api/invoices/adjustments", requireAuth, mutationLimiter, async (req: 
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30013,7 +30013,7 @@ app.patch("/api/invoices/adjustments/:adjustmentId/approve", requireAuth, mutati
     if (!adjustment) return res.status(404).json({ error: 'Adjustment not found' });
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30052,7 +30052,7 @@ app.patch("/api/invoices/adjustments/:adjustmentId/reject", requireAuth, mutatio
     if (!adjustment) return res.status(404).json({ error: 'Adjustment not found' });
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30106,7 +30106,7 @@ app.patch("/api/employees/:employeeId/metadata", requireAuth, mutationLimiter, a
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30147,7 +30147,7 @@ app.get("/api/employees/:employeeId/metadata", requireAuth, async (req: Authenti
     if (!employee) return res.status(404).json({ error: 'Employee not found' });
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30192,7 +30192,7 @@ app.get("/api/chat/unread-count", requireAuth, readLimiter, async (req: Authenti
       const count = await unreadMessageService.getUnreadCount(conversationId as string, userId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30216,7 +30216,7 @@ app.get("/api/chat/unread-count", requireAuth, readLimiter, async (req: Authenti
       const total = await unreadMessageService.getTotalUnreadCount(userId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30258,7 +30258,7 @@ app.post("/api/chat/mark-as-read", requireAuth, mutationLimiter, async (req: Aut
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30416,7 +30416,7 @@ app.get("/api/breaks/status/:employeeId", requireAuth, readLimiter, async (req: 
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30491,7 +30491,7 @@ app.get("/api/breaks/rules", requireAuth, readLimiter, async (req: Authenticated
     const rules = await breaksService.getAllLaborLawRules();
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30523,7 +30523,7 @@ app.get("/api/breaks/rules/workspace", requireAuth, readLimiter, async (req: Aut
     const rules = await breaksService.getWorkspaceLaborLawRules(workspaceId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30558,7 +30558,7 @@ app.get("/api/breaks/rules/:jurisdiction", requireAuth, readLimiter, async (req:
     }
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30611,7 +30611,7 @@ app.post("/api/breaks/calculate", requireAuth, mutationLimiter, async (req: Auth
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30747,7 +30747,7 @@ app.get("/api/breaks/shift/:shiftId", requireAuth, readLimiter, async (req: Auth
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30941,7 +30941,7 @@ app.get("/api/training/completion/:employeeId", requireAuth, readLimiter, async 
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -30974,7 +30974,7 @@ app.get("/api/training/team-summary", requireAuth, readLimiter, async (req: Auth
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31082,7 +31082,7 @@ app.get("/api/analytics/summary", requireAuth, readLimiter, async (req: Authenti
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31127,7 +31127,7 @@ app.get("/api/analytics/dashboard", requireAuth, readLimiter, async (req: Authen
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31168,7 +31168,7 @@ app.get("/api/analytics/time-usage", requireAuth, readLimiter, async (req: Authe
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31209,7 +31209,7 @@ app.get("/api/analytics/scheduling", requireAuth, readLimiter, async (req: Authe
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31250,7 +31250,7 @@ app.get("/api/analytics/revenue", requireAuth, readLimiter, async (req: Authenti
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31291,7 +31291,7 @@ app.get("/api/analytics/employee-performance", requireAuth, readLimiter, async (
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31374,7 +31374,7 @@ app.get("/api/analytics/insights", requireAuth, readLimiter, async (req: Authent
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31416,7 +31416,7 @@ app.get("/api/jobs/by-role/:role", requireAuth, readLimiter, async (req: Authent
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31488,7 +31488,7 @@ app.get("/api/helpos/settings", requireAuth, readLimiter, async (req: Authentica
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31522,7 +31522,7 @@ app.post("/api/helpos/settings", requireAuth, requireManager, mutationLimiter, a
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31766,7 +31766,7 @@ app.post("/api/file-cabinet/upload", requireAuth, mutationLimiter, async (req: A
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31806,7 +31806,7 @@ app.get("/api/file-cabinet/:employeeId", requireAuth, async (req: AuthenticatedR
     const fileCabinet = employee.metadata?.fileCabinet || [];
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31852,7 +31852,7 @@ app.delete("/api/file-cabinet/:employeeId/:fileId", requireAuth, mutationLimiter
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -31924,7 +31924,7 @@ app.post("/api/migrations/employee-match", requireAuth, async (req: Authenticate
     if (!scoredEmployees.length) {
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -32488,7 +32488,7 @@ app.get("/api/alerts/config", requireAuth, async (req: AuthenticatedRequest, res
     
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -32531,7 +32531,7 @@ app.get("/api/alerts/config/:alertType", requireAuth, async (req: AuthenticatedR
     
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -32581,7 +32581,7 @@ app.put("/api/alerts/config/:alertType", requireAuth, mutationLimiter, async (re
     
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -32629,7 +32629,7 @@ app.patch("/api/alerts/config/:alertType/toggle", requireAuth, mutationLimiter, 
     
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -32675,7 +32675,7 @@ app.get("/api/alerts/history", requireAuth, async (req: AuthenticatedRequest, re
     
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -32721,7 +32721,7 @@ app.get("/api/alerts/history/:id", requireAuth, async (req: AuthenticatedRequest
     
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -32768,7 +32768,7 @@ app.post("/api/alerts/:id/acknowledge", requireAuth, mutationLimiter, async (req
     
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -32815,7 +32815,7 @@ app.post("/api/alerts/:id/resolve", requireAuth, mutationLimiter, async (req: Au
     
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -32853,7 +32853,7 @@ app.get("/api/alerts/unacknowledged-count", requireAuth, async (req: Authenticat
     
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -32911,7 +32911,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -33013,7 +33013,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -33104,7 +33104,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const updated = await storage.updateFeedback(id, updateData);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -33155,7 +33155,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const updated = await storage.updateFeedbackStatus(id, status, req.userId!, note);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -33205,7 +33205,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const result = await storage.voteFeedback(id, req.userId!, voteType);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -33286,7 +33286,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const comments = await storage.getFeedbackComments(id);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -33331,7 +33331,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       await storage.deleteFeedbackComment(commentId);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -33380,7 +33380,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       await storage.deleteFeedback(id);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -33431,7 +33431,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -33469,7 +33469,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -33556,7 +33556,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail
@@ -33694,7 +33694,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const summary = aiBrainAuthorizationService.getPermissionSummary(authCheck.role!);
       // ✅ WEBSOCKET: Broadcast to ALL connected clients for real-time updates
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', undefined, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: 0, platformUpdates: 0, total: 0, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
       // ✅ AI BRAIN LOGGING: Log this command execution for audit trail

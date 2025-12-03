@@ -88,9 +88,9 @@ const generateLetterStates = (text: string, colorPalette: string[]): LetterState
   });
 };
 
-// Calculate position to keep bubble anchored VERY close to mascot (magnet-style)
+// Calculate position to keep bubble ABOVE mascot without covering it
 // mascotPos is in BOTTOM-RIGHT coordinates (distance from bottom-right corner)
-// This positioning stays tight even during mutations/transforms/emote changes
+// The bubble sits WELL ABOVE the mascot so Trinity and all emotes/transformations stay visible
 const calculateAnchoredPosition = (
   mascotPos: { x: number; y: number },
   mascotSize: number,
@@ -107,10 +107,10 @@ const calculateAnchoredPosition = (
   const mascotCenterX = viewportWidth - mascotPos.x - (mascotSize / 2);
   const mascotTopY = viewportHeight - mascotPos.y - mascotSize;
   
-  // MAGNET POSITIONING: Bubble sits RIGHT on top of mascot with minimal gap
-  // Very tight for mobile (2px) and desktop (1px)
-  const magnetGap = isMobile ? 2 : 1; 
-  const bubbleBottomY = mascotTopY - magnetGap;
+  // CLEAR GAP: Bubble sits WELL ABOVE mascot - never overlap with mascot or emotes
+  // Much larger gap to ensure mascot is never hidden by bubble background
+  const clearanceGap = isMobile ? 55 : 70;
+  const bubbleBottomY = mascotTopY - clearanceGap;
   
   // Center bubble horizontally on mascot center
   let bubbleLeftX = mascotCenterX - (bubbleWidth / 2);
@@ -119,8 +119,8 @@ const calculateAnchoredPosition = (
   const padding = 4;
   bubbleLeftX = Math.max(padding, Math.min(bubbleLeftX, viewportWidth - bubbleWidth - padding));
   
-  // Estimate bubble height based on content (very compact positioning)
-  const estimatedBubbleHeight = isMobile ? 32 : 38;
+  // Estimate bubble height based on content
+  const estimatedBubbleHeight = isMobile ? 45 : 55;
   const bubbleTop = Math.max(padding, bubbleBottomY - estimatedBubbleHeight);
   
   return {

@@ -184,6 +184,7 @@ function createSystemMessage(
     sentimentScore: null,
     sentimentConfidence: null,
     urgencyLevel: null,
+    shouldEscalate: false,
     sentimentAnalyzedAt: null,
     
     // Timestamps
@@ -640,13 +641,13 @@ async function revalidateUserAuth(ws: WebSocketClient): Promise<{
     }
     
     // Get current platform role from database
-    const role = await storage.getUserPlatformRole(ws.userId).catch(() => undefined);
-    const isStaff = hasPlatformWideAccess(role);
+    const role = await storage.getUserPlatformRole(ws.userId).catch(() => null);
+    const isStaff = hasPlatformWideAccess(role ?? undefined);
     
     return {
       userId: user.id,
       workspaceId: user.currentWorkspaceId || '',
-      role: role,
+      role: role ?? null,
       isStaff: !!isStaff,
     };
   } catch (error) {
@@ -978,7 +979,7 @@ export function setupWebSocket(server: Server) {
               }) : 'User';
 
               // Determine user type and set initial status
-              platformRole = await storage.getUserPlatformRole(effectiveUserId).catch(() => undefined);
+              platformRole = await storage.getUserPlatformRole(effectiveUserId).catch(() => null) ?? undefined;
               isStaff = hasPlatformWideAccess(platformRole);
               
               if (isStaff) {
@@ -1282,7 +1283,7 @@ export function setupWebSocket(server: Server) {
                   }
 
                   // Check if user has an active support ticket
-                  const existingTicket = await storage.getActiveSupportTicket(payload.userId, ws.workspaceId);
+                  const existingTicket = await storage.getActiveSupportTicket(payload.userId ?? '', ws.workspaceId ?? '');
                   
                   let welcomeMessage: string;
                   let ticketNumber: string;
@@ -2586,7 +2587,7 @@ export function setupWebSocket(server: Server) {
                         suspendedAt: new Date(),
                         suspendedBy: ws.userId,
                         updatedAt: new Date()
-                      })
+                      } as any)
                       .where(eq(usersTable.id, targetUser.id));
                     
                     ws.send(JSON.stringify({ 
@@ -2630,7 +2631,7 @@ export function setupWebSocket(server: Server) {
                         suspendedAt: null,
                         suspendedBy: null,
                         updatedAt: new Date()
-                      })
+                      } as any)
                       .where(eq(usersTable.id, targetUser.id));
                     
                     ws.send(JSON.stringify({ 
@@ -2874,10 +2875,10 @@ export function setupWebSocket(server: Server) {
                   console.log(`[ChatSentiment] Alert triggered for message ${savedMessage.id}: ${sentimentAnalysis.sentiment} (urgency: ${sentimentAnalysis.urgencyLevel})`);
                   
                   ChatServerHub.emitSentimentAlert({
-                    conversationId: ws.conversationId,
+                    conversationId: ws.conversationId ?? '',
                     workspaceId: ws.workspaceId || '',
                     messageId: savedMessage.id,
-                    userId: ws.userId,
+                    userId: ws.userId ?? '',
                     userName: displayName,
                     sentiment: sentimentAnalysis.sentiment,
                     sentimentScore: sentimentAnalysis.sentimentScore,
@@ -3132,7 +3133,7 @@ export function setupWebSocket(server: Server) {
             }
 
             // SECURITY: Only platform staff (root_admin, deputy admins, support managers) can kick users
-            const kickerRole = await storage.getUserPlatformRole(ws.userId).catch(() => undefined);
+            const kickerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null) ?? undefined;
             const canKick = hasPlatformWideAccess(kickerRole);
             
             if (!canKick) {
@@ -3458,7 +3459,7 @@ export function setupWebSocket(server: Server) {
             }
 
             // SECURITY: Only platform staff can silence users
-            const silencerRole = await storage.getUserPlatformRole(ws.userId).catch(() => undefined);
+            const silencerRole = await storage.getUserPlatformRole(ws.userId).catch(() => null) ?? undefined;
             const canSilence = hasPlatformWideAccess(silencerRole);
             
             if (!canSilence) {
@@ -3639,7 +3640,7 @@ export function setupWebSocket(server: Server) {
             }
 
             // SECURITY: Only platform staff can give voice
-            const voiceStaffRole = await storage.getUserPlatformRole(ws.userId).catch(() => undefined);
+            const voiceStaffRole = await storage.getUserPlatformRole(ws.userId).catch(() => null) ?? undefined;
             const canGiveVoice = hasPlatformWideAccess(voiceStaffRole);
             
             if (!canGiveVoice) {
@@ -3945,7 +3946,7 @@ export function setupWebSocket(server: Server) {
 
             // Check if user has staff permissions using centralized hasPlatformWideAccess
             const staffInfo = await storage.getUserDisplayInfo(ws.userId);
-            const isBanStaff = hasPlatformWideAccess(staffInfo?.platformRole);
+            const isBanStaff = hasPlatformWideAccess(staffInfo?.platformRole ?? undefined);
             
             if (!isBanStaff) {
               ws.send(JSON.stringify({
@@ -4643,10 +4644,15 @@ export function setupWebSocket(server: Server) {
         return;
       }
 
-      // Sanitize notification payload if present - include enhanced metadata for end users
       let sanitizedNotification = undefined;
-      if (notification) {
-        // Extract enhanced fields from metadata for live display
+      
+      if (updateType === 'notification_count_updated' && notification) {
+        sanitizedNotification = {
+          type: notification.type,
+          counts: notification.counts,
+          source: notification.source,
+        };
+      } else if (notification) {
         const metadata = notification.metadata || {};
         sanitizedNotification = {
           id: notification.id,
@@ -4656,14 +4662,12 @@ export function setupWebSocket(server: Server) {
           isRead: notification.isRead,
           actionUrl: notification.actionUrl,
           createdAt: notification.createdAt,
-          // Enhanced metadata fields for end-user display
           detailedCategory: metadata.detailedCategory || notification.detailedCategory,
           sourceType: metadata.sourceType || notification.sourceType,
           sourceName: metadata.sourceName || notification.sourceName,
           endUserSummary: metadata.endUserSummary || notification.endUserSummary,
           brokenDescription: metadata.brokenDescription || notification.brokenDescription,
           impactDescription: metadata.impactDescription || notification.impactDescription,
-          // Also include the badge if present
           badge: metadata.badge || notification.badge,
           category: metadata.category || notification.category,
         };
@@ -4676,7 +4680,7 @@ export function setupWebSocket(server: Server) {
         timestamp: new Date().toISOString(),
       });
 
-      console.log(`🔔 Broadcasting ${updateType} to user ${userId} in workspace ${workspaceId}`);
+      console.log(`🔔 Broadcasting ${updateType} to user ${userId} in workspace ${workspaceId} (count: ${unreadCount})`);
 
       userClient.send(payload);
     },

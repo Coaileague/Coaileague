@@ -35,7 +35,8 @@ type BroadcastFunction = (
   workspaceId: string,
   userId: string,
   updateType: string,
-  data: any
+  data: any,
+  unreadCount?: number
 ) => void;
 
 class NotificationStateManager {
