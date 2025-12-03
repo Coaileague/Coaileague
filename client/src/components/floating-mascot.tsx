@@ -312,6 +312,10 @@ const FloatingMascot = memo(function FloatingMascot({
   const statusEffectsRef = useRef<StatusEmoteEffects>(new StatusEmoteEffects());
   const lastModeRef = useRef<MascotMode>('IDLE');
   
+  // Mutation state for smooth transitions between modes
+  // Based on user's reference: mutation decays at 0.94 rate, triggers jitter and chromatic aberration
+  const mutationRef = useRef<number>(0);
+  
   // Motion pattern state - AI Brain can switch this
   const [activeMotionPattern, setActiveMotionPattern] = useState<MotionPattern>('TRIAD_SYNCHRONIZED');
   const [showHolidayDecorations, setShowHolidayDecorations] = useState(true);
@@ -646,7 +650,16 @@ const FloatingMascot = memo(function FloatingMascot({
       if (lastModeRef.current !== currentMode) {
         statusEffects.onModeChange(currentMode, center, center);
         lastModeRef.current = currentMode;
+        // Trigger mutation effect on mode change (per user's reference implementation)
+        mutationRef.current = 1.0;
       }
+      
+      // Decay mutation over time (0.94 rate per frame - matches user's reference)
+      if (mutationRef.current > 0) {
+        mutationRef.current *= 0.94;
+        if (mutationRef.current < 0.01) mutationRef.current = 0;
+      }
+      const mutation = mutationRef.current;
       
       // Update status effects each frame
       statusEffects.update(currentMode, center, center, 1);
@@ -784,6 +797,25 @@ const FloatingMascot = memo(function FloatingMascot({
           y3 = center + Math.sin(twins[0].angle + trinityOffset * 2) * radius;
       }
 
+      // MUTATION JITTER: Random scatter during mode transitions (per user's reference)
+      // Stars jitter randomly before settling into new pattern
+      if (mutation > 0.01) {
+        const jitterStrength = 50 * mutation; // Max 50px jitter at peak mutation
+        const jitter1X = (Math.random() - 0.5) * jitterStrength;
+        const jitter1Y = (Math.random() - 0.5) * jitterStrength;
+        const jitter2X = (Math.random() - 0.5) * jitterStrength;
+        const jitter2Y = (Math.random() - 0.5) * jitterStrength;
+        const jitter3X = (Math.random() - 0.5) * jitterStrength;
+        const jitter3Y = (Math.random() - 0.5) * jitterStrength;
+        
+        x1 += jitter1X;
+        y1 += jitter1Y;
+        x2 += jitter2X;
+        y2 += jitter2Y;
+        x3 += jitter3X;
+        y3 += jitter3Y;
+      }
+
       // Set physics target positions (relative to center)
       const physics = physicsRef.current;
       if (physics) {
@@ -824,6 +856,42 @@ const FloatingMascot = memo(function FloatingMascot({
       const brandingLabels = ['Co', 'AI', 'L'];
       // FIXED: Each star has DISTINCT text color matching its identity - gold star (#f4c15d) was incorrectly cyan!
       const brandingColors = [colors.primary, colors.secondary, colors.tertiary];
+      
+      // CHROMATIC ABERRATION during mutation (per user's reference implementation)
+      // Draw R and B shifted ghost stars during mode transitions
+      const chromaticShift = mutation * 8; // Max 8px shift at peak mutation
+      if (mutation > 0.01 && chromaticShift > 0.5) {
+        const starSize = mascotSize * trinityConfig.starSizeMultiplier;
+        
+        // RED channel - shifted left
+        ctx.globalCompositeOperation = 'screen';
+        ctx.globalAlpha = 0.5 * mutation;
+        twins.forEach((twin) => {
+          ctx.beginPath();
+          ctx.arc(twin.x - chromaticShift, twin.y, starSize, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(255, 0, 0, 0.5)';
+          ctx.fill();
+        });
+        
+        // BLUE channel - shifted right
+        twins.forEach((twin) => {
+          ctx.beginPath();
+          ctx.arc(twin.x + chromaticShift, twin.y, starSize, 0, Math.PI * 2);
+          ctx.fillStyle = 'rgba(0, 0, 255, 0.5)';
+          ctx.fill();
+        });
+        
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.globalAlpha = 1;
+      }
+      
+      // DIGITAL GLITCH LINES during mutation (per user's reference)
+      if (mutation > 0.1) {
+        ctx.fillStyle = `rgba(255, 255, 255, ${mutation * 0.1})`;
+        const glitchY = (Math.random() - 0.5) * mascotSize + center;
+        const glitchH = Math.random() * 10;
+        ctx.fillRect(0, glitchY, mascotSize, glitchH);
+      }
       
       // INDEPENDENT STAR RENDERING - Each star is a distinct entity with NO visual overlap
       const qs = qualitySettings;

@@ -1782,7 +1782,6 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
           />
           <MutationFlashOverlay
             isActive={warpState.phase === 'enter' || warpState.phase === 'peak'}
-            colors={warpState.colors}
           />
         </div>
       </div>
@@ -1857,7 +1856,6 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
           />
           <MutationFlashOverlay
             isActive={warpState.phase === 'enter' || warpState.phase === 'peak'}
-            colors={warpState.colors}
           />
         </div>
       </div>
@@ -1889,7 +1887,6 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
         />
         <MutationFlashOverlay
           isActive={warpState.phase === 'enter' || warpState.phase === 'peak'}
-          colors={warpState.colors}
         />
       </div>
 
