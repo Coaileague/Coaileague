@@ -591,6 +591,16 @@ export type ThoughtBubbleAnimation =
   | 'leaves-drift'
   | 'confetti-burst';
 
+// Thought bubble boundary - keeps bubble anchored and unified with mascot
+export const THOUGHT_BUBBLE_BOUNDARY_CONFIG = {
+  offsetAbove: 10, // pixels above mascot
+  maxWidth: 280,   // max bubble width on desktop
+  mobileMaxWidth: 200, // max bubble width on mobile
+  padding: 8,
+  anchorToMascot: true, // always stay attached to mascot position
+  followMascotDrag: true, // move with mascot when dragged
+};
+
 export interface ThoughtBubbleStyle {
   background: string;
   backdropBlur: string;

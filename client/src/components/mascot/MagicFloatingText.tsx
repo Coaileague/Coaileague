@@ -11,6 +11,7 @@
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import type { Thought } from '@/lib/mascot/ThoughtManager';
+import { THOUGHT_BUBBLE_BOUNDARY_CONFIG } from '@/config/mascotConfig';
 
 // Color palettes for letter variety
 const LETTER_COLORS = {
@@ -86,98 +87,24 @@ const generateLetterStates = (text: string, colorPalette: string[]): LetterState
   });
 };
 
-// Calculate smart position based on mascot location and screen edges
-const calculateSmartPosition = (
+// Calculate position to keep bubble anchored directly above mascot
+const calculateAnchoredPosition = (
   mascotPos: { x: number; y: number },
   mascotSize: number,
   isMobile: boolean
-): { 
-  position: React.CSSProperties;
-  direction: 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right';
-} => {
-  const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
-  const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+): React.CSSProperties => {
+  // Use centralized config for boundary settings
+  const config = THOUGHT_BUBBLE_BOUNDARY_CONFIG;
+  const bubbleWidth = isMobile ? config.mobileMaxWidth : config.maxWidth;
   
-  // Mascot position from bottom-right corner
-  const mascotRight = mascotPos.x;
-  const mascotBottom = mascotPos.y;
-  
-  // Convert to actual screen coordinates (mascot uses bottom-right positioning)
-  const mascotScreenX = viewportWidth - mascotRight - mascotSize / 2;
-  const mascotScreenY = viewportHeight - mascotBottom - mascotSize / 2;
-  
-  // Padding from edges
-  const edgePadding = isMobile ? 10 : 20;
-  const textMargin = isMobile ? 8 : 15;
-  
-  // Determine best position based on mascot location
-  const isNearTop = mascotScreenY < viewportHeight * 0.3;
-  const isNearBottom = mascotScreenY > viewportHeight * 0.7;
-  const isNearLeft = mascotScreenX < viewportWidth * 0.3;
-  const isNearRight = mascotScreenX > viewportWidth * 0.7;
-  
-  let direction: 'top' | 'bottom' | 'left' | 'right' | 'top-left' | 'top-right' = 'top';
-  let position: React.CSSProperties = {};
-  
-  if (isNearBottom && isNearRight) {
-    // Mascot in bottom-right: text goes top-left
-    direction = 'top-left';
-    position = {
-      bottom: `${mascotBottom + mascotSize + textMargin}px`,
-      right: `${mascotRight + mascotSize * 0.3}px`,
-    };
-  } else if (isNearBottom && isNearLeft) {
-    // Mascot in bottom-left: text goes top-right
-    direction = 'top-right';
-    position = {
-      bottom: `${mascotBottom + mascotSize + textMargin}px`,
-      left: `${viewportWidth - mascotRight + textMargin}px`,
-    };
-  } else if (isNearTop && isNearRight) {
-    // Mascot in top-right: text goes bottom-left
-    direction = 'bottom';
-    position = {
-      top: `${viewportHeight - mascotBottom + mascotSize + textMargin}px`,
-      right: `${mascotRight + mascotSize * 0.3}px`,
-    };
-  } else if (isNearRight) {
-    // Mascot on right edge: text goes left
-    direction = 'left';
-    position = {
-      bottom: `${mascotBottom + mascotSize * 0.3}px`,
-      right: `${mascotRight + mascotSize + textMargin}px`,
-    };
-  } else if (isNearLeft) {
-    // Mascot on left edge: text goes right
-    direction = 'right';
-    position = {
-      bottom: `${mascotBottom + mascotSize * 0.3}px`,
-      left: `${viewportWidth - mascotRight + textMargin}px`,
-    };
-  } else {
-    // Default: text above mascot
-    direction = 'top';
-    position = {
-      bottom: `${mascotBottom + mascotSize + textMargin}px`,
-      right: `${mascotRight}px`,
-    };
-  }
-  
-  // Ensure text stays on screen
-  if (position.right !== undefined && typeof position.right === 'string') {
-    const rightVal = parseInt(position.right);
-    if (rightVal < edgePadding) {
-      position.right = `${edgePadding}px`;
-    }
-  }
-  if (position.left !== undefined && typeof position.left === 'string') {
-    const leftVal = parseInt(position.left);
-    if (leftVal < edgePadding) {
-      position.left = `${edgePadding}px`;
-    }
-  }
-  
-  return { position, direction };
+  // Always position directly above the mascot, centered
+  return {
+    position: 'fixed',
+    bottom: mascotPos.y + mascotSize + config.offsetAbove,
+    right: mascotPos.x - (bubbleWidth / 2) + (mascotSize / 2),
+    maxWidth: bubbleWidth,
+    minWidth: isMobile ? 120 : 150,
+  };
 };
 
 export function MagicFloatingText({
@@ -197,9 +124,9 @@ export function MagicFloatingText({
     return pickRandom(palettes);
   }, [thought?.id]);
   
-  // Calculate smart position
-  const { position, direction } = useMemo(() => 
-    calculateSmartPosition(mascotPosition, mascotSize, isMobile),
+  // Calculate anchored position - stays unified with mascot
+  const bubblePosition = useMemo(() => 
+    calculateAnchoredPosition(mascotPosition, mascotSize, isMobile),
     [mascotPosition.x, mascotPosition.y, mascotSize, isMobile]
   );
   
@@ -282,9 +209,8 @@ export function MagicFloatingText({
     return `${anim} ${duration}s ease-out forwards`;
   };
   
-  // Responsive sizes
+  // Responsive font size
   const fontSize = isMobile ? 'clamp(14px, 4vw, 18px)' : 'clamp(16px, 1.5vw, 22px)';
-  const maxWidth = isMobile ? '70vw' : '400px';
   
   if (!isActive || letters.length === 0) return null;
   
@@ -407,19 +333,20 @@ export function MagicFloatingText({
         }
       `}</style>
       
+      {/* Unified bubble container - anchored to mascot */}
       <div
-        className="fixed pointer-events-none"
+        className="pointer-events-none"
         style={{
-          ...position,
+          ...bubblePosition,
           zIndex: 9999,
-          maxWidth,
           display: 'flex',
           flexWrap: 'wrap',
           gap: '0',
-          justifyContent: direction.includes('left') ? 'flex-end' : 'flex-start',
+          justifyContent: 'center',
+          textAlign: 'center',
         }}
         data-testid="magic-floating-text"
-        data-direction={direction}
+        data-anchored="true"
       >
         {letters.map((letter, index) => (
           <span
