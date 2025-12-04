@@ -9929,6 +9929,15 @@ export const notificationScopeEnum = pgEnum('notification_scope', [
   'global',     // Platform-wide notification (broadcast to all users)
 ]);
 
+// Notification category enum - for filtering and organizing notifications
+export const notificationCategoryEnum = pgEnum('notification_category', [
+  'system',      // Platform maintenance, known issues, services down
+  'chat',        // Chat server notifications, mentions, DMs
+  'whats_new',   // Platform updates, patches, new features (AI-summarized)
+  'alerts',      // Important alerts requiring attention
+  'activity',    // General activity (shifts, timesheets, approvals)
+]);
+
 // Notification type enum
 export const notificationTypeEnum = pgEnum('notification_type', [
   'shift_assigned',      // New shift assigned to user
@@ -9956,6 +9965,12 @@ export const notificationTypeEnum = pgEnum('notification_type', [
   'ai_approval_needed',  // AI Brain needs approval for workflow
   'ai_action_completed', // AI Brain completed automated action
   'deadline_approaching', // Deadline approaching for approval/action
+  'platform_maintenance', // Platform going down for maintenance
+  'known_issue',         // Known issue being investigated
+  'service_down',        // Service outage notification
+  'service_restored',    // Service restored notification
+  'platform_update',     // New platform update/patch deployed
+  'feature_release',     // New feature released
 ]);
 
 // Notifications table - supports workspace, user, and global scopes
@@ -9964,6 +9979,9 @@ export const notifications = pgTable("notifications", {
   
   // Scope determines routing and validation rules
   scope: notificationScopeEnum("scope").notNull().default('workspace'),
+  
+  // Category for filtering (system, chat, whats_new, alerts, activity)
+  category: notificationCategoryEnum("category").default('activity'),
   
   // workspaceId is nullable for user-scoped and global notifications
   workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
@@ -9974,9 +9992,12 @@ export const notifications = pgTable("notifications", {
   title: varchar("title", { length: 255 }).notNull(),
   message: text("message").notNull(),
   
-  // Status
+  // Status - three states: unread, read (acknowledged), cleared (dismissed permanently)
   isRead: boolean("is_read").default(false),
   readAt: timestamp("read_at"),
+  isAcknowledged: boolean("is_acknowledged").default(false),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  clearedAt: timestamp("cleared_at"), // When null = visible; when set = permanently dismissed
   
   // Navigation
   actionUrl: varchar("action_url", { length: 500 }), // Where to go when clicked
@@ -9985,8 +10006,11 @@ export const notifications = pgTable("notifications", {
   relatedEntityType: varchar("related_entity_type", { length: 100 }), // e.g., 'shift', 'employee', 'document'
   relatedEntityId: varchar("related_entity_id"), // ID of the related entity
   
+  // For What's New / Platform Updates - links to change event
+  changeEventId: varchar("change_event_id"), // Reference to platform change/patch
+  
   // Metadata
-  metadata: jsonb("metadata"), // Additional data (shift details, document name, etc.)
+  metadata: jsonb("metadata"), // Additional data (shift details, document name, AI summary, etc.)
   
   // Audit
   createdBy: varchar("created_by").references(() => users.id), // Who triggered this notification
@@ -9997,11 +10021,13 @@ export const notifications = pgTable("notifications", {
   userIdx: index("notifications_user_idx").on(table.userId),
   workspaceIdx: index("notifications_workspace_idx").on(table.workspaceId),
   scopeIdx: index("notifications_scope_idx").on(table.scope),
+  categoryIdx: index("notifications_category_idx").on(table.category),
   isReadIdx: index("notifications_is_read_idx").on(table.isRead),
   createdAtIdx: index("notifications_created_at_idx").on(table.createdAt),
   typeIdx: index("notifications_type_idx").on(table.type),
-  // Composite index for user-scoped notifications
+  clearedAtIdx: index("notifications_cleared_at_idx").on(table.clearedAt),
   userScopeIdx: index("notifications_user_scope_idx").on(table.userId, table.scope),
+  userCategoryClearedIdx: index("notifications_user_category_cleared_idx").on(table.userId, table.category, table.isRead, table.clearedAt),
 }));
 
 export const insertNotificationSchema = createInsertSchema(notifications).omit({
