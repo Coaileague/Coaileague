@@ -2,9 +2,9 @@
  * SMS API Routes - Twilio SMS Integration
  */
 
-import { Router, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { requireAuth } from '../auth';
-import { requireWorkspaceRole, requireManager, AuthenticatedRequest } from '../rbac';
+import { requireWorkspaceRole, requireManager } from '../rbac';
 import { 
   sendSMS, 
   sendSMSToEmployee, 
@@ -18,7 +18,7 @@ import '../types';
 
 export const smsRouter = Router();
 
-smsRouter.get('/status', requireAuth, async (req: AuthenticatedRequest, res: Response) => {
+smsRouter.get('/status', requireAuth, async (req: Request, res: Response) => {
   try {
     res.json({
       enabled: isFeatureEnabled('enableSMSNotifications'),
@@ -30,7 +30,7 @@ smsRouter.get('/status', requireAuth, async (req: AuthenticatedRequest, res: Res
   }
 });
 
-smsRouter.post('/send', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: AuthenticatedRequest, res: Response) => {
+smsRouter.post('/send', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: Request, res: Response) => {
   try {
     if (!isFeatureEnabled('enableSMSNotifications')) {
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
@@ -82,7 +82,7 @@ smsRouter.post('/send', requireAuth, requireWorkspaceRole(['org_owner', 'org_adm
   }
 });
 
-smsRouter.post('/send-to-employee', requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
+smsRouter.post('/send-to-employee', requireAuth, requireManager, async (req: Request, res: Response) => {
   try {
     if (!isFeatureEnabled('enableSMSNotifications')) {
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
@@ -114,7 +114,7 @@ smsRouter.post('/send-to-employee', requireAuth, requireManager, async (req: Aut
   }
 });
 
-smsRouter.post('/shift-reminder', requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
+smsRouter.post('/shift-reminder', requireAuth, requireManager, async (req: Request, res: Response) => {
   try {
     if (!isFeatureEnabled('enableSMSNotifications')) {
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
@@ -142,7 +142,7 @@ smsRouter.post('/shift-reminder', requireAuth, requireManager, async (req: Authe
   }
 });
 
-smsRouter.post('/schedule-change', requireAuth, requireManager, async (req: AuthenticatedRequest, res: Response) => {
+smsRouter.post('/schedule-change', requireAuth, requireManager, async (req: Request, res: Response) => {
   try {
     if (!isFeatureEnabled('enableSMSNotifications')) {
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
@@ -170,7 +170,7 @@ smsRouter.post('/schedule-change', requireAuth, requireManager, async (req: Auth
   }
 });
 
-smsRouter.post('/invoice-reminder', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: AuthenticatedRequest, res: Response) => {
+smsRouter.post('/invoice-reminder', requireAuth, requireWorkspaceRole(['org_owner', 'org_admin']), async (req: Request, res: Response) => {
   try {
     if (!isFeatureEnabled('enableSMSNotifications')) {
       return res.status(403).json({ error: 'SMS notifications are not enabled' });
