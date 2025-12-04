@@ -28,8 +28,9 @@ import { statusEmoteEffects, StatusEmoteEffects, STATUS_COLORS } from '@/lib/mas
 import { emoteMorphingEngine, EmoteMorphingEngine, EmoteName, EmotePhase, EMOTE_FORMATIONS } from '@/lib/mascot/EmoteMorphingEngine';
 import { EmoteTransitionRenderer, WarpPhase, WarpColors } from '@/lib/mascot/EmoteTransitionRenderer';
 import { GrabSlingMechanics, GrabEvent, SlingResult } from '@/lib/mascot/GrabSlingMechanics';
-// REMOVED: WarpMutationOverlay and MutationFlashOverlay - caused visible borders and sickening glow effects
-// Physical geometry morphing now uses simplified flat properties (points, innerR) with Target-Seek LERP
+import { MutationFlashOverlay } from '@/components/mascot/MutationFlashOverlay';
+import { TransmutationEngine, TRANSMUTATION_CODES, TransmutationCode } from '@/lib/mascot/TransmutationEngine';
+// Physical geometry morphing uses TransmutationEngine with fractional point interpolation for smooth shape-shifting
 
 export type MascotMode = 
   | 'IDLE' 
@@ -270,8 +271,10 @@ class CoAITwinEngine {
   private morphEngine: EmoteMorphingEngine;
   private transitionRenderer: EmoteTransitionRenderer;
   private grabMechanics: GrabSlingMechanics;
+  private transmutationEngine: TransmutationEngine;
   private lastFrameTime: number = 0;
   private onEmoteComplete?: (emote: EmoteName) => void;
+  private onMutationFlash?: () => void;
   private emoteQueue: EmoteName[] = [];
   private isTransitioningToIdle: boolean = false;
   private idleTransitionProgress: number = 0;
@@ -312,6 +315,14 @@ class CoAITwinEngine {
     
     // Initialize transition renderer for polished emote transitions
     this.transitionRenderer = new EmoteTransitionRenderer();
+    
+    // Initialize transmutation engine for physical geometry morphing
+    this.transmutationEngine = new TransmutationEngine(3);
+    this.transmutationEngine.setFlashCallback(() => {
+      if (this.onMutationFlash) {
+        this.onMutationFlash();
+      }
+    });
     
     // Set up warp mutation callbacks for CSS overlay effects
     this.transitionRenderer.setWarpCallbacks({
@@ -467,6 +478,10 @@ class CoAITwinEngine {
   
   setEmoteCallback(callback: (emote: EmoteName) => void): void {
     this.onEmoteComplete = callback;
+  }
+  
+  setMutationFlashCallback(callback: () => void): void {
+    this.onMutationFlash = callback;
   }
   
   setWarpStateCallback(callback: (phase: WarpPhase, intensity: number, colors: WarpColors) => void): void {
@@ -669,8 +684,12 @@ class CoAITwinEngine {
       this.warpColors = { primary: color, secondary: '#ffffff', accent: '#f4c15d' };
     }
     
-    // 3. SET TARGET GEOMETRY for physical shape morphing (SIMPLIFIED Target-Seek pattern)
-    // Uses flat properties: targetPoints, targetInner - lerped each frame in update()
+    // 3. TRIGGER TRANSMUTATION ENGINE for physical shape morphing
+    // Uses fractional point interpolation for smooth morphing between shapes
+    // e.g., 3.5 points = halfway between triangle (3) and square (4)
+    this.transmutationEngine.transmute(mode as TransmutationCode);
+    
+    // Also update twin targets for legacy compatibility
     const targetGeo = MODE_GEOMETRY_TARGETS[mode];
     this.twins.forEach(t => {
       t.targetPoints = targetGeo.points;
@@ -1145,6 +1164,9 @@ class CoAITwinEngine {
     // Update transition renderer for polished effects
     this.transitionRenderer.update(deltaMs);
     
+    // Update transmutation engine for physical geometry morphing
+    this.transmutationEngine.update();
+    
     // Apply sling velocity physics (decays over time)
     if (Math.abs(this.slingVelocityX) > 0.1 || Math.abs(this.slingVelocityY) > 0.1) {
       this.dragOffsetX += this.slingVelocityX;
@@ -1499,46 +1521,74 @@ class CoAITwinEngine {
     this.drawPolygon(drawX, drawY, radius, numPoints, innerRatio, color, twinIndex);
   }
   
-  // SIMPLIFIED polygon drawing - dramatic geometry morphing without complex effects
+  // FRACTIONAL POLYGON DRAWING - Enables smooth morphing between shapes
+  // When points is 3.5, draws a shape halfway between triangle (3) and square (4)
+  // This creates the visible "shape-shifting" effect during mode transitions
   private drawPolygon(x: number, y: number, radius: number, points: number, innerRatio: number, color: string, twinIndex: number = 0) {
-    // Round points to integer but allow fractional for smooth transition
-    const p = Math.max(3, Math.round(points));
+    // Get transmutation state for this star (provides fractional geometry values)
+    const transState = this.transmutationEngine.getState(twinIndex);
+    
+    // Use transmutation engine values if available, otherwise fall back to passed values
+    const fractionalPoints = transState?.currentPoints ?? points;
+    const currentInnerRatio = transState?.currentInnerR ?? innerRatio;
+    const currentColor = transState?.currentColor ?? color;
+    
+    // Calculate floor/ceil for interpolation
+    const minPoints = 3;
+    const clampedPoints = Math.max(minPoints, fractionalPoints);
+    const floorPoints = Math.floor(clampedPoints);
+    const fraction = clampedPoints - floorPoints;
+    
+    // Calculate effective points for smooth morph (interpolate between shapes)
+    const effectivePoints = Math.round(this.lerp(floorPoints, floorPoints + 1, fraction));
+    const p = Math.max(minPoints, effectivePoints);
     const step = Math.PI / p;
     const rotation = -(this.state.time * 0.05);
     
+    // Morphed inner ratio - adds subtle "bulge" effect during transition
+    const morphedInnerRatio = currentInnerRatio + (1 - currentInnerRatio) * 0.08 * Math.sin(fraction * Math.PI);
+    
     // Draw dark outline first
-    this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.6)';
-    this.ctx.lineWidth = 3;
+    this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.5)';
+    this.ctx.lineWidth = 2;
     this.ctx.beginPath();
     for (let i = 0; i < 2 * p; i++) {
-      const r = (i % 2 === 0) ? radius * 1.1 : radius * innerRatio * 1.1;
+      const r = (i % 2 === 0) ? radius * 1.05 : radius * morphedInnerRatio * 1.05;
       const a = i * step + rotation;
-      this.ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      if (i === 0) {
+        this.ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      } else {
+        this.ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      }
     }
     this.ctx.closePath();
     this.ctx.stroke();
     
-    // Draw colored fill with subtle shadow
-    this.ctx.fillStyle = color;
-    this.ctx.shadowBlur = 10;
-    this.ctx.shadowColor = color;
+    // Draw colored fill with subtle glow
+    this.ctx.fillStyle = currentColor;
+    this.ctx.shadowBlur = 8;
+    this.ctx.shadowColor = currentColor;
     this.ctx.beginPath();
     for (let i = 0; i < 2 * p; i++) {
-      const r = (i % 2 === 0) ? radius : radius * innerRatio;
+      const r = (i % 2 === 0) ? radius : radius * morphedInnerRatio;
       const a = i * step + rotation;
-      this.ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      if (i === 0) {
+        this.ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      } else {
+        this.ctx.lineTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
+      }
     }
     this.ctx.closePath();
     this.ctx.fill();
     
     // Reset shadow and add stroke
     this.ctx.shadowBlur = 0;
-    this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.4)';
-    this.ctx.lineWidth = 1.5;
+    this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.35)';
+    this.ctx.lineWidth = 1.2;
     this.ctx.stroke();
     
     // Draw white center dot
-    const centerRadius = radius * 0.25;
+    const centerRadius = radius * 0.22;
     this.ctx.fillStyle = '#fff';
     this.ctx.beginPath();
     this.ctx.arc(x, y, centerRadius, 0, Math.PI * 2);
@@ -1550,7 +1600,7 @@ class CoAITwinEngine {
     const label = brandLabels[twinIndex] || 'LE';
     const labelColor = brandColors[twinIndex] || '#1e3a5f';
     
-    const fontSize = Math.max(4, radius * 0.55);
+    const fontSize = Math.max(4, radius * 0.5);
     this.ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
     this.ctx.textAlign = 'center';
     this.ctx.textBaseline = 'middle';
@@ -1765,6 +1815,9 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
     intensity: 0,
     colors: { primary: '#38bdf8', secondary: '#a855f7', accent: '#f4c15d' }
   });
+  
+  // Mutation flash overlay state for transmutation effects
+  const [isMutating, setIsMutating] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current || !canvasRef.current) return;
@@ -1777,6 +1830,12 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
     if (onEmoteComplete) {
       engineRef.current.setEmoteCallback(onEmoteComplete);
     }
+    
+    // Set up mutation flash callback for CSS overlay effects during transmutations
+    engineRef.current.setMutationFlashCallback(() => {
+      setIsMutating(true);
+      setTimeout(() => setIsMutating(false), 650);
+    });
     
     // Set up warp state callback for CSS overlay effects
     engineRef.current.setWarpStateCallback((phase, intensity, colors) => {
@@ -1913,7 +1972,8 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
             }}
             data-testid="coai-twin-mascot-canvas-mini"
           />
-          {/* OVERLAYS REMOVED - Physical geometry morphing handles mutations */}
+          {/* CSS-based mutation flash overlay for transmutation effects */}
+          <MutationFlashOverlay isActive={isMutating} />
         </div>
       </div>
     );
@@ -1954,7 +2014,8 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
             }}
             data-testid="coai-twin-mascot-canvas-expanded"
           />
-          {/* OVERLAYS REMOVED - Physical geometry morphing handles mutations */}
+          {/* CSS-based mutation flash overlay for transmutation effects */}
+          <MutationFlashOverlay isActive={isMutating} />
         </div>
       </div>
     );
@@ -1976,7 +2037,8 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
           style={{ background: 'transparent' }}
           data-testid="coai-twin-mascot-canvas"
         />
-        {/* OVERLAYS REMOVED - Physical geometry morphing handles mutations */}
+        {/* CSS-based mutation flash overlay for transmutation effects */}
+        <MutationFlashOverlay isActive={isMutating} />
       </div>
 
       <div className="absolute bottom-0 left-0 w-full p-4 pointer-events-none"

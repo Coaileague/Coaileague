@@ -1,0 +1,61 @@
+Here is the architectural blueprint you can copy and paste directly to Replit. It breaks down exactly how the Canvas and CSS systems must work together to achieve the "Trinity Morph" effect.
+
+📋 The Trinity Architecture Blueprint
+Goal: Create a "Trinity Agent" where the mascot physically shape-shifts (morphs) using HTML5 Canvas, while using CSS Overlays for screen-wide effects like flashes.
+
+Core Principle: Do not use static images or SVGs for the mascot. Use Procedural Geometry drawn frame-by-frame.
+
+1. The Canvas Geometry Engine (The Morphing)
+Instruction to Replit: "We need a custom drawing function called drawPolygon inside the Canvas loop. It must handle fractional points to allow smooth morphing."
+
+The Logic:
+
+Instead of switching sprites, we draw a polygon mathematically.
+
+Properties: Each agent has currentPoints (e.g., 4) and targetPoints (e.g., 3).
+
+The Loop: Every frame, we LERP (Linear Interpolate) the currentPoints towards targetPoints.
+
+The Drawing: If currentPoints is 3.5, the math draws a shape halfway between a Triangle and a Square. This creates the fluid "morphing" illusion.
+
+2. The CSS Overlay Layer (The Energy Flash)
+Instruction to Replit: "Use a CSS div positioned absolutely over the canvas for lighting effects. Do not try to draw full-screen flashes inside Canvas; it's too slow."
+
+The HTML: <div id="mutationFlash" class="mutation-overlay"></div>
+
+The CSS:
+
+CSS
+
+.mutation-overlay { mix-blend-mode: overlay; opacity: 0; pointer-events: none; }
+.mutation-active { animation: flash 0.5s forwards; }
+@keyframes flash { 0% { opacity: 0; } 10% { opacity: 0.8; } 100% { opacity: 0; } }
+The JS Trigger: When setMode() is called, remove and re-add the .mutation-active class to restart the animation.
+
+3. The State Machine (The "Brain")
+Instruction to Replit: "The animation loop must separate Logic (Update) from Rendering (Draw)."
+
+update(): Calculates the new math.
+
+Moves x/y positions (Physics).
+
+Interpolates color and shape (Morphing).
+
+Decays shake and mutation variables.
+
+draw(): Renders the state.
+
+If mutation > 0, apply a "Chromatic Aberration" effect by drawing the scene 3 times (Red, Blue, Green) with slight offsets.
+
+🛑 Copy-Paste Prompt for Replit
+If Replit is still stuck, paste this exact block:
+
+"I need to implement the 'Trinity Morph' system. Please refactor the code to use this specific logic:
+
+Canvas Drawing: Create a drawPolygon(x, y, radius, points, innerRadius, color) function. It must use a for loop based on points to draw dynamic shapes.
+
+State Management: In the update() loop, do NOT set properties directly. Instead, interpolate them: agent.points += (agent.targetPoints - agent.points) * 0.1.
+
+Hybrid FX: When I change state, trigger a CSS class on a wrapper div for the 'Flash', but keep the shape morphing inside the Canvas requestAnimationFrame loop.
+
+Do not use image assets. Generate the geometry with code."
