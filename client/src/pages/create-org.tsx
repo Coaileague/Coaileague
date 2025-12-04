@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Building2, Plus } from "lucide-react";
+import { Loader2, Plus } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -9,6 +9,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { triggerGlobalEmote } from "@/hooks/use-mascot-emotes";
+
+interface CreateWorkspaceResponse {
+  success: boolean;
+  workspace: {
+    id: string;
+    name: string;
+    organizationId: string;
+    organizationSerial: string;
+  };
+}
 
 export default function CreateOrg() {
   const [orgName, setOrgName] = useState("");
@@ -17,6 +30,36 @@ export default function CreateOrg() {
   const [size, setSize] = useState("");
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+
+  const createWorkspaceMutation = useMutation({
+    mutationFn: async (formData: { name: string; description: string; industry: string; size: string }) => {
+      const response = await apiRequest('POST', '/api/workspaces', formData);
+      const result: CreateWorkspaceResponse = await response.json();
+      return result;
+    },
+    onSuccess: (data) => {
+      triggerGlobalEmote("org_created");
+      toast({
+        title: "Organization Created",
+        description: `${data.workspace.name} has been created successfully! Organization ID: ${data.workspace.organizationId}`,
+      });
+
+      queryClient.invalidateQueries({ queryKey: ["/api/workspaces/all"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/workspaces"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+
+      setTimeout(() => {
+        setLocation("/dashboard");
+      }, 1500);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create organization",
+        variant: "destructive",
+      });
+    },
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,15 +73,12 @@ export default function CreateOrg() {
       return;
     }
 
-    toast({
-      title: "Organization Created",
-      description: `${orgName} has been created successfully!`,
+    createWorkspaceMutation.mutate({
+      name: orgName.trim(),
+      description: orgDescription,
+      industry,
+      size,
     });
-
-    // Redirect to dashboard
-    setTimeout(() => {
-      setLocation("/dashboard");
-    }, 1000);
   };
 
   return (
@@ -70,6 +110,7 @@ export default function CreateOrg() {
                 onChange={(e) => setOrgName(e.target.value)}
                 data-testid="input-org-name"
                 required
+                disabled={createWorkspaceMutation.isPending}
               />
             </div>
 
@@ -81,6 +122,7 @@ export default function CreateOrg() {
                 value={industry}
                 onChange={(e) => setIndustry(e.target.value)}
                 data-testid="select-industry"
+                disabled={createWorkspaceMutation.isPending}
               >
                 <option value="">Select an industry</option>
                 <option value="technology">Technology</option>
@@ -102,6 +144,7 @@ export default function CreateOrg() {
                 value={size}
                 onChange={(e) => setSize(e.target.value)}
                 data-testid="select-size"
+                disabled={createWorkspaceMutation.isPending}
               >
                 <option value="">Select company size</option>
                 <option value="1-10">1-10 employees</option>
@@ -121,6 +164,7 @@ export default function CreateOrg() {
                 onChange={(e) => setOrgDescription(e.target.value)}
                 rows={4}
                 data-testid="input-description"
+                disabled={createWorkspaceMutation.isPending}
               />
             </div>
 
@@ -130,12 +174,26 @@ export default function CreateOrg() {
                 variant="outline"
                 onClick={() => setLocation("/dashboard")}
                 data-testid="button-cancel"
+                disabled={createWorkspaceMutation.isPending}
               >
                 Cancel
               </Button>
-              <Button type="submit" data-testid="button-create-org">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Organization
+              <Button 
+                type="submit" 
+                data-testid="button-create-org"
+                disabled={createWorkspaceMutation.isPending}
+              >
+                {createWorkspaceMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Create Organization
+                  </>
+                )}
               </Button>
             </div>
           </form>
