@@ -210,40 +210,30 @@ export function NotificationsPopover() {
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
-      try {
-        await apiRequest("PATCH", `/api/notifications/${notificationId}/read`);
-      } catch (error) {
-        console.error('[Notifications] Error marking as read:', error);
-      }
-      const acknowledged = JSON.parse(localStorage.getItem('notifications-acknowledged') || '[]');
-      if (!acknowledged.includes(notificationId)) {
-        acknowledged.push(notificationId);
-        localStorage.setItem('notifications-acknowledged', JSON.stringify(acknowledged));
-      }
+      const response = await apiRequest("POST", `/api/notifications/acknowledge/${notificationId}`);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       refetch();
     },
+    onError: (error) => {
+      console.error('[Notifications] Error marking as read:', error);
+    },
   });
 
   const acknowledgeAlertMutation = useMutation({
     mutationFn: async (alertId: string) => {
-      try {
-        await apiRequest("POST", `/api/maintenance-alerts/${alertId}/acknowledge`);
-      } catch (error) {
-        console.error('[Notifications] Error acknowledging alert:', error);
-      }
-      const acknowledged = JSON.parse(localStorage.getItem('alerts-acknowledged') || '[]');
-      if (!acknowledged.includes(alertId)) {
-        acknowledged.push(alertId);
-        localStorage.setItem('alerts-acknowledged', JSON.stringify(acknowledged));
-      }
+      const response = await apiRequest("POST", `/api/maintenance-alerts/${alertId}/acknowledge`);
+      return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       refetch();
+    },
+    onError: (error) => {
+      console.error('[Notifications] Error acknowledging alert:', error);
     },
   });
 
@@ -252,20 +242,8 @@ export function NotificationsPopover() {
       const idsToAcknowledge = Array.from(selectedIds);
       if (idsToAcknowledge.length === 0) return { success: true };
       
-      try {
-        const response = await apiRequest("POST", "/api/notifications/mark-all-read");
-        await response.json();
-      } catch (error) {
-        console.error('[Notifications] API error:', error);
-      }
-      
-      const acknowledged = JSON.parse(localStorage.getItem('notifications-acknowledged') || '[]');
-      idsToAcknowledge.forEach(id => {
-        if (!acknowledged.includes(id)) acknowledged.push(id);
-      });
-      localStorage.setItem('notifications-acknowledged', JSON.stringify(acknowledged));
-      
-      return { success: true };
+      const response = await apiRequest("POST", "/api/notifications/acknowledge-all");
+      return response.json();
     },
     onSuccess: () => {
       setSelectedIds(new Set());
@@ -302,18 +280,13 @@ export function NotificationsPopover() {
     }
   };
 
-  const acknowledgedIds = new Set(JSON.parse(localStorage.getItem('notifications-acknowledged') || '[]'));
-  const acknowledgedAlertIds = new Set(JSON.parse(localStorage.getItem('alerts-acknowledged') || '[]'));
-  
   const rawPlatformUpdates = data?.platformUpdates || [];
   const rawMaintenanceAlerts = data?.maintenanceAlerts || [];
   const rawNotifications = data?.notifications || [];
   
-  // Show all platform updates - don't filter by localStorage
-  // This prevents "No updates yet" when user has acknowledged previous updates
   const filteredPlatformUpdates = rawPlatformUpdates;
-  const filteredMaintenanceAlerts = rawMaintenanceAlerts.filter(a => !acknowledgedAlertIds.has(a.id));
-  const filteredNotifications = rawNotifications.filter(n => !acknowledgedIds.has(n.id));
+  const filteredMaintenanceAlerts = rawMaintenanceAlerts;
+  const filteredNotifications = rawNotifications;
   
   // Use API's pre-computed counts as baseline
   const apiUnreadPlatformUpdates = data?.unreadPlatformUpdates ?? 0;
@@ -348,18 +321,15 @@ export function NotificationsPopover() {
       return response.json();
     },
     onMutate: async () => {
-      // Cancel any outgoing queries
       await queryClient.cancelQueries({ queryKey: ["/api/notifications/combined"] });
       
-      // Snapshot current data
       const previousData = queryClient.getQueryData(["/api/notifications/combined"]);
       
-      // Optimistically update cache IMMEDIATELY for instant feedback
       queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
         if (!oldData) return oldData;
         return {
           ...oldData,
-          notifications: oldData.notifications?.map((n: any) => ({ ...n, isRead: true })) || [],
+          notifications: [],
           platformUpdates: oldData.platformUpdates?.map((u: any) => ({ ...u, isViewed: true })) || [],
           maintenanceAlerts: oldData.maintenanceAlerts?.map((a: any) => ({ ...a, isAcknowledged: true })) || [],
           unreadNotifications: 0,
@@ -369,17 +339,10 @@ export function NotificationsPopover() {
         };
       });
       
-      // Clear localStorage immediately
-      localStorage.removeItem('notifications-acknowledged');
-      localStorage.removeItem('alerts-acknowledged');
       setSelectedIds(new Set());
-      
-      console.log('🧹 Clear All: Optimistic update applied');
       return { previousData };
     },
-    onSuccess: (data) => {
-      console.log('🧹 Clear All: Server confirmed', data);
-      // Server confirmed - invalidate to sync with real data
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
@@ -387,8 +350,7 @@ export function NotificationsPopover() {
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
     },
     onError: (err, _, context) => {
-      console.error('🧹 Clear All: Error, rolling back', err);
-      // Rollback on error
+      console.error('[Clear All] Error:', err);
       if (context?.previousData) {
         queryClient.setQueryData(["/api/notifications/combined"], context.previousData);
       }
