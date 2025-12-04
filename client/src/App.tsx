@@ -187,12 +187,8 @@ import { useCreditAwareness } from "@/hooks/use-credit-awareness";
 import { useBusinessBuddyTier, getAllowedModes, getUpgradeNudgeMessage } from "@/hooks/use-business-buddy-tier";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 
-// Demo mode cycling - all modes to cycle through on tap
-const DEMO_MODES = [
-  'IDLE', 'SEARCHING', 'THINKING', 'ANALYZING', 'CODING', 
-  'UPLOADING', 'LISTENING', 'SUCCESS', 'ERROR', 'ADVISING',
-  'HOLIDAY', 'CELEBRATING', 'GREETING'
-] as const;
+// Trinity modes are driven by system state, not user interaction
+// Mode changes happen automatically based on AI activity, seasons, etc.
 
 function MascotRenderer() {
   const { user } = useAuth();
@@ -205,9 +201,6 @@ function MascotRenderer() {
   const { tier, isDemo, hasFullAccess, shouldShowUpgradeNudge, tierLabel } = useBusinessBuddyTier();
   const allowedModes = useMemo(() => getAllowedModes(tier), [tier]);
   
-  // Demo mode cycling state - tap mascot to see different formations
-  const [demoModeIndex, setDemoModeIndex] = useState<number | null>(null);
-  
   // Upgrade nudge timer - periodically remind non-subscribers
   const lastNudgeRef = useRef<number>(0);
   
@@ -217,20 +210,12 @@ function MascotRenderer() {
   // Apply HOLIDAY mode during Christmas season when mascot is idle
   const holiday = getCurrentHoliday();
   const currentMode = useMemo(() => {
-    // If demo mode is active, use that (respecting tier restrictions)
-    if (demoModeIndex !== null) {
-      const demoMode = DEMO_MODES[demoModeIndex];
-      // For demo tier, only allow demo modes
-      if (isDemo && !allowedModes.includes(demoMode)) {
-        return 'IDLE'; // Fall back to IDLE if mode not allowed
-      }
-      return demoMode as any;
-    }
+    // Apply seasonal mode override during holidays
     if (baseMode === 'IDLE' && holiday?.key === 'christmas') {
       return 'HOLIDAY';
     }
     return baseMode;
-  }, [baseMode, holiday, demoModeIndex, isDemo, allowedModes]);
+  }, [baseMode, holiday]);
   
   const [location] = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -546,34 +531,11 @@ function MascotRenderer() {
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     if (!isDragging) {
+      // Trinity reacts to taps with a friendly response
       thoughtManager.triggerReaction('tap');
       triggerEmoteRef.current?.('happy');
-      
-      // Cycle through demo modes on tap to showcase all formations
-      setDemoModeIndex(prev => {
-        if (prev === null) return 0;
-        const next = (prev + 1) % DEMO_MODES.length;
-        
-        // Check if next mode is restricted for demo tier
-        const nextMode = DEMO_MODES[next];
-        if (isDemo && !allowedModes.includes(nextMode)) {
-          // Show upgrade hint when trying restricted mode
-          thoughtManager.showSimpleThought({
-            text: 'Upgrade to Business Buddy for all modes!',
-            priority: 'low',
-            duration: 3000,
-            source: 'upgrade_hint',
-          });
-        }
-        
-        // After cycling through all modes, return to auto mode
-        if (next === 0) {
-          setTimeout(() => setDemoModeIndex(null), 3000);
-        }
-        return next;
-      });
     }
-  }, [isDragging, isDemo, allowedModes]);
+  }, [isDragging]);
   
   const hasTrinityAccess = useMemo(() => {
     if (!user) return false;
@@ -631,19 +593,6 @@ function MascotRenderer() {
             glitchEffect={showcaseControl.glitchEffect}
             warpIntensity={showcaseControl.warpIntensity}
           />
-          
-          {/* Demo mode indicator - shows current mode and tier when cycling */}
-          {demoModeIndex !== null && (
-            <div 
-              className="absolute -top-6 left-1/2 -translate-x-1/2 bg-background/90 backdrop-blur-sm 
-                         text-xs font-medium px-2 py-1 rounded-full border border-primary/20 shadow-sm
-                         text-primary whitespace-nowrap"
-              data-testid="demo-mode-indicator"
-            >
-              {currentMode} ({demoModeIndex + 1}/{DEMO_MODES.length})
-              {isDemo && <span className="ml-1 text-muted-foreground">| {tierLabel}</span>}
-            </div>
-          )}
           
           {!currentThought && workspaceId && (
             <MascotTaskBox 
