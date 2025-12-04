@@ -335,7 +335,7 @@ export function MagicFloatingText({
   };
   
   // Responsive font size - BIGGER, BOLDER, ALL CAPS for visibility
-  const fontSize = isMobile ? 'clamp(14px, 3.8vw, 18px)' : 'clamp(16px, 1.5vw, 22px)';
+  const fontSize = isMobile ? 'clamp(11px, 3vw, 14px)' : 'clamp(15px, 1.4vw, 20px)';
   
   if (!isActive || letters.length === 0) return null;
   

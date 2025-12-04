@@ -234,9 +234,9 @@ class CoAITwinEngine {
 
   private emoteState: EmoteState = {
     type: 'neutral',
-    purpleBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
-    cyanBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
-    goldBehavior: { scale: 1, wobble: 0.5, glow: 0.5, speed: 1 },
+    purpleBehavior: { scale: 1, wobble: 0.8, glow: 0, speed: 1.2 },
+    cyanBehavior: { scale: 1, wobble: 0.8, glow: 0, speed: 1.2 },
+    goldBehavior: { scale: 1, wobble: 0.8, glow: 0, speed: 1.2 },
   };
 
   private emoteParticles: { x: number; y: number; vx: number; vy: number; life: number; type: string; char?: string }[] = [];
@@ -422,9 +422,9 @@ class CoAITwinEngine {
       
       this.emoteState = {
         type: 'neutral',
-        purpleBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
-        cyanBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
-        goldBehavior: { scale: 1, wobble: 0.5, glow: 0.5, speed: 1 },
+        purpleBehavior: { scale: 1, wobble: 0.8, glow: 0, speed: 1.2 },
+        cyanBehavior: { scale: 1, wobble: 0.8, glow: 0, speed: 1.2 },
+        goldBehavior: { scale: 1, wobble: 0.8, glow: 0, speed: 1.2 },
         particleEffect: undefined
       };
     }
@@ -464,9 +464,9 @@ class CoAITwinEngine {
     
     this.emoteState = {
       type: 'neutral',
-      purpleBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
-      cyanBehavior: { scale: 1, wobble: 0.5, glow: 0.4, speed: 1 },
-      goldBehavior: { scale: 1, wobble: 0.5, glow: 0.5, speed: 1 },
+      purpleBehavior: { scale: 1, wobble: 0.8, glow: 0, speed: 1.2 },
+      cyanBehavior: { scale: 1, wobble: 0.8, glow: 0, speed: 1.2 },
+      goldBehavior: { scale: 1, wobble: 0.8, glow: 0, speed: 1.2 },
       particleEffect: undefined
     };
     
@@ -1463,17 +1463,16 @@ class CoAITwinEngine {
     const feedback = this.grabMechanics.getVisualFeedback();
     if (!feedback.isHolding) return;
     
-    // Draw subtle grab ring around mascot - NO glow
-    const pulse = Math.sin(this.state.time * 0.15) * 0.3 + 0.7;
-    const radius = 40 * pulse;
+    // Draw clean, solid grab ring around mascot - no fuzzy animations
+    const radius = 35;
     
     this.ctx.beginPath();
     this.ctx.arc(this.dragOffsetX, this.dragOffsetY, radius, 0, Math.PI * 2);
-    this.ctx.strokeStyle = `rgba(34, 197, 94, ${0.4 * pulse})`;
-    this.ctx.lineWidth = 2;
+    this.ctx.strokeStyle = 'rgba(34, 197, 94, 0.6)';
+    this.ctx.lineWidth = 2.5;
+    this.ctx.setLineDash([5, 5]); // Dashed line for fun look
     this.ctx.stroke();
-    
-    // REMOVED inner glow gradient - no more sickening glow effects
+    this.ctx.setLineDash([]); // Reset line dash
   }
 
   private drawStar(x: number, y: number, outerR: number, _innerR: number, color: string, twinIndex: number = 0) {
@@ -1603,10 +1602,8 @@ class CoAITwinEngine {
     this.ctx.closePath();
     this.ctx.stroke();
     
-    // Draw colored fill with glow
+    // Draw colored fill - clean, crisp rendering without fuzzy glow
     this.ctx.fillStyle = color;
-    this.ctx.shadowBlur = 10;
-    this.ctx.shadowColor = color;
     this.ctx.beginPath();
     for (let i = 0; i < 2 * p; i++) {
       const r = (i % 2 === 0) ? radius : radius * innerRatio;
@@ -1620,8 +1617,7 @@ class CoAITwinEngine {
     this.ctx.closePath();
     this.ctx.fill();
     
-    // Reset shadow and add stroke
-    this.ctx.shadowBlur = 0;
+    // Add crisp stroke for definition
     this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.35)';
     this.ctx.lineWidth = 1.2;
     this.ctx.stroke();

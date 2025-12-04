@@ -697,13 +697,13 @@ export type ThoughtBubbleAnimation =
 // - Text uses subtle shadow (0.35 opacity) for readability without blocking mascot
 // - No borders, no box shadows - pure glassmorphism with 2px blur
 export const THOUGHT_BUBBLE_BOUNDARY_CONFIG = {
-  offsetAbove: 6, // pixels above mascot
-  maxWidth: 260,   // max bubble width on desktop - tighter for close anchoring
-  mobileMaxWidth: 180, // max bubble width on mobile - compact for small screens
-  padding: 4,
+  offsetAbove: 4, // pixels above mascot
+  maxWidth: 220,   // max bubble width on desktop - tighter for close anchoring
+  mobileMaxWidth: 130, // max bubble width on mobile - compact for small screens
+  padding: 3,
   anchorToMascot: true, // always stay attached to mascot position
   followMascotDrag: true, // move with mascot when dragged
-  clearanceGap: { desktop: 8, mobile: 6 }, // TIGHT gap - bubble hugs the mascot
+  clearanceGap: { desktop: 6, mobile: 4 }, // TIGHT gap - bubble hugs the mascot
   collisionAvoidance: true, // shift bubble to avoid covering mascot on edge cases
   backgroundOpacity: { center: 0.14, edge: 0.04 }, // nearly transparent radial gradient
   backdropBlur: 2, // minimal blur in pixels
@@ -1288,11 +1288,11 @@ export const MASCOT_CONFIG: MascotConfig = {
   },
   
   mobile: {
-    bubble: 90,
-    defaultSize: 90,
-    expandedSize: 140,
-    minSize: 75,
-    maxSize: 170,
+    bubble: 60,
+    defaultSize: 60,
+    expandedSize: 95,
+    minSize: 50,
+    maxSize: 110,
   },
   
   defaultPosition: {
