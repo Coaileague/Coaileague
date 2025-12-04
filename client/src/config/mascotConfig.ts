@@ -1294,7 +1294,7 @@ export const MASCOT_CONFIG: MascotConfig = {
     y: 12,
   },
   
-  zIndex: 9999,
+  zIndex: 10001,
   
   storageKeys: {
     position: 'coaileague-mascot-position',
