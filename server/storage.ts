@@ -798,6 +798,14 @@ export interface IStorage {
   deleteNotification(id: string, userId: string): Promise<boolean>;
   deleteOldNotifications(workspaceId: string, daysOld: number): Promise<number>;
   
+  // Bulk notification operations - Database-synced persistent clear/acknowledge
+  acknowledgeNotification(id: string, userId: string): Promise<Notification | undefined>;
+  acknowledgeAllNotifications(userId: string, workspaceId?: string, category?: string): Promise<number>;
+  clearNotification(id: string, userId: string): Promise<Notification | undefined>;
+  clearAllNotifications(userId: string, workspaceId?: string, category?: string): Promise<number>;
+  getUnclearedNotifications(userId: string, workspaceId?: string, category?: string, limit?: number): Promise<Notification[]>;
+  getUnreadAndUnclearedCount(userId: string, workspaceId?: string): Promise<{ unread: number; uncleared: number }>;
+  
   // Notification Preferences - User notification settings
   getNotificationPreferences(userId: string, workspaceId: string): Promise<UserNotificationPreferences | undefined>;
   createOrUpdateNotificationPreferences(userId: string, workspaceId: string, data: Partial<InsertUserNotificationPreferences>): Promise<UserNotificationPreferences>;
@@ -6313,6 +6321,146 @@ export class DatabaseStorage implements IStorage {
         sql`${notifications.createdAt} < ${cutoffDate}`
       ));
     return result.rowCount || 0;
+  }
+
+  async acknowledgeNotification(id: string, userId: string): Promise<Notification | undefined> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ 
+        isRead: true, 
+        readAt: new Date(),
+        isAcknowledged: true,
+        acknowledgedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(notifications.id, id),
+        eq(notifications.userId, userId)
+      ))
+      .returning();
+    return notification;
+  }
+
+  async acknowledgeAllNotifications(userId: string, workspaceId?: string, category?: string): Promise<number> {
+    const conditions = [
+      eq(notifications.userId, userId),
+      isNull(notifications.clearedAt), // Only acknowledge uncleared notifications
+    ];
+    
+    if (workspaceId) {
+      conditions.push(eq(notifications.workspaceId, workspaceId));
+    }
+    
+    if (category) {
+      conditions.push(eq(notifications.category, category as any));
+    }
+    
+    const result = await db
+      .update(notifications)
+      .set({ 
+        isRead: true, 
+        readAt: new Date(),
+        isAcknowledged: true,
+        acknowledgedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(...conditions));
+    return result.rowCount || 0;
+  }
+
+  async clearNotification(id: string, userId: string): Promise<Notification | undefined> {
+    const [notification] = await db
+      .update(notifications)
+      .set({ 
+        isRead: true, 
+        readAt: new Date(),
+        isAcknowledged: true,
+        acknowledgedAt: new Date(),
+        clearedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(notifications.id, id),
+        eq(notifications.userId, userId)
+      ))
+      .returning();
+    return notification;
+  }
+
+  async clearAllNotifications(userId: string, workspaceId?: string, category?: string): Promise<number> {
+    const conditions = [
+      eq(notifications.userId, userId),
+      isNull(notifications.clearedAt), // Only clear uncleared notifications
+    ];
+    
+    if (workspaceId) {
+      conditions.push(eq(notifications.workspaceId, workspaceId));
+    }
+    
+    if (category) {
+      conditions.push(eq(notifications.category, category as any));
+    }
+    
+    const result = await db
+      .update(notifications)
+      .set({ 
+        isRead: true, 
+        readAt: new Date(),
+        isAcknowledged: true,
+        acknowledgedAt: new Date(),
+        clearedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(...conditions));
+    return result.rowCount || 0;
+  }
+
+  async getUnclearedNotifications(userId: string, workspaceId?: string, category?: string, limit: number = 50): Promise<Notification[]> {
+    const conditions = [
+      eq(notifications.userId, userId),
+      isNull(notifications.clearedAt), // Only get uncleared notifications
+    ];
+    
+    if (workspaceId) {
+      conditions.push(eq(notifications.workspaceId, workspaceId));
+    }
+    
+    if (category) {
+      conditions.push(eq(notifications.category, category as any));
+    }
+    
+    const results = await db
+      .select()
+      .from(notifications)
+      .where(and(...conditions))
+      .orderBy(desc(notifications.createdAt))
+      .limit(limit);
+    
+    return results;
+  }
+
+  async getUnreadAndUnclearedCount(userId: string, workspaceId?: string): Promise<{ unread: number; uncleared: number }> {
+    const conditions = [
+      eq(notifications.userId, userId),
+      isNull(notifications.clearedAt), // Only count uncleared notifications
+    ];
+    
+    if (workspaceId) {
+      conditions.push(eq(notifications.workspaceId, workspaceId));
+    }
+    
+    const [result] = await db
+      .select({
+        unread: sql<number>`count(*) filter (where ${notifications.isRead} = false)`,
+        uncleared: sql<number>`count(*)`,
+      })
+      .from(notifications)
+      .where(and(...conditions));
+    
+    return {
+      unread: Number(result?.unread || 0),
+      uncleared: Number(result?.uncleared || 0),
+    };
   }
 
   async getNotificationPreferences(userId: string, workspaceId: string): Promise<UserNotificationPreferences | undefined> {
