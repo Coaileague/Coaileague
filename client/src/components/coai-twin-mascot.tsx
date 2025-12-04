@@ -1836,7 +1836,9 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
   });
   
   // Mutation flash overlay state for transmutation effects
-  const [isMutating, setIsMutating] = useState(false);
+  // Using a counter ensures each trigger is detected even if previous animation is still running
+  const [mutationTriggerCount, setMutationTriggerCount] = useState(0);
+  const isMutating = mutationTriggerCount > 0;
 
   useEffect(() => {
     if (!containerRef.current || !canvasRef.current) return;
@@ -1851,9 +1853,9 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
     }
     
     // Set up mutation flash callback for CSS overlay effects during transmutations
+    // Use counter increment to ensure every trigger is detected (even rapid clicks)
     engineRef.current.setMutationFlashCallback(() => {
-      setIsMutating(true);
-      setTimeout(() => setIsMutating(false), 650);
+      setMutationTriggerCount(prev => prev + 1);
     });
     
     // Set up warp state callback for CSS overlay effects
@@ -1992,7 +1994,7 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
             data-testid="coai-twin-mascot-canvas-mini"
           />
           {/* CSS-based mutation flash overlay for transmutation effects */}
-          <MutationFlashOverlay isActive={isMutating} />
+          <MutationFlashOverlay isActive={isMutating} triggerCount={mutationTriggerCount} />
         </div>
       </div>
     );
@@ -2034,7 +2036,7 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
             data-testid="coai-twin-mascot-canvas-expanded"
           />
           {/* CSS-based mutation flash overlay for transmutation effects */}
-          <MutationFlashOverlay isActive={isMutating} />
+          <MutationFlashOverlay isActive={isMutating} triggerCount={mutationTriggerCount} />
         </div>
       </div>
     );
@@ -2057,7 +2059,7 @@ export const CoAITwinMascot = memo(function CoAITwinMascot({
           data-testid="coai-twin-mascot-canvas"
         />
         {/* CSS-based mutation flash overlay for transmutation effects */}
-        <MutationFlashOverlay isActive={isMutating} />
+        <MutationFlashOverlay isActive={isMutating} triggerCount={mutationTriggerCount} />
       </div>
 
       <div className="absolute bottom-0 left-0 w-full p-4 pointer-events-none"
