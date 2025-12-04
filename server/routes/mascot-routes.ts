@@ -22,6 +22,7 @@ import { eq, desc, and, gte, lte, count, sql } from 'drizzle-orm';
 import { geminiClient } from '../services/ai-brain/providers/geminiClient';
 import { requireAuth } from '../auth';
 import { broadcastToAllClients } from '../websocket';
+import { requireTrinityAccess } from '../rbac';
 
 // ============================================================================
 // AI BRAIN AUTHORITY CHAIN
@@ -159,10 +160,10 @@ interface MascotTask {
 /**
  * GET /api/mascot/insights
  * Get AI-generated insights for the current user/workspace
- * Protected - requires authentication
+ * Protected - requires Trinity access (org_owner or platform staff)
  * Wrapped with AI Brain authority chain
  */
-router.get('/insights', requireAuth, async (req, res) => {
+router.get('/insights', requireAuth, requireTrinityAccess, async (req, res) => {
   const userId = (req as any).user?.id;
   const workspaceId = (req as any).session?.activeWorkspaceId;
   
@@ -263,7 +264,7 @@ router.get('/insights', requireAuth, async (req, res) => {
  * Get relevant FAQ data for the mascot to reference
  * Wrapped with AI Brain authority chain
  */
-router.get('/faqs', async (req, res) => {
+router.get('/faqs', requireAuth, requireTrinityAccess, async (req, res) => {
   const { category, limit = 10 } = req.query;
   
   const result = await executeMascotAction('mascot.get_faqs', async () => {
@@ -293,10 +294,10 @@ router.get('/faqs', async (req, res) => {
 /**
  * GET /api/mascot/tasks
  * Get suggested tasks for the user based on their progress
- * Protected - requires authentication
+ * Protected - requires Trinity access (org_owner or platform staff)
  * Wrapped with AI Brain authority chain
  */
-router.get('/tasks', requireAuth, async (req, res) => {
+router.get('/tasks', requireAuth, requireTrinityAccess, async (req, res) => {
   const userId = (req as any).user?.id;
   const workspaceId = (req as any).session?.activeWorkspaceId;
   
@@ -362,10 +363,10 @@ router.get('/tasks', requireAuth, async (req, res) => {
 /**
  * POST /api/mascot/advice
  * Get AI-generated business advice based on context
- * Protected - requires authentication
+ * Protected - requires Trinity access (org_owner or platform staff)
  * Wrapped with AI Brain authority chain
  */
-router.post('/advice', requireAuth, async (req, res) => {
+router.post('/advice', requireAuth, requireTrinityAccess, async (req, res) => {
   const { context, businessCategory, question } = req.body;
   const userId = (req as any).user?.id;
   const workspaceId = (req as any).session?.activeWorkspaceId;
@@ -415,7 +416,7 @@ Keep your responses:
  * Get current holiday information for holiday-aware thoughts
  * Wrapped with AI Brain authority chain
  */
-router.get('/holiday', async (_req, res) => {
+router.get('/holiday', requireAuth, requireTrinityAccess, async (_req, res) => {
   const result = await executeMascotAction('mascot.get_holiday', async () => {
     const now = new Date();
     const month = now.getMonth() + 1;
@@ -461,10 +462,10 @@ router.get('/holiday', async (_req, res) => {
 /**
  * POST /api/mascot/ask
  * Alias for /advice endpoint - used by frontend hooks
- * Protected - requires authentication
+ * Protected - requires Trinity access (org_owner or platform staff)
  * Wrapped with AI Brain authority chain
  */
-router.post('/ask', requireAuth, async (req, res) => {
+router.post('/ask', requireAuth, requireTrinityAccess, async (req, res) => {
   const { question, context, businessCategory } = req.body;
   const userId = (req as any).user?.id;
   const workspaceId = (req as any).session?.activeWorkspaceId;
@@ -512,10 +513,10 @@ Keep your responses:
  * POST /api/mascot/business-advisor
  * Get comprehensive AI-powered business success advisory
  * Returns insights, thought bubbles, action items, and emote suggestions
- * Protected - requires authentication
+ * Protected - requires Trinity access (org_owner or platform staff)
  * Wrapped with AI Brain authority chain
  */
-router.post('/business-advisor', requireAuth, async (req, res) => {
+router.post('/business-advisor', requireAuth, requireTrinityAccess, async (req, res) => {
   const { 
     businessType, 
     currentChallenges, 
@@ -650,7 +651,7 @@ Mode options: ADVISING, THINKING, CELEBRATING, IDLE`;
  * Get emote animation cycle configurations for the mascot
  * Returns full animation sequences with effects, transitions, and timing
  */
-router.get('/emote-cycles', async (_req, res) => {
+router.get('/emote-cycles', requireAuth, requireTrinityAccess, async (_req, res) => {
   const result = await executeMascotAction('mascot.get_emote_cycles', async () => {
     return {
       cycles: {
@@ -736,7 +737,7 @@ router.get('/emote-cycles', async (_req, res) => {
  * Protected - requires authentication
  * Wrapped with AI Brain authority chain
  */
-router.get('/personalized-greeting', requireAuth, async (req, res) => {
+router.get('/personalized-greeting', requireAuth, requireTrinityAccess, async (req, res) => {
   const userId = (req as any).user?.id;
   const workspaceId = (req as any).session?.activeWorkspaceId;
   
@@ -955,7 +956,7 @@ Be concise, friendly, and genuinely helpful.`;
  * Returns actionable insights, trends, and recommendations
  * Protected - requires authentication
  */
-router.get('/org-insights', requireAuth, async (req, res) => {
+router.get('/org-insights', requireAuth, requireTrinityAccess, async (req, res) => {
   const userId = (req as any).user?.id;
   const workspaceId = (req as any).session?.activeWorkspaceId;
   
@@ -1053,7 +1054,7 @@ Provide 3 brief, actionable insights in JSON format:
  * Protected - requires authentication
  * Wrapped with AI Brain authority chain
  */
-router.post('/complete-task', requireAuth, async (req, res) => {
+router.post('/complete-task', requireAuth, requireTrinityAccess, async (req, res) => {
   const { taskId } = req.body;
   const userId = (req as any).user?.id;
   
@@ -1086,7 +1087,7 @@ router.post('/complete-task', requireAuth, async (req, res) => {
  * Protected - requires authentication
  * Wrapped with AI Brain authority chain
  */
-router.get('/preferences', requireAuth, async (req, res) => {
+router.get('/preferences', requireAuth, requireTrinityAccess, async (req, res) => {
   const userId = (req as any).user?.id;
   
   if (!userId) {
@@ -1140,7 +1141,7 @@ router.get('/preferences', requireAuth, async (req, res) => {
  * Update user's mascot preferences
  * Protected - requires authentication
  */
-router.put('/preferences', requireAuth, async (req, res) => {
+router.put('/preferences', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const userId = (req as any).user?.id;
     const updates = req.body;
@@ -1191,7 +1192,7 @@ router.put('/preferences', requireAuth, async (req, res) => {
  * Update mascot position (separate endpoint for frequent updates)
  * Protected - requires authentication
  */
-router.post('/preferences/position', requireAuth, async (req, res) => {
+router.post('/preferences/position', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const userId = (req as any).user?.id;
     const { x, y } = req.body;
@@ -1227,7 +1228,7 @@ router.post('/preferences/position', requireAuth, async (req, res) => {
  * Record a mascot interaction (tap, hover, etc.)
  * Protected - requires authentication
  */
-router.post('/preferences/interaction', requireAuth, async (req, res) => {
+router.post('/preferences/interaction', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const userId = (req as any).user?.id;
     const { type } = req.body;
@@ -1284,7 +1285,7 @@ router.post('/preferences/interaction', requireAuth, async (req, res) => {
  * Delete user's mascot preferences (called on user termination)
  * Protected - requires authentication
  */
-router.delete('/preferences', requireAuth, async (req, res) => {
+router.delete('/preferences', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const userId = (req as any).user?.id;
     
@@ -1308,7 +1309,7 @@ router.delete('/preferences', requireAuth, async (req, res) => {
  * Get current seasonal profile with theme, effects, and mascot hints
  * Public endpoint - no auth required for theme detection
  */
-router.get('/seasonal/state', async (req, res) => {
+router.get('/seasonal/state', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const workspaceId = (req as any).session?.activeWorkspaceId;
     const profile = await generateSeasonalProfile(workspaceId);
@@ -1335,7 +1336,7 @@ router.get('/seasonal/state', async (req, res) => {
  * Quick check for current season (lightweight, cached)
  * Public endpoint
  */
-router.get('/seasonal/quick', (req, res) => {
+router.get('/seasonal/quick', requireAuth, requireTrinityAccess, (req, res) => {
   try {
     res.json({
       seasonId: getCurrentSeasonId(),
@@ -1356,7 +1357,7 @@ router.get('/seasonal/quick', (req, res) => {
  * Run AI Brain health check on seasonal effects
  * Support staff endpoint - requires auth
  */
-router.get('/seasonal/health', requireAuth, async (req, res) => {
+router.get('/seasonal/health', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const healthCheck = await runSeasonalHealthCheck();
     res.json({
@@ -1378,7 +1379,7 @@ router.get('/seasonal/health', requireAuth, async (req, res) => {
  * Generate AI-powered health report
  * Support staff endpoint - requires auth
  */
-router.get('/seasonal/health/report', requireAuth, async (req, res) => {
+router.get('/seasonal/health/report', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const report = await generateAIHealthReport();
     res.json({
@@ -1400,7 +1401,7 @@ router.get('/seasonal/health/report', requireAuth, async (req, res) => {
  * Execute seasonal command from support console
  * Support staff endpoint - requires auth
  */
-router.post('/seasonal/command', requireAuth, async (req, res) => {
+router.post('/seasonal/command', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const command = req.body as SeasonalCommand;
     
@@ -1432,7 +1433,7 @@ router.post('/seasonal/command', requireAuth, async (req, res) => {
  * Get current support overrides for seasonal effects
  * Support staff endpoint - requires auth
  */
-router.get('/seasonal/overrides', requireAuth, (req, res) => {
+router.get('/seasonal/overrides', requireAuth, requireTrinityAccess, (req, res) => {
   try {
     const overrides = getSupportOverrides();
     res.json({
@@ -1454,7 +1455,7 @@ router.get('/seasonal/overrides', requireAuth, (req, res) => {
  * Register a seasonal effect manager (called by frontend components)
  * Public endpoint - called by frontend on component mount
  */
-router.post('/seasonal/managers/register', (req, res) => {
+router.post('/seasonal/managers/register', requireAuth, requireTrinityAccess, (req, res) => {
   try {
     const { managerId } = req.body;
     
@@ -1485,7 +1486,7 @@ router.post('/seasonal/managers/register', (req, res) => {
  * Unregister a seasonal effect manager (called by frontend components)
  * Public endpoint - called by frontend on component unmount
  */
-router.post('/seasonal/managers/unregister', (req, res) => {
+router.post('/seasonal/managers/unregister', requireAuth, requireTrinityAccess, (req, res) => {
   try {
     const { managerId } = req.body;
     
@@ -1516,7 +1517,7 @@ router.post('/seasonal/managers/unregister', (req, res) => {
  * Get list of active seasonal managers
  * Support staff endpoint - requires auth
  */
-router.get('/seasonal/managers', requireAuth, (req, res) => {
+router.get('/seasonal/managers', requireAuth, requireTrinityAccess, (req, res) => {
   try {
     res.json({
       success: true,
@@ -1537,7 +1538,7 @@ router.get('/seasonal/managers', requireAuth, (req, res) => {
  * Get AI Brain orchestrated ornament directives for current season
  * Public endpoint - used by frontend ornament scenes
  */
-router.get('/seasonal/ornaments', (req, res) => {
+router.get('/seasonal/ornaments', requireAuth, requireTrinityAccess, (req, res) => {
   try {
     const seasonId = getCurrentSeasonId();
     const directive = getModifiedOrnamentDirective(seasonId);
@@ -1576,7 +1577,7 @@ import { storage } from '../storage';
  * Get current active holiday directive (motion pattern + decorations)
  * Public endpoint - used by frontend mascot component
  */
-router.get('/holiday/directives', async (req, res) => {
+router.get('/holiday/directives', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const seasonId = getCurrentSeasonId();
     
@@ -1652,7 +1653,7 @@ router.get('/holiday/directives', async (req, res) => {
  * Get all motion profiles available for AI Brain selection
  * Support staff endpoint - requires auth
  */
-router.get('/holiday/profiles', requireAuth, async (req, res) => {
+router.get('/holiday/profiles', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const profiles = await storage.getAllMascotMotionProfiles();
     const decorations = await storage.getAllHolidayMascotDecor();
@@ -1677,7 +1678,7 @@ router.get('/holiday/profiles', requireAuth, async (req, res) => {
  * Apply a new holiday directive (AI Brain or manual)
  * Support staff endpoint - requires auth
  */
-router.post('/holiday/directives/apply', requireAuth, async (req, res) => {
+router.post('/holiday/directives/apply', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const { holidayDecorId, motionProfileId, triggeredBy = 'manual' } = req.body;
     
@@ -1737,7 +1738,7 @@ router.post('/holiday/directives/apply', requireAuth, async (req, res) => {
  * Create a new motion profile
  * Support staff endpoint - requires auth
  */
-router.post('/holiday/profiles', requireAuth, async (req, res) => {
+router.post('/holiday/profiles', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const profileData = req.body;
     
@@ -1775,7 +1776,7 @@ router.post('/holiday/profiles', requireAuth, async (req, res) => {
  * Update an existing motion profile
  * Support staff endpoint - requires auth
  */
-router.patch('/holiday/profiles/:id', requireAuth, async (req, res) => {
+router.patch('/holiday/profiles/:id', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -1808,7 +1809,7 @@ router.patch('/holiday/profiles/:id', requireAuth, async (req, res) => {
  * Create a new holiday decoration config
  * Support staff endpoint - requires auth
  */
-router.post('/holiday/decorations', requireAuth, async (req, res) => {
+router.post('/holiday/decorations', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const decorData = req.body;
     
@@ -1847,7 +1848,7 @@ router.post('/holiday/decorations', requireAuth, async (req, res) => {
  * Get history of directive activations
  * Support staff endpoint - requires auth
  */
-router.get('/holiday/history', requireAuth, async (req, res) => {
+router.get('/holiday/history', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
     const triggeredBy = req.query.triggeredBy as string | undefined;
@@ -1881,7 +1882,7 @@ router.get('/holiday/history', requireAuth, async (req, res) => {
  * Create or get active session for current user/workspace
  * Protected - requires authentication
  */
-router.post('/sessions', requireAuth, async (req, res) => {
+router.post('/sessions', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const userId = (req as any).user?.id;
     const workspaceId = (req as any).session?.activeWorkspaceId;
@@ -1934,7 +1935,7 @@ router.post('/sessions', requireAuth, async (req, res) => {
  * Get current active session for user/workspace
  * Protected - requires authentication
  */
-router.get('/sessions/active', requireAuth, async (req, res) => {
+router.get('/sessions/active', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const userId = (req as any).user?.id;
     const workspaceId = (req as any).session?.activeWorkspaceId;
@@ -1968,7 +1969,7 @@ router.get('/sessions/active', requireAuth, async (req, res) => {
  * Close an active session
  * Protected - requires authentication
  */
-router.patch('/sessions/:id/close', requireAuth, async (req, res) => {
+router.patch('/sessions/:id/close', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const { id } = req.params;
     const userId = (req as any).user?.id;
@@ -1994,7 +1995,7 @@ router.patch('/sessions/:id/close', requireAuth, async (req, res) => {
  * Log a mascot interaction with optional AI processing
  * Protected - requires authentication
  */
-router.post('/interactions', requireAuth, async (req, res) => {
+router.post('/interactions', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const userId = (req as any).user?.id;
     const workspaceId = (req as any).session?.activeWorkspaceId;
@@ -2088,7 +2089,7 @@ Source: ${source}, Action: ${interactionType}`;
  * Special endpoint for chat observation with AI-powered contextual advice
  * Protected - requires authentication
  */
-router.post('/observe-chat', requireAuth, async (req, res) => {
+router.post('/observe-chat', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const userId = (req as any).user?.id;
     const workspaceId = (req as any).session?.activeWorkspaceId;
@@ -2165,7 +2166,7 @@ ${chatContext ? `Recent chat context: ${chatContext}` : ''}`;
  * Generate AI-powered task list for user
  * Protected - requires authentication
  */
-router.post('/generate-tasks', requireAuth, async (req, res) => {
+router.post('/generate-tasks', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const userId = (req as any).user?.id;
     const workspaceId = (req as any).session?.activeWorkspaceId;
@@ -2252,7 +2253,7 @@ ${context ? `Context: ${context}` : ''}`;
  * Get user's mascot-generated tasks
  * Protected - requires authentication
  */
-router.get('/generated-tasks', requireAuth, async (req, res) => {
+router.get('/generated-tasks', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const userId = (req as any).user?.id;
     const workspaceId = (req as any).session?.activeWorkspaceId;
@@ -2285,7 +2286,7 @@ router.get('/generated-tasks', requireAuth, async (req, res) => {
  * Update task status
  * Protected - requires authentication
  */
-router.patch('/tasks/:id/status', requireAuth, async (req, res) => {
+router.patch('/tasks/:id/status', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
@@ -2325,7 +2326,7 @@ router.patch('/tasks/:id/status', requireAuth, async (req, res) => {
  * Query mascot sessions - for support staff and AI Brain
  * Protected - requires staff role
  */
-router.get('/sessions/query', requireAuth, async (req, res) => {
+router.get('/sessions/query', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const user = (req as any).user;
     const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
@@ -2374,7 +2375,7 @@ router.get('/sessions/query', requireAuth, async (req, res) => {
  * Get all interactions for a session - for support staff
  * Protected - requires staff role
  */
-router.get('/sessions/:id/interactions', requireAuth, async (req, res) => {
+router.get('/sessions/:id/interactions', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const user = (req as any).user;
     const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];
@@ -2408,7 +2409,7 @@ router.get('/sessions/:id/interactions', requireAuth, async (req, res) => {
  * Get mascot usage analytics - for support staff and AI Brain
  * Protected - requires staff role
  */
-router.get('/analytics', requireAuth, async (req, res) => {
+router.get('/analytics', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
     const user = (req as any).user;
     const staffRoles = ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'];

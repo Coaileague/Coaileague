@@ -57,9 +57,15 @@ export function useMascotTaskGeneration(options: UseTaskGenerationOptions = {}) 
         context,
         currentPage: location,
       });
+      if (response.status === 403 || response.status === 401) {
+        return { success: false, tasks: [] } as TaskGenerationResult;
+      }
       return response.json() as Promise<TaskGenerationResult>;
     },
     onSuccess: (data) => {
+      if (!data.success && data.tasks?.length === 0) {
+        return;
+      }
       queryClient.invalidateQueries({ queryKey: ['/api/mascot/generated-tasks', workspaceId] });
       if (data.tasks?.length > 0) {
         toast({
@@ -68,7 +74,10 @@ export function useMascotTaskGeneration(options: UseTaskGenerationOptions = {}) 
         });
       }
     },
-    onError: () => {
+    onError: (error: Error) => {
+      if (error.message?.includes('403') || error.message?.includes('401')) {
+        return;
+      }
       toast({
         title: 'Generation Failed',
         description: 'Could not generate tasks. Please try again.',

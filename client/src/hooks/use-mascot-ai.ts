@@ -54,8 +54,8 @@ interface HolidayStatus {
 async function fetchJSON<T>(url: string): Promise<T> {
   const res = await fetch(url, { credentials: 'include' });
   if (!res.ok) {
-    if (res.status === 401) {
-      return { insights: [], faqs: [], tasks: [] } as T;
+    if (res.status === 401 || res.status === 403) {
+      return { insights: [], faqs: [], tasks: [], isHoliday: false } as T;
     }
     throw new Error(`Failed to fetch: ${res.status}`);
   }

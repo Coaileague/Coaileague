@@ -1689,29 +1689,11 @@ export function shouldHideMascot(pathname: string): boolean {
   return MASCOT_CONFIG.hiddenRoutes.some(route => pathname.startsWith(route));
 }
 
-export interface TrinityAccessContext {
-  platformRole?: string | null;
-  workspaceRole?: string | null;
-  isOrgOwner?: boolean;
-}
-
-export function canAccessTrinity(context: TrinityAccessContext): boolean {
-  const { platformRole, workspaceRole, isOrgOwner } = context;
-  
-  if (platformRole && MASCOT_CONFIG.allowedRoles.platform.includes(platformRole)) {
-    return true;
-  }
-  
-  if (workspaceRole && MASCOT_CONFIG.allowedRoles.workspace.includes(workspaceRole)) {
-    return true;
-  }
-  
-  if (isOrgOwner) {
-    return true;
-  }
-  
-  return false;
-}
+export { 
+  canAccessTrinity, 
+  type TrinityAccessContext,
+  type TrinityAccessResult 
+} from '@shared/types';
 
 export function getMascotMode(pathname: string, aiState?: string): MascotMode {
   if (aiState) {

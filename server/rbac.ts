@@ -444,3 +444,87 @@ export const requirePlatformStaff = requirePlatformRole([
   'support_agent',
   'compliance_officer'
 ]);
+
+// ============================================================================
+// TRINITY (MASCOT) ACCESS CONTROL
+// Trinity is restricted to org creators and root/support roles
+// Uses shared constants for consistency with client-side checks
+// ============================================================================
+
+import { 
+  TRINITY_ALLOWED_PLATFORM_ROLES, 
+  TRINITY_ALLOWED_WORKSPACE_ROLES 
+} from '@shared/types';
+
+/**
+ * Check if a user has access to Trinity mascot features
+ * Access granted to:
+ * - Platform staff (root_admin, deputy_admin, sysop, support_manager, support_agent)
+ * - Org owners (workspace creators)
+ */
+export async function canAccessTrinity(userId: string): Promise<{
+  hasAccess: boolean;
+  platformRole?: PlatformRole;
+  workspaceRole?: WorkspaceRole;
+  isOrgOwner?: boolean;
+}> {
+  // Check platform role first
+  const platformRole = await getUserPlatformRole(userId);
+  
+  if (TRINITY_ALLOWED_PLATFORM_ROLES.includes(platformRole)) {
+    return { hasAccess: true, platformRole };
+  }
+  
+  // Check if user owns any workspace (org creator)
+  const [ownedWorkspace] = await db
+    .select()
+    .from(workspaces)
+    .where(eq(workspaces.ownerId, userId))
+    .limit(1);
+  
+  if (ownedWorkspace) {
+    return { hasAccess: true, workspaceRole: 'org_owner', isOrgOwner: true };
+  }
+  
+  // Check workspace role if they have employee access
+  const employee = await db.query.employees.findFirst({
+    where: eq(employees.userId, userId),
+  });
+  
+  if (employee && TRINITY_ALLOWED_WORKSPACE_ROLES.includes(employee.workspaceRole as WorkspaceRole)) {
+    return { hasAccess: true, workspaceRole: employee.workspaceRole as WorkspaceRole };
+  }
+  
+  return { hasAccess: false };
+}
+
+/**
+ * Middleware to require Trinity access
+ * Returns 403 if user doesn't have required role/ownership
+ */
+export const requireTrinityAccess: RequestHandler = async (req, res, next) => {
+  const authReq = req as AuthenticatedRequest;
+  
+  if (!authReq.user?.id) {
+    return res.status(401).json({ error: 'Authentication required' });
+  }
+  
+  const accessResult = await canAccessTrinity(authReq.user.id);
+  
+  if (!accessResult.hasAccess) {
+    return res.status(403).json({ 
+      error: 'Trinity access requires org owner role or platform staff permissions',
+      code: 'TRINITY_ACCESS_DENIED'
+    });
+  }
+  
+  // Attach access info to request for downstream use
+  if (accessResult.platformRole) {
+    authReq.platformRole = accessResult.platformRole;
+  }
+  if (accessResult.workspaceRole) {
+    authReq.workspaceRole = accessResult.workspaceRole;
+  }
+  
+  next();
+};
