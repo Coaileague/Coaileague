@@ -2,15 +2,15 @@
  * MutationFlashOverlay - Flash effect during Trinity mode transitions
  * 
  * Based on user's reference implementation: triggerFlash() with mix-blend-mode overlay
- * Creates subtle visual feedback when Trinity morphs between states
+ * Uses void offsetWidth trick to force browser to restart CSS animation
  * 
  * Features:
  * - Simple white overlay flash (not gradients)
- * - 0.4 opacity peak (subtle, not overwhelming)
- * - Quick 600ms fade using cubic-bezier easing
+ * - 0.8 opacity peak for visible flash
+ * - Quick 500ms fade using forwards animation
  */
 
-import { useState, useEffect, useRef } from 'react';
+import { useRef, useEffect } from 'react';
 
 interface MutationFlashOverlayProps {
   isActive: boolean;
@@ -21,56 +21,41 @@ export function MutationFlashOverlay({
   isActive, 
   className = ''
 }: MutationFlashOverlayProps) {
-  const [isFlashing, setIsFlashing] = useState(false);
-  const timeoutRef = useRef<number | null>(null);
+  const flashRef = useRef<HTMLDivElement>(null);
   
   useEffect(() => {
-    if (isActive) {
-      setIsFlashing(true);
-      
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-      
-      timeoutRef.current = window.setTimeout(() => {
-        setIsFlashing(false);
-      }, 600);
+    if (isActive && flashRef.current) {
+      const flash = flashRef.current;
+      flash.classList.remove('mutation-active');
+      void flash.offsetWidth;
+      flash.classList.add('mutation-active');
     }
-    
-    return () => {
-      if (timeoutRef.current) {
-        clearTimeout(timeoutRef.current);
-      }
-    };
   }, [isActive]);
-  
-  if (!isFlashing) return null;
   
   return (
     <>
       <style>{`
-        @keyframes mutationFlash {
+        @keyframes flash {
           0% { opacity: 0; }
-          10% { opacity: 0.4; }
+          10% { opacity: 0.8; }
           100% { opacity: 0; }
+        }
+        .mutation-active {
+          animation: flash 0.5s forwards;
         }
       `}</style>
       
       <div
+        ref={flashRef}
         className={`absolute inset-0 pointer-events-none ${className}`}
-        style={{ zIndex: 10 }}
+        style={{ 
+          zIndex: 10,
+          background: '#ffffff',
+          opacity: 0,
+          mixBlendMode: 'overlay',
+        }}
         data-testid="mutation-flash-overlay"
-      >
-        <div
-          className="absolute inset-0"
-          style={{
-            background: '#ffffff',
-            opacity: 0,
-            mixBlendMode: 'overlay',
-            animation: 'mutationFlash 0.6s cubic-bezier(0.22, 1, 0.36, 1) forwards',
-          }}
-        />
-      </div>
+      />
     </>
   );
 }

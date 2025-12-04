@@ -584,7 +584,12 @@ function MascotRenderer() {
     });
   }, [user]);
   
-  if (!MASCOT_CONFIG.enabled || shouldHideMascot(location) || !hasTrinityAccess) return null;
+  // Trinity Visibility Rules:
+  // - Public pages: Everyone sees Trinity (showcase mode for marketing)
+  // - Protected pages: Everyone sees Trinity, but only privileged users get AI integration
+  // - Hidden routes: Trinity is hidden for all users (e.g., admin consoles)
+  // The mascot renders for ALL users; RBAC gates the AI/API calls, not the visual component
+  if (!MASCOT_CONFIG.enabled || shouldHideMascot(location)) return null;
   
   const effectiveX = position.x + (isDragging ? 0 : floatOffsetRef.current.x + targetInfluence.x);
   const effectiveY = position.y + (isDragging ? 0 : floatOffsetRef.current.y + targetInfluence.y);
