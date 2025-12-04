@@ -513,7 +513,7 @@ function MascotRenderer() {
       if (now - lastNudgeRef.current > 60000 && !currentThought) {
         lastNudgeRef.current = now;
         const nudgeMessage = getUpgradeNudgeMessage('general');
-        thoughtManager.showThought({
+        thoughtManager.showSimpleThought({
           text: nudgeMessage,
           priority: 'low',
           duration: 8000,
@@ -526,7 +526,7 @@ function MascotRenderer() {
     const initialTimer = setTimeout(() => {
       if (!currentThought) {
         const nudgeMessage = getUpgradeNudgeMessage('general');
-        thoughtManager.showThought({
+        thoughtManager.showSimpleThought({
           text: nudgeMessage,
           priority: 'low',
           duration: 10000,
@@ -557,7 +557,7 @@ function MascotRenderer() {
         const nextMode = DEMO_MODES[next];
         if (isDemo && !allowedModes.includes(nextMode)) {
           // Show upgrade hint when trying restricted mode
-          thoughtManager.showThought({
+          thoughtManager.showSimpleThought({
             text: 'Upgrade to Business Buddy for all modes!',
             priority: 'low',
             duration: 3000,

@@ -31,7 +31,7 @@ export interface Thought {
   emoticon: string;
   mode: MascotMode;
   priority: 'low' | 'normal' | 'high' | 'urgent';
-  source: 'default' | 'reaction' | 'holiday' | 'ai' | 'task' | 'promo' | 'action';
+  source: 'default' | 'reaction' | 'holiday' | 'ai' | 'task' | 'promo' | 'action' | 'upgrade_nudge' | 'upgrade_hint';
   expiresAt: number;
   // Promotional thought extras
   ctaText?: string;          // Call-to-action button text
@@ -162,6 +162,39 @@ class ThoughtManager {
     this.displayTimer = setTimeout(() => {
       this.clearThought();
     }, MASCOT_CONFIG.thoughts.displayDuration);
+  }
+  
+  showSimpleThought(options: {
+    text: string;
+    priority?: Thought['priority'];
+    source?: Thought['source'];
+    duration?: number;
+    mode?: MascotMode;
+  }): void {
+    const mode = options.mode || 'IDLE';
+    const thought = this.createThought(
+      options.text,
+      mode,
+      options.source || 'default',
+      options.priority || 'low'
+    );
+    
+    if (this.displayTimer) {
+      clearTimeout(this.displayTimer);
+    }
+    
+    this.state.currentThought = thought;
+    this.state.history.push(thought);
+    if (this.state.history.length > 50) {
+      this.state.history.shift();
+    }
+    
+    this.notify();
+    
+    const displayDuration = options.duration || MASCOT_CONFIG.thoughts.displayDuration;
+    this.displayTimer = setTimeout(() => {
+      this.clearThought();
+    }, displayDuration);
   }
   
   clearThought(): void {
