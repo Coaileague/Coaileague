@@ -24,6 +24,7 @@ export interface AIRequestContext {
   requestId: string;
   timestamp: Date;
   operation: string; // 'sentiment_analysis', 'schedule_generation', 'payroll_calc', etc.
+  ipAddress?: string; // Real client IP address for audit logging
 }
 
 export interface AIGuardRailsConfig {
@@ -309,7 +310,7 @@ export class AIGuardRails {
       output: output.substring(0, 500),
       result,
       timestamp: new Date(),
-      ipAddress: context.userId // Placeholder - should be actual IP
+      ipAddress: context.ipAddress || 'unknown'
     };
 
     const key = `${context.workspaceId}:${new Date().toISOString().split('T')[0]}`;

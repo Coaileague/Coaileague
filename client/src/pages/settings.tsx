@@ -102,6 +102,11 @@ export default function Settings() {
   const [quietHoursStart, setQuietHoursStart] = useState<number>(22);
   const [quietHoursEnd, setQuietHoursEnd] = useState<number>(7);
   
+  // Notification cleanup/retention state
+  const [autoCleanupEnabled, setAutoCleanupEnabled] = useState<boolean>(true);
+  const [retentionDays, setRetentionDays] = useState<number>(30);
+  const [autoArchiveRead, setAutoArchiveRead] = useState<boolean>(true);
+  
   // Track original values to detect changes
   const [originalValues, setOriginalValues] = useState<any>({});
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -283,6 +288,10 @@ export default function Settings() {
       setQuietHoursEnabled(notificationPrefs.quietHoursStart !== null && notificationPrefs.quietHoursStart !== undefined);
       setQuietHoursStart(notificationPrefs.quietHoursStart ?? 22);
       setQuietHoursEnd(notificationPrefs.quietHoursEnd ?? 7);
+      // Cleanup settings
+      setAutoCleanupEnabled(notificationPrefs.autoCleanupEnabled ?? true);
+      setRetentionDays(notificationPrefs.retentionDays ?? 30);
+      setAutoArchiveRead(notificationPrefs.autoArchiveRead ?? true);
     }
   }, [notificationPrefs]);
 
@@ -338,6 +347,10 @@ export default function Settings() {
       enableAiSummarization,
       quietHoursStart: quietHoursEnabled ? quietHoursStart : null,
       quietHoursEnd: quietHoursEnabled ? quietHoursEnd : null,
+      // Cleanup settings
+      autoCleanupEnabled,
+      retentionDays: autoCleanupEnabled ? retentionDays : null,
+      autoArchiveRead,
     }, {
       onSuccess: () => {
         setHasUnsavedChanges(false);
@@ -1273,6 +1286,76 @@ export default function Settings() {
                   <p className="text-xs text-muted-foreground md:col-span-2">
                     Notifications will be held during quiet hours and delivered when they end
                   </p>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+            
+            {/* Notification Cleanup & Retention */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between mobile-flex-col mobile-gap-3">
+                <div className="flex items-center gap-2">
+                  <Trash2 className="h-4 w-4 text-muted-foreground" />
+                  <div>
+                    <h3 className="text-sm font-semibold">Auto-Cleanup</h3>
+                    <p className="text-xs text-muted-foreground">Automatically remove old notifications</p>
+                  </div>
+                </div>
+                <Switch 
+                  checked={autoCleanupEnabled} 
+                  onCheckedChange={(checked) => {
+                    setAutoCleanupEnabled(checked);
+                    setHasUnsavedChanges(true);
+                  }}
+                  data-testid="switch-auto-cleanup"
+                />
+              </div>
+              
+              {autoCleanupEnabled && (
+                <div className="grid gap-4 md:grid-cols-2 pl-6">
+                  <div className="space-y-2">
+                    <Label htmlFor="retentionDays">Keep Notifications For</Label>
+                    <Select 
+                      value={String(retentionDays)} 
+                      onValueChange={(v) => {
+                        setRetentionDays(Number(v));
+                        setHasUnsavedChanges(true);
+                      }}
+                    >
+                      <SelectTrigger id="retentionDays" data-testid="select-retention-days">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="7" data-testid="option-retention-7">7 days</SelectItem>
+                        <SelectItem value="14" data-testid="option-retention-14">14 days</SelectItem>
+                        <SelectItem value="30" data-testid="option-retention-30">30 days</SelectItem>
+                        <SelectItem value="60" data-testid="option-retention-60">60 days</SelectItem>
+                        <SelectItem value="90" data-testid="option-retention-90">90 days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Notifications older than this will be automatically deleted
+                    </p>
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Check className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">Auto-Archive Read</p>
+                        <p className="text-xs text-muted-foreground">Move read notifications to archive faster</p>
+                      </div>
+                    </div>
+                    <Switch 
+                      checked={autoArchiveRead} 
+                      onCheckedChange={(checked) => {
+                        setAutoArchiveRead(checked);
+                        setHasUnsavedChanges(true);
+                      }}
+                      data-testid="switch-auto-archive-read"
+                    />
+                  </div>
                 </div>
               )}
             </div>

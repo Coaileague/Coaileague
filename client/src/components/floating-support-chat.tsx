@@ -14,7 +14,8 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, X, MessageCircle, Minimize2, Maximize2, ExternalLink, Headset } from 'lucide-react';
+import { Send, Bot, User, X, MessageCircle, Minimize2, Maximize2, ExternalLink, Headset, Search, Brain, LineChart, Code2, Loader2 } from 'lucide-react';
+import { useAIActivity, type AIActivityState } from '@/hooks/use-ai-activity';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -40,6 +41,19 @@ interface Message {
   timestamp: Date;
 }
 
+const AI_STATE_CONFIG: Record<AIActivityState, { label: string; icon: JSX.Element; color: string }> = {
+  IDLE: { label: 'Ready', icon: <Bot className="w-3 h-3" />, color: 'text-muted-foreground' },
+  SEARCHING: { label: 'Searching knowledge base...', icon: <Search className="w-3 h-3" />, color: 'text-blue-500' },
+  THINKING: { label: 'Thinking...', icon: <Brain className="w-3 h-3" />, color: 'text-purple-500' },
+  ANALYZING: { label: 'Analyzing your request...', icon: <LineChart className="w-3 h-3" />, color: 'text-amber-500' },
+  CODING: { label: 'Processing automation...', icon: <Code2 className="w-3 h-3" />, color: 'text-green-500' },
+  UPLOADING: { label: 'Uploading data...', icon: <Loader2 className="w-3 h-3 animate-spin" />, color: 'text-cyan-500' },
+  LISTENING: { label: 'Listening...', icon: <Bot className="w-3 h-3" />, color: 'text-indigo-500' },
+  SUCCESS: { label: 'Complete!', icon: <Bot className="w-3 h-3" />, color: 'text-green-600' },
+  ERROR: { label: 'Something went wrong', icon: <Bot className="w-3 h-3" />, color: 'text-red-500' },
+  ADVISING: { label: 'Preparing response...', icon: <Brain className="w-3 h-3" />, color: 'text-violet-500' },
+};
+
 export function FloatingSupportChat() {
   const { user } = useAuth();
   const { employee } = useEmployee();
@@ -47,6 +61,10 @@ export function FloatingSupportChat() {
   const { toast } = useToast();
   const [isCreatingTicket, setIsCreatingTicket] = useState(false);
   const [animationState, setAnimationState] = useState<AnimationState>('idle');
+  
+  const { activityState, isActive: isAIActive, lastEvent } = useAIActivity({
+    workspaceId: employee?.workspaceId,
+  });
   
   // Real IDs from auth system
   const workId = employee?.employeeNumber || 'GUEST';
@@ -530,17 +548,28 @@ export function FloatingSupportChat() {
             )}
           </div>
         ))}
-        {isTyping && (
+        {(isTyping || isAIActive) && (
           <div className={`flex gap-${CHAT_BUBBLE_CONFIG.sizes.messageGap} justify-start`}>
             <div className={`w-${CHAT_BUBBLE_CONFIG.sizes.avatarSize} h-${CHAT_BUBBLE_CONFIG.sizes.avatarSize} rounded-full bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} flex items-center justify-center`}>
               <Bot className={`w-${CHAT_BUBBLE_CONFIG.sizes.avatarIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.avatarIconSize} text-white`} />
             </div>
             <div className={`bg-muted rounded-lg px-${CHAT_BUBBLE_CONFIG.sizes.messagePaddingX} py-${CHAT_BUBBLE_CONFIG.sizes.messagePaddingY}`}>
-              <div className="flex gap-1">
-                <div className={`w-${CHAT_BUBBLE_CONFIG.sizes.smallAvatarSize} h-${CHAT_BUBBLE_CONFIG.sizes.smallAvatarSize} bg-muted-foreground rounded-full animate-bounce`} />
-                <div className={`w-${CHAT_BUBBLE_CONFIG.sizes.smallAvatarSize} h-${CHAT_BUBBLE_CONFIG.sizes.smallAvatarSize} bg-muted-foreground rounded-full animate-bounce`} style={{ animationDelay: CHAT_BUBBLE_CONFIG.sizes.typingDelay1 }} />
-                <div className={`w-${CHAT_BUBBLE_CONFIG.sizes.smallAvatarSize} h-${CHAT_BUBBLE_CONFIG.sizes.smallAvatarSize} bg-muted-foreground rounded-full animate-bounce`} style={{ animationDelay: CHAT_BUBBLE_CONFIG.sizes.typingDelay2 }} />
-              </div>
+              {isAIActive && activityState !== 'IDLE' ? (
+                <div className="flex items-center gap-2">
+                  <span className={AI_STATE_CONFIG[activityState].color}>
+                    {AI_STATE_CONFIG[activityState].icon}
+                  </span>
+                  <span className={`text-xs ${AI_STATE_CONFIG[activityState].color}`}>
+                    {AI_STATE_CONFIG[activityState].label}
+                  </span>
+                </div>
+              ) : (
+                <div className="flex gap-1">
+                  <div className={`w-${CHAT_BUBBLE_CONFIG.sizes.smallAvatarSize} h-${CHAT_BUBBLE_CONFIG.sizes.smallAvatarSize} bg-muted-foreground rounded-full animate-bounce`} />
+                  <div className={`w-${CHAT_BUBBLE_CONFIG.sizes.smallAvatarSize} h-${CHAT_BUBBLE_CONFIG.sizes.smallAvatarSize} bg-muted-foreground rounded-full animate-bounce`} style={{ animationDelay: CHAT_BUBBLE_CONFIG.sizes.typingDelay1 }} />
+                  <div className={`w-${CHAT_BUBBLE_CONFIG.sizes.smallAvatarSize} h-${CHAT_BUBBLE_CONFIG.sizes.smallAvatarSize} bg-muted-foreground rounded-full animate-bounce`} style={{ animationDelay: CHAT_BUBBLE_CONFIG.sizes.typingDelay2 }} />
+                </div>
+              )}
             </div>
           </div>
         )}
