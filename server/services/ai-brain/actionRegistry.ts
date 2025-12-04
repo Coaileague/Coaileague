@@ -14,7 +14,7 @@ import {
 } from '../helpai/helpaiActionOrchestrator';
 import { serviceController, featureToggleManager, consoleCommandExecutor, endUserBotSupport, supportStaffAssistant } from './orchestratorCapabilities';
 import { db } from '../../db';
-import { eq, and, desc, gte, lte } from 'drizzle-orm';
+import { eq, and, desc, gte, lte, sql, isNull } from 'drizzle-orm';
 import {
   employees,
   shifts,
@@ -407,13 +407,218 @@ class AIBrainActionRegistry {
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { onboardingConfig } = await import('@shared/config/onboardingConfig');
-        return createResult(request.actionId, true, `Onboarding checklist retrieved`, onboardingConfig.onboardingSteps, start);
+        return createResult(request.actionId, true, 'Onboarding checklist retrieved', onboardingConfig.onboardingSteps, start);
+      },
+    };
+
+    const sendInvitation: ActionHandler = {
+      actionId: 'onboarding.send_invitation',
+      name: 'Send Employee Invitation',
+      category: 'lifecycle',
+      description: 'Send an invitation email to a new employee',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { email, firstName, lastName, role } = request.payload || {};
+        const { storage } = await import('../../storage');
+        const { emailService } = await import('../emailService');
+        
+        if (!email || !firstName || !lastName) {
+          return createResult(request.actionId, false, 'Email, firstName, and lastName are required', null, start);
+        }
+
+        const invitation = await storage.createEmployeeInvitation({
+          workspaceId: request.workspaceId!,
+          email,
+          firstName,
+          lastName,
+          role: role || 'employee',
+          inviteStatus: 'pending',
+        });
+
+        const workspace = await storage.getWorkspace(request.workspaceId!);
+        await emailService.sendEmployeeInvitationEmail(
+          request.workspaceId!,
+          invitation.id,
+          email,
+          firstName,
+          workspace?.name || 'Your Organization',
+          invitation.token!
+        );
+
+        return createResult(request.actionId, true, 'Invitation sent successfully', { invitationId: invitation.id }, start);
+      },
+    };
+
+    const resendInvitation: ActionHandler = {
+      actionId: 'onboarding.resend_invitation',
+      name: 'Resend Employee Invitation',
+      category: 'lifecycle',
+      description: 'Resend an invitation email to an employee',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { invitationId } = request.payload || {};
+        const { storage } = await import('../../storage');
+        const { emailService } = await import('../emailService');
+        
+        if (!invitationId) {
+          return createResult(request.actionId, false, 'Invitation ID is required', null, start);
+        }
+
+        const invitation = await storage.getEmployeeInvitationById(invitationId);
+        if (!invitation) {
+          return createResult(request.actionId, false, 'Invitation not found', null, start);
+        }
+
+        const workspace = await storage.getWorkspace(invitation.workspaceId);
+        await emailService.sendEmployeeInvitationEmail(
+          invitation.workspaceId,
+          invitation.id,
+          invitation.email!,
+          invitation.firstName,
+          workspace?.name || 'Your Organization',
+          invitation.token!
+        );
+
+        await storage.updateEmployeeInvitation(invitation.id, {
+          invitedAt: new Date(),
+          resentCount: (invitation.resentCount || 0) + 1,
+        });
+
+        return createResult(request.actionId, true, 'Invitation resent successfully', { invitationId }, start);
+      },
+    };
+
+    const revokeInvitation: ActionHandler = {
+      actionId: 'onboarding.revoke_invitation',
+      name: 'Revoke Employee Invitation',
+      category: 'lifecycle',
+      description: 'Revoke an outstanding employee invitation',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { invitationId } = request.payload || {};
+        const { storage } = await import('../../storage');
+        
+        if (!invitationId) {
+          return createResult(request.actionId, false, 'Invitation ID is required', null, start);
+        }
+
+        await storage.updateEmployeeInvitation(invitationId, {
+          inviteStatus: 'revoked',
+          revokedAt: new Date(),
+        });
+
+        return createResult(request.actionId, true, 'Invitation revoked successfully', { invitationId }, start);
+      },
+    };
+
+    const sendClientWelcome: ActionHandler = {
+      actionId: 'onboarding.send_client_welcome',
+      name: 'Send Client Welcome Email',
+      category: 'lifecycle',
+      description: 'Send a welcome email to a new client with portal access',
+      requiredRoles: ['manager', 'owner', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { clientId, email, clientName, companyName } = request.payload || {};
+        const { emailService } = await import('../emailService');
+        const { storage } = await import('../../storage');
+        
+        if (!email || !clientName) {
+          return createResult(request.actionId, false, 'Email and clientName are required', null, start);
+        }
+
+        const workspace = await storage.getWorkspace(request.workspaceId!);
+        await emailService.sendClientWelcomeEmail(
+          request.workspaceId!,
+          clientId || '',
+          email,
+          clientName,
+          companyName || '',
+          workspace?.name || ''
+        );
+
+        return createResult(request.actionId, true, 'Client welcome email sent', { clientId }, start);
+      },
+    };
+
+    const assignPlatformRole: ActionHandler = {
+      actionId: 'platform_roles.assign',
+      name: 'Assign Platform Role',
+      category: 'lifecycle',
+      description: 'Assign a platform-level role to a user',
+      requiredRoles: ['root_admin', 'deputy_admin', 'sysop'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { userId, role, reason } = request.payload || {};
+        const { platformRoles, users } = await import('@shared/schema');
+        
+        if (!userId || !role) {
+          return createResult(request.actionId, false, 'userId and role are required', null, start);
+        }
+
+        const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+        if (!user) {
+          return createResult(request.actionId, false, 'User not found', null, start);
+        }
+
+        await db.update(platformRoles)
+          .set({ revokedAt: new Date(), revokedReason: 'Role changed via AI Brain' })
+          .where(and(eq(platformRoles.userId, userId)));
+
+        if (role !== 'none') {
+          await db.insert(platformRoles).values({
+            userId,
+            role,
+            grantedBy: request.userId,
+            grantedReason: reason || 'Assigned via AI Brain',
+          });
+        }
+
+        return createResult(request.actionId, true, 'Platform role assigned successfully', { userId, role }, start);
+      },
+    };
+
+    const getPlatformOnboarding: ActionHandler = {
+      actionId: 'onboarding.get_platform_status',
+      name: 'Get Platform Onboarding Status',
+      category: 'lifecycle',
+      description: 'Get onboarding status across all organizations',
+      requiredRoles: ['support_agent', 'sysop', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { employeeInvitations } = await import('@shared/schema');
+        
+        const pending = await db.select({ count: sql`count(*)::int` })
+          .from(employeeInvitations)
+          .where(eq(employeeInvitations.inviteStatus, 'pending' as any));
+        
+        const accepted = await db.select({ count: sql`count(*)::int` })
+          .from(employeeInvitations)
+          .where(eq(employeeInvitations.inviteStatus, 'accepted' as any));
+
+        const expired = await db.select({ count: sql`count(*)::int` })
+          .from(employeeInvitations)
+          .where(eq(employeeInvitations.inviteStatus, 'expired' as any));
+
+        return createResult(request.actionId, true, 'Platform onboarding status retrieved', {
+          pendingInvitations: pending[0]?.count || 0,
+          acceptedInvitations: accepted[0]?.count || 0,
+          expiredInvitations: expired[0]?.count || 0,
+        }, start);
       },
     };
 
     helpaiOrchestrator.registerAction(getChecklist);
+    helpaiOrchestrator.registerAction(sendInvitation);
+    helpaiOrchestrator.registerAction(resendInvitation);
+    helpaiOrchestrator.registerAction(revokeInvitation);
+    helpaiOrchestrator.registerAction(sendClientWelcome);
+    helpaiOrchestrator.registerAction(assignPlatformRole);
+    helpaiOrchestrator.registerAction(getPlatformOnboarding);
   }
-
   // ============================================================================
   // BULK OPERATION ACTIONS
   // ============================================================================

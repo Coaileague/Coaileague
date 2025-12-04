@@ -197,6 +197,43 @@ const emailTemplates = {
       </div>
     `
   }),
+
+  clientWelcome: (data: {
+    clientName: string;
+    companyName: string;
+    workspaceName: string;
+    portalUrl: string;
+  }) => ({
+    subject: `Welcome to ${data.workspaceName} - Client Portal Access`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">Welcome to ${data.workspaceName}!</h2>
+        <p>Hello ${data.clientName},</p>
+        <p>Thank you for choosing to work with us! Your client account has been set up and you now have access to our client portal.</p>
+        <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+          <p style="margin: 5px 0;"><strong>Organization:</strong> ${data.companyName}</p>
+          <p style="margin: 5px 0;"><strong>Service Provider:</strong> ${data.workspaceName}</p>
+        </div>
+        <div style="text-align: center; margin: 30px 0;">
+          <a href="${data.portalUrl}" 
+             style="background-color: #2563eb; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block;">
+            Access Client Portal
+          </a>
+        </div>
+        <p>Through the portal, you can:</p>
+        <ul style="color: #4b5563;">
+          <li>View and approve timesheets</li>
+          <li>Access invoices and payment history</li>
+          <li>Review reports and analytics</li>
+          <li>Communicate with your service team</li>
+        </ul>
+        <p style="color: #6b7280; font-size: 14px; margin-top: 30px;">
+          If you have any questions, please don't hesitate to reach out to your account manager.<br>
+          This is an automated message from CoAIleague.
+        </p>
+      </div>
+    `
+  }),
 };
 
 // ============================================================================
@@ -647,6 +684,37 @@ export class EmailService {
       emailType || 'custom_email',
       workspaceId,
       userId
+    );
+  }
+
+  /**
+   * Send client welcome email
+   * Sent when a new client is created with portal access
+   */
+  async sendClientWelcomeEmail(
+    workspaceId: string,
+    clientId: string,
+    email: string,
+    clientName: string,
+    companyName: string,
+    workspaceName: string,
+  ): Promise<EmailResult> {
+    const portalUrl = `${getAppBaseUrl()}/client-portal`;
+    
+    const template = emailTemplates.clientWelcome({
+      clientName,
+      companyName: companyName || 'Your Organization',
+      workspaceName: workspaceName || 'Our Team',
+      portalUrl,
+    });
+
+    return this.sendEmail(
+      email,
+      template.subject,
+      template.html,
+      'client_welcome',
+      workspaceId,
+      undefined
     );
   }
 }

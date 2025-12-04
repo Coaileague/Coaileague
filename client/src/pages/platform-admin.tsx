@@ -75,6 +75,427 @@ interface PlatformStats {
   }>;
 }
 
+
+// Platform Roles Manager Component
+interface PlatformRoleAssignment {
+  id: string;
+  userId: string;
+  role: string;
+  grantedAt: string;
+  grantedBy: string;
+  grantedReason: string;
+  userEmail: string | null;
+  userFirstName: string | null;
+  userLastName: string | null;
+}
+
+const PLATFORM_ROLES = [
+  { value: 'root_admin', label: 'Root Admin', description: 'Full platform control' },
+  { value: 'deputy_admin', label: 'Deputy Admin', description: 'Platform administration' },
+  { value: 'sysop', label: 'SysOp', description: 'System operations' },
+  { value: 'support_manager', label: 'Support Manager', description: 'Support team lead' },
+  { value: 'support_agent', label: 'Support Agent', description: 'Customer support' },
+  { value: 'compliance_officer', label: 'Compliance Officer', description: 'Compliance monitoring' },
+  { value: 'none', label: 'No Role', description: 'Remove platform access' },
+];
+
+
+// Multi-Org Onboarding Visibility Manager Component
+interface OnboardingWorkspace {
+  id: string;
+  name: string;
+  slug: string;
+  tier: string;
+  isActive: boolean;
+  createdAt: string;
+  employeeCount: number;
+  activeEmployees: number;
+  onboardingEmployees: number;
+  invitations: {
+    total: number;
+    pending: number;
+    accepted: number;
+    expired: number;
+    revoked: number;
+  };
+  onboardingStatus: 'not_started' | 'in_progress' | 'complete';
+}
+
+interface OnboardingStats {
+  totalWorkspaces: number;
+  activeWorkspaces: number;
+  totalEmployees: number;
+  totalOnboarding: number;
+  totalPendingInvitations: number;
+  totalAcceptedInvitations: number;
+  totalExpiredInvitations: number;
+}
+
+function OnboardingVisibilityManager() {
+  const { toast } = useToast();
+
+  const { data: onboardingData, isLoading } = useQuery<{
+    workspaces: OnboardingWorkspace[];
+    stats: OnboardingStats;
+  }>({
+    queryKey: ['/api/admin/platform/onboarding'],
+  });
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'complete':
+        return <Badge variant="default" className="bg-emerald-500 dark:bg-emerald-600">Complete</Badge>;
+      case 'in_progress':
+        return <Badge variant="default" className="bg-amber-500 dark:bg-amber-600">In Progress</Badge>;
+      case 'not_started':
+        return <Badge variant="secondary">Not Started</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin h-8 w-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  const stats = onboardingData?.stats || {
+    totalWorkspaces: 0,
+    activeWorkspaces: 0,
+    totalEmployees: 0,
+    totalOnboarding: 0,
+    totalPendingInvitations: 0,
+    totalAcceptedInvitations: 0,
+    totalExpiredInvitations: 0,
+  };
+
+  const workspaces = onboardingData?.workspaces || [];
+
+  return (
+    <div className="space-y-6">
+      {/* Stats Cards */}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+            <CardTitle className="text-sm font-medium">Organizations</CardTitle>
+            <Building className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalWorkspaces}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.activeWorkspaces} active
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+            <CardTitle className="text-sm font-medium">Total Employees</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalEmployees}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.totalOnboarding} onboarding
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+            <CardTitle className="text-sm font-medium">Pending Invites</CardTitle>
+            <Clock className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalPendingInvitations}</div>
+            <p className="text-xs text-muted-foreground">
+              {stats.totalAcceptedInvitations} accepted
+            </p>
+          </CardContent>
+        </Card>
+        
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+            <CardTitle className="text-sm font-medium">Expired Invites</CardTitle>
+            <AlertCircle className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.totalExpiredInvitations}</div>
+            <p className="text-xs text-muted-foreground">
+              may need attention
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Workspaces Table */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Building className="h-5 w-5" />
+            Organization Onboarding Status
+          </CardTitle>
+          <CardDescription>
+            View onboarding progress across all organizations
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ScrollArea className="h-[400px]">
+            <div className="space-y-4">
+              {workspaces.map((workspace) => (
+                <div
+                  key={workspace.id}
+                  className="flex items-center justify-between p-4 border rounded-lg"
+                  data-testid={`row-workspace-${workspace.id}`}
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{workspace.name}</span>
+                      {getStatusBadge(workspace.onboardingStatus)}
+                      <Badge variant="outline">{workspace.tier}</Badge>
+                    </div>
+                    <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Users className="h-3 w-3" />
+                        {workspace.employeeCount} employees
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <CheckCircle className="h-3 w-3" />
+                        {workspace.activeEmployees} active
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        {workspace.invitations.pending} pending invites
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-right text-sm">
+                    <div className="text-muted-foreground">
+                      Invitations: {workspace.invitations.accepted}/{workspace.invitations.total}
+                    </div>
+                    {workspace.invitations.expired > 0 && (
+                      <div className="text-amber-600 dark:text-amber-400 flex items-center gap-1 justify-end">
+                        <AlertCircle className="h-3 w-3" />
+                        {workspace.invitations.expired} expired
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+              {workspaces.length === 0 && (
+                <div className="text-center text-muted-foreground py-8">
+                  No organizations found
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function PlatformRolesManager() {
+  const { toast } = useToast();
+  const [selectedUser, setSelectedUser] = useState<PlatformRoleAssignment | null>(null);
+  const [newRole, setNewRole] = useState('');
+  const [showAssignDialog, setShowAssignDialog] = useState(false);
+  const [searchEmail, setSearchEmail] = useState('');
+
+  const { data: roleAssignments, isLoading, refetch } = useQuery<PlatformRoleAssignment[]>({
+    queryKey: ['/api/admin/platform/roles'],
+  });
+
+  const assignRoleMutation = useMutation({
+    mutationFn: async ({ userId, role }: { userId: string; role: string }) => {
+      const response = await apiRequest('POST', '/api/admin/platform/roles', { userId, role });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: 'Role Updated',
+        description: 'Platform role has been updated successfully',
+      });
+      refetch();
+      setSelectedUser(null);
+      setShowAssignDialog(false);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update role',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case 'root_admin':
+        return 'destructive';
+      case 'deputy_admin':
+        return 'default';
+      case 'sysop':
+        return 'secondary';
+      case 'support_manager':
+        return 'outline';
+      default:
+        return 'secondary';
+    }
+  };
+
+  const handleRoleChange = (userId: string, role: string) => {
+    assignRoleMutation.mutate({ userId, role });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between">
+        <div className="relative flex-1 max-w-sm">
+          <Input
+            placeholder="Search by email..."
+            value={searchEmail}
+            onChange={(e) => setSearchEmail(e.target.value)}
+            className="pr-8"
+            data-testid="input-search-roles"
+          />
+        </div>
+        <Badge variant="outline" data-testid="badge-role-count">
+          {roleAssignments?.length || 0} assignments
+        </Badge>
+      </div>
+
+      <ScrollArea className="h-[400px]">
+        <div className="space-y-2">
+          {roleAssignments
+            ?.filter((r) => 
+              !searchEmail || 
+              r.userEmail?.toLowerCase().includes(searchEmail.toLowerCase())
+            )
+            .map((assignment) => (
+              <div
+                key={assignment.id}
+                className="flex items-center justify-between p-3 rounded-lg border hover-elevate"
+                data-testid={`role-row-${assignment.id}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
+                    <UserCog className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">
+                      {assignment.userFirstName} {assignment.userLastName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {assignment.userEmail}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Badge variant={getRoleBadgeVariant(assignment.role) as any}>
+                    {assignment.role.replace('_', ' ')}
+                  </Badge>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setSelectedUser(assignment);
+                      setNewRole(assignment.role);
+                      setShowAssignDialog(true);
+                    }}
+                    data-testid={`button-edit-role-${assignment.id}`}
+                  >
+                    Edit
+                  </Button>
+                </div>
+              </div>
+            ))}
+
+          {(!roleAssignments || roleAssignments.length === 0) && (
+            <div className="text-center py-8 text-muted-foreground">
+              <UserCog className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium mb-2">No Platform Roles Assigned</p>
+              <p className="text-sm">Platform roles grant administrative access</p>
+            </div>
+          )}
+        </div>
+      </ScrollArea>
+
+      {/* Edit Role Dialog */}
+      <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Change Platform Role</DialogTitle>
+            <DialogDescription>
+              Update the platform role for {selectedUser?.userEmail}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Select Role</Label>
+              <div className="grid grid-cols-1 gap-2">
+                {PLATFORM_ROLES.map((role) => (
+                  <div
+                    key={role.value}
+                    className={`p-3 rounded-lg border cursor-pointer transition-colors ${
+                      newRole === role.value
+                        ? 'border-primary bg-primary/10'
+                        : 'hover:bg-muted'
+                    }`}
+                    onClick={() => setNewRole(role.value)}
+                    data-testid={`role-option-${role.value}`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <p className="font-medium">{role.label}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {role.description}
+                        </p>
+                      </div>
+                      {newRole === role.value && (
+                        <CheckCircle className="h-5 w-5 text-primary" />
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowAssignDialog(false)}
+              data-testid="button-cancel-role-change"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => selectedUser && handleRoleChange(selectedUser.userId, newRole)}
+              disabled={assignRoleMutation.isPending}
+              data-testid="button-save-role-change"
+            >
+              {assignRoleMutation.isPending ? 'Saving...' : 'Update Role'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export default function PlatformAdmin() {
   const [showSettings, setShowSettings] = useState(false);
   const { toast } = useToast();
@@ -137,9 +558,9 @@ export default function PlatformAdmin() {
   }
 
   const healthColor = (value: number) => {
-    if (value >= 90) return "text-blue-600";
-    if (value >= 70) return "text-yellow-600";
-    return "text-red-600";
+    if (value >= 90) return "text-blue-600 dark:text-blue-400";
+    if (value >= 70) return "text-amber-600 dark:text-amber-400";
+    return "text-red-600 dark:text-red-400";
   };
 
   return (
@@ -237,6 +658,8 @@ export default function PlatformAdmin() {
           <TabsTrigger value="health" data-testid="tab-health">System Health</TabsTrigger>
           <TabsTrigger value="support" data-testid="tab-support">Support Metrics</TabsTrigger>
           <TabsTrigger value="revenue" data-testid="tab-revenue">Revenue</TabsTrigger>
+          <TabsTrigger value="roles" data-testid="tab-roles">User Roles</TabsTrigger>
+          <TabsTrigger value="onboarding" data-testid="tab-onboarding">Onboarding</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab */}
@@ -459,6 +882,28 @@ export default function PlatformAdmin() {
               </CardContent>
             </Card>
           </div>
+        </TabsContent>
+
+        {/* User Roles Tab */}
+        <TabsContent value="roles" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <UserCog className="h-5 w-5" />
+                Platform Role Assignments
+              </CardTitle>
+              <CardDescription>
+                Manage platform-level access roles for users across all organizations
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <PlatformRolesManager />
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="onboarding" className="space-y-4">
+          <OnboardingVisibilityManager />
         </TabsContent>
       </Tabs>
 

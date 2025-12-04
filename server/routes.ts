@@ -2544,6 +2544,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Create a new workspace/organization
+  app.post('/api/workspaces', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const { name, description, industry, size, companyName } = req.body;
+
+      if (!name || typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ message: 'Organization name is required' });
+      }
+
+      // Create the workspace
+      const workspace = await storage.createWorkspace({
+        name: name.trim(),
+        ownerId: userId,
+        companyName: companyName || name.trim(),
+        industryDescription: description || null,
+        businessCategory: industry || 'general',
+      });
+
+      // Log the organization creation
+      await storage.createAuditLogEntry({
+        userId,
+        workspaceId: workspace.id,
+        action: 'workspace_created',
+        entityType: 'workspace',
+        entityId: workspace.id,
+        details: {
+          name: workspace.name,
+          industry,
+          size,
+          organizationId: workspace.organizationId,
+        },
+        ipAddress: req.ip || req.socket.remoteAddress,
+      });
+
+      // Broadcast creation event for Trinity mascot reaction
+      broadcastPlatformUpdate({
+        type: 'workspace_created',
+        title: 'New Organization Created',
+        message: `${workspace.name} has been created successfully`,
+        workspaceId: workspace.id,
+        timestamp: new Date().toISOString(),
+      });
+
+      res.status(201).json({
+        success: true,
+        workspace: {
+          id: workspace.id,
+          name: workspace.name,
+          organizationId: workspace.organizationId,
+          organizationSerial: workspace.organizationSerial,
+        },
+      });
+    } catch (error) {
+      console.error('Error creating workspace:', error);
+      res.status(500).json({ message: 'Failed to create organization' });
+    }
+  });
   // Switch workspace
   app.post('/api/workspace/switch/:workspaceId', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
@@ -6534,6 +6597,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+
+      // Send client welcome email (non-blocking)
+      if (validated.email) {
+        const { emailService } = await import('./services/emailService');
+        emailService.sendClientWelcomeEmail(
+          workspaceId,
+          client.id,
+          validated.email,
+          validated.name || 'Valued Client',
+          validated.companyName || '',
+          workspace.name || ''
+        ).catch(err => console.error('[Client Creation] Failed to send welcome email:', err));
+      }
       res.json(client);
     } catch (error: any) {
       console.error("Error creating client:", error);
@@ -11934,6 +12010,176 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch invites" });
     }
   });
+
+  // Resend an invitation with new token
+  app.post('/api/onboarding/invite/:id/resend', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { id } = req.params;
+      
+      // Get the existing invite
+      const invite = await storage.getInviteById(id);
+      
+      if (!invite) {
+        return res.status(404).json({ message: 'Invite not found' });
+      }
+      
+      if (invite.workspaceId !== workspaceId) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      if (invite.isUsed) {
+        return res.status(400).json({ message: 'Invite has already been used' });
+      }
+
+      // Generate new token and expiry
+      const crypto = await import('crypto');
+      const newToken = crypto.randomBytes(32).toString('hex');
+      const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+      
+      // Update the invite
+      const updatedInvite = await storage.resendInvite(id, newToken, newExpiresAt);
+      
+      if (!updatedInvite) {
+        return res.status(500).json({ message: 'Failed to resend invite' });
+      }
+      
+      // Send invitation email again
+      const workspace = await storage.getWorkspace(workspaceId);
+      const protocol = process.env.NODE_ENV === 'production' ? 'https' : req.protocol;
+      const host = process.env.NODE_ENV === 'production' 
+        ? req.get('host') 
+        : (process.env.REPL_SLUG ? `${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co` : req.get('host'));
+      const onboardingUrl = `${protocol}://${host}/onboarding/${newToken}`;
+      
+      await sendOnboardingInviteEmail(updatedInvite.email, {
+        employeeName: `${updatedInvite.firstName} ${updatedInvite.lastName}`,
+        workspaceName: workspace?.name || 'Our Team',
+        onboardingUrl,
+        expiresIn: '7 days',
+      });
+      
+      // Broadcast for Trinity mascot
+      broadcastPlatformUpdate({
+        type: 'invite_resent',
+        title: 'Invitation Resent',
+        message: `Invitation resent to ${updatedInvite.email}`,
+        workspaceId,
+        timestamp: new Date().toISOString(),
+      });
+      
+      res.json({ 
+        success: true, 
+        message: 'Invitation resent successfully',
+        invite: updatedInvite 
+      });
+    } catch (error: any) {
+      console.error('Error resending invite:', error);
+      res.status(500).json({ message: error.message || 'Failed to resend invite' });
+    }
+  });
+
+  // Revoke an invitation
+  app.post('/api/onboarding/invite/:id/revoke', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { id } = req.params;
+      
+      // Get the existing invite
+      const invite = await storage.getInviteById(id);
+      
+      if (!invite) {
+        return res.status(404).json({ message: 'Invite not found' });
+      }
+      
+      if (invite.workspaceId !== workspaceId) {
+        return res.status(403).json({ message: 'Access denied' });
+      }
+      
+      if (invite.isUsed) {
+        return res.status(400).json({ message: 'Cannot revoke a used invite' });
+      }
+      
+      const revokedInvite = await storage.revokeInvite(id);
+      
+      if (!revokedInvite) {
+        return res.status(500).json({ message: 'Failed to revoke invite' });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: 'Invitation revoked successfully',
+        invite: revokedInvite 
+      });
+    } catch (error: any) {
+      console.error('Error revoking invite:', error);
+      res.status(500).json({ message: error.message || 'Failed to revoke invite' });
+    }
+  });
+
+  // Mark invite as opened (called when user opens the invite link)
+  app.post('/api/onboarding/invite/:token/opened', async (req, res) => {
+    try {
+      const { token } = req.params;
+      const invite = await storage.getOnboardingInviteByToken(token);
+      
+      if (!invite) {
+        return res.status(404).json({ message: 'Invite not found' });
+      }
+      
+      // Only mark as opened if not already used
+      if (!invite.isUsed && invite.status !== 'opened' && invite.status !== 'accepted') {
+        await storage.markInviteOpened(invite.id);
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error marking invite as opened:', error);
+      res.status(500).json({ message: 'Failed to mark invite as opened' });
+    }
+  });
+
+  // Get invites by status
+  app.get('/api/onboarding/invites/status/:status', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const { status } = req.params;
+      
+      const validStatuses = ['sent', 'opened', 'accepted', 'expired', 'revoked'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ message: 'Invalid status. Must be one of: ' + validStatuses.join(', ') });
+      }
+      
+      const invites = await storage.getInvitesByStatus(workspaceId, status);
+      res.json(invites);
+    } catch (error) {
+      console.error('Error fetching invites by status:', error);
+      res.status(500).json({ message: 'Failed to fetch invites' });
+    }
+  });
+
+  // Get invite statistics for workspace
+  app.get('/api/onboarding/invites/stats', isAuthenticated, requireManager, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId!;
+      const invites = await storage.getOnboardingInvitesByWorkspace(workspaceId);
+      
+      const stats = {
+        total: invites.length,
+        sent: invites.filter(i => i.status === 'sent').length,
+        opened: invites.filter(i => i.status === 'opened').length,
+        accepted: invites.filter(i => i.status === 'accepted' || i.isUsed).length,
+        expired: invites.filter(i => i.status === 'expired' || (i.expiresAt && new Date(i.expiresAt) < new Date() && !i.isUsed)).length,
+        revoked: invites.filter(i => i.status === 'revoked').length,
+        pendingCount: invites.filter(i => !i.isUsed && i.status !== 'revoked' && i.status !== 'expired').length,
+      };
+      
+      res.json(stats);
+    } catch (error) {
+      console.error('Error fetching invite stats:', error);
+      res.status(500).json({ message: 'Failed to fetch invite statistics' });
+    }
+  });
   
   // Create/start onboarding application (public route with valid token)
   app.post('/api/onboarding/application', async (req, res) => {
@@ -16912,6 +17158,268 @@ Summary:`;
       console.error("Error fetching platform activities:", error);
       res.status(500).json({ message: "Failed to fetch platform activities" });
     }
+  });
+
+  // Get all platform role assignments (for admin management)
+  app.get('/api/admin/platform/roles', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Get all active platform role assignments with user details
+      const roleAssignments = await db
+        .select({
+          id: platformRoles.id,
+          userId: platformRoles.userId,
+          role: platformRoles.role,
+          grantedAt: platformRoles.grantedAt,
+          grantedBy: platformRoles.grantedBy,
+          grantedReason: platformRoles.grantedReason,
+          userEmail: users.email,
+          userFirstName: users.firstName,
+          userLastName: users.lastName,
+        })
+        .from(platformRoles)
+        .leftJoin(users, eq(platformRoles.userId, users.id))
+        .where(isNull(platformRoles.revokedAt))
+        .orderBy(desc(platformRoles.grantedAt));
+
+      res.json(roleAssignments);
+    } catch (error) {
+      console.error('Error fetching platform roles:', error);
+      res.status(500).json({ message: 'Failed to fetch platform roles' });
+    }
+  });
+
+  // Assign or update a platform role
+  app.post('/api/admin/platform/roles', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { userId, role } = req.body;
+
+      if (!userId || !role) {
+        return res.status(400).json({ message: 'User ID and role are required' });
+      }
+
+      const validRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer', 'Bot', 'none'];
+      if (!validRoles.includes(role)) {
+        return res.status(400).json({ message: 'Invalid role. Must be one of: ' + validRoles.join(', ') });
+      }
+
+      // Check if user exists
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: 'User not found' });
+      }
+
+      // Revoke existing role if any
+      await db
+        .update(platformRoles)
+        .set({ revokedAt: new Date(), revokedReason: 'Role changed by platform admin' })
+        .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
+
+      // If role is 'none', don't create a new assignment
+      if (role === 'none') {
+        // Log the role removal
+        await storage.createAuditLogEntry({
+          userId: req.user!.id,
+          workspaceId: null,
+          action: 'platform_role_removed',
+          entityType: 'platform_role',
+          entityId: userId,
+          details: {
+            targetUserId: userId,
+            targetEmail: user.email,
+            removedBy: req.user!.email,
+          },
+          ipAddress: req.ip || req.socket.remoteAddress,
+        });
+
+        return res.json({ success: true, message: 'Platform role removed successfully' });
+      }
+
+      // Assign new role
+      const [newRole] = await db
+        .insert(platformRoles)
+        .values({
+          userId,
+          role,
+          grantedBy: req.user!.id,
+          grantedReason: `Role assigned by ${req.user!.email || 'platform admin'}`,
+        })
+        .returning();
+
+      // Log the role assignment
+      await storage.createAuditLogEntry({
+        userId: req.user!.id,
+        workspaceId: null,
+        action: 'platform_role_assigned',
+        entityType: 'platform_role',
+        entityId: newRole.id,
+        details: {
+          targetUserId: userId,
+          targetEmail: user.email,
+          role,
+          assignedBy: req.user!.email,
+        },
+        ipAddress: req.ip || req.socket.remoteAddress,
+      });
+
+      // Broadcast update for Trinity mascot
+      broadcastPlatformUpdate({
+        type: 'platform_role_changed',
+        title: 'Platform Role Updated',
+        message: `${user.email} has been assigned the ${role} role`,
+        timestamp: new Date().toISOString(),
+      });
+
+      res.json({ 
+        success: true, 
+        message: `Platform role ${role} assigned successfully`,
+        role: newRole 
+      });
+    } catch (error) {
+      console.error('Error assigning platform role:', error);
+      res.status(500).json({ message: 'Failed to assign platform role' });
+    }
+
+  // ============================================================================
+  // MULTI-ORG ONBOARDING VISIBILITY (Platform Admin)
+  // ============================================================================
+  
+  // Get all organization onboarding status for platform admins
+  app.get('/api/admin/platform/onboarding', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      // Get all workspaces with employee counts
+      const allWorkspaces = await db.select({
+        id: workspaces.id,
+        name: workspaces.name,
+        slug: workspaces.slug,
+        tier: workspaces.tier,
+        isActive: workspaces.isActive,
+        createdAt: workspaces.createdAt,
+      }).from(workspaces);
+
+      // Get employee counts per workspace
+      const employeeCounts = await db.select({
+        workspaceId: employees.workspaceId,
+        count: sql<number>`count(*)::int`,
+        activeCount: sql<number>`count(*) filter (where ${employees.status} = 'active')::int`,
+        onboardingCount: sql<number>`count(*) filter (where ${employees.status} = 'onboarding')::int`,
+      })
+      .from(employees)
+      .groupBy(employees.workspaceId);
+
+      // Get invitation counts per workspace
+      const invitationCounts = await db.select({
+        workspaceId: employeeInvitations.workspaceId,
+        total: sql<number>`count(*)::int`,
+        pending: sql<number>`count(*) filter (where ${employeeInvitations.inviteStatus} = 'pending')::int`,
+        accepted: sql<number>`count(*) filter (where ${employeeInvitations.inviteStatus} = 'accepted')::int`,
+        expired: sql<number>`count(*) filter (where ${employeeInvitations.inviteStatus} = 'expired')::int`,
+        revoked: sql<number>`count(*) filter (where ${employeeInvitations.inviteStatus} = 'revoked')::int`,
+      })
+      .from(employeeInvitations)
+      .groupBy(employeeInvitations.workspaceId);
+
+      // Build enriched workspace data
+      const empCountMap = new Map(employeeCounts.map(e => [e.workspaceId, e]));
+      const invCountMap = new Map(invitationCounts.map(i => [i.workspaceId, i]));
+
+      const enrichedWorkspaces = allWorkspaces.map(ws => {
+        const empStats = empCountMap.get(ws.id) || { count: 0, activeCount: 0, onboardingCount: 0 };
+        const invStats = invCountMap.get(ws.id) || { total: 0, pending: 0, accepted: 0, expired: 0, revoked: 0 };
+        
+        // Determine onboarding status
+        let onboardingStatus = 'complete';
+        if (empStats.count === 0 && invStats.pending === 0) {
+          onboardingStatus = 'not_started';
+        } else if (empStats.onboardingCount > 0 || invStats.pending > 0) {
+          onboardingStatus = 'in_progress';
+        }
+
+        return {
+          ...ws,
+          employeeCount: empStats.count,
+          activeEmployees: empStats.activeCount,
+          onboardingEmployees: empStats.onboardingCount,
+          invitations: {
+            total: invStats.total,
+            pending: invStats.pending,
+            accepted: invStats.accepted,
+            expired: invStats.expired,
+            revoked: invStats.revoked,
+          },
+          onboardingStatus,
+        };
+      });
+
+      // Calculate platform-wide stats
+      const platformStats = {
+        totalWorkspaces: allWorkspaces.length,
+        activeWorkspaces: allWorkspaces.filter(w => w.isActive).length,
+        totalEmployees: employeeCounts.reduce((sum, e) => sum + e.count, 0),
+        totalOnboarding: employeeCounts.reduce((sum, e) => sum + e.onboardingCount, 0),
+        totalPendingInvitations: invitationCounts.reduce((sum, i) => sum + i.pending, 0),
+        totalAcceptedInvitations: invitationCounts.reduce((sum, i) => sum + i.accepted, 0),
+        totalExpiredInvitations: invitationCounts.reduce((sum, i) => sum + i.expired, 0),
+      };
+
+      res.json({
+        workspaces: enrichedWorkspaces,
+        stats: platformStats,
+      });
+    } catch (error) {
+      console.error('Error fetching platform onboarding data:', error);
+      res.status(500).json({ message: 'Failed to fetch onboarding data' });
+    }
+  });
+
+  // Get all pending invitations across the platform
+  app.get('/api/admin/platform/invitations', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const status = req.query.status as string || 'pending';
+      const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+      const offset = parseInt(req.query.offset as string) || 0;
+
+      // Build status condition
+      let statusCondition = eq(employeeInvitations.inviteStatus, status as any);
+      if (status === 'all') {
+        statusCondition = sql`1=1` as any;
+      }
+
+      const invitations = await db.select({
+        id: employeeInvitations.id,
+        email: employeeInvitations.email,
+        firstName: employeeInvitations.firstName,
+        lastName: employeeInvitations.lastName,
+        workspaceId: employeeInvitations.workspaceId,
+        inviteStatus: employeeInvitations.inviteStatus,
+        invitedAt: employeeInvitations.invitedAt,
+        expiresAt: employeeInvitations.expiresAt,
+        openedAt: employeeInvitations.openedAt,
+        acceptedAt: employeeInvitations.acceptedAt,
+        workspaceName: workspaces.name,
+      })
+      .from(employeeInvitations)
+      .leftJoin(workspaces, eq(employeeInvitations.workspaceId, workspaces.id))
+      .where(statusCondition)
+      .orderBy(desc(employeeInvitations.invitedAt))
+      .limit(limit)
+      .offset(offset);
+
+      // Get total count
+      const [{ count }] = await db.select({ count: sql<number>`count(*)::int` })
+        .from(employeeInvitations)
+        .where(statusCondition);
+
+      res.json({
+        invitations,
+        total: count,
+        limit,
+        offset,
+      });
+    } catch (error) {
+      console.error('Error fetching platform invitations:', error);
+      res.status(500).json({ message: 'Failed to fetch invitations' });
+    }
+  });
   });
 
   // ============================================================================

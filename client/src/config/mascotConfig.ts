@@ -511,6 +511,14 @@ export const EMOTE_CONTEXTS: EmoteContext[] = [
   { trigger: 'ai_response', emote: 'helpful', priority: 3 },
   { trigger: 'faq_found', emote: 'proud', priority: 3 },
   { trigger: 'advice_given', emote: 'nodding', priority: 2 },
+  
+  // Onboarding triggers
+  { trigger: 'org_created', emote: 'celebrating', priority: 5 },
+  { trigger: 'invitation_sent', emote: 'happy', priority: 4 },
+  { trigger: 'invitation_accepted', emote: 'celebrating', priority: 5 },
+  { trigger: 'role_assigned', emote: 'helpful', priority: 3 },
+  { trigger: 'client_welcome_sent', emote: 'waving', priority: 3 },
+  { trigger: 'employee_onboarded', emote: 'proud', priority: 5 },
 ];
 
 export interface RoamingConfig {
