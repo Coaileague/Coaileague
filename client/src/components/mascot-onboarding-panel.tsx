@@ -21,7 +21,9 @@ import {
   Rocket,
   Sparkles,
   Lock,
-  LockOpen
+  LockOpen,
+  HelpCircle,
+  MessageSquare
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -421,6 +423,17 @@ export function MascotOnboardingPanel({
               )}
             </div>
           </CardFooter>
+          <div className="px-6 pb-4 flex items-center justify-center gap-4 text-sm">
+            <Link href="/help" className="text-muted-foreground hover:text-foreground transition-colors flex items-center gap-1" data-testid="link-onboarding-help">
+              <HelpCircle className="h-4 w-4" />
+              Need Help?
+            </Link>
+            <span className="text-muted-foreground">|</span>
+            <Link href="/chat" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1" data-testid="link-onboarding-chat">
+              <MessageSquare className="h-4 w-4" />
+              Chat with Support
+            </Link>
+          </div>
         </>
       )}
     </Card>
