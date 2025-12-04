@@ -1521,39 +1521,78 @@ class CoAITwinEngine {
     this.drawPolygon(drawX, drawY, radius, numPoints, innerRatio, color, twinIndex);
   }
   
-  // FRACTIONAL POLYGON DRAWING - Enables smooth morphing between shapes
-  // When points is 3.5, draws a shape halfway between triangle (3) and square (4)
-  // This creates the visible "shape-shifting" effect during mode transitions
-  private drawPolygon(x: number, y: number, radius: number, points: number, innerRatio: number, color: string, twinIndex: number = 0) {
+  // FRACTIONAL POLYGON DRAWING - True fractional morphing between shapes
+  // When points is 3.5, we draw BOTH a 3-point AND 4-point shape blended together
+  // This creates visible "shape-shifting" during mode transitions
+  private drawPolygon(x: number, y: number, radius: number, _points: number, _innerRatio: number, _color: string, twinIndex: number = 0) {
     // Get transmutation state for this star (provides fractional geometry values)
     const transState = this.transmutationEngine.getState(twinIndex);
+    if (!transState) return;
     
-    // Use transmutation engine values if available, otherwise fall back to passed values
-    const fractionalPoints = transState?.currentPoints ?? points;
-    const currentInnerRatio = transState?.currentInnerR ?? innerRatio;
-    const currentColor = transState?.currentColor ?? color;
+    // Use transmutation engine values - these are LERPED each frame
+    const fractionalPoints = transState.currentPoints;
+    const currentInnerRatio = transState.currentInnerR;
+    const currentColor = transState.currentColor;
+    const currentScale = transState.currentScale;
     
-    // Calculate floor/ceil for interpolation
+    // Apply scale from transmutation
+    const scaledRadius = radius * currentScale;
+    
+    // Calculate floor/ceil for hybrid drawing
     const minPoints = 3;
     const clampedPoints = Math.max(minPoints, fractionalPoints);
     const floorPoints = Math.floor(clampedPoints);
+    const ceilPoints = Math.ceil(clampedPoints);
     const fraction = clampedPoints - floorPoints;
     
-    // Calculate effective points for smooth morph (interpolate between shapes)
-    const effectivePoints = Math.round(this.lerp(floorPoints, floorPoints + 1, fraction));
-    const p = Math.max(minPoints, effectivePoints);
-    const step = Math.PI / p;
     const rotation = -(this.state.time * 0.05);
     
-    // Morphed inner ratio - adds subtle "bulge" effect during transition
-    const morphedInnerRatio = currentInnerRatio + (1 - currentInnerRatio) * 0.08 * Math.sin(fraction * Math.PI);
+    // HYBRID APPROACH: Draw blend of floor and ceil shapes
+    // When fraction > 0, we're transitioning between shapes
+    if (fraction > 0.01 && floorPoints !== ceilPoints) {
+      // Draw both shapes with blended opacity for smooth morph effect
+      this.ctx.globalAlpha = 1 - fraction * 0.3;
+      this.drawStarShape(x, y, scaledRadius, floorPoints, currentInnerRatio, currentColor, rotation);
+      this.ctx.globalAlpha = fraction * 0.7 + 0.3;
+      this.drawStarShape(x, y, scaledRadius, ceilPoints, currentInnerRatio, currentColor, rotation);
+      this.ctx.globalAlpha = 1;
+    } else {
+      // No transition, draw single shape
+      this.drawStarShape(x, y, scaledRadius, floorPoints, currentInnerRatio, currentColor, rotation);
+    }
+    
+    // Draw white center dot
+    const centerRadius = scaledRadius * 0.22;
+    this.ctx.fillStyle = '#fff';
+    this.ctx.beginPath();
+    this.ctx.arc(x, y, centerRadius, 0, Math.PI * 2);
+    this.ctx.fill();
+    
+    // Trinity branded text: "Co" (cyan), "AI" (purple), "LE" (gold)
+    const brandLabels = ['Co', 'AI', 'LE'];
+    const brandColors = ['#a855f7', '#38bdf8', '#1e3a5f'];
+    const label = brandLabels[twinIndex] || 'LE';
+    const labelColor = brandColors[twinIndex] || '#1e3a5f';
+    
+    const fontSize = Math.max(4, scaledRadius * 0.5);
+    this.ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'middle';
+    this.ctx.fillStyle = labelColor;
+    this.ctx.fillText(label, x, y + 0.5);
+  }
+  
+  // Helper method to draw a star/polygon shape with specific point count
+  private drawStarShape(x: number, y: number, radius: number, points: number, innerRatio: number, color: string, rotation: number) {
+    const p = Math.max(3, points);
+    const step = Math.PI / p;
     
     // Draw dark outline first
     this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.5)';
     this.ctx.lineWidth = 2;
     this.ctx.beginPath();
     for (let i = 0; i < 2 * p; i++) {
-      const r = (i % 2 === 0) ? radius * 1.05 : radius * morphedInnerRatio * 1.05;
+      const r = (i % 2 === 0) ? radius * 1.05 : radius * innerRatio * 1.05;
       const a = i * step + rotation;
       if (i === 0) {
         this.ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
@@ -1564,13 +1603,13 @@ class CoAITwinEngine {
     this.ctx.closePath();
     this.ctx.stroke();
     
-    // Draw colored fill with subtle glow
-    this.ctx.fillStyle = currentColor;
-    this.ctx.shadowBlur = 8;
-    this.ctx.shadowColor = currentColor;
+    // Draw colored fill with glow
+    this.ctx.fillStyle = color;
+    this.ctx.shadowBlur = 10;
+    this.ctx.shadowColor = color;
     this.ctx.beginPath();
     for (let i = 0; i < 2 * p; i++) {
-      const r = (i % 2 === 0) ? radius : radius * morphedInnerRatio;
+      const r = (i % 2 === 0) ? radius : radius * innerRatio;
       const a = i * step + rotation;
       if (i === 0) {
         this.ctx.moveTo(x + Math.cos(a) * r, y + Math.sin(a) * r);
@@ -1586,26 +1625,6 @@ class CoAITwinEngine {
     this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.35)';
     this.ctx.lineWidth = 1.2;
     this.ctx.stroke();
-    
-    // Draw white center dot
-    const centerRadius = radius * 0.22;
-    this.ctx.fillStyle = '#fff';
-    this.ctx.beginPath();
-    this.ctx.arc(x, y, centerRadius, 0, Math.PI * 2);
-    this.ctx.fill();
-    
-    // Trinity branded text: "Co" (cyan), "AI" (purple), "LE" (gold)
-    const brandLabels = ['Co', 'AI', 'LE'];
-    const brandColors = ['#a855f7', '#38bdf8', '#1e3a5f'];
-    const label = brandLabels[twinIndex] || 'LE';
-    const labelColor = brandColors[twinIndex] || '#1e3a5f';
-    
-    const fontSize = Math.max(4, radius * 0.5);
-    this.ctx.font = `bold ${fontSize}px system-ui, -apple-system, sans-serif`;
-    this.ctx.textAlign = 'center';
-    this.ctx.textBaseline = 'middle';
-    this.ctx.fillStyle = labelColor;
-    this.ctx.fillText(label, x, y + 0.5);
   }
 
   private drawEmoteParticles() {

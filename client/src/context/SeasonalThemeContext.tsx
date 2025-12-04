@@ -128,6 +128,66 @@ const DEFAULT_PROFILE: SeasonalProfile = {
   aiGenerated: false,
 };
 
+// Client-side Christmas profile - used when API fails or on public pages during December
+const CHRISTMAS_PROFILE: SeasonalProfile = {
+  seasonId: 'christmas',
+  holidayName: 'Christmas',
+  isHoliday: true,
+  theme: {
+    forceDarkMode: true,
+    primaryColor: '#c41e3a',
+    secondaryColor: '#228b22',
+    accentColor: '#ffd700',
+    glowColor: '#ff6b6b',
+  },
+  effects: {
+    primary: 'snowfall',
+    secondary: 'ornaments',
+    cadence: 'slow',
+    intensity: 0.7,
+    accumulation: true,
+    accumulationCycle: {
+      formDuration: 60000,
+      holdDuration: 30000,
+      dissolveDuration: 45000,
+    },
+  },
+  ornaments: {
+    enabled: true,
+    types: ['ball', 'star', 'bell', 'candy-cane', 'snowflake'],
+    colors: ['#c41e3a', '#228b22', '#ffd700', '#ffffff', '#87ceeb'],
+    density: 'medium',
+  },
+  mascotHints: {
+    preferredZones: ['corners'],
+    avoidEffectZones: true,
+    seasonalEmotes: ['HOLIDAY', 'CELEBRATING'],
+    seasonalThoughts: [
+      "Happy Holidays! 🎄",
+      "Let it snow! ❄️",
+      "Season's greetings!",
+      "Ho ho ho! 🎅",
+    ],
+  },
+  validUntil: new Date(new Date().getFullYear(), 11, 31, 23, 59, 59).toISOString(),
+  aiGenerated: false,
+};
+
+// Check if we're in Christmas season (Dec 1-31)
+function isChristmasSeason(): boolean {
+  const now = new Date();
+  const month = now.getMonth(); // 0-indexed, so December = 11
+  return month === 11; // December
+}
+
+// Get appropriate fallback profile based on date
+function getDateBasedFallback(): SeasonalProfile {
+  if (isChristmasSeason()) {
+    return CHRISTMAS_PROFILE;
+  }
+  return DEFAULT_PROFILE;
+}
+
 const SeasonalThemeContext = createContext<SeasonalThemeContextValue | null>(null);
 
 export function SeasonalThemeProvider({ children }: { children: React.ReactNode }) {
@@ -139,10 +199,12 @@ export function SeasonalThemeProvider({ children }: { children: React.ReactNode 
     queryKey: ['/api/mascot/seasonal/state'],
     staleTime: 5 * 60 * 1000,
     refetchInterval: 10 * 60 * 1000,
-    retry: 2,
+    retry: 1, // Reduce retries - we have date fallback
   });
   
-  const profile = data?.profile || DEFAULT_PROFILE;
+  // Use API profile if available, otherwise fall back to date-based detection
+  // This ensures Christmas decorations show even on public pages (401 errors)
+  const profile = data?.profile || getDateBasedFallback();
   
   useEffect(() => {
     if (!profile) return;
