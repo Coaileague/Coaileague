@@ -91,6 +91,7 @@ import { timesheetReportRouter } from "./routes/timesheetReportRoutes";
 import { timesheetInvoiceRouter } from "./routes/timesheetInvoiceRoutes";
 import { advancedSchedulingRouter } from "./routes/advancedSchedulingRoutes";
 import { ownerAnalyticsRouter } from "./routes/ownerAnalytics";
+import serviceControlRouter from "./routes/service-control";
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
 import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
@@ -2755,6 +2756,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/helpai', helpaiRouter);
   app.use('/api/mascot', mascotRouter); // CoAI Twin Mascot
 
+  app.use("/api/platform", serviceControlRouter);
   // Core Automation routes (Scheduling, Invoicing, Payroll) - REQUIRES AUTH
   app.use('/api/automation', requireAuth, automationRouter);
 

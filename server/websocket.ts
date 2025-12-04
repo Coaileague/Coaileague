@@ -521,6 +521,22 @@ export function broadcastToAllClients(message: any) {
   return count;
 }
 
+export function broadcastToWorkspace(workspaceId: string, data: any) {
+  if (!globalBroadcaster) {
+    console.warn('[WebSocket] Global broadcaster not initialized for workspace broadcast');
+    return 0;
+  }
+  
+  try {
+    globalBroadcaster.broadcastToWorkspace(workspaceId, data);
+    console.log(`[WebSocket] Workspace broadcast sent to ${workspaceId}`);
+    return 1;
+  } catch (err) {
+    console.warn('[WebSocket] Failed to broadcast to workspace:', err);
+    return 0;
+  }
+}
+
 // =============================================================================
 // SECURITY: MULTI-DIMENSIONAL RATE LIMITING (User + IP + Session)
 // =============================================================================

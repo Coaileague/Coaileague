@@ -29,7 +29,7 @@ import { emoteMorphingEngine, EmoteMorphingEngine, EmoteName, EmotePhase, EMOTE_
 import { EmoteTransitionRenderer, WarpPhase, WarpColors } from '@/lib/mascot/EmoteTransitionRenderer';
 import { GrabSlingMechanics, GrabEvent, SlingResult } from '@/lib/mascot/GrabSlingMechanics';
 // REMOVED: WarpMutationOverlay and MutationFlashOverlay - caused visible borders and sickening glow effects
-// Physical geometry morphing now handles all mutations through MODE_GEOMETRY_CONFIG
+// Physical geometry morphing now uses simplified flat properties (points, innerR) with Target-Seek LERP
 
 export type MascotMode = 
   | 'IDLE' 

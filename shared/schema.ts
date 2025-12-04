@@ -232,6 +232,35 @@ export const workspaces = pgTable("workspaces", {
   lockedAt: timestamp("locked_at"),
   lockedBy: varchar("locked_by"),
 
+  // ============================================================================
+  // INVESTIGATION SERVICE CONTROLS - ROOT/SUPPORT Staff Only
+  // Per-workspace service suspension for investigations/compliance
+  // ============================================================================
+  
+  // Trinity Mascot Control
+  trinitySuspended: boolean("trinity_suspended").default(false),
+  trinitySuspendedReason: text("trinity_suspended_reason"),
+  trinitySuspendedAt: timestamp("trinity_suspended_at"),
+  trinitySuspendedBy: varchar("trinity_suspended_by"),
+  
+  // Chat Service Control  
+  chatSuspended: boolean("chat_suspended").default(false),
+  chatSuspendedReason: text("chat_suspended_reason"),
+  chatSuspendedAt: timestamp("chat_suspended_at"),
+  chatSuspendedBy: varchar("chat_suspended_by"),
+  
+  // Automation Service Control (disables all scheduled jobs for this workspace)
+  automationsSuspended: boolean("automations_suspended").default(false),
+  automationsSuspendedReason: text("automations_suspended_reason"),
+  automationsSuspendedAt: timestamp("automations_suspended_at"),
+  automationsSuspendedBy: varchar("automations_suspended_by"),
+  
+  // AI Brain Service Control (disables HelpAI/AI features for this workspace)
+  aiBrainSuspended: boolean("ai_brain_suspended").default(false),
+  aiBrainSuspendedReason: text("ai_brain_suspended_reason"),
+  aiBrainSuspendedAt: timestamp("ai_brain_suspended_at"),
+  aiBrainSuspendedBy: varchar("ai_brain_suspended_by"),
+
   // AI Feature Trials & Activation (Subscriber Pays All Model)
   // Scheduling Platform AI Auto-Scheduling
   scheduleosTrialStartedAt: timestamp("scheduleos_trial_started_at"), // 7-day free trial
