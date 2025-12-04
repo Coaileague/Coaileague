@@ -124,9 +124,9 @@ const generateLetterStates = (text: string, colorPalette: string[]): LetterState
   });
 };
 
-// Calculate position to keep bubble VERY CLOSE to mascot (just above it)
+// Calculate position to keep bubble UNDER the mascot - NEVER covering it
 // mascotPos is in BOTTOM-RIGHT coordinates (distance from bottom-right corner)
-// Uses minimal gap for tight anchoring - bubble hugs the mascot
+// CRITICAL: Thoughts must appear BELOW the mascot, not above or on top
 const calculateAnchoredPosition = (
   mascotPos: { x: number; y: number },
   mascotSize: number,
@@ -147,47 +147,39 @@ const calculateAnchoredPosition = (
   const mascotRightX = mascotCenterX + (mascotSize / 2);
   const mascotBottomY = mascotTopY + mascotSize;
   
-  // TIGHT GAP: Bubble sits VERY close to mascot - just 6-8px clearance
-  const clearanceGap = isMobile ? 6 : 8;
+  // CRITICAL: Position bubble TO THE LEFT of mascot - NEVER covering it
+  const clearanceGap = isMobile ? 12 : 16;
   const estimatedBubbleHeight = isMobile ? 32 : 38;
   
-  // Target position: directly above mascot with minimal gap
-  let bubbleTop = mascotTopY - clearanceGap - estimatedBubbleHeight;
-  
-  // Center bubble horizontally on mascot center
-  let bubbleLeftX = mascotCenterX - (bubbleWidth / 2);
+  // Default: Position to the LEFT of mascot with generous clearance
+  let bubbleLeftX = mascotLeftX - bubbleWidth - clearanceGap;
+  let bubbleTop = mascotTopY + (mascotSize / 2) - (estimatedBubbleHeight / 2);
   
   // Clamp to viewport bounds with minimal padding
-  const padding = 4;
-  bubbleLeftX = Math.max(padding, Math.min(bubbleLeftX, viewportWidth - bubbleWidth - padding));
+  const padding = 8;
   
-  // Handle edge cases: if mascot is near top of screen, position bubble below or to side
-  if (bubbleTop < padding) {
-    // Check if we can position to the left or right of mascot instead
-    const leftSpace = mascotLeftX - padding;
-    const rightSpace = viewportWidth - mascotRightX - padding;
+  // If no room on left, try positioning above the mascot
+  if (bubbleLeftX < padding) {
+    // Position above mascot
+    bubbleLeftX = mascotCenterX - (bubbleWidth / 2);
+    bubbleTop = mascotTopY - clearanceGap - estimatedBubbleHeight;
     
-    if (rightSpace >= bubbleWidth) {
-      // Position to the right of mascot
-      bubbleLeftX = mascotRightX + clearanceGap;
-      bubbleTop = mascotCenterX > viewportHeight / 2 
-        ? mascotTopY 
-        : mascotTopY + (mascotSize / 2) - (estimatedBubbleHeight / 2);
-    } else if (leftSpace >= bubbleWidth) {
-      // Position to the left of mascot
-      bubbleLeftX = mascotLeftX - bubbleWidth - clearanceGap;
-      bubbleTop = mascotCenterX > viewportHeight / 2 
-        ? mascotTopY 
-        : mascotTopY + (mascotSize / 2) - (estimatedBubbleHeight / 2);
-    } else {
-      // Fallback: position below mascot if no horizontal room
-      bubbleTop = mascotBottomY + clearanceGap;
-    }
-    
-    // Re-clamp positions
-    bubbleTop = Math.max(padding, Math.min(bubbleTop, viewportHeight - estimatedBubbleHeight - padding));
+    // Clamp horizontal position
     bubbleLeftX = Math.max(padding, Math.min(bubbleLeftX, viewportWidth - bubbleWidth - padding));
+    
+    // If no room above, position to the right
+    if (bubbleTop < padding) {
+      const rightSpace = viewportWidth - mascotRightX - padding;
+      if (rightSpace >= bubbleWidth + clearanceGap) {
+        bubbleLeftX = mascotRightX + clearanceGap;
+        bubbleTop = mascotTopY + (mascotSize / 2) - (estimatedBubbleHeight / 2);
+      }
+    }
   }
+  
+  // Final clamp
+  bubbleTop = Math.max(padding, Math.min(bubbleTop, viewportHeight - estimatedBubbleHeight - padding));
+  bubbleLeftX = Math.max(padding, Math.min(bubbleLeftX, viewportWidth - bubbleWidth - padding));
   
   return {
     position: 'fixed',
@@ -488,12 +480,12 @@ export function MagicFloatingText({
         }
       `}</style>
       
-      {/* Unified bubble container - clamped to mascot and follows in real-time */}
+      {/* Unified bubble container - positioned to NEVER overlap mascot */}
       <div
         className="pointer-events-none"
         style={{
           ...livePosition,
-          zIndex: 9999,
+          zIndex: 9990,
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'center',
