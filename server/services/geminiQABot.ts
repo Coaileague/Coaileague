@@ -4,6 +4,7 @@
  */
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
+import { aiActivityService } from './aiActivityService';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -56,6 +57,8 @@ export async function getAiResponse(
         shouldRespond: false,
       };
     }
+
+    aiActivityService.startThinking('HelpAI', { workspaceId, userId, message: 'Processing your question...' });
 
     const model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-exp' });
 
@@ -111,6 +114,8 @@ Remember: You're a helpful AI assistant, not a human. Be honest about your limit
     const costPerMillionTokens = 0.075; // Gemini 2.0 Flash pricing (very cheap!)
     const estimatedCost = (estimatedTokens / 1_000_000) * costPerMillionTokens;
 
+    aiActivityService.complete('HelpAI', { workspaceId, userId, message: 'Response ready' });
+
     return {
       message: text.trim(),
       shouldRespond: true,
@@ -121,6 +126,7 @@ Remember: You're a helpful AI assistant, not a human. Be honest about your limit
     };
   } catch (error) {
     console.error('[Gemini Q&A Bot] Error:', error);
+    aiActivityService.error('HelpAI', { workspaceId, userId, message: 'Processing error' });
     return {
       message: "I'm having trouble processing that right now. Please try rephrasing your question or contact support.",
       shouldRespond: false,

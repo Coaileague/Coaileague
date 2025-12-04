@@ -35,6 +35,7 @@ import { timeEntryRouter } from "./time-entry-routes"; // Universal Time Trackin
 import { gamificationRouter } from "./gamification-api"; // Employee Engagement & Recognition System
 import schedulerRouter from "./routes/schedulerRoutes"; // CoAIleague Autonomous Scheduler API
 import { automationRouter } from "./routes/automation"; // Core Automation (Scheduling, Invoicing, Payroll)
+import automationEventsRouter from "./routes/automation-events"; // Automation Events API
 import { migrationRouter } from "./routes/migration"; // Data Migration from External Platforms
 import { registerHealthRoutes } from "./routes/health"; // Health check monitoring
 import { registerSearchRoutes } from "./routes/searchRoutes"; // AI-Powered Intelligent Search
@@ -2870,6 +2871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/platform", serviceControlRouter);
   // Core Automation routes (Scheduling, Invoicing, Payroll) - REQUIRES AUTH
   app.use('/api/automation', requireAuth, automationRouter);
+  app.use('/api/automation-events', requireAuth, automationEventsRouter);
 
   // Data Migration routes (Import from external platforms) - REQUIRES AUTH
   app.use('/api/migration', requireAuth, migrationRouter);

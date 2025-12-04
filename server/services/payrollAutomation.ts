@@ -12,10 +12,19 @@
  */
 
 import { db } from "../db";
-import { timeEntries, employees, payrollRuns, payrollEntries, workspaces, invoiceLineItems, type TimeEntry } from "@shared/schema";
+import { timeEntries, employees, payrollRuns, payrollEntries, workspaces, invoiceLineItems, employeeBenefits, type TimeEntry } from "@shared/schema";
 import { eq, and, gte, lte, isNull, sql, notInArray, inArray } from "drizzle-orm";
 import { startOfWeek, endOfWeek, subWeeks, format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
 import { aggregatePayrollHours, markEntriesAsPayrolled } from "./automation/payrollHoursAggregator";
+
+const PRE_TAX_BENEFIT_TYPES = ['401k', 'health_insurance', 'dental_insurance', 'vision_insurance'];
+const POST_TAX_BENEFIT_TYPES = ['life_insurance', 'other'];
+
+interface EmployeeDeductions {
+  preTax: number;
+  postTax: number;
+  details: Array<{ type: string; amount: number; isPreTax: boolean }>;
+}
 
 interface PayPeriod {
   start: Date;
@@ -42,6 +51,69 @@ interface PayrollCalculation {
 }
 
 export class PayrollAutomationEngine {
+  
+  /**
+   * Fetch active employee benefit deductions from the database
+   * Calculates per-payroll amounts based on monthly contributions and pay frequency
+   */
+  static async getEmployeeDeductions(
+    employeeId: string,
+    grossPay: number,
+    payPeriodType: 'weekly' | 'bi-weekly' | 'monthly' = 'bi-weekly'
+  ): Promise<EmployeeDeductions> {
+    const payrollsPerMonth: Record<string, number> = {
+      'weekly': 4.33,
+      'bi-weekly': 2.17,
+      'monthly': 1
+    };
+    const divisor = payrollsPerMonth[payPeriodType];
+    
+    const benefits = await db
+      .select()
+      .from(employeeBenefits)
+      .where(
+        and(
+          eq(employeeBenefits.employeeId, employeeId),
+          eq(employeeBenefits.status, 'active')
+        )
+      );
+    
+    let preTax = 0;
+    let postTax = 0;
+    const details: Array<{ type: string; amount: number; isPreTax: boolean }> = [];
+    
+    for (const benefit of benefits) {
+      let amount = 0;
+      
+      if (benefit.benefitType === '401k' && benefit.contributionPercentage) {
+        amount = grossPay * (parseFloat(benefit.contributionPercentage) / 100);
+      } else if (benefit.employeeContribution) {
+        amount = parseFloat(benefit.employeeContribution) / divisor;
+      }
+      
+      if (amount > 0) {
+        const isPreTax = PRE_TAX_BENEFIT_TYPES.includes(benefit.benefitType);
+        
+        if (isPreTax) {
+          preTax += amount;
+        } else {
+          postTax += amount;
+        }
+        
+        details.push({
+          type: benefit.benefitType,
+          amount: parseFloat(amount.toFixed(2)),
+          isPreTax
+        });
+      }
+    }
+    
+    return {
+      preTax: parseFloat(preTax.toFixed(2)),
+      postTax: parseFloat(postTax.toFixed(2)),
+      details
+    };
+  }
   
   /**
    * Auto-detect pay period based on workspace settings
@@ -1274,32 +1346,45 @@ export class PayrollAutomationEngine {
         console.log(`[AI Payroll™] Employee ${employeeSummary.employeeName} will reach SS wage base limit this period - withholding on $${taxableThisPeriod.toFixed(2)} of $${grossPay.toFixed(2)} gross`);
       }
       
-      // Calculate taxes and deductions on gross pay
-      const federalTax = this.calculateFederalTax(grossPay, payPeriod.type);
-      const stateTax = this.calculateStateTax(grossPay);
-      const socialSecurity = this.calculateSocialSecurity(grossPay, ytdWages);
-      // Pass YTD wages for Additional Medicare Tax threshold tracking
-      const medicare = this.calculateMedicare(grossPay, ytdWages);
+      // Fetch employee benefit deductions from database
+      const deductions = await this.getEmployeeDeductions(
+        employeeSummary.employeeId,
+        grossPay,
+        payPeriod.type
+      );
       
-      // Calculate net pay
-      const totalDeductions = federalTax + stateTax + socialSecurity + medicare;
-      const netPay = grossPay - totalDeductions;
+      // Calculate taxable gross (gross - pre-tax deductions)
+      const taxableGrossPay = grossPay - deductions.preTax;
+      
+      // Calculate taxes on taxable gross (after pre-tax deductions)
+      const federalTax = this.calculateFederalTax(taxableGrossPay, payPeriod.type);
+      const stateTax = this.calculateStateTax(taxableGrossPay);
+      const socialSecurity = this.calculateSocialSecurity(taxableGrossPay, ytdWages);
+      const medicare = this.calculateMedicare(taxableGrossPay, ytdWages);
+      
+      // Calculate net pay (gross - all deductions - taxes)
+      const totalTaxes = federalTax + stateTax + socialSecurity + medicare;
+      const netPay = grossPay - deductions.preTax - totalTaxes - deductions.postTax;
+      
+      if (deductions.details.length > 0) {
+        console.log(`[AI Payroll™] ${employeeSummary.employeeName} deductions: Pre-tax $${deductions.preTax}, Post-tax $${deductions.postTax}`);
+      }
       
       calculations.push({
         employeeId: employeeSummary.employeeId,
         employeeName: employeeSummary.employeeName,
         regularHours,
         overtimeHours,
-        holidayHours, // Include holiday hours for QC review
+        holidayHours,
         hourlyRate,
         grossPay: parseFloat(grossPay.toFixed(2)),
-        preTaxDeductions: 0, // TODO: Fetch from employee deductions
-        taxableGrossPay: parseFloat(grossPay.toFixed(2)), // grossPay - preTaxDeductions
+        preTaxDeductions: deductions.preTax,
+        taxableGrossPay: parseFloat(taxableGrossPay.toFixed(2)),
         federalTax,
         stateTax,
         socialSecurity,
         medicare,
-        postTaxDeductions: 0, // TODO: Fetch from employee deductions
+        postTaxDeductions: deductions.postTax,
         netPay: parseFloat(netPay.toFixed(2))
       });
       

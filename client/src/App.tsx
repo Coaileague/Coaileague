@@ -167,6 +167,7 @@ import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { CoAITwinMascot } from "@/components/coai-twin-mascot";
 import { MascotTaskBox } from "@/components/mascot-task-box";
 import { useMascotMode } from "@/hooks/use-mascot-mode";
+import { useAIActivity } from "@/hooks/use-ai-activity";
 import { useMascotPosition } from "@/hooks/use-mascot-position";
 import { useMascotRoaming } from "@/hooks/use-mascot-roaming";
 import { useMascotMouseFollow } from "@/hooks/use-mascot-mouse-follow";
@@ -204,18 +205,26 @@ function MascotRenderer() {
   // Upgrade nudge timer - periodically remind non-subscribers
   const lastNudgeRef = useRef<number>(0);
   
-  // Get mascot mode - loading state handled internally by observer
-  const baseMode = useMascotMode();
+  // Get mascot mode - combines local state with real-time AI activity
+  const localMode = useMascotMode();
+  const { mascotMode: aiActivityMode, isActive: isAIActive, message: aiMessage } = useAIActivity({
+    workspaceId,
+    userId: user?.id,
+  });
   
   // Apply HOLIDAY mode during Christmas season when mascot is idle
   const holiday = getCurrentHoliday();
   const currentMode = useMemo(() => {
+    // AI activity takes priority over local mode when active
+    if (isAIActive && aiActivityMode !== 'IDLE') {
+      return aiActivityMode;
+    }
     // Apply seasonal mode override during holidays
-    if (baseMode === 'IDLE' && holiday?.key === 'christmas') {
+    if (localMode === 'IDLE' && holiday?.key === 'christmas') {
       return 'HOLIDAY';
     }
-    return baseMode;
-  }, [baseMode, holiday]);
+    return localMode;
+  }, [localMode, aiActivityMode, isAIActive, holiday]);
   
   const [location] = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);

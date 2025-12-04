@@ -12,6 +12,7 @@ import { supportTickets, helposFaqs, users } from '@shared/schema';
 import { eq, and, desc, sql } from 'drizzle-orm';
 import { usageMeteringService } from '../billing/usageMetering';
 import { aiBrainService } from '../ai-brain/aiBrainService';
+import { aiActivityService } from '../aiActivityService';
 
 export enum HelpAIState {
   GREETING = 'greeting',
@@ -376,6 +377,12 @@ class HelpAIBotService {
     conversation.lastInteraction = new Date();
     conversation.userQuery = userMessage;
 
+    aiActivityService.startThinking('HelpAI', { 
+      workspaceId, 
+      userId, 
+      message: 'Analyzing your message...' 
+    });
+
     const isIntakeFlow = [
       HelpAIState.INTAKE_SUBJECT,
       HelpAIState.INTAKE_DESCRIPTION,
@@ -503,6 +510,21 @@ class HelpAIBotService {
     });
 
     this.conversations.set(conversationId, conversation);
+
+    if (shouldEscalate) {
+      aiActivityService.setState('ADVISING', 'HelpAI', { 
+        workspaceId, 
+        userId, 
+        message: 'Connecting to support...',
+        duration: 3000 
+      });
+    } else {
+      aiActivityService.complete('HelpAI', { 
+        workspaceId, 
+        userId, 
+        message: 'Response ready' 
+      });
+    }
 
     return {
       response,
