@@ -30,6 +30,7 @@ import { sendMonitoringAlert } from './externalMonitoring';
 import { checkDatabase, checkChatWebSocket, checkStripe } from './healthCheck';
 import { checkExpiringCertifications } from './complianceAlertService';
 import { platformChangeMonitor } from './ai-brain/platformChangeMonitor';
+import { runAllMaintenanceJobs, maintenanceConfig } from './databaseMaintenance';
 
 // ============================================================================
 // IDEMPOTENCY FINGERPRINTING
@@ -1724,6 +1725,23 @@ export function startAutonomousScheduler() {
   console.log('   Schedule: 0 0 * * 0 (every Sunday at midnight)');
   console.log('   Creates weekly AI token overage invoices with idempotency\n');
 
+  // Database Maintenance - Weekly on Sundays at 3 AM
+  cron.schedule(maintenanceConfig.schedule, () => {
+    console.log(`🧹 [DB MAINTENANCE] Scheduled maintenance triggered at ${new Date().toISOString()}`);
+    (async () => {
+      try {
+        const results = await runAllMaintenanceJobs();
+        const successCount = results.filter(r => r.success).length;
+        console.log(`🧹 [DB MAINTENANCE] Complete: ${successCount}/${results.length} jobs successful`);
+      } catch (error) {
+        console.error('🧹 [DB MAINTENANCE] ❌ Maintenance error:', error);
+      }
+    })();
+  });
+  console.log('✅ Database Maintenance Automation:');
+  console.log(`   Schedule: ${maintenanceConfig.schedule} (weekly Sundays 3 AM)`);
+  console.log(`   ${maintenanceConfig.description}\n`);
+
   // Platform Change Monitor - Every 15 minutes
   cron.schedule("*/15 * * * *", () => {
     console.log(`🧠 [AI BRAIN] 🕐 Scheduled platform scan triggered at ${new Date().toISOString()}`);
@@ -1778,6 +1796,7 @@ export const manualTriggers = {
   creditReset: resetMonthlyCredits,
   shiftReminders: async () => { const { processShiftReminders } = await import('./shiftRemindersService'); return processShiftReminders(); },
   platformScan: async () => platformChangeMonitor.triggerManualScan(),
+  databaseMaintenance: runAllMaintenanceJobs,
   aiOverageBilling: async () => {
     const { usageMeteringService } = await import('./billing/usageMetering');
     const { workspaces, billingAuditLog, invoices } = await import('@shared/schema');
