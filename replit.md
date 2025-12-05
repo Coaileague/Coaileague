@@ -46,7 +46,7 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
 - **Heat Map Visualization:** 7x24 grid for staffing intensity, with AI analysis and optimization.
 - **Break Compliance:** 50-state labor law configuration, auto-scheduling, and compliance checking.
 - **AI Brain Platform Awareness:** Registry of 100+ features across 4 families, natural language feature discovery, and diagnostic endpoints.
-- **Automation Jobs:** 12 scheduled jobs for billing, scheduling, payroll, reminders, compliance, email, and platform change monitoring.
+- **Automation Jobs:** 13 scheduled jobs for billing, scheduling, payroll, reminders, compliance, email, platform change monitoring, and database maintenance.
 - **AI Brain Platform Change Monitor:** Autonomous service scanning codebase and services to generate and broadcast AI-summarized change notifications.
 - **Notification System:** Platform updates, support staff alerts, real-time WebSocket delivery, and user notification history.
 - **Support Command Console:** Force-push updates system for support staff with command endpoints and real-time WebSocket broadcast, including mascot orchestration.
@@ -59,8 +59,9 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
 **System Design Choices:**
 - **Modularity:** Composed of 87 backend service modules and 220+ frontend routes.
 - **Type Safety:** 100% LSP clean with zero compilation warnings.
-- **Automation:** Features 12 scheduled autonomous jobs.
-- **Audit Logging:** Comprehensive audit logging with a 365-day retention policy.
+- **Automation:** Features 13 scheduled autonomous jobs including weekly database maintenance.
+- **Audit Logging:** Comprehensive audit logging with 90-day retention; automated weekly archival.
+- **Database Maintenance:** Weekly cleanup automation for audit logs (90d), chat messages (180d), notifications (30d).
 - **Security:** AES-256-GCM encryption, PBKDF2-SHA256 key derivation, RBAC, per-org credential isolation, and credential expiry warnings.
 - **Unified Config Registry:** Single source of truth at `shared/config/registry.ts` with Zod validation.
 
