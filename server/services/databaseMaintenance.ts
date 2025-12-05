@@ -2,9 +2,9 @@
  * Database Maintenance Service
  * ============================
  * Handles periodic cleanup and archival of database records:
- * - Audit log archival (retain 365 days, archive older records)
- * - Chat message cleanup (retain 90 days for non-archived conversations)
- * - Notification trimming (retain 30 days for read notifications)
+ * - Audit log archival (retain 90 days, archive older records)
+ * - Chat message cleanup (retain 180 days for system messages)
+ * - Notification trimming (retain 30 days for cleared/read notifications)
  * - Time entry archival (retain 2 years for completed entries)
  * 
  * All cleanup operations are logged for compliance auditing.
@@ -32,19 +32,19 @@ interface MaintenanceResult {
 }
 
 const RETENTION_PERIODS = {
-  auditLogs: 365,
-  chatMessages: 90,
+  auditLogs: 90,
+  chatMessages: 180,
   notifications: 30,
   timeEntries: 730,
   sessionLogs: 14,
 };
 
-const SYSTEM_WORKSPACE_ID = 'system-maintenance';
+const PLATFORM_WORKSPACE_ID = 'coaileague-platform-workspace';
 
 async function logMaintenanceEvent(result: MaintenanceResult) {
   try {
     await db.insert(billingAuditLog).values({
-      workspaceId: SYSTEM_WORKSPACE_ID,
+      workspaceId: PLATFORM_WORKSPACE_ID,
       eventType: `maintenance_${result.job}`,
       eventCategory: 'system',
       actorType: 'system',
