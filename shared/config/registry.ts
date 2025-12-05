@@ -98,6 +98,62 @@ const NavigationSchema = z.object({
   })),
 });
 
+// Centralized Routes Schema - Single Source of Truth for ALL paths
+const RoutesSchema = z.object({
+  // Core platform routes
+  core: z.object({
+    dashboard: z.string(),
+    settings: z.string(),
+    profile: z.string(),
+    help: z.string(),
+    chat: z.string(),
+    updates: z.string(),
+    contact: z.string(),
+  }),
+  // Authentication routes
+  auth: z.object({
+    login: z.string(),
+    register: z.string(),
+    forgotPassword: z.string(),
+    resetPassword: z.string(),
+    logout: z.string(),
+  }),
+  // People management routes
+  people: z.object({
+    employees: z.string(),
+    employeeDetails: z.string(),
+    clients: z.string(),
+    clientDetails: z.string(),
+  }),
+  // Operations routes
+  operations: z.object({
+    schedule: z.string(),
+    dailySchedule: z.string(),
+    timeTracking: z.string(),
+    workflowApprovals: z.string(),
+  }),
+  // Financial routes
+  financials: z.object({
+    payroll: z.string(),
+    invoices: z.string(),
+    billing: z.string(),
+  }),
+  // Admin routes
+  admin: z.object({
+    platformAdmin: z.string(),
+    rootAdmin: z.string(),
+    automationControl: z.string(),
+    automationAuditLog: z.string(),
+    automationSettings: z.string(),
+  }),
+  // Integration routes
+  integrations: z.object({
+    main: z.string(),
+    quickbooks: z.string(),
+    slack: z.string(),
+  }),
+});
+
 const CopySchema = z.object({
   ui: z.object({
     loading: z.string(),
@@ -153,6 +209,7 @@ const ConfigRegistrySchema = z.object({
   branding: BrandingSchema,
   layout: LayoutSchema,
   navigation: NavigationSchema,
+  routes: RoutesSchema,
   copy: CopySchema,
   services: ServicesSchema,
   features: FeaturesSchema,
@@ -166,6 +223,7 @@ export type Branding = z.infer<typeof BrandingSchema>;
 export type Layout = z.infer<typeof LayoutSchema>;
 export type Module = z.infer<typeof ModuleSchema>;
 export type Navigation = z.infer<typeof NavigationSchema>;
+export type Routes = z.infer<typeof RoutesSchema>;
 export type Copy = z.infer<typeof CopySchema>;
 export type Services = z.infer<typeof ServicesSchema>;
 export type Features = z.infer<typeof FeaturesSchema>;
@@ -279,6 +337,54 @@ export const CONFIG: ConfigRegistry = {
         ],
       },
     ],
+  },
+
+  routes: {
+    core: {
+      dashboard: "/dashboard",
+      settings: "/settings",
+      profile: "/profile",
+      help: "/help",
+      chat: "/chat",
+      updates: "/updates",
+      contact: "/contact",
+    },
+    auth: {
+      login: "/login",
+      register: "/register",
+      forgotPassword: "/forgot-password",
+      resetPassword: "/reset-password",
+      logout: "/logout",
+    },
+    people: {
+      employees: "/employees",
+      employeeDetails: "/employees/:id",
+      clients: "/clients",
+      clientDetails: "/clients/:id",
+    },
+    operations: {
+      schedule: "/schedule",
+      dailySchedule: "/daily-schedule",
+      timeTracking: "/time-tracking",
+      workflowApprovals: "/workflow-approvals",
+    },
+    financials: {
+      payroll: "/payroll",
+      invoices: "/invoices",
+      billing: "/billing",
+    },
+    admin: {
+      platformAdmin: "/platform-admin",
+      rootAdmin: "/root-admin",
+      automationControl: "/automation-control",
+      automationAuditLog: "/automation/audit-log",
+      automationSettings: "/automation/settings",
+    },
+    integrations: {
+      main: "/integrations",
+      quickbooks: "/integrations/quickbooks",
+      slack: "/integrations/slack",
+    },
   },
 
   copy: {
@@ -419,6 +525,44 @@ export function getResponsiveHref(moduleId: string, isMobile: boolean): string {
   const module = getModule(moduleId);
   if (!module) return "/";
   return isMobile && module.mobileHref ? module.mobileHref : module.href;
+}
+
+/**
+ * Get route path from centralized registry
+ * @param category - Route category (core, auth, people, operations, financials, admin, integrations)
+ * @param route - Specific route within category
+ * @param params - Optional params for dynamic routes (e.g., { id: "123" })
+ */
+export function getRoute(
+  category: keyof Routes,
+  route: string,
+  params?: Record<string, string>
+): string {
+  const routes = CONFIG.routes[category] as Record<string, string>;
+  let path = routes[route] || "/";
+  
+  if (params) {
+    Object.entries(params).forEach(([key, value]) => {
+      path = path.replace(`:${key}`, value);
+    });
+  }
+  
+  return path;
+}
+
+/**
+ * Get all routes as flat object for backward compatibility
+ */
+export function getAllRoutes(): Record<string, string> {
+  const allRoutes: Record<string, string> = {};
+  
+  for (const [category, routes] of Object.entries(CONFIG.routes)) {
+    for (const [name, path] of Object.entries(routes as Record<string, string>)) {
+      allRoutes[`${category}.${name}`] = path;
+    }
+  }
+  
+  return allRoutes;
 }
 
 // Export for use across platform
