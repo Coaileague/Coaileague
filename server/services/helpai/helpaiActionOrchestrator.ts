@@ -285,15 +285,16 @@ class HelpaiActionOrchestrator {
       }
     });
 
-    // Send Notification to User - Persisted to database
+    // Send Notification to User - Uses centralized notification state manager
     this.registerAction({
       actionId: 'notifications.send_to_user',
       name: 'Send User Notification',
       category: 'notifications',
-      description: 'Send a persisted notification to a specific user',
-      requiredRoles: ['support', 'admin', 'super_admin', 'manager'],
+      description: 'Send a persisted notification to a specific user via centralized notification engine',
+      requiredRoles: ['support', 'admin', 'super_admin'],
       handler: async (request) => {
         const startTime = Date.now();
+        const { broadcastNotificationToUser } = await import('../../websocket');
         const { targetUserId, title, message, type, actionUrl, relatedEntityType, relatedEntityId, metadata } = request.payload || {};
         
         if (!targetUserId || !title || !message) {
@@ -305,26 +306,27 @@ class HelpaiActionOrchestrator {
           };
         }
 
+        // Insert notification with proper fields
         const [notification] = await db.insert(notifications).values({
           userId: targetUserId,
-          workspaceId: request.workspaceId,
+          workspaceId: request.workspaceId || null,
           type: type || 'system',
           title,
           message,
           actionUrl: actionUrl || null,
           relatedEntityType: relatedEntityType || null,
           relatedEntityId: relatedEntityId || null,
-          metadata: metadata || null,
+          metadata: { ...metadata, sentViaHelpAI: true, sentBy: request.userId },
           createdBy: request.userId,
-          isRead: false
+          isRead: false,
+          clearedAt: null
         }).returning();
 
-        // Broadcast via WebSocket if available
-        if (this.wsBroadcaster) {
-          this.wsBroadcaster({
-            type: 'notification_new',
-            targetUserId,
+        // Broadcast via centralized WebSocket service
+        if (request.workspaceId) {
+          broadcastNotificationToUser(targetUserId, request.workspaceId, 'new_notification', {
             notification,
+            source: 'helpai_orchestrator',
             timestamp: new Date().toISOString()
           });
         }
@@ -340,16 +342,18 @@ class HelpaiActionOrchestrator {
       }
     });
 
-    // Create Maintenance Alert
+    // Create Maintenance Alert - Uses aiNotificationService
     this.registerAction({
       actionId: 'notifications.create_maintenance_alert',
       name: 'Create Maintenance Alert',
       category: 'notifications',
-      description: 'Create a maintenance alert for scheduled downtime',
+      description: 'Create a maintenance alert for scheduled downtime via AI notification service',
       requiredRoles: ['support', 'admin', 'super_admin'],
       handler: async (request) => {
         const startTime = Date.now();
-        const { title, description, severity, scheduledStartTime, scheduledEndTime, affectedServices, isBroadcast } = request.payload || {};
+        const { aiNotificationService } = await import('../aiNotificationService');
+        const { broadcastToAllClients } = await import('../../websocket');
+        const { title, description, severity, scheduledStartTime, scheduledEndTime, affectedServices, isBroadcast, estimatedImpactMinutes } = request.payload || {};
         
         if (!title || !description || !scheduledStartTime || !scheduledEndTime) {
           return {
@@ -360,23 +364,38 @@ class HelpaiActionOrchestrator {
           };
         }
 
-        const [alert] = await db.insert(maintenanceAlerts).values({
-          createdById: request.userId,
+        // Use centralized AI notification service
+        const result = await aiNotificationService.createMaintenanceAlert(request.userId, {
           title,
           description,
           severity: severity || 'info',
           scheduledStartTime: new Date(scheduledStartTime),
           scheduledEndTime: new Date(scheduledEndTime),
           affectedServices: affectedServices || [],
-          isBroadcast: isBroadcast !== false,
-          status: 'scheduled'
-        }).returning();
+          estimatedImpactMinutes,
+          workspaceId: request.workspaceId,
+          isBroadcast: isBroadcast !== false
+        });
 
-        // Broadcast maintenance alert
-        if (this.wsBroadcaster && isBroadcast !== false) {
-          this.wsBroadcaster({
-            type: 'maintenance_alert',
-            alert,
+        if (!result) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Failed to create maintenance alert',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+
+        // Broadcast maintenance alert to all connected clients
+        if (isBroadcast !== false) {
+          broadcastToAllClients({
+            type: 'maintenance_alert_created',
+            alertId: result.id,
+            title,
+            severity: severity || 'info',
+            scheduledStartTime,
+            scheduledEndTime,
+            affectedServices: affectedServices || [],
             timestamp: new Date().toISOString()
           });
         }
@@ -385,14 +404,14 @@ class HelpaiActionOrchestrator {
           success: true,
           actionId: request.actionId,
           message: `Maintenance alert created: ${title}`,
-          data: { alertId: alert.id },
+          data: { alertId: result.id },
           executionTimeMs: Date.now() - startTime,
           broadcastSent: isBroadcast !== false
         };
       }
     });
 
-    // Get Notification Stats for User
+    // Get Notification Stats for User - Uses proper SQL aggregation
     this.registerAction({
       actionId: 'notifications.get_stats',
       name: 'Get Notification Statistics',
@@ -401,14 +420,22 @@ class HelpaiActionOrchestrator {
       requiredRoles: ['support', 'admin', 'super_admin', 'employee'],
       handler: async (request) => {
         const startTime = Date.now();
-        const { sql } = await import('drizzle-orm');
-        const { targetUserId } = request.payload || {};
+        const { sql, isNull } = await import('drizzle-orm');
+        const { targetUserId, workspaceId: targetWorkspaceId } = request.payload || {};
         const userId = targetUserId || request.userId;
+        const workspaceId = targetWorkspaceId || request.workspaceId;
+
+        // Build proper query with workspace scoping for multi-tenant
+        const conditions = [eq(notifications.userId, userId)];
+        if (workspaceId) {
+          conditions.push(eq(notifications.workspaceId, workspaceId));
+        }
 
         const [stats] = await db.select({
           total: sql<number>`count(*)::int`,
           unread: sql<number>`count(*) filter (where ${notifications.isRead} = false)::int`,
-        }).from(notifications).where(eq(notifications.userId, userId));
+          uncleared: sql<number>`count(*) filter (where ${notifications.clearedAt} is null)::int`,
+        }).from(notifications).where(and(...conditions));
 
         return {
           success: true,
@@ -416,25 +443,30 @@ class HelpaiActionOrchestrator {
           message: `Notification stats for user ${userId}`,
           data: {
             userId,
+            workspaceId,
             total: stats?.total || 0,
             unread: stats?.unread || 0,
-            read: (stats?.total || 0) - (stats?.unread || 0)
+            read: (stats?.total || 0) - (stats?.unread || 0),
+            uncleared: stats?.uncleared || 0
           },
           executionTimeMs: Date.now() - startTime
         };
       }
     });
 
-    // Force Clear All Notifications for User
+    // Force Clear All Notifications - Aligns with REST endpoint behavior
     this.registerAction({
       actionId: 'notifications.force_clear_all',
       name: 'Force Clear All Notifications',
       category: 'notifications',
-      description: 'Clear all notifications for a user (support action)',
+      description: 'Clear all notifications for a user (support action) - sets clearedAt and acknowledges alerts',
       requiredRoles: ['support', 'admin', 'super_admin'],
       handler: async (request) => {
         const startTime = Date.now();
-        const { targetUserId } = request.payload || {};
+        const { aiNotificationService } = await import('../aiNotificationService');
+        const { broadcastNotificationToUser } = await import('../../websocket');
+        const { aiBrainAuthorizationService } = await import('../ai-brain/aiBrainAuthorizationService');
+        const { targetUserId, workspaceId: targetWorkspaceId } = request.payload || {};
         
         if (!targetUserId) {
           return {
@@ -445,31 +477,66 @@ class HelpaiActionOrchestrator {
           };
         }
 
+        const workspaceId = targetWorkspaceId || request.workspaceId;
+        const now = new Date();
+
+        // Clear all notifications - set clearedAt for permanent dismissal
+        const conditions = [eq(notifications.userId, targetUserId)];
+        if (workspaceId) {
+          conditions.push(eq(notifications.workspaceId, workspaceId));
+        }
+
         const result = await db.update(notifications)
           .set({ 
             isRead: true, 
-            readAt: new Date(),
-            clearedAt: new Date(),
-            updatedAt: new Date()
+            readAt: now,
+            clearedAt: now,
+            updatedAt: now
           })
-          .where(eq(notifications.userId, targetUserId))
+          .where(and(...conditions))
           .returning({ id: notifications.id });
 
-        // Broadcast notification cleared event
-        if (this.wsBroadcaster) {
-          this.wsBroadcaster({
-            type: 'notifications_cleared',
-            targetUserId,
-            clearedCount: result.length,
-            timestamp: new Date().toISOString()
+        // Acknowledge all active maintenance alerts
+        let alertsCleared = 0;
+        try {
+          const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+          for (const alert of alerts) {
+            await aiNotificationService.acknowledgeMaintenanceAlert(alert.id, targetUserId);
+            alertsCleared++;
+          }
+        } catch (e) {
+          console.warn('[HelpAI] Failed to acknowledge maintenance alerts:', e);
+        }
+
+        // Broadcast notification cleared event via centralized WebSocket
+        if (workspaceId) {
+          broadcastNotificationToUser(targetUserId, workspaceId, 'notification_cleared_all', {
+            cleared: { notifications: result.length, alerts: alertsCleared },
+            unreadCount: 0,
+            unclearedCount: 0,
+            timestamp: now.toISOString()
           });
+        }
+
+        // Log to AI Brain audit trail
+        try {
+          await aiBrainAuthorizationService.logCommandExecution({
+            userId: request.userId,
+            userRole: request.userRole,
+            actionId: 'notifications.force_clear_all',
+            category: 'notifications',
+            parameters: { targetUserId, workspaceId },
+            result: { success: true, cleared: { notifications: result.length, alerts: alertsCleared } }
+          });
+        } catch (logError) {
+          console.warn('[HelpAI] Failed to log to AI Brain audit:', logError);
         }
 
         return {
           success: true,
           actionId: request.actionId,
-          message: `Cleared ${result.length} notifications for user ${targetUserId}`,
-          data: { clearedCount: result.length },
+          message: `Cleared ${result.length} notifications and ${alertsCleared} alerts for user ${targetUserId}`,
+          data: { clearedCount: result.length, alertsCleared },
           executionTimeMs: Date.now() - startTime,
           broadcastSent: true
         };
