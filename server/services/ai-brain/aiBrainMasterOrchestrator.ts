@@ -386,6 +386,7 @@ class AIBrainMasterOrchestrator {
     this.registerFileSystemActions();
     this.registerWorkflowActions();
     this.registerTestRunnerActions();
+    this.registerOnboardingAssistantActions();
     
     // Subscribe to platform events
     this.subscribeToEvents();
@@ -2871,6 +2872,153 @@ class AIBrainMasterOrchestrator {
     });
 
     console.log('[AI Brain Master Orchestrator] Registered test runner actions');
+  }
+
+  // ============================================================================
+  // ONBOARDING ASSISTANT - New org data flow validation
+  // ============================================================================
+
+  private registerOnboardingAssistantActions(): void {
+    helpaiOrchestrator.registerAction({
+      actionId: 'onboarding.run_diagnostics',
+      name: 'Run Org Onboarding Diagnostics',
+      category: 'health',
+      description: 'Run comprehensive diagnostics for a workspace to verify database, file, and routing configuration',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin', 'org_owner', 'org_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId } = request.payload || {};
+        
+        try {
+          const { orgOnboardingAssistant } = await import('./orgOnboardingAssistant');
+          const report = await orgOnboardingAssistant.runDiagnostics(
+            workspaceId || request.workspaceId!
+          );
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Diagnostics complete: ${report.overallStatus}`,
+            data: report,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'onboarding.apply_auto_fixes',
+      name: 'Apply Auto Fixes',
+      category: 'automation',
+      description: 'Apply automatic fixes for detected onboarding issues',
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin', 'org_owner'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId, fixActions } = request.payload || {};
+        
+        try {
+          const { orgOnboardingAssistant } = await import('./orgOnboardingAssistant');
+          const result = await orgOnboardingAssistant.applyAutoFixes(
+            workspaceId || request.workspaceId!,
+            fixActions || []
+          );
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Applied ${result.applied.length} fixes, ${result.failed.length} failed`,
+            data: result,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'onboarding.get_routing_config',
+      name: 'Get Data Routing Config',
+      category: 'system',
+      description: 'Get the data routing configuration for a workspace including database isolation and file paths',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin', 'org_owner', 'org_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId } = request.payload || {};
+        
+        try {
+          const { orgOnboardingAssistant } = await import('./orgOnboardingAssistant');
+          const config = await orgOnboardingAssistant.getDataRoutingConfig(
+            workspaceId || request.workspaceId!
+          );
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Data routing configuration retrieved',
+            data: config,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'onboarding.validate_routing',
+      name: 'Validate Universal Routing',
+      category: 'health',
+      description: 'Validate that all features route correctly to the workspace',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin', 'org_owner', 'org_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { workspaceId } = request.payload || {};
+        
+        try {
+          const { orgOnboardingAssistant } = await import('./orgOnboardingAssistant');
+          const validation = await orgOnboardingAssistant.validateUniversalRouting(
+            workspaceId || request.workspaceId!
+          );
+          
+          return {
+            success: validation.valid,
+            actionId: request.actionId,
+            message: validation.valid 
+              ? 'All features routing correctly' 
+              : `${validation.issues.length} routing issues detected`,
+            data: validation,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered onboarding assistant actions');
   }
 
   // ============================================================================

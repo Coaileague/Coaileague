@@ -91,24 +91,24 @@ const isMobile = typeof window !== 'undefined' && (
 const MOBILE_PADDING_MULTIPLIER = 1.5;
 
 const DEFAULT_CONFIG: AvoidanceConfig = {
-  mascotSize: isMobile ? 60 : 80,
-  scanInterval: 150, // Faster scanning for responsive UI avoidance
-  minSafeDistance: isMobile ? 30 : 20, // Larger safe distance on mobile
+  mascotSize: isMobile ? 90 : 140,
+  scanInterval: 100, // Faster scanning for responsive UI avoidance
+  minSafeDistance: isMobile ? 40 : 35, // Larger safe distance for smarter movement
   preferredEdge: 'any',
   avoidFixedElements: true,
   avoidFocusedElements: true,
   padding: {
-    button: isMobile ? 25 : 15, // Touch targets need more space
-    link: isMobile ? 20 : 12,
-    input: isMobile ? 30 : 20,
-    navigation: isMobile ? 35 : 25,
-    modal: isMobile ? 50 : 40,
-    default: isMobile ? 20 : 15
+    button: isMobile ? 35 : 30, // Extra space around buttons/CTAs
+    link: isMobile ? 25 : 18,
+    input: isMobile ? 35 : 25,
+    navigation: isMobile ? 45 : 35,
+    modal: isMobile ? 60 : 50,
+    default: isMobile ? 30 : 25
   }
 };
 
 const UI_SELECTORS: Record<UIElementType, string> = {
-  button: 'button, [role="button"], input[type="submit"], input[type="button"], [data-testid*="button"], [data-testid*="btn"]',
+  button: 'button, [role="button"], input[type="submit"], input[type="button"], [data-testid*="button"], [data-testid*="btn"], [data-testid*="cta"], [data-testid*="get-started"], [data-testid*="signup"], [data-testid*="login"], .cta-button, .hero-button, [class*="hero-cta"]',
   link: 'a[href], [role="link"], [data-testid*="link"]',
   input: 'input:not([type="hidden"]), textarea, select, [contenteditable="true"], [data-testid*="input"]',
   select: 'select, [role="listbox"], [role="combobox"], [data-testid*="select"]',
@@ -116,12 +116,12 @@ const UI_SELECTORS: Record<UIElementType, string> = {
   navigation: 'nav, [role="navigation"], header nav, .sidebar-nav, [data-testid*="nav"]',
   modal: '[role="dialog"], [role="alertdialog"], .modal, .dialog, [data-testid*="modal"], [data-testid*="dialog"]',
   dialog: 'dialog, [role="dialog"]',
-  popover: '[role="menu"], [role="tooltip"], .popover, .dropdown-menu, [data-testid*="popover"], [data-testid*="dropdown"]',
+  popover: '[role="menu"], [role="tooltip"], .popover, .dropdown-menu, [data-testid*="popover"], [data-testid*="dropdown"], [data-testid*="notification"], [data-testid*="whats-new"], [data-testid="notification-bell"], [data-testid="whats-new-badge"], .notification-popover, .whats-new-popover',
   menu: '[role="menu"], [role="menubar"], .menu, [data-testid*="menu"]',
   sidebar: 'aside, [role="complementary"], .sidebar, [data-testid*="sidebar"]',
   header: 'header, [role="banner"], [data-testid*="header"]',
   footer: 'footer, [role="contentinfo"], [data-testid*="footer"]',
-  fixed: '[style*="position: fixed"], [style*="position:fixed"]',
+  fixed: '[style*="position: fixed"], [style*="position:fixed"], [role="alert"], [role="status"], .notification-badge, .whats-new-badge, .notification-bell',
   sticky: '[style*="position: sticky"], [style*="position:sticky"], .sticky',
   focusable: ':focus, :focus-within'
 };
@@ -129,19 +129,19 @@ const UI_SELECTORS: Record<UIElementType, string> = {
 const PRIORITY_MAP: Record<UIElementType, number> = {
   modal: 100,
   dialog: 100,
-  popover: 90,
+  popover: 95,
   menu: 85,
   focusable: 80,
   input: 70,
   select: 70,
   form: 60,
-  button: 50,
+  button: 65,
   link: 45,
   navigation: 40,
-  header: 30,
+  header: 35,
   footer: 30,
   sidebar: 25,
-  fixed: 20,
+  fixed: 55,
   sticky: 15
 };
 
@@ -210,7 +210,26 @@ class UIAvoidanceSystem {
       'canvas[data-seasonal-effects]',
       '[class*="seasonal"]',
       '[class*="snowflake"]',
-      '[class*="santa"]'
+      '[class*="santa"]',
+      '[data-testid*="whats-new"]',
+      '[data-testid*="notification"]',
+      '[data-testid*="bell"]',
+      '[data-testid="notification-bell"]',
+      '[data-testid="whats-new-badge"]',
+      '[data-testid*="cta"]',
+      '[data-testid*="login"]',
+      '[data-testid*="signup"]',
+      '[data-testid*="get-started"]',
+      '[data-testid*="hero"]',
+      '.notification-badge',
+      '.whats-new-badge',
+      '.notification-bell',
+      '.cta-button',
+      '.hero-button',
+      '[class*="notification-bell"]',
+      '[class*="whats-new"]',
+      '[role="alert"]',
+      '[role="status"]'
     ];
     
     for (const selector of seasonalSelectors) {
