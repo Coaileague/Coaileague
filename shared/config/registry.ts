@@ -205,6 +205,35 @@ const FeaturesSchema = z.object({
   flags: z.array(FeatureFlagSchema),
 });
 
+const BillingTierSchema = z.object({
+  id: z.enum(["free", "starter", "professional", "enterprise"]),
+  name: z.string(),
+  description: z.string(),
+  monthlyPrice: z.number(),
+  annualPrice: z.number(),
+  features: z.array(z.string()),
+  stripeProductId: z.string(),
+  stripePriceIdMonthly: z.string(),
+  stripePriceIdAnnual: z.string(),
+});
+
+const BillingAddonSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  price: z.number(),
+  unit: z.string(),
+  stripeProductId: z.string(),
+  stripePriceId: z.string(),
+});
+
+const BillingSchema = z.object({
+  currency: z.string(),
+  trialDays: z.number(),
+  tiers: z.array(BillingTierSchema),
+  addons: z.array(BillingAddonSchema),
+});
+
 const ConfigRegistrySchema = z.object({
   branding: BrandingSchema,
   layout: LayoutSchema,
@@ -213,6 +242,7 @@ const ConfigRegistrySchema = z.object({
   copy: CopySchema,
   services: ServicesSchema,
   features: FeaturesSchema,
+  billing: BillingSchema,
 });
 
 // ============================================================================
@@ -436,6 +466,77 @@ export const CONFIG: ConfigRegistry = {
       { id: "helpai", name: "HelpAI Orchestration", enabled: true, minimumTier: "professional" },
       { id: "multi-currency", name: "Multi-Currency Support", enabled: true, minimumTier: "enterprise" },
       { id: "sso", name: "Single Sign-On", enabled: true, minimumTier: "enterprise" },
+    ],
+  },
+
+  billing: {
+    currency: "usd",
+    trialDays: 14,
+    tiers: [
+      {
+        id: "free",
+        name: "Free",
+        description: "For small teams getting started",
+        monthlyPrice: 0,
+        annualPrice: 0,
+        features: ["Up to 5 employees", "Basic scheduling", "Time tracking"],
+        stripeProductId: process.env.STRIPE_FREE_PRODUCT_ID || "",
+        stripePriceIdMonthly: process.env.STRIPE_FREE_PRICE_MONTHLY || "",
+        stripePriceIdAnnual: process.env.STRIPE_FREE_PRICE_ANNUAL || "",
+      },
+      {
+        id: "starter",
+        name: "Starter",
+        description: "For growing businesses",
+        monthlyPrice: 29,
+        annualPrice: 290,
+        features: ["Up to 25 employees", "AI scheduling", "Gamification", "Email notifications"],
+        stripeProductId: process.env.STRIPE_STARTER_PRODUCT_ID || "",
+        stripePriceIdMonthly: process.env.STRIPE_STARTER_PRICE_MONTHLY || "",
+        stripePriceIdAnnual: process.env.STRIPE_STARTER_PRICE_ANNUAL || "",
+      },
+      {
+        id: "professional",
+        name: "Professional",
+        description: "For established organizations",
+        monthlyPrice: 79,
+        annualPrice: 790,
+        features: ["Up to 100 employees", "AI payroll", "HelpAI orchestration", "Advanced analytics", "Integrations"],
+        stripeProductId: process.env.STRIPE_PROFESSIONAL_PRODUCT_ID || "",
+        stripePriceIdMonthly: process.env.STRIPE_PROFESSIONAL_PRICE_MONTHLY || "",
+        stripePriceIdAnnual: process.env.STRIPE_PROFESSIONAL_PRICE_ANNUAL || "",
+      },
+      {
+        id: "enterprise",
+        name: "Enterprise",
+        description: "For large organizations",
+        monthlyPrice: 199,
+        annualPrice: 1990,
+        features: ["Unlimited employees", "Multi-currency", "SSO", "Dedicated support", "Custom integrations", "SLA"],
+        stripeProductId: process.env.STRIPE_ENTERPRISE_PRODUCT_ID || "",
+        stripePriceIdMonthly: process.env.STRIPE_ENTERPRISE_PRICE_MONTHLY || "",
+        stripePriceIdAnnual: process.env.STRIPE_ENTERPRISE_PRICE_ANNUAL || "",
+      },
+    ],
+    addons: [
+      {
+        id: "ai-tokens",
+        name: "AI Token Pack",
+        description: "Additional AI processing tokens",
+        price: 10,
+        unit: "1000 tokens",
+        stripeProductId: process.env.STRIPE_AI_TOKENS_PRODUCT_ID || "",
+        stripePriceId: process.env.STRIPE_AI_TOKENS_PRICE_ID || "",
+      },
+      {
+        id: "extra-emails",
+        name: "Email Credits",
+        description: "Additional email sending credits",
+        price: 5,
+        unit: "500 emails",
+        stripeProductId: process.env.STRIPE_EMAIL_CREDITS_PRODUCT_ID || "",
+        stripePriceId: process.env.STRIPE_EMAIL_CREDITS_PRICE_ID || "",
+      },
     ],
   },
 };
