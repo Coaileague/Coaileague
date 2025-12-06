@@ -285,6 +285,197 @@ class HelpaiActionOrchestrator {
       }
     });
 
+    // Send Notification to User - Persisted to database
+    this.registerAction({
+      actionId: 'notifications.send_to_user',
+      name: 'Send User Notification',
+      category: 'notifications',
+      description: 'Send a persisted notification to a specific user',
+      requiredRoles: ['support', 'admin', 'super_admin', 'manager'],
+      handler: async (request) => {
+        const startTime = Date.now();
+        const { targetUserId, title, message, type, actionUrl, relatedEntityType, relatedEntityId, metadata } = request.payload || {};
+        
+        if (!targetUserId || !title || !message) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Required fields: targetUserId, title, message',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+
+        const [notification] = await db.insert(notifications).values({
+          userId: targetUserId,
+          workspaceId: request.workspaceId,
+          type: type || 'system',
+          title,
+          message,
+          actionUrl: actionUrl || null,
+          relatedEntityType: relatedEntityType || null,
+          relatedEntityId: relatedEntityId || null,
+          metadata: metadata || null,
+          createdBy: request.userId,
+          isRead: false
+        }).returning();
+
+        // Broadcast via WebSocket if available
+        if (this.wsBroadcaster) {
+          this.wsBroadcaster({
+            type: 'notification_new',
+            targetUserId,
+            notification,
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        return {
+          success: true,
+          actionId: request.actionId,
+          message: `Notification sent to user ${targetUserId}`,
+          data: { notificationId: notification.id },
+          executionTimeMs: Date.now() - startTime,
+          notificationSent: true
+        };
+      }
+    });
+
+    // Create Maintenance Alert
+    this.registerAction({
+      actionId: 'notifications.create_maintenance_alert',
+      name: 'Create Maintenance Alert',
+      category: 'notifications',
+      description: 'Create a maintenance alert for scheduled downtime',
+      requiredRoles: ['support', 'admin', 'super_admin'],
+      handler: async (request) => {
+        const startTime = Date.now();
+        const { title, description, severity, scheduledStartTime, scheduledEndTime, affectedServices, isBroadcast } = request.payload || {};
+        
+        if (!title || !description || !scheduledStartTime || !scheduledEndTime) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Required fields: title, description, scheduledStartTime, scheduledEndTime',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+
+        const [alert] = await db.insert(maintenanceAlerts).values({
+          createdById: request.userId,
+          title,
+          description,
+          severity: severity || 'info',
+          scheduledStartTime: new Date(scheduledStartTime),
+          scheduledEndTime: new Date(scheduledEndTime),
+          affectedServices: affectedServices || [],
+          isBroadcast: isBroadcast !== false,
+          status: 'scheduled'
+        }).returning();
+
+        // Broadcast maintenance alert
+        if (this.wsBroadcaster && isBroadcast !== false) {
+          this.wsBroadcaster({
+            type: 'maintenance_alert',
+            alert,
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        return {
+          success: true,
+          actionId: request.actionId,
+          message: `Maintenance alert created: ${title}`,
+          data: { alertId: alert.id },
+          executionTimeMs: Date.now() - startTime,
+          broadcastSent: isBroadcast !== false
+        };
+      }
+    });
+
+    // Get Notification Stats for User
+    this.registerAction({
+      actionId: 'notifications.get_stats',
+      name: 'Get Notification Statistics',
+      category: 'notifications',
+      description: 'Get notification counts and statistics for a user',
+      requiredRoles: ['support', 'admin', 'super_admin', 'employee'],
+      handler: async (request) => {
+        const startTime = Date.now();
+        const { sql } = await import('drizzle-orm');
+        const { targetUserId } = request.payload || {};
+        const userId = targetUserId || request.userId;
+
+        const [stats] = await db.select({
+          total: sql<number>`count(*)::int`,
+          unread: sql<number>`count(*) filter (where ${notifications.isRead} = false)::int`,
+        }).from(notifications).where(eq(notifications.userId, userId));
+
+        return {
+          success: true,
+          actionId: request.actionId,
+          message: `Notification stats for user ${userId}`,
+          data: {
+            userId,
+            total: stats?.total || 0,
+            unread: stats?.unread || 0,
+            read: (stats?.total || 0) - (stats?.unread || 0)
+          },
+          executionTimeMs: Date.now() - startTime
+        };
+      }
+    });
+
+    // Force Clear All Notifications for User
+    this.registerAction({
+      actionId: 'notifications.force_clear_all',
+      name: 'Force Clear All Notifications',
+      category: 'notifications',
+      description: 'Clear all notifications for a user (support action)',
+      requiredRoles: ['support', 'admin', 'super_admin'],
+      handler: async (request) => {
+        const startTime = Date.now();
+        const { targetUserId } = request.payload || {};
+        
+        if (!targetUserId) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Required field: targetUserId',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+
+        const result = await db.update(notifications)
+          .set({ 
+            isRead: true, 
+            readAt: new Date(),
+            clearedAt: new Date(),
+            updatedAt: new Date()
+          })
+          .where(eq(notifications.userId, targetUserId))
+          .returning({ id: notifications.id });
+
+        // Broadcast notification cleared event
+        if (this.wsBroadcaster) {
+          this.wsBroadcaster({
+            type: 'notifications_cleared',
+            targetUserId,
+            clearedCount: result.length,
+            timestamp: new Date().toISOString()
+          });
+        }
+
+        return {
+          success: true,
+          actionId: request.actionId,
+          message: `Cleared ${result.length} notifications for user ${targetUserId}`,
+          data: { clearedCount: result.length },
+          executionTimeMs: Date.now() - startTime,
+          broadcastSent: true
+        };
+      }
+    });
+
     // Broadcast Message
     this.registerAction({
       actionId: 'support.broadcast',
