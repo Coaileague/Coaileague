@@ -585,6 +585,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // WebSocket broadcast for real-time client updates
+      // Get updated counts after clearing all notifications
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { markedRead: { platformUpdates: platformUpdatesMarked, notifications: notificationsMarked, alerts: alertsMarked } }, 0);
       broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: counts.unread, platformUpdates: 0, total: counts.unread, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, counts.unread);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
