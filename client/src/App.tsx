@@ -115,6 +115,9 @@ import PrivateMessages from "@/pages/private-messages";
 import Training from "@/pages/training-os";
 import Budgeting from "@/pages/budgeting";
 import AIIntegrations from "@/pages/ai-integrations";
+import EmployeeRecognition from "@/pages/employee-recognition";
+import AlertConfiguration from "@/pages/alert-configuration";
+import AccountingIntegrations from "@/pages/accounting-integrations";
 import Records from "@/pages/records";
 import Insights from "@/pages/insights";
 import CommunicationFamilyPage from "@/pages/category-communication";
@@ -835,6 +838,9 @@ function AppContent() {
               <Route path="/training" component={Training} />
               <Route path="/budgeting" component={Budgeting} />
               <Route path="/ai-integrations" component={AIIntegrations} />
+              <Route path="/employee-recognition" component={EmployeeRecognition} />
+              <Route path="/alert-configuration" component={AlertConfiguration} />
+              <Route path="/accounting-integrations" component={AccountingIntegrations} />
               <Route path="/records" component={Records} />
               <Route path="/insights" component={Insights} />
 

@@ -371,6 +371,38 @@ export class GamificationService {
     await db.update(employeePoints)
       .set({ pointsThisMonth: 0, updatedAt: new Date() });
   }
+
+  /**
+   * Get recent recognition feed
+   */
+  async getRecognitionFeed(workspaceId: string, limit: number = 20): Promise<any[]> {
+    const feed = await db.select({
+      id: employeeAchievements.id,
+      employeeId: employeeAchievements.employeeId,
+      achievementId: employeeAchievements.achievementId,
+      earnedAt: employeeAchievements.earnedAt,
+      employeeFirstName: employees.firstName,
+      employeeLastName: employees.lastName,
+      achievementName: achievements.name,
+      achievementIcon: achievements.icon,
+      pointsEarned: achievements.pointsValue,
+    })
+    .from(employeeAchievements)
+    .innerJoin(employees, eq(employeeAchievements.employeeId, employees.id))
+    .innerJoin(achievements, eq(employeeAchievements.achievementId, achievements.id))
+    .where(eq(employeeAchievements.workspaceId, workspaceId))
+    .orderBy(desc(employeeAchievements.earnedAt))
+    .limit(limit);
+
+    return feed.map(item => ({
+      id: item.id,
+      employeeName: `${item.employeeFirstName || ''} ${item.employeeLastName || ''}`.trim(),
+      achievementName: item.achievementName,
+      achievementIcon: item.achievementIcon || 'trophy',
+      pointsEarned: item.pointsEarned || 0,
+      earnedAt: item.earnedAt,
+    }));
+  }
 }
 
 export const gamificationService = new GamificationService();
