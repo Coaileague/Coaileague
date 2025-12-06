@@ -892,6 +892,11 @@ function AppContent() {
               <Route path="/automation/audit-log" component={AutomationAuditLog} />
               <Route path="/automation/settings" component={AutomationSettings} />
               <Route path="/ai/brain" component={AIBrainDashboard} />
+              <Route path="/trinity-insights">
+                <PlatformAdminRoute>
+                  <TrinityInsights />
+                </PlatformAdminRoute>
+              </Route>
               <Route path="/system-health">
                 <PlatformAdminRoute>
                   <SystemHealth />
@@ -1072,6 +1077,11 @@ function AppContent() {
                 <Route path="/support/console" component={SupportCommandConsole} />
                 <Route path="/ai/brain" component={AIBrainDashboard} />
                 <Route path="/support/ai-console" component={SupportAIConsole} />
+                <Route path="/trinity-insights">
+                  <PlatformAdminRoute>
+                    <TrinityInsights />
+                  </PlatformAdminRoute>
+                </Route>
                 <Route path="/system-health">
                   <PlatformAdminRoute>
                     <SystemHealth />

@@ -30,6 +30,7 @@ import { billingRouter } from "./billing-api"; // Billing API routes
 import { aiBrainRouter } from "./ai-brain-routes"; // Unified AI Brain System
 import { helpaiRouter } from "./helpai-routes"; // HelpAI Orchestration System (Phases 2-5)
 import { registerFaqRoutes } from "./faq-routes"; // HelpAI FAQ routes
+import trinityInsightsRouter from "./routes/trinityInsightsRoutes"; // Trinity AI Business Intelligence
 import integrationRouter from "./integrationRoutes"; // Partner Integration OAuth routes
 import { timeEntryRouter } from "./time-entry-routes"; // Universal Time Tracking & Clock System
 import { gamificationRouter } from "./gamification-api"; // Employee Engagement & Recognition System
@@ -2987,6 +2988,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register HelpAI FAQ routes (AI-powered FAQ system with semantic search)
   registerFaqRoutes(app);
 
+  // Register Trinity AI Business Intelligence routes
+  app.use("/api/trinity", trinityInsightsRouter);
   // ============================================================================
   // AUTH ROUTES
   // ============================================================================

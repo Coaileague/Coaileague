@@ -26,9 +26,9 @@ router.get('/insights', async (req: Request, res: Response) => {
 
     let insights;
     if (workspaceId) {
-      insights = aiAnalyticsEngine.getInsights(workspaceId, limit);
+      insights = await aiAnalyticsEngine.getInsights(workspaceId, limit);
     } else {
-      insights = aiAnalyticsEngine.getAllInsightsForUser(userId, limit);
+      insights = await aiAnalyticsEngine.getAllInsightsForUser(userId, limit);
     }
 
     res.json({
@@ -54,7 +54,7 @@ router.post('/insights/:id/read', async (req: Request, res: Response) => {
     }
     
     const insightId = req.params.id;
-    const success = aiAnalyticsEngine.markInsightRead(insightId);
+    const success = await aiAnalyticsEngine.markInsightRead(insightId);
 
     if (success) {
       res.json({ success: true, message: 'Insight marked as read' });

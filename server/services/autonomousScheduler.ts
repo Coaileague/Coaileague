@@ -1952,6 +1952,20 @@ export const manualTriggers = {
   shiftReminders: async () => { const { processShiftReminders } = await import('./shiftRemindersService'); return processShiftReminders(); },
   platformScan: async () => platformChangeMonitor.triggerManualScan(),
   databaseMaintenance: runAllMaintenanceJobs,
+  trinityProactiveScan: async () => {
+    const { aiAnalyticsEngine } = await import('./ai-brain/aiAnalyticsEngine');
+    const allWorkspaces = await db.select().from(workspaces).where(eq(workspaces.isSuspended, false));
+    let totalInsights = 0;
+    for (const ws of allWorkspaces.slice(0, 10)) { // Limit to 10 workspaces per scan
+      try {
+        const insights = await aiAnalyticsEngine.runProactiveScan(ws.id);
+        totalInsights += insights.length;
+      } catch (e) {
+        console.warn(`[Trinity Scan] Failed for workspace ${ws.id}:`, e);
+      }
+    }
+    return { workspacesScanned: Math.min(allWorkspaces.length, 10), insightsGenerated: totalInsights };
+  },
   aiOverageBilling: async () => {
     const { usageMeteringService } = await import('./billing/usageMetering');
     const { workspaces, billingAuditLog, invoices } = await import('@shared/schema');

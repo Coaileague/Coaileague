@@ -6,41 +6,106 @@
  * - See what Trinity has been working on
  * - Get business recommendations
  * - Link to relevant actions/features
+ * - Trigger manual proactive scans
  */
 
-import { useState, useEffect } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { apiRequest } from '@/lib/queryClient';
+import { useState } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { queryClient, apiRequest } from '@/lib/queryClient';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
-import { Sparkles, ArrowRight, Zap } from 'lucide-react';
+import { Sparkles, ArrowRight, Zap, RefreshCw, Check, AlertTriangle, Lightbulb, Trophy, Brain } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
 
 interface TrinityInsight {
   id: string;
-  message: string;
+  workspaceId: string;
+  userId?: string;
   type: 'advice' | 'alert' | 'recommendation' | 'achievement' | 'insight';
   category: string;
-  createdAt: Date;
+  title: string;
+  message: string;
+  rationale?: string;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  confidence: number;
   actionUrl?: string;
   actionLabel?: string;
+  isRead: boolean;
+  createdAt: string;
+  expiresAt?: string;
+}
+
+interface TrinityStatus {
+  available: boolean;
+  features: {
+    preActionReasoning: boolean;
+    postActionAnalysis: boolean;
+    proactiveScanning: boolean;
+    insightPersistence: boolean;
+  };
 }
 
 export default function TrinityInsights() {
-  const [insights, setInsights] = useState<TrinityInsight[]>([]);
+  const { toast } = useToast();
+  const [selectedType, setSelectedType] = useState<string | null>(null);
 
-  // Fetch Trinity insights from localStorage or API
-  useEffect(() => {
-    const stored = localStorage.getItem('trinity_insights');
-    if (stored) {
-      try {
-        setInsights(JSON.parse(stored));
-      } catch (e) {
-        console.error('Failed to parse stored insights:', e);
-      }
+  const { data: insightsData, isLoading, refetch } = useQuery<{ insights: TrinityInsight[] }>({
+    queryKey: ['/api/trinity/insights'],
+    refetchInterval: 30000,
+  });
+
+  const { data: statusData } = useQuery<TrinityStatus>({
+    queryKey: ['/api/trinity/status'],
+  });
+
+  const scanMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest('POST', '/api/trinity/scan');
+      return response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Scan Complete',
+        description: `Found ${data.insights?.length || 0} new insights`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/trinity/insights'] });
+    },
+    onError: () => {
+      toast({
+        title: 'Scan Failed',
+        description: 'Could not complete proactive scan',
+        variant: 'destructive',
+      });
+    },
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: async (insightId: string) => {
+      const response = await apiRequest('POST', `/api/trinity/insights/${insightId}/read`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/trinity/insights'] });
+    },
+  });
+
+  const insights = insightsData?.insights || [];
+  const filteredInsights = selectedType 
+    ? insights.filter(i => i.type === selectedType)
+    : insights;
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'advice': return <Lightbulb className="w-4 h-4" />;
+      case 'alert': return <AlertTriangle className="w-4 h-4" />;
+      case 'recommendation': return <Brain className="w-4 h-4" />;
+      case 'achievement': return <Trophy className="w-4 h-4" />;
+      case 'insight': return <Sparkles className="w-4 h-4" />;
+      default: return <Sparkles className="w-4 h-4" />;
     }
-  }, []);
+  };
 
   const getTypeColor = (type: string) => {
     switch (type) {
@@ -50,6 +115,16 @@ export default function TrinityInsights() {
       case 'achievement': return 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200';
       case 'insight': return 'bg-amber-100 dark:bg-amber-900 text-amber-700 dark:text-amber-200';
       default: return 'bg-gray-100 dark:bg-gray-900 text-gray-700 dark:text-gray-200';
+    }
+  };
+
+  const getRiskColor = (risk: string) => {
+    switch (risk) {
+      case 'critical': return 'border-red-500';
+      case 'high': return 'border-orange-500';
+      case 'medium': return 'border-yellow-500';
+      case 'low': return 'border-green-500';
+      default: return 'border-gray-300';
     }
   };
 
@@ -68,56 +143,110 @@ export default function TrinityInsights() {
         <div className="mb-8 text-center">
           <div className="flex items-center justify-center gap-2 mb-4">
             <Sparkles className="w-8 h-8 text-purple-600 dark:text-purple-400" />
-            <h1 className="text-3xl md:text-4xl font-bold">Trinity Insights</h1>
+            <h1 className="text-3xl md:text-4xl font-bold" data-testid="text-page-title">Trinity Insights</h1>
           </div>
-          <p className="text-secondary text-lg">
-            Everything Trinity has been tracking and recommending for your success
+          <p className="text-muted-foreground text-lg">
+            AI-powered business intelligence from your workforce data
           </p>
+          
+          {/* Trinity Status */}
+          <div className="mt-4 flex items-center justify-center gap-2">
+            <Badge variant={statusData?.available ? 'default' : 'secondary'}>
+              {statusData?.available ? 'AI Connected' : 'AI Offline'}
+            </Badge>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => scanMutation.mutate()}
+              disabled={scanMutation.isPending || !statusData?.available}
+              data-testid="button-scan"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${scanMutation.isPending ? 'animate-spin' : ''}`} />
+              {scanMutation.isPending ? 'Scanning...' : 'Run Scan'}
+            </Button>
+          </div>
         </div>
 
         {/* Filter badges */}
         <div className="flex gap-2 mb-8 flex-wrap justify-center">
-          {Object.entries(typeLabels).map(([key, label]) => (
-            <Badge
-              key={key}
-              variant="outline"
-              className="cursor-pointer hover:bg-primary/10 transition-colors"
-            >
-              {label}
-            </Badge>
-          ))}
+          <Badge
+            variant={selectedType === null ? 'default' : 'outline'}
+            className="cursor-pointer hover-elevate"
+            onClick={() => setSelectedType(null)}
+            data-testid="filter-all"
+          >
+            All ({insights.length})
+          </Badge>
+          {Object.entries(typeLabels).map(([key, label]) => {
+            const count = insights.filter(i => i.type === key).length;
+            return (
+              <Badge
+                key={key}
+                variant={selectedType === key ? 'default' : 'outline'}
+                className="cursor-pointer hover-elevate"
+                onClick={() => setSelectedType(selectedType === key ? null : key)}
+                data-testid={`filter-${key}`}
+              >
+                {getTypeIcon(key)}
+                <span className="ml-1">{label} ({count})</span>
+              </Badge>
+            );
+          })}
         </div>
 
         {/* Insights grid */}
-        {insights.length > 0 ? (
+        {isLoading ? (
+          <div className="flex items-center justify-center h-64">
+            <RefreshCw className="w-8 h-8 animate-spin text-muted-foreground" />
+          </div>
+        ) : filteredInsights.length > 0 ? (
           <ScrollArea className="h-[600px] rounded-lg border">
             <div className="p-6 space-y-4">
-              {insights
+              {filteredInsights
                 .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .map((insight) => (
                   <Card
                     key={insight.id}
-                    className="p-4 border-l-4 hover:shadow-md transition-shadow cursor-default"
-                    style={{
-                      borderColor: insight.type === 'advice' ? '#3b82f6' : 
-                                   insight.type === 'alert' ? '#ef4444' :
-                                   insight.type === 'recommendation' ? '#a855f7' :
-                                   insight.type === 'achievement' ? '#10b981' :
-                                   '#f59e0b'
-                    }}
+                    className={`p-4 border-l-4 hover:shadow-md transition-shadow cursor-default ${getRiskColor(insight.riskLevel)} ${insight.isRead ? 'opacity-75' : ''}`}
+                    data-testid={`card-insight-${insight.id}`}
                   >
                     <div className="flex items-start justify-between gap-4 mb-2">
-                      <Badge className={getTypeColor(insight.type)}>
-                        {typeLabels[insight.type]}
-                      </Badge>
-                      <span className="text-xs text-secondary whitespace-nowrap">
-                        {new Date(insight.createdAt).toLocaleDateString()}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getTypeColor(insight.type)}>
+                          {getTypeIcon(insight.type)}
+                          <span className="ml-1">{typeLabels[insight.type]}</span>
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                          {Math.round(insight.confidence * 100)}% confidence
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {!insight.isRead && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => markReadMutation.mutate(insight.id)}
+                            data-testid={`button-mark-read-${insight.id}`}
+                          >
+                            <Check className="w-4 h-4" />
+                          </Button>
+                        )}
+                        <span className="text-xs text-muted-foreground whitespace-nowrap">
+                          {new Date(insight.createdAt).toLocaleDateString()}
+                        </span>
+                      </div>
                     </div>
 
-                    <p className="text-sm leading-relaxed mb-3 dark:text-gray-200">
+                    <h3 className="font-semibold mb-1">{insight.title}</h3>
+                    <p className="text-sm leading-relaxed mb-2 dark:text-gray-200">
                       {insight.message}
                     </p>
+
+                    {insight.rationale && (
+                      <p className="text-xs text-muted-foreground italic mb-3">
+                        {insight.rationale}
+                      </p>
+                    )}
 
                     {insight.actionUrl && (
                       <Button
@@ -137,42 +266,51 @@ export default function TrinityInsights() {
           </ScrollArea>
         ) : (
           <Card className="p-12 text-center">
-            <Zap className="w-12 h-12 text-secondary mx-auto mb-4" />
-            <p className="text-secondary text-lg mb-4">
-              No insights yet. Trinity will start tracking things as you use the platform.
+            <Zap className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground text-lg mb-4">
+              No insights yet. Trinity will start analyzing your data as you use the platform.
             </p>
-            <Button asChild>
-              <a href="/dashboard">Return to Dashboard</a>
-            </Button>
+            {statusData?.available && (
+              <Button onClick={() => scanMutation.mutate()} disabled={scanMutation.isPending}>
+                <RefreshCw className={`w-4 h-4 mr-2 ${scanMutation.isPending ? 'animate-spin' : ''}`} />
+                Run First Scan
+              </Button>
+            )}
           </Card>
         )}
 
         {/* Stats */}
         {insights.length > 0 && (
-          <div className="mt-8 grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="mt-8 grid grid-cols-2 md:grid-cols-5 gap-4">
             <Card className="p-4 text-center">
               <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                 {insights.length}
               </div>
-              <p className="text-xs text-secondary mt-1">Total Insights</p>
+              <p className="text-xs text-muted-foreground mt-1">Total</p>
             </Card>
             <Card className="p-4 text-center">
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {insights.filter(i => i.type === 'advice').length}
               </div>
-              <p className="text-xs text-secondary mt-1">Advice</p>
+              <p className="text-xs text-muted-foreground mt-1">Advice</p>
+            </Card>
+            <Card className="p-4 text-center">
+              <div className="text-2xl font-bold text-red-600 dark:text-red-400">
+                {insights.filter(i => i.type === 'alert').length}
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">Alerts</p>
             </Card>
             <Card className="p-4 text-center">
               <div className="text-2xl font-bold text-purple-600 dark:text-purple-400">
                 {insights.filter(i => i.type === 'recommendation').length}
               </div>
-              <p className="text-xs text-secondary mt-1">Recommendations</p>
+              <p className="text-xs text-muted-foreground mt-1">Recommendations</p>
             </Card>
             <Card className="p-4 text-center">
               <div className="text-2xl font-bold text-green-600 dark:text-green-400">
                 {insights.filter(i => i.type === 'achievement').length}
               </div>
-              <p className="text-xs text-secondary mt-1">Achievements</p>
+              <p className="text-xs text-muted-foreground mt-1">Achievements</p>
             </Card>
           </div>
         )}
