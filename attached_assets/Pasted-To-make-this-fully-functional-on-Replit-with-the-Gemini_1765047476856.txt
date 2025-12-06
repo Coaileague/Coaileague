@@ -1,0 +1,256 @@
+To make this fully functional on Replit with the Gemini API as the brain and FastAPI as the interface, I will provide the complete, copy-pasteable file structure.
+
+This setup replaces the "Mock" AI with the real Google Gemini API.
+
+1. Dependencies (requirements.txt)
+Create this file to tell Replit what to install.
+
+Plaintext
+
+fastapi
+uvicorn
+sqlalchemy
+google-generativeai
+python-multipart
+pydantic
+requests
+2. The Database (database.py)
+Standard SQLite setup for Replit.
+
+Python
+
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker, declarative_base
+
+# Replit uses SQLite by default. 
+SQLALCHEMY_DATABASE_URL = "sqlite:///./ai_brain.db"
+
+engine = create_engine(
+    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False}
+)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+Base = declarative_base()
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+3. The Data Models (models.py)
+Defines your tables for Tools and Workflows.
+
+Python
+
+from sqlalchemy import Column, String, Integer, JSON, Boolean, DateTime, ForeignKey
+from sqlalchemy.sql import func
+from database import Base
+
+class ToolDefinition(Base):
+    __tablename__ = 'tool_definitions'
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False)
+    description = Column(String, nullable=False)
+    # Stores the JSON schema for validation
+    parameters_schema = Column(JSON, nullable=False) 
+    is_active = Column(Boolean, default=True)
+
+class Workflow(Base):
+    __tablename__ = 'workflows'
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, index=True)
+    request_text = Column(String)
+    status = Column(String, default="pending") # pending, running, completed, failed
+    plan_data = Column(JSON) # Stores the AI's generated plan
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+4. The Actual Tools (tools_impl.py)
+This file contains the real Python functions your AI will call. Gemini will "see" these functions and decide when to run them.
+
+Python
+
+# This is the "Hand" of the AI.
+import json
+
+def send_email_notification(recipient: str, subject: str, body: str):
+    """
+    Sends an email notification to a client or team member.
+    """
+    # In a real app, you would use SMTP or SendGrid here.
+    print(f"\n📧 [SYSTEM ACTION] Sending Email to {recipient}")
+    print(f"   Subject: {subject}")
+    print(f"   Body: {body}\n")
+    return {"status": "sent", "recipient": recipient}
+
+def query_database(query_string: str):
+    """
+    Runs a read-only SQL query to fetch data (e.g., invoice status).
+    """
+    print(f"\n🔍 [SYSTEM ACTION] Querying DB: {query_string}")
+    # Mock return data for demonstration
+    if "invoice" in query_string.lower():
+        return {"results": [{"invoice_id": "INV-101", "amount": 500, "status": "UNPAID"}]}
+    return {"results": []}
+
+# A map of function_name -> function_object for the executor to use
+TOOL_BS = {
+    "send_email_notification": send_email_notification,
+    "query_database": query_database
+}
+
+# The list of functions to pass to Gemini so it knows they exist
+AVAILABLE_TOOLS = [send_email_notification, query_database]
+5. The AI Brain Service (services/ai_engine.py)
+This service uses google.generativeai to intelligently plan and execute.
+
+Python
+
+import os
+import google.generativeai as genai
+from sqlalchemy.orm import Session
+from models import Workflow
+from tools_impl import AVAILABLE_TOOLS, TOOL_BS
+
+# CONFIGURATION: Get API Key from Replit Secrets (Tools pane on left -> Secrets)
+# You must add GEMINI_API_KEY to your Replit Secrets.
+API_KEY = os.environ.get("GEMINI_API_KEY")
+
+if API_KEY:
+    genai.configure(api_key=API_KEY)
+else:
+    print("⚠️ WARNING: GEMINI_API_KEY not found in environment variables.")
+
+class AIEngineService:
+    def __init__(self, db: Session):
+        self.db = db
+        # Initialize Gemini with our Tools
+        self.model = genai.GenerativeModel(
+            model_name='gemini-1.5-flash', # Fast and capable model
+            tools=AVAILABLE_TOOLS
+        )
+
+    def process_request(self, user_id: int, request_text: str):
+        """
+        Takes a user request, lets Gemini think, calls tools, and saves the result.
+        """
+        # 1. Create Workflow Record
+        workflow = Workflow(user_id=user_id, request_text=request_text, status="running")
+        self.db.add(workflow)
+        self.db.commit()
+
+        # 2. Start Chat with Automatic Function Calling
+        # enable_automatic_function_calling=True means Gemini executes the Python functions 
+        # inside tools_impl.py automatically when it needs to!
+        chat = self.model.start_chat(enable_automatic_function_calling=True)
+
+        try:
+            # 3. Send the user request to the Brain
+            response = chat.send_message(request_text)
+            
+            # 4. Save the result
+            workflow.status = "completed"
+            workflow.plan_data = {
+                "ai_response": response.text,
+                "history": [
+                    {"role": p.role, "text": p.parts[0].text} 
+                    for p in chat.history if p.parts
+                ]
+            }
+            self.db.commit()
+            return workflow
+
+        except Exception as e:
+            workflow.status = "failed"
+            workflow.plan_data = {"error": str(e)}
+            self.db.commit()
+            raise e
+6. The API Entry Point (main.py)
+This wraps everything in FastAPI so you can talk to it via HTTP.
+
+Python
+
+import os
+import uvicorn
+from fastapi import FastAPI, Depends, HTTPException
+from sqlalchemy.orm import Session
+from pydantic import BaseModel
+
+from database import engine, Base, get_db
+from services.ai_engine import AIEngineService
+import models
+
+# Initialize DB Tables
+Base.metadata.create_all(bind=engine)
+
+app = FastAPI(title="AI Orchestration Brain")
+
+# --- Pydantic Models for API Input/Output ---
+class WorkflowRequest(BaseModel):
+    user_id: int
+    request_text: str
+
+class WorkflowResponse(BaseModel):
+    workflow_id: int
+    status: str
+    ai_response: str
+
+# --- API Endpoints ---
+
+@app.get("/")
+def home():
+    return {"message": "AI Brain is Online 🧠. Go to /docs to test."}
+
+@app.post("/workflow/process", response_model=WorkflowResponse)
+def process_workflow(request: WorkflowRequest, db: Session = Depends(get_db)):
+    """
+    The main endpoint. Provide a text request, and the AI will execute it.
+    """
+    if not os.environ.get("GEMINI_API_KEY"):
+        raise HTTPException(status_code=500, detail="GEMINI_API_KEY not set in Replit Secrets.")
+    
+    brain = AIEngineService(db)
+    
+    try:
+        # This triggers the AI -> Tool -> AI loop
+        workflow = brain.process_request(request.user_id, request.request_text)
+        
+        return {
+            "workflow_id": workflow.id,
+            "status": workflow.status,
+            # Handle cases where response might be empty if only tools ran
+            "ai_response": workflow.plan_data.get("ai_response", "Actions executed successfully.")
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+# Run the app
+if __name__ == "__main__":
+    uvicorn.run(app, host="0.0.0.0", port=8080)
+⚡ How to Run on Replit
+Add Secret: Go to the "Tools" pane (left side) -> "Secrets". Add a new secret with key GEMINI_API_KEY and your actual Google Gemini API key.
+
+Paste Files: Create the 6 files listed above (requirements.txt, database.py, models.py, tools_impl.py, services/ai_engine.py, main.py).
+
+Install: Replit should automatically detect requirements.txt and install packages when you hit Run. If not, type pip install -r requirements.txt in the Shell.
+
+Run: Click the big "Run" button.
+
+Test:
+
+Replit will open a "Webview" window.
+
+Add /docs to the end of that URL (e.g., https://your-repl-name.repl.co/docs).
+
+Click on POST /workflow/process -> Try it out.
+
+Enter a JSON request:
+
+JSON
+
+{
+  "user_id": 1,
+  "request_text": "Check the database for unpaid invoices and send an email to admin@example.com about them."
+}
+Execute. You will see the logs in the console showing the AI calling query_database then send_email_notification automatically!
+
+Would you like me to add a CommitmentManager check inside the tools_impl.py functions to simulate needing approval before sending that email?
