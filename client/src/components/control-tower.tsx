@@ -21,9 +21,15 @@ import {
   XCircle,
   Clock,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Brain,
+  Pause,
+  Play
 } from "lucide-react";
 import { Link } from "wouter";
+import { useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface HealthMetric {
   name: string;
@@ -44,6 +50,29 @@ interface WorkforceMetric {
   schedulingGaps: number;
   pendingApprovals: number;
   complianceIssues: number;
+}
+
+interface AiBrainService {
+  name: string;
+  status: 'running' | 'paused' | 'stopped' | 'error' | 'starting';
+  pausedBy?: string | null;
+  pauseReason?: string | null;
+}
+
+interface AiBrainHealth {
+  overall: 'healthy' | 'degraded' | 'unhealthy';
+  services: AiBrainService[];
+  summary: {
+    runningServices: number;
+    pausedServices: number;
+    errorServices: number;
+    totalServices: number;
+  };
+  workflows?: {
+    totalRuns: number;
+    completedRuns: number;
+    failedRuns: number;
+  };
 }
 
 interface ControlTowerData {
@@ -96,15 +125,50 @@ function StatusIcon({ status }: { status: 'operational' | 'degraded' | 'down' })
 }
 
 export function ControlTower() {
+  const { toast } = useToast();
+  
   const { data, isLoading, refetch, isFetching } = useQuery<ControlTowerData>({
     queryKey: ['/api/control-tower/summary'],
     refetchInterval: 60000, // Refresh every minute
   });
 
+  const { data: aiBrainData } = useQuery<AiBrainHealth>({
+    queryKey: ['/api/ai-brain/control/health'],
+    refetchInterval: 30000, // Refresh every 30 seconds
+  });
+
+  const pauseServiceMutation = useMutation({
+    mutationFn: async ({ serviceName, reason }: { serviceName: string; reason?: string }) => {
+      const res = await apiRequest('POST', `/api/ai-brain/control/services/${serviceName}/pause`, { reason });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ai-brain/control/health'] });
+      toast({ title: "Service paused", description: "AI Brain service has been paused" });
+    },
+    onError: (error) => {
+      toast({ title: "Failed to pause service", description: String(error), variant: "destructive" });
+    },
+  });
+
+  const resumeServiceMutation = useMutation({
+    mutationFn: async (serviceName: string) => {
+      const res = await apiRequest('POST', `/api/ai-brain/control/services/${serviceName}/resume`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ai-brain/control/health'] });
+      toast({ title: "Service resumed", description: "AI Brain service has been resumed" });
+    },
+    onError: (error) => {
+      toast({ title: "Failed to resume service", description: String(error), variant: "destructive" });
+    },
+  });
+
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {[1, 2, 3].map((i) => (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[1, 2, 3, 4].map((i) => (
           <Card key={i} className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2">
             <CardHeader className="pb-2">
               <Skeleton className="h-6 w-32" />
@@ -152,7 +216,7 @@ export function ControlTower() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* System Health Card */}
         <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 hover-elevate transition-all">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
@@ -315,6 +379,112 @@ export function ControlTower() {
             
             <Link href="/employees">
               <Button variant="outline" size="sm" className="w-full mt-2" data-testid="button-view-employees">
+                View Details <ArrowRight className="h-3 w-3 ml-1" />
+              </Button>
+            </Link>
+          </CardContent>
+        </Card>
+
+        {/* AI Brain Orchestration Card */}
+        <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 hover-elevate transition-all">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-medium flex items-center gap-2">
+              <Brain className="h-4 w-4 text-indigo-500" />
+              AI Brain
+            </CardTitle>
+            {aiBrainData?.overall === 'healthy' ? (
+              <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Healthy</Badge>
+            ) : aiBrainData?.overall === 'degraded' ? (
+              <Badge className="bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">Degraded</Badge>
+            ) : aiBrainData?.overall === 'unhealthy' ? (
+              <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">Unhealthy</Badge>
+            ) : (
+              <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-900/30 dark:text-gray-400">Loading</Badge>
+            )}
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3 mb-3">
+              {aiBrainData?.overall === 'healthy' ? (
+                <CheckCircle className="h-5 w-5 text-green-500" />
+              ) : aiBrainData?.overall === 'degraded' ? (
+                <AlertTriangle className="h-5 w-5 text-yellow-500" />
+              ) : (
+                <XCircle className="h-5 w-5 text-red-500" />
+              )}
+              <div>
+                <p className={`text-2xl font-bold ${
+                  aiBrainData?.overall === 'healthy' ? 'text-green-600 dark:text-green-400' :
+                  aiBrainData?.overall === 'degraded' ? 'text-yellow-600 dark:text-yellow-400' :
+                  'text-red-600 dark:text-red-400'
+                }`}>
+                  {aiBrainData?.summary?.runningServices || 0} Running
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {aiBrainData?.summary?.totalServices || 0} total services
+                </p>
+              </div>
+            </div>
+            
+            <div className="space-y-1 mb-3 text-xs">
+              {aiBrainData?.summary?.pausedServices && aiBrainData.summary.pausedServices > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Pause className="h-3 w-3 text-yellow-500" />
+                    Paused Services
+                  </span>
+                  <span className="font-medium text-yellow-600">{aiBrainData.summary.pausedServices}</span>
+                </div>
+              )}
+              {aiBrainData?.summary?.errorServices && aiBrainData.summary.errorServices > 0 && (
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <XCircle className="h-3 w-3 text-red-500" />
+                    Error Services
+                  </span>
+                  <span className="font-medium text-red-600">{aiBrainData.summary.errorServices}</span>
+                </div>
+              )}
+              {aiBrainData?.workflows && (
+                <div className="flex items-center justify-between">
+                  <span className="flex items-center gap-1">
+                    <Activity className="h-3 w-3 text-blue-500" />
+                    Workflows
+                  </span>
+                  <span className="font-medium">{aiBrainData.workflows.completedRuns} / {aiBrainData.workflows.totalRuns}</span>
+                </div>
+              )}
+              {(!aiBrainData?.summary?.pausedServices && !aiBrainData?.summary?.errorServices) && (
+                <p className="text-muted-foreground">All AI services operational</p>
+              )}
+            </div>
+
+            {/* Quick service controls */}
+            <div className="flex gap-1 flex-wrap mb-2">
+              {aiBrainData?.services?.slice(0, 2).map((service) => (
+                <Badge
+                  key={service.name}
+                  className={`text-xs cursor-pointer ${
+                    service.status === 'running' 
+                      ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' 
+                      : 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                  }`}
+                  onClick={() => {
+                    if (service.status === 'running') {
+                      pauseServiceMutation.mutate({ serviceName: service.name, reason: 'Manual pause from Control Tower' });
+                    } else {
+                      resumeServiceMutation.mutate(service.name);
+                    }
+                  }}
+                  data-testid={`badge-service-${service.name}`}
+                >
+                  {service.status === 'running' ? <Play className="h-2 w-2 mr-1" /> : <Pause className="h-2 w-2 mr-1" />}
+                  {service.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()).slice(0, 12)}
+                </Badge>
+              ))}
+            </div>
+            
+            <Link href="/trinity-insights">
+              <Button variant="outline" size="sm" className="w-full mt-2" data-testid="button-view-ai-brain">
                 View Details <ArrowRight className="h-3 w-3 ml-1" />
               </Button>
             </Link>

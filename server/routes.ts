@@ -88,6 +88,7 @@ import { smsRouter } from "./routes/smsRoutes";
 import { whatsNewRouter } from "./routes/whatsNewRoutes";
 import { supportCommandRouter } from "./routes/support-command-console";
 import { aiBrainConsoleRouter } from "./routes/ai-brain-console";
+import aiBrainControlRouter from "./routes/aiBrainControlRoutes";
 import codeEditorRouter from "./routes/code-editor";
 import { onboardingRouter } from "./routes/onboardingRoutes";
 import { onboardingAssistantRouter } from "./routes/onboarding-assistant-routes";
@@ -2812,6 +2813,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/support/command", supportCommandRouter);
   // Register AI Brain Console routes (Interactive AI chat and control for support staff)
   app.use("/api/ai-brain/console", aiBrainConsoleRouter);
+  // Register AI Brain Control routes (service pause/resume, workflow management, health monitoring)
+  app.use("/api/ai-brain/control", aiBrainControlRouter);
 
   // Register AI Brain Code Editor routes (staged code changes, approval workflow)
   app.use("/api/code-editor", codeEditorRouter);

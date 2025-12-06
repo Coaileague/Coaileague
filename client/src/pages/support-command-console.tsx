@@ -43,7 +43,11 @@ import {
   Clock,
   Zap,
   Shield,
-  Settings
+  Settings,
+  Brain,
+  Pause,
+  Play,
+  RotateCcw
 } from "lucide-react";
 import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -110,6 +114,70 @@ export default function SupportCommandConsole() {
   const { data: healthStatus, refetch: refetchHealth } = useQuery<{ status: string; services: ServiceHealth[] }>({
     queryKey: ['/api/helpai/orchestrator/health'],
     refetchInterval: 30000,
+  });
+
+  // AI Brain Orchestration services
+  const { data: orchestrationHealth, refetch: refetchOrchestration } = useQuery<{
+    overall: 'healthy' | 'degraded' | 'unhealthy';
+    services: Array<{
+      name: string;
+      status: 'running' | 'paused' | 'stopped' | 'error';
+      pausedBy?: string;
+      pauseReason?: string;
+    }>;
+    summary: {
+      runningServices: number;
+      pausedServices: number;
+      errorServices: number;
+      totalServices: number;
+    };
+  }>({
+    queryKey: ['/api/ai-brain/control/health'],
+    refetchInterval: 15000,
+  });
+
+  const pauseOrchestrationService = useMutation({
+    mutationFn: async ({ serviceName, reason }: { serviceName: string; reason?: string }) => {
+      const res = await apiRequest('POST', `/api/ai-brain/control/services/${serviceName}/pause`, { reason });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ai-brain/control/health'] });
+      toast({ title: "Service paused", description: "AI Brain service has been paused" });
+    },
+    onError: (error) => {
+      toast({ title: "Failed to pause service", description: String(error), variant: "destructive" });
+    },
+  });
+
+  const resumeOrchestrationService = useMutation({
+    mutationFn: async (serviceName: string) => {
+      const res = await apiRequest('POST', `/api/ai-brain/control/services/${serviceName}/resume`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/ai-brain/control/health'] });
+      toast({ title: "Service resumed", description: "AI Brain service has been resumed" });
+    },
+    onError: (error) => {
+      toast({ title: "Failed to resume service", description: String(error), variant: "destructive" });
+    },
+  });
+
+  const testAlertMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/ai-brain/control/test-alert', {
+        type: 'support_test',
+        message: 'Test alert from Support Command Console'
+      });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Test alert sent", description: "Check WebSocket and notifications" });
+    },
+    onError: (error) => {
+      toast({ title: "Failed to send test alert", description: String(error), variant: "destructive" });
+    },
   });
 
   const sendCommandMutation = useMutation({
@@ -327,6 +395,7 @@ export default function SupportCommandConsole() {
           <Tabs defaultValue="health">
             <TabsList className="w-full">
               <TabsTrigger value="health" className="flex-1" data-testid="tab-health">Health</TabsTrigger>
+              <TabsTrigger value="orchestration" className="flex-1" data-testid="tab-orchestration">AI Brain</TabsTrigger>
               <TabsTrigger value="tools" className="flex-1" data-testid="tab-tools">Tools</TabsTrigger>
             </TabsList>
 
@@ -357,6 +426,113 @@ export default function SupportCommandConsole() {
                       )}
                     </div>
                   ))}
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            <TabsContent value="orchestration" className="mt-4 space-y-3">
+              <Card>
+                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-sm flex items-center">
+                    <Brain className="w-4 h-4 mr-2 text-indigo-500" />
+                    Orchestration
+                  </CardTitle>
+                  <Badge 
+                    className={
+                      orchestrationHealth?.overall === 'healthy' 
+                        ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400' 
+                        : orchestrationHealth?.overall === 'degraded'
+                        ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
+                        : 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400'
+                    }
+                    data-testid="badge-orchestration-status"
+                  >
+                    {orchestrationHealth?.overall || 'loading'}
+                  </Badge>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex items-center justify-between text-xs text-muted-foreground mb-2">
+                    <span>{orchestrationHealth?.summary?.runningServices || 0}/{orchestrationHealth?.summary?.totalServices || 0} running</span>
+                    <Button 
+                      size="icon" 
+                      variant="ghost" 
+                      className="h-6 w-6" 
+                      onClick={() => refetchOrchestration()}
+                      data-testid="button-refresh-orchestration"
+                    >
+                      <RefreshCw className="w-3 h-3" />
+                    </Button>
+                  </div>
+                  
+                  {orchestrationHealth?.services?.map((service) => (
+                    <div 
+                      key={service.name} 
+                      className="flex items-center justify-between p-2 rounded-md bg-muted/50"
+                      data-testid={`orchestration-service-${service.name}`}
+                    >
+                      <div className="flex items-center space-x-2">
+                        {service.status === 'running' ? (
+                          <CheckCircle className="w-4 h-4 text-emerald-500" />
+                        ) : service.status === 'paused' ? (
+                          <Pause className="w-4 h-4 text-yellow-500" />
+                        ) : (
+                          <XCircle className="w-4 h-4 text-red-500" />
+                        )}
+                        <span className="text-xs capitalize">{service.name.replace(/_/g, ' ')}</span>
+                      </div>
+                      <div className="flex items-center space-x-1">
+                        {service.status === 'running' ? (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => pauseOrchestrationService.mutate({ 
+                              serviceName: service.name, 
+                              reason: 'Manual pause from Support Console' 
+                            })}
+                            disabled={pauseOrchestrationService.isPending}
+                            data-testid={`button-pause-${service.name}`}
+                          >
+                            <Pause className="w-3 h-3 text-yellow-600" />
+                          </Button>
+                        ) : (
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-6 w-6"
+                            onClick={() => resumeOrchestrationService.mutate(service.name)}
+                            disabled={resumeOrchestrationService.isPending}
+                            data-testid={`button-resume-${service.name}`}
+                          >
+                            <Play className="w-3 h-3 text-emerald-600" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {orchestrationHealth?.services?.length === 0 && (
+                    <p className="text-xs text-muted-foreground text-center py-2">No services found</p>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm">Test Alerts</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => testAlertMutation.mutate()}
+                    disabled={testAlertMutation.isPending}
+                    data-testid="button-test-alert"
+                  >
+                    <AlertTriangle className="w-3 h-3 mr-2" />
+                    Send Test Alert
+                  </Button>
                 </CardContent>
               </Card>
             </TabsContent>

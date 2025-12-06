@@ -14,9 +14,28 @@ import { schedulerCoordinator } from './schedulerCoordinator';
 import { realTimeBridge } from './realTimeBridge';
 import { platformEventBus, publishPlatformUpdate } from '../platformEventBus';
 import type { PlatformEventType } from '../platformEventBus';
+import { serviceControlManager } from './serviceControl';
 
 let isInitialized = false;
 let wssBroadcaster: ((workspaceId: string, data: any) => void) | null = null;
+
+/**
+ * Load persisted service states from database
+ */
+async function loadPersistedServiceStates(): Promise<string[]> {
+  try {
+    const pausedServices = await serviceControlManager.loadPersistedStates();
+    
+    if (pausedServices.length > 0) {
+      console.log(`[OrchestrationBridge] Respecting ${pausedServices.length} paused services from previous session:`, pausedServices.join(', '));
+    }
+    
+    return pausedServices;
+  } catch (error) {
+    console.error('[OrchestrationBridge] Failed to load persisted service states:', error);
+    return [];
+  }
+}
 
 /**
  * Set the WebSocket broadcaster function from the main websocket.ts
@@ -29,7 +48,7 @@ export function setOrchestrationWebSocketBroadcaster(broadcaster: (workspaceId: 
 /**
  * Initialize all orchestration services and connect them to platform infrastructure
  */
-export function initializeOrchestrationServices() {
+export async function initializeOrchestrationServices() {
   if (isInitialized) {
     console.log('[OrchestrationBridge] Already initialized, skipping');
     return;
@@ -37,7 +56,10 @@ export function initializeOrchestrationServices() {
 
   console.log('[OrchestrationBridge] Initializing AI Brain orchestration services...');
 
-  // 1. Start SupervisoryAgent health monitoring loop
+  // 0. Load persisted service states from database
+  await loadPersistedServiceStates();
+
+  // 1. Start SupervisoryAgent health monitoring loop (only if not paused)
   startSupervisoryAgent();
 
   // 2. Start SchedulerCoordinator processing loop
@@ -52,15 +74,65 @@ export function initializeOrchestrationServices() {
   // 5. Connect realTimeBridge subscribers to actual WebSocket
   connectRealTimeBridgeToWebSocket();
 
+  // 6. Register service control callbacks for pause/resume
+  setupServiceControlCallbacks();
+
   isInitialized = true;
   console.log('[OrchestrationBridge] Orchestration services initialized');
+}
+
+/**
+ * Register pause/resume callbacks for orchestration services
+ */
+function setupServiceControlCallbacks() {
+  // SupervisoryAgent pause/resume
+  serviceControlManager.registerPauseCallback('supervisory_agent', () => {
+    supervisoryAgent.stop();
+  });
+  serviceControlManager.registerResumeCallback('supervisory_agent', () => {
+    supervisoryAgent.start();
+  });
+
+  // SchedulerCoordinator pause/resume
+  serviceControlManager.registerPauseCallback('scheduler_coordinator', () => {
+    schedulerCoordinator.stop();
+  });
+  serviceControlManager.registerResumeCallback('scheduler_coordinator', () => {
+    schedulerCoordinator.start();
+  });
+
+  // Service state change events -> WebSocket broadcast
+  aiBrainEvents.on('service_state_changed', (data) => {
+    broadcastOrchestrationEvent('service_status', {
+      service: data.service,
+      status: data.status,
+      userId: data.userId,
+      reason: data.reason,
+      timestamp: data.timestamp,
+    });
+  });
+
+  aiBrainEvents.on('service_control_action', (data) => {
+    broadcastOrchestrationEvent('service_control', {
+      action: data.action,
+      service: data.service,
+      userId: data.userId,
+      reason: data.reason,
+      timestamp: data.timestamp,
+    });
+  });
+
+  console.log('[OrchestrationBridge] Service control callbacks registered');
 }
 
 /**
  * Start SupervisoryAgent health monitoring
  */
 function startSupervisoryAgent() {
-  // Start the agent's internal monitoring loop
+  if (!serviceControlManager.isServiceRunning('supervisory_agent')) {
+    console.log('[OrchestrationBridge] SupervisoryAgent is paused, skipping start');
+    return;
+  }
   supervisoryAgent.start();
   console.log('[OrchestrationBridge] SupervisoryAgent started');
 }
@@ -69,7 +141,10 @@ function startSupervisoryAgent() {
  * Start SchedulerCoordinator processing loop
  */
 function startSchedulerCoordinator() {
-  // Start the coordinator's internal processing loop
+  if (!serviceControlManager.isServiceRunning('scheduler_coordinator')) {
+    console.log('[OrchestrationBridge] SchedulerCoordinator is paused, skipping start');
+    return;
+  }
   schedulerCoordinator.start();
   console.log('[OrchestrationBridge] SchedulerCoordinator started');
 }

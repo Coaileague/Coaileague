@@ -16359,3 +16359,18 @@ export const insertWorkflowArtifactSchema = createInsertSchema(workflowArtifacts
 
 export type InsertWorkflowArtifact = z.infer<typeof insertWorkflowArtifactSchema>;
 export type WorkflowArtifact = typeof workflowArtifacts.$inferSelect;
+
+// Service control states - persists AI Brain service pause/resume states across restarts
+export const serviceControlStates = pgTable("service_control_states", {
+  serviceName: varchar("service_name", { length: 100 }).primaryKey(),
+  status: varchar("status", { length: 30 }).notNull().default('running'),
+  pausedBy: varchar("paused_by").references(() => users.id, { onDelete: 'set null' }),
+  pauseReason: text("pause_reason"),
+  pausedAt: timestamp("paused_at"),
+  lastStartedAt: timestamp("last_started_at"),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertServiceControlStateSchema = createInsertSchema(serviceControlStates);
+export type InsertServiceControlState = z.infer<typeof insertServiceControlStateSchema>;
+export type ServiceControlState = typeof serviceControlStates.$inferSelect;
