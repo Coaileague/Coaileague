@@ -39,7 +39,7 @@ interface PlatformUpdate {
 }
 
 interface NotificationWebSocketMessage {
-  type: 'notification_new' | 'notification_read' | 'notification_read_bulk' | 'notification_count_updated' | 'notifications_subscribed' | 'platform_update' | 'all_notifications_cleared' | 'whats_new_cleared' | 'whats_new_viewed' | 'error';
+  type: 'notification_new' | 'notification_read' | 'notification_read_bulk' | 'notification_count_updated' | 'notifications_subscribed' | 'platform_update' | 'notification_cleared_all' | 'all_notifications_cleared' | 'whats_new_cleared' | 'whats_new_viewed' | 'error';
   notification?: EnhancedNotification & { counts?: { notifications: number; platformUpdates: number; total: number; lastUpdated: string } };
   update?: PlatformUpdate;
   updateId?: string;
@@ -312,8 +312,9 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-counts"] });
               break;
 
+            case 'notification_cleared_all':
             case 'all_notifications_cleared':
-              console.log('🧹 All notifications cleared broadcast received:', data.markedRead);
+              console.log('🧹 All notifications cleared broadcast received:', data.markedRead || data.cleared);
               // Optimistically mark all as read in cache
               queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
                 if (!oldData) return oldData;

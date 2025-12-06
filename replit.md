@@ -48,7 +48,7 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
 - **AI Brain Platform Awareness:** Registry of 100+ features across 4 families, natural language feature discovery, and diagnostic endpoints.
 - **Automation Jobs:** 13 scheduled jobs for billing, scheduling, payroll, reminders, compliance, email, platform change monitoring, and database maintenance.
 - **AI Brain Platform Change Monitor:** Autonomous service scanning codebase and services to generate and broadcast AI-summarized change notifications.
-- **Notification System:** Platform updates, support staff alerts, real-time WebSocket delivery, and user notification history.
+- **Notification System:** Platform updates, support staff alerts, real-time WebSocket delivery, and user notification history. Fixed December 2025: Removed 90+ orphan code blocks that were causing undefined variable errors and breaking WebSocket broadcasts.
 - **Support Command Console:** Force-push updates system for support staff with command endpoints and real-time WebSocket broadcast, including mascot orchestration.
 - **AI Brain Code Editor:** Staged code editing system with approval workflow and HelpAI integration.
 - **AI Brain Master Orchestrator:** Central hub coordinating 61 actions across 12 categories, connecting Gemini AI to platform services and executing workflow chains.
@@ -78,3 +78,8 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
 - **Google Cloud Storage (GCS)**: File management.
 - **PostgreSQL**: Primary relational database.
 - **Twilio**: SMS notifications.
+### Recent Changes (December 2025)
+- **Notification System Cleanup:** Removed 90+ orphan code blocks from server/routes.ts that were causing undefined variable errors (counts, workspaceId, platformUpdatesMarked, etc.) and breaking WebSocket broadcasts. Fixed incorrect `markedRead` return statements in unrelated endpoints.
+- **Real-time Updates Restored:** WebSocket notification broadcasts now work correctly without mid-request crashes.
+- **AI Brain Integration:** All 65 actions properly registered across 12 categories with Gemini function calling support.
+- **Trinity Mascot:** Single universal Canvas-based component with 5-pointed interwoven ribbon design.
