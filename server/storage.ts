@@ -6264,7 +6264,8 @@ export class DatabaseStorage implements IStorage {
       .from(notifications)
       .where(and(
         eq(notifications.userId, userId),
-        eq(notifications.workspaceId, workspaceId)
+        eq(notifications.workspaceId, workspaceId),
+        isNull(notifications.clearedAt)
       ))
       .orderBy(desc(notifications.createdAt))
       .limit(limit);
@@ -6273,15 +6274,18 @@ export class DatabaseStorage implements IStorage {
   /**
    * Get all notifications for a user including both workspace-scoped and user-scoped.
    * This is the primary method for fetching notifications in the dual-scope model.
+   * Only returns non-cleared notifications (where clearedAt is NULL).
    */
   async getAllNotificationsForUser(userId: string, workspaceId?: string, limit: number = 50): Promise<Notification[]> {
     if (workspaceId) {
       // Include both workspace-scoped for this workspace AND user-scoped notifications
+      // Exclude cleared notifications (clearedAt is NULL)
       return await db
         .select()
         .from(notifications)
         .where(and(
           eq(notifications.userId, userId),
+          isNull(notifications.clearedAt),
           or(
             eq(notifications.workspaceId, workspaceId),
             eq(notifications.scope, 'user' as any)
@@ -6291,12 +6295,14 @@ export class DatabaseStorage implements IStorage {
         .limit(limit);
     } else {
       // Only user-scoped notifications (for users without workspace context)
+      // Exclude cleared notifications (clearedAt is NULL)
       return await db
         .select()
         .from(notifications)
         .where(and(
           eq(notifications.userId, userId),
-          eq(notifications.scope, 'user' as any)
+          eq(notifications.scope, 'user' as any),
+          isNull(notifications.clearedAt)
         ))
         .orderBy(desc(notifications.createdAt))
         .limit(limit);
@@ -6310,13 +6316,15 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(notifications.userId, userId),
         eq(notifications.workspaceId, workspaceId),
-        eq(notifications.isRead, false)
+        eq(notifications.isRead, false),
+        isNull(notifications.clearedAt)
       ));
     return result?.count || 0;
   }
 
   /**
    * Get total unread count including both workspace-scoped and user-scoped notifications.
+   * Only counts non-cleared notifications.
    */
   async getTotalUnreadCountForUser(userId: string, workspaceId?: string): Promise<number> {
     if (workspaceId) {
@@ -6329,7 +6337,8 @@ export class DatabaseStorage implements IStorage {
             eq(notifications.workspaceId, workspaceId),
             eq(notifications.scope, 'user' as any)
           ),
-          eq(notifications.isRead, false)
+          eq(notifications.isRead, false),
+          isNull(notifications.clearedAt)
         ));
       return result?.count || 0;
     } else {
@@ -6339,7 +6348,8 @@ export class DatabaseStorage implements IStorage {
         .where(and(
           eq(notifications.userId, userId),
           eq(notifications.scope, 'user' as any),
-          eq(notifications.isRead, false)
+          eq(notifications.isRead, false),
+          isNull(notifications.clearedAt)
         ));
       return result?.count || 0;
     }
