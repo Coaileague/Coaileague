@@ -166,6 +166,7 @@ import { NotificationsPopover } from "@/components/notifications-popover";
 import { WorkspaceTabsNav } from "@/components/workspace-tabs-nav";
 import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { CoAITwinMascot } from "@/components/coai-twin-mascot";
+import TrinityRedesign from "@/components/trinity-redesign";
 import { MascotTaskBox } from "@/components/mascot-task-box";
 import { useMascotMode } from "@/hooks/use-mascot-mode";
 import { useAIActivity } from "@/hooks/use-ai-activity";
@@ -594,14 +595,11 @@ function MascotRenderer() {
           onClick={handleTap}
           style={{ background: 'transparent' }}
         >
-          <CoAITwinMascot 
-            mode={currentMode} 
-            variant={isExpanded ? 'expanded' : 'mini'}
+          {/* Polished Trinity Redesign - Smooth mutations and state animations */}
+          <TrinityRedesign 
+            mode={currentMode}
             size={bubbleSize}
-            emote={emoteState}
-            chromaticAberration={showcaseControl.chromaticAberration}
-            glitchEffect={showcaseControl.glitchEffect}
-            warpIntensity={showcaseControl.warpIntensity}
+            mini={!isExpanded}
           />
           
           {!currentThought && workspaceId && (
