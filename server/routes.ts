@@ -730,6 +730,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const acknowledged = await storage.acknowledgeAllNotifications(userId, workspaceId);
       const platformUpdatesMarked = await storage.markAllPlatformUpdatesAsViewed(userId, workspaceId);
       
+      // Also acknowledge all maintenance alerts
+      const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+      let alertsAcknowledged = 0;
+      for (const alert of alerts) {
+        if (!(alert as any).isAcknowledged) {
+          await aiNotificationService.acknowledgeMaintenanceAlert(alert.id, userId);
+          alertsAcknowledged++;
+        }
+      }
+      
       // Get updated counts
       const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
       
@@ -737,22 +747,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       broadcastNotification(workspaceId, userId, 'notification_acknowledged_all', { 
         acknowledged,
         platformUpdatesMarked,
+        alertsAcknowledged,
         unreadCount: counts.unread,
         unclearedCount: counts.uncleared
       }, counts.unread);
       broadcastNotification(workspaceId, userId, 'notification_count_updated', { 
         type: 'notification_count_updated', 
-        counts: { notifications: counts.unread, platformUpdates: 0, total: counts.unread, lastUpdated: new Date().toISOString() }, 
+        counts: { notifications: counts.unread, platformUpdates: 0, alerts: 0, total: counts.unread, lastUpdated: new Date().toISOString() }, 
         source: 'acknowledge_all' 
       }, counts.unread);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
       
-      console.log("[Acknowledge All] User " + userId + " acknowledged " + acknowledged + " notifications and " + platformUpdatesMarked + " platform updates");
+      console.log("[Acknowledge All] User " + userId + " acknowledged " + acknowledged + " notifications, " + platformUpdatesMarked + " platform updates, and " + alertsAcknowledged + " maintenance alerts");
       
       res.json({ 
         success: true, 
         acknowledged,
         platformUpdatesMarked,
+        alertsAcknowledged,
         counts: { unread: counts.unread, uncleared: counts.uncleared }
       });
     } catch (error) {
