@@ -44,9 +44,8 @@ import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
 import { LoadingScreen } from "@/components/LoadingScreen";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
-import { MagicFloatingText } from "@/components/mascot/MagicFloatingText";
-import { FestiveDialogueBubble } from "@/components/mascot/FestiveDialogueBubble";
 import NotFound from "@/pages/not-found";
+import TrinityInsights from "@/pages/trinity-insights";
 // import Landing from "@/pages/landing";
 import Homepage from "@/pages/homepage";
 import CustomLogin from "@/pages/custom-login";
@@ -167,6 +166,7 @@ import { WorkspaceTabsNav } from "@/components/workspace-tabs-nav";
 import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { CoAITwinMascot } from "@/components/coai-twin-mascot";
 import TrinityRedesign from "@/components/trinity-redesign";
+import { CompactBubble } from "@/components/mascot/CompactBubble";
 import { MascotTaskBox } from "@/components/mascot-task-box";
 import { useMascotMode } from "@/hooks/use-mascot-mode";
 import { useAIActivity } from "@/hooks/use-ai-activity";
@@ -611,23 +611,14 @@ function MascotRenderer() {
         </div>
       </div>
       
-      {/* Dialogue bubbles MUST be OUTSIDE the transformed container for correct fixed positioning */}
-      {/* Use FestiveDialogueBubble for HOLIDAY mode, MagicFloatingText for other modes */}
-      {currentThought && currentMode === 'HOLIDAY' && (
-        <FestiveDialogueBubble
-          thought={currentThought}
-          mascotPosition={{ x: effectiveX, y: effectiveY }}
-          mascotSize={bubbleSize}
-          isMobile={isMobile}
-        />
-      )}
-      {currentThought && currentMode !== 'HOLIDAY' && (
-        <MagicFloatingText
+      {/* Compact polished dialogue bubble - minimal and non-intrusive */}
+      {currentThought && (
+        <CompactBubble
           thought={currentThought}
           mascotPosition={{ x: effectiveX, y: effectiveY }}
           mascotSize={bubbleSize}
           mode={currentMode}
-          isMobile={isMobile}
+          onDismiss={() => setCurrentThought(null)}
         />
       )}
     </>
