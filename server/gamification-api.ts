@@ -328,6 +328,29 @@ gamificationRouter.get('/employees/:id', requireWorkspaceRole(['org_owner', 'org
 });
 
 /**
+ * GET /api/gamification/feed - Get recent recognition feed
+ */
+gamificationRouter.get('/feed', async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+  try {
+    const user = req.user;
+    if (!user?.currentWorkspaceId) {
+      return res.status(400).json({ error: 'No workspace selected' });
+    }
+
+    const { limit = '20' } = req.query;
+    const feed = await gamificationService.getRecognitionFeed(
+      user.currentWorkspaceId,
+      parseInt(limit as string) || 20
+    );
+
+    res.json({ feed });
+  } catch (error) {
+    console.error('Error fetching recognition feed:', error);
+    res.status(500).json({ error: 'Failed to fetch feed' });
+  }
+});
+
+/**
  * POST /api/gamification/initialize - Initialize gamification for workspace
  */
 gamificationRouter.post('/initialize', requireWorkspaceRole(['org_owner', 'org_admin']), async (req: AuthenticatedRequest, res) => {
