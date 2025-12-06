@@ -29,6 +29,7 @@ interface TrinityRedesignProps {
   className?: string;
   autoCycle?: boolean;
   cycleInterval?: number;
+  idleTimeout?: number;
 }
 
 const STATE_MUTATIONS = {
@@ -255,23 +256,55 @@ const TrinityRedesign = memo(function TrinityRedesign({
   className = '',
   autoCycle = false,
   cycleInterval = 2000,
+  idleTimeout = 0,
 }: TrinityRedesignProps) {
   const containerRef = useRef<SVGSVGElement>(null);
   const animationRef = useRef<number | null>(null);
   const particlesRef = useRef<Particle[]>([]);
   const timeRef = useRef<number>(0);
   const [cycleIndex, setCycleIndex] = useState(0);
+  const [isUserIdle, setIsUserIdle] = useState(false);
+  const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastActivityRef = useRef<number>(Date.now());
   
-  const activeMode = autoCycle ? CYCLE_MODES[cycleIndex] : mode;
+  useEffect(() => {
+    if (idleTimeout <= 0) return;
+    
+    const resetIdleTimer = () => {
+      lastActivityRef.current = Date.now();
+      setIsUserIdle(false);
+      
+      if (idleTimerRef.current) {
+        clearTimeout(idleTimerRef.current);
+      }
+      
+      idleTimerRef.current = setTimeout(() => {
+        setIsUserIdle(true);
+      }, idleTimeout);
+    };
+    
+    const events = ['mousedown', 'mousemove', 'keydown', 'scroll', 'touchstart', 'click'];
+    events.forEach(event => window.addEventListener(event, resetIdleTimer, { passive: true }));
+    
+    resetIdleTimer();
+    
+    return () => {
+      events.forEach(event => window.removeEventListener(event, resetIdleTimer));
+      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
+    };
+  }, [idleTimeout]);
+  
+  const shouldCycle = autoCycle || (idleTimeout > 0 && isUserIdle);
+  const activeMode = shouldCycle ? CYCLE_MODES[cycleIndex] : mode;
   const mutation = STATE_MUTATIONS[activeMode as keyof typeof STATE_MUTATIONS] || STATE_MUTATIONS.IDLE;
   
   useEffect(() => {
-    if (!autoCycle) return;
+    if (!shouldCycle) return;
     const interval = setInterval(() => {
       setCycleIndex((prev) => (prev + 1) % CYCLE_MODES.length);
     }, cycleInterval);
     return () => clearInterval(interval);
-  }, [autoCycle, cycleInterval]);
+  }, [shouldCycle, cycleInterval]);
   const displaySize = mini ? size * 0.8 : size;
   const centerX = displaySize / 2;
   const centerY = displaySize / 2;

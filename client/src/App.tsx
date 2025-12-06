@@ -596,10 +596,13 @@ function MascotRenderer() {
           style={{ background: 'transparent' }}
         >
           {/* Polished Trinity Redesign - Smooth mutations and state animations */}
+          {/* Auto-cycles through states after 30 seconds of user inactivity */}
           <TrinityRedesign 
             mode={currentMode}
             size={bubbleSize}
             mini={!isExpanded}
+            idleTimeout={30000}
+            cycleInterval={3000}
           />
           
           {!currentThought && workspaceId && (

@@ -169,17 +169,19 @@ export default function TrinityInsights() {
         </div>
 
         {/* Trinity Mascot Demo - Auto-cycling through states */}
-        <Card className="mb-8 p-6">
+        <Card className="mb-8 p-6 overflow-visible">
           <div className="text-center mb-4">
             <h2 className="text-lg font-semibold mb-2">Trinity AI States</h2>
             <p className="text-sm text-muted-foreground">Watch Trinity morph through different states</p>
           </div>
-          <div className="flex justify-center">
-            <TrinityRedesign 
-              autoCycle={true}
-              cycleInterval={2500}
-              size={160}
-            />
+          <div className="flex justify-center items-center" style={{ minHeight: '200px' }}>
+            <div style={{ width: '180px', height: '180px', position: 'relative' }}>
+              <TrinityRedesign 
+                autoCycle={true}
+                cycleInterval={2500}
+                size={180}
+              />
+            </div>
           </div>
         </Card>
 
