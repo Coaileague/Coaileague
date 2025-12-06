@@ -80,32 +80,55 @@ export interface AvoidanceConfig {
   };
 }
 
-// Detect mobile device for touch-friendly padding
-const isMobile = typeof window !== 'undefined' && (
-  window.matchMedia?.('(max-width: 768px)').matches || 
-  'ontouchstart' in window ||
-  navigator.maxTouchPoints > 0
-);
+// Responsive sizes matching Trinity component - breakpoint-based detection
+function getResponsiveMascotSize(): number {
+  if (typeof window === 'undefined') return 140;
+  const width = window.innerWidth;
+  // Match Trinity's RESPONSIVE_SIZES: mobile: 90, tablet: 120, desktop: 140
+  if (width < 768) return 90;      // mobile
+  if (width < 1024) return 120;    // tablet  
+  return 140;                       // desktop
+}
 
-// Mobile devices need larger touch target padding for accessibility
-const MOBILE_PADDING_MULTIPLIER = 1.5;
+// Screen size category for padding (touch needs more space)
+function getScreenCategory(): 'mobile' | 'tablet' | 'desktop' {
+  if (typeof window === 'undefined') return 'desktop';
+  const width = window.innerWidth;
+  if (width < 768) return 'mobile';
+  if (width < 1024) return 'tablet';
+  return 'desktop';
+}
 
-const DEFAULT_CONFIG: AvoidanceConfig = {
-  mascotSize: isMobile ? 90 : 140,
-  scanInterval: 100, // Faster scanning for responsive UI avoidance
-  minSafeDistance: isMobile ? 40 : 35, // Larger safe distance for smarter movement
-  preferredEdge: 'any',
-  avoidFixedElements: true,
-  avoidFocusedElements: true,
-  padding: {
-    button: isMobile ? 35 : 30, // Extra space around buttons/CTAs
-    link: isMobile ? 25 : 18,
-    input: isMobile ? 35 : 25,
-    navigation: isMobile ? 45 : 35,
-    modal: isMobile ? 60 : 50,
-    default: isMobile ? 30 : 25
-  }
+// Padding multipliers per screen category
+const PADDING_MULTIPLIERS = {
+  mobile: 1.5,
+  tablet: 1.2,
+  desktop: 1.0
 };
+
+function getDefaultConfig(): AvoidanceConfig {
+  const screenCategory = getScreenCategory();
+  const paddingMult = PADDING_MULTIPLIERS[screenCategory];
+  
+  return {
+    mascotSize: getResponsiveMascotSize(),
+    scanInterval: 100, // Faster scanning for responsive UI avoidance
+    minSafeDistance: screenCategory === 'mobile' ? 40 : screenCategory === 'tablet' ? 38 : 35,
+    preferredEdge: 'any',
+    avoidFixedElements: true,
+    avoidFocusedElements: true,
+    padding: {
+      button: Math.round(30 * paddingMult), // Extra space around buttons/CTAs
+      link: Math.round(18 * paddingMult),
+      input: Math.round(25 * paddingMult),
+      navigation: Math.round(35 * paddingMult),
+      modal: Math.round(50 * paddingMult),
+      default: Math.round(25 * paddingMult)
+    }
+  };
+}
+
+const DEFAULT_CONFIG: AvoidanceConfig = getDefaultConfig();
 
 const UI_SELECTORS: Record<UIElementType, string> = {
   button: 'button, [role="button"], input[type="submit"], input[type="button"], [data-testid*="button"], [data-testid*="btn"], [data-testid*="cta"], [data-testid*="get-started"], [data-testid*="signup"], [data-testid*="login"], .cta-button, .hero-button, [class*="hero-cta"]',
@@ -159,9 +182,41 @@ class UIAvoidanceSystem {
   private mousePosition: MascotPosition = { x: -1000, y: -1000 };
   private mouseAvoidanceRadius = 120;
   private seasonalElements: UIElement[] = [];
+  private resizeHandler: (() => void) | null = null;
 
   constructor(config: Partial<AvoidanceConfig> = {}) {
-    this.config = { ...DEFAULT_CONFIG, ...config };
+    this.config = { ...getDefaultConfig(), ...config };
+    this.setupResizeListener();
+  }
+  
+  private setupResizeListener(): void {
+    if (typeof window === 'undefined') return;
+    
+    let resizeTimeout: ReturnType<typeof setTimeout>;
+    this.resizeHandler = () => {
+      clearTimeout(resizeTimeout);
+      resizeTimeout = setTimeout(() => {
+        this.updateResponsiveConfig();
+      }, 150); // Debounce resize events
+    };
+    
+    window.addEventListener('resize', this.resizeHandler);
+  }
+  
+  private updateResponsiveConfig(): void {
+    const newConfig = getDefaultConfig();
+    this.config = { ...this.config, ...newConfig };
+    // Force rescan with new sizes
+    this.scanUIElements();
+    this.generateHeatmap();
+  }
+  
+  updateMascotSize(size: number): void {
+    this.config.mascotSize = size;
+  }
+  
+  getMascotSize(): number {
+    return this.config.mascotSize;
   }
   
   updateMousePosition(x: number, y: number): void {
