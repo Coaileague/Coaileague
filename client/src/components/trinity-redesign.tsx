@@ -434,29 +434,28 @@ const TrinityRedesign = memo(function TrinityRedesign({
     const petalLen = radius * mut.petalLength;
     const pulseSpeed = 0.025;
     
-    const petalColors = [
-      mut.secondaryColor,
-      mut.primaryColor,
-      mut.secondaryColor,
-      mut.primaryColor,
-      mut.secondaryColor,
+    const frontLayer: Array<{index: number, color: string}> = [
+      { index: 0, color: mut.secondaryColor },
+      { index: 2, color: mut.secondaryColor },
+      { index: 4, color: mut.secondaryColor },
+    ];
+    const backLayer: Array<{index: number, color: string}> = [
+      { index: 1, color: mut.primaryColor },
+      { index: 3, color: mut.primaryColor },
     ];
     
-    const backIndices = [1, 3];
-    const frontIndices = [0, 2, 4];
-    
-    for (const i of backIndices) {
-      const angle = angleStep * i - Math.PI / 2 + (time * mut.rotationSpeed * 0.001);
-      const pulseOffset = time * pulseSpeed + i * 0.6;
-      drawRibbonPetal(ctx, centerX, centerY, angle, petalLen, ribbonWidth, petalColors[i], pulseOffset);
+    for (const petal of backLayer) {
+      const angle = angleStep * petal.index - Math.PI / 2 + (time * mut.rotationSpeed * 0.001);
+      const pulseOffset = time * pulseSpeed + petal.index * 0.6;
+      drawRibbonPetal(ctx, centerX, centerY, angle, petalLen, ribbonWidth, petal.color, pulseOffset);
     }
     
     drawCenterWeave(ctx, centerX, centerY, radius * 0.22, time, mut);
     
-    for (const i of frontIndices) {
-      const angle = angleStep * i - Math.PI / 2 + (time * mut.rotationSpeed * 0.001);
-      const pulseOffset = time * pulseSpeed + i * 0.6;
-      drawRibbonPetal(ctx, centerX, centerY, angle, petalLen, ribbonWidth, petalColors[i], pulseOffset);
+    for (const petal of frontLayer) {
+      const angle = angleStep * petal.index - Math.PI / 2 + (time * mut.rotationSpeed * 0.001);
+      const pulseOffset = time * pulseSpeed + petal.index * 0.6;
+      drawRibbonPetal(ctx, centerX, centerY, angle, petalLen, ribbonWidth, petal.color, pulseOffset);
     }
   }, [drawRibbonPetal]);
   
