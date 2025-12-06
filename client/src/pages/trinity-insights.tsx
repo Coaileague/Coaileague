@@ -18,6 +18,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Badge } from '@/components/ui/badge';
 import { Sparkles, ArrowRight, Zap, RefreshCw, Check, AlertTriangle, Lightbulb, Trophy, Brain } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import TrinityRedesign from '@/components/trinity-redesign';
 
 interface TrinityInsight {
   id: string;
@@ -166,6 +167,21 @@ export default function TrinityInsights() {
             </Button>
           </div>
         </div>
+
+        {/* Trinity Mascot Demo - Auto-cycling through states */}
+        <Card className="mb-8 p-6">
+          <div className="text-center mb-4">
+            <h2 className="text-lg font-semibold mb-2">Trinity AI States</h2>
+            <p className="text-sm text-muted-foreground">Watch Trinity morph through different states</p>
+          </div>
+          <div className="flex justify-center">
+            <TrinityRedesign 
+              autoCycle={true}
+              cycleInterval={2500}
+              size={160}
+            />
+          </div>
+        </Card>
 
         {/* Filter badges */}
         <div className="flex gap-2 mb-8 flex-wrap justify-center">

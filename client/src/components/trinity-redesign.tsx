@@ -27,48 +27,85 @@ interface TrinityRedesignProps {
   size?: number;
   mini?: boolean;
   className?: string;
+  autoCycle?: boolean;
+  cycleInterval?: number;
 }
 
 const STATE_MUTATIONS = {
   IDLE: {
-    primaryColor: '#38bdf8',
-    secondaryColor: '#0ea5e9',
-    accentColor: '#06b6d4',
+    primaryColor: '#00BFFF',
+    secondaryColor: '#FFD700',
+    accentColor: '#FFFFE0',
     animation: 'breathing',
     particleMode: 'gentle',
     scale: 1.0,
+    petalLength: 45,
+    petalWidth: 8,
+    petalSpread: 72,
+    coreSize: 8,
+    coreGlow: 1.0,
+    rotationSpeed: 0,
+    ribbonCurve: 35,
   },
   THINKING: {
     primaryColor: '#a855f7',
-    secondaryColor: '#7c3aed',
+    secondaryColor: '#FFD700',
     accentColor: '#d8b4fe',
     animation: 'rotating-rings',
     particleMode: 'constellation',
-    scale: 1.2,
+    scale: 1.1,
+    petalLength: 40,
+    petalWidth: 6,
+    petalSpread: 72,
+    coreSize: 12,
+    coreGlow: 1.5,
+    rotationSpeed: 15,
+    ribbonCurve: 30,
   },
   ANALYZING: {
     primaryColor: '#6366f1',
-    secondaryColor: '#4f46e5',
+    secondaryColor: '#00BFFF',
     accentColor: '#818cf8',
     animation: 'node-pulse',
     particleMode: 'connected-nodes',
-    scale: 1.15,
+    scale: 1.05,
+    petalLength: 50,
+    petalWidth: 4,
+    petalSpread: 60,
+    coreSize: 10,
+    coreGlow: 2.0,
+    rotationSpeed: 5,
+    ribbonCurve: 25,
   },
   SEARCHING: {
     primaryColor: '#10b981',
-    secondaryColor: '#059669',
+    secondaryColor: '#FFD700',
     accentColor: '#6ee7b7',
     animation: 'spotlight-scan',
     particleMode: 'expanding-rings',
-    scale: 1.25,
+    scale: 1.2,
+    petalLength: 55,
+    petalWidth: 10,
+    petalSpread: 80,
+    coreSize: 6,
+    coreGlow: 1.8,
+    rotationSpeed: 25,
+    ribbonCurve: 40,
   },
   SUCCESS: {
-    primaryColor: '#f472b6',
-    secondaryColor: '#ec4899',
-    accentColor: '#fbcfe8',
+    primaryColor: '#FFD700',
+    secondaryColor: '#00BFFF',
+    accentColor: '#FFFFE0',
     animation: 'bloom',
     particleMode: 'celebration',
     scale: 1.3,
+    petalLength: 60,
+    petalWidth: 12,
+    petalSpread: 90,
+    coreSize: 14,
+    coreGlow: 2.5,
+    rotationSpeed: 0,
+    ribbonCurve: 45,
   },
   ERROR: {
     primaryColor: '#ef4444',
@@ -76,63 +113,119 @@ const STATE_MUTATIONS = {
     accentColor: '#fca5a5',
     animation: 'shake',
     particleMode: 'alert',
-    scale: 0.9,
+    scale: 0.85,
+    petalLength: 35,
+    petalWidth: 10,
+    petalSpread: 50,
+    coreSize: 5,
+    coreGlow: 3.0,
+    rotationSpeed: 0,
+    ribbonCurve: 20,
   },
   LISTENING: {
     primaryColor: '#fbbf24',
-    secondaryColor: '#f59e0b',
+    secondaryColor: '#00BFFF',
     accentColor: '#fcd34d',
     animation: 'waveform',
     particleMode: 'sound-waves',
     scale: 1.1,
+    petalLength: 42,
+    petalWidth: 7,
+    petalSpread: 75,
+    coreSize: 10,
+    coreGlow: 1.3,
+    rotationSpeed: 0,
+    ribbonCurve: 38,
   },
   UPLOADING: {
-    primaryColor: '#06b6d4',
-    secondaryColor: '#0891b2',
+    primaryColor: '#00BFFF',
+    secondaryColor: '#FFD700',
     accentColor: '#67e8f9',
     animation: 'ascend-spiral',
     particleMode: 'ascending-particles',
-    scale: 1.2,
+    scale: 1.15,
+    petalLength: 48,
+    petalWidth: 5,
+    petalSpread: 65,
+    coreSize: 8,
+    coreGlow: 1.6,
+    rotationSpeed: 30,
+    ribbonCurve: 32,
   },
   CELEBRATING: {
-    primaryColor: '#fbbf24',
-    secondaryColor: '#fcd34d',
+    primaryColor: '#FFD700',
+    secondaryColor: '#f472b6',
     accentColor: '#fef08a',
     animation: 'bloom',
     particleMode: 'confetti',
-    scale: 1.25,
+    scale: 1.35,
+    petalLength: 65,
+    petalWidth: 14,
+    petalSpread: 100,
+    coreSize: 16,
+    coreGlow: 3.0,
+    rotationSpeed: 10,
+    ribbonCurve: 50,
   },
   ADVISING: {
     primaryColor: '#10b981',
-    secondaryColor: '#34d399',
+    secondaryColor: '#FFD700',
     accentColor: '#a7f3d0',
     animation: 'gentle-orbit',
     particleMode: 'wisdom-aura',
-    scale: 1.1,
+    scale: 1.08,
+    petalLength: 44,
+    petalWidth: 9,
+    petalSpread: 70,
+    coreSize: 11,
+    coreGlow: 1.4,
+    rotationSpeed: 3,
+    ribbonCurve: 36,
   },
   HOLIDAY: {
     primaryColor: '#c41e3a',
     secondaryColor: '#165b33',
-    accentColor: '#ffd700',
+    accentColor: '#FFD700',
     animation: 'festive-spin',
     particleMode: 'snowfall',
     scale: 1.2,
+    petalLength: 50,
+    petalWidth: 11,
+    petalSpread: 85,
+    coreSize: 12,
+    coreGlow: 2.2,
+    rotationSpeed: 20,
+    ribbonCurve: 42,
   },
   GREETING: {
     primaryColor: '#f472b6',
-    secondaryColor: '#ec4899',
+    secondaryColor: '#00BFFF',
     accentColor: '#fbcfe8',
     animation: 'wave',
     particleMode: 'sparkle',
-    scale: 1.15,
+    scale: 1.12,
+    petalLength: 46,
+    petalWidth: 8,
+    petalSpread: 78,
+    coreSize: 9,
+    coreGlow: 1.5,
+    rotationSpeed: 0,
+    ribbonCurve: 34,
   },
   CODING: {
     primaryColor: '#34d399',
-    secondaryColor: '#10b981',
+    secondaryColor: '#00BFFF',
     accentColor: '#a7f3d0',
     animation: 'grid-step',
     particleMode: 'matrix-rain',
-    scale: 1.1,
+    scale: 1.0,
+    petalLength: 38,
+    petalWidth: 4,
+    petalSpread: 55,
+    coreSize: 7,
+    coreGlow: 1.8,
+    rotationSpeed: 0,
+    ribbonCurve: 22,
   },
 };
 
@@ -150,18 +243,35 @@ interface Particle {
   size: number;
 }
 
+const CYCLE_MODES: MascotMode[] = [
+  'IDLE', 'THINKING', 'ANALYZING', 'SEARCHING', 'SUCCESS', 
+  'LISTENING', 'UPLOADING', 'CELEBRATING', 'ADVISING', 'CODING'
+];
+
 const TrinityRedesign = memo(function TrinityRedesign({
   mode = 'IDLE',
   size = 120,
   mini = false,
   className = '',
+  autoCycle = false,
+  cycleInterval = 2000,
 }: TrinityRedesignProps) {
   const containerRef = useRef<SVGSVGElement>(null);
   const animationRef = useRef<number | null>(null);
   const particlesRef = useRef<Particle[]>([]);
   const timeRef = useRef<number>(0);
+  const [cycleIndex, setCycleIndex] = useState(0);
   
-  const mutation = STATE_MUTATIONS[mode as keyof typeof STATE_MUTATIONS] || STATE_MUTATIONS.IDLE;
+  const activeMode = autoCycle ? CYCLE_MODES[cycleIndex] : mode;
+  const mutation = STATE_MUTATIONS[activeMode as keyof typeof STATE_MUTATIONS] || STATE_MUTATIONS.IDLE;
+  
+  useEffect(() => {
+    if (!autoCycle) return;
+    const interval = setInterval(() => {
+      setCycleIndex((prev) => (prev + 1) % CYCLE_MODES.length);
+    }, cycleInterval);
+    return () => clearInterval(interval);
+  }, [autoCycle, cycleInterval]);
   const displaySize = mini ? size * 0.8 : size;
   const centerX = displaySize / 2;
   const centerY = displaySize / 2;
@@ -489,62 +599,116 @@ const TrinityRedesign = memo(function TrinityRedesign({
           opacity="0.3"
         />
 
-        {/* Five interwoven ribbon petals - alternating gold and teal */}
-        <g transform={`translate(${centerX}, ${centerY}) scale(${mutation.scale * 0.6})`} filter="url(#glow)">
-          {/* Back layer ribbons (odd indices: 1, 3) - teal */}
-          {[1, 3].map((i) => {
-            const rotate = i * 72 - 90;
-            return (
-              <g key={`back-${i}`} transform={`rotate(${rotate})`}>
-                <path
-                  d={`M -8 0 
-                      C -12 -20, -6 -35, 0 -45 
-                      C 6 -35, 12 -20, 8 0 
-                      C 4 5, -4 5, -8 0`}
-                  fill="url(#tealRibbon)"
-                  stroke="#007acc"
-                  strokeWidth="0.5"
-                  opacity="0.95"
-                />
-              </g>
-            );
-          })}
+        {/* Five interwoven ribbon petals - physical mutations based on state */}
+        <g 
+          transform={`translate(${centerX}, ${centerY}) scale(${mutation.scale * 0.6})`} 
+          filter="url(#glow)"
+          style={{ 
+            transition: 'all 0.8s cubic-bezier(0.4, 0, 0.2, 1)',
+            transformOrigin: 'center',
+          }}
+        >
+          {/* Dynamic rotation wrapper for spinning states */}
+          <g style={{ 
+            animation: mutation.rotationSpeed > 0 ? `rotating-rings ${60 / mutation.rotationSpeed}s linear infinite` : 'none'
+          }}>
+            {/* Back layer ribbons (odd indices: 1, 3) - secondary color */}
+            {[1, 3].map((i) => {
+              const w = mutation.petalWidth;
+              const h = mutation.petalLength;
+              const curve = mutation.ribbonCurve;
+              const rotate = i * mutation.petalSpread - 90;
+              return (
+                <g key={`back-${i}`} transform={`rotate(${rotate})`}>
+                  <path
+                    d={`M ${-w} 0 
+                        C ${-w * 1.5} ${-h * 0.45}, ${-w * 0.75} ${-h * 0.78}, 0 ${-h} 
+                        C ${w * 0.75} ${-h * 0.78}, ${w * 1.5} ${-h * 0.45}, ${w} 0 
+                        C ${w * 0.5} ${curve * 0.14}, ${-w * 0.5} ${curve * 0.14}, ${-w} 0`}
+                    fill={mutation.primaryColor}
+                    stroke={mutation.primaryColor}
+                    strokeWidth="0.5"
+                    opacity="0.95"
+                    style={{ transition: 'all 0.6s ease-out' }}
+                  />
+                </g>
+              );
+            })}
 
-          {/* Center weave ring */}
-          <circle cx="0" cy="0" r="18" fill="none" stroke="url(#goldRibbon)" strokeWidth="8" opacity="0.4" />
-          <circle cx="0" cy="0" r="18" fill="none" stroke="url(#tealRibbon)" strokeWidth="4" strokeDasharray="20 20" opacity="0.6" />
+            {/* Center weave ring - size based on coreSize */}
+            <circle 
+              cx="0" cy="0" 
+              r={mutation.coreSize * 2.2} 
+              fill="none" 
+              stroke={mutation.secondaryColor} 
+              strokeWidth={mutation.petalWidth * 0.8} 
+              opacity="0.4"
+              style={{ transition: 'all 0.6s ease-out' }}
+            />
+            <circle 
+              cx="0" cy="0" 
+              r={mutation.coreSize * 2.2} 
+              fill="none" 
+              stroke={mutation.primaryColor} 
+              strokeWidth={mutation.petalWidth * 0.4} 
+              strokeDasharray={`${mutation.coreSize * 2.5} ${mutation.coreSize * 2.5}`}
+              opacity="0.6"
+              style={{ transition: 'all 0.6s ease-out' }}
+            />
 
-          {/* Front layer ribbons (even indices: 0, 2, 4) - gold */}
-          {[0, 2, 4].map((i) => {
-            const rotate = i * 72 - 90;
-            return (
-              <g key={`front-${i}`} transform={`rotate(${rotate})`}>
-                <path
-                  d={`M -8 0 
-                      C -12 -20, -6 -35, 0 -45 
-                      C 6 -35, 12 -20, 8 0 
-                      C 4 5, -4 5, -8 0`}
-                  fill="url(#goldRibbon)"
-                  stroke="#cc9900"
-                  strokeWidth="0.5"
-                  opacity="0.95"
-                />
-              </g>
-            );
-          })}
+            {/* Front layer ribbons (even indices: 0, 2, 4) - secondary color */}
+            {[0, 2, 4].map((i) => {
+              const w = mutation.petalWidth;
+              const h = mutation.petalLength;
+              const curve = mutation.ribbonCurve;
+              const rotate = i * mutation.petalSpread - 90;
+              return (
+                <g key={`front-${i}`} transform={`rotate(${rotate})`}>
+                  <path
+                    d={`M ${-w} 0 
+                        C ${-w * 1.5} ${-h * 0.45}, ${-w * 0.75} ${-h * 0.78}, 0 ${-h} 
+                        C ${w * 0.75} ${-h * 0.78}, ${w * 1.5} ${-h * 0.45}, ${w} 0 
+                        C ${w * 0.5} ${curve * 0.14}, ${-w * 0.5} ${curve * 0.14}, ${-w} 0`}
+                    fill={mutation.secondaryColor}
+                    stroke={mutation.secondaryColor}
+                    strokeWidth="0.5"
+                    opacity="0.95"
+                    style={{ transition: 'all 0.6s ease-out' }}
+                  />
+                </g>
+              );
+            })}
+          </g>
 
-          {/* Central glowing crystal core */}
+          {/* Central glowing crystal core - size based on coreSize */}
           <polygon
-            points="0,-12 10,-4 6,10 -6,10 -10,-4"
+            points={`0,${-mutation.coreSize * 1.5} ${mutation.coreSize * 1.25},${-mutation.coreSize * 0.5} ${mutation.coreSize * 0.75},${mutation.coreSize * 1.25} ${-mutation.coreSize * 0.75},${mutation.coreSize * 1.25} ${-mutation.coreSize * 1.25},${-mutation.coreSize * 0.5}`}
             fill="url(#coreGlow)"
-            stroke="#FFD700"
+            stroke={mutation.accentColor}
             strokeWidth="1"
             opacity="0.9"
+            style={{ 
+              transition: 'all 0.6s ease-out',
+              filter: `drop-shadow(0 0 ${mutation.coreGlow * 4}px ${mutation.accentColor})`
+            }}
           />
           
-          {/* Inner core highlight */}
-          <circle cx="-3" cy="-4" r="4" fill="white" opacity="0.8" />
-          <circle cx="0" cy="0" r="8" fill="white" opacity="0.3" />
+          {/* Inner core highlight - pulses with coreGlow */}
+          <circle 
+            cx={-mutation.coreSize * 0.4} 
+            cy={-mutation.coreSize * 0.5} 
+            r={mutation.coreSize * 0.5} 
+            fill="white" 
+            opacity={0.6 + mutation.coreGlow * 0.1}
+            style={{ transition: 'all 0.6s ease-out' }}
+          />
+          <circle 
+            cx="0" cy="0" 
+            r={mutation.coreSize} 
+            fill="white" 
+            opacity={0.2 + mutation.coreGlow * 0.05}
+            style={{ transition: 'all 0.6s ease-out' }}
+          />
         </g>
 
         {/* Circuit/data lines extending outward */}
@@ -583,7 +747,7 @@ const TrinityRedesign = memo(function TrinityRedesign({
           fontFamily="system-ui, sans-serif"
           fontWeight="600"
         >
-          {mode}
+          {activeMode}
         </text>
       )}
     </svg>
