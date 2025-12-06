@@ -249,6 +249,7 @@ export function NotificationsPopover() {
       setSelectedIds(new Set());
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-counts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
@@ -345,6 +346,7 @@ export function NotificationsPopover() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-counts"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });

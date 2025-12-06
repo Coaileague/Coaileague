@@ -310,7 +310,7 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
     
     const totalChars = newLetters.length;
     const entryDuration = Math.min(totalChars * 60, 2500);
-    const displayDuration = Math.max(4000, thought.text.length * 100);
+    const displayDuration = Math.max(8000, thought.text.length * 150); // 8 sec minimum, 150ms per char
     const exitDuration = 1800;
     
     const animate = (timestamp: number) => {
