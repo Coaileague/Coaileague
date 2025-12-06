@@ -82,4 +82,7 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
 - **Notification System Cleanup:** Removed 90+ orphan code blocks from server/routes.ts that were causing undefined variable errors (counts, workspaceId, platformUpdatesMarked, etc.) and breaking WebSocket broadcasts. Fixed incorrect `markedRead` return statements in unrelated endpoints.
 - **Real-time Updates Restored:** WebSocket notification broadcasts now work correctly without mid-request crashes.
 - **AI Brain Integration:** All 65 actions properly registered across 12 categories with Gemini function calling support.
-- **Trinity Mascot:** Single universal Canvas-based component with 5-pointed interwoven ribbon design.
+- **Trinity Mascot Optimization:** Desktop size increased from 80px to 100px for better visibility. Mobile performance optimized with aggressive idle throttling (3s delay, 12 FPS target) for battery efficiency.
+- **Festive Bubble System:** FestiveDialogueBubble now properly activates for ALL holidays (not just Christmas) using `holiday && holiday.key !== 'default'` check.
+- **AI Brain Code Editor LSP Fix:** Changed notification type from invalid 'code_change' to enum-compliant 'ai_action_completed' with proper scope/category fields.
+- **Support Console Communication:** Trinity connected to support console via WebSocket broadcasts, force-refresh commands, and platform event bus for AI-driven platform maintenance.
