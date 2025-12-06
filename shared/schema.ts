@@ -16161,3 +16161,201 @@ export const insertMascotTaskSchema = createInsertSchema(mascotTasks).omit({
 
 export type InsertMascotTask = z.infer<typeof insertMascotTaskSchema>;
 export type MascotTask = typeof mascotTasks.$inferSelect;
+
+// ============================================================================
+// AI BRAIN ORCHESTRATION SYSTEM - Workflow Tracking & Commitment Management
+// ============================================================================
+
+// Orchestration runs - tracks all AI Brain workflow executions
+export const orchestrationRuns = pgTable("orchestration_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Context
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Workflow identification
+  actionId: varchar("action_id", { length: 100 }).notNull(), // e.g., 'scheduling.generate_ai_schedule'
+  category: varchar("category", { length: 50 }).notNull(), // e.g., 'scheduling', 'payroll', 'compliance'
+  source: varchar("source", { length: 50 }).notNull(), // 'helpai', 'trinity', 'automation', 'api', 'scheduler'
+  
+  // Status tracking (matches task status for consistency)
+  status: varchar("status", { length: 30 }).default('queued').notNull(), 
+  // 'queued', 'running', 'awaiting_approval', 'completed', 'failed', 'cancelled', 'rolled_back'
+  
+  // Input/Output
+  inputParams: jsonb("input_params"),
+  outputResult: jsonb("output_result"),
+  errorMessage: text("error_message"),
+  errorStack: text("error_stack"),
+  
+  // SLA tracking
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+  slaThresholdMs: integer("sla_threshold_ms").default(30000), // 30 second default SLA
+  slaMet: boolean("sla_met"),
+  
+  // Retry/recovery
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  parentRunId: varchar("parent_run_id"), // For chained workflows
+  
+  // Commitment tracking
+  commitmentId: varchar("commitment_id"), // Links to commitmentLedger
+  requiresApproval: boolean("requires_approval").default(false),
+  approvedBy: varchar("approved_by").references(() => users.id, { onDelete: 'set null' }),
+  approvedAt: timestamp("approved_at"),
+  
+  // Audit
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("orchestration_runs_workspace_idx").on(table.workspaceId),
+  index("orchestration_runs_user_idx").on(table.userId),
+  index("orchestration_runs_action_idx").on(table.actionId),
+  index("orchestration_runs_category_idx").on(table.category),
+  index("orchestration_runs_status_idx").on(table.status),
+  index("orchestration_runs_source_idx").on(table.source),
+  index("orchestration_runs_created_idx").on(table.createdAt),
+  index("orchestration_runs_parent_idx").on(table.parentRunId),
+]);
+
+export const insertOrchestrationRunSchema = createInsertSchema(orchestrationRuns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertOrchestrationRun = z.infer<typeof insertOrchestrationRunSchema>;
+export type OrchestrationRun = typeof orchestrationRuns.$inferSelect;
+
+// Run steps - individual steps within a workflow run
+export const orchestrationRunSteps = pgTable("orchestration_run_steps", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  runId: varchar("run_id").notNull().references(() => orchestrationRuns.id, { onDelete: 'cascade' }),
+  
+  // Step identification
+  stepNumber: integer("step_number").notNull(),
+  stepName: varchar("step_name", { length: 100 }).notNull(),
+  stepType: varchar("step_type", { length: 50 }).notNull(), // 'action', 'condition', 'loop', 'parallel', 'approval'
+  
+  // Status
+  status: varchar("status", { length: 30 }).default('pending').notNull(),
+  // 'pending', 'running', 'completed', 'failed', 'skipped'
+  
+  // Input/Output
+  inputData: jsonb("input_data"),
+  outputData: jsonb("output_data"),
+  errorMessage: text("error_message"),
+  
+  // Timing
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("run_steps_run_idx").on(table.runId),
+  index("run_steps_status_idx").on(table.status),
+  index("run_steps_step_number_idx").on(table.stepNumber),
+]);
+
+export const insertOrchestrationRunStepSchema = createInsertSchema(orchestrationRunSteps).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertOrchestrationRunStep = z.infer<typeof insertOrchestrationRunStepSchema>;
+export type OrchestrationRunStep = typeof orchestrationRunSteps.$inferSelect;
+
+// Commitment ledger - tracks intents, locks, and transaction boundaries
+export const commitmentLedger = pgTable("commitment_ledger", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Context
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  runId: varchar("run_id").references(() => orchestrationRuns.id, { onDelete: 'cascade' }),
+  
+  // Commitment type
+  commitmentType: varchar("commitment_type", { length: 50 }).notNull(),
+  // 'intent', 'lock', 'reservation', 'approval_pending', 'committed', 'rolled_back'
+  
+  // Resource being committed
+  resourceType: varchar("resource_type", { length: 100 }).notNull(), // 'schedule', 'payroll', 'notification', 'employee'
+  resourceId: varchar("resource_id", { length: 255 }),
+  
+  // Commitment details
+  description: text("description"),
+  commitmentData: jsonb("commitment_data"), // What will be changed
+  compensationData: jsonb("compensation_data"), // How to roll back
+  
+  // Status
+  status: varchar("status", { length: 30 }).default('pending').notNull(),
+  // 'pending', 'active', 'fulfilled', 'cancelled', 'compensated'
+  
+  // Expiry (for locks/reservations)
+  expiresAt: timestamp("expires_at"),
+  
+  // Resolution
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by").references(() => users.id, { onDelete: 'set null' }),
+  resolutionReason: text("resolution_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("commitment_workspace_idx").on(table.workspaceId),
+  index("commitment_run_idx").on(table.runId),
+  index("commitment_type_idx").on(table.commitmentType),
+  index("commitment_resource_idx").on(table.resourceType, table.resourceId),
+  index("commitment_status_idx").on(table.status),
+  index("commitment_expires_idx").on(table.expiresAt),
+]);
+
+export const insertCommitmentLedgerSchema = createInsertSchema(commitmentLedger).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertCommitmentLedger = z.infer<typeof insertCommitmentLedgerSchema>;
+export type CommitmentLedger = typeof commitmentLedger.$inferSelect;
+
+// Workflow artifacts - stores outputs, files, and intermediate results
+export const workflowArtifacts = pgTable("workflow_artifacts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  runId: varchar("run_id").notNull().references(() => orchestrationRuns.id, { onDelete: 'cascade' }),
+  stepId: varchar("step_id").references(() => orchestrationRunSteps.id, { onDelete: 'cascade' }),
+  
+  // Artifact identification
+  artifactType: varchar("artifact_type", { length: 50 }).notNull(), // 'report', 'export', 'log', 'screenshot', 'data'
+  artifactName: varchar("artifact_name", { length: 255 }).notNull(),
+  mimeType: varchar("mime_type", { length: 100 }),
+  
+  // Content (for small artifacts)
+  contentText: text("content_text"),
+  contentJson: jsonb("content_json"),
+  
+  // File reference (for large artifacts)
+  fileUrl: text("file_url"),
+  fileSizeBytes: integer("file_size_bytes"),
+  
+  // Metadata
+  metadata: jsonb("metadata"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("artifacts_run_idx").on(table.runId),
+  index("artifacts_step_idx").on(table.stepId),
+  index("artifacts_type_idx").on(table.artifactType),
+]);
+
+export const insertWorkflowArtifactSchema = createInsertSchema(workflowArtifacts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertWorkflowArtifact = z.infer<typeof insertWorkflowArtifactSchema>;
+export type WorkflowArtifact = typeof workflowArtifacts.$inferSelect;

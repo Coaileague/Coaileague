@@ -1,0 +1,161 @@
+This is the perfect next step. To make this runnable on Replit, we need to define the Tool Registry (so the AI knows what it can do) and the AI Engine (the interface that decides what to do).
+
+Here are the schema definitions and service classes for ToolRegistry and AIEngine. I have written these in Python (using SQLAlchemy for the schema) as it is the standard for AI backends on Replit.
+
+1. The Tool & Action Registry
+Purpose: This acts as the "API of APIs." It stores the definitions of every capability your AI has (e.g., "Send Email," "Query SQL," "Update CRM").
+
+File: models.py (Add to your existing models)
+
+Python
+
+from sqlalchemy import Column, String, Integer, JSON, Boolean, DateTime
+from sqlalchemy.sql import func
+from database import Base # Assuming you have a Base class
+
+class ToolDefinition(Base):
+    __tablename__ = 'tool_definitions'
+
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, unique=True, nullable=False) # e.g., "stripe_refund_payment"
+    description = Column(String, nullable=False) # Critical for the LLM to understand purpose
+    
+    # The JSON schema required to call this tool (OpenAI Function Calling format)
+    parameters_schema = Column(JSON, nullable=False) 
+    
+    # Endpoint or Python path to execute
+    execution_handler = Column(String, nullable=False) 
+    
+    is_active = Column(Boolean, default=True)
+    requires_approval = Column(Boolean, default=False) # Safety guardrail
+    created_at = Column(DateTime(timezone=True), server_default=func.now())
+File: services/tool_registry.py
+
+Python
+
+import json
+
+class ToolRegistryService:
+    def __init__(self, db_session):
+        self.db = db_session
+
+    def register_tool(self, name, description, schema, handler, requires_approval=False):
+        """Adds a new capability to the AI's repertoire."""
+        new_tool = ToolDefinition(
+            name=name,
+            description=description,
+            parameters_schema=schema,
+            execution_handler=handler,
+            requires_approval=requires_approval
+        )
+        self.db.add(new_tool)
+        self.db.commit()
+        return new_tool
+
+    def get_tools_for_context(self, context_tags):
+        """
+        Retrieves relevant tools based on workflow context.
+        (Simple implementation returns all active tools)
+        """
+        return self.db.query(ToolDefinition).filter(ToolDefinition.is_active == True).all()
+
+    def validate_arguments(self, tool_name, arguments):
+        """
+        Validates that the AI's generated arguments match the tool's schema.
+        This prevents the AI from hallucinating invalid inputs.
+        """
+        tool = self.db.query(ToolDefinition).filter_by(name=tool_name).first()
+        if not tool:
+            raise ValueError(f"Tool {tool_name} not found.")
+        
+        # In a real impl, use 'jsonschema' library to validate 'arguments' against 'tool.parameters_schema'
+        return True
+2. The AI Engine (Orchestrator)
+Purpose: This service wraps the LLM (like GPT-4 or Claude). It takes the Context from your ContextResolver, looks at the tools in the ToolRegistry, and generates the plan that gets written to the WorkflowLedger.
+
+File: services/ai_engine.py
+
+Python
+
+class AIEngineService:
+    def __init__(self, tool_registry, context_resolver, ledger):
+        self.tool_registry = tool_registry
+        self.context_resolver = context_resolver
+        self.ledger = ledger
+
+    def plan_workflow(self, client_request, user_id):
+        """
+        Step 1: Analyze request and generate a sequence of intent.
+        """
+        # 1. Fetch Context
+        context = self.context_resolver.get_context(user_id)
+        
+        # 2. Fetch Available Tools
+        tools = self.tool_registry.get_tools_for_context(context)
+        
+        # 3. Construct Prompt (Pseudocode for LLM interaction)
+        system_prompt = f"""
+        You are an autonomous workflow engine. 
+        User Goal: {client_request}
+        Context: {context}
+        Available Tools: {[t.name for t in tools]}
+        
+        Break this down into a list of steps.
+        """
+        
+        # 4. Call LLM (Mock response)
+        # response = openai.ChatCompletion.create(...)
+        generated_plan = [
+            {"step": 1, "tool": "data_scraper", "reason": "Fetch invoice data"},
+            {"step": 2, "tool": "spreadsheet_updater", "reason": "Save to Excel"}
+        ]
+        
+        # 5. Write to Ledger (Initialize the workflow)
+        workflow_id = self.ledger.create_workflow(user_id, client_request, generated_plan)
+        return workflow_id
+
+    def execute_next_step(self, workflow_id):
+        """
+        Step 2: Execute the atomic action.
+        """
+        current_step = self.ledger.get_pending_step(workflow_id)
+        
+        if not current_step:
+            return "Workflow Complete"
+            
+        tool_name = current_step['tool']
+        
+        # Check if this tool requires human approval via CommitmentManager
+        # (This logic would likely call your CommitmentManager service)
+        
+        # execute...
+        return f"Executing {tool_name}..."
+3. How they connect to your previous services
+This is the flow you can set up in your main application file (main.py):
+
+Ingestion: Client sends a request "Upload my invoices."
+
+AI Engine:
+
+Calls ContextResolver to find where invoices are usually stored.
+
+Calls ToolRegistry to find the "Google Drive Upload" tool.
+
+Generates a plan.
+
+WorkflowLedger: Records the plan as "Pending."
+
+RealTimeBridge: If the tool is external (like Stripe or Slack), this bridge handles the actual API traffic.
+
+Summary of What You Have Now:
+✅ WorkflowLedger: Tracks state.
+
+✅ CommitmentManager: Handles promises/transactions.
+
+✅ ContextResolver: Fetches data.
+
+✅ RealTimeBridge: Connects APIs.
+
+✅ ToolRegistry (New): Defines capabilities.
+
+✅ AIEngine (New): The brain connecting them.
