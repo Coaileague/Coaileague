@@ -244,9 +244,9 @@ const CYCLE_MODES: MascotMode[] = [
 ];
 
 const RESPONSIVE_SIZES = {
-  mobile: 80,
-  tablet: 100,
-  desktop: 120,
+  mobile: 90,
+  tablet: 120,
+  desktop: 140,
   demo: 180,
 };
 

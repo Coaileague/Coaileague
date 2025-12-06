@@ -90,6 +90,7 @@ import { supportCommandRouter } from "./routes/support-command-console";
 import { aiBrainConsoleRouter } from "./routes/ai-brain-console";
 import codeEditorRouter from "./routes/code-editor";
 import { onboardingRouter } from "./routes/onboardingRoutes";
+import { onboardingAssistantRouter } from "./routes/onboarding-assistant-routes";
 import { timesheetReportRouter } from "./routes/timesheetReportRoutes";
 import { timesheetInvoiceRouter } from "./routes/timesheetInvoiceRoutes";
 import { advancedSchedulingRouter } from "./routes/advancedSchedulingRoutes";
@@ -2813,6 +2814,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register Onboarding Pipeline routes (tasks, progress, rewards)
   app.use("/api/onboarding", onboardingRouter);
+  
+  // Register Onboarding Assistant routes (AI Brain diagnostics, data flow validation)
+  app.use("/api/onboarding-assistant", onboardingAssistantRouter);
 
   // Register Business Owner Analytics routes (usage metrics, trends, team engagement)
   app.use("/api/analytics/owner", requireAuth, attachWorkspaceId, ownerAnalyticsRouter);

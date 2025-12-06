@@ -104,11 +104,11 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
   const bubbleDimensionsRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
   const dprRef = useRef<number>(2);
   
-  const fontSize = isMobile ? 14 : 18;
-  const lineHeight = fontSize * 1.4;
-  const innerPadding = isMobile ? 16 : 24;
-  const frameWidth = isMobile ? 6 : 8;
-  const maxWidth = isMobile ? 220 : 320;
+  const fontSize = isMobile ? 12 : 14;
+  const lineHeight = fontSize * 1.35;
+  const innerPadding = isMobile ? 10 : 14;
+  const frameWidth = isMobile ? 4 : 5;
+  const maxWidth = isMobile ? 180 : 260;
   
   const drawFrame = useCallback((ctx: CanvasRenderingContext2D, width: number, height: number) => {
     ctx.fillStyle = HOLIDAY_COLORS.white;
