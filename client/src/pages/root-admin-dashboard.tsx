@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { TimeGreeting } from "@/components/time-greeting";
+import { ControlTower } from "@/components/control-tower";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -364,6 +365,9 @@ export default function RootAdminDashboard() {
             </div>
           </div>
         </div>
+
+        {/* Control Tower - AI-Powered Business Intelligence */}
+        <ControlTower />
 
         {/* Desktop: 2-Column Grid | Mobile: Stacked */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">

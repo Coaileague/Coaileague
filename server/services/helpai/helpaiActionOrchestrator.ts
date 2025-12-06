@@ -673,6 +673,31 @@ class HelpaiActionOrchestrator {
   }
 
   /**
+   * Get all registered actions for schema generation
+   */
+  getRegisteredActions(): ActionHandler[] {
+    return Array.from(ACTION_REGISTRY.values());
+  }
+
+  /**
+   * Get a specific action by ID
+   */
+  getAction(actionId: string): ActionHandler | undefined {
+    return ACTION_REGISTRY.get(actionId);
+  }
+
+  /**
+   * Get action count by category
+   */
+  getActionCountByCategory(): Record<ActionCategory, number> {
+    const counts: Record<string, number> = {};
+    for (const action of ACTION_REGISTRY.values()) {
+      counts[action.category] = (counts[action.category] || 0) + 1;
+    }
+    return counts as Record<ActionCategory, number>;
+  }
+
+  /**
    * Execute an action through the orchestrator with AI-powered reasoning
    * 
    * Flow:
