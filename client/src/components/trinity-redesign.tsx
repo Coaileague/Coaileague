@@ -450,34 +450,123 @@ const TrinityRedesign = memo(function TrinityRedesign({
         />
       )}
 
-      {/* Main mascot body with morphing shape */}
+      {/* Five-pointed interwoven ribbon mascot */}
       <g style={{ animation: `${mutation.animation} 2s ease-in-out infinite` }}>
-        {/* Outer ring */}
+        <defs>
+          <linearGradient id="tealRibbon" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#007acc" />
+            <stop offset="30%" stopColor="#00BFFF" />
+            <stop offset="70%" stopColor="#4dd4ff" />
+            <stop offset="100%" stopColor="#007acc" />
+          </linearGradient>
+          <linearGradient id="goldRibbon" x1="0%" y1="0%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#cc9900" />
+            <stop offset="30%" stopColor="#FFD700" />
+            <stop offset="70%" stopColor="#ffe44d" />
+            <stop offset="100%" stopColor="#cc9900" />
+          </linearGradient>
+          <radialGradient id="coreGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="1" />
+            <stop offset="30%" stopColor="#FFFFE0" stopOpacity="0.9" />
+            <stop offset="60%" stopColor="#FFD700" stopOpacity="0.6" />
+            <stop offset="100%" stopColor="#00BFFF" stopOpacity="0" />
+          </radialGradient>
+          <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur"/>
+            <feMerge>
+              <feMergeNode in="coloredBlur"/>
+              <feMergeNode in="SourceGraphic"/>
+            </feMerge>
+          </filter>
+        </defs>
+
+        {/* Outer glow aura */}
         <circle
           cx={centerX}
           cy={centerY}
-          r={displaySize / 3}
-          fill={mutation.primaryColor}
-          opacity="0.2"
+          r={displaySize / 2.5}
+          fill="url(#coreGlow)"
+          opacity="0.3"
         />
 
-        {/* Core shape - morphs based on state */}
-        <g transform={`translate(${centerX}, ${centerY}) scale(${mutation.scale})`}>
-          {/* Smooth blob using multiple circles */}
-          <circle cx="0" cy="0" r="12" fill={mutation.primaryColor} />
-          <circle cx="8" cy="0" r="10" fill={mutation.primaryColor} opacity="0.8" />
-          <circle cx="-8" cy="0" r="10" fill={mutation.primaryColor} opacity="0.8" />
-          <circle cx="0" cy="8" r="10" fill={mutation.secondaryColor} opacity="0.8" />
-          <circle cx="0" cy="-8" r="10" fill={mutation.secondaryColor} opacity="0.8" />
+        {/* Five interwoven ribbon petals */}
+        <g transform={`translate(${centerX}, ${centerY}) scale(${mutation.scale * 0.6})`} filter="url(#glow)">
+          {/* Back layer ribbons (petals 1, 3) - teal */}
+          {[0, 2].map((i) => {
+            const angle = (i * 72 - 90) * Math.PI / 180;
+            const rotate = i * 72 - 90;
+            return (
+              <g key={`back-${i}`} transform={`rotate(${rotate})`}>
+                <path
+                  d={`M -8 0 
+                      C -12 -20, -6 -35, 0 -45 
+                      C 6 -35, 12 -20, 8 0 
+                      C 4 5, -4 5, -8 0`}
+                  fill="url(#tealRibbon)"
+                  stroke="#007acc"
+                  strokeWidth="0.5"
+                  opacity="0.95"
+                />
+              </g>
+            );
+          })}
 
-          {/* Accent highlights */}
-          <circle cx="6" cy="-6" r="3" fill={mutation.accentColor} opacity="0.6" />
-          <circle cx="-6" cy="6" r="3" fill={mutation.accentColor} opacity="0.4" />
+          {/* Center weave ring */}
+          <circle cx="0" cy="0" r="18" fill="none" stroke="url(#goldRibbon)" strokeWidth="8" opacity="0.4" />
+          <circle cx="0" cy="0" r="18" fill="none" stroke="url(#tealRibbon)" strokeWidth="4" strokeDasharray="20 20" opacity="0.6" />
+
+          {/* Front layer ribbons (petals 0, 2, 4) - gold */}
+          {[1, 3, 4].map((i) => {
+            const rotate = i * 72 - 90;
+            return (
+              <g key={`front-${i}`} transform={`rotate(${rotate})`}>
+                <path
+                  d={`M -8 0 
+                      C -12 -20, -6 -35, 0 -45 
+                      C 6 -35, 12 -20, 8 0 
+                      C 4 5, -4 5, -8 0`}
+                  fill="url(#goldRibbon)"
+                  stroke="#cc9900"
+                  strokeWidth="0.5"
+                  opacity="0.95"
+                />
+              </g>
+            );
+          })}
+
+          {/* Central glowing crystal core */}
+          <polygon
+            points="0,-12 10,-4 6,10 -6,10 -10,-4"
+            fill="url(#coreGlow)"
+            stroke="#FFD700"
+            strokeWidth="1"
+            opacity="0.9"
+          />
+          
+          {/* Inner core highlight */}
+          <circle cx="-3" cy="-4" r="4" fill="white" opacity="0.8" />
+          <circle cx="0" cy="0" r="8" fill="white" opacity="0.3" />
         </g>
 
-        {/* Eyes/detail for personality */}
-        <circle cx={centerX - 8} cy={centerY - 5} r="2" fill="white" opacity="0.8" />
-        <circle cx={centerX + 8} cy={centerY - 5} r="2" fill="white" opacity="0.8" />
+        {/* Circuit/data lines extending outward */}
+        {[0, 1, 2, 3, 4, 5, 6, 7].map((i) => {
+          const angle = (i * 45) * Math.PI / 180;
+          const startR = displaySize / 4;
+          const endR = displaySize / 2.2;
+          return (
+            <line
+              key={`circuit-${i}`}
+              x1={centerX + Math.cos(angle) * startR}
+              y1={centerY + Math.sin(angle) * startR}
+              x2={centerX + Math.cos(angle) * endR}
+              y2={centerY + Math.sin(angle) * endR}
+              stroke={i % 2 === 0 ? '#00BFFF' : '#FFD700'}
+              strokeWidth="1"
+              strokeDasharray="3,5"
+              opacity="0.4"
+            />
+          );
+        })}
       </g>
 
       {/* Particle effects */}
