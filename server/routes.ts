@@ -633,7 +633,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       const member = await storage.getWorkspaceMemberByUserId(userId);
-      const workspaceId = workspace?.id || member?.workspaceId;
+      let workspaceId = workspace?.id || member?.workspaceId;
+      
+      // Platform-wide users (support agents, bots, etc.) use the platform workspace
+      if (!workspaceId) {
+        const platformRole = await getUserPlatformRole(userId);
+        if (hasPlatformWideAccess(platformRole)) {
+          workspaceId = 'coaileague-platform-workspace';
+        }
+      }
       
       if (!workspaceId) {
         return res.json({ success: true, cleared: { platformUpdates: 0, notifications: 0, alerts: 0 } });
@@ -720,7 +728,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       const member = await storage.getWorkspaceMemberByUserId(userId);
-      const workspaceId = workspace?.id || member?.workspaceId;
+      let workspaceId = workspace?.id || member?.workspaceId;
+      
+      // Platform-wide users (support agents, bots, etc.) use the platform workspace
+      if (!workspaceId) {
+        const platformRole = await getUserPlatformRole(userId);
+        if (hasPlatformWideAccess(platformRole)) {
+          workspaceId = 'coaileague-platform-workspace';
+        }
+      }
       
       if (!workspaceId) {
         return res.json({ success: true, acknowledged: 0, platformUpdatesMarked: 0, counts: { unread: 0, uncleared: 0 } });
