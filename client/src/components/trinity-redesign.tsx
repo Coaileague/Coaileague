@@ -489,11 +489,10 @@ const TrinityRedesign = memo(function TrinityRedesign({
           opacity="0.3"
         />
 
-        {/* Five interwoven ribbon petals */}
+        {/* Five interwoven ribbon petals - alternating gold and teal */}
         <g transform={`translate(${centerX}, ${centerY}) scale(${mutation.scale * 0.6})`} filter="url(#glow)">
-          {/* Back layer ribbons (petals 1, 3) - teal */}
-          {[0, 2].map((i) => {
-            const angle = (i * 72 - 90) * Math.PI / 180;
+          {/* Back layer ribbons (odd indices: 1, 3) - teal */}
+          {[1, 3].map((i) => {
             const rotate = i * 72 - 90;
             return (
               <g key={`back-${i}`} transform={`rotate(${rotate})`}>
@@ -515,8 +514,8 @@ const TrinityRedesign = memo(function TrinityRedesign({
           <circle cx="0" cy="0" r="18" fill="none" stroke="url(#goldRibbon)" strokeWidth="8" opacity="0.4" />
           <circle cx="0" cy="0" r="18" fill="none" stroke="url(#tealRibbon)" strokeWidth="4" strokeDasharray="20 20" opacity="0.6" />
 
-          {/* Front layer ribbons (petals 0, 2, 4) - gold */}
-          {[1, 3, 4].map((i) => {
+          {/* Front layer ribbons (even indices: 0, 2, 4) - gold */}
+          {[0, 2, 4].map((i) => {
             const rotate = i * 72 - 90;
             return (
               <g key={`front-${i}`} transform={`rotate(${rotate})`}>
