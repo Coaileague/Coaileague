@@ -29,6 +29,7 @@ import {
   notifications,
   systemAuditLogs,
   users,
+  aiInsights,
 } from '@shared/schema';
 
 // ============================================================================
@@ -595,45 +596,164 @@ class AIAnalyticsEngine {
   }
 
   // ============================================================================
-  // INSIGHT MANAGEMENT
+  // INSIGHT MANAGEMENT - Database Persistence
   // ============================================================================
 
   async storeInsight(insight: TrinityInsight): Promise<void> {
-    const workspaceInsights = this.insightStore.get(insight.workspaceId) || [];
-    workspaceInsights.unshift(insight);
-    
-    // Keep only last 100 insights per workspace
-    if (workspaceInsights.length > 100) {
-      workspaceInsights.splice(100);
-    }
-    
-    this.insightStore.set(insight.workspaceId, workspaceInsights);
-    console.log(`[AI Analytics Engine] Stored insight: ${insight.title}`);
-  }
+    try {
+      // Map TrinityInsight to aiInsights table schema
+      const priorityMap: Record<string, string> = {
+        low: 'low',
+        medium: 'normal',
+        high: 'high',
+        critical: 'critical',
+      };
 
-  getInsights(workspaceId: string, limit = 50): TrinityInsight[] {
-    return (this.insightStore.get(workspaceId) || []).slice(0, limit);
-  }
+      await db.insert(aiInsights).values({
+        workspaceId: insight.workspaceId,
+        title: insight.title,
+        category: insight.category || 'recommendation',
+        priority: priorityMap[insight.riskLevel] || 'normal',
+        summary: insight.message,
+        details: insight.rationale,
+        generatedBy: 'gemini-2.0-flash-exp',
+        confidence: String(insight.confidence * 100),
+        actionable: true,
+        suggestedActions: insight.followUpActions,
+        status: insight.isRead ? 'dismissed' : 'active',
+      });
 
-  getAllInsightsForUser(userId: string, limit = 50): TrinityInsight[] {
-    const allInsights: TrinityInsight[] = [];
-    for (const insights of this.insightStore.values()) {
-      allInsights.push(...insights.filter(i => !i.userId || i.userId === userId));
-    }
-    return allInsights
-      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
-      .slice(0, limit);
-  }
-
-  markInsightRead(insightId: string): boolean {
-    for (const insights of this.insightStore.values()) {
-      const insight = insights.find(i => i.id === insightId);
-      if (insight) {
-        insight.isRead = true;
-        return true;
+      // Also keep in memory cache for fast access
+      const workspaceInsights = this.insightStore.get(insight.workspaceId) || [];
+      workspaceInsights.unshift(insight);
+      if (workspaceInsights.length > 100) {
+        workspaceInsights.splice(100);
       }
+      this.insightStore.set(insight.workspaceId, workspaceInsights);
+      
+      console.log(`[AI Analytics Engine] Stored insight to DB: ${insight.title}`);
+    } catch (error) {
+      console.error('[AI Analytics Engine] Failed to store insight:', error);
+      // Fallback to in-memory only
+      const workspaceInsights = this.insightStore.get(insight.workspaceId) || [];
+      workspaceInsights.unshift(insight);
+      this.insightStore.set(insight.workspaceId, workspaceInsights);
     }
-    return false;
+  }
+
+  async getInsights(workspaceId: string, limit = 50): Promise<TrinityInsight[]> {
+    try {
+      const dbInsights = await db.select()
+        .from(aiInsights)
+        .where(eq(aiInsights.workspaceId, workspaceId))
+        .orderBy(desc(aiInsights.createdAt))
+        .limit(limit);
+
+      return dbInsights.map(row => ({
+        id: row.id,
+        workspaceId: row.workspaceId,
+        type: this.mapCategoryToType(row.category),
+        category: row.category as ActionCategory,
+        title: row.title,
+        message: row.summary,
+        rationale: row.details || undefined,
+        riskLevel: this.mapPriorityToRisk(row.priority),
+        confidence: row.confidence ? parseFloat(row.confidence) / 100 : 0.8,
+        isRead: row.status === 'dismissed' || row.status === 'acted_upon',
+        createdAt: row.createdAt || new Date(),
+        followUpActions: row.suggestedActions || undefined,
+      }));
+    } catch (error) {
+      console.error('[AI Analytics Engine] Failed to fetch insights from DB:', error);
+      // Fallback to in-memory
+      return (this.insightStore.get(workspaceId) || []).slice(0, limit);
+    }
+  }
+
+  private mapCategoryToType(category: string): 'opportunity' | 'risk' | 'recommendation' | 'warning' {
+    const categoryMap: Record<string, 'opportunity' | 'risk' | 'recommendation' | 'warning'> = {
+      cost_savings: 'opportunity',
+      productivity: 'recommendation',
+      anomaly: 'warning',
+      prediction: 'recommendation',
+      recommendation: 'recommendation',
+      compliance: 'warning',
+      scheduling: 'recommendation',
+      payroll: 'recommendation',
+      analytics: 'opportunity',
+    };
+    return categoryMap[category] || 'recommendation';
+  }
+
+  private mapPriorityToRisk(priority: string | null): 'low' | 'medium' | 'high' | 'critical' {
+    const priorityMap: Record<string, 'low' | 'medium' | 'high' | 'critical'> = {
+      low: 'low',
+      normal: 'medium',
+      high: 'high',
+      critical: 'critical',
+    };
+    return priorityMap[priority || 'normal'] || 'medium';
+  }
+
+  async getAllInsightsForUser(userId: string, limit = 50): Promise<TrinityInsight[]> {
+    // For platform admins, get insights across all workspaces
+    try {
+      const dbInsights = await db.select()
+        .from(aiInsights)
+        .orderBy(desc(aiInsights.createdAt))
+        .limit(limit);
+
+      return dbInsights.map(row => ({
+        id: row.id,
+        workspaceId: row.workspaceId,
+        type: this.mapCategoryToType(row.category),
+        category: row.category as ActionCategory,
+        title: row.title,
+        message: row.summary,
+        rationale: row.details || undefined,
+        riskLevel: this.mapPriorityToRisk(row.priority),
+        confidence: row.confidence ? parseFloat(row.confidence) / 100 : 0.8,
+        isRead: row.status === 'dismissed' || row.status === 'acted_upon',
+        createdAt: row.createdAt || new Date(),
+      }));
+    } catch (error) {
+      console.error('[AI Analytics Engine] Failed to fetch all insights:', error);
+      const allInsights: TrinityInsight[] = [];
+      for (const insights of this.insightStore.values()) {
+        allInsights.push(...insights.filter(i => !i.userId || i.userId === userId));
+      }
+      return allInsights
+        .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+        .slice(0, limit);
+    }
+  }
+
+  async markInsightRead(insightId: string): Promise<boolean> {
+    try {
+      const result = await db.update(aiInsights)
+        .set({ status: 'dismissed', dismissedAt: new Date() })
+        .where(eq(aiInsights.id, insightId));
+      
+      // Also update in-memory cache
+      for (const insights of this.insightStore.values()) {
+        const insight = insights.find(i => i.id === insightId);
+        if (insight) {
+          insight.isRead = true;
+        }
+      }
+      return true;
+    } catch (error) {
+      console.error('[AI Analytics Engine] Failed to mark insight as read:', error);
+      // Fallback to in-memory
+      for (const insights of this.insightStore.values()) {
+        const insight = insights.find(i => i.id === insightId);
+        if (insight) {
+          insight.isRead = true;
+          return true;
+        }
+      }
+      return false;
+    }
   }
 
   // ============================================================================
