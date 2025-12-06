@@ -13,6 +13,8 @@ import { aiBrainMasterOrchestrator } from "./services/ai-brain/aiBrainMasterOrch
 import { platformEventBus } from "./services/platformEventBus";
 import { handlePlatformChangeEvent } from "./services/aiNotificationService";
 import { startNotificationCleanupScheduler } from "./services/notificationCleanupService";
+import { initializeOrchestrationServices, setOrchestrationWebSocketBroadcaster } from "./services/ai-brain/orchestrationBridge";
+import { broadcastToWorkspace } from "./websocket";
 
 const app = express();
 app.use(express.json());
@@ -174,6 +176,18 @@ process.on('SIGTERM', () => {
     console.log('[Server] Action categories:', JSON.stringify(actionSummary));
   } catch (error) {
     console.error('[Server] Warning: Failed to initialize AI Brain Master Orchestrator:', error);
+  }
+
+  // Initialize AI Brain Orchestration Services (WorkflowLedger, CommitmentManager, etc.)
+  try {
+    // Connect WebSocket broadcaster to orchestration bridge
+    setOrchestrationWebSocketBroadcaster(broadcastToWorkspace);
+    
+    // Start all orchestration services
+    initializeOrchestrationServices();
+    console.log('[Server] AI Brain Orchestration services initialized');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize orchestration services:', error);
   }
 
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {

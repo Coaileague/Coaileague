@@ -55,6 +55,15 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
 - **AI Brain File System Tools:** Comprehensive and secure file access with read, write, edit, delete, list, search, diff, and metadata retrieval.
 - **AI Brain Code Editor API:** Full staged code editing workflow with endpoints for staging, approval, application, and rollback.
 - **AI Brain Authorization Service:** Role-based permission model with a 9-level hierarchy and category-specific matrix, validating credentials and logging checks.
+- **AI Brain Orchestration Infrastructure:** Durable workflow execution with persistence, commitments, and multi-agent coordination:
+  - **WorkflowLedger:** Persistent workflow state tracking with PostgreSQL backing, SLA monitoring, retry/recovery logic.
+  - **CommitmentManager:** Transaction-like commitment tracking with approval workflows, lock management, and rollback support.
+  - **SupervisoryAgent:** Health monitoring, stalled workflow recovery, and automatic retry with configurable intervals.
+  - **SchedulerCoordinator:** Priority-based task scheduling with configurable concurrency and execution coordination.
+  - **RealTimeBridge:** WebSocket integration for live workflow status updates and notification broadcasting.
+  - **ContextResolver:** Smart resolution of workspace/user context with escalation support for approval flows.
+  - **OrchestrationBridge:** Central hub wiring all orchestration services, connecting WebSocket and PlatformEventBus for real-time notifications.
+  - **Database Tables:** orchestration_runs, orchestration_run_steps, commitment_ledger, workflow_artifacts - all with proper indexing and foreign key relationships.
 
 **System Design Choices:**
 - **Modularity:** Composed of 87 backend service modules and 220+ frontend routes.
@@ -79,10 +88,14 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
 - **PostgreSQL**: Primary relational database.
 - **Twilio**: SMS notifications.
 ### Recent Changes (December 2025)
-- **Notification System Cleanup:** Removed 90+ orphan code blocks from server/routes.ts that were causing undefined variable errors (counts, workspaceId, platformUpdatesMarked, etc.) and breaking WebSocket broadcasts. Fixed incorrect `markedRead` return statements in unrelated endpoints.
-- **Real-time Updates Restored:** WebSocket notification broadcasts now work correctly without mid-request crashes.
-- **AI Brain Integration:** All 65 actions properly registered across 12 categories with Gemini function calling support.
-- **Trinity Mascot Optimization:** Desktop size increased from 80px to 100px for better visibility. Mobile performance optimized with aggressive idle throttling (3s delay, 12 FPS target) for battery efficiency.
-- **Festive Bubble System:** FestiveDialogueBubble now properly activates for ALL holidays (not just Christmas) using `holiday && holiday.key !== 'default'` check.
-- **AI Brain Code Editor LSP Fix:** Changed notification type from invalid 'code_change' to enum-compliant 'ai_action_completed' with proper scope/category fields.
-- **Support Console Communication:** Trinity connected to support console via WebSocket broadcasts, force-refresh commands, and platform event bus for AI-driven platform maintenance.
+- **AI Brain Orchestration Infrastructure:** Complete durable workflow execution system with PostgreSQL-backed persistence:
+  - Created 4 new database tables: orchestration_runs, orchestration_run_steps, commitment_ledger, workflow_artifacts with proper indexing.
+  - Implemented 7 orchestration services: WorkflowLedger, CommitmentManager, SupervisoryAgent, SchedulerCoordinator, RealTimeBridge, ContextResolver, OrchestrationBridge.
+  - Added 10+ event listeners bridging aiBrainEvents to WebSocket broadcasts and PlatformEventBus for real-time notifications.
+  - Services auto-start on server boot with automatic stalled workflow recovery.
+- **AI Brain Master Orchestrator:** Now 69 actions registered across 12 categories (up from 65).
+- **Notification System Cleanup:** Removed 90+ orphan code blocks from server/routes.ts that were causing undefined variable errors.
+- **Real-time Updates Restored:** WebSocket notification broadcasts work correctly without mid-request crashes.
+- **Trinity Mascot Optimization:** Desktop size 100px, mobile performance optimized with 3s idle delay and 12 FPS target.
+- **Festive Bubble System:** Properly activates for ALL holidays using `holiday && holiday.key !== 'default'` check.
+- **Support Console Communication:** Trinity connected to support console via WebSocket and platform event bus.
