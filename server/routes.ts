@@ -670,6 +670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // WebSocket broadcast for real-time sync
       broadcastNotification(workspaceId, userId, 'notification_cleared_all', { 
         cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: 0, total: counts.unread, lastUpdated: new Date().toISOString() },
         unreadCount: counts.unread,
         unclearedCount: counts.uncleared 
       }, counts.unread);
@@ -708,6 +709,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           notifications: notificationsCleared, 
           alerts: alertsCleared 
         },
+        counts: { notifications: counts.unread, platformUpdates: 0, total: counts.unread, lastUpdated: new Date().toISOString() },
         unreadCount: counts.unread,
         unclearedCount: counts.uncleared
       });
@@ -765,6 +767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         acknowledged,
         platformUpdatesMarked,
         alertsAcknowledged,
+        counts: { notifications: counts.unread, platformUpdates: 0, total: counts.unread, lastUpdated: new Date().toISOString() },
         unreadCount: counts.unread,
         unclearedCount: counts.uncleared
       }, counts.unread);
@@ -823,7 +826,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (workspaceId) {
         broadcastNotification(workspaceId, userId, 'notification_acknowledged', { 
           notificationId,
-          unreadCount: counts.unread,
+          counts: { notifications: counts.unread, platformUpdates: 0, total: counts.unread, lastUpdated: new Date().toISOString() },
+        unreadCount: counts.unread,
           unclearedCount: counts.uncleared
         }, counts.unread);
         broadcastNotification(workspaceId, userId, 'notification_count_updated', { 
