@@ -282,14 +282,16 @@ export function MagicFloatingText({
         timersRef.current.push(timer);
       });
       
-      // Calculate duration - MUCH longer for comfortable reading (20+ seconds)
+      // Calculate duration - Extended for comfortable reading across all devices
+      // Average reading speed: 200-250 words/min = ~4 words/sec = ~20 chars/sec
+      // For accessibility and mobile users, use slower rate: ~8-10 chars/sec = ~100-120ms/char
       const now = Date.now();
       const textLength = thought.text.length;
-      const baseDuration = 18000; // 18 seconds minimum for reading
-      const readingTime = Math.max(baseDuration, textLength * 150); // 150ms per character
-      // Use expiresAt if set, otherwise use generous reading time (max 25 seconds)
-      const duration = thought.expiresAt ? Math.max(thought.expiresAt - now, readingTime) : Math.min(readingTime, 25000);
-      const exitStartTime = Math.max(duration - 2500, 15000); // Start exit 2.5s before end, minimum 15s display
+      const baseDuration = 25000; // 25 seconds minimum base for any message
+      const readingTime = Math.max(baseDuration, textLength * 250); // 250ms per character for comfortable reading
+      // Use expiresAt if set, otherwise use generous reading time (max 45 seconds)
+      const duration = thought.expiresAt ? Math.max(thought.expiresAt - now, readingTime) : Math.min(readingTime, 45000);
+      const exitStartTime = Math.max(duration - 3000, 22000); // Start exit 3s before end, minimum 22s display
       
       // Start exit animations with stagger
       const exitTimer = window.setTimeout(() => {

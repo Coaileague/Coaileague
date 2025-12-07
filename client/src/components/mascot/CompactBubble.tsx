@@ -65,7 +65,7 @@ export const CompactBubble = memo(function CompactBubble({
 
   const colors = MODE_COLORS[mode];
 
-  // Auto-dismiss after 6 seconds
+  // Auto-dismiss with comfortable reading time based on text length
   useEffect(() => {
     if (!thought) {
       setIsVisible(false);
@@ -76,13 +76,17 @@ export const CompactBubble = memo(function CompactBubble({
     setShouldRender(true);
     setTimeout(() => setIsVisible(true), 50);
 
+    // Calculate reading time: 250ms per character, minimum 15 seconds, max 30 seconds
+    const textLength = thought.text?.length || 0;
+    const readingTime = Math.min(Math.max(textLength * 250, 15000), 30000);
+    
     const dismissTimer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(() => {
         setShouldRender(false);
         onDismiss();
       }, 300);
-    }, 6000);
+    }, readingTime);
 
     return () => clearTimeout(dismissTimer);
   }, [thought, onDismiss]);
