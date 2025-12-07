@@ -249,7 +249,7 @@ import {
 import type { PaginatedResponse, ClientWithInvoiceCount } from "@shared/types";
 import type { ClientsQueryParams } from "@shared/validation/pagination";
 import { db } from "./db";
-import { eq, and, desc, isNotNull, isNull, or, like, sql, lte, count, gt } from "drizzle-orm";
+import { eq, and, desc, isNotNull, isNull, or, like, sql, lte, count, gt, inArray } from "drizzle-orm";
 
 // Custom error for WAL transition failures
 export class InvalidWalTransitionError extends Error {
@@ -6619,19 +6619,10 @@ export class DatabaseStorage implements IStorage {
   // ============================================================================
 
   async getPlatformUpdatesWithReadState(userId: string, workspaceId: string, limit: number = 20): Promise<Array<PlatformUpdate & { isViewed: boolean }>> {
-    const results = await db
-      .select({
-        update: platformUpdates,
-        viewedAt: userPlatformUpdateViews.viewedAt,
-      })
+    // Step 1: Get platform updates
+    const updates = await db
+      .select()
       .from(platformUpdates)
-      .leftJoin(
-        userPlatformUpdateViews,
-        and(
-          eq(userPlatformUpdateViews.updateId, platformUpdates.id),
-          eq(userPlatformUpdateViews.userId, userId)
-        )
-      )
       .where(
         or(
           eq(platformUpdates.visibility, 'all'),
@@ -6642,9 +6633,28 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(platformUpdates.createdAt))
       .limit(limit);
 
-    return results.map(r => ({
-      ...r.update,
-      isViewed: r.viewedAt !== null,
+    if (updates.length === 0) {
+      return [];
+    }
+
+    // Step 2: Get viewed update IDs for this user (separate query to avoid LEFT JOIN mapping issues)
+    const viewedRecords = await db
+      .select({ updateId: userPlatformUpdateViews.updateId })
+      .from(userPlatformUpdateViews)
+      .where(
+        and(
+          eq(userPlatformUpdateViews.userId, userId),
+          inArray(userPlatformUpdateViews.updateId, updates.map(u => u.id))
+        )
+      );
+
+    // Create a Set of viewed update IDs for O(1) lookup
+    const viewedUpdateIds = new Set(viewedRecords.map(r => r.updateId));
+
+    // Step 3: Combine results
+    return updates.map(update => ({
+      ...update,
+      isViewed: viewedUpdateIds.has(update.id),
     }));
   }
 
