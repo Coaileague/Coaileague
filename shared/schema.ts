@@ -16374,3 +16374,292 @@ export const serviceControlStates = pgTable("service_control_states", {
 export const insertServiceControlStateSchema = createInsertSchema(serviceControlStates);
 export type InsertServiceControlState = z.infer<typeof insertServiceControlStateSchema>;
 export type ServiceControlState = typeof serviceControlStates.$inferSelect;
+
+// ============================================================================
+// QUICK FIX SYSTEM - RBAC-governed platform maintenance with audit trail
+// ============================================================================
+
+// Risk tiers for quick fix actions
+export const quickFixRiskTierEnum = pgEnum('quick_fix_risk_tier', [
+  'safe',      // Can be executed by any platform staff
+  'moderate',  // Requires supervisor+ or approval code
+  'elevated',  // Requires manager+ or dual approval
+  'critical',  // Root admin only
+]);
+
+// Quick Fix Actions - Available fix types with risk levels
+export const quickFixActions = pgTable("quick_fix_actions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 100 }).notNull().unique(), // e.g., 'restart_service', 'clear_cache'
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 50 }).notNull(), // 'cache', 'service', 'database', 'security', 'config'
+  
+  // Risk and permissions
+  riskTier: quickFixRiskTierEnum("risk_tier").notNull().default('moderate'),
+  requiresApproval: boolean("requires_approval").default(false),
+  aiSupported: boolean("ai_supported").default(true), // Can Trinity/AI Brain suggest this?
+  
+  // Execution details
+  executionType: varchar("execution_type", { length: 50 }).default('immediate'), // 'immediate', 'scheduled', 'batched'
+  estimatedDuration: integer("estimated_duration").default(5), // seconds
+  reversible: boolean("reversible").default(true),
+  
+  // Limits
+  globalDailyLimit: integer("global_daily_limit"), // Platform-wide daily limit
+  cooldownSeconds: integer("cooldown_seconds").default(60), // Minimum time between executions
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("quick_fix_actions_code_idx").on(table.code),
+  index("quick_fix_actions_category_idx").on(table.category),
+  index("quick_fix_actions_risk_idx").on(table.riskTier),
+]);
+
+export const insertQuickFixActionSchema = createInsertSchema(quickFixActions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertQuickFixAction = z.infer<typeof insertQuickFixActionSchema>;
+export type QuickFixAction = typeof quickFixActions.$inferSelect;
+
+// Quick Fix Role Policies - Per-role limits and permissions
+export const quickFixRolePolicies = pgTable("quick_fix_role_policies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  platformRole: varchar("platform_role", { length: 50 }).notNull(), // root_admin, support_manager, support_agent, etc.
+  actionId: varchar("action_id").notNull().references(() => quickFixActions.id, { onDelete: 'cascade' }),
+  
+  // Limits per role
+  perDayLimit: integer("per_day_limit").default(10),
+  perWeekLimit: integer("per_week_limit").default(50),
+  perMonthLimit: integer("per_month_limit"),
+  
+  // Approval requirements
+  requiresApprovalCode: boolean("requires_approval_code").default(false),
+  requiresSecondApprover: boolean("requires_second_approver").default(false),
+  autoApproveBelow: integer("auto_approve_below"), // Auto-approve if impact score below threshold
+  
+  // Can this role execute immediately or must queue?
+  canExecuteImmediately: boolean("can_execute_immediately").default(false),
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("quick_fix_policies_role_idx").on(table.platformRole),
+  index("quick_fix_policies_action_idx").on(table.actionId),
+  uniqueIndex("quick_fix_policies_unique").on(table.platformRole, table.actionId),
+]);
+
+export const insertQuickFixRolePolicySchema = createInsertSchema(quickFixRolePolicies).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertQuickFixRolePolicy = z.infer<typeof insertQuickFixRolePolicySchema>;
+export type QuickFixRolePolicy = typeof quickFixRolePolicies.$inferSelect;
+
+// Quick Fix Requests - Pending and historical fix requests
+export const quickFixRequests = pgTable("quick_fix_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  actionId: varchar("action_id").notNull().references(() => quickFixActions.id, { onDelete: 'cascade' }),
+  
+  // Requester info
+  requesterId: varchar("requester_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  requesterRole: varchar("requester_role", { length: 50 }).notNull(),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'set null' }),
+  
+  // Request details
+  targetScope: varchar("target_scope", { length: 50 }).default('platform'), // 'platform', 'workspace', 'user', 'service'
+  targetId: varchar("target_id"), // Specific resource ID if scoped
+  payloadJson: jsonb("payload_json"), // Parameters for the fix
+  
+  // AI recommendation (if suggested by Trinity/AI Brain)
+  aiRecommendationId: varchar("ai_recommendation_id"),
+  aiConfidenceScore: doublePrecision("ai_confidence_score"),
+  aiReasoning: text("ai_reasoning"),
+  
+  // Status tracking
+  status: varchar("status", { length: 30 }).notNull().default('pending'),
+  // 'pending', 'awaiting_approval', 'approved', 'rejected', 'executing', 'completed', 'failed', 'cancelled'
+  
+  // Priority
+  priority: varchar("priority", { length: 20 }).default('normal'), // 'low', 'normal', 'high', 'urgent'
+  
+  // Timing
+  requestedAt: timestamp("requested_at").defaultNow(),
+  expiresAt: timestamp("expires_at"), // Request expires if not processed
+  scheduledFor: timestamp("scheduled_for"), // For scheduled execution
+  
+  // Error handling
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("quick_fix_requests_action_idx").on(table.actionId),
+  index("quick_fix_requests_requester_idx").on(table.requesterId),
+  index("quick_fix_requests_status_idx").on(table.status),
+  index("quick_fix_requests_requested_idx").on(table.requestedAt),
+  index("quick_fix_requests_priority_idx").on(table.priority),
+]);
+
+export const insertQuickFixRequestSchema = createInsertSchema(quickFixRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertQuickFixRequest = z.infer<typeof insertQuickFixRequestSchema>;
+export type QuickFixRequest = typeof quickFixRequests.$inferSelect;
+
+// Quick Fix Approvals - Approval records for requests requiring authorization
+export const quickFixApprovals = pgTable("quick_fix_approvals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestId: varchar("request_id").notNull().references(() => quickFixRequests.id, { onDelete: 'cascade' }),
+  
+  // Approver info
+  approverId: varchar("approver_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  approverRole: varchar("approver_role", { length: 50 }).notNull(),
+  
+  // Approval method
+  approvalMethod: varchar("approval_method", { length: 30 }).notNull(), // 'rbac', 'approval_code', 'dual_approval', 'emergency'
+  approvalCode: varchar("approval_code", { length: 100 }), // Hashed if used
+  
+  // Decision
+  decision: varchar("decision", { length: 20 }).notNull(), // 'approved', 'rejected', 'escalated'
+  decisionNotes: text("decision_notes"),
+  
+  // Risk assessment at time of approval
+  assessedRiskLevel: varchar("assessed_risk_level", { length: 20 }),
+  
+  approvedAt: timestamp("approved_at").defaultNow(),
+}, (table) => [
+  index("quick_fix_approvals_request_idx").on(table.requestId),
+  index("quick_fix_approvals_approver_idx").on(table.approverId),
+  index("quick_fix_approvals_decision_idx").on(table.decision),
+]);
+
+export const insertQuickFixApprovalSchema = createInsertSchema(quickFixApprovals).omit({
+  id: true,
+  approvedAt: true,
+});
+export type InsertQuickFixApproval = z.infer<typeof insertQuickFixApprovalSchema>;
+export type QuickFixApproval = typeof quickFixApprovals.$inferSelect;
+
+// Quick Fix Executions - Execution records with telemetry
+export const quickFixExecutions = pgTable("quick_fix_executions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestId: varchar("request_id").notNull().references(() => quickFixRequests.id, { onDelete: 'cascade' }),
+  
+  // Executor info
+  executorId: varchar("executor_id").references(() => users.id, { onDelete: 'set null' }), // null = system/automated
+  executorType: varchar("executor_type", { length: 30 }).default('user'), // 'user', 'system', 'ai_brain', 'scheduled'
+  
+  // Orchestrator integration
+  orchestratorRunId: varchar("orchestrator_run_id").references(() => orchestrationRuns.id, { onDelete: 'set null' }),
+  
+  // Execution result
+  result: varchar("result", { length: 30 }).notNull(), // 'success', 'partial', 'failed', 'rolled_back'
+  resultDetails: jsonb("result_details"),
+  
+  // Telemetry
+  executionStarted: timestamp("execution_started").defaultNow(),
+  executionCompleted: timestamp("execution_completed"),
+  durationMs: integer("duration_ms"),
+  
+  // Changes made (for audit)
+  changesSummary: text("changes_summary"),
+  changesJson: jsonb("changes_json"), // Detailed change log
+  
+  // Rollback info
+  rollbackAvailable: boolean("rollback_available").default(false),
+  rollbackData: jsonb("rollback_data"),
+  rolledBackAt: timestamp("rolled_back_at"),
+  rolledBackBy: varchar("rolled_back_by").references(() => users.id, { onDelete: 'set null' }),
+}, (table) => [
+  index("quick_fix_executions_request_idx").on(table.requestId),
+  index("quick_fix_executions_executor_idx").on(table.executorId),
+  index("quick_fix_executions_result_idx").on(table.result),
+  index("quick_fix_executions_started_idx").on(table.executionStarted),
+]);
+
+export const insertQuickFixExecutionSchema = createInsertSchema(quickFixExecutions).omit({
+  id: true,
+});
+export type InsertQuickFixExecution = z.infer<typeof insertQuickFixExecutionSchema>;
+export type QuickFixExecution = typeof quickFixExecutions.$inferSelect;
+
+// Quick Fix Audit Links - Links executions to main audit log
+export const quickFixAuditLinks = pgTable("quick_fix_audit_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestId: varchar("request_id").notNull().references(() => quickFixRequests.id, { onDelete: 'cascade' }),
+  executionId: varchar("execution_id").references(() => quickFixExecutions.id, { onDelete: 'cascade' }),
+  auditEntryId: varchar("audit_entry_id").notNull(), // Links to main audit log
+  
+  // Event type
+  eventType: varchar("event_type", { length: 50 }).notNull(), // 'requested', 'approved', 'rejected', 'executed', 'failed', 'rolled_back'
+  
+  // AI Brain awareness
+  aiBrainNotified: boolean("ai_brain_notified").default(false),
+  aiBrainSummary: text("ai_brain_summary"), // AI-generated summary for later queries
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("quick_fix_audit_request_idx").on(table.requestId),
+  index("quick_fix_audit_execution_idx").on(table.executionId),
+  index("quick_fix_audit_entry_idx").on(table.auditEntryId),
+  index("quick_fix_audit_event_idx").on(table.eventType),
+]);
+
+export const insertQuickFixAuditLinkSchema = createInsertSchema(quickFixAuditLinks).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertQuickFixAuditLink = z.infer<typeof insertQuickFixAuditLinkSchema>;
+export type QuickFixAuditLink = typeof quickFixAuditLinks.$inferSelect;
+
+// Device Profiles - Store user device capabilities for optimized loading
+export const userDeviceProfiles = pgTable("user_device_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Device identification
+  deviceFingerprint: varchar("device_fingerprint", { length: 255 }),
+  deviceType: varchar("device_type", { length: 30 }).notNull(), // 'desktop', 'tablet', 'mobile'
+  platform: varchar("platform", { length: 50 }), // 'windows', 'macos', 'ios', 'android', 'linux'
+  browser: varchar("browser", { length: 50 }),
+  browserVersion: varchar("browser_version", { length: 30 }),
+  
+  // Capabilities
+  screenWidth: integer("screen_width"),
+  screenHeight: integer("screen_height"),
+  devicePixelRatio: doublePrecision("device_pixel_ratio"),
+  touchSupport: boolean("touch_support").default(false),
+  
+  // Performance metrics
+  cpuCores: integer("cpu_cores"),
+  memoryGb: doublePrecision("memory_gb"),
+  connectionType: varchar("connection_type", { length: 30 }), // '4g', 'wifi', 'ethernet'
+  
+  // Optimized settings (cached)
+  optimizedSettings: jsonb("optimized_settings"), // Animation density, resource bundles, etc.
+  settingsVersion: integer("settings_version").default(1),
+  
+  lastSeenAt: timestamp("last_seen_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("device_profiles_user_idx").on(table.userId),
+  index("device_profiles_type_idx").on(table.deviceType),
+  index("device_profiles_fingerprint_idx").on(table.deviceFingerprint),
+]);
+
+export const insertUserDeviceProfileSchema = createInsertSchema(userDeviceProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertUserDeviceProfile = z.infer<typeof insertUserDeviceProfileSchema>;
+export type UserDeviceProfile = typeof userDeviceProfiles.$inferSelect;

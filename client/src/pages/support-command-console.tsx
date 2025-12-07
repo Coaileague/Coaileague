@@ -19,6 +19,9 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Popover,
   PopoverContent,
@@ -47,7 +50,11 @@ import {
   Brain,
   Pause,
   Play,
-  RotateCcw
+  RotateCcw,
+  Wrench,
+  Database,
+  Lock,
+  Loader2
 } from "lucide-react";
 import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -71,6 +78,34 @@ interface OrchestratorAction {
   description: string;
   isTestTool?: boolean;
 }
+
+interface QuickFixAction {
+  id: string;
+  code: string;
+  name: string;
+  description: string;
+  category: string;
+  riskTier: 'safe' | 'moderate' | 'elevated' | 'critical';
+  requiresApproval: boolean;
+  aiSupported: boolean;
+  estimatedDuration: number;
+  reversible: boolean;
+}
+
+interface QuickFixLimit {
+  actionCode: string;
+  perDayLimit: number;
+  usedToday: number;
+  canExecuteImmediately: boolean;
+  requiresApproval: boolean;
+}
+
+const RISK_COLORS: Record<string, string> = {
+  safe: 'bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-200',
+  moderate: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200',
+  elevated: 'bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200',
+  critical: 'bg-red-100 text-red-800 dark:bg-red-900 dark:text-red-200',
+};
 
 interface ServiceHealth {
   serviceName: string;
@@ -102,6 +137,12 @@ export default function SupportCommandConsole() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  
+  // Quick Fix state
+  const [selectedQuickFix, setSelectedQuickFix] = useState<QuickFixAction | null>(null);
+  const [showQuickFixDialog, setShowQuickFixDialog] = useState(false);
+  const [quickFixNotes, setQuickFixNotes] = useState('');
+  const [approvalCode, setApprovalCode] = useState('');
 
   const { data: actions } = useQuery<{ actions: OrchestratorAction[] }>({
     queryKey: ['/api/helpai/orchestrator/actions'],
@@ -179,6 +220,121 @@ export default function SupportCommandConsole() {
       toast({ title: "Failed to send test alert", description: String(error), variant: "destructive" });
     },
   });
+
+  // Quick Fix actions
+  const { data: quickFixData, isLoading: loadingQuickFix, refetch: refetchQuickFix } = useQuery<{
+    actions: QuickFixAction[];
+    limits: QuickFixLimit[];
+    context: { role: string };
+  }>({
+    queryKey: ['/api/quick-fixes/actions'],
+  });
+
+  // Quick Fix AI suggestions
+  const { data: quickFixSuggestions } = useQuery<{
+    suggestions: Array<{
+      action: QuickFixAction;
+      confidence: number;
+      reasoning: string;
+    }>;
+  }>({
+    queryKey: ['/api/quick-fixes/suggestions'],
+  });
+
+  // Quick Fix history
+  const { data: quickFixHistory } = useQuery<{
+    requests: Array<{
+      id: string;
+      actionCode: string;
+      status: string;
+      requestedAt: string;
+    }>;
+  }>({
+    queryKey: ['/api/quick-fixes/history'],
+  });
+
+  const executeQuickFix = useMutation({
+    mutationFn: async ({ actionCode, notes }: { actionCode: string; notes?: string }) => {
+      const res = await apiRequest('POST', '/api/quick-fixes/execute', { actionCode, notes });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Fix executed",
+        description: data.message || "Quick fix completed successfully"
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/quick-fixes/actions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/quick-fixes/history'] });
+      setShowQuickFixDialog(false);
+      setSelectedQuickFix(null);
+      setQuickFixNotes('');
+    },
+    onError: (error) => {
+      toast({ title: "Quick fix failed", description: String(error), variant: "destructive" });
+    },
+  });
+
+  const requestQuickFixApproval = useMutation({
+    mutationFn: async ({ actionCode, notes, approvalCode }: { actionCode: string; notes?: string; approvalCode?: string }) => {
+      const res = await apiRequest('POST', '/api/quick-fixes/requests', { actionCode, notes, approvalCode });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({ 
+        title: "Approval requested",
+        description: data.message || "Quick fix request submitted for approval"
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/quick-fixes/actions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/quick-fixes/history'] });
+      setShowQuickFixDialog(false);
+      setSelectedQuickFix(null);
+      setQuickFixNotes('');
+      setApprovalCode('');
+    },
+    onError: (error) => {
+      toast({ title: "Request failed", description: String(error), variant: "destructive" });
+    },
+  });
+
+  // Handler for Quick Fix action clicks
+  const handleQuickFixClick = (action: QuickFixAction) => {
+    setSelectedQuickFix(action);
+    setQuickFixNotes('');
+    setApprovalCode('');
+    setShowQuickFixDialog(true);
+  };
+
+  // Handler for Quick Fix submission
+  const handleQuickFixSubmit = () => {
+    if (!selectedQuickFix) return;
+    
+    const limit = quickFixData?.limits?.find(l => l.actionCode === selectedQuickFix.code);
+    const needsApproval = selectedQuickFix.requiresApproval || 
+      (limit && !limit.canExecuteImmediately);
+
+    // Validate approval metadata
+    if (needsApproval && !approvalCode && !quickFixNotes) {
+      toast({ 
+        title: "Notes required", 
+        description: "Please provide notes explaining why this fix is needed",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    if (needsApproval) {
+      requestQuickFixApproval.mutate({
+        actionCode: selectedQuickFix.code,
+        notes: quickFixNotes || undefined,
+        approvalCode: approvalCode || undefined,
+      });
+    } else {
+      executeQuickFix.mutate({
+        actionCode: selectedQuickFix.code,
+        notes: quickFixNotes || undefined,
+      });
+    }
+  };
 
   const sendCommandMutation = useMutation({
     mutationFn: async (command: string) => {
@@ -393,10 +549,11 @@ export default function SupportCommandConsole() {
 
         <div className="hidden lg:block w-80 border-l bg-muted/30 p-4 overflow-auto">
           <Tabs defaultValue="health">
-            <TabsList className="w-full">
-              <TabsTrigger value="health" className="flex-1" data-testid="tab-health">Health</TabsTrigger>
-              <TabsTrigger value="orchestration" className="flex-1" data-testid="tab-orchestration">AI Brain</TabsTrigger>
-              <TabsTrigger value="tools" className="flex-1" data-testid="tab-tools">Tools</TabsTrigger>
+            <TabsList className="w-full grid grid-cols-4">
+              <TabsTrigger value="health" data-testid="tab-health">Health</TabsTrigger>
+              <TabsTrigger value="orchestration" data-testid="tab-orchestration">AI</TabsTrigger>
+              <TabsTrigger value="quickfix" data-testid="tab-quickfix">Fixes</TabsTrigger>
+              <TabsTrigger value="tools" data-testid="tab-tools">Tools</TabsTrigger>
             </TabsList>
 
             <TabsContent value="health" className="mt-4 space-y-3">
@@ -537,6 +694,133 @@ export default function SupportCommandConsole() {
               </Card>
             </TabsContent>
 
+            <TabsContent value="quickfix" className="mt-4 space-y-3">
+              {/* AI Suggestions */}
+              {quickFixSuggestions?.suggestions && quickFixSuggestions.suggestions.length > 0 && (
+                <Card className="border-blue-500/30 bg-blue-500/5">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center">
+                      <Sparkles className="w-4 h-4 mr-2 text-blue-500" />
+                      AI Suggested
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {quickFixSuggestions.suggestions.slice(0, 2).map((suggestion, idx) => (
+                      <div 
+                        key={idx}
+                        className="p-2 rounded-md bg-blue-500/10 space-y-1 hover-elevate cursor-pointer"
+                        onClick={() => handleQuickFixClick(suggestion.action)}
+                        data-testid={`suggestion-${suggestion.action.code}`}
+                      >
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="text-xs font-medium">{suggestion.action.name}</span>
+                          <Badge variant="outline" className="text-[10px] h-4">
+                            {Math.round(suggestion.confidence * 100)}%
+                          </Badge>
+                        </div>
+                        <p className="text-[10px] text-muted-foreground line-clamp-1">{suggestion.reasoning}</p>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Actions List */}
+              <Card>
+                <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
+                  <CardTitle className="text-sm flex items-center">
+                    <Wrench className="w-4 h-4 mr-2 text-orange-500" />
+                    Quick Fixes
+                  </CardTitle>
+                  <Button 
+                    size="icon" 
+                    variant="ghost" 
+                    className="h-6 w-6" 
+                    onClick={() => refetchQuickFix()}
+                    data-testid="button-refresh-quickfix"
+                  >
+                    <RefreshCw className="w-3 h-3" />
+                  </Button>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  {loadingQuickFix ? (
+                    <div className="flex items-center justify-center py-4">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    </div>
+                  ) : quickFixData?.actions?.length === 0 ? (
+                    <p className="text-xs text-muted-foreground text-center py-2">No fixes available</p>
+                  ) : (
+                    quickFixData?.actions?.slice(0, 6).map((action) => {
+                      const limit = quickFixData.limits?.find(l => l.actionCode === action.code);
+                      const needsApproval = action.requiresApproval || (limit && !limit.canExecuteImmediately);
+                      const isOverLimit = limit && limit.usedToday >= limit.perDayLimit;
+                      return (
+                        <div 
+                          key={action.id} 
+                          className="p-2 rounded-md bg-muted/50 space-y-1 hover-elevate cursor-pointer"
+                          onClick={() => handleQuickFixClick(action)}
+                          data-testid={`quickfix-action-${action.code}`}
+                        >
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-xs font-medium truncate">{action.name}</span>
+                            <Badge className={`text-[10px] h-4 shrink-0 ${RISK_COLORS[action.riskTier]}`}>
+                              {action.riskTier}
+                            </Badge>
+                          </div>
+                          <p className="text-[10px] text-muted-foreground line-clamp-2">{action.description}</p>
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="text-[10px] text-muted-foreground">
+                              {limit ? `${limit.usedToday}/${limit.perDayLimit}` : ''} 
+                              {isOverLimit && <span className="text-red-500 ml-1">limit</span>}
+                            </span>
+                            <Badge variant="outline" className="text-[10px] h-4">
+                              {needsApproval ? (
+                                <><Lock className="w-2 h-2 mr-1" /> Approval</>
+                              ) : (
+                                <><Zap className="w-2 h-2 mr-1" /> Instant</>
+                              )}
+                            </Badge>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Recent History */}
+              {quickFixHistory?.requests && quickFixHistory.requests.length > 0 && (
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center">
+                      <Clock className="w-4 h-4 mr-2 text-muted-foreground" />
+                      Recent
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-1">
+                    {quickFixHistory.requests.slice(0, 3).map((request) => (
+                      <div 
+                        key={request.id}
+                        className="flex items-center justify-between text-xs py-1"
+                      >
+                        <span className="truncate">{request.actionCode}</span>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[10px] h-4 ${
+                            request.status === 'completed' ? 'text-green-600' :
+                            request.status === 'failed' ? 'text-red-600' :
+                            request.status === 'pending' ? 'text-yellow-600' : ''
+                          }`}
+                        >
+                          {request.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
+
             <TabsContent value="tools" className="mt-4 space-y-3">
               <Card>
                 <CardHeader className="pb-2">
@@ -595,6 +879,97 @@ export default function SupportCommandConsole() {
           </Tabs>
         </div>
       </div>
+
+      {/* Quick Fix Confirmation Dialog */}
+      <Dialog open={showQuickFixDialog} onOpenChange={setShowQuickFixDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Wrench className="w-5 h-5 text-orange-500" />
+              {selectedQuickFix?.name || 'Quick Fix'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedQuickFix?.description}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedQuickFix && (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Risk Level:</span>
+                <Badge className={RISK_COLORS[selectedQuickFix.riskTier]}>
+                  {selectedQuickFix.riskTier}
+                </Badge>
+              </div>
+              
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Estimated Duration:</span>
+                <span>{selectedQuickFix.estimatedDuration}s</span>
+              </div>
+
+              <div className="flex items-center justify-between text-sm">
+                <span className="text-muted-foreground">Reversible:</span>
+                <span>{selectedQuickFix.reversible ? 'Yes' : 'No'}</span>
+              </div>
+
+              <Separator />
+
+              <div className="space-y-2">
+                <Label htmlFor="quickfix-notes">Notes (optional)</Label>
+                <Textarea
+                  id="quickfix-notes"
+                  placeholder="Add any relevant context..."
+                  value={quickFixNotes}
+                  onChange={(e) => setQuickFixNotes(e.target.value)}
+                  className="resize-none"
+                  rows={2}
+                  data-testid="input-quickfix-notes"
+                />
+              </div>
+
+              {(selectedQuickFix.requiresApproval || 
+                quickFixData?.limits?.find(l => l.actionCode === selectedQuickFix.code && !l.canExecuteImmediately)) && (
+                <div className="space-y-2">
+                  <Label htmlFor="approval-code">Approval Code (if you have one)</Label>
+                  <Input
+                    id="approval-code"
+                    placeholder="Enter approval code..."
+                    value={approvalCode}
+                    onChange={(e) => setApprovalCode(e.target.value)}
+                    data-testid="input-approval-code"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    This action requires approval. Enter an approval code to skip the queue, or submit to request approval.
+                  </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button
+              variant="outline"
+              onClick={() => setShowQuickFixDialog(false)}
+              data-testid="button-cancel-quickfix"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleQuickFixSubmit}
+              disabled={executeQuickFix.isPending || requestQuickFixApproval.isPending}
+              data-testid="button-confirm-quickfix"
+            >
+              {(executeQuickFix.isPending || requestQuickFixApproval.isPending) && (
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+              )}
+              {selectedQuickFix?.requiresApproval || 
+                quickFixData?.limits?.find(l => l.actionCode === selectedQuickFix?.code && !l.canExecuteImmediately)
+                ? 'Request Approval'
+                : 'Execute Fix'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -32,6 +32,8 @@ import { helpaiRouter } from "./helpai-routes"; // HelpAI Orchestration System (
 import { registerFaqRoutes } from "./faq-routes"; // HelpAI FAQ routes
 import trinityInsightsRouter from "./routes/trinityInsightsRoutes"; // Trinity AI Business Intelligence
 import trinityMaintenanceRouter from "./routes/trinityMaintenanceRoutes"; // Trinity Platform Maintenance
+import quickFixRouter from "./routes/quickFixRoutes"; // Quick Fix System with RBAC audit trail
+import deviceLoaderRouter from "./routes/deviceLoaderRoutes"; // Universal Device Loader
 import controlTowerRouter from "./routes/controlTowerRoutes"; // Control Tower Dashboard API
 import integrationRouter from "./integrationRoutes"; // Partner Integration OAuth routes
 import { timeEntryRouter } from "./time-entry-routes"; // Universal Time Tracking & Clock System
@@ -2851,7 +2853,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register Trinity AI Business Intelligence routes
   app.use("/api/trinity", trinityInsightsRouter);
   app.use("/api/trinity/maintenance", trinityMaintenanceRouter); // Trinity Platform Maintenance
-  app.use("/api/control-tower", controlTowerRouter); // Control Tower Dashboard
+  app.use("/api/quick-fixes", quickFixRouter); // Quick Fix System
+  app.use("/api/device", deviceLoaderRouter); // Universal Device Loader
   // ============================================================================
   // AUTH ROUTES
   // ============================================================================
