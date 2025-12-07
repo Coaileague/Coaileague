@@ -6619,57 +6619,38 @@ export class DatabaseStorage implements IStorage {
   // ============================================================================
 
   async getPlatformUpdatesWithReadState(userId: string, workspaceId: string, limit: number = 20): Promise<Array<PlatformUpdate & { isViewed: boolean }>> {
-    console.log(`[TRINITY DEBUG] getPlatformUpdatesWithReadState called with userId=${userId}, workspaceId=${workspaceId}`);
+    // Single SQL query with LEFT JOIN for reliable isViewed computation
+    const result = await db.execute(sql`
+      SELECT 
+        p.*,
+        CASE WHEN v.id IS NOT NULL THEN true ELSE false END as is_viewed
+      FROM platform_updates p
+      LEFT JOIN user_platform_update_views v 
+        ON v.update_id = p.id 
+        AND v.user_id = ${userId}
+      WHERE p.visibility = 'all' 
+        OR p.workspace_id IS NULL 
+        OR p.workspace_id = ${workspaceId}
+      ORDER BY p.created_at DESC
+      LIMIT ${limit}
+    `);
     
-    // Step 1: Get platform updates
-    const updates = await db
-      .select()
-      .from(platformUpdates)
-      .where(
-        or(
-          eq(platformUpdates.visibility, 'all'),
-          isNull(platformUpdates.workspaceId),
-          eq(platformUpdates.workspaceId, workspaceId)
-        )
-      )
-      .orderBy(desc(platformUpdates.createdAt))
-      .limit(limit);
-
-    console.log(`[TRINITY DEBUG] Found ${updates.length} platform updates`);
-
-    if (updates.length === 0) {
-      return [];
-    }
-
-    // Step 2: Get viewed update IDs for this user (separate query to avoid LEFT JOIN mapping issues)
-    const viewedRecords = await db
-      .select({ updateId: userPlatformUpdateViews.updateId })
-      .from(userPlatformUpdateViews)
-      .where(
-        and(
-          eq(userPlatformUpdateViews.userId, userId),
-          inArray(userPlatformUpdateViews.updateId, updates.map(u => u.id))
-        )
-      );
-
-    console.log(`[TRINITY DEBUG] Found ${viewedRecords.length} view records for user ${userId}`);
-
-    // Create a Set of viewed update IDs for O(1) lookup
-    const viewedUpdateIds = new Set(viewedRecords.map(r => r.updateId));
-    
-    console.log(`[TRINITY DEBUG] ViewedUpdateIds Set size: ${viewedUpdateIds.size}`);
-    console.log(`[TRINITY DEBUG] First 3 update IDs: ${updates.slice(0, 3).map(u => u.id.slice(0, 50)).join(', ')}`);
-    console.log(`[TRINITY DEBUG] First 3 viewed IDs: ${[...viewedUpdateIds].slice(0, 3).map(id => id.slice(0, 50)).join(', ')}`);
-
-    // Step 3: Combine results
-    const result = updates.map(update => ({
-      ...update,
-      isViewed: viewedUpdateIds.has(update.id),
+    // Map raw SQL result to typed objects
+    return (result.rows as any[]).map(row => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      category: row.category,
+      date: row.date,
+      version: row.version,
+      badge: row.badge,
+      isNew: row.is_new,
+      priority: row.priority,
+      visibility: row.visibility,
+      workspaceId: row.workspace_id,
+      createdAt: row.created_at,
+      isViewed: row.is_viewed === true || row.is_viewed === 't',
     }));
-    
-    console.log(`[TRINITY DEBUG] First 3 results: ${result.slice(0, 3).map(u => `${u.id.slice(0, 30)}:isViewed=${u.isViewed}`).join(', ')}`);
-    
-    return result;
   }
 
   async markPlatformUpdateAsViewed(userId: string, updateId: string): Promise<void> {
@@ -6683,6 +6664,20 @@ export class DatabaseStorage implements IStorage {
         viewSource: 'popover',
       })
       .onConflictDoNothing();
+  }
+
+  async getUnreadPlatformUpdatesCount(userId: string, workspaceId?: string): Promise<number> {
+    // Direct SQL count of unviewed platform updates
+    const result = await db.execute(sql`
+      SELECT COUNT(*) as count
+      FROM platform_updates p
+      LEFT JOIN user_platform_update_views v 
+        ON v.update_id = p.id 
+        AND v.user_id = ${userId}
+      WHERE v.id IS NULL
+        AND (p.visibility = 'all' OR p.workspace_id IS NULL ${workspaceId ? sql`OR p.workspace_id = ${workspaceId}` : sql``})
+    `);
+    return parseInt((result.rows[0] as any)?.count || '0', 10);
   }
 
   async markAllPlatformUpdatesAsViewed(userId: string, workspaceId?: string): Promise<number> {

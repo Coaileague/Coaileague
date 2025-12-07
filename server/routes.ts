@@ -526,14 +526,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get platform updates with user read state - fetch more for display (50 items)
       const platformUpdatesData = await storage.getPlatformUpdatesWithReadState(userId, workspaceId, 50);
       
-      // DEBUG: Log isViewed status of first 3 updates
-      const viewedSample = platformUpdatesData.slice(0, 3).map(u => ({ id: u.id.slice(0, 30), isViewed: u.isViewed }));
-      console.log("[DEBUG isViewed] Platform updates sample:", JSON.stringify(viewedSample));
-      
-      // Get TRUE unread count for platform updates (count all unviewed, not just fetched)
-      const { getUnviewedCount } = await import('./services/whatsNewService');
-      const workspaceRole = authReq.workspaceRole || 'staff';
-      const trueUnreadPlatformUpdates = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      // Get unread count directly from storage (single source of truth)
+      const trueUnreadPlatformUpdates = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId);
       
       // Get notifications - fetch more for display (50 items)
       const notifications = await storage.getAllNotificationsForUser(userId, workspaceId, 50);
@@ -602,9 +596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
       
       // Get accurate platform updates count
-      const { getUnviewedCount } = await import("./services/whatsNewService");
-      const workspaceRole = (authReq as any).workspaceRole || "staff";
-      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const platformUpdatesCount = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId);
       // WebSocket broadcast for real-time sync - use 'all_notifications_cleared' which frontend handles
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { 
         markedRead: { platformUpdates: platformUpdatesMarked, notifications: acknowledged, alerts: alertsAcknowledged },
@@ -849,7 +841,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       const member = await storage.getWorkspaceMemberByUserId(userId);
       const workspaceId = workspace?.id || member?.workspaceId;
-      const workspaceRole = authReq.workspaceRole || 'staff';
+      
       
       const counts = await notificationStateManager.getUnreadCounts(userId, workspaceId, workspaceRole);
       
