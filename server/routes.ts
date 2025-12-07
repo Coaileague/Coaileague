@@ -708,7 +708,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const platformUpdatesMarked = await storage.markAllPlatformUpdatesAsViewed(userId); // Don't filter by workspace - clear ALL
 
       // Acknowledge all notifications
-      const acknowledged = await storage.acknowledgeAllNotifications(userId); // Don't filter by workspace - clear ALL user notifications
+      const acknowledged = await storage.clearAllNotifications(userId); // Don't filter by workspace - CLEAR ALL user notifications (sets clearedAt)
 
       // Also acknowledge maintenance alerts
       const { aiNotificationService } = await import("./services/aiNotificationService");
