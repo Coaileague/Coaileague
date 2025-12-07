@@ -113,3 +113,15 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
   - Identity change detection triggers context refresh on user/workspace/subscription changes.
 - **Billing Add-ons Seeded:** Trinity Pro, Business Buddy, ScheduleOS AI, InsightOS Analytics, and Compliance Guardian add-ons seeded with pricing models and token allowances.
 - **FeatureToggle Service Fix:** Corrected schema reference from featureKey to addonKey for proper add-on lookup.
+- **Universal Error Page System:** Unified error handling for 404, 403, 500, and generic errors:
+  - UniversalErrorPage component with CoAIleague branding, Trinity mascot integration, and AI Brain error reporting.
+  - Trinity mascot shows mode-appropriate states: SEARCHING for 404, THINKING for 403, ERROR for 500.
+  - Platform staff see diagnostic details panel with route info, timestamps, stack traces, and component stacks.
+  - Auto-reports 500 errors to /api/ai-brain/error-report for AI Brain diagnostics.
+  - Merged duplicate error pages (not-found.tsx, error-404.tsx) into single unified system.
+  - GlobalErrorBoundary and ErrorBoundary now use UniversalErrorPage with formatted error details.
+- **Trinity Persona Integration:** useTrinityPersona and useTrinityDiagnostics hooks integrated in App.tsx MascotRenderer for role-aware persona synchronization and Quick Fix support.
+- **Business Buddy Tier System:** Three-tier tracking (PUBLIC_DEMO, LOGGED_IN_FREE, BUSINESS_BUDDY) with upgrade nudges for non-subscribers:
+  - 20% probability per 30-second check for LOGGED_IN_FREE users.
+  - 5-minute cooldown after each shown nudge.
+  - First nudge possible at 30 seconds with 20% probability, subsequent nudges spaced by 5+ minute cooldown.

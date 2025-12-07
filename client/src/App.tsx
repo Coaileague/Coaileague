@@ -192,6 +192,8 @@ import { useMascotEmotes, setGlobalEmoteTrigger } from "@/hooks/use-mascot-emote
 import { useMascotShowcase } from "@/hooks/use-mascot-showcase";
 import { useCreditAwareness } from "@/hooks/use-credit-awareness";
 import { useBusinessBuddyTier, getAllowedModes, getUpgradeNudgeMessage } from "@/hooks/use-business-buddy-tier";
+import { useTrinityPersona } from "@/hooks/use-trinity-persona";
+import { useTrinityDiagnostics } from "@/hooks/use-trinity-diagnostics";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 
 // Trinity modes are driven by system state, not user interaction
@@ -203,6 +205,12 @@ function MascotRenderer() {
   useMascotAIIntegration(workspaceId);
   useMascotObserver(true);
   useCreditAwareness(); // Business Buddy credit awareness for low balance warnings
+  
+  // Trinity context integration - syncs RBAC context with ThoughtManager for role-aware persona
+  useTrinityPersona(workspaceId);
+  
+  // Trinity diagnostics - connects Quick Fix suggestions for support/root roles
+  useTrinityDiagnostics(workspaceId);
   
   // Business Buddy tier system - controls mascot features based on subscription
   const { tier, isDemo, hasFullAccess, shouldShowUpgradeNudge, tierLabel } = useBusinessBuddyTier();
@@ -504,14 +512,28 @@ function MascotRenderer() {
   
   // Upgrade nudge for non-Business Buddy subscribers
   // Shows periodic reminders to upgrade to full AI assistant
+  // Uses 20% probability per check with 5-minute cooldown after each nudge
   // Only shows when no higher-priority thought is active
   useEffect(() => {
     if (!shouldShowUpgradeNudge) return;
     
+    const NUDGE_COOLDOWN_MS = 5 * 60 * 1000; // 5 minutes cooldown after showing a nudge
+    const NUDGE_PROBABILITY = 0.2; // 20% chance per check
+    const CHECK_INTERVAL_MS = 30 * 1000; // Check every 30 seconds
+    
     const nudgeInterval = setInterval(() => {
       const now = Date.now();
-      // Only nudge every 60 seconds minimum and when no current thought active
-      if (now - lastNudgeRef.current > 60000 && !currentThought) {
+      
+      // Rate limit: if a nudge was shown before (lastNudgeRef > 0), enforce 5-minute cooldown
+      // If no nudge shown yet (lastNudgeRef = 0), allow 20% check to proceed immediately
+      const hasShownNudge = lastNudgeRef.current > 0;
+      const timeSinceLastNudge = now - lastNudgeRef.current;
+      const passesCooldown = !hasShownNudge || timeSinceLastNudge >= NUDGE_COOLDOWN_MS;
+      
+      // 20% probability check
+      const passesProbability = Math.random() < NUDGE_PROBABILITY;
+      
+      if (passesCooldown && passesProbability && !currentThought) {
         lastNudgeRef.current = now;
         const nudgeMessage = getUpgradeNudgeMessage('general');
         thoughtManager.showSimpleThought({
@@ -521,25 +543,10 @@ function MascotRenderer() {
           source: 'upgrade_nudge',
         });
       }
-    }, 45000); // Check every 45 seconds
-    
-    // Show initial nudge after 30 seconds (if no thought active)
-    const initialTimer = setTimeout(() => {
-      if (!currentThought) {
-        const nudgeMessage = getUpgradeNudgeMessage('general');
-        thoughtManager.showSimpleThought({
-          text: nudgeMessage,
-          priority: 'low',
-          duration: 10000,
-          source: 'upgrade_nudge',
-        });
-        lastNudgeRef.current = Date.now();
-      }
-    }, 30000);
+    }, CHECK_INTERVAL_MS);
     
     return () => {
       clearInterval(nudgeInterval);
-      clearTimeout(initialTimer);
     };
   }, [shouldShowUpgradeNudge, currentThought]);
   

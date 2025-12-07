@@ -1,7 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
-import { Button } from '@/components/ui/button';
-import { AlertTriangle } from 'lucide-react';
-import { navConfig } from '@/config/navigationConfig';
+import { GenericErrorPage } from '@/components/universal-error-page';
 
 interface Props {
   children: ReactNode;
@@ -10,15 +8,15 @@ interface Props {
 interface State {
   hasError: boolean;
   error?: Error;
+  errorInfo?: ErrorInfo;
 }
 
 /**
  * Error Boundary Component
  * 
- * Catches React errors and displays a user-friendly fallback UI
- * instead of crashing the entire application.
- * 
- * Required for Fortune 500-grade reliability and user experience.
+ * Catches React errors and displays CoAIleague-branded fallback UI
+ * using the unified UniversalErrorPage system.
+ * Platform staff see detailed diagnostics for debugging.
  */
 export class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
@@ -26,69 +24,43 @@ export class ErrorBoundary extends Component<Props, State> {
     this.state = { hasError: false };
   }
 
-  static getDerivedStateFromError(error: Error): State {
-    // Update state so the next render will show the fallback UI
+  static getDerivedStateFromError(error: Error): Partial<State> {
     return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    // Log error to console for debugging
     console.error('Error Boundary caught an error:', error, errorInfo);
+    this.setState({ errorInfo });
+  }
+
+  formatErrorDetails(): string {
+    const { error, errorInfo } = this.state;
+    if (!error) return '';
     
-    // In production, you would send this to an error tracking service
-    // like Sentry, LogRocket, or DataDog
+    const parts: string[] = [];
+    parts.push(`Error: ${error.message}`);
+    parts.push(`Timestamp: ${new Date().toISOString()}`);
+    parts.push(`URL: ${window.location.href}`);
+    
+    if (error.stack) {
+      parts.push(`\nStack Trace:\n${error.stack}`);
+    }
+    
+    if (errorInfo?.componentStack) {
+      parts.push(`\nComponent Stack:${errorInfo.componentStack}`);
+    }
+    
+    return parts.join('\n');
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className="min-h-screen flex items-center justify-center bg-[hsl(var(--cad-background))] p-4">
-          <div className="max-w-md w-full bg-[hsl(var(--cad-chrome))] border border-[hsl(var(--cad-border-strong))] rounded-lg p-8 text-center">
-            <div className="flex justify-center mb-4">
-              <div className="h-16 w-16 bg-destructive/10 rounded-full flex items-center justify-center">
-                <AlertTriangle className="h-8 w-8 text-destructive" />
-              </div>
-            </div>
-            
-            <h1 className="text-2xl font-bold text-[hsl(var(--cad-text-primary))] mb-2">
-              Something went wrong
-            </h1>
-            
-            <p className="text-[hsl(var(--cad-text-secondary))] mb-6">
-              We encountered an unexpected error. Our team has been notified and is working on a fix.
-            </p>
-            
-            {process.env.NODE_ENV === 'development' && this.state.error && (
-              <div className="mb-6 p-4 bg-destructive/5 border border-destructive/20 rounded text-left">
-                <p className="text-xs font-mono text-destructive break-all">
-                  {this.state.error.toString()}
-                </p>
-              </div>
-            )}
-            
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
-              <Button
-                onClick={() => {
-                  this.setState({ hasError: false, error: undefined });
-                }}
-                variant="outline"
-                data-testid="button-try-again"
-              >
-                Try Again
-              </Button>
-              
-              <Button
-                onClick={() => {
-                  window.location.href = navConfig.app.dashboard;
-                }}
-                className="bg-[hsl(var(--cad-blue))] hover:bg-[hsl(var(--cad-blue))]/90 text-white"
-                data-testid="button-go-home"
-              >
-                Go to Dashboard
-              </Button>
-            </div>
-          </div>
-        </div>
+        <GenericErrorPage
+          title="Something went wrong"
+          message="We encountered an unexpected error. Our team has been notified and is working on a fix."
+          errorDetails={this.formatErrorDetails()}
+        />
       );
     }
 
