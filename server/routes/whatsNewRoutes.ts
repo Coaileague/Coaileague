@@ -109,8 +109,10 @@ whatsNewRouter.get('/unviewed-count', async (req, res) => {
       return res.json({ count: 0, message: 'Not authenticated' });
     }
 
-    const userRole = authReq.workspaceRole || 'staff';
-    const count = await getUnviewedCount(userId, userRole);
+    // Use storage as single source of truth for unread count
+    const { storage } = await import('../storage');
+    const workspaceId = authReq.workspaceId;
+    const count = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId);
 
     res.json({
       success: true,
