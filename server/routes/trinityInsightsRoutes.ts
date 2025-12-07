@@ -2,10 +2,13 @@
  * Trinity Insights API Routes
  * 
  * Endpoints for Trinity AI business intelligence insights
+ * Including context resolution and access control
  */
 
 import { Router, Request, Response, NextFunction } from 'express';
 import { aiAnalyticsEngine } from '../services/ai-brain/aiAnalyticsEngine';
+import { trinityContextService, type TrinityContext } from '../services/trinityContext';
+import { canAccessTrinity } from '../rbac';
 
 const router = Router();
 
@@ -165,6 +168,110 @@ router.post('/cache/clear', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('[Trinity Insights API] Error clearing cache:', error);
     res.status(500).json({ error: 'Failed to clear cache' });
+  }
+});
+
+/**
+ * GET /api/trinity/context
+ * Get the full Trinity context for the current user
+ * This tells Trinity who it's talking to and how to respond
+ */
+router.get('/context', async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (!user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const workspaceId = req.query.workspaceId as string | undefined;
+    const context = await trinityContextService.resolve(user.id, workspaceId);
+    
+    const contextualThought = await trinityContextService.generateThought(context);
+    
+    res.json({
+      success: true,
+      context,
+      initialThought: contextualThought,
+    });
+  } catch (error: any) {
+    console.error('[Trinity Context API] Error resolving context:', error);
+    res.status(500).json({ error: 'Failed to resolve Trinity context' });
+  }
+});
+
+/**
+ * GET /api/trinity/access
+ * Check if user has access to Trinity features
+ * Used by frontend to gate premium features
+ */
+router.get('/access', async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (!user?.id) {
+      return res.json({
+        hasAccess: false,
+        accessLevel: 'none',
+        reason: 'not_authenticated',
+      });
+    }
+    
+    const workspaceId = req.query.workspaceId as string | undefined;
+    const context = await trinityContextService.resolve(user.id, workspaceId);
+    
+    res.json({
+      hasAccess: context.trinityAccessLevel !== 'none',
+      accessLevel: context.trinityAccessLevel,
+      reason: context.trinityAccessReason,
+      hasTrinityPro: context.hasTrinityPro,
+      hasBusinessBuddy: context.hasBusinessBuddy,
+      persona: context.persona,
+      isPlatformStaff: context.isPlatformStaff,
+      isRootAdmin: context.isRootAdmin,
+    });
+  } catch (error: any) {
+    console.error('[Trinity Access API] Error checking access:', error);
+    res.status(500).json({ error: 'Failed to check Trinity access' });
+  }
+});
+
+/**
+ * POST /api/trinity/thought
+ * Generate a contextual thought based on current state
+ */
+router.post('/thought', async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (!user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const { workspaceId, trigger } = req.body;
+    const context = await trinityContextService.resolve(user.id, workspaceId);
+    
+    if (context.trinityAccessLevel === 'none') {
+      return res.json({
+        success: false,
+        thought: null,
+        reason: 'no_access',
+      });
+    }
+    
+    const thought = await trinityContextService.generateThought(context);
+    
+    res.json({
+      success: true,
+      thought,
+      context: {
+        persona: context.persona,
+        greeting: context.greeting,
+        isRootAdmin: context.isRootAdmin,
+        isPlatformStaff: context.isPlatformStaff,
+        workspaceName: context.workspaceName,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Trinity Thought API] Error generating thought:', error);
+    res.status(500).json({ error: 'Failed to generate thought' });
   }
 });
 
