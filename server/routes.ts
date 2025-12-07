@@ -714,6 +714,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { aiNotificationService } = await import("./services/aiNotificationService");
       const alertsAcknowledged = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId); // Don't filter by workspace - clear ALL
 
+
+      // WebSocket broadcast for real-time sync - critical for frontend state update
+      if (workspaceId) {
+        broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { 
+          cleared: { platformUpdates: platformUpdatesMarked, notifications: acknowledged, alerts: alertsAcknowledged },
+        }, 0);
+        broadcastNotification(workspaceId, userId, 'notification_count_updated', { 
+          type: 'notification_count_updated', 
+          counts: { notifications: 0, platformUpdates: 0, alerts: 0, total: 0, lastUpdated: new Date().toISOString() }, 
+          source: 'clear_all' 
+        }, 0);
+        broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+      }
+
+      console.log("[Clear All] User " + userId + " cleared " + platformUpdatesMarked + " platform updates, " + acknowledged + " notifications, and " + alertsAcknowledged + " alerts");
       res.json({
         success: true,
         cleared: { platformUpdates: platformUpdatesMarked, notifications: acknowledged, alerts: alertsAcknowledged },
