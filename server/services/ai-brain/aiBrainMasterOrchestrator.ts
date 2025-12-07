@@ -20,6 +20,8 @@ import { aiBrainFileSystemTools } from './aiBrainFileSystemTools';
 import { aiBrainWorkflowExecutor } from './aiBrainWorkflowExecutor';
 import { aiBrainTestRunner } from './aiBrainTestRunner';
 import { aiNotificationService } from '../aiNotificationService';
+import { aiExpenseCategorizationService } from './aiExpenseCategorizationService';
+import { aiDynamicPricingService } from './aiDynamicPricingService';
 import { broadcastNotificationToUser, broadcastUserScopedNotification, broadcastToAllClients } from '../../websocket';
 import { db } from '../../db';
 import { eq, desc, and, gte, sql, isNotNull } from 'drizzle-orm';
@@ -387,6 +389,8 @@ class AIBrainMasterOrchestrator {
     this.registerWorkflowActions();
     this.registerTestRunnerActions();
     this.registerOnboardingAssistantActions();
+    this.registerExpenseCategorizationActions();
+    this.registerDynamicPricingActions();
     
     // Subscribe to platform events
     this.subscribeToEvents();
@@ -3373,6 +3377,437 @@ class AIBrainMasterOrchestrator {
 
       return errorResult;
     }
+  }
+  // ============================================================================
+  // EXPENSE CATEGORIZATION ACTIONS
+  // ============================================================================
+
+  private registerExpenseCategorizationActions(): void {
+    helpaiOrchestrator.registerAction({
+      actionId: 'expense.extract_receipt',
+      name: 'Extract Receipt Data',
+      category: 'analytics',
+      description: 'AI extracts merchant, amount, and date from receipt images using OCR',
+      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { imageBase64, mimeType } = request.payload || {};
+
+        try {
+          if (!imageBase64) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Missing imageBase64 in payload',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
+          const result = await aiExpenseCategorizationService.extractReceiptData(
+            imageBase64,
+            mimeType || 'image/jpeg',
+            request.workspaceId,
+            request.userId
+          );
+
+          return {
+            success: result.success,
+            actionId: request.actionId,
+            message: result.success 
+              ? `Extracted: ${result.merchant || 'Unknown'} - $${result.amount?.toFixed(2) || '0.00'}`
+              : (result.error || 'Extraction failed'),
+            data: result,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'expense.suggest_category',
+      name: 'Suggest Expense Category',
+      category: 'analytics',
+      description: 'AI suggests the best category for an expense based on description and merchant',
+      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { description, merchant, amount } = request.payload || {};
+        const wsId = request.workspaceId!;
+
+        try {
+          if (!description || !amount) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Missing description or amount in payload',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
+          const suggestions = await aiExpenseCategorizationService.suggestCategory(
+            description,
+            merchant || null,
+            parseFloat(amount),
+            wsId,
+            request.userId
+          );
+
+          return {
+            success: suggestions.length > 0,
+            actionId: request.actionId,
+            message: suggestions.length > 0 
+              ? `Top suggestion: ${suggestions[0].categoryName} (${suggestions[0].confidence}% confidence)`
+              : 'No matching categories found',
+            data: { suggestions },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'expense.batch_categorize',
+      name: 'Batch Categorize Expenses',
+      category: 'analytics',
+      description: 'AI processes and categorizes multiple uncategorized expenses',
+      requiredRoles: ['manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { limit } = request.payload || {};
+        const wsId = request.workspaceId!;
+
+        try {
+          const summary = await aiExpenseCategorizationService.batchCategorize(
+            wsId,
+            request.userId,
+            limit || 50
+          );
+
+          if (summary.totalProcessed > 0) {
+            await this.notifyUser(
+              request.userId!,
+              wsId,
+              'Expense Categorization Complete',
+              `Processed ${summary.totalProcessed} expenses: ${summary.successfullyCategized} categorized, ${summary.requiresReview} need review`,
+              'info'
+            );
+          }
+
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Processed ${summary.totalProcessed} expenses`,
+            data: summary,
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: summary.totalProcessed > 0
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'expense.match_receipt',
+      name: 'Match Receipt to Expense',
+      category: 'analytics',
+      description: 'AI matches uploaded receipts to existing expenses based on amount and date',
+      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { receiptId } = request.payload || {};
+        const wsId = request.workspaceId!;
+
+        try {
+          if (!receiptId) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Missing receiptId in payload',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
+          const result = await aiExpenseCategorizationService.matchReceiptToExpense(
+            receiptId,
+            wsId,
+            request.userId
+          );
+
+          return {
+            success: result.matched,
+            actionId: request.actionId,
+            message: result.matched 
+              ? `Matched to expense ${result.expenseId} (${result.confidence}% confidence)`
+              : result.reason,
+            data: result,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'expense.analyze_patterns',
+      name: 'Analyze Expense Patterns',
+      category: 'analytics',
+      description: 'AI analyzes expense patterns, identifies top categories, and detects anomalies',
+      requiredRoles: ['manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { employeeId, startDate, endDate } = request.payload || {};
+        const wsId = request.workspaceId!;
+
+        try {
+          const dateRange = startDate && endDate ? {
+            start: new Date(startDate),
+            end: new Date(endDate)
+          } : undefined;
+
+          const analysis = await aiExpenseCategorizationService.analyzeExpensePatterns(
+            wsId,
+            employeeId,
+            dateRange
+          );
+
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Analysis complete: ${analysis.topCategories.length} categories, ${analysis.anomalies.length} anomalies`,
+            data: analysis,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered expense categorization actions');
+  }
+
+  // ============================================================================
+  // DYNAMIC PRICING ACTIONS
+  // ============================================================================
+
+  private registerDynamicPricingActions(): void {
+    helpaiOrchestrator.registerAction({
+      actionId: 'pricing.analyze_client',
+      name: 'Analyze Client Pricing',
+      category: 'analytics',
+      description: 'AI analyzes a client\'s billing history and suggests optimal pricing',
+      requiredRoles: ['manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { clientId } = request.payload || {};
+        const wsId = request.workspaceId!;
+
+        try {
+          if (!clientId) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Missing clientId in payload',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
+          const analysis = await aiDynamicPricingService.analyzeClientPricing(
+            clientId,
+            wsId,
+            request.userId
+          );
+
+          if (!analysis) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Client not found',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `${analysis.clientName}: Current $${analysis.currentAverageRate.toFixed(2)}/hr, Suggested $${analysis.suggestion.suggestedRate.toFixed(2)}/hr`,
+            data: analysis,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'pricing.generate_report',
+      name: 'Generate Pricing Report',
+      category: 'analytics',
+      description: 'AI generates comprehensive pricing analysis for all clients with recommendations',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const wsId = request.workspaceId!;
+
+        try {
+          const report = await aiDynamicPricingService.generatePricingReport(
+            wsId,
+            request.userId
+          );
+
+          await this.notifyUser(
+            request.userId!,
+            wsId,
+            'Pricing Report Generated',
+            `Analyzed ${report.clientAnalysis.length} clients. Current margin: ${report.overallMetrics.currentMargin.toFixed(1)}%`,
+            'info'
+          );
+
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Pricing report: ${report.clientAnalysis.length} clients, ${report.recommendations.length} recommendations`,
+            data: report,
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: true
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'pricing.check_competitiveness',
+      name: 'Check Rate Competitiveness',
+      category: 'analytics',
+      description: 'Compare a rate against industry benchmarks',
+      requiredRoles: ['manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { rate, industry } = request.payload || {};
+
+        try {
+          if (!rate) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Missing rate in payload',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
+          const analysis = await aiDynamicPricingService.analyzeRateCompetitiveness(
+            parseFloat(rate),
+            industry || 'general'
+          );
+
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `$${rate}/hr is ${analysis.positioning} (score: ${analysis.competitivenessScore}/100)`,
+            data: analysis,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'pricing.simulate_adjustment',
+      name: 'Simulate Bulk Rate Adjustment',
+      category: 'analytics',
+      description: 'Project the revenue impact of a bulk rate adjustment across all clients',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { adjustmentPercent } = request.payload || {};
+        const wsId = request.workspaceId!;
+
+        try {
+          if (adjustmentPercent === undefined) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Missing adjustmentPercent in payload',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
+          const simulation = await aiDynamicPricingService.suggestBulkRateAdjustment(
+            wsId,
+            parseFloat(adjustmentPercent),
+            request.userId
+          );
+
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `${adjustmentPercent}% adjustment: ${simulation.affectedClients} clients, projected revenue change: $${simulation.projectedRevenueChange.toFixed(2)}`,
+            data: simulation,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered dynamic pricing actions');
   }
 }
 

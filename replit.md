@@ -51,7 +51,9 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
 - **Notification System:** Platform updates, support staff alerts, real-time WebSocket delivery, and user notification history.
 - **Support Command Console:** Force-push updates system for support staff with command endpoints and real-time WebSocket broadcast.
 - **AI Brain Code Editor:** Staged code editing system with approval workflow and HelpAI integration.
-- **AI Brain Master Orchestrator:** Central hub coordinating actions across 12 categories, connecting Gemini AI to platform services and executing workflow chains.
+- **AI Brain Master Orchestrator:** Central hub coordinating 78 actions across 14 categories, connecting Gemini AI to platform services and executing workflow chains.
+- **AI Expense Categorization:** Receipt OCR extraction via Gemini Vision, intelligent category suggestions, batch categorization, receipt-to-expense matching, and spending pattern analysis.
+- **AI Dynamic Pricing:** Client-specific pricing analysis, comprehensive pricing reports, market competitiveness checks, and bulk rate adjustment simulations for profitability optimization.
 - **AI Brain File System Tools:** Comprehensive and secure file access with read, write, edit, delete, list, search, diff, and metadata retrieval.
 - **AI Brain Code Editor API:** Full staged code editing workflow with endpoints for staging, approval, application, and rollback.
 - **AI Brain Authorization Service:** Role-based permission model with a 9-level hierarchy and category-specific matrix.
