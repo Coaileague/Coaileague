@@ -670,16 +670,208 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get updated counts after clearing
       const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
-
-      // WebSocket broadcast for real-time sync
-      broadcastNotification(workspaceId, userId, 'notification_cleared_all', { 
-        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
-        counts: { notifications: counts.unread, platformUpdates: 0, total: counts.unread, lastUpdated: new Date().toISOString() },
-        unreadCount: counts.unread,
-        unclearedCount: counts.uncleared 
-      }, counts.unread);
-      broadcastNotification(workspaceId, userId, 'notification_count_updated', { type: 'notification_count_updated', counts: { notifications: counts.unread, platformUpdates: 0, total: counts.unread, lastUpdated: new Date().toISOString() }, source: 'clear_all' }, counts.unread);
       
+      // Get accurate platform updates count after clearing
+      const { getUnviewedCount } = await import("./services/whatsNewService");
+      const workspaceRole = req.user?.workspaceRole || "staff";
+      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const totalCount = counts.unread + platformUpdatesCount;
+
+      // WebSocket broadcast for real-time sync with accurate counts
+      broadcastNotification(workspaceId, userId, "notification_cleared_all", { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() },
+        unreadCount: totalCount,
+        unclearedCount: counts.uncleared 
+      }, totalCount);
+      broadcastNotification(workspaceId, userId, "notification_count_updated", { type: "notification_count_updated", counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, source: "clear_all" }, totalCount);
+      // Get updated counts after clearing
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
+      
+      // Get accurate platform updates count after clearing
+      const { getUnviewedCount } = await import("./services/whatsNewService");
+      const workspaceRole = req.user?.workspaceRole || "staff";
+      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const totalCount = counts.unread + platformUpdatesCount;
+
+      // WebSocket broadcast for real-time sync with accurate counts
+      broadcastNotification(workspaceId, userId, "notification_cleared_all", { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() },
+        unreadCount: totalCount,
+        unclearedCount: counts.uncleared 
+      }, totalCount);
+      broadcastNotification(workspaceId, userId, "notification_count_updated", { type: "notification_count_updated", counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, source: "clear_all" }, totalCount);
+      // Get updated counts after clearing
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
+      
+      // Get accurate platform updates count after clearing
+      const { getUnviewedCount } = await import("./services/whatsNewService");
+      const workspaceRole = req.user?.workspaceRole || "staff";
+      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const totalCount = counts.unread + platformUpdatesCount;
+
+      // WebSocket broadcast for real-time sync with accurate counts
+      broadcastNotification(workspaceId, userId, "notification_cleared_all", { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() },
+        unreadCount: totalCount,
+        unclearedCount: counts.uncleared 
+      }, totalCount);
+      broadcastNotification(workspaceId, userId, "notification_count_updated", { type: "notification_count_updated", counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, source: "clear_all" }, totalCount);
+      // Get updated counts after clearing
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
+      
+      // Get accurate platform updates count after clearing
+      const { getUnviewedCount } = await import("./services/whatsNewService");
+      const workspaceRole = req.user?.workspaceRole || "staff";
+      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const totalCount = counts.unread + platformUpdatesCount;
+
+      // WebSocket broadcast for real-time sync with accurate counts
+      broadcastNotification(workspaceId, userId, "notification_cleared_all", { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() },
+        unreadCount: totalCount,
+        unclearedCount: counts.uncleared 
+      }, totalCount);
+      broadcastNotification(workspaceId, userId, "notification_count_updated", { type: "notification_count_updated", counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, source: "clear_all" }, totalCount);
+      // Get updated counts after clearing
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
+      
+      // Get accurate platform updates count after clearing
+      const { getUnviewedCount } = await import("./services/whatsNewService");
+      const workspaceRole = req.user?.workspaceRole || "staff";
+      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const totalCount = counts.unread + platformUpdatesCount;
+
+      // WebSocket broadcast for real-time sync with accurate counts
+      broadcastNotification(workspaceId, userId, "notification_cleared_all", { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() },
+        unreadCount: totalCount,
+        unclearedCount: counts.uncleared 
+      }, totalCount);
+      broadcastNotification(workspaceId, userId, "notification_count_updated", { type: "notification_count_updated", counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, source: "clear_all" }, totalCount);
+      // Get updated counts after clearing
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
+      
+      // Get accurate platform updates count after clearing
+      const { getUnviewedCount } = await import("./services/whatsNewService");
+      const workspaceRole = req.user?.workspaceRole || "staff";
+      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const totalCount = counts.unread + platformUpdatesCount;
+
+      // WebSocket broadcast for real-time sync with accurate counts
+      broadcastNotification(workspaceId, userId, "notification_cleared_all", { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() },
+        unreadCount: totalCount,
+        unclearedCount: counts.uncleared 
+      }, totalCount);
+      broadcastNotification(workspaceId, userId, "notification_count_updated", { type: "notification_count_updated", counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, source: "clear_all" }, totalCount);
+      // Get updated counts after clearing
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
+      
+      // Get accurate platform updates count after clearing
+      const { getUnviewedCount } = await import("./services/whatsNewService");
+      const workspaceRole = req.user?.workspaceRole || "staff";
+      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const totalCount = counts.unread + platformUpdatesCount;
+
+      // WebSocket broadcast for real-time sync with accurate counts
+      broadcastNotification(workspaceId, userId, "notification_cleared_all", { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() },
+        unreadCount: totalCount,
+        unclearedCount: counts.uncleared 
+      }, totalCount);
+      broadcastNotification(workspaceId, userId, "notification_count_updated", { type: "notification_count_updated", counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, source: "clear_all" }, totalCount);
+      // Get updated counts after clearing
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
+      
+      // Get accurate platform updates count after clearing
+      const { getUnviewedCount } = await import("./services/whatsNewService");
+      const workspaceRole = req.user?.workspaceRole || "staff";
+      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const totalCount = counts.unread + platformUpdatesCount;
+
+      // WebSocket broadcast for real-time sync with accurate counts
+      broadcastNotification(workspaceId, userId, "notification_cleared_all", { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() },
+        unreadCount: totalCount,
+        unclearedCount: counts.uncleared 
+      }, totalCount);
+      broadcastNotification(workspaceId, userId, "notification_count_updated", { type: "notification_count_updated", counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, source: "clear_all" }, totalCount);
+      // Get updated counts after clearing
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
+      
+      // Get accurate platform updates count after clearing
+      const { getUnviewedCount } = await import("./services/whatsNewService");
+      const workspaceRole = req.user?.workspaceRole || "staff";
+      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const totalCount = counts.unread + platformUpdatesCount;
+
+      // WebSocket broadcast for real-time sync with accurate counts
+      broadcastNotification(workspaceId, userId, "notification_cleared_all", { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() },
+        unreadCount: totalCount,
+        unclearedCount: counts.uncleared 
+      }, totalCount);
+      broadcastNotification(workspaceId, userId, "notification_count_updated", { type: "notification_count_updated", counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, source: "clear_all" }, totalCount);
+      // Get updated counts after clearing
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
+      
+      // Get accurate platform updates count after clearing
+      const { getUnviewedCount } = await import("./services/whatsNewService");
+      const workspaceRole = req.user?.workspaceRole || "staff";
+      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const totalCount = counts.unread + platformUpdatesCount;
+
+      // WebSocket broadcast for real-time sync with accurate counts
+      broadcastNotification(workspaceId, userId, "notification_cleared_all", { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() },
+        unreadCount: totalCount,
+        unclearedCount: counts.uncleared 
+      }, totalCount);
+      broadcastNotification(workspaceId, userId, "notification_count_updated", { type: "notification_count_updated", counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, source: "clear_all" }, totalCount);
+      // Get updated counts after clearing
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
+      
+      // Get accurate platform updates count after clearing
+      const { getUnviewedCount } = await import("./services/whatsNewService");
+      const workspaceRole = req.user?.workspaceRole || "staff";
+      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const totalCount = counts.unread + platformUpdatesCount;
+
+      // WebSocket broadcast for real-time sync with accurate counts
+      broadcastNotification(workspaceId, userId, "notification_cleared_all", { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() },
+        unreadCount: totalCount,
+        unclearedCount: counts.uncleared 
+      }, totalCount);
+      broadcastNotification(workspaceId, userId, "notification_count_updated", { type: "notification_count_updated", counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, source: "clear_all" }, totalCount);
+      // Get updated counts after clearing
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
+      
+      // Get accurate platform updates count after clearing
+      const { getUnviewedCount } = await import("./services/whatsNewService");
+      const workspaceRole = req.user?.workspaceRole || "staff";
+      const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
+      const totalCount = counts.unread + platformUpdatesCount;
+
+      // WebSocket broadcast for real-time sync with accurate counts
+      broadcastNotification(workspaceId, userId, "notification_cleared_all", { 
+        cleared: { platformUpdates: platformUpdatesCleared, notifications: notificationsCleared, alerts: alertsCleared },
+        counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() },
+        unreadCount: totalCount,
+        unclearedCount: counts.uncleared 
+      }, totalCount);
+      broadcastNotification(workspaceId, userId, "notification_count_updated", { type: "notification_count_updated", counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, source: "clear_all" }, totalCount);
       // AI Brain notification for Trinity/HelpAI awareness
       try {
         const { aiBrainAuthorizationService } = await import('./services/ai-brain/aiBrainAuthorizationService');
