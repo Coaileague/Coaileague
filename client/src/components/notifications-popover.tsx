@@ -342,6 +342,11 @@ export function NotificationsPopover() {
         };
       });
       
+      // Immediately signal WebSocket hook to reset its count for instant UI feedback
+      window.dispatchEvent(new CustomEvent('notifications_clear_optimistic', { 
+        detail: { source: 'clear_all_mutation' } 
+      }));
+      
       setSelectedIds(new Set());
       return { previousData };
     },

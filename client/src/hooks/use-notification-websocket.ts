@@ -432,6 +432,21 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
     };
   }, [userId, workspaceId, connect]);
 
+  // Listen for optimistic clear signal from Clear All mutation
+  // This ensures the WebSocket count resets immediately for instant UI feedback
+  useEffect(() => {
+    const handleOptimisticClear = (event: CustomEvent) => {
+      console.log('🧹 [WS] Optimistic clear signal received:', event.detail);
+      setUnreadCount(0);
+    };
+
+    window.addEventListener('notifications_clear_optimistic' as any, handleOptimisticClear);
+    
+    return () => {
+      window.removeEventListener('notifications_clear_optimistic' as any, handleOptimisticClear);
+    };
+  }, []);
+
   return {
     isConnected,
     unreadCount,
