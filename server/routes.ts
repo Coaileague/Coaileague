@@ -541,6 +541,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const maintenanceAlerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
       const unreadAlerts = maintenanceAlerts.filter((a: any) => !a.isAcknowledged).length;
       
+      
       res.json({
         platformUpdates: platformUpdatesData,
         maintenanceAlerts,
@@ -554,8 +555,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: 'Failed to fetch notifications' });
     }
   });
-  
-  // Mark all notifications as read (comprehensive - handles all types)
   app.post('/api/notifications/mark-all-read', async (req, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
