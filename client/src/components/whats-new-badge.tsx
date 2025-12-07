@@ -111,9 +111,8 @@ export function WhatsNewBadge() {
   const acknowledgedIds = new Set(JSON.parse(localStorage.getItem('whats-new-acknowledged') || '[]'));
   const filteredUpdates = updates.filter(u => !acknowledgedIds.has(u.id));
   
-  const apiUnviewedCount = unviewedData?.count || 0;
-  const localUnviewedCount = filteredUpdates.filter(u => !u.hasViewed).length;
-  const unviewedCount = Math.max(apiUnviewedCount, localUnviewedCount);
+  // Trust API count as single source of truth - no fallback logic
+  const unviewedCount = unviewedData?.count ?? 0;
   const hasNewUpdates = unviewedCount > 0;
 
   const acknowledgeSelectedMutation = useMutation({
