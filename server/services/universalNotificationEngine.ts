@@ -71,7 +71,7 @@ export class UniversalNotificationEngine {
         recipientCount = 1;
         
         // LIVE UPDATE: Broadcast via WebSocket for real-time delivery
-        broadcastNotificationToUser(payload.userId, payload.workspaceId, 'new_notification', {
+        broadcastNotificationToUser(payload.workspaceId, payload.userId, {
           id: notification.id,
           type: payload.type,
           title: payload.title,
@@ -118,7 +118,7 @@ export class UniversalNotificationEngine {
             recipientCount++;
             
             // LIVE UPDATE: Broadcast via WebSocket for real-time delivery
-            broadcastNotificationToUser(emp.userId, payload.workspaceId, 'new_notification', {
+            broadcastNotificationToUser(payload.workspaceId, emp.userId, {
               id: notification.id,
               type: payload.type,
               title: payload.title,
@@ -162,7 +162,7 @@ export class UniversalNotificationEngine {
             recipientCount++;
             
             // LIVE UPDATE: Broadcast via WebSocket for real-time delivery
-            broadcastNotificationToUser(emp.userId, payload.workspaceId, 'new_notification', {
+            broadcastNotificationToUser(payload.workspaceId, emp.userId, {
               id: notification.id,
               type: payload.type,
               title: payload.title,
@@ -250,7 +250,7 @@ export class UniversalNotificationEngine {
           recipientCount++;
           
           // LIVE UPDATE: Broadcast to each user
-          broadcastNotificationToUser(admin.userId, admin.workspaceId, 'new_notification', {
+          broadcastNotificationToUser(admin.workspaceId, admin.userId, {
             id: notification.id,
             type: 'platform_update',
             title: payload.title,
