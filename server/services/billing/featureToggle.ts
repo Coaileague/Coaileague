@@ -116,7 +116,7 @@ export class FeatureToggleService {
 
     // Get all active add-ons
     const activeAddons = await db.select({
-      featureKey: billingAddons.featureKey,
+      addonKey: billingAddons.addonKey,
     })
       .from(workspaceAddons)
       .innerJoin(billingAddons, eq(workspaceAddons.addonId, billingAddons.id))
@@ -127,9 +127,9 @@ export class FeatureToggleService {
         )
       );
 
-    // Extract feature keys, filtering out nulls
+    // Extract addon keys
     const features = activeAddons
-      .map(a => a.featureKey)
+      .map(a => a.addonKey)
       .filter((key): key is string => key !== null);
 
     return features;
@@ -351,14 +351,14 @@ export class FeatureToggleService {
   }
 
   /**
-   * Get add-on for a specific feature
+   * Get add-on for a specific feature by addonKey
    */
-  private async getAddonForFeature(featureKey: string): Promise<BillingAddon | null> {
+  private async getAddonForFeature(addonKey: string): Promise<BillingAddon | null> {
     const [addon] = await db.select()
       .from(billingAddons)
       .where(
         and(
-          eq(billingAddons.featureKey, featureKey),
+          eq(billingAddons.addonKey, addonKey),
           eq(billingAddons.isActive, true)
         )
       )

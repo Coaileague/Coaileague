@@ -734,8 +734,18 @@ class ThoughtManager {
       ];
       greeting = staffGreetings[Math.floor(Math.random() * staffGreetings.length)];
     }
+    // Trinity Pro users get executive-level greetings
+    else if (ctx.hasTrinityPro) {
+      const proGreetings = [
+        `${timeGreeting}, ${displayName}! Trinity Pro activated. Ready for intelligent insights.`,
+        `Hey ${displayName}! Your AI advisor is ready with priority support access.`,
+        `${timeGreeting}, ${displayName}! Let me help you make smarter decisions today.`,
+        `Welcome back, ${displayName}! Trinity Pro features are at your fingertips.`,
+      ];
+      greeting = proGreetings[Math.floor(Math.random() * proGreetings.length)];
+    }
     // Organization owner / Business Buddy persona
-    else if (ctx.isOrgOwner || ctx.persona === 'business_buddy') {
+    else if (ctx.isOrgOwner || ctx.hasBusinessBuddy || ctx.persona === 'business_buddy') {
       const ownerGreetings = [
         `${timeGreeting}, ${displayName}! I'm your business buddy. Let's grow your org!`,
         `Hey ${displayName}! Ready to optimize your workforce today?`,
