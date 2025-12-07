@@ -578,14 +578,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const platformUpdatesMarked = await storage.markAllPlatformUpdatesAsViewed(userId, workspaceId);
       
       // Mark all notifications as read
-      const notificationsMarked = await storage.clearAllNotifications(userId, workspaceId);
+      const acknowledged = await storage.clearAllNotifications(userId, workspaceId);
       // Acknowledge all maintenance alerts
       const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
-      let alertsMarked = 0;
+      let alertsAcknowledged = 0;
       for (const alert of alerts) {
         if (!(alert as any).isAcknowledged) {
           await aiNotificationService.acknowledgeMaintenanceAlert(alert.id, userId);
-          alertsMarked++;
+          alertsAcknowledged++;
         }
       }
       
@@ -596,9 +596,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get accurate platform updates count
       const { getUnviewedCount } = await import("./services/whatsNewService");
-      const workspaceRole = req.user?.workspaceRole || "staff";
+      const workspaceRole = (authReq as any).workspaceRole || "staff";
       const platformUpdatesCount = await getUnviewedCount(userId, workspaceRole, workspaceId);
-      const totalCount = counts.unread + platformUpdatesCount;      
       // WebSocket broadcast for real-time sync - use 'all_notifications_cleared' which frontend handles
       broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { 
         markedRead: { platformUpdates: platformUpdatesMarked, notifications: acknowledged, alerts: alertsAcknowledged },
@@ -606,8 +605,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }, 0);
       broadcastNotification(workspaceId, userId, 'notification_count_updated', { 
         type: 'notification_count_updated', 
-        counts: { notifications: 0, platformUpdates: 0, alerts: 0, total: 0, lastUpdated: new Date().toISOString() }, 
-        source: 'clear_all' 
+        counts: { notifications: counts.unread, platformUpdates: 0, alerts: 0, total: counts.unread, lastUpdated: new Date().toISOString() }, 
+        source: 'mark_all_read' 
       }, 0);
       broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
 
