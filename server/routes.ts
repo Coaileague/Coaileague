@@ -712,7 +712,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const acknowledged = await storage.acknowledgeAllNotifications(userId, workspaceId || "");
 
       // Also acknowledge maintenance alerts
-      const { aiNotificationService } = await import("./services/ai-notification-service");
+      const { aiNotificationService } = await import("./services/aiNotificationService");
       const alertsAcknowledged = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId, workspaceId || "");
 
       res.json({
