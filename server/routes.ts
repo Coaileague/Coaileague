@@ -529,7 +529,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get TRUE unread count for platform updates (count all unviewed, not just fetched)
       const { getUnviewedCount } = await import('./services/whatsNewService');
       const workspaceRole = authReq.workspaceRole || 'staff';
-      const trueUnreadPlatformUpdates = await getUnviewedCount(userId, workspaceRole);
+      const trueUnreadPlatformUpdates = await getUnviewedCount(userId, workspaceRole, workspaceId);
       
       // Get notifications - fetch more for display (50 items)
       const notifications = await storage.getAllNotificationsForUser(userId, workspaceId, 50);
