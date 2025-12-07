@@ -526,6 +526,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get platform updates with user read state - fetch more for display (50 items)
       const platformUpdatesData = await storage.getPlatformUpdatesWithReadState(userId, workspaceId, 50);
       
+      // DEBUG: Log isViewed status of first 3 updates
+      const viewedSample = platformUpdatesData.slice(0, 3).map(u => ({ id: u.id.slice(0, 30), isViewed: u.isViewed }));
+      console.log("[DEBUG isViewed] Platform updates sample:", JSON.stringify(viewedSample));
       
       // Get TRUE unread count for platform updates (count all unviewed, not just fetched)
       const { getUnviewedCount } = await import('./services/whatsNewService');
