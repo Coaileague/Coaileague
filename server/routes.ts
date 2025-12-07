@@ -372,6 +372,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     // Test database connection
     try {
+      // Combined notifications endpoint
       await db.select().from(users).limit(1);
       health.dependencies.database = 'ok';
     } catch (error) {
@@ -470,7 +471,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.set('Expires', '0');
     try {
       const authReq = req as AuthenticatedRequest;
-      const userId = authReq.user?.id;
+      // Support BOTH Replit Auth (req.user) AND custom session auth (req.session.userId)
+      const userId = authReq.user?.id || authReq.session?.userId;
+      
       
       // For unauthenticated users, return platform updates only
       if (!userId) {
@@ -511,6 +514,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         workspaceId = 'coaileague-platform-workspace';
       }
 
+       
       if (!workspaceId) {
         return res.json({
           platformUpdates: [],
@@ -523,10 +527,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
+      
       // Get platform updates with user read state - fetch more for display (50 items)
-      console.log('[Notifications Combined] Fetching for user:', userId, 'workspace:', workspaceId);
+      
       const platformUpdatesData = await storage.getPlatformUpdatesWithReadState(userId, workspaceId, 50);
-      console.log('[Notifications Combined] First item isViewed:', platformUpdatesData[0]?.isViewed);
+      
       
       // Get unread count directly from storage (single source of truth)
       const trueUnreadPlatformUpdates = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId);
@@ -1233,7 +1238,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Unauthorized' });
       }
       const workspaceId = req.user!.currentWorkspaceId;
-      const { notificationType } = req.body;
+      const {  notificationType  } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
@@ -1274,7 +1279,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Unauthorized' });
       }
       const workspaceId = req.user!.currentWorkspaceId;
-      const { notificationType } = req.body;
+      const {  notificationType  } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
@@ -1354,7 +1359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Unauthorized' });
       }
       const workspaceId = req.user!.currentWorkspaceId;
-      const { phoneNumber } = req.body;
+      const {  phoneNumber  } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
@@ -1400,7 +1405,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: 'Unauthorized' });
       }
       const workspaceId = req.user!.currentWorkspaceId;
-      const { phoneNumber } = req.body;
+      const {  phoneNumber  } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
@@ -1425,7 +1430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post('/api/notifications/send-shift-reminder', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.user!.currentWorkspaceId;
-      const { shiftId } = req.body;
+      const {  shiftId  } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
@@ -1975,7 +1980,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // For guests, use CoAIleague Platform workspace
       const { PLATFORM_WORKSPACE_ID } = await import('./seed-platform-workspace');
-      if (!workspaceId) {
         workspaceId = PLATFORM_WORKSPACE_ID;
       }
       
@@ -2495,7 +2499,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/workspace/health', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId;
-      if (!workspaceId) {
         return res.status(400).json({ error: 'No workspace selected' });
       }
 
@@ -2581,7 +2584,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/workspace/status', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId;
-      if (!workspaceId) {
         return res.status(400).json({ error: 'No workspace selected' });
       }
 
@@ -2619,7 +2621,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/workspace/custom-messages', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId;
-      if (!workspaceId) {
         return res.status(400).json({ error: 'No workspace selected' });
       }
 
@@ -4188,7 +4189,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Regular workspace manager/owner - use workspace from middleware
       const workspaceId = req.workspaceId;
       
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -4206,7 +4206,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
       const workspaceId = req.workspaceId;
       
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
       
@@ -4350,7 +4349,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
       const workspaceId = req.workspaceId;
       
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -4376,7 +4374,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use workspaceId from middleware
       const workspaceId = req.workspaceId;
       
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -4481,7 +4478,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
 
-      if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
@@ -4524,7 +4520,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
 
-      if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
@@ -4575,7 +4570,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
 
-      if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
@@ -4605,7 +4599,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
 
-      if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
@@ -4642,7 +4635,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
 
-      if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
@@ -4694,7 +4686,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
 
-      if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
@@ -6218,7 +6209,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Regular workspace manager/owner - use workspace from middleware
       const workspaceId = req.workspaceId;
       
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -6262,7 +6252,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Regular workspace manager/owner
       const workspaceId = req.workspaceId;
       
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -6280,7 +6269,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
       const workspaceId = req.workspaceId;
       
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
       
@@ -6371,7 +6359,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
       const workspaceId = req.workspaceId;
       
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -6397,7 +6384,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
       const workspaceId = req.workspaceId;
       
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -7827,7 +7813,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { enabled, workspaceId } = req.body;
       const userId = req.user.claims.sub;
       
-      if (!workspaceId) {
         return res.status(400).json({ message: "workspaceId is required" });
       }
       
@@ -9341,7 +9326,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const user = req.user!;
     const workspaceId = user.currentWorkspaceId;
     
-    if (!workspaceId) {
       return res.status(400).json({ error: "No workspace selected" });
     }
 
@@ -11511,7 +11495,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const workspaceId = req.workspaceId;
       
-      if (!workspaceId) {
         return res.status(404).json({ message: "No workspace selected" });
       }
       
@@ -11940,7 +11923,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const workspaceId = req.query.workspaceId as string;
       
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
       
@@ -11963,7 +11945,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { workspaceId, ...updateData } = req.body;
       
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
       
@@ -12220,7 +12201,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { applicationId } = req.params;
       const { workspaceId } = req.query;
 
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -12254,7 +12234,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { applicationId } = req.params;
       const { workspaceId } = req.query;
 
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -12430,7 +12409,6 @@ ${application.email}`,
       const { workspaceId } = req.query;
       const { signedByName, applicationId } = req.body;
 
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -17673,7 +17651,6 @@ Summary:`;
   app.get('/api/audit-logs', requireAuth, requireProfessional, attachWorkspaceId, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId;
-      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID required" });
       }
 
@@ -19331,7 +19308,6 @@ Summary:`;
       // PUBLIC ACCESS: Guests can access chat but AI features require workspace for billing
       // Workspace users get AI assistance (billed), guests get human support only
       const workspaceId = req.user?.workspaceId;
-      if (!workspaceId) {
         // Gracefully disable AI for guests instead of blocking chat access
         return res.status(200).json({ 
           message: "AI features are available to workspace members only. A human support agent will assist you shortly.",
@@ -27640,7 +27616,6 @@ Respond with valid JSON array only.`
   app.get('/api/comm-os/onboarding-status', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId;
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
       }
 
@@ -27667,7 +27642,6 @@ Respond with valid JSON array only.`
         return res.status(401).json({ message: 'Unauthorized' });
       }
       const workspaceId = req.workspaceId;
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
       }
 
@@ -27906,7 +27880,6 @@ Respond with valid JSON array only.`
       }
       const workspaceId = req.workspaceId;
 
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
       }
 
@@ -27942,7 +27915,6 @@ Respond with valid JSON array only.`
   app.post('/api/private-messages/upload', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId;
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
       }
 
@@ -28005,7 +27977,6 @@ Respond with valid JSON array only.`
       const workspaceId = req.workspaceId;
       const { recipientId, message, attachmentUrl, attachmentName } = req.body;
 
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
       }
 
@@ -28049,7 +28020,6 @@ Respond with valid JSON array only.`
       const workspaceId = req.workspaceId;
       const { recipientId } = req.body;
 
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
       }
 
@@ -28093,7 +28063,6 @@ Respond with valid JSON array only.`
       const workspaceId = req.workspaceId;
       const query = req.query.q as string;
 
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
       }
 
@@ -28126,7 +28095,6 @@ Respond with valid JSON array only.`
       const workspaceId = req.workspaceId;
       const { conversationId, investigationReason, caseNumber } = req.body;
 
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
       }
 
@@ -28156,7 +28124,6 @@ Respond with valid JSON array only.`
     try {
       const workspaceId = req.workspaceId;
 
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
       }
 
@@ -28535,7 +28502,6 @@ Respond with valid JSON array only.`
   app.get('/api/oversight', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.user!.currentWorkspaceId;
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
       }
 
@@ -28563,7 +28529,6 @@ Respond with valid JSON array only.`
   app.get('/api/oversight/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.user!.currentWorkspaceId;
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
       }
 
@@ -28605,7 +28570,6 @@ Respond with valid JSON array only.`
   app.patch('/api/oversight/:id/approve', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.user!.currentWorkspaceId;
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
       }
 
@@ -28673,7 +28637,6 @@ Respond with valid JSON array only.`
   app.patch('/api/oversight/:id/reject', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.user!.currentWorkspaceId;
-      if (!workspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
       }
 

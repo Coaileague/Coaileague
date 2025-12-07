@@ -6619,6 +6619,7 @@ export class DatabaseStorage implements IStorage {
   // ============================================================================
 
   async getPlatformUpdatesWithReadState(userId: string, workspaceId: string, limit: number = 20): Promise<Array<PlatformUpdate & { isViewed: boolean }>> {
+    
     // Single SQL query with LEFT JOIN for reliable isViewed computation
     const result = await db.execute(sql`
       SELECT 
@@ -6634,14 +6635,6 @@ export class DatabaseStorage implements IStorage {
       ORDER BY p.created_at DESC
       LIMIT ${limit}
     `);
-    
-    // Debug: log second row to see view_id value (first may be newest without view)
-    if (result.rows.length > 1) {
-      const secondRow = result.rows[1] as any;
-      console.error('[ERROR_DEBUG getPlatformUpdatesWithReadState] Second row keys:', Object.keys(secondRow));
-      console.error('[ERROR_DEBUG getPlatformUpdatesWithReadState] Second row view_id:', secondRow.view_id, 'type:', typeof secondRow.view_id);
-      console.error('[ERROR_DEBUG getPlatformUpdatesWithReadState] Second row id:', secondRow.id);
-    }
     
     // Map raw SQL result to typed objects - isViewed = true if view_id exists (check for truthy value)
     // Note: view_id comes from LEFT JOIN and will be a string if record exists, null/undefined otherwise
