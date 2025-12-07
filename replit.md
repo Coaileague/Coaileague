@@ -106,3 +106,10 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
 - **Trinity Mascot Optimization:** Desktop size 100px, mobile performance optimized with 3s idle delay and 12 FPS target.
 - **Festive Bubble System:** Properly activates for ALL holidays using `holiday && holiday.key !== 'default'` check.
 - **Support Console Communication:** Trinity connected to support console via WebSocket and platform event bus.
+- **Trinity Role-Aware Persona System:** Complete TrinityContext service resolving platform role, workspace role, subscription tier, and org topology:
+  - Server-side TrinityContext service at `/api/trinity/context` and `/api/trinity/access`.
+  - Client hooks: useTrinityContext and useTrinityPersona bridging context to ThoughtManager.
+  - Role-aware greetings: Root admin, support staff, platform staff, Trinity Pro, Business Buddy, org owner, manager, onboarding, and standard personas.
+  - Identity change detection triggers context refresh on user/workspace/subscription changes.
+- **Billing Add-ons Seeded:** Trinity Pro, Business Buddy, ScheduleOS AI, InsightOS Analytics, and Compliance Guardian add-ons seeded with pricing models and token allowances.
+- **FeatureToggle Service Fix:** Corrected schema reference from featureKey to addonKey for proper add-on lookup.
