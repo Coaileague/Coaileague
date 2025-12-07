@@ -61,7 +61,7 @@ export interface ApprovalResult {
   appliedAt?: Date;
 }
 
-class AIBrainCodeEditorService {
+export class AIBrainCodeEditorService {
   private static instance: AIBrainCodeEditorService;
 
   static getInstance(): AIBrainCodeEditorService {
