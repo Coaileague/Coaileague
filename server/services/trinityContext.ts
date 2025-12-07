@@ -188,8 +188,8 @@ export async function resolveTrinityContext(userId: string, workspaceId?: string
   
   return {
     userId,
-    username: user.username || user.email?.split('@')[0] || 'User',
-    displayName: user.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : (user.username || 'User'),
+    username: user.email?.split('@')[0] || 'User',
+    displayName: user.firstName ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}` : (user.email?.split('@')[0] || 'User'),
     
     platformRole,
     isPlatformStaff,
@@ -257,6 +257,20 @@ export async function generateContextualThought(context: TrinityContext): Promis
   const org = context.workspaceName || 'your organization';
   const employeeCount = context.orgStats?.employeeCount || 0;
   
+  // Try to get health insight for platform staff
+  if (context.isRootAdmin || context.isSupportRole) {
+    try {
+      const { platformHealthMonitor } = await import('./ai-brain/platformHealthMonitor');
+      const healthInsight = await platformHealthMonitor.getTrinityHealthInsight();
+      // 40% chance to show health insight, 60% show regular thought
+      if (Math.random() < 0.4 && healthInsight) {
+        return healthInsight;
+      }
+    } catch {
+      // Fall through to regular thoughts if health monitor unavailable
+    }
+  }
+  
   if (context.isRootAdmin) {
     const thoughts = [
       `As root administrator, you have full platform oversight. All ${employeeCount} employees and systems are operational.`,
@@ -265,6 +279,8 @@ export async function generateContextualThought(context: TrinityContext): Promis
       `I'm monitoring all ${employeeCount > 0 ? employeeCount + ' active' : ''} workspaces. Want a platform health summary?`,
       `The AI orchestration engine has ${Math.floor(Math.random() * 20) + 50} actions ready. Need to trigger any workflows?`,
       `System metrics look healthy. I can run predictive analysis on platform usage patterns if you'd like.`,
+      `I can diagnose issues and suggest hotfixes. Visit the Control Tower for maintenance options.`,
+      `Need to push a quick fix? I can queue hotfix suggestions for your approval.`,
     ];
     return thoughts[Math.floor(Math.random() * thoughts.length)];
   }
@@ -277,6 +293,9 @@ export async function generateContextualThought(context: TrinityContext): Promis
       `I can help draft support responses or search the knowledge base for solutions.`,
       `Need to send a platform-wide announcement? I can help compose and broadcast it.`,
       `I'm tracking user activity patterns. Want insights on common support requests?`,
+      `I can diagnose platform issues and suggest fixes. Want me to run a health check?`,
+      `If you spot a bug, I can help queue a hotfix for admin approval.`,
+      `Platform maintenance tools are available. I can help analyze logs or suggest optimizations.`,
     ];
     return thoughts[Math.floor(Math.random() * thoughts.length)];
   }

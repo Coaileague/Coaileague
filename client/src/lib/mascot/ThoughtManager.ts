@@ -736,8 +736,8 @@ class ThoughtManager {
     const ctx = this.state.trinityContext;
     const displayName = this.getUserDisplayName() || 'there';
     
-    // 60% chance to try fetching AI-generated thought from server
-    if (Math.random() < 0.6) {
+    // 90% chance to try fetching AI-generated thought from server
+    if (Math.random() < 0.9) {
       this.fetchAIThought().then(aiThought => {
         if (aiThought) {
           const thought = this.createThought(aiThought, 'ADVISING', 'ai', 'normal');
