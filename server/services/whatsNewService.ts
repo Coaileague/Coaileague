@@ -46,122 +46,6 @@ const WORKSPACE_ROLE_ACCESS: Record<string, number> = {
   'contractor': 4,          // Staff level (limited)
 };
 
-const STATIC_SEED_UPDATES: PlatformUpdate[] = [
-  {
-    id: 'coai-buddy-mascot-2025-12-03',
-    title: 'Meet CoAI - Your Intelligent Platform Buddy',
-    description: 'CoAI is your new AI companion represented by three floating stars (Co/cyan, AI/purple, LE/gold). It proactively offers tips, answers questions, and learns from your usage. CoAI monitors platform health, suggests optimizations, celebrates holidays with seasonal themes, and provides contextual guidance on every page. Look for the colorful floating messages near your mascot!',
-    date: '2025-12-03',
-    category: 'feature',
-    badge: 'NEW',
-    version: '2.2.0',
-    isNew: true,
-    priority: 1,
-  },
-  {
-    id: 'sms-notifications-2025-11-28',
-    title: 'SMS Notifications',
-    description: 'Receive shift reminders, schedule changes, and approval notifications via SMS. Connect your Twilio account to enable text message alerts for your entire team.',
-    date: '2025-11-28',
-    category: 'feature',
-    badge: 'NEW',
-    version: '2.1.0',
-    isNew: true,
-    priority: 2,
-  },
-  {
-    id: 'calendar-sync-2025-11-28',
-    title: 'Calendar Integration',
-    description: 'Export your schedule to Google Calendar, Outlook, or any calendar app with ICS support. One-click sync keeps your personal calendar updated with work shifts.',
-    date: '2025-11-28',
-    category: 'feature',
-    badge: 'NEW',
-    version: '2.1.0',
-    isNew: true,
-    priority: 2,
-  },
-  {
-    id: 'timesheet-reports-2025-11-28',
-    title: 'Timesheet Reports & Export',
-    description: 'Generate comprehensive timesheet reports with one click. Export to CSV for payroll processing, compliance audits, or client billing.',
-    date: '2025-11-28',
-    category: 'feature',
-    badge: 'NEW',
-    version: '2.1.0',
-    isNew: true,
-    priority: 3,
-  },
-  {
-    id: 'shift-swapping-2025-11-28',
-    title: 'Shift Swapping',
-    description: 'Employees can now request to swap shifts with coworkers. Managers receive swap requests for approval, making schedule flexibility easier than ever.',
-    date: '2025-11-28',
-    category: 'feature',
-    badge: 'NEW',
-    version: '2.1.0',
-    isNew: true,
-    priority: 4,
-  },
-  {
-    id: 'recurring-shifts-2025-11-28',
-    title: 'Recurring Shifts',
-    description: 'Create weekly or bi-weekly recurring shifts that automatically populate your schedule. Save hours of scheduling time with pattern-based shift creation.',
-    date: '2025-11-28',
-    category: 'feature',
-    badge: 'NEW',
-    version: '2.1.0',
-    isNew: true,
-    priority: 5,
-  },
-  {
-    id: 'mobile-schedule-2025-11-20',
-    title: 'Mobile-First AI Scheduling',
-    description: 'Completely redesigned mobile scheduling experience with week navigation, real-time stats cards (hours, cost, overtime, open shifts), swipe-friendly day tabs, and streamlined shift creation.',
-    date: '2025-11-20',
-    category: 'feature',
-    version: '2.0.5',
-  },
-  {
-    id: 'analytics-platform-2025-11-04',
-    title: 'AI Analytics Platform',
-    description: 'Launch of autonomous AI analytics with real-time insights, cost-saving recommendations, and anomaly detection. Get actionable recommendations with confidence scores.',
-    date: '2025-11-04',
-    category: 'feature',
-    version: '2.0.0',
-  },
-  {
-    id: 'natural-language-search-2025-11-04',
-    title: 'Natural Language Search',
-    description: 'Search your entire workforce database using natural language. Ask questions like "Show me employees hired this month" and get instant results.',
-    date: '2025-11-04',
-    category: 'feature',
-    version: '2.0.0',
-  },
-  {
-    id: 'gamification-2025-11-15',
-    title: 'Employee Gamification',
-    description: 'Boost engagement with achievements, points, leaderboards, and streak tracking. Recognize top performers and motivate your team.',
-    date: '2025-11-15',
-    category: 'feature',
-    version: '2.0.3',
-  },
-  {
-    id: 'animated-logo-2025-11-05',
-    title: 'CoAIleague Brand Refresh',
-    description: 'New animated logo featuring the AI network gradient design representing autonomous workforce management at scale.',
-    date: '2025-11-05',
-    category: 'improvement',
-    version: '2.0.1',
-  },
-  {
-    id: 'security-2025-11-03',
-    title: 'Security Enhancements',
-    description: 'Improved authentication flow with account locking, password complexity requirements, and session management upgrades.',
-    date: '2025-11-03',
-    category: 'security',
-    version: '2.0.0',
-  },
-];
 
 /**
  * Check if user's workspace role has access to the visibility level
@@ -178,40 +62,19 @@ function hasVisibilityAccess(userRole: string, visibility: string): boolean {
 }
 
 /**
- * Seed the database with static updates - ONLY if database is completely empty
- * This prevents re-seeding old data that was intentionally cleared
+ * Check for platform updates - all updates are now managed via admin interface
+ * No static seeding - fully database-driven
  */
 export async function seedPlatformUpdates(): Promise<void> {
   try {
-    // Check if there are ANY platform updates - if so, skip seeding entirely
     const existingCount = await db.query.platformUpdates.findFirst({});
-    
     if (existingCount) {
-      console.log('[WhatsNew] Platform updates already exist, skipping seed');
-      return;
+      console.log('[WhatsNew] Platform updates exist in database');
+    } else {
+      console.log('[WhatsNew] No platform updates - create via admin interface');
     }
-    
-    // Only seed if the database is truly empty - seed first 3 only
-    const seedUpdates = STATIC_SEED_UPDATES.slice(0, 3);
-    for (const update of seedUpdates) {
-      await db.insert(platformUpdatesTable).values({
-        id: update.id,
-        title: update.title,
-        description: update.description,
-        category: update.category,
-        badge: update.badge,
-        version: update.version,
-        isNew: update.isNew ?? false,
-        priority: update.priority,
-        learnMoreUrl: update.learnMoreUrl,
-        visibility: 'all',
-        date: new Date(update.date),
-      });
-      console.log(`[WhatsNew] Seeded update: ${update.title}`);
-    }
-    console.log('[WhatsNew] Platform updates seeding complete');
   } catch (error) {
-    console.error('[WhatsNew] Failed to seed updates:', error);
+    console.error('[WhatsNew] Failed to check updates:', error);
   }
 }
 
