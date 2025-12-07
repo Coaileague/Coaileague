@@ -693,6 +693,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // Alias for clear-all (frontend uses this endpoint)
+  app.post("/api/notifications/clear-all", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      const workspaceId = authReq.workspaceId || authReq.user?.defaultWorkspaceId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      // Mark all platform updates as viewed
+      const platformUpdatesMarked = await storage.markAllPlatformUpdatesAsViewed(userId, workspaceId || "");
+
+      // Acknowledge all notifications
+      const acknowledged = await storage.acknowledgeAllNotifications(userId, workspaceId || "");
+
+      // Also acknowledge maintenance alerts
+      const { aiNotificationService } = await import("./services/ai-notification-service");
+      const alertsAcknowledged = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId, workspaceId || "");
+
+      res.json({
+        success: true,
+        cleared: { platformUpdates: platformUpdatesMarked, notifications: acknowledged, alerts: alertsAcknowledged },
+        counts: { notifications: 0, platformUpdates: 0, alerts: 0, total: 0 },
+      });
+    } catch (error) {
+      console.error("Error in clear-all:", error);
+      res.status(500).json({ message: "Failed to clear notifications" });
+    }
+  });
   // Acknowledge a single notification
   app.post("/api/notifications/acknowledge/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
