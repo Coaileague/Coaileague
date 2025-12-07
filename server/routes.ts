@@ -625,6 +625,70 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Alias route for acknowledge-all (frontend uses this endpoint)
+  app.post('/api/notifications/acknowledge-all', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user!.id;
+      
+      // Get user's workspace
+      const workspace = await storage.getWorkspaceByOwnerId(userId);
+      const member = await storage.getWorkspaceMemberByUserId(userId);
+      const workspaceId = workspace?.id || member?.workspaceId;
+      
+      if (!workspaceId) {
+        return res.json({ 
+          success: true, 
+          acknowledged: 0,
+          platformUpdatesMarked: 0,
+          alertsAcknowledged: 0
+        });
+      }
+      
+      // Mark all platform updates as viewed
+      const platformUpdatesMarked = await storage.markAllPlatformUpdatesAsViewed(userId, workspaceId);
+      
+      // Clear all notifications
+      const acknowledged = await storage.clearAllNotifications(userId, workspaceId);
+      
+      // Acknowledge all maintenance alerts
+      const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+      let alertsAcknowledged = 0;
+      for (const alert of alerts) {
+        if (!(alert as any).isAcknowledged) {
+          await aiNotificationService.acknowledgeMaintenanceAlert(alert.id, userId);
+          alertsAcknowledged++;
+        }
+      }
+      
+      // Get updated counts after clearing
+      const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
+      
+      // WebSocket broadcast for real-time sync
+      broadcastNotification(workspaceId, userId, 'all_notifications_cleared', { 
+        cleared: { platformUpdates: platformUpdatesMarked, notifications: acknowledged, alerts: alertsAcknowledged },
+      }, 0);
+      broadcastNotification(workspaceId, userId, 'notification_count_updated', { 
+        type: 'notification_count_updated', 
+        counts: { notifications: 0, platformUpdates: 0, alerts: 0, total: 0, lastUpdated: new Date().toISOString() }, 
+        source: 'acknowledge_all' 
+      }, 0);
+      broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
+
+      console.log("[Acknowledge All] User " + userId + " cleared " + acknowledged + " notifications, " + platformUpdatesMarked + " platform updates, and " + alertsAcknowledged + " alerts");
+      
+      res.json({ 
+        success: true, 
+        acknowledged,
+        platformUpdatesMarked,
+        alertsAcknowledged,
+        counts: { unread: counts.unread, uncleared: counts.uncleared }
+      });
+    } catch (error) {
+      console.error('Error in acknowledge-all:', error);
+      res.status(500).json({ message: 'Failed to acknowledge notifications' });
+    }
+  });
+
   // Acknowledge a single notification
   app.post("/api/notifications/acknowledge/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {

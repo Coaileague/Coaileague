@@ -294,25 +294,8 @@ export async function getUpdates(options?: {
         hasViewed: viewedUpdateIds.has(u.id),
       }));
   } catch (error) {
-    console.error('[WhatsNew] Database query failed, falling back to static:', error);
-    let updates = [...STATIC_SEED_UPDATES];
-    
-    if (options?.category) {
-      updates = updates.filter(u => u.category === options.category);
-    }
-    
-    updates.sort((a, b) => {
-      const aPriority = a.priority ?? 999;
-      const bPriority = b.priority ?? 999;
-      if (aPriority !== bPriority) return aPriority - bPriority;
-      return new Date(b.date).getTime() - new Date(a.date).getTime();
-    });
-    
-    if (options?.limit && !options?.includeAll) {
-      updates = updates.slice(0, options.limit);
-    }
-    
-    return updates;
+    console.error('[WhatsNew] Database query failed:', error);
+    return [];
   }
 }
 
@@ -428,7 +411,7 @@ export async function getNewFeatures(userId?: string, userRole?: string, workspa
       }));
   } catch (error) {
     console.error('[WhatsNew] Failed to get new features:', error);
-    return STATIC_SEED_UPDATES.filter(u => u.isNew === true);
+    return [];
   }
 }
 
@@ -468,7 +451,7 @@ export async function getUpdateById(id: string, userId?: string): Promise<Platfo
     };
   } catch (error) {
     console.error('[WhatsNew] Failed to get update by ID:', error);
-    return STATIC_SEED_UPDATES.find(u => u.id === id);
+    return undefined;
   }
 }
 
@@ -503,17 +486,15 @@ export async function getUpdateStats(userRole: string = 'staff') {
   } catch (error) {
     console.error('[WhatsNew] Failed to get stats:', error);
     return {
-      total: STATIC_SEED_UPDATES.length,
-      recentCount: STATIC_SEED_UPDATES.filter(u => 
-        new Date(u.date) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-      ).length,
-      newFeatures: STATIC_SEED_UPDATES.filter(u => u.isNew).length,
+      total: 0,
+      recentCount: 0,
+      newFeatures: 0,
       byCategory: {
-        feature: STATIC_SEED_UPDATES.filter(u => u.category === 'feature').length,
-        improvement: STATIC_SEED_UPDATES.filter(u => u.category === 'improvement').length,
-        bugfix: STATIC_SEED_UPDATES.filter(u => u.category === 'bugfix').length,
-        security: STATIC_SEED_UPDATES.filter(u => u.category === 'security').length,
-        announcement: STATIC_SEED_UPDATES.filter(u => u.category === 'announcement').length,
+        feature: 0,
+        improvement: 0,
+        bugfix: 0,
+        security: 0,
+        announcement: 0,
       },
       latestVersion: PLATFORM.version,
     };
