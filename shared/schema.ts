@@ -9879,7 +9879,29 @@ export const platformUpdateCategoryEnum = pgEnum('platform_update_category', [
   'bugfix',        // Bug fix
   'security',      // Security patch
   'announcement',  // Platform announcement
+  'maintenance',   // System maintenance, scheduled downtime
+  'diagnostic',    // Trinity diagnostics, system health
+  'support',       // Support requests, help desk
+  'ai_brain',      // AI Brain messages, orchestration updates
+  'error',         // System errors, issues, incidents
 ]);
+
+// Tab group type for filtering What's New notifications
+export type WhatsNewTabGroup = 'features' | 'enduser' | 'system';
+
+// Map categories to tab groups for filtering
+export const categoryToTabGroup: Record<string, WhatsNewTabGroup> = {
+  feature: 'features',
+  improvement: 'features',
+  bugfix: 'enduser',
+  security: 'enduser',
+  announcement: 'enduser',
+  maintenance: 'system',
+  diagnostic: 'system',
+  support: 'system',
+  ai_brain: 'system',
+  error: 'system',
+};
 
 // Minimum role required to view update (RBAC visibility)
 export const updateVisibilityEnum = pgEnum('update_visibility', [
