@@ -6619,6 +6619,8 @@ export class DatabaseStorage implements IStorage {
   // ============================================================================
 
   async getPlatformUpdatesWithReadState(userId: string, workspaceId: string, limit: number = 20): Promise<Array<PlatformUpdate & { isViewed: boolean }>> {
+    console.log(`[TRINITY DEBUG] getPlatformUpdatesWithReadState called with userId=${userId}, workspaceId=${workspaceId}`);
+    
     // Step 1: Get platform updates
     const updates = await db
       .select()
@@ -6632,6 +6634,8 @@ export class DatabaseStorage implements IStorage {
       )
       .orderBy(desc(platformUpdates.createdAt))
       .limit(limit);
+
+    console.log(`[TRINITY DEBUG] Found ${updates.length} platform updates`);
 
     if (updates.length === 0) {
       return [];
@@ -6648,14 +6652,24 @@ export class DatabaseStorage implements IStorage {
         )
       );
 
+    console.log(`[TRINITY DEBUG] Found ${viewedRecords.length} view records for user ${userId}`);
+
     // Create a Set of viewed update IDs for O(1) lookup
     const viewedUpdateIds = new Set(viewedRecords.map(r => r.updateId));
+    
+    console.log(`[TRINITY DEBUG] ViewedUpdateIds Set size: ${viewedUpdateIds.size}`);
+    console.log(`[TRINITY DEBUG] First 3 update IDs: ${updates.slice(0, 3).map(u => u.id.slice(0, 50)).join(', ')}`);
+    console.log(`[TRINITY DEBUG] First 3 viewed IDs: ${[...viewedUpdateIds].slice(0, 3).map(id => id.slice(0, 50)).join(', ')}`);
 
     // Step 3: Combine results
-    return updates.map(update => ({
+    const result = updates.map(update => ({
       ...update,
       isViewed: viewedUpdateIds.has(update.id),
     }));
+    
+    console.log(`[TRINITY DEBUG] First 3 results: ${result.slice(0, 3).map(u => `${u.id.slice(0, 30)}:isViewed=${u.isViewed}`).join(', ')}`);
+    
+    return result;
   }
 
   async markPlatformUpdateAsViewed(userId: string, updateId: string): Promise<void> {
