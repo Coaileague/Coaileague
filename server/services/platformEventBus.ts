@@ -11,7 +11,7 @@
 
 import { db } from '../db';
 import { platformUpdates, notifications, platformRoles, systemAuditLogs, employees } from '@shared/schema';
-import { eq, and, inArray } from 'drizzle-orm';
+import { eq, and, inArray, gte, isNull } from 'drizzle-orm';
 
 export type PlatformEventType = 
   | 'feature_released'
@@ -141,9 +141,42 @@ class PlatformEventBus {
    * Store event in What's New database table
    * - workspaceId: null = global platform update, set = workspace-specific
    * - visibility: controls RBAC who can see the update
+   * - Includes smart deduplication to prevent similar updates within 1 hour
    */
   private async storeInWhatsNew(event: PlatformEvent): Promise<void> {
     try {
+      // Smart deduplication: check for similar titles in the last hour
+      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+      const normalizedTitle = event.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+      
+      // Check for exact or similar title within the dedup window
+      const recentSimilar = await db.select({ id: platformUpdates.id, title: platformUpdates.title })
+        .from(platformUpdates)
+        .where(
+          and(
+            gte(platformUpdates.createdAt, oneHourAgo),
+            event.workspaceId 
+              ? eq(platformUpdates.workspaceId, event.workspaceId)
+              : isNull(platformUpdates.workspaceId)
+          )
+        )
+        .limit(50);
+      
+      // Check if any recent update has a similar normalized title (80% word overlap)
+      const isDuplicate = recentSimilar.some(existing => {
+        const existingNormalized = existing.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+        const titleWords = new Set(normalizedTitle.split(/\s+/));
+        const existingWords = new Set(existingNormalized.split(/\s+/));
+        const commonWords = [...titleWords].filter(w => existingWords.has(w));
+        const overlapRatio = commonWords.length / Math.max(titleWords.size, existingWords.size);
+        return overlapRatio >= 0.8; // 80% word overlap threshold
+      });
+      
+      if (isDuplicate) {
+        console.log(`[EventBus] Skipping duplicate platform update (similar title within 1hr): ${event.title}`);
+        return;
+      }
+      
       const id = `${event.type}-${event.title.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
       
       await db.insert(platformUpdates).values({
