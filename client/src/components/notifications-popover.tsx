@@ -285,9 +285,11 @@ export function NotificationsPopover() {
   const rawMaintenanceAlerts = data?.maintenanceAlerts || [];
   const rawNotifications = data?.notifications || [];
   
-  const filteredPlatformUpdates = rawPlatformUpdates;
+  // Filter to only show unviewed platform updates - "Clear All" marks as viewed, so they disappear
+  const filteredPlatformUpdates = rawPlatformUpdates.filter((u: PlatformUpdate) => !u.isViewed);
   const filteredMaintenanceAlerts = rawMaintenanceAlerts;
-  const filteredNotifications = rawNotifications;
+  // Filter to only show unread/uncleared notifications
+  const filteredNotifications = rawNotifications.filter((n: any) => !n.isRead && !n.clearedAt);
   
   // Use API's pre-computed counts as baseline
   const apiUnreadPlatformUpdates = data?.unreadPlatformUpdates ?? 0;
