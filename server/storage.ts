@@ -6642,6 +6642,17 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(platformUpdates.createdAt))
       .limit(limit);
 
+    // Debug logging to trace the issue
+    const viewedCount = results.filter(r => r.viewedAt !== null).length;
+    const unviewedCount = results.filter(r => r.viewedAt === null).length;
+    console.log(`[Storage.getPlatformUpdatesWithReadState] User: ${userId}, Workspace: ${workspaceId}, Results: ${results.length}, Viewed: ${viewedCount}, Unviewed: ${unviewedCount}`);
+    if (results.length > 0 && unviewedCount > 0) {
+      const firstUnviewed = results.find(r => r.viewedAt === null);
+      if (firstUnviewed) {
+        console.log(`[Storage.getPlatformUpdatesWithReadState] First unviewed ID: ${firstUnviewed.update.id}`);
+      }
+    }
+
     return results.map(r => ({
       ...r.update,
       isViewed: r.viewedAt !== null,

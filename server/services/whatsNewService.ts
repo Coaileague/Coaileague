@@ -192,6 +192,9 @@ export async function getUnviewedCount(userId: string, userRole: string = 'staff
     });
     const viewedIds = viewedUpdates.map(v => v.updateId);
     
+    // DEBUG: Log viewed count
+    console.log(`[WhatsNew.getUnviewedCount] User: ${userId}, ViewedIds count: ${viewedIds.length}, WorkspaceId: ${workspaceId || 'none'}`);
+    
     // Build conditions with workspace scoping
     const conditions = [];
     if (viewedIds.length > 0) {
@@ -215,7 +218,9 @@ export async function getUnviewedCount(userId: string, userRole: string = 'staff
     });
     
     // Filter by RBAC
-    return allUpdates.filter(u => hasVisibilityAccess(userRole, u.visibility || 'all')).length;
+    const unviewedCount = allUpdates.filter(u => hasVisibilityAccess(userRole, u.visibility || 'all')).length;
+    console.log(`[WhatsNew.getUnviewedCount] TotalUpdates fetched: ${allUpdates.length}, After RBAC filter: ${unviewedCount}`);
+    return unviewedCount;
   } catch (error) {
     console.error('[WhatsNew] Failed to get unviewed count:', error);
     return 0;
