@@ -7,22 +7,20 @@
 
 import { Router, Request, Response } from 'express';
 import { platformHealthMonitor, type PlatformIssue } from '../services/ai-brain/platformHealthMonitor';
-import { requirePlatformStaff } from '../rbac';
+import { requirePlatformStaff, requirePlatformAdmin, requirePlatformRole } from '../rbac';
+
+// Middleware for hotfix approval - only root_admin, deputy_admin, support_manager can approve
+const requireHotfixApprover = requirePlatformRole(['root_admin', 'deputy_admin', 'support_manager']);
 
 const router = Router();
 
 /**
  * GET /api/trinity/maintenance/health
  * Get platform health status
- * Accessible by platform staff and org owners
+ * Requires platform staff role for security
  */
-router.get('/health', async (req: Request, res: Response) => {
+router.get('/health', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
-    if (!user?.id) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
     const forceRefresh = req.query.refresh === 'true';
     const health = await platformHealthMonitor.getHealthStatus(forceRefresh);
 
@@ -40,14 +38,10 @@ router.get('/health', async (req: Request, res: Response) => {
 /**
  * GET /api/trinity/maintenance/insight
  * Get Trinity-friendly health insight for mascot dialogue
+ * Requires platform staff role for security
  */
-router.get('/insight', async (req: Request, res: Response) => {
+router.get('/insight', requirePlatformStaff, async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
-    if (!user?.id) {
-      return res.status(401).json({ error: 'Authentication required' });
-    }
-
     const insight = await platformHealthMonitor.getTrinityHealthInsight();
 
     res.json({
@@ -169,21 +163,14 @@ router.post('/hotfixes', requirePlatformStaff, async (req: Request, res: Respons
 /**
  * POST /api/trinity/maintenance/hotfixes/:id/approve
  * Approve a hotfix
- * Requires root admin or support manager role
+ * Requires root admin, deputy admin, or support manager role (verified via RBAC)
  */
-router.post('/hotfixes/:id/approve', requirePlatformStaff, async (req: Request, res: Response) => {
+router.post('/hotfixes/:id/approve', requireHotfixApprover, async (req: Request, res: Response) => {
   try {
     const user = (req as any).user;
     const hotfixId = req.params.id;
 
-    // Check if user has approval permissions (root admin or support manager)
-    const platformRole = user.platformRole || 'none';
-    const canApprove = ['root_admin', 'deputy_admin', 'support_manager'].includes(platformRole);
-
-    if (!canApprove) {
-      return res.status(403).json({ error: 'Insufficient permissions to approve hotfixes' });
-    }
-
+    // User already verified via requireHotfixApprover middleware
     const hotfix = platformHealthMonitor.approveHotfix(hotfixId, user.id);
 
     if (!hotfix) {
@@ -231,19 +218,13 @@ router.post('/hotfixes/:id/reject', requirePlatformStaff, async (req: Request, r
 /**
  * POST /api/trinity/maintenance/hotfixes/:id/execute
  * Execute an approved hotfix via AI Brain
- * Requires root admin role
+ * Requires root admin or deputy admin role (verified via RBAC)
  */
-router.post('/hotfixes/:id/execute', requirePlatformStaff, async (req: Request, res: Response) => {
+router.post('/hotfixes/:id/execute', requirePlatformRole(['root_admin', 'deputy_admin']), async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
     const hotfixId = req.params.id;
 
-    // Only root admin can execute hotfixes
-    const platformRole = user.platformRole || 'none';
-    if (platformRole !== 'root_admin' && platformRole !== 'deputy_admin') {
-      return res.status(403).json({ error: 'Only root admins can execute hotfixes' });
-    }
-
+    // User already verified via RBAC middleware
     // For now, mark as executed - in production this would trigger AI Brain
     const hotfix = platformHealthMonitor.markHotfixExecuted(hotfixId, true);
 
