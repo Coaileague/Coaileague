@@ -696,6 +696,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Alias for clear-all (frontend uses this endpoint)
   app.post("/api/notifications/clear-all", requireAuth, async (req: AuthenticatedRequest, res) => {
+    console.log("[Trinity Diagnostic] clear-all endpoint hit - Session:", req.session?.userId ? "authenticated" : "none", "User:", req.user?.id || "none");
     try {
       const authReq = req as AuthenticatedRequest;
       const userId = authReq.user?.id;
