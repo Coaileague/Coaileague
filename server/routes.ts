@@ -1980,8 +1980,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // For guests, use CoAIleague Platform workspace
       const { PLATFORM_WORKSPACE_ID } = await import('./seed-platform-workspace');
-        workspaceId = PLATFORM_WORKSPACE_ID;
-      }
+        if (!workspaceId) {
+          workspaceId = PLATFORM_WORKSPACE_ID;
+        }
       
       // Combine conversation history into description
       const fullDescription = conversationHistory && Array.isArray(conversationHistory)
@@ -2499,6 +2500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/workspace/health', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId;
+      if (!workspaceId) {
         return res.status(400).json({ error: 'No workspace selected' });
       }
 
@@ -2584,6 +2586,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/workspace/status', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId;
+      if (!workspaceId) {
         return res.status(400).json({ error: 'No workspace selected' });
       }
 
@@ -2621,6 +2624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/workspace/custom-messages', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId;
+      if (!workspaceId) {
         return res.status(400).json({ error: 'No workspace selected' });
       }
 
@@ -4189,6 +4193,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Regular workspace manager/owner - use workspace from middleware
       const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -4206,6 +4211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
       const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
       
@@ -4349,6 +4355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
       const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -4374,6 +4381,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use workspaceId from middleware
       const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -4477,7 +4485,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
-
+      
+      if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
@@ -4519,7 +4528,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
-
+      
+      if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
@@ -4569,7 +4579,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
-
+      
+      if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
@@ -4598,7 +4609,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
-
+      
+      if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
@@ -4634,7 +4646,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
-
+      
+      if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
@@ -4685,7 +4698,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
-
+      
+      if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
@@ -6209,6 +6223,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Regular workspace manager/owner - use workspace from middleware
       const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -6252,6 +6267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Regular workspace manager/owner
       const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -6269,6 +6285,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
       const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
       
@@ -6359,6 +6376,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
       const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -6384,6 +6402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Use workspaceId from middleware (works for multi-workspace managers & platform staff)
       const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
 
@@ -7812,7 +7831,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { enabled, workspaceId } = req.body;
       const userId = req.user.claims.sub;
+      const workspaceId = req.body.workspaceId;
       
+      if (!workspaceId) {
         return res.status(400).json({ message: "workspaceId is required" });
       }
       
@@ -9326,6 +9347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const user = req.user!;
     const workspaceId = user.currentWorkspaceId;
     
+    if (!workspaceId) {
       return res.status(400).json({ error: "No workspace selected" });
     }
 
@@ -11495,6 +11517,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const workspaceId = req.workspaceId;
       
+      if (!workspaceId) {
         return res.status(404).json({ message: "No workspace selected" });
       }
       
@@ -11923,6 +11946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const workspaceId = req.query.workspaceId as string;
       
+      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
       
@@ -11945,6 +11969,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { id } = req.params;
       const { workspaceId, ...updateData } = req.body;
       
+      if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
       }
       
