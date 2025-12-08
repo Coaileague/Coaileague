@@ -27,6 +27,7 @@ import { SeasonalThemeProvider } from "@/context/SeasonalThemeContext";
 import SeasonalEffectsLayer from "@/components/effects/SeasonalEffectsLayer";
 import { Button } from "@/components/ui/button";
 import { ProtectedRoute } from "@/components/protected-route";
+import { ApprovalTray } from "@/components/approvals/ApprovalTray";
 import { LeaderRoute } from "@/components/leader-route";
 import { OwnerRoute } from "@/components/owner-route";
 import { PlatformAdminRoute } from "@/components/platform-admin-route";
@@ -1008,6 +1009,8 @@ function AppContent() {
           {/* Mobile Bottom Navigation - Fixed at bottom */}
           {!isHelpDesk && <MobileBottomNav />}
         </div>
+      {/* Universal Approval Request Tray - Desktop */}
+      <ApprovalTray scope="admin" isMobile={false} />
         <OnboardingWizard isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
       </ProtectedRoute>
     );
@@ -1281,6 +1284,8 @@ function AppContent() {
         </div>
       </SidebarProvider>
       
+      {/* Universal Approval Request Tray - Desktop */}
+      <ApprovalTray scope="admin" isMobile={false} />
       <OnboardingWizard isOpen={showOnboarding} onClose={() => setShowOnboarding(false)} />
     </ProtectedRoute>
   );
