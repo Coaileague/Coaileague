@@ -173,6 +173,78 @@ export const CATEGORY_CONFIG = {
     label: "Billing",
     priority: 2,
   },
+  subagent_added: {
+    iconName: "Bot",
+    color: "text-indigo-500",
+    label: "New Subagent",
+    priority: 1,
+  },
+  orchestration_update: {
+    iconName: "Zap",
+    color: "text-violet-500",
+    label: "Orchestration",
+    priority: 2,
+  },
+  approval_needed: {
+    iconName: "AlertTriangle",
+    color: "text-amber-500",
+    label: "Approval Needed",
+    priority: 0,
+  },
+  warning: {
+    iconName: "AlertTriangle",
+    color: "text-amber-500",
+    label: "Warning",
+    priority: 1,
+  },
+  incident: {
+    iconName: "AlertTriangle",
+    color: "text-red-500",
+    label: "Incident",
+    priority: 0,
+  },
+  outage: {
+    iconName: "AlertTriangle",
+    color: "text-red-600",
+    label: "Outage",
+    priority: 0,
+  },
+  recovery: {
+    iconName: "Check",
+    color: "text-green-500",
+    label: "Recovery",
+    priority: 1,
+  },
+  maintenance_update: {
+    iconName: "Wrench",
+    color: "text-amber-500",
+    label: "Maintenance Update",
+    priority: 2,
+  },
+  maintenance_postmortem: {
+    iconName: "FileText",
+    color: "text-slate-500",
+    label: "Postmortem",
+    priority: 3,
+  },
+  release: {
+    iconName: "Sparkles",
+    color: "text-purple-500",
+    label: "Release",
+    priority: 1,
+  },
+  migration: {
+    iconName: "Database",
+    color: "text-cyan-500",
+    label: "Migration",
+    priority: 2,
+  },
+  ai_mascot: {
+    iconName: "Bot",
+    color: "text-pink-500",
+    label: "AI Mascot",
+    priority: 4,
+  },
 } as const;
 
 export type CategoryType = keyof typeof CATEGORY_CONFIG;
@@ -299,6 +371,12 @@ export const TAB_ROUTING: Record<string, NotificationTab> = {
   api_change: 'whats_new',          // API changes for developers
   subagent_added: 'whats_new',      // New subagents added to orchestration
   orchestration_update: 'whats_new', // Orchestration improvements
+  ai_mascot: 'whats_new',           // Mascot updates
+  welcome: 'whats_new',             // Welcome messages
+  welcome_org: 'whats_new',         // Org welcome
+  welcome_employee: 'whats_new',    // Employee welcome
+  migration: 'whats_new',           // Database/system migrations
+  release: 'whats_new',             // Release announcements
   
   // Alerts tab - User-specific, action required
   billing: 'alerts',
@@ -313,9 +391,18 @@ export const TAB_ROUTING: Record<string, NotificationTab> = {
   compliance_alert: 'alerts',
   approval_needed: 'alerts',
   warning: 'alerts',
+  ai_approval_needed: 'alerts',     // AI workflow approvals
+  ai_schedule_ready: 'alerts',      // AI schedule ready for approval
+  invoice_generated: 'alerts',      // Invoice notifications
+  invoice_reminder: 'alerts',       // Invoice reminders
+  payment_received: 'alerts',       // Payment notifications
+  certification_expiring: 'alerts', // Cert expiry warnings
+  timesheet_reminder: 'alerts',     // Timesheet reminders
   
   // System tab - Operational, maintenance, diagnostics
   maintenance: 'system',
+  maintenance_update: 'system',     // Alias for maintenance
+  maintenance_postmortem: 'system', // Post-incident reports
   diagnostic: 'system',
   support: 'system',
   error: 'system',
@@ -325,7 +412,13 @@ export const TAB_ROUTING: Record<string, NotificationTab> = {
   security: 'system',
   deprecation: 'system',
   system: 'system',
+  incident: 'system',               // Incident notifications
+  outage: 'system',                 // Service outage alerts
+  recovery: 'system',               // Recovery notifications
 } as const;
+
+// Default tab for unknown categories
+const DEFAULT_TAB: NotificationTab = 'whats_new';
 
 /**
  * RBAC-based notification targeting
@@ -353,9 +446,10 @@ export const RBAC_NOTIFICATION_TARGETING = {
 
 /**
  * Get the target tab for a notification category
+ * Falls back to DEFAULT_TAB ('whats_new') for unknown categories
  */
 export function getNotificationTab(category: string): NotificationTab {
-  return TAB_ROUTING[category] || 'whats_new';
+  return TAB_ROUTING[category] || DEFAULT_TAB;
 }
 
 /**

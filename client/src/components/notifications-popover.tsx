@@ -32,7 +32,9 @@ import {
   SEVERITY_CONFIG, 
   CATEGORY_CONFIG, 
   getSeverityConfig, 
-  getCategoryConfig 
+  getCategoryConfig,
+  getNotificationTab,
+  getCategoriesForTab
 } from "@shared/config/notificationConfig";
 
 const ICON_MAP: Record<string, LucideIcon> = {
@@ -284,6 +286,42 @@ export function NotificationsPopover() {
     }
   });
 
+  // Data extraction and filtering - must be defined before toggle functions
+  const rawPlatformUpdates = data?.platformUpdates || [];
+  const rawMaintenanceAlerts = data?.maintenanceAlerts || [];
+  const rawNotifications = data?.notifications || [];
+  
+  // Keep all platform updates for display (viewed ones are dimmed, not hidden)
+  // Only filter out viewed updates for the "unviewed" count/selection
+  const filteredPlatformUpdates = rawPlatformUpdates;
+  const filteredMaintenanceAlerts = rawMaintenanceAlerts;
+  
+  // Use configuration-driven tab routing for categorization
+  // Filter platform updates for System tab (system categories via config)
+  const systemPlatformUpdates = rawPlatformUpdates.filter((u: PlatformUpdate) => 
+    getNotificationTab(u.category) === 'system'
+  );
+  
+  // Filter platform updates for What's New tab (whats_new categories via config)
+  const whatsNewPlatformUpdates = rawPlatformUpdates.filter((u: PlatformUpdate) => 
+    getNotificationTab(u.category) === 'whats_new'
+  );
+  
+  // Filter to only show unread/uncleared notifications
+  const filteredNotifications = rawNotifications.filter((n: any) => !n.isRead && !n.clearedAt);
+  
+  // unviewedUpdates for selection/acknowledge - only unviewed What's New items
+  const unviewedUpdates = whatsNewPlatformUpdates.filter(u => !u.isViewed);
+  
+  // SIMPLIFIED: Server is the single source of truth for all counts
+  // This eliminates race conditions between WebSocket state and server state
+  const unreadPlatformUpdates = data?.unreadPlatformUpdates ?? 0;
+  const unreadNotifications = data?.unreadNotifications ?? 0;
+  const unreadAlerts = data?.unreadAlerts ?? 0;
+  const totalUnread = data?.totalUnread ?? 0;
+
+  const allUnviewedSelected = unviewedUpdates.length > 0 && selectedIds.size === unviewedUpdates.length;
+
   const toggleSelectUpdate = (updateId: string) => {
     const newSelected = new Set(selectedIds);
     if (newSelected.has(updateId)) {
@@ -295,46 +333,12 @@ export function NotificationsPopover() {
   };
 
   const toggleSelectAll = () => {
-    const unviewedUpdates = filteredPlatformUpdates.filter(u => !u.isViewed);
     if (selectedIds.size === unviewedUpdates.length) {
       setSelectedIds(new Set());
     } else {
       setSelectedIds(new Set(unviewedUpdates.map(u => u.id)));
     }
   };
-
-  const rawPlatformUpdates = data?.platformUpdates || [];
-  const rawMaintenanceAlerts = data?.maintenanceAlerts || [];
-  const rawNotifications = data?.notifications || [];
-  
-  // System categories for filtering
-  const systemCategories = ['maintenance', 'diagnostic', 'support', 'ai_brain', 'error'];
-  
-  // Filter to only show unviewed platform updates - "Clear All" marks as viewed, so they disappear
-  const filteredPlatformUpdates = rawPlatformUpdates.filter((u: PlatformUpdate) => !u.isViewed);
-  const filteredMaintenanceAlerts = rawMaintenanceAlerts;
-  
-  // Filter platform updates for System tab (system categories only)
-  const systemPlatformUpdates = filteredPlatformUpdates.filter((u: PlatformUpdate) => 
-    systemCategories.includes(u.category)
-  );
-  
-  // Filter platform updates for What's New tab (non-system categories only)
-  const whatsNewPlatformUpdates = filteredPlatformUpdates.filter((u: PlatformUpdate) => 
-    !systemCategories.includes(u.category)
-  );
-  // Filter to only show unread/uncleared notifications
-  const filteredNotifications = rawNotifications.filter((n: any) => !n.isRead && !n.clearedAt);
-  
-  // SIMPLIFIED: Server is the single source of truth for all counts
-  // This eliminates race conditions between WebSocket state and server state
-  const unreadPlatformUpdates = data?.unreadPlatformUpdates ?? 0;
-  const unreadNotifications = data?.unreadNotifications ?? 0;
-  const unreadAlerts = data?.unreadAlerts ?? 0;
-  const totalUnread = data?.totalUnread ?? 0;
-
-  const unviewedUpdates = filteredPlatformUpdates.filter(u => !u.isViewed);
-  const allUnviewedSelected = unviewedUpdates.length > 0 && selectedIds.size === unviewedUpdates.length;
 
   const clearAllMutation = useMutation({
     mutationFn: async () => {

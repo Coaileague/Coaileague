@@ -47,7 +47,7 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **AI Brain Platform Awareness:** Registry of 100+ features, natural language feature discovery, and diagnostic endpoints.
 - **Automation Jobs:** 13 scheduled jobs for billing, scheduling, payroll, reminders, and maintenance.
 - **AI Brain Platform Change Monitor:** Autonomous service scanning for AI-summarized change notifications.
-- **Notification System:** Platform updates, support alerts, real-time WebSocket, and user history.
+- **Notification System:** Platform updates, support alerts, real-time WebSocket, and user history. Configuration-driven tab routing via `TAB_ROUTING` in `notificationConfig.ts` with intelligent categorization (What's New for features/AI upgrades, Alerts for user-specific, System for maintenance).
 - **Support Command Console:** Force-push updates system for support staff.
 - **AI Brain Code Editor:** Staged code editing with approval workflow and HelpAI integration.
 - **AI Brain Master Orchestrator:** Central hub coordinating 93 actions across 16 categories, connecting Gemini AI to platform services.
