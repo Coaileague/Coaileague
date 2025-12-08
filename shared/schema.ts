@@ -305,6 +305,11 @@ export const workspaces = pgTable("workspaces", {
   // HelpAI Bot Configuration (Gap #7)
   enableHelpOSBot: boolean("enable_helpos_bot").default(true), // Allow disabling bot per workspace
   
+  // Trinity Diagnostic & Recovery Tools Access
+  trinityDiagnosticsEnabled: boolean("trinity_diagnostics_enabled").default(true), // Allow org owners to enable/disable Trinity AI recovery tools
+  trinityDiagnosticsEnabledAt: timestamp("trinity_diagnostics_enabled_at"),
+  trinityDiagnosticsEnabledBy: varchar("trinity_diagnostics_enabled_by"), // User who last changed this setting
+  
   // Client Tax Rate Configuration (Gap #8)
   defaultTaxRate: decimal("default_tax_rate", { precision: 5, scale: 4 }).default("0.08875"), // Default 8.875%
   taxJurisdiction: varchar("tax_jurisdiction"), // State/country for tax lookup
