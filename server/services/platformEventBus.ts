@@ -38,7 +38,7 @@ export type PlatformEventType =
   | 'queue_update'
   | 'staff_action';
 
-export type EventCategory = 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement';
+export type EventCategory = 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement' | 'maintenance' | 'diagnostic' | 'support' | 'ai_brain' | 'error';
 
 // Event visibility levels - must match update_visibility enum in database
 // Available: 'all', 'staff', 'supervisor', 'manager', 'admin'
