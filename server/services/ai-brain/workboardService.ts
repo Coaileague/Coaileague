@@ -305,13 +305,16 @@ class WorkboardService {
         })
         .where(eq(trinityCredits.workspaceId, workspaceId));
 
+      const currentBalance = credits.balance - tokens;
       await db.insert(trinityCreditTransactions).values({
         workspaceId,
         userId,
-        type: 'deduction',
-        amount: tokens,
+        transactionType: 'usage',
+        credits: -tokens,
+        balanceAfter: currentBalance,
         description: `Workboard task: ${taskId.substring(0, 8)}`,
-        featureKey: 'workboard_task',
+        actionType: 'workboard_task',
+        actionId: taskId,
         metadata: { taskId }
       });
 
@@ -416,7 +419,7 @@ class WorkboardService {
 
     if (!task) return false;
 
-    if (task.retryCount >= (task.maxRetries || 3)) {
+    if ((task.retryCount || 0) >= (task.maxRetries || 3)) {
       console.log('[WorkboardService] Max retries exceeded:', taskId);
       await this.escalateTask(taskId, 'Max retries exceeded');
       return false;
@@ -463,30 +466,47 @@ class WorkboardService {
   }
 
   /**
-   * Get tasks for a user
+   * Get tasks for a user with RBAC scope filtering
+   * - scope 'admin': all workspace tasks
+   * - scope 'manager': team tasks (same workspace)
+   * - scope 'employee': own tasks only (default)
    */
   async getUserTasks(
     userId: string, 
     workspaceId: string, 
     options?: { 
       status?: TaskStatus[]; 
+      priority?: string;
       limit?: number; 
-      offset?: number 
+      offset?: number;
+      scope?: 'admin' | 'manager' | 'employee';
     }
   ): Promise<AiWorkboardTask[]> {
+    const scope = options?.scope || 'employee';
+    
+    const conditions = [];
+    
+    if (scope === 'admin') {
+      conditions.push(eq(aiWorkboardTasks.workspaceId, workspaceId));
+    } else if (scope === 'manager') {
+      conditions.push(eq(aiWorkboardTasks.workspaceId, workspaceId));
+    } else {
+      conditions.push(eq(aiWorkboardTasks.userId, userId));
+      conditions.push(eq(aiWorkboardTasks.workspaceId, workspaceId));
+    }
+    
+    if (options?.status && options.status.length > 0) {
+      conditions.push(inArray(aiWorkboardTasks.status, options.status));
+    }
+    
+    if (options?.priority) {
+      conditions.push(eq(aiWorkboardTasks.priority, options.priority as any));
+    }
+    
     let query = db.select()
       .from(aiWorkboardTasks)
-      .where(
-        and(
-          eq(aiWorkboardTasks.userId, userId),
-          eq(aiWorkboardTasks.workspaceId, workspaceId)
-        )
-      )
+      .where(and(...conditions))
       .orderBy(desc(aiWorkboardTasks.createdAt));
-
-    if (options?.status && options.status.length > 0) {
-      query = query.where(inArray(aiWorkboardTasks.status, options.status)) as any;
-    }
 
     if (options?.limit) {
       query = query.limit(options.limit) as any;

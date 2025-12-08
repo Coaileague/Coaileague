@@ -157,6 +157,7 @@ import AutomationSettings from "@/pages/automation-settings";
 import AIBrainDashboard from "@/pages/ai-brain-dashboard";
 import SupportAIConsole from "@/pages/support-ai-console";
 import SystemHealth from "@/pages/system-health";
+import WorkboardDashboard from "@/components/workboard/WorkboardDashboard";
 import { HeaderChatButton } from "@/components/header-chat-button";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
 import { ChatroomNotificationListener } from "@/components/chatroom-notification-listener";
@@ -954,6 +955,7 @@ function AppContent() {
               <Route path="/automation/audit-log" component={AutomationAuditLog} />
               <Route path="/automation/settings" component={AutomationSettings} />
               <Route path="/ai/brain" component={AIBrainDashboard} />
+              <Route path="/ai/workboard" component={WorkboardDashboard} />
               <Route path="/trinity-insights">
                 <PlatformAdminRoute>
                   <TrinityInsights />
@@ -1138,6 +1140,7 @@ function AppContent() {
                 <Route path="/ai/command-center" component={AICommandCenter} />
                 <Route path="/support/console" component={SupportCommandConsole} />
                 <Route path="/ai/brain" component={AIBrainDashboard} />
+                <Route path="/ai/workboard" component={WorkboardDashboard} />
                 <Route path="/support/ai-console" component={SupportAIConsole} />
                 <Route path="/trinity-insights">
                   <PlatformAdminRoute>

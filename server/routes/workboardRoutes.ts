@@ -52,38 +52,70 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
   });
 
   /**
-   * List tasks for the current user
+   * List tasks with RBAC scope filtering
+   * - admin/support: all workspace tasks
+   * - manager: team tasks (same workspace)
+   * - employee: own tasks only
    */
   app.get('/api/workboard/tasks', requireAuth, async (req: any, res: any) => {
     try {
       const userId = req.userId!;
       const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
-      const { status, limit, offset } = req.query;
+      const platformRole = req.user?.platformRole || 'none';
+      const { status, priority, limit, offset, scope } = req.query;
 
       if (!workspaceId) {
         return res.status(400).json({ error: 'Workspace context required' });
       }
 
+      const isAdmin = ['root_admin', 'super_admin', 'support_admin'].includes(platformRole);
+      const isSupport = ['support_manager', 'support_agent', 'support_lead'].includes(platformRole);
+      
       const statusFilter = status ? (status as string).split(',') as any : undefined;
+      const priorityFilter = priority as string | undefined;
+      
+      const scopeValue = (isAdmin || isSupport) ? 'admin' : (scope === 'manager' ? 'manager' : 'employee');
       const tasks = await workboardService.getUserTasks(userId, workspaceId, {
         status: statusFilter,
+        priority: priorityFilter,
         limit: limit ? parseInt(limit as string) : 50,
-        offset: offset ? parseInt(offset as string) : 0
+        offset: offset ? parseInt(offset as string) : 0,
+        scope: scopeValue as 'admin' | 'manager' | 'employee',
       });
 
       res.json({
         success: true,
         tasks: tasks.map(t => ({
           id: t.id,
+          workspaceId: t.workspaceId,
+          userId: t.userId,
           requestType: t.requestType,
+          requestContent: t.requestContent,
           status: t.status,
           priority: t.priority,
-          assignedAgent: t.assignedAgentName,
+          intent: t.intent,
+          category: t.category,
+          confidence: t.confidence,
+          assignedAgentId: t.assignedAgentId,
+          assignedAgentName: t.assignedAgentName,
+          estimatedTokens: t.estimatedTokens,
+          actualTokens: t.actualTokens,
+          creditsDeducted: t.creditsDeducted,
           resultSummary: t.resultSummary,
+          errorMessage: t.errorMessage,
+          retryCount: t.retryCount,
+          maxRetries: t.maxRetries,
+          notifyVia: t.notifyVia,
           createdAt: t.createdAt,
-          completedAt: t.completedAt
+          startedAt: t.startedAt,
+          completedAt: t.completedAt,
         })),
-        total: tasks.length
+        pagination: {
+          total: tasks.length,
+          limit: limit ? parseInt(limit as string) : 50,
+          offset: offset ? parseInt(offset as string) : 0,
+          hasMore: tasks.length >= (limit ? parseInt(limit as string) : 50),
+        }
       });
     } catch (error: any) {
       console.error('[Workboard] List error:', error);
