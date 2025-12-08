@@ -285,9 +285,22 @@ export function NotificationsPopover() {
   const rawMaintenanceAlerts = data?.maintenanceAlerts || [];
   const rawNotifications = data?.notifications || [];
   
+  // System categories for filtering
+  const systemCategories = ['maintenance', 'diagnostic', 'support', 'ai_brain', 'error'];
+  
   // Filter to only show unviewed platform updates - "Clear All" marks as viewed, so they disappear
   const filteredPlatformUpdates = rawPlatformUpdates.filter((u: PlatformUpdate) => !u.isViewed);
   const filteredMaintenanceAlerts = rawMaintenanceAlerts;
+  
+  // Filter platform updates for System tab (system categories only)
+  const systemPlatformUpdates = filteredPlatformUpdates.filter((u: PlatformUpdate) => 
+    systemCategories.includes(u.category)
+  );
+  
+  // Filter platform updates for What's New tab (non-system categories only)
+  const whatsNewPlatformUpdates = filteredPlatformUpdates.filter((u: PlatformUpdate) => 
+    !systemCategories.includes(u.category)
+  );
   // Filter to only show unread/uncleared notifications
   const filteredNotifications = rawNotifications.filter((n: any) => !n.isRead && !n.clearedAt);
   
@@ -442,9 +455,9 @@ export function NotificationsPopover() {
                   data-testid="tab-maintenance"
                 >
                   System
-                  {unreadAlerts > 0 && (
+                  {(unreadAlerts + systemPlatformUpdates.filter(u => !u.isViewed).length) > 0 && (
                     <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
-                      {unreadAlerts > 9 ? '9+' : unreadAlerts}
+                      {(unreadAlerts + systemPlatformUpdates.filter(u => !u.isViewed).length) > 9 ? '9+' : (unreadAlerts + systemPlatformUpdates.filter(u => !u.isViewed).length)}
                     </span>
                   )}
                 </TabsTrigger>
@@ -674,8 +687,45 @@ export function NotificationsPopover() {
             </TabsContent>
 
             <TabsContent value="maintenance" className="mt-0 focus-visible:outline-none">
-              {filteredMaintenanceAlerts.length > 0 ? (
+              {(filteredMaintenanceAlerts.length > 0 || systemPlatformUpdates.length > 0) ? (
                 <div className="divide-y">
+                  {systemPlatformUpdates.map((update) => {
+                    const catStyles = getCategoryStyles(update.category);
+                    const CategoryIcon = catStyles.icon;
+                    return (
+                      <div
+                        key={update.id}
+                        className={`px-4 py-4 ${update.isViewed ? 'opacity-60' : 'bg-primary/5'}`}
+                        data-testid={`system-update-${update.id}`}
+                      >
+                        <div className="flex gap-3">
+                          <div className={`shrink-0 ${catStyles.color} mt-0.5`}>
+                            <div className="w-8 h-8 rounded-full bg-current/10 flex items-center justify-center">
+                              <CategoryIcon className="h-4 w-4" />
+                            </div>
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-start justify-between gap-2 mb-1">
+                              <span className="font-medium text-sm leading-tight">{update.title}</span>
+                              <Badge variant="secondary" className="text-[10px] px-2 py-0.5 font-medium shrink-0">
+                                {catStyles.label}
+                              </Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+                              {update.description}
+                            </p>
+                            <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+                              <Clock className="h-3.5 w-3.5" />
+                              <span>{formatDistanceToNow(new Date(update.createdAt), { addSuffix: true })}</span>
+                            </div>
+                          </div>
+                          {!update.isViewed && (
+                            <div className="h-2 w-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 shrink-0 mt-2" />
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                   {filteredMaintenanceAlerts.map((alert) => {
                     const config = getSeverityStyles(alert.severity);
                     const SeverityIcon = config.icon;
