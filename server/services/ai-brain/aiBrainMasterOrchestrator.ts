@@ -392,6 +392,7 @@ class AIBrainMasterOrchestrator {
     this.registerExpenseCategorizationActions();
     this.registerDynamicPricingActions();
     await this.registerSessionCheckpointActions();
+    await this.registerElevatedSessionGuardianActions();
     
     // Subscribe to platform events
     this.subscribeToEvents();
@@ -4076,6 +4077,194 @@ class AIBrainMasterOrchestrator {
     });
 
     console.log('[AI Brain Master Orchestrator] Registered session checkpoint actions');
+  }
+
+  // ============================================================================
+  // ELEVATED SESSION GUARDIAN ORCHESTRATION
+  // ============================================================================
+
+  private async registerElevatedSessionGuardianActions(): Promise<void> {
+    const { elevatedSessionGuardian } = await import('./elevatedSessionGuardian');
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'session.guardian.diagnose',
+      name: 'Run Session Guardian Diagnostics',
+      category: 'security',
+      description: 'Trinity runs Dr. Holmes-style diagnostics on elevated session system health',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        
+        try {
+          const report = await elevatedSessionGuardian.runDiagnostics();
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: report.diagnosis,
+            data: report,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'session.guardian.heal',
+      name: 'Run Session Healing Cycle',
+      category: 'security',
+      description: 'Trinity initiates self-healing cycle for elevated sessions',
+      requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        
+        try {
+          const result = await elevatedSessionGuardian.runHealingCycle();
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Healing complete: ${result.healed} healed, ${result.failures} failures`,
+            data: result,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'session.guardian.status',
+      name: 'Get Session Guardian Health Status',
+      category: 'security',
+      description: 'Get current health status of elevated session system',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        
+        try {
+          const status = await elevatedSessionGuardian.getHealthStatus();
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: status.healthy ? 'Session system healthy' : 'Session system has issues',
+            data: status,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'session.guardian.elevate',
+      name: 'Issue Elevated Session',
+      category: 'security',
+      description: 'Issue a new elevated session for support/AI service with full telemetry',
+      requiredRoles: ['sysop', 'deputy_admin', 'root_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { targetUserId, sessionId, platformRole, reason } = request.payload || {};
+        
+        try {
+          if (!targetUserId || !sessionId || !platformRole) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'targetUserId, sessionId, and platformRole are required',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          const result = await elevatedSessionGuardian.issueElevation(
+            targetUserId,
+            sessionId,
+            platformRole,
+            reason || 'AI Brain initiated elevation'
+          );
+          
+          return {
+            success: result.success,
+            actionId: request.actionId,
+            message: result.success ? 'Elevation issued successfully' : result.error || 'Elevation failed',
+            data: result.elevation ? { elevationId: result.elevation.id } : undefined,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'session.guardian.revoke',
+      name: 'Revoke Elevated Session',
+      category: 'security',
+      description: 'Revoke an elevated session with telemetry tracking',
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { elevationId, reason } = request.payload || {};
+        
+        try {
+          if (!elevationId) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'elevationId is required',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          const result = await elevatedSessionGuardian.revokeElevation(
+            elevationId,
+            request.userId!,
+            reason || 'AI Brain initiated revocation'
+          );
+          
+          return {
+            success: result.success,
+            actionId: request.actionId,
+            message: result.success ? 'Elevation revoked' : 'Revocation failed',
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered elevated session guardian actions');
   }
 }
 
