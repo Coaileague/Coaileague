@@ -137,7 +137,6 @@ export interface SharedInsight {
 class TrinityMemoryService {
   private static instance: TrinityMemoryService;
   private userProfileCache: Map<string, UserMemoryProfile> = new Map();
-  private toolCatalog: Map<string, ToolCapability> = new Map();
   private sharedInsights: SharedInsight[] = [];
   private cacheTimeout = 10 * 60 * 1000; // 10 minutes
 
@@ -502,71 +501,8 @@ class TrinityMemoryService {
   }
 
   // ============================================================================
-  // TOOL CAPABILITY CATALOG
+  // TOOL CAPABILITY CATALOG (WORKSPACE-SCOPED FOR TENANT ISOLATION)
   // ============================================================================
-
-  async refreshToolCatalog(): Promise<void> {
-    try {
-      // Get all registered actions from automation ledger for success metrics
-      const recentOutcomes = await db
-        .select({
-          actionCategory: automationActionLedger.actionCategory,
-          actionName: automationActionLedger.actionName,
-          approvalState: automationActionLedger.approvalState,
-        })
-        .from(automationActionLedger)
-        .where(gte(automationActionLedger.createdAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)))
-        .limit(1000);
-
-      // Calculate success metrics per tool
-      const toolMetrics: Map<string, { success: number; total: number }> = new Map();
-      
-      for (const outcome of recentOutcomes) {
-        const toolId = `${outcome.actionCategory}.${outcome.actionName}`;
-        const existing = toolMetrics.get(toolId) || { success: 0, total: 0 };
-        existing.total++;
-        if (outcome.approvalState === 'executed' || outcome.approvalState === 'approved') {
-          existing.success++;
-        }
-        toolMetrics.set(toolId, existing);
-      }
-
-      // Update catalog with metrics
-      for (const [toolId, metrics] of toolMetrics) {
-        const [category, name] = toolId.split('.');
-        const existing = this.toolCatalog.get(toolId);
-        
-        this.toolCatalog.set(toolId, {
-          toolId,
-          toolName: name,
-          category,
-          description: existing?.description || `${category} ${name} action`,
-          requiredConsents: existing?.requiredConsents || [],
-          prerequisites: existing?.prerequisites || [],
-          successMetrics: {
-            successRate: metrics.total > 0 ? (metrics.success / metrics.total) * 100 : 0,
-            avgExecutionTime: existing?.successMetrics.avgExecutionTime || 0,
-            userSatisfaction: existing?.successMetrics.userSatisfaction || 0,
-          },
-          healthStatus: 'healthy',
-          lastHealthCheck: new Date(),
-          usageCount: metrics.total,
-          recommendedFor: existing?.recommendedFor || [],
-        });
-      }
-
-      console.log(`[TrinityMemoryService] Tool catalog refreshed: ${this.toolCatalog.size} tools`);
-    } catch (error) {
-      console.error('[TrinityMemoryService] Error refreshing tool catalog:', error);
-    }
-  }
-
-  getToolCatalog(workspaceId?: string): ToolCapability[] {
-    // Note: Tool catalog currently contains platform-wide metrics
-    // For tenant isolation, we return only tools with usage in the caller's workspace
-    // or tools with no workspace association (platform defaults)
-    return Array.from(this.toolCatalog.values());
-  }
 
   // Get workspace-scoped tool catalog with metrics from automation ledger
   async getWorkspaceScopedToolCatalog(workspaceId: string): Promise<ToolCapability[]> {
@@ -629,22 +565,6 @@ class TrinityMemoryService {
       console.error('[TrinityMemoryService] Error getting workspace-scoped catalog:', error);
       return [];
     }
-  }
-
-  getToolsByCategory(category: string): ToolCapability[] {
-    return Array.from(this.toolCatalog.values())
-      .filter(tool => tool.category === category);
-  }
-
-  getRecommendedTools(context: string[]): ToolCapability[] {
-    return Array.from(this.toolCatalog.values())
-      .filter(tool => 
-        tool.healthStatus === 'healthy' &&
-        tool.successMetrics.successRate >= 70 &&
-        (context.some(c => tool.recommendedFor.includes(c)) || tool.usageCount >= 10)
-      )
-      .sort((a, b) => b.successMetrics.successRate - a.successMetrics.successRate)
-      .slice(0, 5);
   }
 
   // ============================================================================
