@@ -44,7 +44,7 @@ export interface GrabConfig {
 
 const DEFAULT_CONFIG: GrabConfig = {
   catchChance: 0.10,             // 10% catch chance
-  grabRadius: 60,                // 60px grab area
+  grabRadius: 35,                // 35px grab area (center model only)
   velocitySmoothing: 5,          // Average last 5 samples
   minSlingSpeed: 3,              // Minimum 3 units for sling
   maxSlingSpeed: 25,             // Cap at 25 units
