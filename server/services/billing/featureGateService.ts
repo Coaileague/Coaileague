@@ -481,7 +481,9 @@ class FeatureGateService {
           unlockedAt: new Date(),
           unlockedBy: userId,
           expiresAt,
+          requiresCredits: true, // All features in this system consume credits
           creditsPerUse: featureDef?.creditsPerUse ?? 1,
+          requiredTier: null, // Credits are separate from subscription tiers
           showLockIcon: false,
           lockMessage: featureDef?.lockMessage
         });
