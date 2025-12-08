@@ -101,8 +101,8 @@ const SnowfallEngine = memo(function SnowfallEngine() {
         x,
         width: isMobile ? 100 + Math.random() * 80 : 80 + Math.random() * 60,
         height: 0,
-        // Mobile: taller snow piles (60-120px), Desktop: normal (20-60px)
-        targetHeight: isMobile ? 60 + Math.random() * 60 : 20 + Math.random() * 40,
+        // Mobile: shorter snow piles (30-50px), Desktop: minimal (10-25px)
+        targetHeight: isMobile ? 30 + Math.random() * 20 : 10 + Math.random() * 15,
         phase: 'forming',
         phaseStart: Date.now(),
       });

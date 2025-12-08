@@ -480,25 +480,25 @@ export interface SeasonalEffectsConfig {
  */
 export const SEASONAL_EFFECTS_CONFIG: SeasonalEffectsConfig = {
   snow: {
-    // Snow pile cycle: 12 minutes total (form 5min + hold 3min + dissolve 4min)
-    formDuration: 300000,     // 5 minutes
-    holdDuration: 180000,     // 3 minutes  
-    dissolveDuration: 240000, // 4 minutes
+    // Snow pile cycle: 45 minutes total (form 25min + hold 10min + dissolve 10min)
+    formDuration: 1500000,    // 25 minutes - very slow pile buildup
+    holdDuration: 600000,     // 10 minutes  
+    dissolveDuration: 600000, // 10 minutes
     
     // Lower intensity = less resource usage
-    intensity: 0.5,
+    intensity: 0.3,
     
-    // Speed variation every 8-20 seconds
-    speedCycleDuration: { min: 8000, max: 20000 },
+    // Speed variation every 15-40 seconds (slower cycles)
+    speedCycleDuration: { min: 15000, max: 40000 },
     
     // Reduced max snowflakes for performance
-    maxSnowflakes: { mobile: 25, desktop: 50 },
+    maxSnowflakes: { mobile: 15, desktop: 30 },
     
-    // Low spawn rates to reduce lag
+    // Very low spawn rates for gentle snowfall
     spawnRates: {
-      fast: 0.15,
-      medium: 0.08,
-      slow: 0.04,
+      fast: 0.04,
+      medium: 0.02,
+      slow: 0.01,
     },
   },
   
