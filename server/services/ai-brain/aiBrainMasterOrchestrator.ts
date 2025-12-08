@@ -4520,6 +4520,7 @@ class AIBrainMasterOrchestrator {
           
           const context = {
             actionId: actionName,
+            actionName,
             actionCategory,
             executorId: request.userId!,
             executorType: 'user' as const,
@@ -4536,7 +4537,7 @@ class AIBrainMasterOrchestrator {
           return {
             success: true,
             actionId: request.actionId,
-            message: result.allowed ? 'Action approved by governance' : 'Action blocked by governance',
+            message: result.canExecute ? 'Action approved by governance' : 'Action blocked by governance',
             data: result,
             executionTimeMs: Date.now() - startTime
           };
@@ -4589,7 +4590,12 @@ class AIBrainMasterOrchestrator {
             computedLevel: 'graduated' as const,
             policyLevel: 'graduated' as const,
             confidenceScore: confidenceScore || 75,
-            confidenceFactors: {},
+            confidenceFactors: {
+              baseScore: confidenceScore || 75,
+              historyBonus: 0,
+              riskPenalty: 0,
+              approvalBonus: 0,
+            },
             isHighRisk: false,
             riskFactors: []
           };

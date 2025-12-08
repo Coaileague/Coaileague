@@ -51,7 +51,8 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Support Command Console:** Force-push updates system for support staff.
 - **AI Brain Code Editor:** Staged code editing with approval workflow and HelpAI integration.
 - **AI Brain Master Orchestrator:** Central hub coordinating 93 actions across 16 categories, connecting Gemini AI to platform services.
-- **SubagentSupervisor:** Manages 23 specialized domain subagents with diagnostic workflow, RBAC, and escalation policies.
+- **SubagentSupervisor:** Manages 23 specialized domain subagents with diagnostic workflow, RBAC, and escalation policies. Uses consolidated `shared/config/orchestration.ts` for tiered agent definitions (strategy, router, executor).
+- **Unified RBAC System:** Centralized role-based access control via `shared/config/rbac.ts` with `resolveAccessContext()` helper, capability matrix, and role groups (PLATFORM_ADMINS, SUPPORT_TEAM, AI_SERVICES, WORKSPACE_MANAGERS).
 - **AI Expense Categorization:** Receipt OCR via Gemini Vision, intelligent categorization, and spending pattern analysis.
 - **AI Dynamic Pricing:** Client-specific pricing analysis, reports, and bulk rate adjustment simulations.
 - **AI Brain File System Tools:** Comprehensive and secure file access with read, write, edit, delete, list, search, diff, and metadata retrieval.
