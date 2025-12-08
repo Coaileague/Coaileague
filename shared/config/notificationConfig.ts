@@ -270,6 +270,122 @@ export const MAINTENANCE_ALERT_CONFIG = {
 export type MaintenanceAlertType = keyof typeof MAINTENANCE_ALERT_CONFIG;
 
 // ============================================================================
+// TAB ROUTING CONFIGURATION
+// Defines which categories route to which notification tabs
+// ============================================================================
+
+export type NotificationTab = 'whats_new' | 'alerts' | 'system';
+
+/**
+ * Tab routing map - determines which tab each category appears in
+ * - whats_new: Platform features, AI upgrades, subagents, integrations, UI improvements
+ * - alerts: User-specific notifications, approvals, compliance, payroll, shifts
+ * - system: Maintenance, diagnostics, errors, support operations
+ */
+export const TAB_ROUTING: Record<string, NotificationTab> = {
+  // What's New tab - Platform evolution, features, AI capabilities
+  feature: 'whats_new',
+  improvement: 'whats_new',
+  announcement: 'whats_new',
+  service: 'whats_new',
+  bot_automation: 'whats_new',
+  integration: 'whats_new',
+  ui_update: 'whats_new',
+  backend_update: 'whats_new',
+  performance: 'whats_new',
+  documentation: 'whats_new',
+  ai_brain: 'whats_new',           // AI Brain upgrades go to What's New
+  workflow: 'whats_new',            // Workflow improvements
+  api_change: 'whats_new',          // API changes for developers
+  subagent_added: 'whats_new',      // New subagents added to orchestration
+  orchestration_update: 'whats_new', // Orchestration improvements
+  
+  // Alerts tab - User-specific, action required
+  billing: 'alerts',
+  compliance: 'alerts',
+  shift_assigned: 'alerts',
+  shift_reminder: 'alerts',
+  shift_change: 'alerts',
+  shift_cancelled: 'alerts',
+  time_off_approved: 'alerts',
+  time_off_rejected: 'alerts',
+  payroll_ready: 'alerts',
+  compliance_alert: 'alerts',
+  approval_needed: 'alerts',
+  warning: 'alerts',
+  
+  // System tab - Operational, maintenance, diagnostics
+  maintenance: 'system',
+  diagnostic: 'system',
+  support: 'system',
+  error: 'system',
+  fix: 'system',
+  bugfix: 'system',
+  hotpatch: 'system',
+  security: 'system',
+  deprecation: 'system',
+  system: 'system',
+} as const;
+
+/**
+ * RBAC-based notification targeting
+ * Defines which roles receive which types of notifications
+ */
+export const RBAC_NOTIFICATION_TARGETING = {
+  // Platform-level updates (all users)
+  platform_updates: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'org_owner', 'org_admin', 'department_manager', 'supervisor', 'staff', 'contractor'],
+  
+  // Technical/AI Brain updates (technical roles only)
+  technical_updates: ['root_admin', 'deputy_admin', 'sysop', 'support_manager'],
+  
+  // Subagent/Orchestration updates (admin and support roles)
+  orchestration_updates: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'org_admin'],
+  
+  // Security updates (elevated roles)
+  security_updates: ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'org_admin'],
+  
+  // Billing/Financial updates (finance roles)
+  financial_updates: ['root_admin', 'deputy_admin', 'org_owner', 'org_admin'],
+  
+  // Compliance updates (compliance-related roles)
+  compliance_updates: ['root_admin', 'deputy_admin', 'sysop', 'compliance_officer', 'org_owner', 'org_admin', 'department_manager'],
+} as const;
+
+/**
+ * Get the target tab for a notification category
+ */
+export function getNotificationTab(category: string): NotificationTab {
+  return TAB_ROUTING[category] || 'whats_new';
+}
+
+/**
+ * Check if a category belongs to a specific tab
+ */
+export function isCategoryInTab(category: string, tab: NotificationTab): boolean {
+  return getNotificationTab(category) === tab;
+}
+
+/**
+ * Get all categories for a specific tab
+ */
+export function getCategoriesForTab(tab: NotificationTab): string[] {
+  return Object.entries(TAB_ROUTING)
+    .filter(([_, t]) => t === tab)
+    .map(([category]) => category);
+}
+
+/**
+ * Check if a role should receive a specific notification type
+ */
+export function shouldRoleReceiveNotification(
+  role: string, 
+  notificationType: keyof typeof RBAC_NOTIFICATION_TARGETING
+): boolean {
+  const allowedRoles = RBAC_NOTIFICATION_TARGETING[notificationType];
+  return allowedRoles.includes(role as any);
+}
+
+// ============================================================================
 // UI COPY CONFIGURATION (no hardcoded strings)
 // ============================================================================
 
