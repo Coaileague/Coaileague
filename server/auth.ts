@@ -211,6 +211,89 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   next();
 };
 
+/**
+ * Enhanced auth middleware that also checks for elevated support sessions
+ * This allows support roles and AI services to bypass redundant auth checks
+ * during automated workflows while maintaining security
+ * 
+ * IMPORTANT: Even elevated sessions must pass account lock checks for security
+ */
+export const requireAuthWithElevation: RequestHandler = async (req, res, next) => {
+  const userId = req.session?.userId;
+  
+  if (!userId) {
+    return res.status(401).json({ message: "Unauthorized - Please login" });
+  }
+
+  // Check for elevated session first (for support/AI services)
+  try {
+    const { isElevatedSupportSession, revokeElevation } = await import("./services/session/elevatedSessionService");
+    const elevationContext = await isElevatedSupportSession(req);
+    
+    if (elevationContext.isElevated) {
+      // Elevated session found - still verify user exists and is not locked
+      const [user] = await db
+        .select()
+        .from(users)
+        .where(eq(users.id, userId))
+        .limit(1);
+      
+      if (!user) {
+        // User deleted - revoke elevation
+        if (elevationContext.elevationId) {
+          await revokeElevation(elevationContext.elevationId, userId, 'user_not_found');
+        }
+        req.session.destroy(() => {});
+        return res.status(401).json({ message: "User not found" });
+      }
+
+      // CRITICAL: Check if account is locked even for elevated sessions
+      const lockStatus = await checkAccountLocked(user.id);
+      if (lockStatus.locked) {
+        // Revoke elevation for locked accounts to prevent reuse
+        if (elevationContext.elevationId) {
+          await revokeElevation(elevationContext.elevationId, userId, 'account_locked');
+          console.log(`[Auth] Revoked elevation ${elevationContext.elevationId} due to locked account`);
+        }
+        return res.status(403).json({ message: lockStatus.message });
+      }
+
+      req.user = user;
+      (req as any).authContext = {
+        isSupportElevated: true,
+        elevationId: elevationContext.elevationId,
+        platformRole: elevationContext.platformRole,
+        actionsExecuted: elevationContext.actionsExecuted
+      };
+      return next();
+    }
+  } catch (error) {
+    // Fall through to normal auth if elevation check fails
+    console.warn('[Auth] Elevation check failed, using standard auth:', error);
+  }
+
+  // Standard auth flow
+  const [user] = await db
+    .select()
+    .from(users)
+    .where(eq(users.id, userId))
+    .limit(1);
+
+  if (!user) {
+    req.session.destroy(() => {});
+    return res.status(401).json({ message: "User not found" });
+  }
+
+  const lockStatus = await checkAccountLocked(user.id);
+  if (lockStatus.locked) {
+    return res.status(403).json({ message: lockStatus.message });
+  }
+
+  req.user = user;
+  (req as any).authContext = { isSupportElevated: false };
+  next();
+};
+
 export const requireAdmin: RequestHandler = async (req, res, next) => {
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Unauthorized" });

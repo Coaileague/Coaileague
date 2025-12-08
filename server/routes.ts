@@ -32339,6 +32339,146 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     }
   });
 
+
+  // ============================================================================
+  // ELEVATED SESSION AUTHENTICATION - Support/AI Service Bypass System
+  // ============================================================================
+
+  const elevatedSessionService = await import("./services/session/elevatedSessionService");
+
+  /**
+   * POST /api/support/session/elevate
+   * Request session elevation for support roles or AI services
+   * Automatically issued on login for eligible platform roles
+   */
+  app.post("/api/support/session/elevate", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.userId!;
+      const sessionId = req.sessionID;
+
+      const eligibility = await elevatedSessionService.canReceiveElevation(userId);
+      if (!eligibility.canElevate) {
+        return res.status(403).json({
+          success: false,
+          error: eligibility.reason || 'Not eligible for session elevation',
+          info: 'Only support roles and AI services can receive elevated sessions'
+        });
+      }
+
+      const result = await elevatedSessionService.issueElevation(
+        userId,
+        sessionId,
+        'auto_support_login',
+        userId,
+        req.ip,
+        req.get('user-agent')
+      );
+
+      if (result.success) {
+        res.json({
+          success: true,
+          elevationId: result.elevationId,
+          expiresAt: result.expiresAt,
+          role: eligibility.role
+        });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      console.error('[Elevation Route] Error:', error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * GET /api/support/session/status
+   * Check current session elevation status
+   */
+  app.get("/api/support/session/status", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const context = await elevatedSessionService.isElevatedSupportSession(req);
+      res.json({
+        success: true,
+        isElevated: context.isElevated,
+        elevationId: context.elevationId,
+        platformRole: context.platformRole,
+        expiresAt: context.expiresAt,
+        actionsExecuted: context.actionsExecuted
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/support/session/revoke
+   * Revoke current session elevation (logout cleanup)
+   */
+  app.post("/api/support/session/revoke", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.userId!;
+      const count = await elevatedSessionService.revokeAllUserElevations(userId, 'manual_logout');
+      res.json({ success: true, revokedCount: count });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/support/session/ai-service
+   * Issue elevation for AI services (Trinity, HelpAI, subagents)
+   * Called internally by AI Brain orchestration
+   */
+  app.post("/api/support/session/ai-service", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { aiBrainAuthorizationService } = await import("./services/ai-brain/aiBrainAuthorizationService");
+      
+      const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.userId!);
+      if (!authCheck.valid || !['root_admin', 'deputy_admin', 'sysop'].includes(authCheck.role || '')) {
+        return res.status(403).json({ success: false, error: 'Insufficient permissions to issue AI service elevations' });
+      }
+
+      const { serviceType, serviceUserId, workflowId } = req.body;
+      if (!serviceType || !serviceUserId) {
+        return res.status(400).json({ success: false, error: 'serviceType and serviceUserId required' });
+      }
+
+      const result = await elevatedSessionService.issueAIServiceElevation(
+        serviceType,
+        serviceUserId,
+        workflowId
+      );
+
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * GET /api/support/session/admin/active
+   * Admin view of all active elevated sessions (for platform admins)
+   */
+  app.get("/api/support/session/admin/active", requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { supportSessionElevations } = await import("@shared/schema");
+      const { eq, gt, and } = await import("drizzle-orm");
+      
+      const now = new Date();
+      const activeSessions = await db.select()
+        .from(supportSessionElevations)
+        .where(and(
+          eq(supportSessionElevations.isActive, true),
+          gt(supportSessionElevations.expiresAt, now)
+        ))
+        .limit(100);
+
+      res.json({ success: true, sessions: activeSessions, count: activeSessions.length });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
 }
 
 // ============================================================================

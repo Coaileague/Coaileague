@@ -748,12 +748,30 @@ class SubagentSupervisor {
     userId: string,
     workspaceId: string,
     platformRole: string
-  ): Promise<{ allowed: boolean; reason?: string }> {
+  ): Promise<{ allowed: boolean; reason?: string; elevatedSession?: boolean }> {
     const allowedRoles = (subagent.allowedRoles as string[]) || [];
     
     // Root always has access
     if (platformRole === 'root_admin') {
       return { allowed: true };
+    }
+
+    // Check for elevated support session (bypasses redundant auth checks for automated workflows)
+    try {
+      const { getActiveElevation } = await import('../session/elevatedSessionService');
+      const elevation = await getActiveElevation(userId);
+      
+      if (elevation?.isElevated && elevation.platformRole) {
+        // Elevated sessions for support roles bypass standard checks
+        const ELEVATED_SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
+        if (ELEVATED_SUPPORT_ROLES.includes(elevation.platformRole)) {
+          console.log(`[SubagentSupervisor] User ${userId} has elevated session (${elevation.platformRole}), bypassing standard auth for ${subagent.name}`);
+          return { allowed: true, elevatedSession: true };
+        }
+      }
+    } catch (error) {
+      // Fall through to standard auth if elevation check fails
+      console.warn('[SubagentSupervisor] Elevation check failed, using standard auth:', error);
     }
 
     // Check if role is in allowed list

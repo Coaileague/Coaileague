@@ -65,9 +65,25 @@ class AIBrainAuthorizationService {
     return this.instance;
   }
 
-  async canExecuteAction(context: AuthorizationContext, category: string, actionId: string): Promise<ActionAuthCheck> {
+  async canExecuteAction(context: AuthorizationContext, category: string, actionId: string, elevationContext?: { isElevated: boolean; platformRole?: string }): Promise<ActionAuthCheck> {
     const requiredRoles = AI_BRAIN_AUTHORITY_ROLES[category] || [];
-    const isAuthorized = requiredRoles.includes(context.userRole);
+    
+    // Check if user has elevated support session (bypasses redundant checks)
+    let isAuthorized = false;
+    let bypassReason = '';
+    
+    if (elevationContext?.isElevated && elevationContext.platformRole) {
+      // Elevated sessions get authorization based on their platform role
+      isAuthorized = requiredRoles.includes(elevationContext.platformRole);
+      if (isAuthorized) {
+        bypassReason = ' (via elevated session)';
+      }
+    }
+    
+    // Standard role check
+    if (!isAuthorized) {
+      isAuthorized = requiredRoles.includes(context.userRole);
+    }
     
     await this.logAuthorizationCheck({
       userId: context.userId,
@@ -75,7 +91,8 @@ class AIBrainAuthorizationService {
       actionId,
       category,
       isAuthorized,
-      requiredRoles
+      requiredRoles,
+      elevatedSession: elevationContext?.isElevated || false
     });
     
     return {
@@ -85,9 +102,32 @@ class AIBrainAuthorizationService {
       actionId,
       isAuthorized,
       reason: isAuthorized 
-        ? `Authorized: ${context.userRole} can execute ${category}.${actionId}`
+        ? `Authorized: ${context.userRole} can execute ${category}.${actionId}${bypassReason}`
         : `Unauthorized: ${context.userRole} requires one of [${requiredRoles.join(', ')}] to execute ${category}.${actionId}`
     };
+  }
+
+  /**
+   * Check if a user has an active elevated support session
+   * This is used by AI Brain orchestration and subagents to bypass redundant auth
+   */
+  async checkElevatedSession(userId: string, sessionId?: string): Promise<{ isElevated: boolean; platformRole?: string; elevationId?: string }> {
+    try {
+      const { getActiveElevation } = await import('../session/elevatedSessionService');
+      const elevation = await getActiveElevation(userId);
+      
+      if (elevation?.isElevated) {
+        return {
+          isElevated: true,
+          platformRole: elevation.platformRole,
+          elevationId: elevation.elevationId
+        };
+      }
+      return { isElevated: false };
+    } catch (error) {
+      console.warn('[AIBrainAuthorizationService] Elevation check failed:', error);
+      return { isElevated: false };
+    }
   }
 
   async validateSupportStaff(userId: string): Promise<{ valid: boolean; role?: string; reason?: string }> {
@@ -148,6 +188,7 @@ class AIBrainAuthorizationService {
     category: string;
     isAuthorized: boolean;
     requiredRoles: string[];
+    elevatedSession?: boolean;
   }): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
@@ -159,7 +200,8 @@ class AIBrainAuthorizationService {
           category: data.category,
           authorized: data.isAuthorized,
           userRole: data.userRole,
-          requiredRoles: data.requiredRoles
+          requiredRoles: data.requiredRoles,
+          elevatedSession: data.elevatedSession || false
         }
       });
     } catch (error) {
