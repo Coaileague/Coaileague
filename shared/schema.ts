@@ -16685,3 +16685,136 @@ export const insertUserDeviceProfileSchema = createInsertSchema(userDeviceProfil
 });
 export type InsertUserDeviceProfile = z.infer<typeof insertUserDeviceProfileSchema>;
 export type UserDeviceProfile = typeof userDeviceProfiles.$inferSelect;
+
+// ============================================================================
+// SESSION CHECKPOINT SYSTEM - Trinity-Aware Session State Management
+// ============================================================================
+
+// Checkpoint sync state enum
+export const checkpointSyncStateEnum = pgEnum("checkpoint_sync_state", [
+  "pending",
+  "synced",
+  "failed",
+  "stale"
+]);
+
+// Session checkpoint phases
+export const sessionCheckpoints = pgTable("session_checkpoints", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  sessionId: varchar("session_id").notNull(), // Browser session fingerprint
+  
+  // Phase tracking
+  phaseKey: varchar("phase_key", { length: 100 }).notNull(), // e.g., 'form_editing', 'report_building', 'data_entry'
+  phaseNumber: integer("phase_number").default(1),
+  
+  // State payload (encrypted for sensitive data)
+  payload: jsonb("payload").notNull(), // Current user state/form data
+  payloadChecksum: varchar("payload_checksum", { length: 64 }), // SHA-256 for integrity verification
+  payloadVersion: integer("payload_version").default(1),
+  
+  // Context for Trinity AI Brain
+  contextSummary: text("context_summary"), // AI-readable summary of what user was doing
+  pageRoute: varchar("page_route", { length: 255 }), // Current page/route
+  actionHistory: jsonb("action_history"), // Recent user actions for context
+  
+  // AI Sync State
+  aiSyncState: checkpointSyncStateEnum("ai_sync_state").default("pending"),
+  aiSyncedAt: timestamp("ai_synced_at"),
+  trinityContextId: varchar("trinity_context_id", { length: 100 }), // Reference ID in Trinity's context
+  
+  // Lifecycle
+  isFinal: boolean("is_final").default(false), // True when session ended gracefully
+  isRecovered: boolean("is_recovered").default(false), // True if this was used for recovery
+  expiresAt: timestamp("expires_at"), // Auto-cleanup after this time
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  savedAt: timestamp("saved_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("session_checkpoints_user_idx").on(table.userId),
+  index("session_checkpoints_workspace_idx").on(table.workspaceId),
+  index("session_checkpoints_session_idx").on(table.sessionId),
+  index("session_checkpoints_phase_idx").on(table.phaseKey),
+  index("session_checkpoints_final_idx").on(table.isFinal),
+  index("session_checkpoints_expires_idx").on(table.expiresAt),
+]);
+
+export const insertSessionCheckpointSchema = createInsertSchema(sessionCheckpoints).omit({
+  id: true,
+  createdAt: true,
+  savedAt: true,
+  updatedAt: true,
+});
+export type InsertSessionCheckpoint = z.infer<typeof insertSessionCheckpointSchema>;
+export type SessionCheckpoint = typeof sessionCheckpoints.$inferSelect;
+
+// Session checkpoint events for audit trail
+export const sessionCheckpointEvents = pgTable("session_checkpoint_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  checkpointId: varchar("checkpoint_id").notNull().references(() => sessionCheckpoints.id, { onDelete: 'cascade' }),
+  
+  // Event details
+  eventType: varchar("event_type", { length: 50 }).notNull(), // 'created', 'updated', 'finalized', 'recovered', 'expired', 'ai_synced'
+  eventSource: varchar("event_source", { length: 50 }).notNull(), // 'user_action', 'auto_save', 'visibility_change', 'unload', 'ai_brain'
+  
+  // Metadata
+  metadata: jsonb("metadata"), // Event-specific data
+  previousPayloadChecksum: varchar("previous_payload_checksum", { length: 64 }),
+  
+  // Trinity integration
+  aiBrainNotified: boolean("ai_brain_notified").default(false),
+  aiBrainEventId: varchar("ai_brain_event_id", { length: 100 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("checkpoint_events_checkpoint_idx").on(table.checkpointId),
+  index("checkpoint_events_type_idx").on(table.eventType),
+  index("checkpoint_events_created_idx").on(table.createdAt),
+]);
+
+export const insertSessionCheckpointEventSchema = createInsertSchema(sessionCheckpointEvents).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSessionCheckpointEvent = z.infer<typeof insertSessionCheckpointEventSchema>;
+export type SessionCheckpointEvent = typeof sessionCheckpointEvents.$inferSelect;
+
+// Session recovery requests
+export const sessionRecoveryRequests = pgTable("session_recovery_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  checkpointId: varchar("checkpoint_id").notNull().references(() => sessionCheckpoints.id, { onDelete: 'cascade' }),
+  sessionId: varchar("session_id").notNull(), // Original session that was lost
+  newSessionId: varchar("new_session_id"), // New session where recovery happened
+  
+  // Request details
+  requestSource: varchar("request_source", { length: 50 }).notNull(), // 'auto_prompt', 'user_initiated', 'trinity_suggested'
+  status: varchar("status", { length: 30 }).default("pending"), // 'pending', 'accepted', 'declined', 'expired', 'completed'
+  
+  // Recovery outcome
+  recoveredData: jsonb("recovered_data"), // What was restored
+  recoveryNotes: text("recovery_notes"), // AI-generated summary of recovery
+  userFeedback: varchar("user_feedback", { length: 30 }), // 'helpful', 'partial', 'not_needed'
+  
+  // Timing
+  promptedAt: timestamp("prompted_at").defaultNow(),
+  respondedAt: timestamp("responded_at"),
+  completedAt: timestamp("completed_at"),
+  expiresAt: timestamp("expires_at"), // Recovery offer expires after this
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("recovery_requests_user_idx").on(table.userId),
+  index("recovery_requests_checkpoint_idx").on(table.checkpointId),
+  index("recovery_requests_status_idx").on(table.status),
+  index("recovery_requests_created_idx").on(table.createdAt),
+]);
+
+export const insertSessionRecoveryRequestSchema = createInsertSchema(sessionRecoveryRequests).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSessionRecoveryRequest = z.infer<typeof insertSessionRecoveryRequestSchema>;
+export type SessionRecoveryRequest = typeof sessionRecoveryRequests.$inferSelect;
