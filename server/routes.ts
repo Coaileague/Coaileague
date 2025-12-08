@@ -302,6 +302,8 @@ import {
   featureUpdateReceipts,
   editChatMessageSchema,
   updateNotificationPreferencesSchema,
+  trinityCredits,
+  trinityCreditTransactions,
 } from "@shared/schema";
 import crypto from "crypto";
 import { sql, eq, and, or, isNull, isNotNull, lte, gte, desc, asc, inArray, ne } from "drizzle-orm";
@@ -1964,6 +1966,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // ============================================================================
+  // MOBILE VOICE COMMAND SYSTEM
+  // ============================================================================
+
+  /**
+   * Voice Command API - Mobile Trinity voice interaction
+   * 
+   * Receives voice-transcribed commands from mobile users and routes them
+   * through the SubagentSupervisor for orchestration with AI Brain Gemini.
+   * Tracks token usage against the organization's credit account.
+   */
+  app.post('/api/voice-command', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { transcript, timestamp, source } = req.body;
+      const userId = req.userId!;
+      const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+      
+      if (!transcript || typeof transcript !== 'string') {
+        return res.status(400).json({ 
+          error: 'Missing required field: transcript',
+          message: 'Please provide a voice command transcript.'
+        });
+      }
+
+      console.log('[VoiceCommand] Received command:', {
+        userId,
+        workspaceId,
+        transcript: transcript.substring(0, 100),
+        source,
+        timestamp
+      });
+
+      // Import subagent supervisor for task routing
+      const { subagentSupervisor } = await import('./services/ai-brain/subagentSupervisor');
+      
+      // Create a voice command task for the workboard
+      const voiceTask = {
+        id: crypto.randomUUID(),
+        type: 'voice_command',
+        source: source || 'mobile_trinity',
+        transcript: transcript.trim(),
+        userId,
+        workspaceId,
+        status: 'pending',
+        createdAt: new Date(timestamp || Date.now()),
+        metadata: {
+          platform: 'mobile',
+          inputMethod: 'voice',
+        }
+      };
+
+      // Route through SubagentSupervisor to determine appropriate subagent
+      const routingResult = await subagentSupervisor.routeVoiceCommand({
+        transcript: transcript.trim(),
+        userId,
+        workspaceId,
+        context: {
+          source,
+          timestamp,
+          platform: 'mobile'
+        }
+      });
+
+      // Deduct credits for voice command processing
+      let creditDeducted = false;
+      if (workspaceId) {
+        try {
+          const [credits] = await db.select().from(trinityCredits).where(eq(trinityCredits.workspaceId, workspaceId)).limit(1);
+          
+          if (credits && credits.balance >= routingResult.estimatedTokens) {
+            // Deduct credits
+            await db.update(trinityCredits)
+              .set({ 
+                balance: sql`${trinityCredits.balance} - ${routingResult.estimatedTokens}`,
+                lifetimeUsed: sql`${trinityCredits.lifetimeUsed} + ${routingResult.estimatedTokens}`,
+                updatedAt: new Date()
+              })
+              .where(eq(trinityCredits.workspaceId, workspaceId));
+            
+            // Record transaction
+            await db.insert(trinityCreditTransactions).values({
+              workspaceId,
+              userId,
+              type: 'deduction',
+              amount: routingResult.estimatedTokens,
+              description: `Voice command: ${transcript.trim().substring(0, 50)}`,
+              featureKey: 'voice_command',
+              metadata: {
+                taskId: voiceTask.id,
+                assignedAgent: routingResult.assignedAgent
+              }
+            });
+            
+            creditDeducted = true;
+            console.log('[VoiceCommand] Deducted credits:', routingResult.estimatedTokens);
+          } else {
+            console.log('[VoiceCommand] Insufficient credits or no credit record:', workspaceId);
+          }
+        } catch (creditError) {
+          console.error('[VoiceCommand] Credit deduction failed:', creditError);
+        }
+      }
+
+      // Log the voice command for analytics
+      await storage.createAuditLog({
+        workspaceId: workspaceId || 'platform',
+        userId,
+        action: 'voice_command_submitted',
+        entityType: 'voice_command',
+        entityId: voiceTask.id,
+        details: {
+          transcript: transcript.trim().substring(0, 200),
+          source,
+          routing: routingResult.assignedAgent,
+          estimatedTokens: routingResult.estimatedTokens
+        }
+      });
+
+      // Emit event for real-time UI update
+      const { eventBus } = await import('./services/eventBus');
+      eventBus.emit('voice_command_received', {
+        userId,
+        workspaceId,
+        taskId: voiceTask.id,
+        status: 'processing',
+        assignedAgent: routingResult.assignedAgent
+      });
+
+      res.json({
+        success: true,
+        taskId: voiceTask.id,
+        status: 'queued',
+        assignedAgent: routingResult.assignedAgent,
+        estimatedTokens: routingResult.estimatedTokens,
+        message: `Command received and assigned to ${routingResult.assignedAgent} for processing.`
+      });
+
+    } catch (error: any) {
+      console.error('[VoiceCommand] Error processing command:', error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process voice command',
+        message: error.message || 'An unexpected error occurred.'
+      });
+    }
+  });
   // ============================================================================
   // HELPOS™ AI SUPPORT SYSTEM
   // ============================================================================
