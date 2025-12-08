@@ -77,7 +77,17 @@ class ApprovalRequestService {
   ) {
     const { decision, limit = 50, offset = 0, scope = 'employee' } = options;
 
-    let query = db.select({
+    const conditions: any[] = [eq(aiApprovalRequests.workspaceId, workspaceId)];
+
+    if (decision && decision.length > 0) {
+      conditions.push(inArray(aiApprovalRequests.decision, decision));
+    }
+
+    if (scope === 'employee') {
+      conditions.push(eq(aiApprovalRequests.requesterId, userId));
+    }
+
+    const results = await db.select({
       id: aiApprovalRequests.id,
       workspaceId: aiApprovalRequests.workspaceId,
       requesterId: aiApprovalRequests.requesterId,
@@ -100,27 +110,27 @@ class ApprovalRequestService {
     })
     .from(aiApprovalRequests)
     .leftJoin(users, eq(aiApprovalRequests.requesterId, users.id))
-    .where(eq(aiApprovalRequests.workspaceId, workspaceId))
+    .where(and(...conditions))
     .orderBy(desc(aiApprovalRequests.createdAt))
     .limit(limit)
     .offset(offset);
-
-    const results = await query;
-
-    if (scope === 'employee') {
-      return results.filter(r => r.requesterId === userId);
-    }
 
     return results;
   }
 
   async getPendingCount(userId: string, workspaceId: string, scope: 'admin' | 'manager' | 'employee' = 'employee'): Promise<number> {
+    const conditions: any[] = [
+      eq(aiApprovalRequests.workspaceId, workspaceId),
+      eq(aiApprovalRequests.decision, 'pending')
+    ];
+
+    if (scope === 'employee') {
+      conditions.push(eq(aiApprovalRequests.requesterId, userId));
+    }
+
     const results = await db.select({ count: sql<number>`count(*)` })
       .from(aiApprovalRequests)
-      .where(and(
-        eq(aiApprovalRequests.workspaceId, workspaceId),
-        eq(aiApprovalRequests.decision, 'pending')
-      ));
+      .where(and(...conditions));
 
     return Number(results[0]?.count || 0);
   }
