@@ -16845,6 +16845,15 @@ export const subagentDomainEnum = pgEnum('subagent_domain', [
   'recovery',        // Session recovery, rollback, checkpoints
   'orchestration',   // Workflow coordination, chain execution
   'security',        // RBAC, audit, access control
+  'escalation',      // Critical issue escalation, runbook execution
+  'automation',      // Scheduled jobs, diagnostics, platform animations
+  'lifecycle',       // Employee lifecycle: probation, renewals, anniversaries
+  'assist',          // User assistance: feature discovery, troubleshooting
+  'filesystem',      // File operations: read, write, edit, search
+  'workflow',        // Durable workflows: registration, execution, monitoring
+  'onboarding',      // Employee onboarding: diagnostics, routing config
+  'expense',         // Expense management: receipt OCR, categorization
+  'pricing',         // Dynamic pricing: analysis, competitiveness, simulations
 ]);
 
 // Subagent execution status
