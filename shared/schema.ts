@@ -17821,3 +17821,60 @@ export const insertAiWorkboardTaskSchema = createInsertSchema(aiWorkboardTasks).
 });
 export type InsertAiWorkboardTask = z.infer<typeof insertAiWorkboardTaskSchema>;
 export type AiWorkboardTask = typeof aiWorkboardTasks.$inferSelect;
+
+/**
+ * AI Approval Requests - Universal approval queue for AI Brain, Trinity, and subagent requests
+ */
+export const aiApprovalRequests = pgTable("ai_approval_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Requester and approver
+  requesterId: varchar("requester_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  approverId: varchar("approver_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Source tracking
+  sourceTaskId: varchar("source_task_id").references(() => aiWorkboardTasks.id, { onDelete: 'set null' }),
+  sourceSystem: varchar("source_system", { length: 30 }).notNull().default('ai_brain'), // 'ai_brain', 'trinity', 'subagent'
+  sourceAgentId: varchar("source_agent_id", { length: 100 }),
+  
+  // Request details
+  requestType: varchar("request_type", { length: 50 }).notNull(), // 'action_approval', 'budget_approval', 'access_request', 'schedule_change'
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  requestPayload: jsonb("request_payload").default(sql`'{}'::jsonb`), // Details of what's being requested
+  
+  // Decision state
+  decision: varchar("decision", { length: 20 }).notNull().default('pending'), // 'pending', 'approved', 'rejected', 'expired', 'cancelled'
+  decisionAt: timestamp("decision_at"),
+  decisionNote: text("decision_note"),
+  decisionMetadata: jsonb("decision_metadata").default(sql`'{}'::jsonb`),
+  
+  // Priority and timing
+  priority: varchar("priority", { length: 20 }).notNull().default('normal'), // 'low', 'normal', 'high', 'urgent'
+  expiresAt: timestamp("expires_at"),
+  
+  // Token cost display
+  estimatedTokens: integer("estimated_tokens").default(0),
+  
+  // Status history for audit trail
+  statusHistory: jsonb("status_history").default(sql`'[]'::jsonb`), // [{decision, timestamp, actor, note}]
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("ai_approval_requests_workspace_idx").on(table.workspaceId),
+  index("ai_approval_requests_requester_idx").on(table.requesterId),
+  index("ai_approval_requests_approver_idx").on(table.approverId),
+  index("ai_approval_requests_decision_idx").on(table.decision),
+  index("ai_approval_requests_source_task_idx").on(table.sourceTaskId),
+  index("ai_approval_requests_expires_idx").on(table.expiresAt),
+]);
+
+export const insertAiApprovalRequestSchema = createInsertSchema(aiApprovalRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAiApprovalRequest = z.infer<typeof insertAiApprovalRequestSchema>;
+export type AiApprovalRequest = typeof aiApprovalRequests.$inferSelect;
