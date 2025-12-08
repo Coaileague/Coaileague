@@ -31,6 +31,7 @@ import {
   type InsertUserAutomationConsent,
   type InsertWorkspaceAutomationPolicy,
 } from '@shared/schema';
+import { trinityMemoryService } from './trinityMemoryService';
 
 // ============================================================================
 // TYPES
@@ -805,6 +806,122 @@ class AutomationGovernanceService {
         highRiskActions: 0,
         levelBreakdown: { hand_held: 0, graduated: 0, full_automation: 0 },
       };
+    }
+  }
+
+  // ============================================================================
+  // LEARNING FEEDBACK LOOP
+  // Feeds automation outcomes back to Trinity Memory Service for pattern learning
+  // ============================================================================
+
+  async recordOutcomeForLearning(params: {
+    context: ActionContext;
+    decision: ExecutionDecision;
+    outcome: 'success' | 'failure' | 'partial';
+    errorMessage?: string;
+    lessonsLearned?: string;
+  }): Promise<void> {
+    try {
+      // Calculate confidence adjustment based on outcome
+      let confidenceAdjustment = 0;
+      if (params.outcome === 'success') {
+        // Boost confidence for successful actions
+        confidenceAdjustment = Math.min(10, (100 - params.decision.confidenceScore) / 10);
+      } else if (params.outcome === 'failure') {
+        // Reduce confidence for failed actions (more severe reduction for high-confidence failures)
+        confidenceAdjustment = -Math.max(5, params.decision.confidenceScore / 10);
+      }
+
+      // Generate lesson learned if not provided
+      let lessonsLearned = params.lessonsLearned;
+      if (!lessonsLearned && params.outcome === 'failure' && params.errorMessage) {
+        lessonsLearned = `${params.context.actionName} failed: ${params.errorMessage}`;
+      } else if (!lessonsLearned && params.outcome === 'success') {
+        lessonsLearned = `${params.context.actionName} executed successfully with ${params.decision.confidenceScore}% confidence`;
+      }
+
+      // Feed to Trinity Memory Service
+      if (params.context.userId) {
+        await trinityMemoryService.recordInteractionOutcome({
+          userId: params.context.userId,
+          workspaceId: params.context.workspaceId,
+          actionName: params.context.actionName,
+          category: params.context.actionCategory,
+          outcome: params.outcome,
+          confidenceAdjustment,
+          lessonsLearned,
+        });
+      }
+
+      // Share insight for cross-bot learning if significant
+      if (params.decision.isHighRisk || Math.abs(confidenceAdjustment) >= 5) {
+        const insightType = params.outcome === 'success' ? 'resolution' : 'warning';
+        await trinityMemoryService.shareInsight({
+          sourceAgent: params.context.executorType === 'trinity' ? 'trinity' 
+            : params.context.executorType === 'helpai' ? 'helpai'
+            : params.context.executorType === 'subagent' ? 'subagent'
+            : 'automation',
+          insightType,
+          workspaceScope: params.context.workspaceId || null,
+          title: `${params.context.actionCategory}.${params.context.actionName} ${params.outcome}`,
+          content: lessonsLearned || `Action ${params.outcome} with confidence ${params.decision.confidenceScore}%`,
+          confidence: params.decision.confidenceScore / 100,
+          applicableScenarios: [
+            params.context.actionCategory,
+            params.context.actionName,
+            ...(params.decision.isHighRisk ? ['high_risk'] : []),
+          ],
+        });
+      }
+
+      console.log(`[AutomationGovernance] Learning recorded: ${params.context.actionName} - ${params.outcome} (conf adjustment: ${confidenceAdjustment})`);
+    } catch (error) {
+      console.error('[AutomationGovernance] Error recording outcome for learning:', error);
+    }
+  }
+
+  // Get historical success rate for a specific action type
+  async getHistoricalSuccessRate(
+    workspaceId: string,
+    actionCategory: string,
+    actionName: string
+  ): Promise<number> {
+    try {
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      
+      const entries = await db
+        .select()
+        .from(automationActionLedger)
+        .where(
+          and(
+            eq(automationActionLedger.workspaceId, workspaceId),
+            eq(automationActionLedger.actionCategory, actionCategory),
+            eq(automationActionLedger.actionName, actionName),
+            gte(automationActionLedger.createdAt, sevenDaysAgo)
+          )
+        )
+        .limit(100);
+
+      if (entries.length === 0) return 50; // Default neutral success rate
+
+      const successCount = entries.filter(e => 
+        e.approvalState === 'executed' || e.approvalState === 'approved'
+      ).length;
+
+      return Math.round((successCount / entries.length) * 100);
+    } catch (error) {
+      console.error('[AutomationGovernance] Error getting historical success rate:', error);
+      return 50;
+    }
+  }
+
+  // Refresh tool catalog with latest metrics
+  async refreshToolCatalogMetrics(): Promise<void> {
+    try {
+      await trinityMemoryService.refreshToolCatalog();
+      console.log('[AutomationGovernance] Tool catalog metrics refreshed');
+    } catch (error) {
+      console.error('[AutomationGovernance] Error refreshing tool catalog:', error);
     }
   }
 }

@@ -26,6 +26,7 @@ import {
   type InsertKnowledgeGapLog,
   type KnowledgeGapLog,
 } from '@shared/schema';
+import { trinityMemoryService } from './trinityMemoryService';
 
 // ============================================================================
 // TYPES
@@ -522,6 +523,77 @@ class TrinityContextManager {
     }
 
     return promptContext;
+  }
+
+  // Enhanced context building with long-term memory
+  async buildEnhancedPromptContext(
+    context: ConversationContext, 
+    maxTurns: number = 10,
+    currentTopic?: string
+  ): Promise<string> {
+    let promptContext = this.buildPromptContext(context, maxTurns);
+
+    // Add long-term memory from TrinityMemoryService
+    try {
+      const memoryContext = await trinityMemoryService.buildMemoryContext(
+        context.userId,
+        context.workspaceId,
+        currentTopic
+      );
+      promptContext = memoryContext + '\n' + promptContext;
+    } catch (error) {
+      console.error('[TrinityContextManager] Error building memory context:', error);
+    }
+
+    // Add recommended tools based on context (workspace-scoped for tenant isolation)
+    try {
+      if (context.workspaceId) {
+        const workspaceTools = await trinityMemoryService.getWorkspaceScopedToolCatalog(context.workspaceId);
+        const recommendedTools = workspaceTools
+          .filter(tool => 
+            tool.healthStatus === 'healthy' &&
+            tool.successMetrics.successRate >= 70 &&
+            tool.usageCount >= 3
+          )
+          .sort((a, b) => b.successMetrics.successRate - a.successMetrics.successRate)
+          .slice(0, 5);
+        
+        if (recommendedTools.length > 0) {
+          promptContext += '\n## Recommended Tools\n';
+          for (const tool of recommendedTools) {
+            promptContext += `- ${tool.toolName} (${tool.category}): ${tool.successMetrics.successRate.toFixed(0)}% success rate\n`;
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[TrinityContextManager] Error getting recommended tools:', error);
+    }
+
+    return promptContext;
+  }
+
+  // Record learning outcome for feedback loop
+  async recordLearningOutcome(
+    context: ConversationContext,
+    actionName: string,
+    category: string,
+    outcome: 'success' | 'failure' | 'partial',
+    confidenceAdjustment: number,
+    lessonsLearned?: string
+  ): Promise<void> {
+    try {
+      await trinityMemoryService.recordInteractionOutcome({
+        userId: context.userId,
+        workspaceId: context.workspaceId,
+        actionName,
+        category,
+        outcome,
+        confidenceAdjustment,
+        lessonsLearned,
+      });
+    } catch (error) {
+      console.error('[TrinityContextManager] Error recording learning outcome:', error);
+    }
   }
 
   // ============================================================================
