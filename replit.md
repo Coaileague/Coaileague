@@ -58,6 +58,7 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
 - **AI Brain Code Editor API:** Full staged code editing workflow with endpoints for staging, approval, application, and rollback.
 - **AI Brain Authorization Service:** Role-based permission model with a 9-level hierarchy and category-specific matrix.
 - **AI Brain Orchestration Infrastructure:** Durable workflow execution with persistence, commitments, and multi-agent coordination including WorkflowLedger, CommitmentManager, SupervisoryAgent, and SchedulerCoordinator.
+- **Elevated Session Authentication:** HMAC-signed session elevation for support roles and AI services (Trinity, HelpAI, subagents, bots) with TTL expiry (4h idle, 12h absolute), automatic revocation on account lock, and audit logging. Regular org users rely on standard RBAC/subscription tier controls.
 
 **System Design Choices:**
 - **Modularity:** Composed of 87 backend service modules and 220+ frontend routes.
