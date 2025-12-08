@@ -15,7 +15,7 @@ export interface PlatformUpdate {
   title: string;
   description: string;
   date: string;
-  category: 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement';
+  category: 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement' | 'maintenance' | 'diagnostic' | 'support' | 'ai_brain' | 'error';
   badge?: string;
   version?: string;
   learnMoreUrl?: string;
@@ -146,7 +146,7 @@ export async function getUpdates(options?: {
         id: u.id,
         title: u.title,
         description: u.description,
-        date: u.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+        date: u.date?.toISOString() || u.createdAt?.toISOString() || new Date().toISOString(),
         category: u.category,
         badge: u.badge || undefined,
         version: u.version || undefined,
@@ -267,7 +267,7 @@ export async function getNewFeatures(userId?: string, userRole?: string, workspa
         id: u.id,
         title: u.title,
         description: u.description,
-        date: u.date?.toISOString().split('T')[0] || new Date().toISOString().split('T')[0],
+        date: u.date?.toISOString() || u.createdAt?.toISOString() || new Date().toISOString(),
         category: u.category,
         badge: u.badge || undefined,
         version: u.version || undefined,
