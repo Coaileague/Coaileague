@@ -493,8 +493,8 @@ const SantaFlyoverScene = memo(function SantaFlyoverScene() {
     };
     
     const scheduleNextFlyover = () => {
-      // PERFORMANCE: Santa appears ~twice per hour (25-35 mins between flyovers)
-      const delay = 1500000 + Math.random() * 600000; // 25-35 minutes
+      // PERFORMANCE: Santa appears ~once every 1.5-2.5 hours to avoid overwhelming users
+      const delay = 5400000 + Math.random() * 3600000; // 90-150 minutes (1.5-2.5 hours)
       
       const timeout = window.setTimeout(() => {
         setDirection(Math.random() > 0.5 ? 'ltr' : 'rtl');

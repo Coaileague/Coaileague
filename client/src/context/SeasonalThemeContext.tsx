@@ -144,12 +144,12 @@ const CHRISTMAS_PROFILE: SeasonalProfile = {
     primary: 'snowfall',
     secondary: 'ornaments',
     cadence: 'slow',
-    intensity: 0.7,
+    intensity: 0.5, // Reduced for performance
     accumulation: true,
     accumulationCycle: {
-      formDuration: 60000,
-      holdDuration: 30000,
-      dissolveDuration: 45000,
+      formDuration: 300000,   // 5 minutes to form (was 60s)
+      holdDuration: 180000,   // 3 minutes to hold (was 30s)
+      dissolveDuration: 240000, // 4 minutes to dissolve (was 45s)
     },
   },
   ornaments: {
