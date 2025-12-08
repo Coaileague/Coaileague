@@ -11,6 +11,7 @@
 
 import { useEffect, useRef, useState, useCallback, memo } from 'react';
 import { useSeasonalEffect } from '@/context/SeasonalThemeContext';
+import { getSnowConfig } from '@/config/seasonalThemes';
 
 interface Snowflake {
   x: number;
@@ -52,21 +53,25 @@ const SnowfallEngine = memo(function SnowfallEngine() {
   const lastSpeedChangeRef = useRef<number>(Date.now());
   const currentSpeedRef = useRef<'fast' | 'medium' | 'slow'>('medium');
   
-  const { enabled, intensity, accumulation, accumulationCycle } = useSeasonalEffect();
+  const { enabled, accumulation, accumulationCycle } = useSeasonalEffect();
+  
+  // Use centralized config for all timing/performance values
+  const snowConfig = getSnowConfig();
   
   const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
   
-  // PERFORMANCE: Reduced spawn rates for less lag
+  // PERFORMANCE: Use centralized spawn rates from config
   const SPEEDS = {
-    fast: { min: 2.5, max: 5, spawnRate: 0.15 },    // Reduced from 0.4
-    medium: { min: 1.2, max: 3, spawnRate: 0.08 },   // Reduced from 0.25
-    slow: { min: 0.4, max: 1.2, spawnRate: 0.04 },   // Reduced from 0.15
+    fast: { min: 2.5, max: 5, spawnRate: snowConfig.spawnRates.fast },
+    medium: { min: 1.2, max: 3, spawnRate: snowConfig.spawnRates.medium },
+    slow: { min: 0.4, max: 1.2, spawnRate: snowConfig.spawnRates.slow },
   };
   
+  // Use config values with API override fallback
   const cycleDurations = accumulationCycle || {
-    formDuration: 15000,
-    holdDuration: 8000,
-    dissolveDuration: 5000,
+    formDuration: snowConfig.formDuration,
+    holdDuration: snowConfig.holdDuration,
+    dissolveDuration: snowConfig.dissolveDuration,
   };
   
   useEffect(() => {
@@ -152,7 +157,8 @@ const SnowfallEngine = memo(function SnowfallEngine() {
   
   const updateSpeedCycle = useCallback(() => {
     const now = Date.now();
-    const speedCycleDuration = 8000 + Math.random() * 12000;
+    const { min, max } = snowConfig.speedCycleDuration;
+    const speedCycleDuration = min + Math.random() * (max - min);
     
     if (now - lastSpeedChangeRef.current > speedCycleDuration) {
       const speeds: ('fast' | 'medium' | 'slow')[] = ['fast', 'medium', 'slow'];
@@ -175,8 +181,10 @@ const SnowfallEngine = memo(function SnowfallEngine() {
     canvas.height = dimensions.height * dpr;
     ctx.scale(dpr, dpr);
     
-    // PERFORMANCE: Reduced max snowflakes for less lag (was 150 * intensity)
-    const maxSnowflakes = Math.floor(50 * intensity);
+    // PERFORMANCE: Use config-based max snowflakes
+    const isMobile = dimensions.width < 768;
+    const baseMax = isMobile ? snowConfig.maxSnowflakes.mobile : snowConfig.maxSnowflakes.desktop;
+    const maxSnowflakes = Math.floor(baseMax * snowConfig.intensity);
     
     const animate = () => {
       ctx.clearRect(0, 0, dimensions.width, dimensions.height);

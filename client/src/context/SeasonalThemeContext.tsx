@@ -10,6 +10,7 @@
 
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { SEASONAL_EFFECTS_CONFIG } from '@/config/seasonalThemes';
 
 export type SeasonId = 
   | 'winter' | 'christmas' | 'newYear' | 'valentines' 
@@ -144,12 +145,12 @@ const CHRISTMAS_PROFILE: SeasonalProfile = {
     primary: 'snowfall',
     secondary: 'ornaments',
     cadence: 'slow',
-    intensity: 0.5, // Reduced for performance
+    intensity: SEASONAL_EFFECTS_CONFIG.snow.intensity,
     accumulation: true,
     accumulationCycle: {
-      formDuration: 300000,   // 5 minutes to form (was 60s)
-      holdDuration: 180000,   // 3 minutes to hold (was 30s)
-      dissolveDuration: 240000, // 4 minutes to dissolve (was 45s)
+      formDuration: SEASONAL_EFFECTS_CONFIG.snow.formDuration,
+      holdDuration: SEASONAL_EFFECTS_CONFIG.snow.holdDuration,
+      dissolveDuration: SEASONAL_EFFECTS_CONFIG.snow.dissolveDuration,
     },
   },
   ornaments: {

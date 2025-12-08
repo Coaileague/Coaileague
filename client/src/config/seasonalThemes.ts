@@ -422,3 +422,108 @@ function getNthWeekdayOfMonth(year: number, month: number, weekday: number, n: n
 export function getThemeConfig(theme: SeasonalTheme): SeasonalThemeConfig {
   return SEASONAL_THEMES[theme] || SEASONAL_THEMES.default;
 }
+
+// ============================================================================
+// SEASONAL EFFECTS TIMING CONFIG (AI Brain editable)
+// All timing values in milliseconds for easy adjustment
+// ============================================================================
+
+export interface SnowEffectConfig {
+  // Snow pile accumulation cycle
+  formDuration: number;      // How long snow piles take to form
+  holdDuration: number;      // How long snow piles stay at max height
+  dissolveDuration: number;  // How long snow piles take to melt
+  
+  // Snowfall density (0.1 = sparse, 1.0 = heavy)
+  intensity: number;
+  
+  // Speed variation cycle (ms between speed changes)
+  speedCycleDuration: { min: number; max: number };
+  
+  // Performance: max snowflakes on screen
+  maxSnowflakes: { mobile: number; desktop: number };
+  
+  // Spawn rates per frame (lower = less snow)
+  spawnRates: {
+    fast: number;
+    medium: number;
+    slow: number;
+  };
+}
+
+export interface SantaFlyoverConfig {
+  // Time between Santa appearances (ms)
+  intervalRange: { min: number; max: number };
+  
+  // Duration of each flyover (ms)
+  flyoverDuration: number;
+  
+  // Size on different devices
+  size: { mobile: number; desktop: number };
+  
+  // Enable/disable Santa
+  enabled: boolean;
+  
+  // Show initial flyover on page load
+  showInitialFlyover: boolean;
+}
+
+export interface SeasonalEffectsConfig {
+  snow: SnowEffectConfig;
+  santa: SantaFlyoverConfig;
+}
+
+/**
+ * CENTRALIZED SEASONAL EFFECTS CONFIG
+ * AI Brain and Trinity can modify these values for optimization
+ * All timing values are in milliseconds
+ */
+export const SEASONAL_EFFECTS_CONFIG: SeasonalEffectsConfig = {
+  snow: {
+    // Snow pile cycle: 12 minutes total (form 5min + hold 3min + dissolve 4min)
+    formDuration: 300000,     // 5 minutes
+    holdDuration: 180000,     // 3 minutes  
+    dissolveDuration: 240000, // 4 minutes
+    
+    // Lower intensity = less resource usage
+    intensity: 0.5,
+    
+    // Speed variation every 8-20 seconds
+    speedCycleDuration: { min: 8000, max: 20000 },
+    
+    // Reduced max snowflakes for performance
+    maxSnowflakes: { mobile: 25, desktop: 50 },
+    
+    // Low spawn rates to reduce lag
+    spawnRates: {
+      fast: 0.15,
+      medium: 0.08,
+      slow: 0.04,
+    },
+  },
+  
+  santa: {
+    // Santa appears every 1.5-2.5 hours
+    intervalRange: { min: 5400000, max: 9000000 }, // 90-150 minutes
+    
+    // Each flyover lasts 12 seconds
+    flyoverDuration: 12000,
+    
+    // Size in pixels
+    size: { mobile: 90, desktop: 140 },
+    
+    // Can be disabled entirely
+    enabled: true,
+    
+    // Show one flyover when page first loads
+    showInitialFlyover: true,
+  },
+};
+
+export function getSnowConfig(): SnowEffectConfig {
+  return SEASONAL_EFFECTS_CONFIG.snow;
+}
+
+export function getSantaConfig(): SantaFlyoverConfig {
+  return SEASONAL_EFFECTS_CONFIG.santa;
+}

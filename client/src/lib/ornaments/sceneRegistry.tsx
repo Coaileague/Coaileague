@@ -7,6 +7,7 @@
 
 import { memo, useMemo, useEffect, useState, useCallback } from 'react';
 import { useSeasonalTheme, useSeasonalOrnaments, useSeasonalEffect, type SeasonId } from '@/context/SeasonalThemeContext';
+import { getSantaConfig } from '@/config/seasonalThemes';
 import { 
   OrnamentBall, 
   FacetedStar, 
@@ -469,6 +470,7 @@ interface FallingPresent {
 
 const SantaFlyoverScene = memo(function SantaFlyoverScene() {
   const { seasonId } = useSeasonalTheme();
+  const santaConfig = getSantaConfig();
   const [isFlying, setIsFlying] = useState(false);
   const [position, setPosition] = useState({ x: -200, y: 80 });
   const [sparkles, setSparkles] = useState<SparkleParticle[]>([]);
@@ -480,10 +482,11 @@ const SantaFlyoverScene = memo(function SantaFlyoverScene() {
   
   const isChristmas = seasonId === 'christmas';
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
-  const santaSize = isMobile ? 90 : 140;
+  const santaSize = isMobile ? santaConfig.size.mobile : santaConfig.size.desktop;
   
   useEffect(() => {
-    if (!isChristmas) return;
+    // Check if Santa is enabled and it's Christmas
+    if (!isChristmas || !santaConfig.enabled) return;
     
     injectKeyframes();
     
@@ -493,8 +496,9 @@ const SantaFlyoverScene = memo(function SantaFlyoverScene() {
     };
     
     const scheduleNextFlyover = () => {
-      // PERFORMANCE: Santa appears ~once every 1.5-2.5 hours to avoid overwhelming users
-      const delay = 5400000 + Math.random() * 3600000; // 90-150 minutes (1.5-2.5 hours)
+      // Use centralized config for timing
+      const { min, max } = santaConfig.intervalRange;
+      const delay = min + Math.random() * (max - min);
       
       const timeout = window.setTimeout(() => {
         setDirection(Math.random() > 0.5 ? 'ltr' : 'rtl');
@@ -503,27 +507,31 @@ const SantaFlyoverScene = memo(function SantaFlyoverScene() {
         const endTimeout = window.setTimeout(() => {
           setIsFlying(false);
           scheduleNextFlyover();
-        }, 12000);
+        }, santaConfig.flyoverDuration);
         timeoutsRef.current.push(endTimeout);
       }, delay);
       
       timeoutsRef.current.push(timeout);
     };
     
-    // Initial flyover
-    setDirection('ltr');
-    setIsFlying(true);
-    
-    const initialTimeout = window.setTimeout(() => {
-      setIsFlying(false);
+    // Initial flyover (if enabled in config)
+    if (santaConfig.showInitialFlyover) {
+      setDirection('ltr');
+      setIsFlying(true);
+      
+      const initialTimeout = window.setTimeout(() => {
+        setIsFlying(false);
+        scheduleNextFlyover();
+      }, santaConfig.flyoverDuration);
+      timeoutsRef.current.push(initialTimeout);
+    } else {
       scheduleNextFlyover();
-    }, 12000);
-    timeoutsRef.current.push(initialTimeout);
+    }
     
     return () => {
       clearAllTimeouts();
     };
-  }, [isChristmas]);
+  }, [isChristmas, santaConfig]);
   
   useEffect(() => {
     if (!isFlying) {
@@ -537,7 +545,7 @@ const SantaFlyoverScene = memo(function SantaFlyoverScene() {
     const startX = direction === 'ltr' ? -200 : windowWidth + 200;
     const endX = direction === 'ltr' ? windowWidth + 200 : -200;
     const startTime = Date.now();
-    const duration = 12000;
+    const duration = santaConfig.flyoverDuration; // Use centralized config
     const baseY = 50 + Math.random() * 60;
     const presentColors = ['#c41e3a', '#228b22', '#1e90ff', '#ffd700', '#9400d3', '#ff6b6b'];
     
