@@ -82,6 +82,16 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
 - **Regular Users:** Org users do NOT receive bypass - they use standard RBAC and subscription tier controls.
 - **Tracking:** AI Brain Master Orchestrator tracks all elevated actions for subscriber-agent reporting and audit compliance.
 
+**ChatServerHub Architecture:**
+- **Unified Gateway:** Central hub (`ChatServerHub.ts`) connecting all chat rooms to AI Brain, notifications, tickets, analytics.
+- **Room Types:** Support rooms, work rooms, meeting rooms, organization rooms - all with elevated service access.
+- **WebSocket Integration:** Real-time broadcast to universal (platform-wide) and workspace-scoped clients on desktop/mobile.
+- **Quick Tools/Actions:** Support roles have quick action execution that persists to database via RBAC-gated endpoints.
+- **AI Brain Connection:** All chat events emit to AI Brain for intelligent responses, escalation detection, and sentiment analysis.
+- **Trinity Integration:** Trinity receives chat context and can inject insights directly into chat streams.
+- **HelpAI Bot:** Platform-wide HelpDesk room with HelpAI bot as permanent participant for automated support.
+- **Elevated Access:** Bot role and support roles receive elevated bypass within chatroom context for uninterrupted workflow execution.
+
 **Trinity Mobile Configuration:**
 - **Mobile Size:** 130px default (highly visible, easy to tap)
 - **Chat Bubble Timing:** Human-paced with 1.5s typing delay, 20 chars/sec on mobile
