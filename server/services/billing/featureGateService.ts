@@ -17,99 +17,186 @@ const AI_SERVICE_IDS = ['trinity', 'helpai', 'bot', 'subagent'];
 export type FeatureGateResult = {
   allowed: boolean;
   reason?: string;
-  requiredAction?: 'purchase_credits' | 'upgrade_tier' | 'complete_onboarding' | 'unlock_feature' | 'enter_code';
+  requiredAction?: 'purchase_credits' | 'complete_onboarding' | 'unlock_feature' | 'enter_code';
   creditsRequired?: number;
   currentBalance?: number;
-  requiredTier?: string;
-  currentTier?: string;
+  featureCategory?: 'trinity_command' | 'automation_action' | 'automation_cycle' | 'staged_publish' | 'ai_brain';
 };
 
 export interface FeatureDefinition {
   key: string;
-  category: 'ai_brain' | 'automation' | 'addon' | 'core';
+  category: 'trinity_command' | 'automation_action' | 'automation_cycle' | 'staged_publish' | 'ai_brain';
   displayName: string;
   description?: string;
-  requiresCredits: boolean;
   creditsPerUse: number;
-  requiredTier?: string;
   requiresOnboarding: boolean;
   lockMessage?: string;
 }
 
+// Credit-based features - SEPARATE from subscription tiers
+// These consume credits per action/cycle/event
 const FEATURE_DEFINITIONS: Record<string, FeatureDefinition> = {
+  // Trinity Quick Commands (per command execution)
   'trinity_quick_commands': {
     key: 'trinity_quick_commands',
-    category: 'ai_brain',
+    category: 'trinity_command',
     displayName: 'Trinity Quick Commands',
-    description: 'AI-powered quick commands for automation',
-    requiresCredits: true,
+    description: 'AI-powered quick commands - 1 credit per command',
     creditsPerUse: 1,
     requiresOnboarding: true,
     lockMessage: 'Complete onboarding to unlock Trinity commands'
   },
-  'ai_scheduling': {
-    key: 'ai_scheduling',
-    category: 'automation',
-    displayName: 'AI Smart Scheduling',
-    description: 'AI-optimized schedule generation',
-    requiresCredits: true,
-    creditsPerUse: 5,
-    requiredTier: 'starter',
+  'trinity_complex_command': {
+    key: 'trinity_complex_command',
+    category: 'trinity_command',
+    displayName: 'Trinity Complex Commands',
+    description: 'Multi-step AI commands - 3 credits per command',
+    creditsPerUse: 3,
     requiresOnboarding: true,
-    lockMessage: 'Upgrade to Starter tier for AI scheduling'
+    lockMessage: 'Complete onboarding to unlock Trinity commands'
   },
-  'automation_engine': {
-    key: 'automation_engine',
-    category: 'automation',
-    displayName: 'Automation Engine',
-    description: 'Automated workflow execution',
-    requiresCredits: true,
+  'trinity_batch_command': {
+    key: 'trinity_batch_command',
+    category: 'trinity_command',
+    displayName: 'Trinity Batch Commands',
+    description: 'Bulk operations - 5 credits per batch',
+    creditsPerUse: 5,
+    requiresOnboarding: true,
+    lockMessage: 'Complete onboarding to unlock Trinity commands'
+  },
+  
+  // Automation Actions (per action execution)
+  'automation_action': {
+    key: 'automation_action',
+    category: 'automation_action',
+    displayName: 'Automation Action',
+    description: 'Single automated action - 1 credit per action',
+    creditsPerUse: 1,
+    requiresOnboarding: true,
+    lockMessage: 'Complete onboarding to unlock automation'
+  },
+  'automation_scheduled_job': {
+    key: 'automation_scheduled_job',
+    category: 'automation_action',
+    displayName: 'Scheduled Job Execution',
+    description: 'Scheduled job run - 2 credits per execution',
     creditsPerUse: 2,
     requiresOnboarding: true,
     lockMessage: 'Complete onboarding to unlock automation'
   },
+  'automation_webhook_trigger': {
+    key: 'automation_webhook_trigger',
+    category: 'automation_action',
+    displayName: 'Webhook Trigger',
+    description: 'Webhook-triggered automation - 1 credit per trigger',
+    creditsPerUse: 1,
+    requiresOnboarding: true,
+    lockMessage: 'Complete onboarding to unlock automation'
+  },
+  
+  // Automation Cycles (per cycle completion)
+  'automation_cycle': {
+    key: 'automation_cycle',
+    category: 'automation_cycle',
+    displayName: 'Automation Cycle',
+    description: 'Complete automation cycle - 5 credits per cycle',
+    creditsPerUse: 5,
+    requiresOnboarding: true,
+    lockMessage: 'Complete onboarding to unlock automation'
+  },
+  'automation_workflow': {
+    key: 'automation_workflow',
+    category: 'automation_cycle',
+    displayName: 'Workflow Execution',
+    description: 'Multi-step workflow - 10 credits per workflow',
+    creditsPerUse: 10,
+    requiresOnboarding: true,
+    lockMessage: 'Complete onboarding to unlock automation'
+  },
+  
+  // Staged Publish Events (per publish)
+  'staged_code_publish': {
+    key: 'staged_code_publish',
+    category: 'staged_publish',
+    displayName: 'Staged Code Publish',
+    description: 'Publish staged code changes - 3 credits per publish',
+    creditsPerUse: 3,
+    requiresOnboarding: true,
+    lockMessage: 'Complete onboarding to unlock code publishing'
+  },
+  'staged_config_publish': {
+    key: 'staged_config_publish',
+    category: 'staged_publish',
+    displayName: 'Staged Config Publish',
+    description: 'Publish configuration changes - 2 credits per publish',
+    creditsPerUse: 2,
+    requiresOnboarding: true,
+    lockMessage: 'Complete onboarding to unlock config publishing'
+  },
+  
+  // AI Brain Features (per use)
   'helpai_chat': {
     key: 'helpai_chat',
     category: 'ai_brain',
     displayName: 'HelpAI Chat',
-    description: 'AI-powered help assistant',
-    requiresCredits: true,
+    description: 'AI chat message - 1 credit per message',
     creditsPerUse: 1,
     requiresOnboarding: false,
     lockMessage: 'Purchase credits to use HelpAI'
+  },
+  'ai_scheduling': {
+    key: 'ai_scheduling',
+    category: 'ai_brain',
+    displayName: 'AI Smart Scheduling',
+    description: 'AI schedule generation - 5 credits per generation',
+    creditsPerUse: 5,
+    requiresOnboarding: true,
+    lockMessage: 'Complete onboarding for AI scheduling'
   },
   'document_extraction': {
     key: 'document_extraction',
     category: 'ai_brain',
     displayName: 'Document Extraction',
-    description: 'AI-powered document data extraction',
-    requiresCredits: true,
+    description: 'AI document extraction - 3 credits per document',
     creditsPerUse: 3,
-    requiredTier: 'professional',
     requiresOnboarding: true,
-    lockMessage: 'Upgrade to Professional tier for document extraction'
+    lockMessage: 'Complete onboarding for document extraction'
   },
   'ai_reporting': {
     key: 'ai_reporting',
     category: 'ai_brain',
     displayName: 'AI Reports',
-    description: 'AI-generated business reports',
-    requiresCredits: true,
+    description: 'AI report generation - 4 credits per report',
     creditsPerUse: 4,
-    requiredTier: 'professional',
     requiresOnboarding: true,
-    lockMessage: 'Upgrade to Professional tier for AI reports'
+    lockMessage: 'Complete onboarding for AI reports'
   },
   'sentiment_analysis': {
     key: 'sentiment_analysis',
     category: 'ai_brain',
     displayName: 'Sentiment Analysis',
-    description: 'AI text sentiment analysis',
-    requiresCredits: true,
+    description: 'AI sentiment analysis - 2 credits per analysis',
     creditsPerUse: 2,
-    requiredTier: 'starter',
     requiresOnboarding: true,
-    lockMessage: 'Upgrade to Starter tier for sentiment analysis'
+    lockMessage: 'Complete onboarding for sentiment analysis'
+  },
+  'expense_categorization': {
+    key: 'expense_categorization',
+    category: 'ai_brain',
+    displayName: 'Expense Categorization',
+    description: 'AI expense categorization - 2 credits per batch',
+    creditsPerUse: 2,
+    requiresOnboarding: true,
+    lockMessage: 'Complete onboarding for expense categorization'
+  },
+  'dynamic_pricing': {
+    key: 'dynamic_pricing',
+    category: 'ai_brain',
+    displayName: 'Dynamic Pricing Analysis',
+    description: 'AI pricing analysis - 5 credits per analysis',
+    creditsPerUse: 5,
+    requiresOnboarding: true,
+    lockMessage: 'Complete onboarding for dynamic pricing'
   }
 };
 
@@ -171,21 +258,9 @@ class FeatureGateService {
       }
     }
 
-    if (featureDef.requiredTier) {
-      const tierCheck = this.checkTierRequirement(
-        workspace.subscriptionTier || 'free',
-        featureDef.requiredTier
-      );
-      if (!tierCheck.allowed) {
-        return {
-          allowed: false,
-          reason: featureDef.lockMessage || `Upgrade to ${featureDef.requiredTier} tier`,
-          requiredAction: 'upgrade_tier',
-          requiredTier: featureDef.requiredTier,
-          currentTier: workspace.subscriptionTier || 'free'
-        };
-      }
-    }
+    // Note: Credits are SEPARATE from subscription tiers
+    // Subscription tier controls platform limits (users, storage, etc.)
+    // Credits control per-action consumption for Trinity/automation/AI features
 
     const featureState = await this.getFeatureState(workspaceId, featureKey);
     if (featureState && !featureState.isUnlocked) {
@@ -198,7 +273,8 @@ class FeatureGateService {
       }
     }
 
-    if (featureDef.requiresCredits) {
+    // All features in this system consume credits per use
+    if (featureDef.creditsPerUse > 0) {
       const creditsNeeded = await creditsLedgerService.getActionCreditCost(
         featureKey,
         workspace.subscriptionTier || 'free'
@@ -244,7 +320,7 @@ class FeatureGateService {
     }
 
     const featureDef = FEATURE_DEFINITIONS[featureKey];
-    if (!featureDef?.requiresCredits) {
+    if (!featureDef || featureDef.creditsPerUse <= 0) {
       return { success: true, creditsUsed: 0 };
     }
 
@@ -333,11 +409,23 @@ class FeatureGateService {
       return { complete: false, progress: 0 };
     }
 
-    const automationUnlocked = onboarding.automationUnlocked ?? false;
-    const progress = onboarding.progressPercentage ?? 0;
+    // Calculate progress based on completed steps
+    const completedSteps = [
+      onboarding.step1CompanyInfo,
+      onboarding.step2BillingInfo,
+      onboarding.step3RolesPermissions,
+      onboarding.step4InviteEmployees,
+      onboarding.step5AddCustomers,
+      onboarding.step6ConfigurePayroll,
+      onboarding.step7SetupIntegrations,
+      onboarding.step8ReviewLaunch
+    ].filter(Boolean).length;
+
+    const totalSteps = onboarding.totalSteps ?? 8;
+    const progress = Math.round((completedSteps / totalSteps) * 100);
 
     return {
-      complete: automationUnlocked || progress >= 100,
+      complete: onboarding.isCompleted ?? false,
       progress
     };
   }
@@ -387,15 +475,13 @@ class FeatureGateService {
         await db.insert(workspaceFeatureStates).values({
           workspaceId,
           featureKey,
-          featureCategory: featureDef?.category || 'core',
+          featureCategory: featureDef?.category || 'ai_brain',
           isUnlocked: true,
           unlockMethod,
           unlockedAt: new Date(),
           unlockedBy: userId,
           expiresAt,
-          requiresCredits: featureDef?.requiresCredits ?? false,
           creditsPerUse: featureDef?.creditsPerUse ?? 1,
-          requiredTier: featureDef?.requiredTier,
           showLockIcon: false,
           lockMessage: featureDef?.lockMessage
         });
@@ -457,11 +543,13 @@ class FeatureGateService {
       await this.unlockFeature(workspaceId, featureKey, 'onboarding', userId);
     }
 
+    // Mark onboarding as completed
     await db.update(organizationOnboarding)
       .set({
-        automationUnlocked: true,
-        automationUnlockedAt: new Date(),
-        automationUnlockedBy: userId
+        isCompleted: true,
+        completedAt: new Date(),
+        completedBy: userId,
+        updatedAt: new Date()
       })
       .where(eq(organizationOnboarding.workspaceId, workspaceId));
 

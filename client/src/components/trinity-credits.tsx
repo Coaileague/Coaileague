@@ -42,17 +42,25 @@ interface FeatureState {
   expiresAt?: string;
 }
 
+type FeatureCategory = 'trinity_command' | 'automation_action' | 'automation_cycle' | 'staged_publish' | 'ai_brain';
+
 interface FeatureDefinition {
   key: string;
-  category: string;
+  category: FeatureCategory;
   displayName: string;
   description?: string;
-  requiresCredits: boolean;
   creditsPerUse: number;
-  requiredTier?: string;
   requiresOnboarding: boolean;
   lockMessage?: string;
 }
+
+const CATEGORY_LABELS: Record<FeatureCategory, string> = {
+  'trinity_command': 'Trinity Commands',
+  'automation_action': 'Automation Actions',
+  'automation_cycle': 'Automation Cycles',
+  'staged_publish': 'Staged Publishing',
+  'ai_brain': 'AI Brain Features',
+};
 
 export function TrinityCreditsCard() {
   const [showRedeemDialog, setShowRedeemDialog] = useState(false);
@@ -78,7 +86,7 @@ export function TrinityCreditsCard() {
   const redeemMutation = useMutation({
     mutationFn: async (code: string) => {
       const response = await apiRequest('POST', '/api/billing/trinity-credits/redeem-code', { code });
-      return response;
+      return response as unknown as { success: boolean; creditsAdded?: number; featureUnlocked?: string; error?: string };
     },
     onSuccess: (data) => {
       if (data.success) {

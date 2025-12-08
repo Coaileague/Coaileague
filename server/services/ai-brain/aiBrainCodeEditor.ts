@@ -25,6 +25,7 @@ import { promises as fs } from 'fs';
 import * as path from 'path';
 import { publishPlatformUpdate } from '../platformEventBus';
 import { broadcastToAllClients } from '../../websocket';
+import { featureGateService } from '../billing/featureGateService';
 
 const WORKSPACE_ROOT = process.cwd();
 const ALLOWED_EXTENSIONS = ['.ts', '.tsx', '.js', '.jsx', '.json', '.css', '.html', '.md'];
@@ -395,7 +396,9 @@ export class AIBrainCodeEditorService {
   async applyChange(
     changeId: string,
     appliedById: string,
-    sendWhatsNew: boolean = true
+    sendWhatsNew: boolean = true,
+    workspaceId?: string,
+    sessionId?: string
   ): Promise<ApprovalResult> {
     try {
       const change = await this.getChangeById(changeId);
@@ -405,6 +408,27 @@ export class AIBrainCodeEditorService {
 
       if (change.status !== 'approved') {
         return { success: false, message: `Change must be approved first (current status: ${change.status})` };
+      }
+
+      // Consume credits for staged code publish (3 credits per publish)
+      if (workspaceId) {
+        const creditResult = await featureGateService.consumeCreditsForFeature(
+          'staged_code_publish',
+          workspaceId,
+          appliedById,
+          sessionId,
+          changeId
+        );
+
+        if (!creditResult.success) {
+          console.log(`[AIBrainCodeEditor] Credit check failed: ${creditResult.error}`);
+          return { 
+            success: false, 
+            message: `Insufficient credits to publish. ${creditResult.error}` 
+          };
+        }
+
+        console.log(`[AIBrainCodeEditor] Consumed ${creditResult.creditsUsed} credits for code publish`);
       }
 
       const appliedAt = new Date();
