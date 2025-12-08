@@ -40,6 +40,7 @@ interface SubmitTaskParams {
   priority?: 'critical' | 'high' | 'normal' | 'low' | 'scheduled';
   notifyVia?: string[];
   metadata?: Record<string, unknown>;
+  executionMode?: 'normal' | 'trinity_fast';
 }
 
 interface SubmitTaskResponse {

@@ -14,8 +14,10 @@ import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { Mic, MicOff, X, Loader2, Send, AlertCircle, CheckCircle } from 'lucide-react';
+import { Mic, MicOff, X, Loader2, Send, AlertCircle, CheckCircle, Zap } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
 
 interface MobileVoiceCommandOverlayProps {
@@ -52,6 +54,7 @@ export function MobileVoiceCommandOverlay({
   const [finalTranscript, setFinalTranscript] = useState('');
   const [submissionState, setSubmissionState] = useState<SubmissionState>('idle');
   const [errorMessage, setErrorMessage] = useState('');
+  const [fastModeEnabled, setFastModeEnabled] = useState(false);
 
   const handleResult = useCallback((result: VoiceCommandResult) => {
     console.log('[VoiceOverlay] Received result:', result);
@@ -130,6 +133,7 @@ export function MobileVoiceCommandOverlay({
         transcript: finalTranscript.trim(),
         timestamp: new Date().toISOString(),
         source: 'mobile_trinity',
+        executionMode: fastModeEnabled ? 'trinity_fast' : 'normal',
       });
 
       setSubmissionState('success');
@@ -226,15 +230,35 @@ export function MobileVoiceCommandOverlay({
                 </div>
               </div>
               
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleClose}
-                className="h-8 w-8"
-                data-testid="button-close-voice-overlay"
-              >
-                <X className="h-4 w-4" />
-              </Button>
+              <div className="flex items-center gap-2">
+                <div 
+                  className={`flex items-center gap-2 px-2 py-1 rounded-full transition-colors ${
+                    fastModeEnabled ? 'bg-amber-500/20 border border-amber-500/50' : 'bg-muted'
+                  }`}
+                  data-testid="container-fast-mode-toggle"
+                >
+                  <Zap className={`h-3 w-3 ${fastModeEnabled ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                  <Label htmlFor="fast-mode" className="text-xs cursor-pointer">
+                    Fast
+                  </Label>
+                  <Switch
+                    id="fast-mode"
+                    checked={fastModeEnabled}
+                    onCheckedChange={setFastModeEnabled}
+                    className="scale-75"
+                    data-testid="switch-fast-mode"
+                  />
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleClose}
+                  className="h-8 w-8"
+                  data-testid="button-close-voice-overlay"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
 
             <div className="flex-1 min-h-[80px] max-h-[200px] overflow-y-auto bg-muted/50 rounded-xl p-4">
@@ -344,10 +368,16 @@ export function MobileVoiceCommandOverlay({
             )}
 
             <p className="text-xs text-center text-muted-foreground">
-              {isIOS 
-                ? 'Voice recognition uses your device\'s speech services' 
-                : 'Speak clearly for best results'
-              }
+              {fastModeEnabled ? (
+                <span className="flex items-center justify-center gap-1 text-amber-500">
+                  <Zap className="h-3 w-3" />
+                  Fast Mode: 2x credits for parallel processing
+                </span>
+              ) : isIOS ? (
+                'Voice recognition uses your device\'s speech services'
+              ) : (
+                'Speak clearly for best results'
+              )}
             </p>
           </div>
         </motion.div>
