@@ -17136,3 +17136,254 @@ export const insertSupportSessionElevationSchema = createInsertSchema(supportSes
 });
 export type InsertSupportSessionElevation = z.infer<typeof insertSupportSessionElevationSchema>;
 export type SupportSessionElevation = typeof supportSessionElevations.$inferSelect;
+
+// ============================================================================
+// TRINITY CREDITS & FEATURE GATING SYSTEM
+// ============================================================================
+
+/**
+ * Credit packages available for purchase - defines pricing and credit amounts
+ */
+export const trinityCreditPackages = pgTable("trinity_credit_packages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Package details
+  name: varchar("name", { length: 100 }).notNull(), // 'Starter Pack', 'Pro Pack', 'Enterprise Pack'
+  description: text("description"),
+  credits: integer("credits").notNull(), // Number of credits in package
+  priceUsd: decimal("price_usd", { precision: 10, scale: 2 }).notNull(), // Price in USD
+  
+  // Package type
+  packageType: varchar("package_type", { length: 30 }).default("one_time"), // 'one_time', 'subscription', 'enterprise'
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  
+  // Bonus credits for larger packages
+  bonusCredits: integer("bonus_credits").default(0),
+  
+  // Tier restrictions (which subscription tiers can buy this)
+  allowedTiers: text("allowed_tiers").array().default(sql`ARRAY['starter', 'professional', 'enterprise']::text[]`),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertTrinityCreditPackageSchema = createInsertSchema(trinityCreditPackages).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertTrinityCreditPackage = z.infer<typeof insertTrinityCreditPackageSchema>;
+export type TrinityCreditPackage = typeof trinityCreditPackages.$inferSelect;
+
+/**
+ * Workspace credit balance - tracks credits for Trinity/AI Brain usage per workspace
+ */
+export const trinityCredits = pgTable("trinity_credits", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }).unique(),
+  
+  // Balance
+  balance: integer("balance").notNull().default(0), // Current credit balance
+  lifetimePurchased: integer("lifetime_purchased").default(0), // Total credits ever purchased
+  lifetimeUsed: integer("lifetime_used").default(0), // Total credits ever consumed
+  lifetimeBonuses: integer("lifetime_bonuses").default(0), // Total bonus credits received
+  
+  // Status
+  isActive: boolean("is_active").default(true), // Whether credits can be used
+  lowBalanceThreshold: integer("low_balance_threshold").default(50), // Alert when below this
+  lastLowBalanceAlert: timestamp("last_low_balance_alert"),
+  
+  // Tracking
+  lastUsedAt: timestamp("last_used_at"),
+  lastPurchasedAt: timestamp("last_purchased_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("trinity_credits_workspace_idx").on(table.workspaceId),
+  index("trinity_credits_balance_idx").on(table.balance),
+]);
+
+export const insertTrinityCreditSchema = createInsertSchema(trinityCredits).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertTrinityCredit = z.infer<typeof insertTrinityCreditSchema>;
+export type TrinityCredit = typeof trinityCredits.$inferSelect;
+
+/**
+ * Credit transactions - audit trail for all credit movements
+ */
+export const trinityCreditTransactions = pgTable("trinity_credit_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }), // User who triggered transaction
+  
+  // Transaction details
+  transactionType: varchar("transaction_type", { length: 30 }).notNull(), // 'purchase', 'usage', 'refund', 'bonus', 'expiry', 'code_redemption'
+  credits: integer("credits").notNull(), // Amount (positive for add, negative for deduct)
+  balanceAfter: integer("balance_after").notNull(), // Balance after transaction
+  
+  // Context
+  description: text("description"), // Human-readable description
+  actionType: varchar("action_type", { length: 100 }), // Which Trinity action consumed credits
+  actionId: varchar("action_id"), // Reference to the specific action
+  
+  // For purchases
+  packageId: varchar("package_id").references(() => trinityCreditPackages.id, { onDelete: 'set null' }),
+  stripePaymentId: varchar("stripe_payment_id"), // Stripe payment intent ID
+  priceUsd: decimal("price_usd", { precision: 10, scale: 2 }),
+  
+  // For code redemptions
+  unlockCodeId: varchar("unlock_code_id"),
+  
+  // Metadata
+  metadata: jsonb("metadata"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("trinity_transactions_workspace_idx").on(table.workspaceId),
+  index("trinity_transactions_user_idx").on(table.userId),
+  index("trinity_transactions_type_idx").on(table.transactionType),
+  index("trinity_transactions_created_idx").on(table.createdAt),
+]);
+
+export const insertTrinityCreditTransactionSchema = createInsertSchema(trinityCreditTransactions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTrinityCreditTransaction = z.infer<typeof insertTrinityCreditTransactionSchema>;
+export type TrinityCreditTransaction = typeof trinityCreditTransactions.$inferSelect;
+
+/**
+ * Unlock codes - system-generated codes to reactivate features
+ */
+export const trinityUnlockCodes = pgTable("trinity_unlock_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Code details
+  code: varchar("code", { length: 50 }).notNull().unique(), // Format: TRIN-XXXX-XXXX-XXXX
+  codeType: varchar("code_type", { length: 30 }).notNull(), // 'credits', 'feature_unlock', 'trial_extension', 'addon_activation'
+  
+  // Value
+  credits: integer("credits"), // Credits to add (for credit codes)
+  featureKey: varchar("feature_key", { length: 100 }), // Feature to unlock (for feature codes)
+  addonKey: varchar("addon_key", { length: 100 }), // Addon to activate
+  daysValid: integer("days_valid"), // Days the feature/addon stays active
+  
+  // Restrictions
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }), // If null, usable by any workspace
+  maxRedemptions: integer("max_redemptions").default(1), // How many times code can be used
+  currentRedemptions: integer("current_redemptions").default(0),
+  
+  // Validity
+  isActive: boolean("is_active").default(true),
+  expiresAt: timestamp("expires_at"), // When code expires
+  
+  // Audit
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("trinity_unlock_codes_code_idx").on(table.code),
+  index("trinity_unlock_codes_type_idx").on(table.codeType),
+  index("trinity_unlock_codes_workspace_idx").on(table.workspaceId),
+  index("trinity_unlock_codes_active_idx").on(table.isActive),
+]);
+
+export const insertTrinityUnlockCodeSchema = createInsertSchema(trinityUnlockCodes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTrinityUnlockCode = z.infer<typeof insertTrinityUnlockCodeSchema>;
+export type TrinityUnlockCode = typeof trinityUnlockCodes.$inferSelect;
+
+/**
+ * Workspace feature states - tracks locked/unlocked status per feature per workspace
+ */
+export const workspaceFeatureStates = pgTable("workspace_feature_states", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Feature identification
+  featureKey: varchar("feature_key", { length: 100 }).notNull(), // 'trinity_quick_commands', 'ai_scheduling', 'automation_engine', etc.
+  featureCategory: varchar("feature_category", { length: 50 }).notNull(), // 'ai_brain', 'automation', 'addon', 'core'
+  
+  // State
+  isUnlocked: boolean("is_unlocked").default(false),
+  unlockMethod: varchar("unlock_method", { length: 50 }), // 'onboarding', 'purchase', 'tier', 'code', 'migration', 'trial'
+  unlockedAt: timestamp("unlocked_at"),
+  unlockedBy: varchar("unlocked_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  // For time-limited features
+  expiresAt: timestamp("expires_at"), // When feature access expires
+  
+  // For credit-gated features
+  requiresCredits: boolean("requires_credits").default(false),
+  creditsPerUse: integer("credits_per_use").default(1), // Credits consumed per use
+  
+  // For tier-gated features
+  requiredTier: varchar("required_tier", { length: 30 }), // Minimum subscription tier required
+  
+  // Display
+  showLockIcon: boolean("show_lock_icon").default(true), // Show lock symbol in UI
+  lockMessage: text("lock_message"), // Custom message for locked state
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("workspace_feature_states_workspace_idx").on(table.workspaceId),
+  index("workspace_feature_states_feature_idx").on(table.featureKey),
+  index("workspace_feature_states_unlocked_idx").on(table.isUnlocked),
+  uniqueIndex("unique_workspace_feature").on(table.workspaceId, table.featureKey),
+]);
+
+export const insertWorkspaceFeatureStateSchema = createInsertSchema(workspaceFeatureStates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertWorkspaceFeatureState = z.infer<typeof insertWorkspaceFeatureStateSchema>;
+export type WorkspaceFeatureState = typeof workspaceFeatureStates.$inferSelect;
+
+/**
+ * Credit cost configuration - defines how many credits each action costs
+ */
+export const trinityCreditCosts = pgTable("trinity_credit_costs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Action identification
+  actionKey: varchar("action_key", { length: 100 }).notNull().unique(), // Maps to AI Brain action keys
+  actionCategory: varchar("action_category", { length: 50 }).notNull(), // 'trinity_command', 'automation', 'ai_analysis', etc.
+  
+  // Cost
+  credits: integer("credits").notNull().default(1), // Credits consumed per use
+  
+  // Tier adjustments (some tiers may get discounts)
+  freeMultiplier: decimal("free_multiplier", { precision: 4, scale: 2 }).default("1.0"),
+  starterMultiplier: decimal("starter_multiplier", { precision: 4, scale: 2 }).default("1.0"),
+  professionalMultiplier: decimal("professional_multiplier", { precision: 4, scale: 2 }).default("0.8"),
+  enterpriseMultiplier: decimal("enterprise_multiplier", { precision: 4, scale: 2 }).default("0.5"),
+  
+  // Display
+  displayName: varchar("display_name", { length: 100 }),
+  description: text("description"),
+  
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("trinity_credit_costs_action_idx").on(table.actionKey),
+  index("trinity_credit_costs_category_idx").on(table.actionCategory),
+]);
+
+export const insertTrinityCreditCostSchema = createInsertSchema(trinityCreditCosts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertTrinityCreditCost = z.infer<typeof insertTrinityCreditCostSchema>;
+export type TrinityCreditCost = typeof trinityCreditCosts.$inferSelect;
