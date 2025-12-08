@@ -9,8 +9,33 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { aiAnalyticsEngine } from '../services/ai-brain/aiAnalyticsEngine';
 import { trinityContextService, type TrinityContext } from '../services/trinityContext';
 import { canAccessTrinity } from '../rbac';
+import { db } from '../db';
+import { users } from '@shared/schema';
+import { eq } from 'drizzle-orm';
 
 const router = Router();
+
+// Helper to get authenticated user from session or req.user
+async function getAuthenticatedUser(req: Request): Promise<{ id: string; [key: string]: any } | null> {
+  // Try req.user first (set by auth middleware)
+  const reqUser = (req as any).user;
+  if (reqUser?.id) {
+    return reqUser;
+  }
+  
+  // Try session-based auth
+  const session = (req as any).session;
+  if (session?.userId) {
+    const [user] = await db.select().from(users).where(eq(users.id, session.userId)).limit(1);
+    if (user) {
+      // Attach to request for subsequent handlers
+      (req as any).user = user;
+      return user;
+    }
+  }
+  
+  return null;
+}
 
 /**
  * GET /api/trinity/insights
@@ -18,7 +43,7 @@ const router = Router();
  */
 router.get('/insights', async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = await getAuthenticatedUser(req);
     if (!user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -51,7 +76,7 @@ router.get('/insights', async (req: Request, res: Response) => {
  */
 router.post('/insights/:id/read', async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = await getAuthenticatedUser(req);
     if (!user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -76,7 +101,7 @@ router.post('/insights/:id/read', async (req: Request, res: Response) => {
  */
 router.post('/scan', async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = await getAuthenticatedUser(req);
     if (!user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -153,7 +178,7 @@ router.get('/status', async (req: Request, res: Response) => {
  */
 router.post('/cache/clear', async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = await getAuthenticatedUser(req);
     if (!user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -178,7 +203,7 @@ router.post('/cache/clear', async (req: Request, res: Response) => {
  */
 router.get('/context', async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = await getAuthenticatedUser(req);
     if (!user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -206,7 +231,7 @@ router.get('/context', async (req: Request, res: Response) => {
  */
 router.get('/access', async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = await getAuthenticatedUser(req);
     if (!user?.id) {
       return res.json({
         hasAccess: false,
@@ -240,7 +265,7 @@ router.get('/access', async (req: Request, res: Response) => {
  */
 router.post('/thought', async (req: Request, res: Response) => {
   try {
-    const user = (req as any).user;
+    const user = await getAuthenticatedUser(req);
     if (!user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
     }
