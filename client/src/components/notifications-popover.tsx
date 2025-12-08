@@ -340,6 +340,22 @@ export function NotificationsPopover() {
     }
   };
 
+  // Tab-specific clear mutation
+  const clearTabMutation = useMutation({
+    mutationFn: async (tab: 'updates' | 'notifications' | 'maintenance') => {
+      const response = await apiRequest("POST", `/api/notifications/clear-tab/${tab}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
+    },
+    onError: (err) => {
+      console.error('[Clear Tab] Error:', err);
+    },
+  });
+
   const clearAllMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/notifications/clear-all");
@@ -491,17 +507,30 @@ export function NotificationsPopover() {
 
             <TabsContent value="updates" className="mt-0 focus-visible:outline-none">
               {unviewedUpdates.length > 0 && (
-                <div className="px-4 py-3 flex items-center gap-3 border-b bg-muted/30">
-                  <button
-                    onClick={toggleSelectAll}
-                    className="flex items-center justify-center w-5 h-5 rounded border-2 border-muted-foreground/30 hover:border-primary transition-colors"
-                    data-testid="button-select-all-updates"
+                <div className="px-4 py-3 flex items-center justify-between border-b bg-muted/30">
+                  <div className="flex items-center gap-3">
+                    <button
+                      onClick={toggleSelectAll}
+                      className="flex items-center justify-center w-5 h-5 rounded border-2 border-muted-foreground/30 hover:border-primary transition-colors"
+                      data-testid="button-select-all-updates"
+                    >
+                      {allUnviewedSelected && <Check className="h-3 w-3 text-primary" />}
+                    </button>
+                    <span className="text-xs text-muted-foreground">
+                      {selectedIds.size === 0 ? 'Select to acknowledge' : `${selectedIds.size} of ${unviewedUpdates.length} selected`}
+                    </span>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 px-2"
+                    onClick={() => clearTabMutation.mutate('updates')}
+                    disabled={clearTabMutation.isPending}
+                    data-testid="button-clear-updates-tab"
                   >
-                    {allUnviewedSelected && <Check className="h-3 w-3 text-primary" />}
-                  </button>
-                  <span className="text-xs text-muted-foreground">
-                    {selectedIds.size === 0 ? 'Select to acknowledge' : `${selectedIds.size} of ${unviewedUpdates.length} selected`}
-                  </span>
+                    <X className="h-3 w-3 mr-1" />
+                    Clear All
+                  </Button>
                 </div>
               )}
               {unviewedUpdates.length > 0 ? (
@@ -605,6 +634,24 @@ export function NotificationsPopover() {
             </TabsContent>
 
             <TabsContent value="notifications" className="mt-0 focus-visible:outline-none">
+              {filteredNotifications.length > 0 && (
+                <div className="px-4 py-3 flex items-center justify-between border-b bg-muted/30">
+                  <span className="text-xs text-muted-foreground">
+                    {filteredNotifications.filter(n => !n.isRead).length} unread alerts
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 px-2"
+                    onClick={() => clearTabMutation.mutate('notifications')}
+                    disabled={clearTabMutation.isPending}
+                    data-testid="button-clear-notifications-tab"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Clear All
+                  </Button>
+                </div>
+              )}
               {filteredNotifications.length > 0 ? (
                 <div className="divide-y">
                   {filteredNotifications.map((notification) => {
@@ -712,6 +759,24 @@ export function NotificationsPopover() {
             </TabsContent>
 
             <TabsContent value="maintenance" className="mt-0 focus-visible:outline-none">
+              {(filteredMaintenanceAlerts.length > 0 || systemPlatformUpdates.length > 0) && (
+                <div className="px-4 py-3 flex items-center justify-between border-b bg-amber-500/10">
+                  <span className="text-xs text-muted-foreground">
+                    {filteredMaintenanceAlerts.filter(a => !a.isAcknowledged).length + systemPlatformUpdates.filter(u => !u.isViewed).length} unread system alerts
+                  </span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs h-7 px-2"
+                    onClick={() => clearTabMutation.mutate('maintenance')}
+                    disabled={clearTabMutation.isPending}
+                    data-testid="button-clear-maintenance-tab"
+                  >
+                    <X className="h-3 w-3 mr-1" />
+                    Clear All
+                  </Button>
+                </div>
+              )}
               {(filteredMaintenanceAlerts.length > 0 || systemPlatformUpdates.length > 0) ? (
                 <div className="divide-y">
                   {systemPlatformUpdates.map((update) => {

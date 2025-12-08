@@ -745,6 +745,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to clear notifications" });
     }
   });
+
+  // Tab-specific clear endpoint - clears notifications for a specific tab only
+  app.post("/api/notifications/clear-tab/:tab", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      const workspaceId = authReq.workspaceId || authReq.user?.defaultWorkspaceId;
+      const { tab } = req.params;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+
+      const validTabs = ['updates', 'notifications', 'maintenance'];
+      if (!validTabs.includes(tab)) {
+        return res.status(400).json({ message: "Invalid tab. Must be: updates, notifications, or maintenance" });
+      }
+
+      let cleared = { platformUpdates: 0, notifications: 0, alerts: 0 };
+
+      if (tab === 'updates') {
+        // Mark all platform updates as viewed (What's New tab)
+        cleared.platformUpdates = await storage.markAllPlatformUpdatesAsViewed(userId);
+      } else if (tab === 'notifications') {
+        // Clear user notifications (Alerts tab)
+        cleared.notifications = await storage.clearAllNotifications(userId);
+      } else if (tab === 'maintenance') {
+        // Acknowledge all maintenance alerts (System tab)
+        const { aiNotificationService } = await import("./services/aiNotificationService");
+        cleared.alerts = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId);
+      }
+
+      // WebSocket broadcast for real-time sync
+      if (workspaceId) {
+        broadcastNotification(workspaceId, userId, 'tab_cleared', { 
+          tab,
+          cleared,
+        }, 0);
+      }
+
+      console.log(`[Clear Tab] User ${userId} cleared tab '${tab}': ${JSON.stringify(cleared)}`);
+      res.json({
+        success: true,
+        tab,
+        cleared,
+      });
+    } catch (error) {
+      console.error("Error in clear-tab:", error);
+      res.status(500).json({ message: "Failed to clear tab notifications" });
+    }
+  });
+
   // Acknowledge a single notification
   app.post("/api/notifications/acknowledge/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {

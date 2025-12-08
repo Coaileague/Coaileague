@@ -344,7 +344,7 @@ class CoAITwinEngine {
     // Initialize grab/sling mechanics with 10% catch chance
     this.grabMechanics = new GrabSlingMechanics({
       catchChance: 0.10,  // 10% chance to catch
-      grabRadius: 80,     // Generous grab area
+      grabRadius: 35,     // Tight grab area - only center model, not animations
       releaseBoost: 1.8,  // Strong sling effect
       maxSlingSpeed: 30   // Higher max for dramatic flings
     });
