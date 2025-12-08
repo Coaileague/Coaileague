@@ -135,6 +135,12 @@ class ThoughtManager {
   private onboardingReminderTimer: ReturnType<typeof setInterval> | null = null;
   private initialReminderTimeout: ReturnType<typeof setTimeout> | null = null;
   
+  // AI Brain readiness gate - prevents showing thoughts before AI session is ready
+  private aiSessionReady: boolean = false;
+  private aiReadyTimestamp: number = 0;
+  private warmupPollingActive: boolean = false; // Idempotent guard for polling loop
+  private static readonly MIN_WARMUP_DELAY_MS = 2000; // Wait 2s after initialization before first bubble
+  
   constructor() {
     const holiday = getCurrentHoliday();
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
@@ -172,6 +178,36 @@ class ThoughtManager {
     this.listeners.forEach(listener => listener(this.state.currentThought));
   }
   
+  /**
+   * Mark AI session as ready - gates first bubble display
+   * Called when Trinity context is successfully fetched from /api/trinity/context
+   */
+  setAiSessionReady(): void {
+    if (!this.aiSessionReady) {
+      this.aiSessionReady = true;
+      this.aiReadyTimestamp = Date.now();
+      console.log('[Trinity] AI session ready - warmup period started');
+    }
+  }
+  
+  /**
+   * Check if AI session is ready and warmup period has passed
+   */
+  private isReadyForFirstBubble(): boolean {
+    if (!this.aiSessionReady) return false;
+    const elapsed = Date.now() - this.aiReadyTimestamp;
+    return elapsed >= ThoughtManager.MIN_WARMUP_DELAY_MS;
+  }
+  
+  /**
+   * Get remaining warmup delay in milliseconds
+   */
+  private getRemainingWarmupDelay(): number {
+    if (!this.aiSessionReady) return ThoughtManager.MIN_WARMUP_DELAY_MS;
+    const elapsed = Date.now() - this.aiReadyTimestamp;
+    return Math.max(0, ThoughtManager.MIN_WARMUP_DELAY_MS - elapsed);
+  }
+  
   private createThought(
     text: string,
     mode: MascotMode,
@@ -190,6 +226,20 @@ class ThoughtManager {
   }
   
   showThought(thought: Thought): void {
+    // CRITICAL: Gate first bubble display on warmup readiness
+    // This is the final safeguard - no thought can render before AI Brain is ready
+    const isFirstBubble = this.state.history.length === 0 && !this.state.currentThought;
+    if (isFirstBubble && !this.isReadyForFirstBubble()) {
+      // Queue thought and wait for readiness instead of showing immediately
+      if (thought.priority === 'urgent' || thought.priority === 'high') {
+        this.state.queue.unshift(thought);
+      } else {
+        this.state.queue.push(thought);
+      }
+      this.waitForReadinessAndShow();
+      return;
+    }
+    
     if (this.displayTimer) {
       clearTimeout(this.displayTimer);
     }
@@ -226,25 +276,8 @@ class ThoughtManager {
       options.priority || 'low'
     );
     
-    if (this.displayTimer) {
-      clearTimeout(this.displayTimer);
-    }
-    
-    this.state.currentThought = thought;
-    this.state.history.push(thought);
-    if (this.state.history.length > 50) {
-      this.state.history.shift();
-    }
-    
-    this.notify();
-    
-    // Use provided duration or calculate based on text length
-    const displayDuration = options.duration || calculateReadingTime(options.text);
-    thought.expiresAt = Date.now() + displayDuration;
-    
-    this.displayTimer = setTimeout(() => {
-      this.clearThought();
-    }, displayDuration);
+    // Gate first bubble on warmup readiness (delegates to showThought's gate)
+    this.showThought(thought);
   }
   
   clearThought(): void {
@@ -258,6 +291,23 @@ class ThoughtManager {
   }
   
   queueThought(thought: Thought): void {
+    const isFirstBubble = this.state.history.length === 0 && !this.state.currentThought;
+    
+    // CRITICAL: Gate ALL first bubbles (including high/urgent priority) on warmup readiness
+    // This ensures no thoughts display before AI Brain is connected and warmup period passes
+    if (isFirstBubble && !this.isReadyForFirstBubble()) {
+      // Add to queue based on priority but don't show yet
+      if (thought.priority === 'urgent' || thought.priority === 'high') {
+        this.state.queue.unshift(thought);
+      } else {
+        this.state.queue.push(thought);
+      }
+      // Start polling (idempotent - only one loop runs)
+      this.waitForReadinessAndShow();
+      return;
+    }
+    
+    // Post-warmup: normal priority handling
     if (thought.priority === 'urgent') {
       this.showThought(thought);
     } else if (thought.priority === 'high') {
@@ -273,6 +323,55 @@ class ThoughtManager {
     }
   }
   
+  /**
+   * Poll until AI session is ready and warmup has passed, then show queued thought
+   * Polls every 200ms to check readiness, max 10s timeout
+   * Idempotent - only one polling loop runs at a time
+   */
+  private waitForReadinessAndShow(): void {
+    // Idempotent guard - prevent multiple concurrent polling loops
+    if (this.warmupPollingActive) {
+      return;
+    }
+    this.warmupPollingActive = true;
+    
+    const maxWaitMs = 10000; // Max 10s wait
+    const pollIntervalMs = 200;
+    let elapsed = 0;
+    
+    const checkAndShow = () => {
+      elapsed += pollIntervalMs;
+      
+      if (this.isReadyForFirstBubble()) {
+        // Ready! Show the first queued thought
+        this.warmupPollingActive = false;
+        if (!this.state.currentThought && this.state.queue.length > 0) {
+          setTimeout(() => {
+            if (!this.state.currentThought && this.state.queue.length > 0) {
+              this.showThought(this.state.queue.shift()!);
+            }
+          }, 500); // Small buffer for human-paced appearance
+        }
+        return;
+      }
+      
+      if (elapsed >= maxWaitMs) {
+        // Timeout - show anyway to prevent stuck state
+        this.warmupPollingActive = false;
+        console.log('[Trinity] Warmup timeout reached - showing first bubble');
+        if (!this.state.currentThought && this.state.queue.length > 0) {
+          this.showThought(this.state.queue.shift()!);
+        }
+        return;
+      }
+      
+      // Keep polling
+      setTimeout(checkAndShow, pollIntervalMs);
+    };
+    
+    setTimeout(checkAndShow, pollIntervalMs);
+  }
+  
   triggerModeThought(mode: MascotMode): void {
     const text = getRandomThought(mode);
     if (text) {
@@ -285,6 +384,7 @@ class ThoughtManager {
    * Trigger an action state indicator like "thinking..." "coding..." "automating..."
    * Shows dynamic activity with animated ellipsis in the thought bubble.
    * Action states are high priority and replace existing action states.
+   * Routes through showThought() to honor warmup gating.
    */
   triggerActionState(mode: MascotMode, customText?: string): void {
     // Get appropriate action text with seasonal override
@@ -308,29 +408,15 @@ class ThoughtManager {
       text: actionText,
       emoticon: getEmoticon(mode),
       mode,
-      priority: 'high',
+      priority: 'urgent', // Use urgent to show immediately (after warmup gate)
       source: 'action',
       expiresAt: Date.now() + MASCOT_CONFIG.thoughts.displayDuration,
       isActionState: true, // Flag for MagicFloatingText to animate ellipsis
     };
     
-    // Show immediately, replacing any existing thought
-    if (this.displayTimer) {
-      clearTimeout(this.displayTimer);
-    }
-    
-    this.state.currentThought = actionThought;
-    this.state.history.push(actionThought);
-    if (this.state.history.length > 50) {
-      this.state.history.shift();
-    }
-    
-    this.notify();
-    
-    // Set timer to clear after display duration
-    this.displayTimer = setTimeout(() => {
-      this.clearThought();
-    }, MASCOT_CONFIG.thoughts.displayDuration);
+    // Route through showThought to honor warmup gating
+    // This ensures no action state shows before AI Brain is ready
+    this.showThought(actionThought);
   }
   
   /**
@@ -643,26 +729,27 @@ class ThoughtManager {
       timeGreeting = 'Working late';
     }
     
-    // Personalized greetings with name
+    // Personalized greetings with name - professional business tone
     const greetings = [
-      `${timeGreeting}, ${displayName}! Ready to get things done?`,
-      `Hey ${displayName}! I'm Trinity, your AI business buddy.`,
-      `Welcome back, ${displayName}! What can I help with today?`,
-      `Hi ${displayName}! Tap me anytime for help or insights.`,
-      `${timeGreeting}, ${displayName}! Let's make today productive.`,
+      `${timeGreeting}, ${displayName}. How may I assist you today?`,
+      `${timeGreeting}, ${displayName}. I'm Trinity, your AI assistant.`,
+      `Welcome back, ${displayName}. What can I help you accomplish?`,
+      `${timeGreeting}, ${displayName}. Your AI assistant is ready.`,
+      `${timeGreeting}, ${displayName}. Standing by to assist.`,
     ];
     
     // Holiday-aware personalized greeting
     if (this.state.isHoliday && this.state.currentHoliday) {
       greetings.push(
-        `${this.state.currentHoliday.greeting} ${displayName}!`,
-        `Hey ${displayName}! ${this.state.currentHoliday.greeting}`
+        `${this.state.currentHoliday.greeting}, ${displayName}.`,
+        `${timeGreeting}, ${displayName}. ${this.state.currentHoliday.greeting}`
       );
     }
     
     const text = greetings[Math.floor(Math.random() * greetings.length)];
     const thought = this.createThought(text, 'GREETING' as MascotMode, 'default', 'high');
-    this.showThought(thought);
+    // Route through queueThought to honor warmup gate
+    this.queueThought(thought);
   }
   
   /**
@@ -678,17 +765,24 @@ class ThoughtManager {
   
   /**
    * Set Trinity context for role-aware persona and greetings
+   * Called when /api/trinity/context returns successfully - marks AI session ready
    */
   setTrinityContext(context: TrinityPersonaContext | null): void {
     this.state.trinityContext = context;
     
-    // If context includes a custom greeting, show it
+    // Mark AI session as ready when context is set (enables bubble display)
+    if (context) {
+      this.setAiSessionReady();
+    }
+    
+    // Trigger greeting with proper warmup delay to ensure smooth initialization
     if (context?.greeting && this.state.user && !this.state.lastGreetedUserId) {
+      const warmupDelay = this.getRemainingWarmupDelay();
       setTimeout(() => {
         if (this.state.trinityContext && this.state.user) {
           this.triggerRoleAwareGreeting();
         }
-      }, 1000);
+      }, warmupDelay + 1500); // Wait for warmup + 1.5s for human-paced appearance
     }
     
     // Start thought rotation when we have a valid context and user
@@ -764,60 +858,61 @@ class ThoughtManager {
   
   /**
    * Generate a thought from local persona-specific pools
+   * Uses professional business/tech tone throughout
    */
   private generateLocalThought(ctx: TrinityPersonaContext | null, displayName: string): void {
     let thoughtPool: string[];
     
     if (ctx?.isRootAdmin || ctx?.isPlatformStaff) {
       thoughtPool = [
-        `Platform metrics looking good today, ${displayName}.`,
-        `All systems operational. Need to review anything?`,
-        `I'm monitoring the platform. Want a status update?`,
+        `${displayName}, platform metrics are within normal parameters.`,
+        `All systems operational. Standing by for review.`,
+        `Platform monitoring active. Status update available on request.`,
         `Ready to assist with platform operations.`,
-        `How can I help you manage the platform today?`,
+        `How may I help with platform management today?`,
       ];
     } else if (ctx?.isSupportRole) {
       thoughtPool = [
-        `Any users need help today, ${displayName}?`,
-        `Support queue is ready. I'll help you stay efficient.`,
-        `I can help you draft responses or find solutions.`,
-        `Need help with a tricky ticket?`,
-        `Let's help some users today!`,
+        `${displayName}, support queue is available for review.`,
+        `Support systems ready. I can help streamline responses.`,
+        `I can assist with drafting responses or researching solutions.`,
+        `Available to help with complex support cases.`,
+        `Standing by to assist with customer inquiries.`,
       ];
     } else if (ctx?.hasTrinityPro) {
       thoughtPool = [
-        `${displayName}, I've analyzed your recent data. Want insights?`,
-        `I noticed some trends in your workforce patterns.`,
-        `Pro tip: I can help optimize your scheduling.`,
-        `Ready for your daily intelligence briefing?`,
-        `Your AI advisor is here. What shall we work on?`,
-        `I can generate reports or analyze performance data.`,
+        `${displayName}, data analysis complete. Insights available on request.`,
+        `I've identified trends in your workforce patterns.`,
+        `I can assist with schedule optimization.`,
+        `Ready to provide your intelligence briefing.`,
+        `Your AI advisor is available. What would you like to work on?`,
+        `I can generate reports or analyze performance metrics.`,
       ];
     } else if (ctx?.hasBusinessBuddy || ctx?.isOrgOwner) {
       thoughtPool = [
-        `How's business going, ${displayName}?`,
-        `Need help with workforce planning?`,
-        `I can help you optimize scheduling efficiency.`,
-        `Want to review your team's performance?`,
-        `Let's make your organization even better!`,
-        `Ready to tackle today's challenges together?`,
+        `${displayName}, how can I assist with business operations?`,
+        `Ready to help with workforce planning.`,
+        `I can help optimize scheduling efficiency.`,
+        `Would you like to review team performance metrics?`,
+        `Standing by to support your business operations.`,
+        `Ready to assist with organizational tasks.`,
       ];
     } else if (ctx?.isManager) {
       thoughtPool = [
-        `Your team schedule looks good, ${displayName}.`,
-        `Any shifts need adjusting today?`,
-        `I can help you manage time-off requests.`,
-        `Need help with team coordination?`,
-        `Ready to help with scheduling!`,
+        `${displayName}, team schedule status is available.`,
+        `I can assist with shift adjustments.`,
+        `Time-off request management is available.`,
+        `Ready to help with team coordination.`,
+        `Standing by to assist with scheduling.`,
       ];
     } else {
-      // Standard user thoughts
+      // Standard user thoughts - professional tone
       thoughtPool = [
-        `Hey ${displayName}, need any help?`,
-        `I'm here if you have questions!`,
-        `Tap me anytime for assistance.`,
-        `How's your day going?`,
-        `Need help with anything?`,
+        `${displayName}, how may I assist you?`,
+        `I'm available if you have questions.`,
+        `Standing by to assist.`,
+        `How can I help you today?`,
+        `Ready to provide assistance.`,
       ];
     }
     
@@ -1117,12 +1212,12 @@ class ThoughtManager {
       timeGreeting = 'Working late';
     }
     
-    // Standard fallback greetings (always available)
+    // Standard fallback greetings - professional business tone
     const standardGreetings = [
-      `${timeGreeting}, ${displayName}! I'm Trinity, here to help!`,
-      `Hey ${displayName}! Tap me anytime for assistance.`,
-      `${timeGreeting}, ${displayName}! Ready to get things done?`,
-      `Welcome back, ${displayName}! What can I help with today?`,
+      `${timeGreeting}, ${displayName}. I'm Trinity, your AI assistant. How may I help you today?`,
+      `${timeGreeting}, ${displayName}. Ready to assist with your workflow.`,
+      `Welcome back, ${displayName}. What can I help you accomplish today?`,
+      `${timeGreeting}, ${displayName}. Your AI assistant is ready.`,
     ];
     
     let greeting: string;
@@ -1131,70 +1226,70 @@ class ThoughtManager {
     if (!ctx) {
       greeting = standardGreetings[Math.floor(Math.random() * standardGreetings.length)];
     }
-    // Root admin persona
+    // Root admin persona - executive professional tone
     else if (ctx.isRootAdmin) {
       const rootGreetings = [
-        `${timeGreeting}, ${displayName}. Platform systems nominal. Ready for executive review.`,
-        `Welcome back, Commander ${displayName}. All services operational.`,
-        `${timeGreeting}, ${displayName}. Root access confirmed. What shall we oversee?`,
-        `Hey ${displayName}! Platform running smoothly. 69 actions at your command.`,
+        `${timeGreeting}, ${displayName}. Platform systems nominal. Executive dashboard ready.`,
+        `Welcome back, ${displayName}. All services operational. Standing by for your directives.`,
+        `${timeGreeting}, ${displayName}. Administrative access confirmed. What would you like to review?`,
+        `${timeGreeting}, ${displayName}. Platform health optimal. Ready for executive operations.`,
       ];
       greeting = rootGreetings[Math.floor(Math.random() * rootGreetings.length)];
     }
-    // Support role persona
+    // Support role persona - professional support tone
     else if (ctx.isSupportRole) {
       const supportGreetings = [
-        `${timeGreeting}, ${displayName}! Support console ready. How can I assist?`,
-        `Hey ${displayName}! Trinity Support Mode active. Let's help some users!`,
-        `${timeGreeting}, ${displayName}. Support dashboard synced. Ready for tickets?`,
-        `Welcome ${displayName}! I'll help you help others today.`,
+        `${timeGreeting}, ${displayName}. Support console initialized. How can I assist?`,
+        `${timeGreeting}, ${displayName}. Support systems ready. Standing by for ticket review.`,
+        `Welcome, ${displayName}. Support dashboard synchronized. Ready to help users.`,
+        `${timeGreeting}, ${displayName}. Customer support mode active. How can I help?`,
       ];
       greeting = supportGreetings[Math.floor(Math.random() * supportGreetings.length)];
     }
     // Other platform staff persona
     else if (ctx.isPlatformStaff) {
       const staffGreetings = [
-        `${timeGreeting}, ${displayName}! Platform staff access confirmed.`,
-        `Hey ${displayName}! Ready to manage the platform together?`,
-        `${timeGreeting}, ${displayName}. Full platform access enabled.`,
+        `${timeGreeting}, ${displayName}. Platform staff access confirmed.`,
+        `${timeGreeting}, ${displayName}. Ready to assist with platform operations.`,
+        `Welcome, ${displayName}. Full platform access enabled.`,
       ];
       greeting = staffGreetings[Math.floor(Math.random() * staffGreetings.length)];
     }
-    // Trinity Pro users get executive-level greetings
+    // Trinity Pro users - executive advisor tone
     else if (ctx.hasTrinityPro) {
       const proGreetings = [
-        `${timeGreeting}, ${displayName}! Trinity Pro activated. Ready for intelligent insights.`,
-        `Hey ${displayName}! Your AI advisor is ready with priority support access.`,
-        `${timeGreeting}, ${displayName}! Let me help you make smarter decisions today.`,
-        `Welcome back, ${displayName}! Trinity Pro features are at your fingertips.`,
+        `${timeGreeting}, ${displayName}. Trinity Pro activated. Your AI advisor is ready.`,
+        `${timeGreeting}, ${displayName}. Priority support access enabled. How can I assist?`,
+        `Welcome back, ${displayName}. Ready to provide strategic insights and recommendations.`,
+        `${timeGreeting}, ${displayName}. Trinity Pro features at your service.`,
       ];
       greeting = proGreetings[Math.floor(Math.random() * proGreetings.length)];
     }
-    // Organization owner / Business Buddy persona
+    // Organization owner / Business Buddy persona - business professional tone
     else if (ctx.isOrgOwner || ctx.hasBusinessBuddy || ctx.persona === 'business_buddy') {
       const ownerGreetings = [
-        `${timeGreeting}, ${displayName}! I'm your business buddy. Let's grow your org!`,
-        `Hey ${displayName}! Ready to optimize your workforce today?`,
-        `${timeGreeting}, ${displayName}! Your org dashboard awaits. What's on the agenda?`,
-        `Welcome back, ${displayName}! Let's make today productive for your team.`,
+        `${timeGreeting}, ${displayName}. Your business intelligence dashboard is ready.`,
+        `${timeGreeting}, ${displayName}. Ready to assist with workforce optimization.`,
+        `Welcome back, ${displayName}. How can I help with your organization today?`,
+        `${timeGreeting}, ${displayName}. Standing by to support your business operations.`,
       ];
       greeting = ownerGreetings[Math.floor(Math.random() * ownerGreetings.length)];
     }
-    // New org / onboarding persona
+    // New org / onboarding persona - helpful professional guide
     else if (ctx.persona === 'onboarding_guide' || ctx.orgStats?.isNewOrg) {
       const onboardingGreetings = [
-        `${timeGreeting}, ${displayName}! I'm Trinity, your setup guide. Let's get started!`,
-        `Hey ${displayName}! Welcome aboard. I'll help you set everything up.`,
-        `${timeGreeting}, ${displayName}! Ready to unlock the full platform? I'll guide you!`,
+        `${timeGreeting}, ${displayName}. I'm Trinity, your onboarding guide. Let me walk you through the setup.`,
+        `Welcome, ${displayName}. I'll help you configure your platform step by step.`,
+        `${timeGreeting}, ${displayName}. Ready to help you get started with the platform.`,
       ];
       greeting = onboardingGreetings[Math.floor(Math.random() * onboardingGreetings.length)];
     }
-    // Manager persona
+    // Manager persona - team management professional
     else if (ctx.isManager) {
       const managerGreetings = [
-        `${timeGreeting}, ${displayName}! Team management at your fingertips.`,
-        `Hey ${displayName}! Ready to coordinate your team today?`,
-        `${timeGreeting}, ${displayName}! Your schedule and team status are ready.`,
+        `${timeGreeting}, ${displayName}. Team management tools are ready.`,
+        `${timeGreeting}, ${displayName}. Ready to assist with schedule coordination.`,
+        `Welcome, ${displayName}. Your team status and schedule are updated.`,
       ];
       greeting = managerGreetings[Math.floor(Math.random() * managerGreetings.length)];
     }
@@ -1210,11 +1305,12 @@ class ThoughtManager {
     
     // Final safety check: ensure greeting is a valid string
     if (!greeting || typeof greeting !== 'string') {
-      greeting = `Hello, ${displayName}! I'm Trinity, here to help!`;
+      greeting = `Hello, ${displayName}. I'm Trinity, ready to assist.`;
     }
     
     const thought = this.createThought(greeting, 'GREETING' as MascotMode, 'default', 'high');
-    this.showThought(thought);
+    // Route through queueThought to honor warmup gate
+    this.queueThought(thought);
     
     // Mark user as greeted after successful greeting
     if (this.state.user?.id) {
