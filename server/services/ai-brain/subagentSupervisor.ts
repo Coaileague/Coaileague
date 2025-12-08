@@ -370,12 +370,24 @@ class SubagentSupervisor {
   }
 
   private setupHealthMonitoring(): void {
-    platformEventBus.on('subagent:heartbeat', async (event: any) => {
-      await this.handleHeartbeat(event);
-    });
-
-    platformEventBus.on('subagent:health_check', async (event: any) => {
-      await this.handleHealthCheck(event);
+    platformEventBus.subscribe('ai_brain_action', {
+      name: 'SubagentSupervisor',
+      handler: async (event: any) => {
+        // Runtime validation - guard against malformed events
+        if (!event || typeof event !== 'object') return;
+        if (typeof event.type !== 'string') return;
+        
+        if (event.type === 'subagent:heartbeat') {
+          // Validate heartbeat payload
+          if (event.data?.subagentId && typeof event.data.subagentId === 'string') {
+            await this.handleHeartbeat(event);
+          }
+        } else if (event.type === 'subagent:health_check') {
+          // Validate health check payload
+          if (!event.data || typeof event.data !== 'object') return;
+          await this.handleHealthCheck(event);
+        }
+      }
     });
   }
 
