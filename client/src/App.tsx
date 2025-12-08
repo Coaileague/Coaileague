@@ -195,6 +195,7 @@ import { useBusinessBuddyTier, getAllowedModes, getUpgradeNudgeMessage } from "@
 import { useTrinityPersona } from "@/hooks/use-trinity-persona";
 import { useTrinityDiagnostics } from "@/hooks/use-trinity-diagnostics";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
+import { MobileVoiceCommandOverlay } from "@/components/mobile/MobileVoiceCommandOverlay";
 
 // Trinity modes are driven by system state, not user interaction
 // Mode changes happen automatically based on AI activity, seasons, etc.
@@ -243,6 +244,8 @@ function MascotRenderer() {
   const [location] = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [currentThought, setCurrentThought] = useState<Thought | null>(null);
+  const [showVoiceOverlay, setShowVoiceOverlay] = useState(false);
+  const [voiceModeOverride, setVoiceModeOverride] = useState<string | null>(null);
   const floatOffsetRef = useRef({ x: 0, y: 0 });
   const dragVelocityRef = useRef(0);
   const lastPosRef = useRef({ x: 0, y: 0, time: 0 });
@@ -553,11 +556,29 @@ function MascotRenderer() {
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
     if (!isDragging) {
-      // Trinity reacts to taps with a friendly response
-      thoughtManager.triggerReaction('tap');
-      triggerEmoteRef.current?.('happy');
+      // On mobile, tap opens voice command overlay for authenticated users
+      if (isMobile && user) {
+        setShowVoiceOverlay(true);
+        thoughtManager.showSimpleThought({
+          text: "Tap the mic to give me a voice command!",
+          priority: 'low',
+          duration: 3000,
+          source: 'action',
+        });
+      } else {
+        // Trinity reacts to taps with a friendly response
+        thoughtManager.triggerReaction('tap');
+        triggerEmoteRef.current?.('happy');
+      }
     }
-  }, [isDragging]);
+  }, [isDragging, isMobile, user]);
+
+  const handleVoiceModeChange = useCallback((mode: 'LISTENING' | 'THINKING' | 'SUCCESS' | 'ERROR' | 'IDLE') => {
+    setVoiceModeOverride(mode);
+    if (mode === 'IDLE' || mode === 'SUCCESS' || mode === 'ERROR') {
+      setTimeout(() => setVoiceModeOverride(null), 2000);
+    }
+  }, []);
   
   const hasTrinityAccess = useMemo(() => {
     if (!user) return false;
@@ -619,7 +640,7 @@ function MascotRenderer() {
           {/* Polished Trinity Redesign - Smooth mutations and state animations */}
           {/* Auto-cycles through states after 30 seconds of user inactivity */}
           <TrinityRedesign 
-            mode={currentMode}
+            mode={(voiceModeOverride as any) || currentMode}
             size={bubbleSize}
             mini={!isExpanded}
             idleTimeout={30000}
@@ -652,6 +673,13 @@ function MascotRenderer() {
           onDismiss={() => setCurrentThought(null)}
         />
       ) : null}
+      
+      {/* Mobile Voice Command Overlay - triggered by tapping Trinity on mobile */}
+      <MobileVoiceCommandOverlay
+        isOpen={showVoiceOverlay}
+        onClose={() => setShowVoiceOverlay(false)}
+        onModeChange={handleVoiceModeChange}
+      />
     </>
   );
 }

@@ -1678,6 +1678,84 @@ class SubagentSupervisor {
 
     return health;
   }
+
+  /**
+   * Route a voice command to the appropriate subagent
+   * Analyzes the transcript to determine intent and assign to the best subagent
+   */
+  async routeVoiceCommand(params: {
+    transcript: string;
+    userId: string;
+    workspaceId?: string;
+    context: {
+      source: string;
+      timestamp: string;
+      platform: string;
+    };
+  }): Promise<{
+    assignedAgent: string;
+    estimatedTokens: number;
+    confidence: number;
+  }> {
+    const { transcript, userId, workspaceId, context } = params;
+    
+    console.log('[SubagentSupervisor] Routing voice command:', { 
+      transcriptLength: transcript.length,
+      userId, 
+      workspaceId 
+    });
+
+    // Simple keyword-based routing (can be enhanced with AI later)
+    const lowerTranscript = transcript.toLowerCase();
+    
+    // Determine the best subagent based on keywords
+    let assignedAgent = 'GeneralAssistant';
+    let estimatedTokens = 100;
+    
+    if (lowerTranscript.includes('schedule') || lowerTranscript.includes('shift') || lowerTranscript.includes('calendar')) {
+      assignedAgent = 'SchedulingAgent';
+      estimatedTokens = 150;
+    } else if (lowerTranscript.includes('payroll') || lowerTranscript.includes('salary') || lowerTranscript.includes('pay')) {
+      assignedAgent = 'PayrollAgent';
+      estimatedTokens = 200;
+    } else if (lowerTranscript.includes('invoice') || lowerTranscript.includes('billing') || lowerTranscript.includes('payment')) {
+      assignedAgent = 'BillingAgent';
+      estimatedTokens = 180;
+    } else if (lowerTranscript.includes('employee') || lowerTranscript.includes('staff') || lowerTranscript.includes('team')) {
+      assignedAgent = 'HRAgent';
+      estimatedTokens = 160;
+    } else if (lowerTranscript.includes('report') || lowerTranscript.includes('analytics') || lowerTranscript.includes('metrics')) {
+      assignedAgent = 'AnalyticsAgent';
+      estimatedTokens = 250;
+    } else if (lowerTranscript.includes('help') || lowerTranscript.includes('support') || lowerTranscript.includes('issue')) {
+      assignedAgent = 'SupportAgent';
+      estimatedTokens = 120;
+    } else if (lowerTranscript.includes('compliance') || lowerTranscript.includes('certification') || lowerTranscript.includes('audit')) {
+      assignedAgent = 'ComplianceAgent';
+      estimatedTokens = 180;
+    } else if (lowerTranscript.includes('time') || lowerTranscript.includes('clock') || lowerTranscript.includes('hours')) {
+      assignedAgent = 'TimeTrackingAgent';
+      estimatedTokens = 140;
+    }
+
+    // Calculate confidence based on keyword matches
+    const keywords = ['schedule', 'shift', 'payroll', 'invoice', 'employee', 'report', 'help', 'compliance', 'time'];
+    const matchCount = keywords.filter(kw => lowerTranscript.includes(kw)).length;
+    const confidence = matchCount > 0 ? Math.min(0.5 + (matchCount * 0.15), 0.95) : 0.4;
+
+    console.log('[SubagentSupervisor] Voice command routed:', {
+      assignedAgent,
+      estimatedTokens,
+      confidence,
+      platform: context.platform
+    });
+
+    return {
+      assignedAgent,
+      estimatedTokens,
+      confidence
+    };
+  }
 }
 
 // Export singleton instance
