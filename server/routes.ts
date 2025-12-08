@@ -93,6 +93,7 @@ import { supportCommandRouter } from "./routes/support-command-console";
 import { sessionCheckpointRouter } from "./routes/sessionCheckpointRoutes";
 import { aiBrainConsoleRouter } from "./routes/ai-brain-console";
 import aiBrainControlRouter from "./routes/aiBrainControlRoutes";
+import subagentRouter from "./routes/subagentRoutes";
 import codeEditorRouter from "./routes/code-editor";
 import { onboardingRouter } from "./routes/onboardingRoutes";
 import { onboardingAssistantRouter } from "./routes/onboarding-assistant-routes";
@@ -2699,6 +2700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register What's New routes (Platform updates feed)
   app.use("/api/whats-new", whatsNewRouter);
   app.use("/api/session-checkpoints", sessionCheckpointRouter);
+  app.use("/api/subagents", subagentRouter);
   // Register Support Command Console routes (Force-push updates for support staff)
   app.use("/api/support/command", supportCommandRouter);
   // Register AI Brain Console routes (Interactive AI chat and control for support staff)

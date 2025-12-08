@@ -1,0 +1,526 @@
+/**
+ * SUBAGENT ORCHESTRATION API ROUTES
+ * ==================================
+ * API endpoints for managing AI subagents, access control, and support interventions.
+ * 
+ * RBAC: Most endpoints require sysop or higher platform role.
+ */
+
+import { Router, Response, NextFunction } from 'express';
+import { db } from '../db';
+import { eq, and, desc } from 'drizzle-orm';
+import { z } from 'zod';
+import {
+  aiSubagentDefinitions,
+  subagentTelemetry,
+  supportInterventions,
+  trinityAccessControl,
+} from '@shared/schema';
+import { subagentSupervisor } from '../services/ai-brain/subagentSupervisor';
+import { aiBrainAuthorizationService, AI_BRAIN_AUTHORITY_ROLES } from '../services/ai-brain/aiBrainAuthorizationService';
+import { storage } from '../storage';
+import type { AuthenticatedRequest } from '../rbac';
+
+const router = Router();
+
+// ============================================================================
+// VALIDATION SCHEMAS (Security hardening)
+// ============================================================================
+
+const subagentUpdateSchema = z.object({
+  description: z.string().max(2000).optional(),
+  maxRetries: z.number().min(0).max(10).optional(),
+  timeoutMs: z.number().min(1000).max(300000).optional(),
+  confidenceThreshold: z.number().min(0).max(1).optional(),
+  requiresApproval: z.boolean().optional(),
+  isActive: z.boolean().optional(),
+}).strict();
+
+const subagentToggleSchema = z.object({
+  isActive: z.boolean(),
+}).strict();
+
+const accessControlSchema = z.object({
+  workspaceId: z.string().min(1).max(100),
+  resourceType: z.enum(['page', 'feature', 'tool', 'mascot', 'subagent']),
+  resourceId: z.string().min(1).max(200),
+  resourceName: z.string().max(200).optional(),
+  isEnabled: z.boolean().optional(),
+  allowedRoles: z.array(z.string()).optional(),
+  deniedRoles: z.array(z.string()).optional(),
+  requiresApproval: z.boolean().optional(),
+  approvalRoles: z.array(z.string()).optional(),
+  autoApproveFor: z.array(z.string()).optional(),
+  trinityCanAssist: z.boolean().optional(),
+  trinityCanAutoFix: z.boolean().optional(),
+  aiToolsEnabled: z.boolean().optional(),
+  mascotVisible: z.boolean().optional(),
+}).strict();
+
+const accessControlUpdateSchema = accessControlSchema.partial().omit({ workspaceId: true, resourceType: true, resourceId: true });
+
+const interventionRejectSchema = z.object({
+  reason: z.string().min(1).max(2000),
+}).strict();
+
+const executeTestSchema = z.object({
+  domain: z.enum(['scheduling', 'payroll', 'invoicing', 'compliance', 'notifications', 'analytics', 'gamification', 'communication', 'health', 'testing', 'deployment', 'recovery', 'orchestration', 'security']),
+  actionId: z.string().min(1).max(200),
+  parameters: z.record(z.any()).optional(),
+  workspaceId: z.string().max(100).optional(),
+}).strict();
+
+// ============================================================================
+// MIDDLEWARE: Require sysop+ role for subagent management
+// ============================================================================
+
+async function requireSubagentAccess(req: AuthenticatedRequest, res: Response, next: NextFunction) {
+  const userId = req.user?.id || req.session?.userId;
+  if (!userId) {
+    return res.status(401).json({ success: false, error: 'Authentication required' });
+  }
+
+  const platformUser = await storage.getPlatformUserById(userId);
+  const platformRole = platformUser?.platformRole || 'none';
+  
+  // Subagent management requires sysop or higher
+  const authorizedRoles = ['root_admin', 'deputy_admin', 'sysop'];
+  if (!authorizedRoles.includes(platformRole)) {
+    return res.status(403).json({ 
+      success: false, 
+      error: 'Insufficient permissions. Requires sysop or higher role.' 
+    });
+  }
+
+  (req as any).platformRole = platformRole;
+  (req as any).userId = userId;
+  next();
+}
+
+// ============================================================================
+// SUBAGENT REGISTRY ENDPOINTS
+// ============================================================================
+
+router.get('/subagents', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const subagents = await subagentSupervisor.getAllSubagents();
+    res.json({ success: true, subagents });
+  } catch (error: any) {
+    console.error('[SubagentRoutes] Error fetching subagents:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/subagents/:id', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const subagent = await subagentSupervisor.getSubagent(req.params.id);
+    if (!subagent) {
+      return res.status(404).json({ success: false, error: 'Subagent not found' });
+    }
+    res.json({ success: true, subagent });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/subagents/domain/:domain', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const subagents = await subagentSupervisor.getSubagentsByDomain(req.params.domain as any);
+    res.json({ success: true, subagents });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.patch('/subagents/:id', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Validate input - reject unknown fields
+    const validation = subagentUpdateSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid input',
+        details: validation.error.errors 
+      });
+    }
+    
+    const [updated] = await db.update(aiSubagentDefinitions)
+      .set({ ...validation.data, updatedAt: new Date() })
+      .where(eq(aiSubagentDefinitions.id, id))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Subagent not found' });
+    }
+    
+    res.json({ success: true, subagent: updated });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/subagents/:id/toggle', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Validate input
+    const validation = subagentToggleSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid input: isActive (boolean) required' 
+      });
+    }
+    
+    const [updated] = await db.update(aiSubagentDefinitions)
+      .set({ isActive: validation.data.isActive, updatedAt: new Date() })
+      .where(eq(aiSubagentDefinitions.id, id))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Subagent not found' });
+    }
+    
+    res.json({ success: true, subagent: updated, message: `Subagent ${validation.data.isActive ? 'enabled' : 'disabled'}` });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// SUBAGENT HEALTH & TELEMETRY
+// ============================================================================
+
+router.get('/health', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const health = await subagentSupervisor.getSubagentHealth();
+    res.json({ success: true, health });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/telemetry', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const { subagentId, workspaceId, limit = 50 } = req.query;
+    
+    let query = db.select().from(subagentTelemetry);
+    
+    if (subagentId) {
+      query = query.where(eq(subagentTelemetry.subagentId, subagentId as string)) as any;
+    }
+    if (workspaceId) {
+      query = query.where(eq(subagentTelemetry.workspaceId, workspaceId as string)) as any;
+    }
+    
+    const telemetry = await query
+      .orderBy(desc(subagentTelemetry.createdAt))
+      .limit(parseInt(limit as string));
+    
+    res.json({ success: true, telemetry });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/telemetry/:executionId', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const [telemetry] = await db.select().from(subagentTelemetry)
+      .where(eq(subagentTelemetry.executionId, req.params.executionId));
+    
+    if (!telemetry) {
+      return res.status(404).json({ success: false, error: 'Telemetry not found' });
+    }
+    
+    res.json({ success: true, telemetry });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// SUPPORT INTERVENTIONS (Approval Workflow)
+// ============================================================================
+
+router.get('/interventions', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, status = 'pending' } = req.query;
+    
+    let interventions;
+    if (status === 'pending') {
+      interventions = await subagentSupervisor.getPendingInterventions(workspaceId as string);
+    } else {
+      const query = db.select().from(supportInterventions)
+        .orderBy(desc(supportInterventions.createdAt));
+      
+      if (workspaceId) {
+        interventions = await query.where(eq(supportInterventions.workspaceId, workspaceId as string));
+      } else {
+        interventions = await query;
+      }
+    }
+    
+    res.json({ success: true, interventions });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/interventions/:id', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const [intervention] = await db.select().from(supportInterventions)
+      .where(eq(supportInterventions.id, req.params.id));
+    
+    if (!intervention) {
+      return res.status(404).json({ success: false, error: 'Intervention not found' });
+    }
+    
+    res.json({ success: true, intervention });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/interventions/:id/approve', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
+    const platformRole = (req as any).platformRole;
+    
+    const approved = await subagentSupervisor.approveIntervention(
+      req.params.id,
+      userId!,
+      platformRole
+    );
+    
+    if (!approved) {
+      return res.status(400).json({ success: false, error: 'Failed to approve intervention' });
+    }
+    
+    res.json({ success: true, message: 'Intervention approved and fix executed' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/interventions/:id/reject', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
+    
+    // Validate input
+    const validation = interventionRejectSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid input: reason (string) required' 
+      });
+    }
+    
+    const [updated] = await db.update(supportInterventions)
+      .set({
+        status: 'rejected',
+        rejectedBy: userId!,
+        rejectedAt: new Date(),
+        rejectionReason: validation.data.reason,
+        updatedAt: new Date(),
+      })
+      .where(eq(supportInterventions.id, req.params.id))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Intervention not found' });
+    }
+    
+    res.json({ success: true, message: 'Intervention rejected', intervention: updated });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// TRINITY ACCESS CONTROL (Per-workspace/feature RBAC)
+// ============================================================================
+
+router.get('/access-control', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, resourceType } = req.query;
+    
+    let query = db.select().from(trinityAccessControl);
+    
+    if (workspaceId) {
+      query = query.where(eq(trinityAccessControl.workspaceId, workspaceId as string)) as any;
+    }
+    if (resourceType) {
+      query = query.where(eq(trinityAccessControl.resourceType, resourceType as string)) as any;
+    }
+    
+    const controls = await query;
+    res.json({ success: true, controls });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/access-control/:workspaceId/:resourceType/:resourceId', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, resourceType, resourceId } = req.params;
+    
+    const [control] = await db.select().from(trinityAccessControl)
+      .where(and(
+        eq(trinityAccessControl.workspaceId, workspaceId),
+        eq(trinityAccessControl.resourceType, resourceType),
+        eq(trinityAccessControl.resourceId, resourceId)
+      ));
+    
+    if (!control) {
+      return res.status(404).json({ success: false, error: 'Access control not found' });
+    }
+    
+    res.json({ success: true, control });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/access-control', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
+    
+    // Validate input - reject unknown fields
+    const validation = accessControlSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid input',
+        details: validation.error.errors 
+      });
+    }
+    
+    const { workspaceId, resourceType, resourceId, ...settings } = validation.data;
+    
+    const control = await subagentSupervisor.setAccessControl(
+      workspaceId,
+      resourceType,
+      resourceId,
+      settings,
+      userId!
+    );
+    
+    res.json({ success: true, control });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.patch('/access-control/:id', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
+    
+    // Validate input - reject unknown fields
+    const validation = accessControlUpdateSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid input',
+        details: validation.error.errors 
+      });
+    }
+    
+    const [updated] = await db.update(trinityAccessControl)
+      .set({
+        ...validation.data,
+        configuredBy: userId!,
+        configuredAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(trinityAccessControl.id, req.params.id))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ success: false, error: 'Access control not found' });
+    }
+    
+    res.json({ success: true, control: updated });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.delete('/access-control/:id', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const [deleted] = await db.delete(trinityAccessControl)
+      .where(eq(trinityAccessControl.id, req.params.id))
+      .returning();
+    
+    if (!deleted) {
+      return res.status(404).json({ success: false, error: 'Access control not found' });
+    }
+    
+    res.json({ success: true, message: 'Access control deleted' });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// SUBAGENT EXECUTION (Test/Debug)
+// ============================================================================
+
+router.post('/execute', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user?.id || authReq.session?.userId || (req as any).userId;
+    const platformRole = (req as any).platformRole;
+    
+    // Validate input - reject unknown fields
+    const validation = executeTestSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid input',
+        details: validation.error.errors 
+      });
+    }
+    
+    const { domain, actionId, parameters, workspaceId } = validation.data;
+    
+    // Simple test handler for debugging
+    const testHandler = async (params: Record<string, any>) => {
+      return { executed: true, params, timestamp: new Date().toISOString() };
+    };
+    
+    const result = await subagentSupervisor.executeAction(
+      domain,
+      actionId,
+      parameters || {},
+      userId!,
+      workspaceId || 'test-workspace',
+      platformRole,
+      testHandler
+    );
+    
+    res.json({ success: result.success, result });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// INITIALIZE SUBAGENT SUPERVISOR ON ROUTE LOAD
+// ============================================================================
+
+(async () => {
+  try {
+    await subagentSupervisor.initialize();
+    console.log('[SubagentRoutes] Subagent supervisor initialized');
+  } catch (error) {
+    console.error('[SubagentRoutes] Failed to initialize subagent supervisor:', error);
+  }
+})();
+
+export default router;
