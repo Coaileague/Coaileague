@@ -2,7 +2,7 @@ import { db } from '../../db';
 import { 
   workspaceFeatureStates,
   workspaces,
-  workspaceOnboarding,
+  organizationOnboarding,
   users,
   supportSessionElevations,
   type WorkspaceFeatureState
@@ -325,8 +325,8 @@ class FeatureGateService {
   }
 
   private async checkOnboardingComplete(workspaceId: string): Promise<{ complete: boolean; progress: number }> {
-    const [onboarding] = await db.select().from(workspaceOnboarding)
-      .where(eq(workspaceOnboarding.workspaceId, workspaceId))
+    const [onboarding] = await db.select().from(organizationOnboarding)
+      .where(eq(organizationOnboarding.workspaceId, workspaceId))
       .limit(1);
 
     if (!onboarding) {
@@ -457,13 +457,13 @@ class FeatureGateService {
       await this.unlockFeature(workspaceId, featureKey, 'onboarding', userId);
     }
 
-    await db.update(workspaceOnboarding)
+    await db.update(organizationOnboarding)
       .set({
         automationUnlocked: true,
         automationUnlockedAt: new Date(),
         automationUnlockedBy: userId
       })
-      .where(eq(workspaceOnboarding.workspaceId, workspaceId));
+      .where(eq(organizationOnboarding.workspaceId, workspaceId));
 
     console.log(`[FeatureGate] Unlocked all onboarding-gated features for workspace ${workspaceId}`);
   }
