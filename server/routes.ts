@@ -44,6 +44,7 @@ import automationEventsRouter from "./routes/automation-events"; // Automation E
 import { migrationRouter } from "./routes/migration"; // Data Migration from External Platforms
 import { registerHealthRoutes } from "./routes/health"; // Health check monitoring
 import { registerSearchRoutes } from "./routes/searchRoutes"; // AI-Powered Intelligent Search
+import { registerWorkboardRoutes } from "./routes/workboardRoutes"; // AI Brain Workboard Job Queue
 import { auditContextMiddleware } from "./middleware/audit";
 import { 
   apiLimiter, 
@@ -462,6 +463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerHealthRoutes(app, requireAuth);
   registerSearchRoutes(app, requireAuth); // AI-Powered Search
 
+  registerWorkboardRoutes(app, requireAuth); // AI Brain Workboard Job Queue
   // ============================================================================
   // NOTIFICATIONS & FEATURE UPDATES
   // ============================================================================

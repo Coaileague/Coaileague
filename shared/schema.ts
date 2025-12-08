@@ -17702,3 +17702,122 @@ export const insertKnowledgeGapLogSchema = createInsertSchema(knowledgeGapLogs).
 });
 export type InsertKnowledgeGapLog = z.infer<typeof insertKnowledgeGapLogSchema>;
 export type KnowledgeGapLog = typeof knowledgeGapLogs.$inferSelect;
+
+// ============================================================================
+// AI BRAIN WORKBOARD - CENTRALIZED JOB QUEUE & ORCHESTRATION
+// ============================================================================
+
+/**
+ * Workboard request types - source of the work request
+ */
+export const workboardRequestTypeEnum = pgEnum('workboard_request_type', [
+  'voice_command',     // Mobile voice command via Trinity
+  'chat',              // HelpAI/Trinity chat message
+  'direct_api',        // Direct API call
+  'automation',        // Scheduled automation trigger
+  'escalation',        // Escalated from another task
+  'system'             // System-initiated task
+]);
+
+/**
+ * Workboard task status - lifecycle states
+ */
+export const workboardTaskStatusEnum = pgEnum('workboard_task_status', [
+  'pending',           // Waiting to be processed
+  'analyzing',         // SubagentSupervisor analyzing intent
+  'assigned',          // Assigned to a subagent
+  'in_progress',       // Subagent actively working
+  'awaiting_approval', // Requires human approval
+  'completed',         // Successfully completed
+  'failed',            // Failed with error
+  'cancelled',         // Cancelled by user or system
+  'escalated'          // Escalated to support
+]);
+
+/**
+ * Workboard priority levels
+ */
+export const workboardPriorityEnum = pgEnum('workboard_priority', [
+  'critical',   // Immediate attention required
+  'high',       // Priority processing
+  'normal',     // Standard queue position
+  'low',        // Background processing
+  'scheduled'   // Scheduled for later
+]);
+
+/**
+ * AI Brain Workboard Tasks - Central job queue for all AI orchestration
+ */
+export const aiWorkboardTasks = pgTable("ai_workboard_tasks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Request details
+  requestType: workboardRequestTypeEnum("request_type").notNull().default('chat'),
+  requestContent: text("request_content").notNull(), // Original request/transcript
+  requestMetadata: jsonb("request_metadata").default({}), // Additional context (source, device, etc.)
+  
+  // Task classification
+  intent: varchar("intent", { length: 100 }), // Detected intent
+  category: varchar("category", { length: 50 }), // Business category (scheduling, payroll, etc.)
+  confidence: decimal("confidence", { precision: 4, scale: 3 }), // Intent confidence (0.000-1.000)
+  
+  // Assignment
+  assignedAgentId: varchar("assigned_agent_id", { length: 100 }), // SubagentSupervisor agent ID
+  assignedAgentName: varchar("assigned_agent_name", { length: 100 }), // Human-readable agent name
+  
+  // Status tracking
+  status: workboardTaskStatusEnum("status").notNull().default('pending'),
+  priority: workboardPriorityEnum("priority").notNull().default('normal'),
+  
+  // Token/credit tracking
+  estimatedTokens: integer("estimated_tokens").default(0),
+  actualTokens: integer("actual_tokens"),
+  creditsDeducted: boolean("credits_deducted").default(false),
+  
+  // Execution details
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  timeoutSeconds: integer("timeout_seconds").default(300), // 5 min default
+  
+  // Results
+  result: jsonb("result"), // Task output/result data
+  resultSummary: text("result_summary"), // Human-readable summary
+  errorMessage: text("error_message"), // Error details if failed
+  
+  // Notification preferences
+  notifyVia: text("notify_via").array().default(sql`ARRAY['trinity']::text[]`), // ['trinity', 'email', 'push', 'websocket']
+  notificationSent: boolean("notification_sent").default(false),
+  notifiedAt: timestamp("notified_at"),
+  
+  // Workflow chaining
+  parentTaskId: varchar("parent_task_id"), // For subtasks
+  childTaskIds: text("child_task_ids").array().default(sql`ARRAY[]::text[]`),
+  workflowStep: integer("workflow_step").default(1),
+  totalWorkflowSteps: integer("total_workflow_steps").default(1),
+  
+  // Audit trail
+  statusHistory: jsonb("status_history").default(sql`'[]'::jsonb`), // [{status, timestamp, actor}]
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("ai_workboard_tasks_workspace_idx").on(table.workspaceId),
+  index("ai_workboard_tasks_user_idx").on(table.userId),
+  index("ai_workboard_tasks_status_idx").on(table.status),
+  index("ai_workboard_tasks_priority_idx").on(table.priority),
+  index("ai_workboard_tasks_agent_idx").on(table.assignedAgentId),
+  index("ai_workboard_tasks_parent_idx").on(table.parentTaskId),
+  index("ai_workboard_tasks_created_idx").on(table.createdAt),
+]);
+
+export const insertAiWorkboardTaskSchema = createInsertSchema(aiWorkboardTasks).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertAiWorkboardTask = z.infer<typeof insertAiWorkboardTaskSchema>;
+export type AiWorkboardTask = typeof aiWorkboardTasks.$inferSelect;
