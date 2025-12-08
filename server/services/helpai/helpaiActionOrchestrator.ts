@@ -18,6 +18,7 @@ import { ChatServerHub } from '../ChatServerHub';
 import { db } from '../../db';
 import { notifications, platformUpdates, maintenanceAlerts, systemAuditLogs } from '@shared/schema';
 import { eq, and, desc, gte } from 'drizzle-orm';
+import { automationGovernanceService, type ActionContext, type ConfidenceFactors } from '../ai-brain/automationGovernanceService';
 
 // ============================================================================
 // ACTION TYPES & INTERFACES
@@ -1002,6 +1003,88 @@ class HelpaiActionOrchestrator {
     }
 
     // ============================================================================
+    // AUTOMATION GOVERNANCE GATE - Confidence-based execution control
+    // ============================================================================
+    let governanceDecision = null;
+    let ledgerEntry = null;
+    
+    try {
+      const skipGovernance = ['test', 'health_check'].includes(handler.category);
+      
+      if (!skipGovernance && request.workspaceId) {
+        const actionContext: ActionContext = {
+          actionId: request.actionId,
+          actionName: handler.name,
+          actionCategory: handler.category,
+          workspaceId: request.workspaceId,
+          userId: request.userId,
+          isBot: request.userRole === 'Bot',
+          executorType: request.userRole === 'Bot' ? 'automation_job' : 'user',
+          payload: request.payload,
+        };
+        
+        const confidenceFactors: ConfidenceFactors = {
+          baseScore: 70,
+          contextCompleteness: request.payload ? 80 : 50,
+          riskMultiplier: handler.category === 'payroll' || handler.category === 'invoicing' ? 0.8 : 1.0,
+        };
+        
+        governanceDecision = await automationGovernanceService.evaluateExecution(actionContext, confidenceFactors);
+        
+        ledgerEntry = await automationGovernanceService.createLedgerEntry(actionContext, governanceDecision);
+        
+        if (!governanceDecision.canExecute) {
+          console.log(`[HelpAI Orchestrator] Governance blocked action: ${handler.name} - ${governanceDecision.blockingReason}`);
+          
+          if (ledgerEntry) {
+            await automationGovernanceService.updateLedgerEntry(ledgerEntry.id, {
+              executionStatus: 'blocked',
+              errorDetails: governanceDecision.blockingReason,
+            });
+          }
+          
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Action blocked by governance: ${governanceDecision.blockingReason}`,
+            data: { 
+              governanceDecision, 
+              requiredConsents: governanceDecision.requiredConsents,
+              ledgerEntryId: ledgerEntry?.id,
+            },
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+        
+        if (governanceDecision.requiresApproval && !request.payload?.approvalGranted) {
+          console.log(`[HelpAI Orchestrator] Action requires approval: ${handler.name} (confidence: ${governanceDecision.confidenceScore}%)`);
+          
+          if (ledgerEntry) {
+            await automationGovernanceService.updateLedgerEntry(ledgerEntry.id, {
+              executionStatus: 'awaiting_approval',
+            });
+          }
+          
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Action requires approval (confidence: ${governanceDecision.confidenceScore}%, level: ${governanceDecision.computedLevel})`,
+            data: { 
+              governanceDecision,
+              ledgerEntryId: ledgerEntry?.id,
+              requiresApproval: true,
+            },
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+        
+        console.log(`[HelpAI Orchestrator] Governance approved: ${handler.name} (confidence: ${governanceDecision.confidenceScore}%, level: ${governanceDecision.computedLevel})`);
+      }
+    } catch (govError) {
+      console.warn('[HelpAI Orchestrator] Governance check failed (continuing with caution):', govError);
+    }
+
+    // ============================================================================
     // TRINITY AI INTEGRATION - Pre-Action Reasoning
     // ============================================================================
     let preActionDecision = null;
@@ -1092,6 +1175,24 @@ class HelpaiActionOrchestrator {
         };
       }
 
+      // Update governance ledger with execution result
+      if (ledgerEntry) {
+        await automationGovernanceService.updateLedgerEntry(ledgerEntry.id, {
+          executionStatus: result.success ? 'completed' : 'failed',
+          outputResult: result.data,
+          errorDetails: result.success ? undefined : result.message,
+          executionTimeMs: Date.now() - startTime,
+        });
+        
+        // Add ledger reference to result
+        result.data = {
+          ...result.data,
+          governanceLedgerId: ledgerEntry.id,
+          confidenceScore: governanceDecision?.confidenceScore,
+          automationLevel: governanceDecision?.computedLevel,
+        };
+      }
+
       return result;
     } catch (error: any) {
       const errorResult: ActionResult = {
@@ -1102,6 +1203,15 @@ class HelpaiActionOrchestrator {
       };
 
       await this.logAction(request, errorResult);
+      
+      // Update governance ledger on failure
+      if (ledgerEntry) {
+        await automationGovernanceService.updateLedgerEntry(ledgerEntry.id, {
+          executionStatus: 'failed',
+          errorDetails: error.message,
+          executionTimeMs: Date.now() - startTime,
+        });
+      }
       
       // Notify support of failed action if critical
       if (request.priority === 'critical') {

@@ -32479,6 +32479,273 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     }
   });
 
+
+  // ============================================================================
+  // AUTOMATION GOVERNANCE API ROUTES
+  // Confidence-based automation levels with consent tracking and audit trail
+  // ============================================================================
+
+  // Helper: Check if user has access to workspace
+  const checkWorkspaceAccess = async (userId: string, workspaceId: string): Promise<{ hasAccess: boolean; role?: string }> => {
+    const { employees, workspaces } = await import("@shared/schema");
+    const [employee] = await db.select().from(employees).where(and(eq(employees.userId, userId), eq(employees.workspaceId, workspaceId))).limit(1);
+    if (employee) return { hasAccess: true, role: employee.workspaceRole || 'staff' };
+    const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+    if (workspace?.ownerId === userId) return { hasAccess: true, role: 'org_owner' };
+    return { hasAccess: false };
+  };
+
+  app.get("/api/automation-governance/policy/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { automationGovernanceService } = await import("./services/ai-brain/automationGovernanceService");
+      const { workspaceId } = req.params;
+      const userId = req.userId!;
+      const access = await checkWorkspaceAccess(userId, workspaceId);
+      if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
+      const policy = await automationGovernanceService.getOrCreatePolicy(workspaceId);
+      res.json({ success: true, policy });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.patch("/api/automation-governance/policy/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { automationGovernanceService } = await import("./services/ai-brain/automationGovernanceService");
+      const { workspaceId } = req.params;
+      const userId = req.userId!;
+      const access = await checkWorkspaceAccess(userId, workspaceId);
+      if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
+      if (!['org_owner', 'org_admin'].includes(access.role || '')) {
+        return res.status(403).json({ success: false, error: "Only org owners and admins can modify automation policies" });
+      }
+      const allowedFields = ['currentLevel', 'handHeldThreshold', 'graduatedThreshold', 'highRiskCategories', 'minConfidenceForAutoExecute'];
+      const sanitizedBody: Record<string, any> = { workspaceId };
+      for (const field of allowedFields) {
+        if (req.body[field] !== undefined) sanitizedBody[field] = req.body[field];
+      }
+      const policy = await automationGovernanceService.updatePolicy(sanitizedBody);
+      if (!policy) return res.status(404).json({ success: false, error: "Policy not found" });
+      res.json({ success: true, policy });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/automation-governance/consent", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { automationGovernanceService } = await import("./services/ai-brain/automationGovernanceService");
+      const userId = req.userId!;
+      const { workspaceId, consentType, sourceContext, waiverVersion } = req.body;
+      if (!workspaceId || !consentType) return res.status(400).json({ success: false, error: "workspaceId and consentType required" });
+      if (typeof consentType !== 'string' || consentType.length > 100) return res.status(400).json({ success: false, error: "Invalid consentType" });
+      const access = await checkWorkspaceAccess(userId, workspaceId);
+      if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
+      const consent = await automationGovernanceService.grantUserConsent({ userId, workspaceId, consentType, sourceContext: sourceContext?.substring(0, 500), waiverVersion });
+      if (!consent) return res.status(500).json({ success: false, error: "Failed to grant consent" });
+      res.json({ success: true, consent });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get("/api/automation-governance/consents/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { automationGovernanceService } = await import("./services/ai-brain/automationGovernanceService");
+      const userId = req.userId!;
+      const { workspaceId } = req.params;
+      const access = await checkWorkspaceAccess(userId, workspaceId);
+      if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
+      const consents = await automationGovernanceService.getUserConsents(userId, workspaceId);
+      res.json({ success: true, consents });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/automation-governance/org-consent", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { automationGovernanceService } = await import("./services/ai-brain/automationGovernanceService");
+      const userId = req.userId!;
+      const { workspaceId, waiverVersion } = req.body;
+      if (!workspaceId) return res.status(400).json({ success: false, error: "workspaceId required" });
+      const access = await checkWorkspaceAccess(userId, workspaceId);
+      if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
+      if (access.role !== 'org_owner') {
+        return res.status(403).json({ success: false, error: "Only organization owners can grant org-level automation consent" });
+      }
+      const policy = await automationGovernanceService.updatePolicy({
+        workspaceId, orgOwnerConsent: true, orgOwnerConsentUserId: userId,
+        waiverAccepted: true, waiverVersion: waiverVersion || "1.0",
+      });
+      if (!policy) return res.status(500).json({ success: false, error: "Failed to record org consent" });
+      res.json({ success: true, policy });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get("/api/automation-governance/ledger/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { automationGovernanceService } = await import("./services/ai-brain/automationGovernanceService");
+      const { workspaceId } = req.params;
+      const userId = req.userId!;
+      const access = await checkWorkspaceAccess(userId, workspaceId);
+      if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
+      if (!['org_owner', 'org_admin', 'department_manager'].includes(access.role || '')) {
+        return res.status(403).json({ success: false, error: "Insufficient permissions to view automation ledger" });
+      }
+      const { status, approvalState, limit, offset } = req.query;
+      const parsedLimit = Math.min(parseInt(limit as string) || 50, 100);
+      const parsedOffset = parseInt(offset as string) || 0;
+      const entries = await automationGovernanceService.getLedgerEntries(workspaceId, {
+        status: status as string, approvalState: approvalState as string,
+        limit: parsedLimit, offset: parsedOffset,
+      });
+      res.json({ success: true, entries, count: entries.length });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get("/api/automation-governance/pending-approvals/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { automationGovernanceService } = await import("./services/ai-brain/automationGovernanceService");
+      const { workspaceId } = req.params;
+      const userId = req.userId!;
+      const access = await checkWorkspaceAccess(userId, workspaceId);
+      if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
+      if (!['org_owner', 'org_admin', 'department_manager', 'supervisor'].includes(access.role || '')) {
+        return res.status(403).json({ success: false, error: "Insufficient permissions to view pending approvals" });
+      }
+      const approvals = await automationGovernanceService.getPendingApprovals(workspaceId);
+      res.json({ success: true, approvals, count: approvals.length });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/automation-governance/approve/:ledgerEntryId", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { automationGovernanceService, automationActionLedger } = await import("./services/ai-brain/automationGovernanceService");
+      const { automationActionLedger: ledgerTable } = await import("@shared/schema");
+      const userId = req.userId!;
+      const { ledgerEntryId } = req.params;
+      const { notes } = req.body;
+      const [entry] = await db.select().from(ledgerTable).where(eq(ledgerTable.id, ledgerEntryId)).limit(1);
+      if (!entry) return res.status(404).json({ success: false, error: "Ledger entry not found" });
+      if (!entry.workspaceId) return res.status(400).json({ success: false, error: "Entry has no workspace" });
+      const access = await checkWorkspaceAccess(userId, entry.workspaceId);
+      if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied" });
+      if (!['org_owner', 'org_admin', 'department_manager'].includes(access.role || '')) {
+        return res.status(403).json({ success: false, error: "Insufficient permissions to approve actions" });
+      }
+      const success = await automationGovernanceService.approveLedgerEntry(ledgerEntryId, userId, notes?.substring(0, 500));
+      res.json({ success });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/automation-governance/reject/:ledgerEntryId", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { automationGovernanceService } = await import("./services/ai-brain/automationGovernanceService");
+      const { automationActionLedger: ledgerTable } = await import("@shared/schema");
+      const userId = req.userId!;
+      const { ledgerEntryId } = req.params;
+      const { reason } = req.body;
+      if (!reason || typeof reason !== 'string') return res.status(400).json({ success: false, error: "Rejection reason required" });
+      const [entry] = await db.select().from(ledgerTable).where(eq(ledgerTable.id, ledgerEntryId)).limit(1);
+      if (!entry) return res.status(404).json({ success: false, error: "Ledger entry not found" });
+      if (!entry.workspaceId) return res.status(400).json({ success: false, error: "Entry has no workspace" });
+      const access = await checkWorkspaceAccess(userId, entry.workspaceId);
+      if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied" });
+      if (!['org_owner', 'org_admin', 'department_manager'].includes(access.role || '')) {
+        return res.status(403).json({ success: false, error: "Insufficient permissions to reject actions" });
+      }
+      const success = await automationGovernanceService.rejectLedgerEntry(ledgerEntryId, userId, reason.substring(0, 500));
+      res.json({ success });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get("/api/automation-governance/metrics/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { automationGovernanceService } = await import("./services/ai-brain/automationGovernanceService");
+      const { workspaceId } = req.params;
+      const userId = req.userId!;
+      const access = await checkWorkspaceAccess(userId, workspaceId);
+      if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
+      if (!['org_owner', 'org_admin'].includes(access.role || '')) {
+        return res.status(403).json({ success: false, error: "Insufficient permissions to view metrics" });
+      }
+      const { daysBack } = req.query;
+      const parsedDaysBack = Math.min(Math.max(parseInt(daysBack as string) || 30, 1), 365);
+      const metrics = await automationGovernanceService.getGovernanceMetrics(workspaceId, parsedDaysBack);
+      res.json({ success: true, metrics });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================================================
+  // TRINITY CONTEXT MANAGER API ROUTES  
+  // ============================================================================
+
+  app.get("/api/trinity/session", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { trinityContextManager } = await import("./services/ai-brain/trinityContextManager");
+      const userId = req.userId!;
+      const workspaceId = req.query.workspaceId as string | undefined;
+      const context = await trinityContextManager.getOrCreateSession(userId, workspaceId);
+      res.json({ success: true, sessionId: context.sessionId, turnCount: context.turns.length, knowledgeGaps: context.knowledgeGaps, pendingClarifications: context.pendingClarifications });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/trinity/session/:sessionId/turn", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { trinityContextManager } = await import("./services/ai-brain/trinityContextManager");
+      const { sessionId } = req.params;
+      const { role, content, contentType, toolCalls, toolResults, confidenceScore, confidenceFactors } = req.body;
+      if (!role || !content) return res.status(400).json({ success: false, error: "role and content required" });
+      const turn = await trinityContextManager.addTurn(sessionId, role, content, { contentType, toolCalls, toolResults, confidenceScore, confidenceFactors });
+      if (!turn) return res.status(500).json({ success: false, error: "Failed to add turn" });
+      res.json({ success: true, turn });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/trinity/session/:sessionId/escalate", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { trinityContextManager } = await import("./services/ai-brain/trinityContextManager");
+      const userId = req.userId!;
+      const workspaceId = req.query.workspaceId as string | undefined;
+      const { sessionId } = req.params;
+      const { reason, urgency } = req.body;
+      if (!reason) return res.status(400).json({ success: false, error: "reason required" });
+      const context = await trinityContextManager.getOrCreateSession(userId, workspaceId);
+      if (context.sessionId !== sessionId) return res.status(404).json({ success: false, error: "Session not found" });
+      const success = await trinityContextManager.escalateToSupport(context, reason, urgency || 'medium');
+      res.json({ success });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/trinity/session/:sessionId/end", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { trinityContextManager } = await import("./services/ai-brain/trinityContextManager");
+      const { sessionId } = req.params;
+      const success = await trinityContextManager.endSession(sessionId);
+      res.json({ success });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
 }
 
 // ============================================================================
@@ -32490,3 +32757,4 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
  * List all available suggested changes for AI Brain
  * Query params: category, tag, priority, search
  */
+

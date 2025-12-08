@@ -17387,3 +17387,309 @@ export const insertTrinityCreditCostSchema = createInsertSchema(trinityCreditCos
 });
 export type InsertTrinityCreditCost = z.infer<typeof insertTrinityCreditCostSchema>;
 export type TrinityCreditCost = typeof trinityCreditCosts.$inferSelect;
+
+// ============================================================================
+// AUTOMATION GOVERNANCE SYSTEM
+// Confidence-based automation levels with consent tracking and audit trail
+// ============================================================================
+
+export const automationLevelEnum = pgEnum("automation_level", [
+  "hand_held",       // 0-40% confidence: All actions require explicit user confirmation
+  "graduated",       // 41-75% confidence: Routine auto-execute, high-risk requires confirmation
+  "full_automation", // 76-100% confidence: All actions auto-execute with notifications
+]);
+
+export const workspaceAutomationPolicies = pgTable("workspace_automation_policies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  currentLevel: automationLevelEnum("current_level").notNull().default("hand_held"),
+  
+  handHeldThreshold: integer("hand_held_threshold").notNull().default(40),
+  graduatedThreshold: integer("graduated_threshold").notNull().default(75),
+  
+  reviewCadenceDays: integer("review_cadence_days").default(30),
+  lastReviewedAt: timestamp("last_reviewed_at"),
+  lastReviewedBy: varchar("last_reviewed_by").references(() => users.id, { onDelete: 'set null' }),
+  nextReviewAt: timestamp("next_review_at"),
+  
+  highRiskCategories: text("high_risk_categories").array().default(sql`ARRAY['payroll', 'billing', 'termination', 'data_deletion']`),
+  
+  autoEscalateOnLowConfidence: boolean("auto_escalate_on_low_confidence").default(true),
+  minConfidenceForAutoExecute: integer("min_confidence_for_auto_execute").default(60),
+  
+  enableAuditNotifications: boolean("enable_audit_notifications").default(true),
+  
+  orgOwnerConsent: boolean("org_owner_consent").default(false),
+  orgOwnerConsentAt: timestamp("org_owner_consent_at"),
+  orgOwnerConsentUserId: varchar("org_owner_consent_user_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  waiverAccepted: boolean("waiver_accepted").default(false),
+  waiverAcceptedAt: timestamp("waiver_accepted_at"),
+  waiverVersion: varchar("waiver_version", { length: 20 }).default("1.0"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  uniqueIndex("workspace_automation_policies_workspace_idx").on(table.workspaceId),
+  index("workspace_automation_policies_level_idx").on(table.currentLevel),
+]);
+
+export const insertWorkspaceAutomationPolicySchema = createInsertSchema(workspaceAutomationPolicies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertWorkspaceAutomationPolicy = z.infer<typeof insertWorkspaceAutomationPolicySchema>;
+export type WorkspaceAutomationPolicy = typeof workspaceAutomationPolicies.$inferSelect;
+
+export const userAutomationConsents = pgTable("user_automation_consents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  consentType: varchar("consent_type", { length: 50 }).notNull(),
+  
+  consentGranted: boolean("consent_granted").notNull().default(false),
+  consentGrantedAt: timestamp("consent_granted_at"),
+  
+  waiverAccepted: boolean("waiver_accepted").default(false),
+  waiverAcceptedAt: timestamp("waiver_accepted_at"),
+  waiverVersion: varchar("waiver_version", { length: 20 }),
+  
+  sourceContext: varchar("source_context", { length: 100 }),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  
+  expiresAt: timestamp("expires_at"),
+  revokedAt: timestamp("revoked_at"),
+  revokedReason: text("revoked_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("user_automation_consents_user_idx").on(table.userId),
+  index("user_automation_consents_workspace_idx").on(table.workspaceId),
+  index("user_automation_consents_type_idx").on(table.consentType),
+  uniqueIndex("unique_user_workspace_consent_type").on(table.userId, table.workspaceId, table.consentType),
+]);
+
+export const insertUserAutomationConsentSchema = createInsertSchema(userAutomationConsents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertUserAutomationConsent = z.infer<typeof insertUserAutomationConsentSchema>;
+export type UserAutomationConsent = typeof userAutomationConsents.$inferSelect;
+
+export const automationActionLedger = pgTable("automation_action_ledger", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'set null' }),
+  
+  actionId: varchar("action_id", { length: 100 }).notNull(),
+  actionName: varchar("action_name", { length: 200 }).notNull(),
+  actionCategory: varchar("action_category", { length: 50 }).notNull(),
+  toolName: varchar("tool_name", { length: 100 }),
+  
+  confidenceScore: integer("confidence_score").notNull(),
+  computedLevel: automationLevelEnum("computed_level").notNull(),
+  policyLevel: automationLevelEnum("policy_level").notNull(),
+  
+  requiresHumanApproval: boolean("requires_human_approval").default(false),
+  approvalState: varchar("approval_state", { length: 30 }).default("pending"),
+  approvedBy: varchar("approved_by").references(() => users.id, { onDelete: 'set null' }),
+  approvedAt: timestamp("approved_at"),
+  approvalNotes: text("approval_notes"),
+  
+  executedBy: varchar("executed_by").references(() => users.id, { onDelete: 'set null' }),
+  executedByBot: boolean("executed_by_bot").default(false),
+  executorType: varchar("executor_type", { length: 30 }),
+  
+  inputPayload: jsonb("input_payload"),
+  outputResult: jsonb("output_result"),
+  errorDetails: text("error_details"),
+  
+  executionStatus: varchar("execution_status", { length: 30 }).default("pending"),
+  executionTimeMs: integer("execution_time_ms"),
+  
+  consentSnapshotId: varchar("consent_snapshot_id"),
+  policySnapshotId: varchar("policy_snapshot_id"),
+  
+  isHighRisk: boolean("is_high_risk").default(false),
+  riskFactors: text("risk_factors").array(),
+  
+  trinitySessionId: varchar("trinity_session_id"),
+  conversationTurnId: varchar("conversation_turn_id"),
+  
+  auditLogId: varchar("audit_log_id"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("automation_action_ledger_workspace_idx").on(table.workspaceId),
+  index("automation_action_ledger_action_idx").on(table.actionId),
+  index("automation_action_ledger_category_idx").on(table.actionCategory),
+  index("automation_action_ledger_status_idx").on(table.executionStatus),
+  index("automation_action_ledger_level_idx").on(table.computedLevel),
+  index("automation_action_ledger_approval_idx").on(table.approvalState),
+  index("automation_action_ledger_created_idx").on(table.createdAt),
+]);
+
+export const insertAutomationActionLedgerSchema = createInsertSchema(automationActionLedger).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAutomationActionLedger = z.infer<typeof insertAutomationActionLedgerSchema>;
+export type AutomationActionLedger = typeof automationActionLedger.$inferSelect;
+
+export const automationAcknowledgments = pgTable("automation_acknowledgments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ledgerEntryId: varchar("ledger_entry_id").notNull().references(() => automationActionLedger.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  acknowledgmentType: varchar("acknowledgment_type", { length: 50 }).notNull(),
+  
+  acknowledged: boolean("acknowledged").default(false),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  
+  response: varchar("response", { length: 30 }),
+  responseNotes: text("response_notes"),
+  
+  reminderSentAt: timestamp("reminder_sent_at"),
+  reminderCount: integer("reminder_count").default(0),
+  
+  expiresAt: timestamp("expires_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("automation_acknowledgments_ledger_idx").on(table.ledgerEntryId),
+  index("automation_acknowledgments_user_idx").on(table.userId),
+  index("automation_acknowledgments_type_idx").on(table.acknowledgmentType),
+]);
+
+export const insertAutomationAcknowledgmentSchema = createInsertSchema(automationAcknowledgments).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertAutomationAcknowledgment = z.infer<typeof insertAutomationAcknowledgmentSchema>;
+export type AutomationAcknowledgment = typeof automationAcknowledgments.$inferSelect;
+
+export const trinityConversationSessions = pgTable("trinity_conversation_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'set null' }),
+  
+  sessionState: varchar("session_state", { length: 30 }).default("active"),
+  
+  contextMemory: jsonb("context_memory").default(sql`'{}'::jsonb`),
+  turnCount: integer("turn_count").default(0),
+  
+  lastToolUsed: varchar("last_tool_used", { length: 100 }),
+  lastActionId: varchar("last_action_id", { length: 100 }),
+  lastConfidenceScore: integer("last_confidence_score"),
+  
+  knowledgeGaps: text("knowledge_gaps").array().default(sql`'{}'`),
+  pendingClarifications: text("pending_clarifications").array().default(sql`'{}'`),
+  
+  escalationPending: boolean("escalation_pending").default(false),
+  escalationReason: text("escalation_reason"),
+  escalatedToSupportAt: timestamp("escalated_to_support_at"),
+  
+  sessionMetrics: jsonb("session_metrics").default(sql`'{}'::jsonb`),
+  
+  startedAt: timestamp("started_at").defaultNow(),
+  lastActivityAt: timestamp("last_activity_at").defaultNow(),
+  endedAt: timestamp("ended_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("trinity_conversation_sessions_user_idx").on(table.userId),
+  index("trinity_conversation_sessions_workspace_idx").on(table.workspaceId),
+  index("trinity_conversation_sessions_state_idx").on(table.sessionState),
+  index("trinity_conversation_sessions_activity_idx").on(table.lastActivityAt),
+]);
+
+export const insertTrinityConversationSessionSchema = createInsertSchema(trinityConversationSessions).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTrinityConversationSession = z.infer<typeof insertTrinityConversationSessionSchema>;
+export type TrinityConversationSession = typeof trinityConversationSessions.$inferSelect;
+
+export const trinityConversationTurns = pgTable("trinity_conversation_turns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sessionId: varchar("session_id").notNull().references(() => trinityConversationSessions.id, { onDelete: 'cascade' }),
+  
+  turnNumber: integer("turn_number").notNull(),
+  role: varchar("role", { length: 20 }).notNull(),
+  
+  content: text("content").notNull(),
+  contentType: varchar("content_type", { length: 30 }).default("text"),
+  
+  toolCalls: jsonb("tool_calls").default(sql`'[]'::jsonb`),
+  toolResults: jsonb("tool_results").default(sql`'[]'::jsonb`),
+  
+  confidenceScore: integer("confidence_score"),
+  confidenceFactors: jsonb("confidence_factors").default(sql`'{}'::jsonb`),
+  
+  knowledgeGapDetected: boolean("knowledge_gap_detected").default(false),
+  knowledgeGapDetails: text("knowledge_gap_details"),
+  
+  ledgerEntryId: varchar("ledger_entry_id").references(() => automationActionLedger.id, { onDelete: 'set null' }),
+  
+  tokenCount: integer("token_count"),
+  responseTimeMs: integer("response_time_ms"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("trinity_conversation_turns_session_idx").on(table.sessionId),
+  index("trinity_conversation_turns_number_idx").on(table.turnNumber),
+  index("trinity_conversation_turns_role_idx").on(table.role),
+]);
+
+export const insertTrinityConversationTurnSchema = createInsertSchema(trinityConversationTurns).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertTrinityConversationTurn = z.infer<typeof insertTrinityConversationTurnSchema>;
+export type TrinityConversationTurn = typeof trinityConversationTurns.$inferSelect;
+
+export const knowledgeGapLogs = pgTable("knowledge_gap_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'set null' }),
+  sessionId: varchar("session_id").references(() => trinityConversationSessions.id, { onDelete: 'set null' }),
+  turnId: varchar("turn_id").references(() => trinityConversationTurns.id, { onDelete: 'set null' }),
+  
+  gapType: varchar("gap_type", { length: 50 }).notNull(),
+  gapDescription: text("gap_description").notNull(),
+  userQuery: text("user_query"),
+  
+  contextSnapshot: jsonb("context_snapshot"),
+  
+  resolutionStatus: varchar("resolution_status", { length: 30 }).default("open"),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionMethod: varchar("resolution_method", { length: 50 }),
+  resolutionDetails: text("resolution_details"),
+  
+  learningWorkflowId: varchar("learning_workflow_id"),
+  learningCompleted: boolean("learning_completed").default(false),
+  
+  priority: varchar("priority", { length: 20 }).default("normal"),
+  frequency: integer("frequency").default(1),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("knowledge_gap_logs_workspace_idx").on(table.workspaceId),
+  index("knowledge_gap_logs_type_idx").on(table.gapType),
+  index("knowledge_gap_logs_status_idx").on(table.resolutionStatus),
+  index("knowledge_gap_logs_priority_idx").on(table.priority),
+]);
+
+export const insertKnowledgeGapLogSchema = createInsertSchema(knowledgeGapLogs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertKnowledgeGapLog = z.infer<typeof insertKnowledgeGapLogSchema>;
+export type KnowledgeGapLog = typeof knowledgeGapLogs.$inferSelect;

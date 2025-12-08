@@ -60,6 +60,18 @@ The system employs a multi-tenant architecture with RBAC security and isolation,
 - **AI Brain Orchestration Infrastructure:** Durable workflow execution with persistence, commitments, and multi-agent coordination including WorkflowLedger, CommitmentManager, SupervisoryAgent, and SchedulerCoordinator.
 - **Elevated Session Authentication:** HMAC-signed session elevation for support roles and AI services (Trinity, HelpAI, subagents, bots) with TTL expiry (4h idle, 12h absolute), automatic revocation on account lock, and audit logging. Regular org users rely on standard RBAC/subscription tier controls.
 - **ElevatedSessionGuardian Subagent:** AI-powered security subagent with Dr. Holmes-style diagnostics for session anomaly detection (HMAC mismatches, locked accounts, idle timeouts, elevation rate limits), self-healing capabilities, telemetry emissions, and Trinity escalation. Maps 10 anomaly patterns to risk levels with dynamic severity for support tickets.
+- **Automation Governance System:** Confidence-driven execution gates across three tiers (HAND_HELD, GRADUATED, FULL_AUTOMATION) with comprehensive consent/acknowledgment tracking for org owners and end-users. All automation actions flow through evaluateAction() with confidence scoring (0-100), policy evaluation, and persistent audit trail via automation_action_ledger linked to systemAuditLogs.
+- **TrinityContextManager:** Multi-turn conversation memory with context building, confidence annotation, knowledge gap detection, and human escalation bridge. Enables Trinity to approach ChatGPT/Gemini levels for user assistance with persistent session tracking.
+
+**Automation Governance Tiers:**
+- **HAND_HELD:** Requires approval every time - for low-confidence or high-risk actions
+- **GRADUATED:** Pre-approved for routine tasks after org owner consent
+- **FULL_AUTOMATION:** Executes autonomously within policy boundaries at high confidence
+
+**Consent Flow:**
+- Org owner accepts liability waiver at org creation (tracked in workspace_automation_policies)
+- End-users grant tool-specific consent (tracked in user_automation_consents)
+- All consents persisted with version tracking and audit timestamps
 
 **System Design Choices:**
 - **Modularity:** Composed of 87 backend service modules and 220+ frontend routes.
