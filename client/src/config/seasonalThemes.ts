@@ -480,9 +480,9 @@ export interface SeasonalEffectsConfig {
  */
 export const SEASONAL_EFFECTS_CONFIG: SeasonalEffectsConfig = {
   snow: {
-    // Snow pile cycle: 45 minutes total (form 25min + hold 10min + dissolve 10min)
-    formDuration: 1500000,    // 25 minutes - very slow pile buildup
-    holdDuration: 600000,     // 10 minutes  
+    // Snow pile cycle: 2 hours total (form 90min + hold 20min + dissolve 10min)
+    formDuration: 5400000,    // 90 minutes - super slow pile buildup
+    holdDuration: 1200000,    // 20 minutes - longer hold time
     dissolveDuration: 600000, // 10 minutes
     
     // Lower intensity = less resource usage
