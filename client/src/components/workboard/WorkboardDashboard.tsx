@@ -15,6 +15,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -128,7 +130,17 @@ function TaskCard({
             <span data-testid={`text-task-time-${task.id}`}>
               {task.createdAt ? new Date(task.createdAt).toLocaleString() : 'Unknown time'}
             </span>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-2">
+              {task.executionMode === 'trinity_fast' && (
+                <Badge 
+                  variant="outline" 
+                  className="bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/50 gap-1 text-xs"
+                  data-testid={`badge-fast-mode-${task.id}`}
+                >
+                  <Zap className="h-3 w-3" />
+                  Fast
+                </Badge>
+              )}
               {task.estimatedTokens && (
                 <span className="flex items-center gap-1">
                   <Zap className="h-3 w-3" />
@@ -220,6 +232,20 @@ function TaskDetailSheet({
                   <Bot className="h-4 w-4" />
                   <span className="text-sm">{task.assignedAgentName}</span>
                 </div>
+              </div>
+            )}
+            
+            {task.executionMode === 'trinity_fast' && (
+              <div>
+                <h4 className="text-sm font-medium mb-1">Execution Mode</h4>
+                <Badge 
+                  variant="outline" 
+                  className="bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/50 gap-1"
+                  data-testid="badge-task-fast-mode"
+                >
+                  <Zap className="h-3 w-3" />
+                  Trinity Fast Mode (2x credits)
+                </Badge>
               </div>
             )}
             
@@ -349,6 +375,7 @@ function SubmitTaskDialog({ isMobile }: { isMobile: boolean }) {
   const [open, setOpen] = useState(false);
   const [content, setContent] = useState('');
   const [priority, setPriority] = useState<string>('normal');
+  const [fastModeEnabled, setFastModeEnabled] = useState(false);
   const { toast } = useToast();
   const submitTask = useSubmitWorkboardTask();
   
@@ -363,6 +390,7 @@ function SubmitTaskDialog({ isMobile }: { isMobile: boolean }) {
         requestContent: content,
         requestType: 'direct_api',
         priority: priority as 'critical' | 'high' | 'normal' | 'low' | 'scheduled',
+        executionMode: fastModeEnabled ? 'trinity_fast' : 'normal',
       });
       toast({ title: 'Task submitted successfully' });
       setContent('');
@@ -412,6 +440,31 @@ function SubmitTaskDialog({ isMobile }: { isMobile: boolean }) {
               </SelectContent>
             </Select>
           </div>
+          
+          <div className={`flex items-center justify-between p-3 rounded-lg border ${
+            fastModeEnabled ? 'bg-amber-500/10 border-amber-500/50' : 'bg-muted/50'
+          }`}>
+            <div className="flex items-center gap-3">
+              <div className={`p-2 rounded-full ${fastModeEnabled ? 'bg-amber-500/20' : 'bg-muted'}`}>
+                <Zap className={`h-4 w-4 ${fastModeEnabled ? 'text-amber-500' : 'text-muted-foreground'}`} />
+              </div>
+              <div>
+                <Label htmlFor="fast-mode" className="text-sm font-medium cursor-pointer">
+                  Trinity Fast Mode
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Parallel subagent execution (2x credits)
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="fast-mode"
+              checked={fastModeEnabled}
+              onCheckedChange={setFastModeEnabled}
+              data-testid="switch-fast-mode"
+            />
+          </div>
+          
           <Button 
             onClick={handleSubmit} 
             className="w-full" 

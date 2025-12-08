@@ -14,7 +14,7 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
    */
   app.post('/api/workboard/submit', requireAuth, async (req: any, res: any) => {
     try {
-      const { requestContent, requestType, priority, notifyVia, metadata } = req.body;
+      const { requestContent, requestType, priority, notifyVia, metadata, executionMode } = req.body;
       const userId = req.userId!;
       const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
 
@@ -33,7 +33,8 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
         requestContent: requestContent.trim(),
         requestMetadata: metadata || {},
         priority: priority || 'normal',
-        notifyVia: notifyVia || ['trinity', 'websocket']
+        notifyVia: notifyVia || ['trinity', 'websocket'],
+        executionMode: executionMode || 'normal',
       });
 
       res.json({
@@ -106,6 +107,7 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
           retryCount: t.retryCount,
           maxRetries: t.maxRetries,
           notifyVia: t.notifyVia,
+          executionMode: t.executionMode,
           createdAt: t.createdAt,
           startedAt: t.startedAt,
           completedAt: t.completedAt,

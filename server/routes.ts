@@ -1984,7 +1984,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
    */
   app.post('/api/voice-command', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const { transcript, timestamp, source } = req.body;
+      const { transcript, timestamp, source, executionMode } = req.body;
       const userId = req.userId!;
       const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
       
