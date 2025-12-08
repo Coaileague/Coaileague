@@ -393,6 +393,7 @@ class AIBrainMasterOrchestrator {
     this.registerDynamicPricingActions();
     await this.registerSessionCheckpointActions();
     await this.registerElevatedSessionGuardianActions();
+    this.registerMemoryAndGovernanceActions();
     
     // Subscribe to platform events
     this.subscribeToEvents();
@@ -4374,6 +4375,251 @@ class AIBrainMasterOrchestrator {
     });
 
     console.log('[AI Brain Master Orchestrator] Registered elevated session guardian actions');
+  }
+
+  private registerMemoryAndGovernanceActions() {
+    helpaiOrchestrator.registerAction({
+      actionId: 'memory.build_context',
+      name: 'Build Memory Context',
+      category: 'memory',
+      description: 'Build memory context for AI prompts with user profile and history',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin', 'Bot'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { trinityMemoryService } = await import('./trinityMemoryService');
+        const { targetUserId, topic } = request.payload || {};
+        
+        try {
+          const context = await trinityMemoryService.buildMemoryContext(
+            targetUserId || request.userId!,
+            request.workspaceId,
+            topic
+          );
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Memory context built successfully',
+            data: { context },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'memory.get_profile',
+      name: 'Get Memory Profile',
+      category: 'memory',
+      description: 'Get user memory profile for intelligent context building',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin', 'Bot'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { trinityMemoryService } = await import('./trinityMemoryService');
+        const { targetUserId } = request.payload || {};
+        
+        try {
+          const profile = await trinityMemoryService.getUserMemoryProfile(
+            targetUserId || request.userId!,
+            request.workspaceId
+          );
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Memory profile retrieved',
+            data: { profile },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'memory.share_insight',
+      name: 'Share Cross-Bot Insight',
+      category: 'memory',
+      description: 'Share an insight across all AI agents for collective learning',
+      requiredRoles: ['support_manager', 'sysop', 'deputy_admin', 'root_admin', 'Bot'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { trinityMemoryService } = await import('./trinityMemoryService');
+        const { insightType, sourceBot, insight, effectiveness } = request.payload || {};
+        
+        try {
+          if (!insightType || !insight) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Required fields: insightType, insight',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          await trinityMemoryService.shareInsight({
+            sourceAgent: sourceBot || 'trinity',
+            insightType: insightType as 'resolution' | 'pattern' | 'optimization' | 'warning',
+            workspaceScope: request.workspaceId || null,
+            title: `${insightType} insight`,
+            content: insight,
+            confidence: effectiveness || 0.8,
+            applicableScenarios: ['general']
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Insight shared across agents',
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'governance.evaluate_action',
+      name: 'Evaluate Action Confidence',
+      category: 'automation',
+      description: 'Evaluate action confidence before execution with governance gates',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin', 'Bot'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { automationGovernanceService } = await import('./automationGovernanceService');
+        const { actionName, actionCategory, parameters, confidenceFactors } = request.payload || {};
+        
+        try {
+          if (!actionName || !actionCategory) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Required fields: actionName, actionCategory',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          const context = {
+            actionId: actionName,
+            actionCategory,
+            executorId: request.userId!,
+            executorType: 'user' as const,
+            workspaceId: request.workspaceId!,
+            inputData: parameters || {},
+            triggeredAt: new Date()
+          };
+          
+          const result = await automationGovernanceService.evaluateExecution(
+            context,
+            confidenceFactors || {}
+          );
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: result.allowed ? 'Action approved by governance' : 'Action blocked by governance',
+            data: result,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'governance.record_outcome',
+      name: 'Record Action Outcome',
+      category: 'automation',
+      description: 'Record action outcome for confidence learning feedback loop',
+      requiredRoles: ['support_agent', 'support_manager', 'sysop', 'deputy_admin', 'root_admin', 'Bot'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { automationGovernanceService } = await import('./automationGovernanceService');
+        const { actionName, actionCategory, outcome, errorMessage, lessonsLearned, confidenceScore } = request.payload || {};
+        
+        try {
+          if (!actionName || !actionCategory || !outcome) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Required fields: actionName, actionCategory, outcome',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          const context = {
+            actionId: actionName,
+            actionName,
+            actionCategory,
+            executorId: request.userId!,
+            executorType: 'user' as const,
+            workspaceId: request.workspaceId!,
+            inputData: {},
+            triggeredAt: new Date()
+          };
+          
+          const decision = {
+            canExecute: true,
+            requiresApproval: false,
+            computedLevel: 'graduated' as const,
+            policyLevel: 'graduated' as const,
+            confidenceScore: confidenceScore || 75,
+            confidenceFactors: {},
+            isHighRisk: false,
+            riskFactors: []
+          };
+          
+          await automationGovernanceService.recordOutcomeForLearning({
+            context,
+            decision,
+            outcome: outcome as 'success' | 'failure' | 'partial',
+            errorMessage,
+            lessonsLearned
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Outcome recorded for learning',
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered memory and governance actions');
   }
 }
 

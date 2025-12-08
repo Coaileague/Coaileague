@@ -240,7 +240,8 @@ class HelpaiActionOrchestrator {
           scheduledEndTime: endTime,
           workspaceId: request.workspaceId || null,
           createdById: request.userId,
-          isActive: true
+          isActive: true,
+          affectedServices: ['platform']
         });
 
         return {

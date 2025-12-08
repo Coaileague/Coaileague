@@ -354,6 +354,85 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     isActive: true,
     version: '1.0.0',
   },
+  {
+    name: 'MemoryAgent',
+    domain: 'orchestration',
+    description: 'Manages AI memory, learning, and cross-bot knowledge sharing. Provides persistent context for Trinity, HelpAI, and automation services.',
+    capabilities: [
+      'memory.build_context',
+      'memory.get_profile',
+      'memory.record_outcome',
+      'memory.share_insight',
+      'memory.get_tool_catalog',
+      'memory.learn_from_experience'
+    ],
+    requiredTools: ['context_builder', 'profile_manager', 'insight_broadcaster', 'tool_catalog'],
+    escalationPolicy: { 
+      maxRetries: 3, 
+      escalateOn: ['context_build_failed', 'memory_corruption', 'learning_failure'],
+      alwaysNotify: false
+    },
+    diagnosticWorkflow: {
+      diagnose: ['verify_memory_integrity', 'check_context_freshness', 'audit_learning_gaps'],
+      fix: ['rebuild_context', 'clear_stale_memory', 'resync_knowledge'],
+      validate: ['verify_context_quality', 'check_insight_propagation'],
+      report: ['generate_memory_health_report']
+    },
+    knownPatterns: ['stale_context', 'memory_drift', 'insight_not_shared', 'learning_gap'],
+    fixStrategies: { 
+      stale_context: 'rebuild_from_source', 
+      memory_drift: 'resync_with_database',
+      insight_not_shared: 'rebroadcast_to_agents' 
+    },
+    maxRetries: 3,
+    timeoutMs: 30000,
+    confidenceThreshold: 0.7,
+    requiresApproval: false,
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'Bot'],
+    bypassAuthFor: ['root_admin', 'deputy_admin', 'Bot'],
+    isActive: true,
+    version: '1.0.0',
+  },
+  {
+    name: 'GovernanceAgent',
+    domain: 'orchestration',
+    description: 'Manages automation governance, confidence-driven execution gates, and consent tracking. Evaluates action confidence and enforces policy boundaries.',
+    capabilities: [
+      'governance.evaluate_action',
+      'governance.check_consent',
+      'governance.record_outcome',
+      'governance.calculate_confidence',
+      'governance.get_policy',
+      'governance.update_policy'
+    ],
+    requiredTools: ['confidence_calculator', 'consent_tracker', 'policy_evaluator', 'action_ledger'],
+    escalationPolicy: { 
+      maxRetries: 2, 
+      escalateOn: ['policy_violation', 'consent_missing', 'low_confidence_critical_action'],
+      alwaysNotify: true,
+      notifyRoles: ['root_admin', 'deputy_admin', 'org_owner']
+    },
+    diagnosticWorkflow: {
+      diagnose: ['verify_consent_state', 'audit_action_ledger', 'check_policy_compliance'],
+      fix: ['request_consent', 'apply_policy_override', 'recalculate_confidence'],
+      validate: ['verify_action_authorized', 'confirm_audit_trail'],
+      report: ['generate_governance_report']
+    },
+    knownPatterns: ['consent_expired', 'confidence_too_low', 'policy_outdated', 'audit_gap'],
+    fixStrategies: { 
+      consent_expired: 'prompt_for_renewal', 
+      confidence_too_low: 'gather_more_factors',
+      policy_outdated: 'notify_admin_for_review' 
+    },
+    maxRetries: 2,
+    timeoutMs: 20000,
+    confidenceThreshold: 0.85,
+    requiresApproval: true,
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'org_owner', 'org_admin'],
+    bypassAuthFor: ['root_admin', 'deputy_admin'],
+    isActive: true,
+    version: '1.0.0',
+  },
 ];
 
 // ============================================================================
