@@ -433,7 +433,7 @@ class AIAnalyticsEngine {
   private static instance: AIAnalyticsEngine;
   private contextResolver: ContextResolver;
   private geminiClient: GeminiClientWrapper;
-  private insightStore: Map<string, TrinityInsight[]> = new Map(); // In-memory store (TODO: persist to DB)
+  private insightStore: Map<string, TrinityInsight[]> = new Map(); // In-memory cache for fast access (DB is primary store)
 
   static getInstance(): AIAnalyticsEngine {
     if (!this.instance) {
