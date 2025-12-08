@@ -17074,3 +17074,65 @@ export const insertSupportInterventionSchema = createInsertSchema(supportInterve
 });
 export type InsertSupportIntervention = z.infer<typeof insertSupportInterventionSchema>;
 export type SupportIntervention = typeof supportInterventions.$inferSelect;
+
+// ============================================================================
+// SUPPORT SESSION ELEVATIONS - Verified Support Session Bypass
+// ============================================================================
+
+/**
+ * Tracks elevated support sessions where authenticated support roles
+ * can bypass repeated auth checks for AI-driven automation workflows.
+ * 
+ * Key features:
+ * - HMAC signature verification for tamper protection
+ * - Time-bounded elevation with absolute and idle timeouts
+ * - Audit trail for security compliance
+ * - Automatic cleanup on logout or expiration
+ */
+export const supportSessionElevations = pgTable("support_session_elevations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Session binding
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  sessionId: varchar("session_id").notNull(), // Express session ID
+  
+  // Cryptographic verification
+  signature: varchar("signature", { length: 128 }).notNull(), // HMAC-SHA256 signature
+  signatureVersion: integer("signature_version").default(1), // For future algorithm upgrades
+  
+  // Timing controls
+  issuedAt: timestamp("issued_at").notNull().defaultNow(),
+  expiresAt: timestamp("expires_at").notNull(), // Absolute expiration (max 12 hours)
+  lastActivityAt: timestamp("last_activity_at").defaultNow(), // For idle timeout (4 hours)
+  
+  // Context
+  issuedBy: varchar("issued_by").references(() => users.id, { onDelete: 'set null' }), // Who approved elevation (self for auto-approved roles)
+  platformRole: varchar("platform_role", { length: 50 }).notNull(), // Role at time of elevation
+  elevationReason: varchar("elevation_reason", { length: 200 }), // 'auto_support_login', 'governance_approved', 'mfa_verified'
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  revokedAt: timestamp("revoked_at"),
+  revokedBy: varchar("revoked_by").references(() => users.id, { onDelete: 'set null' }),
+  revocationReason: varchar("revocation_reason", { length: 200 }), // 'logout', 'expired', 'manual_revoke', 'session_destroyed'
+  
+  // Audit trail
+  actionsExecuted: integer("actions_executed").default(0), // Count of actions using this elevation
+  lastActionAt: timestamp("last_action_at"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("support_elevations_user_idx").on(table.userId),
+  index("support_elevations_session_idx").on(table.sessionId),
+  index("support_elevations_active_idx").on(table.isActive),
+  index("support_elevations_expires_idx").on(table.expiresAt),
+]);
+
+export const insertSupportSessionElevationSchema = createInsertSchema(supportSessionElevations).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertSupportSessionElevation = z.infer<typeof insertSupportSessionElevationSchema>;
+export type SupportSessionElevation = typeof supportSessionElevations.$inferSelect;
