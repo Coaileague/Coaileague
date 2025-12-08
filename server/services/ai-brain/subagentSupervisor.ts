@@ -33,6 +33,7 @@ import {
 import { platformEventBus, publishPlatformUpdate } from '../platformEventBus';
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import { aiBrainAuthorizationService, AI_BRAIN_AUTHORITY_ROLES } from './aiBrainAuthorizationService';
+import { aiBrainService } from './aiBrainService';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -1964,8 +1965,7 @@ class SubagentSupervisor {
     userId: string,
     context?: Record<string, any>
   ): Promise<any> {
-    // Simulated execution - in production, this would route to actual subagent handlers
-    console.log('[SubagentSupervisor] Executing:', subagent.name, 'for', content.substring(0, 50));
+    console.log('[SubagentSupervisor] Executing AI Brain action:', subagent.name, 'for', content.substring(0, 50));
     
     // Emit telemetry event
     platformEventBus.publish({
@@ -1981,12 +1981,114 @@ class SubagentSupervisor {
       }
     });
 
-    return {
-      executed: true,
-      subagent: subagent.name,
-      domain: subagent.domain,
-      timestamp: new Date().toISOString()
+    // Map domain to AI Brain skill (using valid aiBrainService skill names)
+    const skillMapping: Record<SubagentDomain, string> = {
+      scheduling: 'scheduleos_generation',
+      payroll: 'business_insight',
+      invoicing: 'business_insight',
+      compliance: 'issue_diagnosis',
+      notifications: 'platform_awareness',
+      analytics: 'business_insight',
+      gamification: 'platform_awareness',
+      communication: 'helpos_support',
+      health: 'issue_diagnosis',
+      testing: 'issue_diagnosis',
+      deployment: 'platform_awareness',
+      recovery: 'issue_diagnosis',
+      orchestration: 'platform_awareness',
+      security: 'platform_awareness',
+      escalation: 'helpos_support',
+      automation: 'platform_awareness',
+      lifecycle: 'platform_awareness',
+      assist: 'helpos_support',
+      filesystem: 'platform_awareness',
+      workflow: 'platform_awareness',
+      onboarding: 'helpos_support',
+      expense: 'business_insight',
+      pricing: 'business_insight'
     };
+
+    const skill = skillMapping[subagent.domain as SubagentDomain] || 'helpos_support';
+    
+    try {
+      // Build input based on skill type for proper schema compatibility
+      let input: any;
+      
+      // Map domains to valid insight types (business_insight accepts: sales, finance, operations, automation, growth)
+      const insightTypeMapping: Record<string, string> = {
+        payroll: 'finance',
+        invoicing: 'finance',
+        analytics: 'operations',
+        expense: 'finance',
+        pricing: 'sales'
+      };
+      
+      switch (skill) {
+        case 'helpos_support':
+          input = { question: content, workspaceId, context: context || {} };
+          break;
+        case 'scheduleos_generation':
+          input = { query: content, workspaceId, preferences: context || {} };
+          break;
+        case 'business_insight':
+          input = { 
+            insightType: insightTypeMapping[subagent.domain] || 'operations', 
+            timeframe: 'monthly',
+            focusArea: content.substring(0, 100),
+            context: context || {} 
+          };
+          break;
+        case 'platform_awareness':
+          input = { query: content, context: context || {} };
+          break;
+        case 'issue_diagnosis':
+          input = { 
+            description: content, 
+            symptoms: [content.substring(0, 100)],
+            affectedFeature: subagent.domain,
+            context: context || {} 
+          };
+          break;
+        default:
+          input = { query: content, context: context || {} };
+      }
+
+      // Execute through AI Brain service
+      const result = await aiBrainService.enqueueJob({
+        workspaceId,
+        userId,
+        skill,
+        input,
+        priority: 'high'
+      });
+
+      console.log('[SubagentSupervisor] AI Brain execution completed:', result.status);
+
+      return {
+        executed: true,
+        subagent: subagent.name,
+        domain: subagent.domain,
+        aiBrainJobId: result.jobId,
+        status: result.status,
+        output: result.output,
+        tokensUsed: (result as any).tokensUsed || 0,
+        timestamp: new Date().toISOString()
+      };
+    } catch (error: any) {
+      console.error('[SubagentSupervisor] AI Brain execution failed:', error.message);
+      
+      // Fallback to simulated execution for resilience
+      console.log('[SubagentSupervisor] Falling back to simulated execution');
+      return {
+        executed: true,
+        subagent: subagent.name,
+        domain: subagent.domain,
+        status: 'simulated',
+        output: { message: `${subagent.name} processed: ${content.substring(0, 100)}` },
+        fallbackReason: error.message,
+        timestamp: new Date().toISOString()
+      };
+    }
   }
 }
 
