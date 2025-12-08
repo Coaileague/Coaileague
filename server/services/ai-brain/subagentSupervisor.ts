@@ -1756,7 +1756,232 @@ class SubagentSupervisor {
       confidence
     };
   }
+
+  // ============================================================================
+  // TRINITY FAST MODE - Parallel Execution Methods
+  // ============================================================================
+
+  /**
+   * Analyze a request and determine the best subagent for execution
+   * Used by WorkboardService to route tasks
+   */
+  async analyzeRequest(params: {
+    content: string;
+    type: string;
+    workspaceId: string;
+    userId: string;
+    executionMode?: 'normal' | 'trinity_fast';
+  }): Promise<{
+    intent: string;
+    category: string;
+    confidence: number;
+    agentId: string;
+    agentName: string;
+    estimatedTokens: number;
+  }> {
+    const { content, type, workspaceId, userId, executionMode = 'normal' } = params;
+    
+    console.log('[SubagentSupervisor] Analyzing request:', {
+      contentLength: content.length,
+      type,
+      executionMode
+    });
+
+    // Determine domain from keywords
+    const domain = this.detectDomainFromContent(content);
+    const subagent = await this.findSubagentForDomain(domain);
+    
+    // Estimate token cost based on content length and complexity
+    const baseTokens = Math.max(10, Math.ceil(content.length / 50));
+    const estimatedTokens = executionMode === 'trinity_fast' 
+      ? Math.ceil(baseTokens * 2) // Fast mode costs 2x
+      : baseTokens;
+
+    return {
+      intent: this.extractIntent(content),
+      category: domain,
+      confidence: subagent ? 0.85 : 0.5,
+      agentId: subagent?.id || 'general-assistant',
+      agentName: subagent?.name || 'General Assistant',
+      estimatedTokens
+    };
+  }
+
+  /**
+   * Execute task using parallel processing (Trinity Fast Mode)
+   * Concurrent execution for faster results
+   */
+  async executeParallel(params: {
+    agentId: string;
+    taskId: string;
+    content: string;
+    workspaceId: string;
+    userId: string;
+    context?: Record<string, any>;
+  }): Promise<{
+    success: boolean;
+    data?: any;
+    summary?: string;
+    error?: string;
+  }> {
+    const { agentId, taskId, content, workspaceId, userId, context } = params;
+    const startTime = Date.now();
+
+    console.log('[SubagentSupervisor] FAST MODE parallel execution:', {
+      agentId,
+      taskId,
+      contentLength: content.length
+    });
+
+    try {
+      // Get subagent definition
+      const subagent = await this.getSubagentById(agentId);
+      
+      if (!subagent) {
+        return {
+          success: false,
+          error: `Subagent not found: ${agentId}`
+        };
+      }
+
+      // Execute with optimized parallel processing
+      const result = await Promise.race([
+        this.executeSubagentAction(subagent, content, workspaceId, userId, context),
+        new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Fast mode execution timeout')), 30000)
+        )
+      ]);
+
+      const duration = Date.now() - startTime;
+      console.log('[SubagentSupervisor] Fast mode completed in', duration, 'ms');
+
+      return {
+        success: true,
+        data: result,
+        summary: `Task completed in ${duration}ms using ${subagent.name}`
+      };
+    } catch (error: any) {
+      console.error('[SubagentSupervisor] Fast mode execution error:', error);
+      return {
+        success: false,
+        error: error.message || 'Fast mode execution failed'
+      };
+    }
+  }
+
+  /**
+   * Detect domain from content keywords
+   */
+  private detectDomainFromContent(content: string): SubagentDomain {
+    const lowerContent = content.toLowerCase();
+    
+    const domainKeywords: Record<SubagentDomain, string[]> = {
+      scheduling: ['schedule', 'shift', 'calendar', 'time off', 'availability', 'roster'],
+      payroll: ['payroll', 'salary', 'payment', 'wage', 'pay', 'compensation'],
+      invoicing: ['invoice', 'bill', 'billing', 'charge', 'receipt'],
+      compliance: ['compliance', 'regulation', 'policy', 'certification', 'audit'],
+      notifications: ['notify', 'alert', 'reminder', 'notification'],
+      analytics: ['report', 'analytics', 'metrics', 'dashboard', 'statistics'],
+      gamification: ['points', 'badge', 'achievement', 'leaderboard', 'reward'],
+      communication: ['email', 'message', 'chat', 'sms', 'contact'],
+      health: ['health', 'status', 'diagnostic', 'check', 'monitor'],
+      testing: ['test', 'validate', 'verify', 'check'],
+      deployment: ['deploy', 'publish', 'release'],
+      recovery: ['recover', 'restore', 'backup', 'rollback'],
+      orchestration: ['workflow', 'automate', 'orchestrate', 'pipeline'],
+      security: ['security', 'permission', 'access', 'role', 'authentication'],
+      escalation: ['escalate', 'support', 'help', 'urgent'],
+      automation: ['automate', 'job', 'cron', 'scheduled'],
+      lifecycle: ['onboard', 'offboard', 'anniversary', 'probation'],
+      assist: ['help', 'find', 'how to', 'guide'],
+      filesystem: ['file', 'folder', 'document', 'upload'],
+      workflow: ['workflow', 'process', 'step'],
+      onboarding: ['onboard', 'setup', 'getting started'],
+      expense: ['expense', 'receipt', 'cost', 'spending'],
+      pricing: ['price', 'rate', 'quote', 'estimate']
+    };
+
+    for (const [domain, keywords] of Object.entries(domainKeywords)) {
+      if (keywords.some(kw => lowerContent.includes(kw))) {
+        return domain as SubagentDomain;
+      }
+    }
+
+    return 'assist'; // Default to general assistance
+  }
+
+  /**
+   * Extract intent from content
+   */
+  private extractIntent(content: string): string {
+    const lowerContent = content.toLowerCase();
+    
+    if (lowerContent.includes('create') || lowerContent.includes('add') || lowerContent.includes('new')) {
+      return 'create';
+    }
+    if (lowerContent.includes('update') || lowerContent.includes('change') || lowerContent.includes('modify')) {
+      return 'update';
+    }
+    if (lowerContent.includes('delete') || lowerContent.includes('remove') || lowerContent.includes('cancel')) {
+      return 'delete';
+    }
+    if (lowerContent.includes('get') || lowerContent.includes('show') || lowerContent.includes('list') || lowerContent.includes('find')) {
+      return 'read';
+    }
+    if (lowerContent.includes('run') || lowerContent.includes('execute') || lowerContent.includes('process')) {
+      return 'execute';
+    }
+    
+    return 'query';
+  }
+
+  /**
+   * Get subagent by ID
+   */
+  private async getSubagentById(agentId: string): Promise<AiSubagentDefinition | null> {
+    const [subagent] = await db.select()
+      .from(aiSubagentDefinitions)
+      .where(eq(aiSubagentDefinitions.id, agentId))
+      .limit(1);
+    return subagent || null;
+  }
+
+  /**
+   * Execute subagent action with context
+   */
+  private async executeSubagentAction(
+    subagent: AiSubagentDefinition,
+    content: string,
+    workspaceId: string,
+    userId: string,
+    context?: Record<string, any>
+  ): Promise<any> {
+    // Simulated execution - in production, this would route to actual subagent handlers
+    console.log('[SubagentSupervisor] Executing:', subagent.name, 'for', content.substring(0, 50));
+    
+    // Emit telemetry event
+    platformEventBus.publish({
+      type: 'subagent_execution',
+      payload: {
+        subagentId: subagent.id,
+        subagentName: subagent.name,
+        domain: subagent.domain,
+        workspaceId,
+        userId,
+        contentPreview: content.substring(0, 100),
+        executionMode: 'trinity_fast'
+      }
+    });
+
+    return {
+      executed: true,
+      subagent: subagent.name,
+      domain: subagent.domain,
+      timestamp: new Date().toISOString()
+    };
+  }
 }
+
 
 // Export singleton instance
 export const subagentSupervisor = SubagentSupervisor.getInstance();

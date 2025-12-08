@@ -17746,6 +17746,16 @@ export const workboardPriorityEnum = pgEnum('workboard_priority', [
 ]);
 
 /**
+ * Execution mode for AI automation tasks
+ * - normal: Standard sequential execution (included with subscription)
+ * - trinity_fast: Premium parallel execution using Trinity credits (2x multiplier)
+ */
+export const executionModeEnum = pgEnum('execution_mode', [
+  'normal',       // Standard sequential processing
+  'trinity_fast'  // Premium parallel execution using credits
+]);
+
+/**
  * AI Brain Workboard Tasks - Central job queue for all AI orchestration
  */
 export const aiWorkboardTasks = pgTable("ai_workboard_tasks", {
@@ -17775,6 +17785,12 @@ export const aiWorkboardTasks = pgTable("ai_workboard_tasks", {
   estimatedTokens: integer("estimated_tokens").default(0),
   actualTokens: integer("actual_tokens"),
   creditsDeducted: boolean("credits_deducted").default(false),
+  
+  // Trinity Fast Mode - Premium parallel execution
+  executionMode: executionModeEnum("execution_mode").notNull().default('normal'),
+  fastModeCredits: integer("fast_mode_credits").default(0), // Credits charged for fast mode (2x multiplier)
+  fastModeRequestedBy: varchar("fast_mode_requested_by", { length: 50 }), // 'trinity', 'voice', 'api'
+  parallelGroupId: varchar("parallel_group_id"), // For grouping parallel fast mode tasks
   
   // Execution details
   startedAt: timestamp("started_at"),
@@ -17812,6 +17828,8 @@ export const aiWorkboardTasks = pgTable("ai_workboard_tasks", {
   index("ai_workboard_tasks_agent_idx").on(table.assignedAgentId),
   index("ai_workboard_tasks_parent_idx").on(table.parentTaskId),
   index("ai_workboard_tasks_created_idx").on(table.createdAt),
+  index("ai_workboard_tasks_execution_mode_idx").on(table.executionMode),
+  index("ai_workboard_tasks_parallel_group_idx").on(table.parallelGroupId),
 ]);
 
 export const insertAiWorkboardTaskSchema = createInsertSchema(aiWorkboardTasks).omit({

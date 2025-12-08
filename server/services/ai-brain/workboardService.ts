@@ -29,7 +29,17 @@ export interface WorkboardSubmission {
   priority?: 'critical' | 'high' | 'normal' | 'low' | 'scheduled';
   notifyVia?: string[];
   parentTaskId?: string;
+  executionMode?: 'normal' | 'trinity_fast';
+  fastModeRequestedBy?: 'trinity' | 'voice' | 'api';
 }
+
+// Trinity Fast Mode configuration
+const FAST_MODE_CONFIG = {
+  creditMultiplier: 2.0,        // 2x credits for fast mode
+  maxParallelTasks: 4,          // Max concurrent fast mode tasks per workspace
+  priorityBoost: true,          // Fast mode tasks get priority processing
+  minCreditsRequired: 10,       // Minimum credits to use fast mode
+};
 
 export interface WorkboardTaskResult {
   success: boolean;
@@ -57,29 +67,59 @@ class WorkboardService {
 
   /**
    * Submit a new work request to the workboard
+   * Supports both normal and Trinity Fast Mode execution
    */
   async submitTask(submission: WorkboardSubmission): Promise<AiWorkboardTask> {
+    const executionMode = submission.executionMode || 'normal';
+    const isFastMode = executionMode === 'trinity_fast';
+
     console.log('[WorkboardService] Submitting new task:', {
       workspaceId: submission.workspaceId,
       userId: submission.userId,
       requestType: submission.requestType,
-      contentLength: submission.requestContent.length
+      contentLength: submission.requestContent.length,
+      executionMode,
+      fastModeRequestedBy: submission.fastModeRequestedBy
     });
+
+    // Pre-authorize credits for fast mode
+    let fastModeCredits = 0;
+    if (isFastMode) {
+      const creditCheck = await this.checkFastModeCredits(submission.workspaceId);
+      if (!creditCheck.hasCredits) {
+        console.log('[WorkboardService] Insufficient credits for fast mode, falling back to normal');
+        submission.executionMode = 'normal';
+      } else {
+        fastModeCredits = Math.ceil(10 * FAST_MODE_CONFIG.creditMultiplier); // Estimated base cost
+      }
+    }
+
+    // Fast mode gets priority boost
+    const priority = isFastMode && FAST_MODE_CONFIG.priorityBoost 
+      ? 'high' 
+      : (submission.priority || 'normal');
 
     const taskData: InsertAiWorkboardTask = {
       workspaceId: submission.workspaceId,
       userId: submission.userId,
       requestType: submission.requestType,
       requestContent: submission.requestContent,
-      requestMetadata: submission.requestMetadata || {},
-      priority: submission.priority || 'normal',
+      requestMetadata: {
+        ...submission.requestMetadata,
+        executionMode: submission.executionMode || 'normal',
+      },
+      priority,
       notifyVia: submission.notifyVia || ['trinity'],
       parentTaskId: submission.parentTaskId,
       status: 'pending',
+      executionMode: submission.executionMode || 'normal',
+      fastModeCredits: isFastMode ? fastModeCredits : 0,
+      fastModeRequestedBy: submission.fastModeRequestedBy,
       statusHistory: [{ 
         status: 'pending', 
         timestamp: new Date().toISOString(), 
-        actor: 'system' 
+        actor: 'system',
+        details: { executionMode: submission.executionMode || 'normal' }
       }]
     };
 
@@ -87,16 +127,176 @@ class WorkboardService {
       .values(taskData)
       .returning();
 
-    console.log('[WorkboardService] Task created:', task.id);
+    console.log('[WorkboardService] Task created:', task.id, 'mode:', executionMode);
 
-    // Process task asynchronously (don't await to allow immediate response)
-    setImmediate(() => {
-      this.processTask(task.id).catch(err => {
-        console.error('[WorkboardService] Background processing error:', err);
+    // Process task asynchronously - fast mode uses parallel processing
+    if (isFastMode) {
+      setImmediate(() => {
+        this.processTaskFastMode(task.id).catch(err => {
+          console.error('[WorkboardService] Fast mode processing error:', err);
+        });
       });
-    });
+    } else {
+      setImmediate(() => {
+        this.processTask(task.id).catch(err => {
+          console.error('[WorkboardService] Background processing error:', err);
+        });
+      });
+    }
 
     return task;
+  }
+
+  /**
+   * Check if workspace has sufficient credits for fast mode
+   */
+  private async checkFastModeCredits(workspaceId: string): Promise<{ hasCredits: boolean; balance: number }> {
+    try {
+      const [credits] = await db.select()
+        .from(trinityCredits)
+        .where(eq(trinityCredits.workspaceId, workspaceId))
+        .limit(1);
+
+      const balance = credits?.balance || 0;
+      const hasCredits = balance >= FAST_MODE_CONFIG.minCreditsRequired;
+
+      return { hasCredits, balance };
+    } catch (error) {
+      console.error('[WorkboardService] Credit check error:', error);
+      return { hasCredits: false, balance: 0 };
+    }
+  }
+
+  /**
+   * Process task using Trinity Fast Mode (parallel execution)
+   */
+  private async processTaskFastMode(taskId: string): Promise<void> {
+    if (this.processingTasks.has(taskId)) {
+      console.log('[WorkboardService] Fast mode task already processing:', taskId);
+      return;
+    }
+
+    this.processingTasks.add(taskId);
+    console.log('[WorkboardService] Starting FAST MODE processing:', taskId);
+
+    try {
+      const [task] = await db.select()
+        .from(aiWorkboardTasks)
+        .where(eq(aiWorkboardTasks.id, taskId))
+        .limit(1);
+
+      if (!task) {
+        console.error('[WorkboardService] Fast mode task not found:', taskId);
+        return;
+      }
+
+      // Update status to analyzing
+      await this.updateTaskStatus(taskId, 'analyzing', 'system');
+
+      // Use SubagentSupervisor with parallel dispatch
+      const analysisResult = await subagentSupervisor.analyzeRequest({
+        content: task.requestContent,
+        type: task.requestType,
+        workspaceId: task.workspaceId,
+        userId: task.userId,
+        executionMode: 'trinity_fast'
+      });
+
+      // Update task with analysis
+      await db.update(aiWorkboardTasks)
+        .set({
+          intent: analysisResult.intent,
+          category: analysisResult.category,
+          confidence: String(analysisResult.confidence),
+          assignedAgentId: analysisResult.agentId,
+          assignedAgentName: analysisResult.agentName,
+          estimatedTokens: analysisResult.estimatedTokens,
+          status: 'assigned',
+          statusHistory: sql`${aiWorkboardTasks.statusHistory} || ${JSON.stringify([{
+            status: 'assigned',
+            timestamp: new Date().toISOString(),
+            actor: 'system',
+            details: { 
+              agentId: analysisResult.agentId,
+              executionMode: 'trinity_fast'
+            }
+          }])}::jsonb`,
+          updatedAt: new Date()
+        })
+        .where(eq(aiWorkboardTasks.id, taskId));
+
+      // Deduct fast mode credits (2x multiplier)
+      const fastModeTokens = Math.ceil((analysisResult.estimatedTokens || 10) * FAST_MODE_CONFIG.creditMultiplier);
+      const creditsDeducted = await this.deductCredits(
+        task.workspaceId, 
+        task.userId, 
+        fastModeTokens, 
+        taskId
+      );
+
+      if (!creditsDeducted) {
+        await this.updateTaskStatus(taskId, 'failed', 'system');
+        await db.update(aiWorkboardTasks)
+          .set({ errorMessage: 'Insufficient Trinity credits for fast mode' })
+          .where(eq(aiWorkboardTasks.id, taskId));
+        return;
+      }
+
+      // Update fast mode credits on task
+      await db.update(aiWorkboardTasks)
+        .set({ fastModeCredits: fastModeTokens })
+        .where(eq(aiWorkboardTasks.id, taskId));
+
+      // Execute using parallel dispatch
+      await this.updateTaskStatus(taskId, 'in_progress', 'system');
+      const startTime = Date.now();
+
+      const result = await subagentSupervisor.executeParallel({
+        agentId: analysisResult.agentId,
+        taskId,
+        content: task.requestContent,
+        workspaceId: task.workspaceId,
+        userId: task.userId,
+        context: task.requestMetadata
+      });
+
+      const executionTime = Date.now() - startTime;
+      console.log('[WorkboardService] Fast mode execution completed in', executionTime, 'ms');
+
+      // Complete task
+      await db.update(aiWorkboardTasks)
+        .set({
+          status: result.success ? 'completed' : 'failed',
+          result: result.data || {},
+          resultSummary: result.summary,
+          errorMessage: result.error || null,
+          actualTokens: fastModeTokens,
+          completedAt: new Date(),
+          statusHistory: sql`${aiWorkboardTasks.statusHistory} || ${JSON.stringify([{
+            status: result.success ? 'completed' : 'failed',
+            timestamp: new Date().toISOString(),
+            actor: analysisResult.agentId,
+            details: { 
+              executionTime,
+              executionMode: 'trinity_fast'
+            }
+          }])}::jsonb`,
+          updatedAt: new Date()
+        })
+        .where(eq(aiWorkboardTasks.id, taskId));
+
+      // Send completion notification
+      await this.sendCompletionNotification(taskId, result);
+
+    } catch (error) {
+      console.error('[WorkboardService] Fast mode processing error:', error);
+      await this.updateTaskStatus(taskId, 'failed', 'system');
+      await db.update(aiWorkboardTasks)
+        .set({ errorMessage: String(error) })
+        .where(eq(aiWorkboardTasks.id, taskId));
+    } finally {
+      this.processingTasks.delete(taskId);
+    }
   }
 
   /**
