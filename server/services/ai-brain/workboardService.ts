@@ -19,6 +19,7 @@ import {
 import { eq, and, desc, asc, sql, inArray } from 'drizzle-orm';
 import { subagentSupervisor } from './subagentSupervisor';
 import { publishPlatformUpdate } from '../platformEventBus';
+import { subagentBanker, type CreditQuote, type CreditReservation } from './subagentBanker';
 
 export interface WorkboardSubmission {
   workspaceId: string;
@@ -68,6 +69,7 @@ class WorkboardService {
   /**
    * Submit a new work request to the workboard
    * Supports both normal and Trinity Fast Mode execution
+   * Uses SubagentBanker for credit pre-authorization (simulate → quote → reserve)
    */
   async submitTask(submission: WorkboardSubmission): Promise<AiWorkboardTask> {
     const executionMode = submission.executionMode || 'normal';
@@ -82,22 +84,43 @@ class WorkboardService {
       fastModeRequestedBy: submission.fastModeRequestedBy
     });
 
-    // Pre-authorize credits for fast mode using estimated tokens from metadata
+    // Use SubagentBanker for credit pre-authorization
     let fastModeCredits = 0;
-    const estimatedTokens = (submission.requestMetadata as any)?.estimatedTokens || 50; // Default estimate
+    let creditReservation: CreditReservation | undefined;
+    
+    // Simulate workload to estimate credits needed
+    const simulation = await subagentBanker.simulateWorkload({
+      taskType: submission.requestType === 'chat' ? 'chat' : 'automation',
+      content: submission.requestContent,
+      executionMode: isFastMode ? 'turbo' : 'normal',
+      workspaceId: submission.workspaceId,
+      userId: submission.userId
+    });
     
     if (isFastMode) {
-      // Calculate required credits with 2x multiplier for fast mode
-      const requiredCredits = Math.ceil(estimatedTokens * FAST_MODE_CONFIG.creditMultiplier);
-      const creditCheck = await this.checkFastModeCredits(submission.workspaceId, requiredCredits);
+      // Generate quote and check if user can proceed
+      const quote = await subagentBanker.generateQuote({
+        workspaceId: submission.workspaceId,
+        userId: submission.userId,
+        simulation
+      });
       
-      if (!creditCheck.hasCredits) {
-        console.log('[WorkboardService] Insufficient credits for fast mode, need', requiredCredits, 'have', creditCheck.balance);
+      if (!quote.canProceed) {
+        console.log('[WorkboardService] Insufficient credits for fast mode, need', simulation.totalCredits, 'have', quote.currentBalance);
         submission.executionMode = 'normal';
-        isFastMode = false; // Recompute after fallback
+        isFastMode = false;
       } else {
-        fastModeCredits = requiredCredits;
-        console.log('[WorkboardService] Fast mode pre-authorized:', fastModeCredits, 'credits');
+        // Reserve credits atomically
+        const reserveResult = await subagentBanker.reserveCredits({ quoteId: quote.quoteId });
+        if (reserveResult.success && reserveResult.reservation) {
+          creditReservation = reserveResult.reservation;
+          fastModeCredits = simulation.totalCredits;
+          console.log('[WorkboardService] Fast mode credits reserved:', fastModeCredits, 'reservation:', creditReservation.reservationId);
+        } else {
+          console.log('[WorkboardService] Credit reservation failed:', reserveResult.error);
+          submission.executionMode = 'normal';
+          isFastMode = false;
+        }
       }
     }
 
@@ -114,6 +137,8 @@ class WorkboardService {
       requestMetadata: {
         ...submission.requestMetadata,
         executionMode: submission.executionMode || 'normal',
+        creditReservationId: creditReservation?.reservationId,
+        estimatedCredits: simulation.totalCredits,
       },
       priority,
       notifyVia: submission.notifyVia || ['trinity'],
@@ -126,7 +151,7 @@ class WorkboardService {
         status: 'pending', 
         timestamp: new Date().toISOString(), 
         actor: 'system',
-        details: { executionMode: submission.executionMode || 'normal' }
+        details: { executionMode: submission.executionMode || 'normal', reservationId: creditReservation?.reservationId }
       }]
     };
 
@@ -235,27 +260,10 @@ class WorkboardService {
         })
         .where(eq(aiWorkboardTasks.id, taskId));
 
-      // Deduct fast mode credits (2x multiplier)
-      const fastModeTokens = Math.ceil((analysisResult.estimatedTokens || 10) * FAST_MODE_CONFIG.creditMultiplier);
-      const creditsDeducted = await this.deductCredits(
-        task.workspaceId, 
-        task.userId, 
-        fastModeTokens, 
-        taskId
-      );
-
-      if (!creditsDeducted) {
-        await this.updateTaskStatus(taskId, 'failed', 'system');
-        await db.update(aiWorkboardTasks)
-          .set({ errorMessage: 'Insufficient Trinity credits for fast mode' })
-          .where(eq(aiWorkboardTasks.id, taskId));
-        return;
-      }
-
-      // Update fast mode credits on task
-      await db.update(aiWorkboardTasks)
-        .set({ fastModeCredits: fastModeTokens })
-        .where(eq(aiWorkboardTasks.id, taskId));
+      // Get credit reservation ID from task metadata
+      const metadata = task.requestMetadata as Record<string, any> || {};
+      const reservationId = metadata.creditReservationId;
+      const estimatedCredits = metadata.estimatedCredits || Math.ceil((analysisResult.estimatedTokens || 10) * FAST_MODE_CONFIG.creditMultiplier);
 
       // Execute using parallel dispatch
       await this.updateTaskStatus(taskId, 'in_progress', 'system');
@@ -267,11 +275,61 @@ class WorkboardService {
         content: task.requestContent,
         workspaceId: task.workspaceId,
         userId: task.userId,
-        context: task.requestMetadata as Record<string, any> | undefined
+        context: metadata
       });
 
       const executionTime = Date.now() - startTime;
       console.log('[WorkboardService] Fast mode execution completed in', executionTime, 'ms');
+
+      // Consume reserved credits via SubagentBanker
+      let creditsDeducted = 0;
+      if (reservationId) {
+        const consumeResult = await subagentBanker.consumeReservation({
+          reservationId,
+          actualCredits: estimatedCredits,
+          taskId,
+          success: result.success
+        });
+        
+        if (consumeResult.success) {
+          creditsDeducted = consumeResult.creditsDeducted;
+          console.log('[WorkboardService] Credits consumed via SubagentBanker:', creditsDeducted);
+        } else {
+          console.warn('[WorkboardService] Credit consumption failed:', consumeResult.error);
+        }
+      } else {
+        // Legacy tasks without reservation - use directDeduct with proper refund on failure
+        const deductResult = await subagentBanker.directDeduct({
+          workspaceId: task.workspaceId,
+          userId: task.userId,
+          credits: estimatedCredits,
+          actionType: 'fast_mode_task',
+          actionId: taskId,
+          description: `Fast mode task: ${taskId.substring(0, 8)}`
+        });
+        
+        if (deductResult.success) {
+          creditsDeducted = estimatedCredits;
+          
+          // Refund if task failed
+          if (!result.success) {
+            await subagentBanker.refillCredits({
+              workspaceId: task.workspaceId,
+              userId: task.userId,
+              credits: estimatedCredits,
+              source: 'refund',
+              description: `Refund for failed fast mode task: ${taskId.substring(0, 8)}`
+            });
+            creditsDeducted = 0;
+            console.log('[WorkboardService] Refunded credits for failed legacy task');
+          }
+        }
+      }
+
+      // Update fast mode credits on task
+      await db.update(aiWorkboardTasks)
+        .set({ fastModeCredits: creditsDeducted, creditsDeducted: creditsDeducted > 0 })
+        .where(eq(aiWorkboardTasks.id, taskId));
 
       // Complete task
       await db.update(aiWorkboardTasks)
@@ -280,7 +338,7 @@ class WorkboardService {
           result: result.data || {},
           resultSummary: result.summary,
           errorMessage: result.error || null,
-          actualTokens: fastModeTokens,
+          actualTokens: estimatedCredits,
           completedAt: new Date(),
           statusHistory: sql`${aiWorkboardTasks.statusHistory} || ${JSON.stringify([{
             status: result.success ? 'completed' : 'failed',
@@ -288,7 +346,8 @@ class WorkboardService {
             actor: analysisResult.agentId,
             details: { 
               executionTime,
-              executionMode: 'trinity_fast'
+              executionMode: 'trinity_fast',
+              creditsDeducted
             }
           }])}::jsonb`,
           updatedAt: new Date()
@@ -300,6 +359,26 @@ class WorkboardService {
 
     } catch (error) {
       console.error('[WorkboardService] Fast mode processing error:', error);
+      
+      // Release reservation on error
+      const [task] = await db.select()
+        .from(aiWorkboardTasks)
+        .where(eq(aiWorkboardTasks.id, taskId))
+        .limit(1);
+      
+      if (task) {
+        const metadata = task.requestMetadata as Record<string, any> || {};
+        const reservationId = metadata.creditReservationId;
+        if (reservationId) {
+          await subagentBanker.consumeReservation({
+            reservationId,
+            taskId,
+            success: false
+          });
+          console.log('[WorkboardService] Released reservation on error:', reservationId);
+        }
+      }
+      
       await this.updateTaskStatus(taskId, 'failed', 'system');
       await db.update(aiWorkboardTasks)
         .set({ errorMessage: String(error) })
