@@ -33059,16 +33059,192 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
+});
+
+  // ============================================================================
+  // CRISIS MANAGEMENT ROUTES - Trinity Guru Mode
+  // ============================================================================
+
+  app.get("/api/trinity/crisis/summary", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { crisisManager } = await import("./services/ai-brain/crisisManager");
+      const { getUserPlatformRole } = await import("./rbac");
+      const userId = req.userId!;
+      const platformRole = await getUserPlatformRole(userId);
+      const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
+      if (!guruRoles.includes(platformRole || "")) {
+        return res.status(403).json({ success: false, error: "Guru mode access required" });
+      }
+      const summary = await crisisManager.getCrisisSummary();
+      const activeCrises = crisisManager.getActiveCrises();
+      const blackout = crisisManager.getBlackoutStatus();
+      res.json({ success: true, summary, activeCrises, blackout });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/trinity/crisis/lockdown", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { crisisManager } = await import("./services/ai-brain/crisisManager");
+      const { getUserPlatformRole } = await import("./rbac");
+      const userId = req.userId!;
+      const platformRole = await getUserPlatformRole(userId);
+      const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
+      if (!guruRoles.includes(platformRole || "")) {
+        return res.status(403).json({ success: false, error: "Guru mode access required" });
+      }
+      const { targetUserId, reason } = req.body;
+      if (!targetUserId || !reason) {
+        return res.status(400).json({ success: false, error: "targetUserId and reason required" });
+      }
+      const result = await crisisManager.initiateLockdown(targetUserId, reason, userId, platformRole || "");
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/trinity/crisis/lockdown/release", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { crisisManager } = await import("./services/ai-brain/crisisManager");
+      const { getUserPlatformRole } = await import("./rbac");
+      const userId = req.userId!;
+      const platformRole = await getUserPlatformRole(userId);
+      const rootRoles = ["root_admin", "deputy_admin"];
+      if (!rootRoles.includes(platformRole || "")) {
+        return res.status(403).json({ success: false, error: "Root admin access required" });
+      }
+      const { targetUserId, verificationCode } = req.body;
+      if (!targetUserId || !verificationCode) {
+        return res.status(400).json({ success: false, error: "targetUserId and verificationCode required" });
+      }
+      const result = await crisisManager.releaseLockdown(targetUserId, verificationCode, userId, platformRole || "");
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/trinity/crisis/blackout", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { crisisManager } = await import("./services/ai-brain/crisisManager");
+      const { getUserPlatformRole } = await import("./rbac");
+      const userId = req.userId!;
+      const platformRole = await getUserPlatformRole(userId);
+      const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager"];
+      if (!guruRoles.includes(platformRole || "")) {
+        return res.status(403).json({ success: false, error: "Elevated Guru mode access required" });
+      }
+      const { level, affectedServices, etaMinutes } = req.body;
+      if (!level || !affectedServices || !etaMinutes) {
+        return res.status(400).json({ success: false, error: "level, affectedServices, and etaMinutes required" });
+      }
+      const result = await crisisManager.initiateBlackout(level, affectedServices, etaMinutes, userId, platformRole || "");
+      res.json({ success: true, blackout: result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/trinity/crisis/blackout/resolve", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { crisisManager } = await import("./services/ai-brain/crisisManager");
+      const { getUserPlatformRole } = await import("./rbac");
+      const userId = req.userId!;
+      const platformRole = await getUserPlatformRole(userId);
+      const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager"];
+      if (!guruRoles.includes(platformRole || "")) {
+        return res.status(403).json({ success: false, error: "Elevated Guru mode access required" });
+      }
+      const { resolution } = req.body;
+      const result = await crisisManager.resolveBlackout(resolution || "Issue resolved", userId, platformRole || "");
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/trinity/crisis/dispute", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { crisisManager } = await import("./services/ai-brain/crisisManager");
+      const { getUserPlatformRole } = await import("./rbac");
+      const userId = req.userId!;
+      const platformRole = await getUserPlatformRole(userId);
+      const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
+      if (!guruRoles.includes(platformRole || "")) {
+        return res.status(403).json({ success: false, error: "Guru mode access required" });
+      }
+      const { workspaceId, incidentDescription, claimedAmount } = req.body;
+      if (!workspaceId || !claimedAmount) {
+        return res.status(400).json({ success: false, error: "workspaceId and claimedAmount required" });
+      }
+      const result = await crisisManager.processDispute(workspaceId, incidentDescription || "", claimedAmount, userId, platformRole || "");
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.post("/api/trinity/crisis/purge", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { crisisManager } = await import("./services/ai-brain/crisisManager");
+      const { getUserPlatformRole } = await import("./rbac");
+      const userId = req.userId!;
+      const platformRole = await getUserPlatformRole(userId);
+      const rootRoles = ["root_admin", "deputy_admin"];
+      if (!rootRoles.includes(platformRole || "")) {
+        return res.status(403).json({ success: false, error: "Root admin access required for purge" });
+      }
+      const { targetOrgId, confirmPhrase } = req.body;
+      if (!targetOrgId || !confirmPhrase) {
+        return res.status(400).json({ success: false, error: "targetOrgId and confirmPhrase required" });
+      }
+      const result = await crisisManager.executePurge(targetOrgId, confirmPhrase, userId, platformRole || "");
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get("/api/trinity/crisis/script/:type", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { crisisManager } = await import("./services/ai-brain/crisisManager");
+      const { getUserPlatformRole } = await import("./rbac");
+      const userId = req.userId!;
+      const platformRole = await getUserPlatformRole(userId);
+      const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
+      if (!guruRoles.includes(platformRole || "")) {
+        return res.status(403).json({ success: false, error: "Guru mode access required" });
+      }
+      const { type } = req.params;
+      const context = req.query as Record<string, unknown>;
+      const validTypes = ["lockdown", "blackout", "dispute", "purge"];
+      if (!validTypes.includes(type)) {
+        return res.status(400).json({ success: false, error: "Invalid crisis type" });
+      }
+      const script = crisisManager.getCrisisScript(type as any, context);
+      res.json({ success: true, script, type });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  app.get("/api/trinity/crisis/audit", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { crisisManager } = await import("./services/ai-brain/crisisManager");
+      const { getUserPlatformRole } = await import("./rbac");
+      const userId = req.userId!;
+      const platformRole = await getUserPlatformRole(userId);
+      const guruRoles = ["root_admin", "deputy_admin", "sysop"];
+      if (!guruRoles.includes(platformRole || "")) {
+        return res.status(403).json({ success: false, error: "Elevated access required for audit trail" });
+      }
+      const limit = parseInt(req.query.limit as string) || 50;
+      const auditTrail = crisisManager.getAuditTrail(limit);
+      res.json({ success: true, auditTrail });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
   });
 }
-
-// ============================================================================
-// SUGGESTED CHANGES REGISTRY - AI Brain Template Library
-// ============================================================================
-
-/**
- * GET /api/suggested-changes
- * List all available suggested changes for AI Brain
- * Query params: category, tag, priority, search
- */
-

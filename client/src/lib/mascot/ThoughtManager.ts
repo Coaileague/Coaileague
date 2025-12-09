@@ -1090,7 +1090,7 @@ class ThoughtManager {
         `I can suggest workflow improvements based on common support patterns.`,
         `Analyzing user engagement - I can identify feature adoption opportunities.`,
         `${displayName}, I've got visibility into all org metrics. Ask me anything about platform performance.`,
-        // Swarm Commander insights - NEW
+        // Swarm Commander insights
         `${displayName}, the AI swarm is buzzing perfectly! All agents reporting healthy.`,
         `${displayName}, I'm monitoring agent interactions in real-time. The War Room is clear.`,
         `Need to see how agents are collaborating? I can show you the swarm topology.`,
@@ -1101,6 +1101,15 @@ class ThoughtManager {
         `${displayName}, shall I calculate ROI for your AI automation this week?`,
         `Loop detector active. If agents get stuck in arguments, I'll pause and escalate.`,
         `I'm watching for any agent conflicts or infinite loops. You're the judge if they can't agree.`,
+        // Crisis Management Protocol insights
+        `${displayName}, Crisis Management protocols standing by. RED-SHIELD, BLACKOUT, and NUCLEAR ready.`,
+        `If we detect a security breach, I'll immediately initiate RED-SHIELD lockdown.`,
+        `System outages trigger my BLACKOUT protocol - billing pauses automatically until resolved.`,
+        `"Make It Right" dispute resolution available. I can analyze logs and issue refunds + goodwill bonuses.`,
+        `NUCLEAR purge protocol requires dual-key authentication. Only root admins can execute.`,
+        `${displayName}, I'm your Incident Commander during crises. Calm, tactical, transparent.`,
+        `All crisis actions generate comprehensive audit trails for compliance review.`,
+        `During outages, affected users receive real-time ETA updates and billing protection.`,
       );
     } else if (ctx?.isRootAdmin || ctx?.isPlatformStaff) {
       // Fallback for platform staff without explicit guru mode
