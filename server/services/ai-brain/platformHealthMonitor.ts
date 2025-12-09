@@ -160,6 +160,35 @@ function checkWebSocket(): HealthCheckResult {
 }
 
 /**
+ * Check Notification System via Trinity Bridge Watchdog
+ */
+async function checkNotificationSystem(): Promise<HealthCheckResult> {
+  try {
+    // Import dynamically to avoid circular dependencies
+    const { trinityNotificationBridge } = await import('./trinityNotificationBridge');
+    const metrics = trinityNotificationBridge.getMetrics();
+    const watchdog = trinityNotificationBridge.getWatchdogStatus();
+
+    return {
+      service: 'notifications',
+      status: metrics.health,
+      latencyMs: metrics.averageDeliveryTime,
+      message: watchdog.running 
+        ? `Watchdog active, ${metrics.queueDepth} queued, ${metrics.totalSent} sent` 
+        : 'Watchdog not running',
+      lastChecked: new Date(),
+    };
+  } catch (error: any) {
+    return {
+      service: 'notifications',
+      status: 'unknown',
+      message: error.message || 'Failed to check notification system',
+      lastChecked: new Date(),
+    };
+  }
+}
+
+/**
  * Run full platform health check
  */
 export async function runHealthCheck(): Promise<PlatformHealthSummary> {
@@ -169,6 +198,7 @@ export async function runHealthCheck(): Promise<PlatformHealthSummary> {
     checkStripeIntegration(),
     checkEmailService(),
     Promise.resolve(checkWebSocket()),
+    checkNotificationSystem(),
   ]);
 
   const unhealthyCount = services.filter(s => s.status === 'unhealthy').length;

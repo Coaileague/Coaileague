@@ -586,8 +586,233 @@ class TrinityNotificationBridge {
       clearInterval(this.batchInterval);
       this.batchInterval = null;
     }
+    if (this.watchdogInterval) {
+      clearInterval(this.watchdogInterval);
+      this.watchdogInterval = null;
+    }
+  }
+
+  /**
+   * Get notification system metrics
+   */
+  getMetrics(): {
+    totalSent: number;
+    totalFailed: number;
+    averageDeliveryTime: number;
+    queueDepth: number;
+    failedInQueue: number;
+    byChannel: Record<string, number>;
+    health: 'healthy' | 'degraded' | 'unhealthy';
+    lastCheck: Date;
+  } {
+    const failedInQueue = this.batchQueue.filter(b => b.status === 'failed').length;
+    const pendingInQueue = this.batchQueue.filter(b => b.status === 'pending').length;
+    
+    let health: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
+    if (this.deliveryMetrics.totalFailed > this.deliveryMetrics.totalSent * 0.1) {
+      health = 'degraded';
+    }
+    if (failedInQueue > 10 || this.deliveryMetrics.totalFailed > this.deliveryMetrics.totalSent * 0.5) {
+      health = 'unhealthy';
+    }
+
+    return {
+      totalSent: this.deliveryMetrics.totalSent,
+      totalFailed: this.deliveryMetrics.totalFailed,
+      averageDeliveryTime: Math.round(this.deliveryMetrics.averageDeliveryTime),
+      queueDepth: pendingInQueue,
+      failedInQueue,
+      byChannel: Object.fromEntries(this.deliveryMetrics.byChannel),
+      health,
+      lastCheck: new Date(),
+    };
+  }
+
+  /**
+   * Notification System Watchdog - Self-monitoring for Trinity/AI Brain
+   * Runs every 2 minutes to detect and alert about notification issues
+   */
+  private watchdogInterval: NodeJS.Timeout | null = null;
+  private lastWatchdogAlert: Date | null = null;
+  private consecutiveFailures = 0;
+
+  startWatchdog(): void {
+    if (this.watchdogInterval) return;
+
+    console.log('[TrinityNotificationWatchdog] Starting self-monitoring...');
+    
+    this.watchdogInterval = setInterval(async () => {
+      await this.runWatchdogCheck();
+    }, 2 * 60 * 1000); // Every 2 minutes
+
+    // Run initial check after 30 seconds
+    setTimeout(() => this.runWatchdogCheck(), 30 * 1000);
+  }
+
+  private async runWatchdogCheck(): Promise<void> {
+    const issues: string[] = [];
+    const metrics = this.getMetrics();
+
+    // Check 1: High failure rate
+    if (metrics.health === 'unhealthy') {
+      issues.push(`High notification failure rate: ${metrics.totalFailed}/${metrics.totalSent + metrics.totalFailed} failed`);
+    }
+
+    // Check 2: Queue backup
+    if (metrics.queueDepth > 50) {
+      issues.push(`Notification queue backing up: ${metrics.queueDepth} pending items`);
+    }
+
+    // Check 3: Slow delivery times
+    if (metrics.averageDeliveryTime > 5000) {
+      issues.push(`Slow notification delivery: ${metrics.averageDeliveryTime}ms average`);
+    }
+
+    // Check 4: Failed items stuck in queue
+    if (metrics.failedInQueue > 5) {
+      issues.push(`${metrics.failedInQueue} failed notifications stuck in queue`);
+    }
+
+    // Check 5: WebSocket connectivity test
+    try {
+      const wsTest = await this.testWebSocketDelivery();
+      if (!wsTest.success) {
+        issues.push('WebSocket notification delivery test failed');
+      }
+    } catch (error) {
+      issues.push('WebSocket connectivity check failed');
+    }
+
+    // Check 6: Database notification table accessibility
+    try {
+      const dbTest = await this.testDatabaseAccess();
+      if (!dbTest.success) {
+        issues.push(`Database notification access issue: ${dbTest.error}`);
+      }
+    } catch (error: any) {
+      issues.push(`Database access error: ${error.message}`);
+    }
+
+    if (issues.length > 0) {
+      this.consecutiveFailures++;
+      
+      // Alert Trinity/AI Brain about issues (but not too frequently)
+      const shouldAlert = !this.lastWatchdogAlert || 
+        (Date.now() - this.lastWatchdogAlert.getTime() > 10 * 60 * 1000); // Max once per 10 minutes
+
+      if (shouldAlert) {
+        await this.alertTrinityAboutIssues(issues, metrics);
+        this.lastWatchdogAlert = new Date();
+      }
+
+      console.warn('[TrinityNotificationWatchdog] Issues detected:', issues);
+    } else {
+      // Reset failure counter on successful check
+      if (this.consecutiveFailures > 0) {
+        console.log('[TrinityNotificationWatchdog] Issues resolved, system healthy');
+        this.consecutiveFailures = 0;
+      }
+    }
+  }
+
+  private async testWebSocketDelivery(): Promise<{ success: boolean }> {
+    try {
+      // Simple test - just verify WebSocket functions are available
+      return { success: typeof broadcastToAllClients === 'function' };
+    } catch {
+      return { success: false };
+    }
+  }
+
+  private async testDatabaseAccess(): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Test notification table access
+      const result = await db.select({ count: sql<number>`COUNT(*)` })
+        .from(notifications)
+        .limit(1);
+      return { success: true };
+    } catch (error: any) {
+      return { success: false, error: error.message };
+    }
+  }
+
+  private async alertTrinityAboutIssues(issues: string[], metrics: any): Promise<void> {
+    console.log('[TrinityNotificationWatchdog] Alerting Trinity/AI Brain about notification system issues');
+
+    // Create internal alert for support/admin staff
+    try {
+      // Log to system audit for tracking
+      await db.insert(systemAuditLogs).values({
+        action: 'notification_watchdog_alert',
+        entityType: 'notification_system',
+        entityId: 'watchdog',
+        metadata: {
+          issues,
+          metrics,
+          consecutiveFailures: this.consecutiveFailures,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      // Broadcast alert to connected support staff via WebSocket
+      broadcastToAllClients({
+        type: 'trinity_system_alert',
+        payload: {
+          source: 'notification_watchdog',
+          severity: this.consecutiveFailures >= 3 ? 'critical' : 'warning',
+          title: 'Notification System Issue Detected',
+          message: `Trinity detected ${issues.length} notification system issue(s) requiring attention`,
+          issues,
+          metrics: {
+            health: metrics.health,
+            queueDepth: metrics.queueDepth,
+            failedInQueue: metrics.failedInQueue,
+            averageDeliveryTime: metrics.averageDeliveryTime,
+          },
+          actionRequired: true,
+          timestamp: new Date().toISOString(),
+        },
+      });
+
+      // Also publish through platform event bus for AI Brain to pick up
+      await platformEventBus.publish({
+        type: 'bugfix_deployed',
+        title: 'Notification System Issue Detected',
+        description: `Trinity watchdog detected ${issues.length} issue(s): ${issues.join('; ')}`,
+        category: 'system',
+        version: '1.0.0',
+        metadata: {
+          issues,
+          severity: this.consecutiveFailures >= 3 ? 'critical' : 'warning',
+        },
+      });
+
+    } catch (error) {
+      console.error('[TrinityNotificationWatchdog] Failed to send alert:', error);
+    }
+  }
+
+  /**
+   * Get watchdog status for health monitoring
+   */
+  getWatchdogStatus(): {
+    running: boolean;
+    lastAlert: Date | null;
+    consecutiveFailures: number;
+    systemHealth: 'healthy' | 'degraded' | 'unhealthy';
+  } {
+    return {
+      running: this.watchdogInterval !== null,
+      lastAlert: this.lastWatchdogAlert,
+      consecutiveFailures: this.consecutiveFailures,
+      systemHealth: this.getMetrics().health,
+    };
   }
 }
 
 export const trinityNotificationBridge = new TrinityNotificationBridge();
+
+// Auto-start the watchdog on module load
+trinityNotificationBridge.startWatchdog();
+
 export default trinityNotificationBridge;

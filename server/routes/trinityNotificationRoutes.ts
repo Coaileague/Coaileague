@@ -274,7 +274,7 @@ trinityNotificationRouter.post('/maintenance-alert', requireAdminRole, async (re
  */
 trinityNotificationRouter.get('/metrics', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
   try {
-    const metrics = trinityNotificationBridge.getDeliveryMetrics();
+    const metrics = trinityNotificationBridge.getMetrics();
 
     res.json({
       success: true,
@@ -282,6 +282,35 @@ trinityNotificationRouter.get('/metrics', requireSupportRole, async (req: Authen
     });
   } catch (error: any) {
     console.error('[TrinityNotificationRoutes] Metrics error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/trinity/notifications/watchdog-status
+ * Get watchdog monitoring status for Trinity/AI Brain awareness
+ */
+trinityNotificationRouter.get('/watchdog-status', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const watchdogStatus = trinityNotificationBridge.getWatchdogStatus();
+    const metrics = trinityNotificationBridge.getMetrics();
+
+    res.json({
+      success: true,
+      watchdog: watchdogStatus,
+      metrics: {
+        health: metrics.health,
+        totalSent: metrics.totalSent,
+        totalFailed: metrics.totalFailed,
+        queueDepth: metrics.queueDepth,
+        averageDeliveryTime: metrics.averageDeliveryTime,
+      },
+      message: watchdogStatus.systemHealth === 'healthy' 
+        ? 'Notification system operating normally' 
+        : `Notification system ${watchdogStatus.systemHealth} - Trinity monitoring active`,
+    });
+  } catch (error: any) {
+    console.error('[TrinityNotificationRoutes] Watchdog status error:', error);
     res.status(500).json({ error: error.message });
   }
 });
