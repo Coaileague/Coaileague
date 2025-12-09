@@ -390,14 +390,16 @@ class ThoughtManager {
       elapsed += pollIntervalMs;
       
       if (this.isReadyForFirstBubble()) {
-        // Ready! Show the first queued thought
+        // Ready! Show the first queued thought immediately
         this.warmupPollingActive = false;
         if (!this.state.currentThought && this.state.queue.length > 0) {
+          // Show immediately with minimal delay
           setTimeout(() => {
             if (!this.state.currentThought && this.state.queue.length > 0) {
-              this.showThought(this.state.queue.shift()!);
+              const thought = this.state.queue.shift()!;
+              this.showThought(thought);
             }
-          }, 500); // Small buffer for human-paced appearance
+          }, 100); // Minimal buffer for smooth appearance
         }
         return;
       }
@@ -694,10 +696,11 @@ class ThoughtManager {
     const previousUserId = this.state.user?.id;
     this.state.user = user;
     
-    // Clean up when user logs out
+    // Clean up when user logs out - but keep rotation running for guests
     if (!user) {
       this.stopPersistentReminders();
-      this.stopRotation(); // Stop thought rotation
+      // NOTE: Don't stop rotation here - we want Trinity active for guests too
+      // Rotation uses fallback local thoughts when no user/context available
       this.state.onboardingProgress = null;
       this.state.isOnboardingComplete = false;
       this.state.advisorMode = false;
@@ -837,15 +840,8 @@ class ThoughtManager {
       }, warmupDelay + 1500); // Wait for warmup + 1.5s for human-paced appearance
     }
     
-    // Start thought rotation when we have a valid context and user
-    if (context && this.state.user && !this.rotationTimer) {
-      this.startPersonaAwareRotation();
-    }
-    
-    // Stop rotation if context is cleared
-    if (!context && this.rotationTimer) {
-      this.stopRotation();
-    }
+    // Note: startRotation() already delegates to generatePersonaThought() when trinityContext is set
+    // No need to call startPersonaAwareRotation() separately - rotation is already running from App.tsx
   }
   
   /**
@@ -2030,15 +2026,36 @@ class ThoughtManager {
   }
   
   startRotation(): void {
-    if (this.rotationTimer) return;
+    if (this.rotationTimer || this.rotationStartupTimer) {
+      console.log('[Trinity] startRotation: Already running, skipping');
+      return;
+    }
+    
+    console.log('[Trinity] startRotation: Starting rotation');
     
     if (this.state.isHoliday) {
       this.triggerHolidayGreeting();
     }
     
     this.rotationTimer = setInterval(() => {
-      if (!this.state.currentThought && this.state.queue.length === 0) {
-        // Prioritize advisor tips for users who completed onboarding (30% chance)
+      const hasContext = !!this.state.trinityContext;
+      const hasUser = !!this.state.user;
+      const hasCurrent = !!this.state.currentThought;
+      const queueLen = this.state.queue.length;
+      const canShowThought = !hasCurrent && queueLen === 0;
+      
+      console.log('[Trinity] Rotation tick:', { hasContext, hasUser, hasCurrent, queueLen, canShowThought });
+      
+      if (canShowThought) {
+        // If user has Trinity context, use persona-aware thought generation (AI-powered)
+        if (hasContext && hasUser) {
+          console.log('[Trinity] Generating persona thought (AI-powered)');
+          this.generatePersonaThought();
+          return;
+        }
+        
+        // Fallback for public/guest users: use local thought pools
+        console.log('[Trinity] Generating local thought (fallback)');
         if (this.state.advisorMode && this.state.isOnboardingComplete && Math.random() < 0.3) {
           this.triggerAdvisorTip();
         } else if (this.state.isHoliday && this.state.currentHoliday && Math.random() > 0.7) {

@@ -1768,8 +1768,8 @@ export const MASCOT_CONFIG: MascotConfig = {
   
   thoughts: {
     enabled: true,
-    displayDuration: 22000, // 22 seconds - plenty of time for humans to read
-    rotateInterval: 30000, // 30 seconds between auto thoughts
+    displayDuration: 15000, // 15 seconds - comfortable reading time
+    rotateInterval: 10000, // 10 seconds between auto thoughts - keeps Trinity active and engaging
     emoticons: {
       IDLE: '✨',
       SEARCHING: '🔍',
@@ -1787,11 +1787,21 @@ export const MASCOT_CONFIG: MascotConfig = {
     },
     defaultThoughts: {
       IDLE: [
-        "I'm available whenever you need assistance.",
-        "I can help with scheduling, payroll, or business insights.",
-        "Standing by to assist with your workforce management needs.",
-        "Ready to help optimize your operations.",
-        "Platform monitoring active. How may I assist?",
+        "Hey there! Need anything?",
+        "I'm here and ready to help!",
+        "Tap me to chat - I love helping!",
+        "I can help with scheduling, payroll, or analytics.",
+        "Got questions? I've got answers!",
+        "What would you like to explore today?",
+        "Your workforce dashboard is looking good!",
+        "Anything I can help you with?",
+        "Just keeping an eye on things for you!",
+        "Ready when you are!",
+        "I'm analyzing your data in the background...",
+        "All systems running smoothly!",
+        "Want me to help optimize something?",
+        "Psst... tap me for instant help!",
+        "Standing by and ready to assist!",
       ],
       SEARCHING: [
         "Searching your records...",
