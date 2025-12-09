@@ -38,8 +38,35 @@ interface PlatformUpdate {
   badge?: string;
 }
 
+interface AutomationEvent {
+  id: string;
+  type: string;
+  status: 'started' | 'completed' | 'failed';
+  jobType: string;
+  duration?: number;
+  result?: { message?: string; itemsProcessed?: number };
+  error?: string;
+}
+
+interface FastModeResult {
+  tier: 'fast' | 'turbo' | 'instant';
+  duration: number;
+  slaTarget: number;
+  success: boolean;
+  agentCount: number;
+  creditsCost: number;
+  qualityScore?: number;
+}
+
+interface GraduationMilestone {
+  from: 'hand_held' | 'graduated' | 'full_automation';
+  to: 'hand_held' | 'graduated' | 'full_automation';
+  confidenceScore: number;
+  unlockedFeatures: string[];
+}
+
 interface NotificationWebSocketMessage {
-  type: 'notification_new' | 'notification_read' | 'notification_read_bulk' | 'notification_count_updated' | 'notifications_subscribed' | 'platform_update' | 'notification_cleared_all' | 'all_notifications_cleared' | 'whats_new_cleared' | 'whats_new_viewed' | 'error';
+  type: 'notification_new' | 'notification_read' | 'notification_read_bulk' | 'notification_count_updated' | 'notifications_subscribed' | 'platform_update' | 'notification_cleared_all' | 'all_notifications_cleared' | 'whats_new_cleared' | 'whats_new_viewed' | 'automation_event' | 'fast_mode_result' | 'graduation_milestone' | 'error';
   notification?: EnhancedNotification & { counts?: { notifications: number; platformUpdates: number; total: number; lastUpdated: string } };
   update?: PlatformUpdate;
   updateId?: string;
@@ -52,6 +79,9 @@ interface NotificationWebSocketMessage {
   counts?: { notifications: number; platformUpdates: number; total: number; lastUpdated: string };
   count?: number;
   source?: string;
+  automationEvent?: AutomationEvent;
+  fastModeResult?: FastModeResult;
+  graduationMilestone?: GraduationMilestone;
 }
 
 export function useNotificationWebSocket(userId: string | undefined, workspaceId: string | undefined) {
@@ -308,6 +338,27 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               localStorage.removeItem('whats-new-acknowledged');
               // Dispatch event for WhatsNewBadge component
               window.dispatchEvent(new CustomEvent('whats_new_cleared', { detail: data }));
+              break;
+
+            case 'automation_event':
+              if (data.automationEvent) {
+                console.log('🤖 Automation event received:', data.automationEvent.jobType, data.automationEvent.status);
+                window.dispatchEvent(new CustomEvent('automation_event', { detail: data.automationEvent }));
+              }
+              break;
+
+            case 'fast_mode_result':
+              if (data.fastModeResult) {
+                console.log('⚡ FAST mode result received:', data.fastModeResult.tier, data.fastModeResult.success);
+                window.dispatchEvent(new CustomEvent('fast_mode_result', { detail: data.fastModeResult }));
+              }
+              break;
+
+            case 'graduation_milestone':
+              if (data.graduationMilestone) {
+                console.log('🎓 Graduation milestone received:', data.graduationMilestone.to);
+                window.dispatchEvent(new CustomEvent('graduation_milestone', { detail: data.graduationMilestone }));
+              }
               break;
 
             case 'error':

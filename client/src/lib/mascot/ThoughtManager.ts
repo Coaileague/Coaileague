@@ -1672,6 +1672,109 @@ class ThoughtManager {
   }
   
   /**
+   * Ingest automation event for Trinity awareness
+   * Called by WebSocket subscription when automation jobs complete
+   */
+  ingestAutomationEvent(event: {
+    id: string;
+    type: string;
+    status: 'started' | 'completed' | 'failed';
+    jobType: string;
+    duration?: number;
+    result?: { message?: string; itemsProcessed?: number };
+    error?: string;
+  }): void {
+    const displayName = this.getUserDisplayName();
+    
+    if (event.status === 'completed') {
+      const messages = [
+        `Automation job "${event.jobType}" completed! ${event.result?.itemsProcessed || 0} items processed.`,
+        `${displayName}, your ${event.jobType} task just finished successfully!`,
+        `Done! ${event.jobType} automation completed in ${event.duration ? Math.round(event.duration / 1000) + 's' : 'record time'}!`,
+      ];
+      const text = messages[Math.floor(Math.random() * messages.length)];
+      const thought = this.createThought(text, 'HAPPY' as MascotMode, 'ai', 'normal');
+      this.queueThought(thought);
+    } else if (event.status === 'failed') {
+      const text = `${displayName}, ${event.jobType} automation hit a snag: ${event.error || 'Unknown error'}. I'll help you fix it!`;
+      const thought = this.createThought(text, 'WARNING' as MascotMode, 'ai', 'high');
+      this.showThought(thought);
+    }
+  }
+  
+  /**
+   * Ingest FAST mode execution results for SLA tracking
+   */
+  ingestFastModeResult(result: {
+    tier: 'fast' | 'turbo' | 'instant';
+    duration: number;
+    slaTarget: number;
+    success: boolean;
+    agentCount: number;
+    creditsCost: number;
+    qualityScore?: number;
+  }): void {
+    const displayName = this.getUserDisplayName();
+    const slaPercent = Math.round((result.slaTarget / result.duration) * 100);
+    
+    if (result.success && result.duration <= result.slaTarget) {
+      const celebs = [
+        `${displayName}, FAST mode delivered in ${Math.round(result.duration / 1000)}s (${slaPercent}% of SLA)! ${result.agentCount} agents crushed it.`,
+        `Lightning fast! ${result.tier.toUpperCase()} completed under SLA. Quality score: ${result.qualityScore || 'A+'}`,
+        `FAST mode win: ${result.agentCount} agents, ${result.creditsCost} credits, ${Math.round(result.duration / 1000)}s. Nailed it!`,
+      ];
+      const text = celebs[Math.floor(Math.random() * celebs.length)];
+      const thought = this.createThought(text, 'HAPPY' as MascotMode, 'ai', 'high');
+      this.showThought(thought);
+    } else if (!result.success || result.duration > result.slaTarget) {
+      const refundPercent = result.duration > result.slaTarget * 2 ? 100 : result.duration > result.slaTarget * 1.5 ? 50 : 25;
+      const text = `FAST mode ${result.tier} took longer than expected. ${refundPercent}% credit refund applied. Let's optimize next time!`;
+      const thought = this.createThought(text, 'ADVISING', 'ai', 'normal');
+      this.queueThought(thought);
+    }
+  }
+  
+  /**
+   * Ingest priority insights from org intelligence
+   * Called when TrinityContext provides new business metrics
+   */
+  ingestOrgInsights(insights: string[]): void {
+    if (!insights || insights.length === 0) return;
+    
+    for (const insight of insights.slice(0, 3)) {
+      const thought = this.createThought(insight, 'ADVISING', 'ai', 'high');
+      this.queueThought(thought);
+    }
+  }
+  
+  /**
+   * Ingest automation graduation milestone
+   */
+  ingestGraduationMilestone(milestone: {
+    from: 'hand_held' | 'graduated' | 'full_automation';
+    to: 'hand_held' | 'graduated' | 'full_automation';
+    confidenceScore: number;
+    unlockedFeatures: string[];
+  }): void {
+    const displayName = this.getUserDisplayName();
+    const levelNames: Record<string, string> = {
+      'hand_held': 'Hand-Held',
+      'graduated': 'Graduated',
+      'full_automation': 'Full Automation',
+    };
+    
+    const celebrations = [
+      `${displayName}, CONGRATS! Your org graduated to ${levelNames[milestone.to]}! Confidence: ${milestone.confidenceScore}%`,
+      `Milestone unlocked! ${levelNames[milestone.to]} mode activated. ${milestone.unlockedFeatures.length} new features available!`,
+      `Your team earned ${levelNames[milestone.to]} status! Trust score: ${milestone.confidenceScore}%. Well done!`,
+    ];
+    
+    const text = celebrations[Math.floor(Math.random() * celebrations.length)];
+    const thought = this.createThought(text, 'HAPPY' as MascotMode, 'ai', 'urgent');
+    this.showThought(thought);
+  }
+  
+  /**
    * Trigger credit purchase celebration
    */
   triggerCreditPurchaseCelebration(amount: number): void {

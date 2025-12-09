@@ -9,7 +9,9 @@
  */
 
 import { useQuery } from '@tanstack/react-query';
+import { useEffect } from 'react';
 import { useAuth } from './useAuth';
+import { thoughtManager } from '@/lib/mascot/ThoughtManager';
 
 interface OrgIntelligence {
   automationReadiness: {
@@ -102,6 +104,37 @@ export function useTrinityContext(workspaceId?: string) {
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });
+  
+  // Wire automation events to ThoughtManager
+  useEffect(() => {
+    const handleAutomationEvent = (e: CustomEvent) => {
+      thoughtManager.ingestAutomationEvent(e.detail);
+    };
+    const handleFastModeResult = (e: CustomEvent) => {
+      thoughtManager.ingestFastModeResult(e.detail);
+    };
+    const handleGraduationMilestone = (e: CustomEvent) => {
+      thoughtManager.ingestGraduationMilestone(e.detail);
+    };
+    
+    window.addEventListener('automation_event', handleAutomationEvent as EventListener);
+    window.addEventListener('fast_mode_result', handleFastModeResult as EventListener);
+    window.addEventListener('graduation_milestone', handleGraduationMilestone as EventListener);
+    
+    return () => {
+      window.removeEventListener('automation_event', handleAutomationEvent as EventListener);
+      window.removeEventListener('fast_mode_result', handleFastModeResult as EventListener);
+      window.removeEventListener('graduation_milestone', handleGraduationMilestone as EventListener);
+    };
+  }, []);
+  
+  // Ingest org intelligence priority insights when context updates
+  useEffect(() => {
+    const insights = query.data?.context?.orgIntelligence?.priorityInsights;
+    if (insights && insights.length > 0) {
+      thoughtManager.ingestOrgInsights(insights);
+    }
+  }, [query.data?.context?.orgIntelligence?.priorityInsights]);
   
   return {
     context: query.data?.context,
