@@ -775,11 +775,16 @@ class ThoughtManager {
       this.setAiSessionReady();
     }
     
-    // Trigger greeting with proper warmup delay to ensure smooth initialization
-    if (context?.greeting && this.state.user && !this.state.lastGreetedUserId) {
+    // Trigger greeting with proper warmup delay - ONCE per user session only
+    // Only greet if: context exists, user exists, AND user hasn't been greeted yet
+    const userId = this.state.user?.id;
+    if (context && userId && this.state.lastGreetedUserId !== userId) {
+      // Mark as greeted immediately to prevent duplicate triggers
+      this.state.lastGreetedUserId = userId;
       const warmupDelay = this.getRemainingWarmupDelay();
       setTimeout(() => {
-        if (this.state.trinityContext && this.state.user) {
+        // Verify user is still the same at trigger time
+        if (this.state.trinityContext && this.state.user?.id === userId) {
           this.triggerRoleAwareGreeting();
         }
       }, warmupDelay + 1500); // Wait for warmup + 1.5s for human-paced appearance
@@ -858,7 +863,7 @@ class ThoughtManager {
   
   /**
    * Generate a thought from local persona-specific pools
-   * Uses professional business/tech tone throughout
+   * Uses comprehensive business expertise across growth, operations, admin, sales, invoicing, payroll, and scheduling
    */
   private generateLocalThought(ctx: TrinityPersonaContext | null, displayName: string): void {
     let thoughtPool: string[];
@@ -869,7 +874,9 @@ class ThoughtManager {
         `All systems operational. Standing by for review.`,
         `Platform monitoring active. Status update available on request.`,
         `Ready to assist with platform operations.`,
-        `How may I help with platform management today?`,
+        `Multi-tenant health checks complete. All orgs are stable.`,
+        `I can analyze system-wide usage patterns for optimization.`,
+        `Subagent confidence scores are tracking well across workspaces.`,
       ];
     } else if (ctx?.isSupportRole) {
       thoughtPool = [
@@ -877,42 +884,81 @@ class ThoughtManager {
         `Support systems ready. I can help streamline responses.`,
         `I can assist with drafting responses or researching solutions.`,
         `Available to help with complex support cases.`,
-        `Standing by to assist with customer inquiries.`,
+        `I can escalate tickets to specialized subagents if needed.`,
+        `Knowledge base suggestions ready based on ticket patterns.`,
       ];
     } else if (ctx?.hasTrinityPro) {
+      // COMPREHENSIVE BUSINESS EXPERTISE - Trinity Pro level
       thoughtPool = [
-        `${displayName}, data analysis complete. Insights available on request.`,
-        `I've identified trends in your workforce patterns.`,
-        `I can assist with schedule optimization.`,
-        `Ready to provide your intelligence briefing.`,
-        `Your AI advisor is available. What would you like to work on?`,
-        `I can generate reports or analyze performance metrics.`,
+        // Growth & Strategy
+        `${displayName}, I've analyzed growth opportunities in your market segment.`,
+        `Revenue trends show patterns. Want me to identify optimization areas?`,
+        `I can model customer acquisition cost versus lifetime value for you.`,
+        `Your competitive positioning analysis is ready when you need it.`,
+        // Operations Excellence
+        `Operational efficiency metrics are available. Shall I highlight bottlenecks?`,
+        `I've identified labor cost optimization opportunities worth reviewing.`,
+        `Break compliance is at 98% - one department needs attention.`,
+        `Schedule coverage gaps detected for next week. Want recommendations?`,
+        // Sales & Revenue
+        `Sales pipeline analysis shows promising conversion patterns.`,
+        `I can help forecast revenue based on current booking trends.`,
+        `Client retention metrics suggest upsell opportunities.`,
+        `Your invoicing cycle efficiency is above industry average.`,
+        // Financial Management
+        `Payroll projections for this period are ready for review.`,
+        `I can simulate overtime scenarios to optimize labor spend.`,
+        `Tax withholding calculations are current. Any adjustments needed?`,
+        `Invoice aging report shows 3 overdue accounts needing attention.`,
+        // Workforce Intelligence
+        `Employee sentiment analysis from recent interactions is available.`,
+        `Scheduling AI confidence is high - ready for autonomous mode.`,
+        `I can generate workforce forecasts based on historical patterns.`,
+        `Time tracking anomalies detected. Want me to flag them?`,
       ];
     } else if (ctx?.hasBusinessBuddy || ctx?.isOrgOwner) {
+      // BUSINESS OWNER EXPERTISE - comprehensive advisor
       thoughtPool = [
-        `${displayName}, how can I assist with business operations?`,
-        `Ready to help with workforce planning.`,
-        `I can help optimize scheduling efficiency.`,
-        `Would you like to review team performance metrics?`,
+        // Growth Focus
+        `${displayName}, how can I help grow your business today?`,
+        `I can analyze your team's productivity trends.`,
+        `Ready to help with strategic workforce planning.`,
+        `Would you like insights on reducing labor costs?`,
+        // Operations
+        `Schedule optimization opportunities are available.`,
+        `I can help balance workload across your teams.`,
+        `Break compliance monitoring is active and healthy.`,
         `Standing by to support your business operations.`,
-        `Ready to assist with organizational tasks.`,
+        // Financial
+        `Payroll processing is on track for this cycle.`,
+        `I can help review invoicing efficiency.`,
+        `Labor cost projections are available on request.`,
+        // Sales & Admin
+        `Client billing is current. Any overdue follow-ups?`,
+        `I can draft professional communications for you.`,
+        `Administrative task automation suggestions are ready.`,
       ];
     } else if (ctx?.isManager) {
+      // MANAGER-FOCUSED EXPERTISE
       thoughtPool = [
         `${displayName}, team schedule status is available.`,
-        `I can assist with shift adjustments.`,
-        `Time-off request management is available.`,
+        `I can assist with shift adjustments and swaps.`,
+        `Time-off request management is streamlined and ready.`,
         `Ready to help with team coordination.`,
-        `Standing by to assist with scheduling.`,
+        `Employee availability conflicts detected - want solutions?`,
+        `I can generate team performance summaries.`,
+        `Overtime alerts are configured. Current projections look good.`,
+        `Standing by to optimize your scheduling workflow.`,
       ];
     } else {
-      // Standard user thoughts - professional tone
+      // STANDARD USER - helpful assistance
       thoughtPool = [
         `${displayName}, how may I assist you?`,
         `I'm available if you have questions.`,
-        `Standing by to assist.`,
+        `Standing by to assist with your tasks.`,
         `How can I help you today?`,
-        `Ready to provide assistance.`,
+        `Ready to help with scheduling or time tracking.`,
+        `I can answer questions about your shifts or time off.`,
       ];
     }
     

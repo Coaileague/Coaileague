@@ -123,19 +123,24 @@ const SnowfallEngine = memo(function SnowfallEngine() {
   const initSnowPiles = useCallback(() => {
     if (!accumulation) return;
     
-    // Mobile gets larger, more visible snow piles
+    // Mobile: REDUCED snow piles to avoid covering navigation
+    // Safe zone at bottom: Mobile has ~60px nav, so keep piles VERY short
     const isMobile = dimensions.width < 768;
-    const pileCount = Math.floor(dimensions.width / (isMobile ? 80 : 120));
+    const isTablet = dimensions.width >= 768 && dimensions.width < 1024;
+    
+    // Fewer piles on mobile, avoid cluttering
+    const pileCount = Math.floor(dimensions.width / (isMobile ? 100 : isTablet ? 100 : 120));
     const piles: SnowPile[] = [];
     
     for (let i = 0; i < pileCount; i++) {
       const x = (i / pileCount) * dimensions.width + Math.random() * 60;
       piles.push({
         x,
-        width: isMobile ? 100 + Math.random() * 80 : 80 + Math.random() * 60,
+        width: isMobile ? 60 + Math.random() * 40 : 80 + Math.random() * 60,
         height: 0,
-        // Mobile: shorter snow piles (30-50px), Desktop: minimal (10-25px)
-        targetHeight: isMobile ? 30 + Math.random() * 20 : 10 + Math.random() * 15,
+        // CRITICAL FIX: Much shorter piles on mobile (8-15px max) to avoid covering menu
+        // Desktop: minimal decorative piles (8-18px)
+        targetHeight: isMobile ? 8 + Math.random() * 7 : isTablet ? 10 + Math.random() * 10 : 10 + Math.random() * 8,
         phase: 'forming',
         phaseStart: Date.now(),
       });
@@ -292,6 +297,11 @@ const SnowfallEngine = memo(function SnowfallEngine() {
       if (accumulation) {
         ctx.globalAlpha = 1;
         
+        // Safe zone: Leave space for mobile navigation (bottom 65px on mobile)
+        const isMobileDevice = dimensions.width < 768;
+        const safeZoneMargin = isMobileDevice ? 65 : 0;
+        const effectiveHeight = dimensions.height - safeZoneMargin;
+        
         snowPilesRef.current.forEach(pile => {
           const phase = phaseRef.current;
           const elapsed = Date.now() - phaseStartRef.current;
@@ -306,8 +316,8 @@ const SnowfallEngine = memo(function SnowfallEngine() {
           
           if (pile.height > 1) {
             const gradient = ctx.createLinearGradient(
-              pile.x, dimensions.height - pile.height,
-              pile.x, dimensions.height
+              pile.x, effectiveHeight - pile.height,
+              pile.x, effectiveHeight
             );
             gradient.addColorStop(0, 'rgba(255, 255, 255, 0.9)');
             gradient.addColorStop(0.3, 'rgba(240, 248, 255, 0.95)');
@@ -315,19 +325,19 @@ const SnowfallEngine = memo(function SnowfallEngine() {
             
             ctx.fillStyle = gradient;
             ctx.beginPath();
-            ctx.moveTo(pile.x - pile.width / 2, dimensions.height);
+            ctx.moveTo(pile.x - pile.width / 2, effectiveHeight);
             
             ctx.quadraticCurveTo(
               pile.x - pile.width / 4,
-              dimensions.height - pile.height * 0.8,
+              effectiveHeight - pile.height * 0.8,
               pile.x,
-              dimensions.height - pile.height
+              effectiveHeight - pile.height
             );
             ctx.quadraticCurveTo(
               pile.x + pile.width / 4,
-              dimensions.height - pile.height * 0.8,
+              effectiveHeight - pile.height * 0.8,
               pile.x + pile.width / 2,
-              dimensions.height
+              effectiveHeight
             );
             
             ctx.closePath();
