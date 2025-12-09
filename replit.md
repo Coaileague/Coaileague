@@ -70,6 +70,7 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Onboarding Data Migration Subagent:** Specialized AI agent for new org setup, extracting data from various sources for bulk import of employees, teams, and schedules.
 - **Gamification Activation Subagent:** Universal activation agent for gamification during org onboarding, setting up achievements, points, and leaderboards, and managing automation gates.
 - **Onboarding Orchestrator:** Coordinates parallel execution of DataMigrationAgent and GamificationActivationAgent during new org creation.
+- **SubagentBanker:** AI Brain credit pre-authorization and ledger management system implementing subscriber-pays-all model. Features: (1) **Workload Simulation** - estimates credits before execution based on task complexity, token count, and execution mode, (2) **Credit Quoting** - generates time-limited quotes requiring user agreement before proceeding, (3) **Credit Reservation** - atomic reservation with 10-minute TTL preventing double-spend, (4) **Consumption Finalization** - deducts actual credits used with full ledger tracking, (5) **Credit Refill** - handles purchases, bonuses, promos, and refunds, (6) **Ledger Management** - complete transaction history with debits/credits and balance tracking. Complexity multipliers: Simple (1x), Standard (1.5x), Complex (2.5x), Enterprise (4x). Fast Mode multipliers: Normal (1x), Fast (1.5x), Turbo (2x), Instant (3x).
 
 **System Design Choices:**
 - **Modularity:** 87 backend service modules and 220+ frontend routes.

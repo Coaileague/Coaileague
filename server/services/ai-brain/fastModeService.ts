@@ -1109,16 +1109,16 @@ class FastModeService {
         gte(aiWorkboardTasks.createdAt, periodStart)
       ));
     
-    const fastModeTasks = tasks.filter(t => t.executionMode === 'fast');
-    const normalModeTasks = tasks.filter(t => t.executionMode !== 'fast');
+    const fastModeTasks = tasks.filter(t => t.executionMode === 'trinity_fast');
+    const normalModeTasks = tasks.filter(t => t.executionMode !== 'trinity_fast');
     
     // Calculate execution times
     const fastModeAvgTime = this.calculateAvgExecutionTime(fastModeTasks);
     const normalModeAvgTime = this.calculateAvgExecutionTime(normalModeTasks);
     
     // Calculate credits spent
-    const totalCreditsSpent = tasks.reduce((sum, t) => sum + (t.creditsDeducted || 0), 0);
-    const fastModeCredits = fastModeTasks.reduce((sum, t) => sum + (t.creditsDeducted || 0), 0);
+    const totalCreditsSpent = tasks.reduce((sum, t) => sum + (t.creditsDeducted ? 1 : 0), 0);
+    const fastModeCredits = fastModeTasks.reduce((sum, t) => sum + (t.creditsDeducted ? 1 : 0), 0);
     
     // Calculate time saved (assuming normal mode takes 25s avg)
     const normalModeBaseline = 25000; // 25 seconds in ms
@@ -1140,11 +1140,11 @@ class FastModeService {
       .from(trinityCreditTransactions)
       .where(and(
         eq(trinityCreditTransactions.workspaceId, workspaceId),
-        eq(trinityCreditTransactions.type, 'sla_refund'),
+        eq(trinityCreditTransactions.transactionType, 'refund'),
         gte(trinityCreditTransactions.createdAt, periodStart)
       ));
     
-    const refundsIssued = refundTransactions.reduce((sum, t) => sum + t.amount, 0);
+    const refundsIssued = refundTransactions.reduce((sum, t) => sum + Math.abs(t.credits), 0);
     
     // Top agents used
     const agentCounts: Record<string, number> = {};
@@ -1235,12 +1235,24 @@ class FastModeService {
     const refundAmount = Math.ceil(creditsCharged * refundPercentage);
     
     if (refundAmount > 0) {
+      // Get current balance to calculate balanceAfter
+      const [currentCredits] = await db.select()
+        .from(trinityCredits)
+        .where(eq(trinityCredits.workspaceId, workspaceId))
+        .limit(1);
+      
+      const currentBalance = currentCredits?.balance || 0;
+      const newBalance = currentBalance + refundAmount;
+      
       // Issue refund
       await db.insert(trinityCreditTransactions).values({
         workspaceId,
-        amount: refundAmount,
-        type: 'sla_refund',
+        transactionType: 'refund',
+        credits: refundAmount,
+        balanceAfter: newBalance,
         description: `SLA breach refund for task ${taskId}`,
+        actionType: 'sla_refund',
+        actionId: taskId,
         metadata: { taskId, tier, actualTimeMs, slaTargetMs, ratio }
       });
       

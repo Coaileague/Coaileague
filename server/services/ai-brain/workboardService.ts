@@ -267,7 +267,7 @@ class WorkboardService {
         content: task.requestContent,
         workspaceId: task.workspaceId,
         userId: task.userId,
-        context: task.requestMetadata
+        context: task.requestMetadata as Record<string, any> | undefined
       });
 
       const executionTime = Date.now() - startTime;
