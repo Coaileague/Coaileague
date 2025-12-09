@@ -324,13 +324,13 @@ class TrinityMemoryService {
       
       if (existing) {
         existing.frequency++;
-        existing.lastDiscussed = new Date(gap.createdAt);
+        existing.lastDiscussed = gap.createdAt ? new Date(gap.createdAt) : new Date();
       } else {
         topicMap.set(topic, {
           topic,
           category: this.categorizeGapType(gap.gapType),
           frequency: 1,
-          lastDiscussed: new Date(gap.createdAt),
+          lastDiscussed: gap.createdAt ? new Date(gap.createdAt) : new Date(),
           sentiment: gap.resolutionStatus === 'resolved' ? 'positive' : 'neutral',
         });
       }
@@ -360,28 +360,28 @@ class TrinityMemoryService {
       issues.push({
         issueId: gap.id,
         issueType: gap.gapType,
-        description: gap.description || 'Unknown issue',
-        resolution: gap.resolutionNotes,
+        description: gap.gapDescription || 'Unknown issue',
+        resolution: gap.resolutionDetails || undefined,
         resolutionMethod: gap.resolutionStatus === 'resolved' ? 'ai_assisted' : 'self_service',
         timeToResolve: gap.resolvedAt && gap.createdAt 
           ? new Date(gap.resolvedAt).getTime() - new Date(gap.createdAt).getTime() 
           : undefined,
         recurrenceCount: 1,
-        lastOccurred: new Date(gap.createdAt),
+        lastOccurred: gap.createdAt ? new Date(gap.createdAt) : new Date(),
       });
     }
 
     // Extract from failed automation outcomes
     for (const outcome of automationOutcomes) {
-      if (outcome.executionResult === 'error' || outcome.approvalState === 'rejected') {
+      if (outcome.executionStatus === 'error' || outcome.approvalState === 'rejected') {
         issues.push({
           issueId: outcome.id,
           issueType: 'automation_failure',
           description: `${outcome.actionCategory}.${outcome.actionName} failed`,
-          resolution: outcome.errorMessage,
+          resolution: outcome.errorDetails || undefined,
           resolutionMethod: 'automated',
           recurrenceCount: 1,
-          lastOccurred: new Date(outcome.createdAt),
+          lastOccurred: outcome.createdAt ? new Date(outcome.createdAt) : new Date(),
         });
       }
     }
@@ -398,20 +398,20 @@ class TrinityMemoryService {
 
       if (existing) {
         existing.usageCount++;
-        if (outcome.executionResult === 'success') {
+        if (outcome.executionStatus === 'success') {
           existing.successRate = ((existing.successRate * (existing.usageCount - 1)) + 100) / existing.usageCount;
         } else {
           existing.successRate = ((existing.successRate * (existing.usageCount - 1)) + 0) / existing.usageCount;
         }
-        existing.lastUsed = new Date(outcome.createdAt);
+        existing.lastUsed = outcome.createdAt ? new Date(outcome.createdAt) : new Date();
       } else {
         toolStats.set(toolName, {
           toolName,
           category: outcome.actionCategory,
           usageCount: 1,
-          successRate: outcome.executionResult === 'success' ? 100 : 0,
+          successRate: outcome.executionStatus === 'success' ? 100 : 0,
           avgExecutionTime: 0,
-          lastUsed: new Date(outcome.createdAt),
+          lastUsed: outcome.createdAt ? new Date(outcome.createdAt) : new Date(),
         });
       }
     }
@@ -719,7 +719,7 @@ class TrinityMemoryService {
 
       // Invalidate user profile cache to force refresh
       const cacheKey = `${params.userId}:${params.workspaceId || 'global'}`;
-      this.userProfileCache.delete(cacheKey);
+      this.profileCache.delete(cacheKey);
 
       console.log(`[TrinityMemoryService] Recorded outcome for ${params.actionName}: ${params.outcome}`);
     } catch (error) {

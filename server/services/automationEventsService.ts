@@ -324,20 +324,19 @@ class AutomationEventsService {
   private async logToDatabase(event: AutomationJobEvent): Promise<void> {
     try {
       await db.insert(systemAuditLogs).values({
-        eventType: 'automation',
-        severity: event.status === 'failed' ? 'warning' : 'info',
-        message: event.result?.message || event.error || `${event.type} ${event.status}`,
-        details: {
+        action: `automation_${event.type}_${event.status}`,
+        entityType: 'automation_job',
+        entityId: event.id,
+        workspaceId: event.workspaceId || undefined,
+        metadata: {
           jobId: event.id,
           jobType: event.type,
           status: event.status,
-          workspaceId: event.workspaceId,
           duration: event.duration,
           retryCount: event.retryCount,
           result: event.result,
           error: event.error,
         },
-        source: 'automation_scheduler',
         ipAddress: '127.0.0.1',
       });
     } catch (error) {
