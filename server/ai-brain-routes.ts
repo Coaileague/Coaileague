@@ -7,6 +7,7 @@ import express, { Router, Request, Response } from 'express';
 import { isAuthenticated } from './replitAuth';
 import { db } from './db';
 import { aiBrainService } from './services/ai-brain/aiBrainService';
+import { subagentConfidenceMonitor } from './services/ai-brain/subagentConfidenceMonitor';
 import { 
   aiBrainJobs, 
   aiGlobalPatterns, 
@@ -1028,5 +1029,141 @@ aiBrainRouter.get('/feature/:featureId', isAuthenticated, async (req: Request, r
   } catch (error: any) {
     console.error('Error getting feature details:', error);
     res.status(500).json({ error: 'Failed to get feature details' });
+  }
+});
+
+// ============================================================================
+// SUBAGENT CONFIDENCE MONITORING ROUTES
+// ============================================================================
+
+/**
+ * GET /api/ai-brain/confidence/subagent/:subagentId - Get confidence score for a specific subagent
+ */
+aiBrainRouter.get('/confidence/subagent/:subagentId', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const { subagentId } = req.params;
+    const workspaceId = authReq.user?.currentWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace required' });
+    }
+    
+    const confidence = await subagentConfidenceMonitor.getSubagentConfidence(subagentId, workspaceId);
+    
+    if (!confidence) {
+      return res.status(404).json({ error: 'Subagent not found' });
+    }
+    
+    res.json(confidence);
+  } catch (error: any) {
+    console.error('Error getting subagent confidence:', error);
+    res.status(500).json({ error: 'Failed to get subagent confidence' });
+  }
+});
+
+/**
+ * GET /api/ai-brain/confidence/org - Get org-level automation readiness
+ */
+aiBrainRouter.get('/confidence/org', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const workspaceId = authReq.user?.currentWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace required' });
+    }
+    
+    const readiness = await subagentConfidenceMonitor.getOrgAutomationReadiness(workspaceId);
+    
+    if (!readiness) {
+      return res.status(500).json({ error: 'Failed to calculate org readiness' });
+    }
+    
+    res.json(readiness);
+  } catch (error: any) {
+    console.error('Error getting org automation readiness:', error);
+    res.status(500).json({ error: 'Failed to get org readiness' });
+  }
+});
+
+/**
+ * GET /api/ai-brain/confidence/graduation - Check graduation eligibility
+ */
+aiBrainRouter.get('/confidence/graduation', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const workspaceId = authReq.user?.currentWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace required' });
+    }
+    
+    const eligibility = await subagentConfidenceMonitor.checkOrgGraduationEligibility(workspaceId);
+    res.json(eligibility);
+  } catch (error: any) {
+    console.error('Error checking graduation eligibility:', error);
+    res.status(500).json({ error: 'Failed to check graduation eligibility' });
+  }
+});
+
+/**
+ * POST /api/ai-brain/confidence/graduate - Graduate org to higher automation level
+ */
+aiBrainRouter.post('/confidence/graduate', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const workspaceId = authReq.user?.currentWorkspaceId;
+    const userId = authReq.user?.id;
+    
+    if (!workspaceId || !userId) {
+      return res.status(400).json({ error: 'Workspace and user required' });
+    }
+    
+    const result = await subagentConfidenceMonitor.graduateOrg(workspaceId, userId);
+    res.json(result);
+  } catch (error: any) {
+    console.error('Error graduating org:', error);
+    res.status(500).json({ error: 'Failed to graduate org' });
+  }
+});
+
+/**
+ * GET /api/ai-brain/confidence/suggestions - Get AI optimization suggestions
+ */
+aiBrainRouter.get('/confidence/suggestions', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const workspaceId = authReq.user?.currentWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace required' });
+    }
+    
+    const suggestions = await subagentConfidenceMonitor.getOrgOptimizationSuggestions(workspaceId);
+    res.json({ suggestions });
+  } catch (error: any) {
+    console.error('Error getting optimization suggestions:', error);
+    res.status(500).json({ error: 'Failed to get suggestions' });
+  }
+});
+
+/**
+ * GET /api/ai-brain/confidence/trinity-summary - Get Trinity monitoring summary
+ */
+aiBrainRouter.get('/confidence/trinity-summary', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const workspaceId = authReq.user?.currentWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace required' });
+    }
+    
+    const summary = await subagentConfidenceMonitor.getTrinityMonitoringSummary(workspaceId);
+    res.json(summary);
+  } catch (error: any) {
+    console.error('Error getting Trinity monitoring summary:', error);
+    res.status(500).json({ error: 'Failed to get Trinity summary' });
   }
 });
