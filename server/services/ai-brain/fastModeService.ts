@@ -20,6 +20,7 @@ import {
 } from '@shared/schema';
 import { eq, sql, desc, and, gte } from 'drizzle-orm';
 import { subagentSupervisor } from './subagentSupervisor';
+import { getTrinityVelocityEngine, VelocityExecutionResult } from './trinityVelocityEngine';
 
 // WebSocket broadcaster type
 type WebSocketBroadcaster = (event: string, data: any) => void;
@@ -484,6 +485,183 @@ class FastModeService {
         totalCreditsSaved: Math.round(avgTimeSaved / 1000 * 0.5) // Rough estimate
       }
     };
+  }
+
+  /**
+   * Execute using Trinity Velocity Engine (Map-Reduce architecture)
+   * This is the enhanced parallel orchestration with:
+   * - Decomposition (Map): Break task into independent sub-tasks
+   * - Parallel Execution: Fire all sub-tasks with Promise.allSettled
+   * - Consolidation (Reduce): Synthesize results into coherent response
+   */
+  async executeVelocity(params: {
+    taskId: string;
+    workspaceId: string;
+    userId: string;
+    content: string;
+    availableAgents?: string[];
+  }): Promise<{
+    success: boolean;
+    result: VelocityExecutionResult;
+    creditsUsed: number;
+  }> {
+    const { taskId, workspaceId, userId, content, availableAgents } = params;
+    const startTime = Date.now();
+
+    console.log('[FastModeService] Starting Velocity Engine execution:', taskId);
+
+    // Default available agents if not specified
+    const agents = availableAgents || [
+      'SchedulingPro', 'PayrollPro', 'ComplianceGuard', 'AnalyticsEngine',
+      'NotificationManager', 'GamificationBot', 'HealthMonitor', 'SupportAssist'
+    ];
+
+    try {
+      // Get velocity engine instance
+      const velocityEngine = getTrinityVelocityEngine();
+
+      // Set up event listeners for real-time updates
+      const cleanup = this.setupVelocityEventListeners(velocityEngine, taskId, workspaceId);
+
+      // Execute with Map-Reduce pattern
+      const result = await velocityEngine.orchestrate(content, {
+        userId,
+        workspaceId,
+        availableAgents: agents
+      });
+
+      // Clean up event listeners
+      cleanup();
+
+      // Calculate credits based on agent details
+      const baseCredits = result.agentDetails.length * 5; // 5 credits per agent
+      const creditsUsed = Math.ceil(baseCredits * FAST_MODE_CONFIG.creditMultiplier);
+
+      console.log('[FastModeService] Velocity execution completed:', {
+        taskId,
+        status: result.status,
+        totalTimeMs: result.totalTimeMs,
+        agentCount: result.agentDetails.length,
+        failedAgents: result.failedAgents.length,
+        creditsUsed
+      });
+
+      return {
+        success: result.status !== 'failed',
+        result,
+        creditsUsed
+      };
+
+    } catch (error) {
+      console.error('[FastModeService] Velocity execution error:', error);
+
+      return {
+        success: false,
+        result: {
+          status: 'failed',
+          totalTimeMs: Date.now() - startTime,
+          parallelConcurrency: 5,
+          finalSynthesis: `Velocity execution failed: ${error}`,
+          agentDetails: [],
+          failedAgents: ['velocity_engine'],
+          cachedAgents: [],
+          needsReviewAgents: []
+        },
+        creditsUsed: 0
+      };
+    }
+  }
+
+  /**
+   * Set up event listeners for velocity engine real-time updates
+   */
+  private setupVelocityEventListeners(
+    velocityEngine: ReturnType<typeof getTrinityVelocityEngine>,
+    taskId: string,
+    workspaceId: string
+  ): () => void {
+    const listeners: Array<{ event: string; handler: (...args: any[]) => void }> = [];
+
+    const addListener = (event: string, handler: (...args: any[]) => void) => {
+      velocityEngine.on(event, handler);
+      listeners.push({ event, handler });
+    };
+
+    // Phase updates
+    addListener('phase_started', (data: { phase: string; agentCount?: number }) => {
+      if (wsBroadcaster) {
+        wsBroadcaster('velocity_phase', { taskId, workspaceId, ...data });
+      }
+    });
+
+    addListener('phase_completed', (data: { phase: string; successCount?: number }) => {
+      if (wsBroadcaster) {
+        wsBroadcaster('velocity_phase_complete', { taskId, workspaceId, ...data });
+      }
+    });
+
+    // Agent updates
+    addListener('agent_started', (data: { agent: string; taskId: string }) => {
+      if (wsBroadcaster) {
+        wsBroadcaster('velocity_agent_started', { taskId, workspaceId, agent: data.agent, agentTaskId: data.taskId });
+      }
+    });
+
+    addListener('agent_completed', (data: { agent: string; cached: boolean; timeMs: number }) => {
+      if (wsBroadcaster) {
+        wsBroadcaster('velocity_agent_completed', { taskId, workspaceId, ...data });
+      }
+    });
+
+    addListener('agent_failed', (data: { agent: string; error: string }) => {
+      if (wsBroadcaster) {
+        wsBroadcaster('velocity_agent_failed', { taskId, workspaceId, ...data });
+      }
+    });
+
+    // Orchestration updates
+    addListener('orchestration_completed', (data: any) => {
+      if (wsBroadcaster) {
+        wsBroadcaster('velocity_completed', { taskId, workspaceId, ...data });
+      }
+    });
+
+    addListener('orchestration_failed', (data: { error: string }) => {
+      if (wsBroadcaster) {
+        wsBroadcaster('velocity_failed', { taskId, workspaceId, ...data });
+      }
+    });
+
+    // Return cleanup function
+    return () => {
+      listeners.forEach(({ event, handler }) => {
+        velocityEngine.removeListener(event, handler);
+      });
+    };
+  }
+
+  /**
+   * Get velocity engine stats
+   */
+  getVelocityStats(): {
+    cacheStats: { size: number; hitRate: number };
+    config: { maxConcurrency: number; confidenceThreshold: number };
+  } {
+    try {
+      const velocityEngine = getTrinityVelocityEngine();
+      return {
+        cacheStats: velocityEngine.getCacheStats(),
+        config: {
+          maxConcurrency: velocityEngine.getConfig().maxConcurrency,
+          confidenceThreshold: velocityEngine.getConfig().confidenceThreshold
+        }
+      };
+    } catch {
+      return {
+        cacheStats: { size: 0, hitRate: 0 },
+        config: { maxConcurrency: 5, confidenceThreshold: 0.7 }
+      };
+    }
   }
   
   // Private helper methods

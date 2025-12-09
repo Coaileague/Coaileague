@@ -333,6 +333,72 @@ export function registerWorkboardRoutes(app: Router, requireAuth: (req: any, res
     }
   });
 
+  /**
+   * Execute task with Velocity Engine (Map-Reduce architecture)
+   * Enhanced parallel orchestration with decomposition, parallel execution, and consolidation
+   */
+  app.post('/api/ai-brain/fast-mode/velocity', requireAuth, async (req: any, res: any) => {
+    try {
+      const { content, availableAgents } = req.body;
+      const userId = req.userId!;
+      const workspaceId = req.workspaceId || req.user?.currentWorkspaceId;
+
+      if (!workspaceId) {
+        return res.status(400).json({ error: 'Workspace context required' });
+      }
+
+      if (!content || typeof content !== 'string') {
+        return res.status(400).json({ error: 'Content is required' });
+      }
+
+      const taskId = `velocity-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+      
+      const result = await fastModeService.executeVelocity({
+        taskId,
+        workspaceId,
+        userId,
+        content: content.trim(),
+        availableAgents
+      });
+
+      res.json({
+        success: result.success,
+        taskId,
+        status: result.result.status,
+        totalTimeMs: result.result.totalTimeMs,
+        parallelConcurrency: result.result.parallelConcurrency,
+        finalSynthesis: result.result.finalSynthesis,
+        agentDetails: result.result.agentDetails.map(a => ({
+          agent: a.agent,
+          status: a.status,
+          confidence: a.confidence,
+          timeMs: a.timeMs,
+          cached: a.cached
+        })),
+        failedAgents: result.result.failedAgents,
+        needsReviewAgents: result.result.needsReviewAgents,
+        creditsUsed: result.creditsUsed
+      });
+    } catch (error: any) {
+      console.error('[FastMode] Velocity execution error:', error);
+      res.status(500).json({ error: 'Velocity execution failed', message: error.message });
+    }
+  });
+
+  /**
+   * Get Velocity Engine stats (cache, config)
+   */
+  app.get('/api/ai-brain/fast-mode/velocity/stats', requireAuth, async (req: any, res: any) => {
+    try {
+      const stats = fastModeService.getVelocityStats();
+      res.json(stats);
+    } catch (error: any) {
+      console.error('[FastMode] Velocity stats error:', error);
+      res.status(500).json({ error: 'Failed to fetch velocity stats', message: error.message });
+    }
+  });
+
   console.log('[WorkboardRoutes] AI Brain Workboard routes registered');
   console.log('[WorkboardRoutes] Fast Mode routes registered');
+  console.log('[WorkboardRoutes] Velocity Engine routes registered');
 }
