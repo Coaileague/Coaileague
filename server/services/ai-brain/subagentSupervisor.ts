@@ -34,7 +34,35 @@ import { platformEventBus, publishPlatformUpdate } from '../platformEventBus';
 import { universalNotificationEngine } from '../universalNotificationEngine';
 import { aiBrainAuthorizationService, AI_BRAIN_AUTHORITY_ROLES } from './aiBrainAuthorizationService';
 import { aiBrainService } from './aiBrainService';
+import { creditManager, CREDIT_COSTS } from '../billing/creditManager';
 import crypto from 'crypto';
+
+// Domain-to-credit-feature mapping for cost estimation
+const DOMAIN_CREDIT_COSTS: Record<SubagentDomain, keyof typeof CREDIT_COSTS> = {
+  scheduling: 'ai_scheduling',
+  payroll: 'ai_payroll_processing',
+  invoicing: 'ai_invoice_generation',
+  compliance: 'ai_general',
+  notifications: 'ai_general',
+  analytics: 'ai_analytics_report',
+  gamification: 'ai_general',
+  communication: 'ai_chat_query',
+  health: 'ai_general',
+  testing: 'ai_general',
+  deployment: 'ai_general',
+  recovery: 'ai_general',
+  orchestration: 'ai_general',
+  security: 'ai_general',
+  escalation: 'ai_general',
+  automation: 'ai_general',
+  lifecycle: 'ai_general',
+  assist: 'ai_chat_query',
+  filesystem: 'ai_general',
+  workflow: 'ai_general',
+  onboarding: 'ai_general',
+  expense: 'ai_general',
+  pricing: 'ai_predictions',
+};
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -79,6 +107,9 @@ export interface SubagentExecutionResult {
   durationMs: number;
   confidenceScore: number;
   retriesUsed?: number; // UPGRADE 2: Track self-correction retries
+  creditsUsed?: number; // Credits consumed for this execution
+  creditBalance?: number; // Remaining credit balance after execution
+  creditDeductionFailed?: boolean; // Flag if credit deduction failed (for observability)
 }
 
 export interface DiagnosticResult {
@@ -816,6 +847,19 @@ class SubagentSupervisor {
       return this.createFailureResult('unauthorized', authorized.reason || 'Access denied', startTime);
     }
 
+    // CREDIT-GATED EXECUTION: Check credits before allowing execution
+    const featureKey = DOMAIN_CREDIT_COSTS[domain] || 'ai_general';
+    const creditCheck = await creditManager.checkCredits(workspaceId, featureKey);
+    
+    if (!creditCheck.hasEnoughCredits) {
+      console.log(`[SubagentSupervisor] Credit-gated: ${domain} requires ${creditCheck.required} credits, workspace has ${creditCheck.currentBalance}`);
+      return this.createFailureResult(
+        'insufficient_credits', 
+        `Insufficient credits for ${domain}. Need ${creditCheck.required}, have ${creditCheck.currentBalance}. Please add more credits.`,
+        startTime
+      );
+    }
+
     // Create execution context
     const context: SubagentExecutionContext = {
       executionId,
@@ -933,6 +977,31 @@ class SubagentSupervisor {
       await this.completeTelemetry(telemetryId, 'completed', currentResult, Date.now() - startTime, undefined, retryCount);
       this.activeExecutions.delete(executionId);
 
+      // CREDIT DEDUCTION: Deduct credits after successful execution
+      const deductionResult = await creditManager.deductCredits({
+        workspaceId,
+        userId,
+        featureKey,
+        featureName: `${domain}:${actionId}`,
+        description: `AI Brain subagent execution: ${subagent.name}`,
+        relatedEntityType: 'subagent_execution',
+        relatedEntityId: executionId,
+      });
+
+      // Calculate final credit values - even if deduction failed, report what was attempted
+      const creditsUsed = deductionResult.success ? creditCheck.required : 0;
+      const finalBalance = deductionResult.success 
+        ? deductionResult.newBalance 
+        : creditCheck.currentBalance; // Keep original balance on failure
+
+      if (!deductionResult.success) {
+        console.warn(`[SubagentSupervisor] Credit deduction failed after execution: ${deductionResult.errorMessage}`);
+        // Note: Execution succeeded but billing failed - this is logged for reconciliation
+        // We don't fail the operation since the work was already completed
+      } else {
+        console.log(`[SubagentSupervisor] Credits deducted: ${creditsUsed} for ${domain}, new balance: ${finalBalance}`);
+      }
+
       return {
         success: true,
         phase: 'validate',
@@ -941,6 +1010,9 @@ class SubagentSupervisor {
         durationMs: Date.now() - startTime,
         confidenceScore: 1.0,
         retriesUsed: retryCount,
+        creditsUsed,
+        creditBalance: finalBalance,
+        creditDeductionFailed: !deductionResult.success,  // Flag for observability
       };
 
     } catch (error: any) {

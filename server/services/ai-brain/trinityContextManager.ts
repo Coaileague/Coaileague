@@ -26,6 +26,7 @@ import {
 } from '@shared/schema';
 import { trinityMemoryService } from './trinityMemoryService';
 import { TTLCache } from './cacheUtils';
+import { creditManager } from '../billing/creditManager';
 
 // ============================================================================
 // TYPES
@@ -109,6 +110,9 @@ export interface WorkspaceContext {
   userRole?: string;
   activeFeatures?: string[];
   subscriptionTier?: string;
+  creditBalance?: number;  // Trinity credit awareness
+  creditAllocation?: number;  // Monthly credit allocation
+  creditPercentUsed?: number;  // Usage percentage
 }
 
 export interface SessionMetrics {
@@ -363,6 +367,55 @@ class TrinityContextManager {
     };
   }
 
+  /**
+   * TRINITY SELF-AWARENESS: Enrich workspace context with credit balance
+   * Enables Trinity to be aware of credit status for informed decision-making
+   */
+  async enrichWorkspaceContextWithCredits(workspaceId: string): Promise<Partial<WorkspaceContext>> {
+    try {
+      const creditsAccount = await creditManager.getCreditsAccount(workspaceId);
+      
+      if (!creditsAccount) {
+        return {};
+      }
+
+      const creditBalance = creditsAccount.currentBalance;
+      const creditAllocation = creditsAccount.monthlyAllocation;
+      const creditPercentUsed = creditAllocation > 0 
+        ? Math.round(((creditAllocation - creditBalance) / creditAllocation) * 100)
+        : 0;
+
+      console.log(`[TrinityContext] Credit awareness loaded for ${workspaceId}: ${creditBalance}/${creditAllocation} (${creditPercentUsed}% used)`);
+
+      return {
+        creditBalance,
+        creditAllocation,
+        creditPercentUsed,
+      };
+    } catch (error) {
+      console.warn('[TrinityContext] Failed to load credit balance:', error);
+      return {};
+    }
+  }
+
+  /**
+   * Get enriched session context with credit awareness
+   */
+  async getEnrichedSessionContext(userId: string, workspaceId?: string): Promise<ConversationContext> {
+    const context = await this.getOrCreateSession(userId, workspaceId);
+    
+    // Enrich with credit awareness if workspace provided
+    if (workspaceId) {
+      const creditContext = await this.enrichWorkspaceContextWithCredits(workspaceId);
+      context.memory.workspaceContext = {
+        ...context.memory.workspaceContext,
+        ...creditContext,
+      };
+    }
+
+    return context;
+  }
+
   // ============================================================================
   // TURN MANAGEMENT
   // ============================================================================
@@ -484,12 +537,33 @@ class TrinityContextManager {
     
     let promptContext = '';
 
-    // Add workspace context
-    if (context.memory.workspaceContext.workspaceName) {
+    // Add workspace context with Trinity credit awareness
+    if (context.memory.workspaceContext.workspaceName || context.memory.workspaceContext.creditBalance !== undefined) {
       promptContext += `## Current Context\n`;
-      promptContext += `- Workspace: ${context.memory.workspaceContext.workspaceName}\n`;
+      if (context.memory.workspaceContext.workspaceName) {
+        promptContext += `- Workspace: ${context.memory.workspaceContext.workspaceName}\n`;
+      }
       promptContext += `- User Role: ${context.memory.workspaceContext.userRole || 'unknown'}\n`;
-      promptContext += `- Subscription: ${context.memory.workspaceContext.subscriptionTier || 'free'}\n\n`;
+      promptContext += `- Subscription: ${context.memory.workspaceContext.subscriptionTier || 'free'}\n`;
+      
+      // TRINITY CREDIT AWARENESS: Include credit status for self-aware decision making
+      if (context.memory.workspaceContext.creditBalance !== undefined) {
+        const creditBalance = context.memory.workspaceContext.creditBalance;
+        const creditAllocation = context.memory.workspaceContext.creditAllocation || 0;
+        const creditPercentUsed = context.memory.workspaceContext.creditPercentUsed || 0;
+        
+        promptContext += `\n## Credit Status (Trinity Awareness)\n`;
+        promptContext += `- Available Credits: ${creditBalance}/${creditAllocation}\n`;
+        promptContext += `- Usage: ${creditPercentUsed}% of monthly allocation used\n`;
+        
+        // Add contextual hints based on credit status
+        if (creditBalance < 10) {
+          promptContext += `- ⚠️ LOW CREDITS: Consider recommending credit purchase or simpler operations\n`;
+        } else if (creditPercentUsed > 80) {
+          promptContext += `- ⚠️ HIGH USAGE: ${100 - creditPercentUsed}% of monthly credits remaining\n`;
+        }
+      }
+      promptContext += '\n';
     }
 
     // Add recent entities discussed

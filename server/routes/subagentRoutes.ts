@@ -265,6 +265,93 @@ router.get('/metrics/self-correction', requireSubagentAccess, async (req: Reques
   }
 });
 
+/**
+ * GET /api/subagents/metrics/credits
+ * Unified credit consumption tracker for AI Brain operations
+ * Returns credit usage breakdown by domain, execution metrics, and balance
+ */
+router.get('/metrics/credits', requireSubagentAccess, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const { workspaceId, since } = req.query;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ success: false, error: 'workspaceId is required' });
+    }
+
+    // Import credit manager for unified tracking
+    const { creditManager } = await import('../services/billing/creditManager');
+    
+    // Get credit balance and account info
+    const creditsAccount = await creditManager.getCreditsAccount(workspaceId as string);
+    
+    // Get monthly usage breakdown by feature
+    const monthlyBreakdown = await creditManager.getMonthlyUsageBreakdown(workspaceId as string);
+    
+    // Get recent transaction history
+    const recentTransactions = await creditManager.getTransactionHistory(
+      workspaceId as string, 
+      20,  // Last 20 transactions
+      0
+    );
+
+    // Get self-correction metrics (which now includes credit tracking)
+    const selfCorrectionMetrics = await subagentSupervisor.getSelfCorrectionMetrics({
+      workspaceId: workspaceId as string,
+      since: since ? new Date(since as string) : new Date(Date.now() - 24 * 60 * 60 * 1000)
+    });
+
+    // Calculate domain-level credit aggregation with safe key extraction
+    const creditsByDomain: Record<string, { credits: number; operations: number }> = {};
+    for (const breakdown of monthlyBreakdown) {
+      // Safely extract domain from featureKey (handles ai_*, custom keys, and null)
+      let domain = 'general';
+      if (breakdown.featureKey) {
+        domain = breakdown.featureKey.startsWith('ai_') 
+          ? breakdown.featureKey.replace('ai_', '') 
+          : breakdown.featureKey;
+      }
+      if (!creditsByDomain[domain]) {
+        creditsByDomain[domain] = { credits: 0, operations: 0 };
+      }
+      creditsByDomain[domain].credits += Number(breakdown.totalCredits) || 0;
+      creditsByDomain[domain].operations += Number(breakdown.operationCount) || 0;
+    }
+
+    res.json({ 
+      success: true, 
+      creditMetrics: {
+        balance: {
+          current: creditsAccount?.currentBalance || 0,
+          allocation: creditsAccount?.monthlyAllocation || 0,
+          percentUsed: creditsAccount?.monthlyAllocation 
+            ? Math.round(((creditsAccount.monthlyAllocation - (creditsAccount?.currentBalance || 0)) / creditsAccount.monthlyAllocation) * 100)
+            : 0,
+          isSuspended: creditsAccount?.isSuspended || false,
+          nextResetAt: creditsAccount?.nextResetAt || null,
+        },
+        monthlyBreakdown,
+        byDomain: creditsByDomain,
+        recentTransactions: recentTransactions.slice(0, 10).map(t => ({
+          id: t.id,
+          type: t.transactionType,
+          amount: t.amount,
+          feature: t.featureName,
+          timestamp: t.createdAt,
+        })),
+        selfCorrectionMetrics: {
+          totalExecutions: selfCorrectionMetrics.totalExecutions,
+          retrySuccessRate: selfCorrectionMetrics.retrySuccessRate,
+          avgRetriesPerExecution: selfCorrectionMetrics.avgRetriesPerExecution,
+        }
+      },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    console.error('[SubagentRoutes] Error fetching credit metrics:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ============================================================================
 // SUPPORT INTERVENTIONS (Approval Workflow)
 // ============================================================================

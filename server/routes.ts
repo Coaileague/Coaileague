@@ -32883,7 +32883,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const { trinityContextManager } = await import("./services/ai-brain/trinityContextManager");
       const userId = req.userId!;
       const workspaceId = req.query.workspaceId as string | undefined;
-      const context = await trinityContextManager.getOrCreateSession(userId, workspaceId);
+      const context = await trinityContextManager.getEnrichedSessionContext(userId, workspaceId);
       res.json({ success: true, sessionId: context.sessionId, turnCount: context.turns.length, knowledgeGaps: context.knowledgeGaps, pendingClarifications: context.pendingClarifications });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
@@ -32912,7 +32912,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const { sessionId } = req.params;
       const { reason, urgency } = req.body;
       if (!reason) return res.status(400).json({ success: false, error: "reason required" });
-      const context = await trinityContextManager.getOrCreateSession(userId, workspaceId);
+      const context = await trinityContextManager.getEnrichedSessionContext(userId, workspaceId);
       if (context.sessionId !== sessionId) return res.status(404).json({ success: false, error: "Session not found" });
       const success = await trinityContextManager.escalateToSupport(context, reason, urgency || 'medium');
       res.json({ success });
