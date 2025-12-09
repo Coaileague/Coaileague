@@ -403,14 +403,19 @@ class GamificationActivationAgent {
     const config = this.getOrCreateConfig(workspaceId);
     const unlockedGates = config.automationGatesUnlocked || [];
 
-    const [levelResult] = await db.select({
-      avgLevel: sql<number>`COALESCE(AVG(current_level), 1)`,
-      maxLevel: sql<number>`COALESCE(MAX(current_level), 1)`,
-    })
-      .from(employeePoints)
-      .where(eq(employeePoints.workspaceId, workspaceId));
+    let currentLevel = 1;
+    try {
+      const [levelResult] = await db.select({
+        avgLevel: sql<number>`COALESCE(AVG(current_level), 1)`,
+        maxLevel: sql<number>`COALESCE(MAX(current_level), 1)`,
+      })
+        .from(employeePoints)
+        .where(eq(employeePoints.workspaceId, workspaceId));
 
-    const currentLevel = Math.floor(levelResult?.maxLevel || 1);
+      currentLevel = Math.floor(levelResult?.maxLevel || 1);
+    } catch (error) {
+      // Fallback to level 1 if query fails (e.g., no employee_points yet)
+    }
 
     return {
       gates: AUTOMATION_GATES.map(gate => ({

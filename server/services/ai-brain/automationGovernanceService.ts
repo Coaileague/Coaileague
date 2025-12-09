@@ -122,6 +122,7 @@ class AutomationGovernanceService {
   private static instance: AutomationGovernanceService;
   private policyCache = new TTLCache<string, WorkspaceAutomationPolicy>(5 * 60 * 1000, 100);
   private consentCache = new TTLCache<string, UserAutomationConsent[]>(5 * 60 * 1000, 200);
+  private schemaErrorLogged = false; // Prevent spamming logs on schema mismatch
 
   static getInstance(): AutomationGovernanceService {
     if (!this.instance) {
@@ -173,8 +174,15 @@ class AutomationGovernanceService {
 
       this.policyCache.set(workspaceId, newPolicy);
       return newPolicy;
-    } catch (error) {
-      console.error('[AutomationGovernance] Error getting policy:', error);
+    } catch (error: any) {
+      // Only log schema mismatch errors once to prevent log spam
+      const isSchemaError = error?.code === '42703'; // Column does not exist
+      if (!this.schemaErrorLogged && isSchemaError) {
+        console.warn('[AutomationGovernance] Schema mismatch detected - using fallback policy. Run db:push to sync schema.');
+        this.schemaErrorLogged = true;
+      } else if (!isSchemaError) {
+        console.error('[AutomationGovernance] Error getting policy:', error);
+      }
       // Return default policy structure if DB fails
       return {
         id: 'fallback',
