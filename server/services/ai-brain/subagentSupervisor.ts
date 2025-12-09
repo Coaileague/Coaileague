@@ -76,7 +76,7 @@ export type SubagentDomain =
   | 'workflow' | 'onboarding' | 'expense' | 'pricing';
 
 export type SubagentPhase = 'prepare' | 'execute' | 'validate' | 'escalate';
-export type SubagentStatus = 'idle' | 'preparing' | 'executing' | 'validating' | 'escalating' | 'completed' | 'failed' | 'derailed';
+export type SubagentStatus = 'idle' | 'preparing' | 'executing' | 'validating' | 'escalating' | 'completed' | 'failed' | 'derailed' | 'retrying';
 
 export interface SubagentExecutionContext {
   executionId: string;
@@ -1134,6 +1134,7 @@ class SubagentSupervisor {
 
   /**
    * Get Fast Mode execution metrics for a workspace
+   * Uses aiWorkboardTasks which has explicit executionMode column
    */
   async getFastModeMetrics(workspaceId: string): Promise<{
     totalFastModeExecutions: number;
@@ -1141,47 +1142,66 @@ class SubagentSupervisor {
     successRate: number;
     popularDomains: string[];
   }> {
-    // Get recent Fast Mode executions from telemetry
-    const recentExecutions = await db.select()
-      .from(subagentTelemetry)
-      .where(and(
-        eq(subagentTelemetry.workspaceId, workspaceId),
-        gte(subagentTelemetry.startedAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
-      ))
-      .orderBy(desc(subagentTelemetry.startedAt))
-      .limit(100);
-    
-    const fastModeExecutions = recentExecutions.filter(e => 
-      (e.inputParameters as any)?._fastMode === true
-    );
-    
-    const successfulExecutions = fastModeExecutions.filter(e => e.status === 'completed');
-    const avgDuration = fastModeExecutions.reduce((acc, e) => acc + (e.durationMs || 0), 0) / (fastModeExecutions.length || 1);
-    
-    // Estimate time saved (Fast Mode is ~60% faster)
-    const normalModeDuration = avgDuration / 0.4; // If Fast Mode is 60% faster, normal is 2.5x slower
-    const avgTimeSaved = normalModeDuration - avgDuration;
-    
-    // Count domains
-    const domainCounts: Record<string, number> = {};
-    fastModeExecutions.forEach(e => {
-      const domain = e.subagentDomain || 'unknown';
-      domainCounts[domain] = (domainCounts[domain] || 0) + 1;
-    });
-    
-    const popularDomains = Object.entries(domainCounts)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([domain]) => domain);
-    
-    return {
-      totalFastModeExecutions: fastModeExecutions.length,
-      avgTimesSaved: avgTimeSaved,
-      successRate: fastModeExecutions.length > 0 
-        ? (successfulExecutions.length / fastModeExecutions.length) * 100 
-        : 100,
-      popularDomains
-    };
+    try {
+      // Import workboard tasks table - has explicit executionMode column
+      const { aiWorkboardTasks } = await import('@shared/schema');
+      
+      // Get recent Fast Mode executions from workboard tasks
+      const recentTasks = await db.select()
+        .from(aiWorkboardTasks)
+        .where(and(
+          eq(aiWorkboardTasks.workspaceId, workspaceId),
+          eq(aiWorkboardTasks.executionMode, 'fast'),
+          gte(aiWorkboardTasks.createdAt, new Date(Date.now() - 7 * 24 * 60 * 60 * 1000))
+        ))
+        .orderBy(desc(aiWorkboardTasks.createdAt))
+        .limit(100);
+      
+      const successfulTasks = recentTasks.filter(t => t.status === 'completed');
+      
+      // Calculate average duration from start to completion
+      const completedWithTiming = recentTasks.filter(t => t.startedAt && t.completedAt);
+      const avgDuration = completedWithTiming.length > 0
+        ? completedWithTiming.reduce((acc, t) => {
+            const startMs = t.startedAt ? new Date(t.startedAt).getTime() : 0;
+            const endMs = t.completedAt ? new Date(t.completedAt).getTime() : 0;
+            return acc + (endMs - startMs);
+          }, 0) / completedWithTiming.length
+        : 3000; // Default 3s for Fast Mode
+      
+      // Estimate time saved (Fast Mode is ~60% faster than normal)
+      const normalModeDuration = avgDuration / 0.4;
+      const avgTimeSaved = normalModeDuration - avgDuration;
+      
+      // Count by category to get domain popularity
+      const domainCounts: Record<string, number> = {};
+      recentTasks.forEach(t => {
+        const domain = t.category || 'general';
+        domainCounts[domain] = (domainCounts[domain] || 0) + 1;
+      });
+      
+      const popularDomains = Object.entries(domainCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 5)
+        .map(([domain]) => domain);
+      
+      return {
+        totalFastModeExecutions: recentTasks.length,
+        avgTimesSaved: avgTimeSaved,
+        successRate: recentTasks.length > 0 
+          ? (successfulTasks.length / recentTasks.length) * 100 
+          : 100,
+        popularDomains
+      };
+    } catch {
+      // Fallback if schema import fails
+      return {
+        totalFastModeExecutions: 0,
+        avgTimesSaved: 0,
+        successRate: 100,
+        popularDomains: []
+      };
+    }
   }
 
   // ============================================================================
