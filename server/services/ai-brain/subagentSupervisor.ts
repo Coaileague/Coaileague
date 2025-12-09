@@ -35,6 +35,7 @@ import { universalNotificationEngine } from '../universalNotificationEngine';
 import { aiBrainAuthorizationService, AI_BRAIN_AUTHORITY_ROLES } from './aiBrainAuthorizationService';
 import { aiBrainService } from './aiBrainService';
 import { creditManager, CREDIT_COSTS } from '../billing/creditManager';
+import { subagentConfidenceMonitor } from './subagentConfidenceMonitor';
 import crypto from 'crypto';
 
 // Domain-to-credit-feature mapping for cost estimation
@@ -1002,12 +1003,25 @@ class SubagentSupervisor {
         console.log(`[SubagentSupervisor] Credits deducted: ${creditsUsed} for ${domain}, new balance: ${finalBalance}`);
       }
 
+      // Record execution for confidence scoring
+      const durationMs = Date.now() - startTime;
+      subagentConfidenceMonitor.recordExecution({
+        subagentId: subagent.id,
+        workspaceId,
+        executionId,
+        success: true,
+        executionTimeMs: durationMs,
+        retryCount,
+        escalated: false,
+        confidenceScore: 1.0,
+      }).catch(err => console.error('[SubagentSupervisor] Failed to record confidence:', err));
+
       return {
         success: true,
         phase: 'validate',
         status: 'completed',
         result: currentResult,
-        durationMs: Date.now() - startTime,
+        durationMs,
         confidenceScore: 1.0,
         retriesUsed: retryCount,
         creditsUsed,
@@ -1017,8 +1031,21 @@ class SubagentSupervisor {
 
     } catch (error: any) {
       console.error(`[SubagentSupervisor] Unexpected error in ${subagent.name}:`, error);
-      await this.completeTelemetry(telemetryId, 'failed', null, Date.now() - startTime, error.message);
+      const failureDurationMs = Date.now() - startTime;
+      await this.completeTelemetry(telemetryId, 'failed', null, failureDurationMs, error.message);
       this.activeExecutions.delete(executionId);
+      
+      // Record failure for confidence scoring
+      subagentConfidenceMonitor.recordExecution({
+        subagentId: subagent.id,
+        workspaceId,
+        executionId,
+        success: false,
+        executionTimeMs: failureDurationMs,
+        retryCount: 0,
+        escalated: false,
+        confidenceScore: 0,
+      }).catch(err => console.error('[SubagentSupervisor] Failed to record failure confidence:', err));
       
       return this.createFailureResult('unexpected_error', error.message, startTime);
     }
