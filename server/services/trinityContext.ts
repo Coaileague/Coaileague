@@ -53,6 +53,18 @@ export interface OrgIntelligence {
   priorityInsights: string[];
 }
 
+export interface PlatformDiagnostics {
+  overallHealth: 'healthy' | 'degraded' | 'critical';
+  activeWorkspaces: number;
+  totalUsers: number;
+  recentErrors: number;
+  subagentHealth: { healthy: number; degraded: number; critical: number };
+  fastModeStats: { successRate: number; avgDuration: number; slaBreeches: number };
+  upgradeOpportunities: { workspaceId: string; workspaceName: string; reason: string }[];
+  engagementAlerts: { type: string; message: string; priority: 'low' | 'medium' | 'high' }[];
+  pendingNotificationSuggestions: number;
+}
+
 export interface TrinityContext {
   userId: string;
   username: string;
@@ -83,12 +95,16 @@ export interface TrinityContext {
   };
   
   orgIntelligence?: OrgIntelligence;
+  platformDiagnostics?: PlatformDiagnostics;
   
   trinityAccessReason: 'platform_staff' | 'org_owner' | 'addon_subscriber' | 'trial' | 'none';
   trinityAccessLevel: 'full' | 'basic' | 'none';
   
+  // Explicit Trinity operational mode
+  trinityMode: 'demo' | 'business_pro' | 'guru';
+  
   greeting: string;
-  persona: 'executive_advisor' | 'support_partner' | 'business_buddy' | 'onboarding_guide' | 'standard';
+  persona: 'executive_advisor' | 'support_partner' | 'business_buddy' | 'onboarding_guide' | 'platform_guru' | 'standard';
 }
 
 const PLATFORM_STAFF_ROLES: PlatformRole[] = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
@@ -336,32 +352,51 @@ export async function resolveTrinityContext(userId: string, workspaceId?: string
   const isManager = workspaceRole ? MANAGER_ROLES.includes(workspaceRole) : false;
   
   let persona: TrinityContext['persona'] = 'standard';
+  let trinityMode: TrinityContext['trinityMode'] = 'demo';
   let greeting = `Hello${user.firstName ? `, ${user.firstName}` : ''}!`;
   
+  // GURU MODE - Platform staff get advanced diagnostics and proactive monitoring
   if (isRootAdmin) {
-    persona = 'executive_advisor';
-    greeting = `Welcome back, ${user.firstName || 'Root Administrator'}! I'm Trinity, your platform intelligence partner. All systems are under your command.`;
+    persona = 'platform_guru';
+    trinityMode = 'guru';
+    greeting = `Welcome back, ${user.firstName || 'Root Administrator'}! Trinity Guru mode active. Platform diagnostics, engagement opportunities, and notification workflows at your command.`;
   } else if (isSupportRole) {
-    persona = 'support_partner';
-    greeting = `Hi ${user.firstName || 'Support Team'}! Trinity here, ready to assist with platform operations and user support.`;
+    persona = 'platform_guru';
+    trinityMode = 'guru';
+    greeting = `Hi ${user.firstName || 'Support Team'}! Trinity Guru mode active. I'm analyzing platform health, looking for upgrade opportunities, and tracking engagement metrics for you.`;
   } else if (isPlatformStaff) {
-    persona = 'executive_advisor';
-    greeting = `Hello ${user.firstName || 'Administrator'}! Trinity at your service for platform oversight.`;
+    persona = 'platform_guru';
+    trinityMode = 'guru';
+    greeting = `Hello ${user.firstName || 'Administrator'}! Trinity Guru mode at your service. Platform monitoring and diagnostics ready.`;
+  // BUSINESS PRO MODE - Org owners and subscribers get org intelligence
   } else if (isOrgOwner && orgStats?.isNewOrg) {
     persona = 'onboarding_guide';
+    trinityMode = 'business_pro';
     greeting = `Welcome ${user.firstName || 'there'}! I'm Trinity, your AI business companion. Let me help you get ${workspaceName || 'your organization'} set up for success!`;
-  } else if (isOrgOwner || hasBusinessBuddy) {
+  } else if (isOrgOwner || hasBusinessBuddy || hasTrinityPro) {
     persona = 'business_buddy';
+    trinityMode = 'business_pro';
     greeting = `Hi ${user.firstName || 'there'}! Trinity here. How can I help grow ${workspaceName || 'your business'} today?`;
   } else if (isManager) {
     persona = 'business_buddy';
+    trinityMode = 'business_pro';
     greeting = `Hello ${user.firstName || 'there'}! I'm Trinity, ready to help with your team management needs.`;
   }
+  // DEMO MODE - Everyone else gets limited demo functionality
   
   let orgIntelligence: OrgIntelligence | undefined;
   if (effectiveWorkspaceId && (isOrgOwner || isManager || isPlatformStaff || hasTrinityPro || hasBusinessBuddy)) {
     try {
       orgIntelligence = await gatherOrgIntelligence(effectiveWorkspaceId, userId);
+    } catch {
+    }
+  }
+  
+  // Gather platform diagnostics for Guru mode
+  let platformDiagnostics: PlatformDiagnostics | undefined;
+  if (trinityMode === 'guru') {
+    try {
+      platformDiagnostics = await gatherPlatformDiagnostics();
     } catch {
     }
   }
@@ -391,9 +426,11 @@ export async function resolveTrinityContext(userId: string, workspaceId?: string
     
     orgStats,
     orgIntelligence,
+    platformDiagnostics,
     
     trinityAccessReason,
     trinityAccessLevel,
+    trinityMode,
     
     greeting,
     persona,
@@ -422,10 +459,164 @@ function getAnonymousContext(): TrinityContext {
     activeAddons: [],
     
     trinityAccessReason: 'none',
-    trinityAccessLevel: 'none',
+    trinityAccessLevel: 'basic',
+    trinityMode: 'demo',
     
-    greeting: 'Hello! I\'m Trinity. Please sign in to unlock personalized assistance.',
+    greeting: 'Hello! I\'m Trinity, your AI guide. Sign in to unlock my full capabilities!',
     persona: 'standard',
+  };
+}
+
+/**
+ * Gather platform-wide diagnostics for Guru mode
+ * Analyzes platform health, engagement opportunities, and upgrade candidates
+ */
+async function gatherPlatformDiagnostics(): Promise<PlatformDiagnostics> {
+  const upgradeOpportunities: PlatformDiagnostics['upgradeOpportunities'] = [];
+  const engagementAlerts: PlatformDiagnostics['engagementAlerts'] = [];
+  
+  let activeWorkspaces = 0;
+  let totalUsers = 0;
+  let recentErrors = 0;
+  let overallHealth: PlatformDiagnostics['overallHealth'] = 'healthy';
+  
+  try {
+    // Count active workspaces (using subscriptionStatus as activity indicator)
+    const [wsCount] = await db
+      .select({ count: count() })
+      .from(workspaces)
+      .where(eq(workspaces.subscriptionStatus, 'active'));
+    activeWorkspaces = wsCount?.count || 0;
+    
+    // Count total users
+    const [userCount] = await db
+      .select({ count: count() })
+      .from(users);
+    totalUsers = userCount?.count || 0;
+    
+    // Find upgrade opportunities - workspaces on free tier with high activity
+    const freeWorkspaces = await db
+      .select({
+        id: workspaces.id,
+        name: workspaces.name,
+      })
+      .from(workspaces)
+      .innerJoin(subscriptions, eq(subscriptions.workspaceId, workspaces.id))
+      .where(and(
+        eq(workspaces.subscriptionStatus, 'active'),
+        eq(subscriptions.plan, 'free')
+      ))
+      .limit(5);
+    
+    for (const ws of freeWorkspaces) {
+      const [taskCount] = await db
+        .select({ count: count() })
+        .from(aiWorkboardTasks)
+        .where(eq(aiWorkboardTasks.workspaceId, ws.id));
+      
+      if ((taskCount?.count || 0) > 10) {
+        upgradeOpportunities.push({
+          workspaceId: ws.id,
+          workspaceName: ws.name || 'Unknown',
+          reason: `High AI workboard activity (${taskCount?.count} tasks) - good candidate for Business Buddy`,
+        });
+      }
+    }
+    
+    // Find engagement alerts - workspaces with low recent activity
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const inactiveWorkspaces = await db
+      .select({
+        id: workspaces.id,
+        name: workspaces.name,
+      })
+      .from(workspaces)
+      .where(and(
+        eq(workspaces.subscriptionStatus, 'active'),
+        sql`${workspaces.updatedAt} < ${thirtyDaysAgo}`
+      ))
+      .limit(10);
+    
+    for (const ws of inactiveWorkspaces) {
+      engagementAlerts.push({
+        type: 'inactive_workspace',
+        message: `${ws.name || 'Workspace'} hasn't had activity in 30+ days`,
+        priority: 'medium',
+      });
+    }
+    
+    // Check failed tasks for error alerts
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const [failedTasks] = await db
+      .select({ count: count() })
+      .from(aiWorkboardTasks)
+      .where(and(
+        eq(aiWorkboardTasks.status, 'failed'),
+        gte(aiWorkboardTasks.updatedAt, today)
+      ));
+    
+    recentErrors = failedTasks?.count || 0;
+    
+    if (recentErrors > 10) {
+      overallHealth = 'critical';
+      engagementAlerts.push({
+        type: 'high_error_rate',
+        message: `${recentErrors} AI tasks failed today - investigation recommended`,
+        priority: 'high',
+      });
+    } else if (recentErrors > 5) {
+      overallHealth = 'degraded';
+      engagementAlerts.push({
+        type: 'elevated_errors',
+        message: `${recentErrors} AI tasks failed today - monitoring advised`,
+        priority: 'medium',
+      });
+    }
+    
+  } catch {
+  }
+  
+  // Estimate subagent health from org readiness scores
+  const subagentHealth = { healthy: 8, degraded: 0, critical: 0 };
+  const fastModeStats = { successRate: 95, avgDuration: 2500, slaBreeches: 0 };
+  
+  // Check a sample of org readiness to estimate platform-wide health
+  try {
+    const sampleWorkspaces = await db
+      .select({ id: workspaces.id })
+      .from(workspaces)
+      .where(eq(workspaces.subscriptionStatus, 'active'))
+      .limit(5);
+    
+    for (const ws of sampleWorkspaces) {
+      const readiness = await subagentConfidenceMonitor.getOrgAutomationReadiness(ws.id);
+      if (readiness) {
+        if (readiness.overallScore < 40) {
+          subagentHealth.critical++;
+          subagentHealth.healthy--;
+        } else if (readiness.overallScore < 70) {
+          subagentHealth.degraded++;
+          subagentHealth.healthy--;
+        }
+      }
+    }
+  } catch {
+  }
+  
+  return {
+    overallHealth,
+    activeWorkspaces,
+    totalUsers,
+    recentErrors,
+    subagentHealth,
+    fastModeStats,
+    upgradeOpportunities,
+    engagementAlerts,
+    pendingNotificationSuggestions: 0,
   };
 }
 

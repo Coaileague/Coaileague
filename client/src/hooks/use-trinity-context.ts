@@ -40,6 +40,18 @@ interface OrgIntelligence {
   priorityInsights: string[];
 }
 
+interface PlatformDiagnostics {
+  overallHealth: 'healthy' | 'degraded' | 'critical';
+  activeWorkspaces: number;
+  totalUsers: number;
+  recentErrors: number;
+  subagentHealth: { healthy: number; degraded: number; critical: number };
+  fastModeStats: { successRate: number; avgDuration: number; slaBreeches: number };
+  upgradeOpportunities: { workspaceId: string; workspaceName: string; reason: string }[];
+  engagementAlerts: { type: string; message: string; priority: 'low' | 'medium' | 'high' }[];
+  pendingNotificationSuggestions: number;
+}
+
 export interface TrinityContext {
   userId: string;
   username: string;
@@ -70,12 +82,14 @@ export interface TrinityContext {
   };
   
   orgIntelligence?: OrgIntelligence;
+  platformDiagnostics?: PlatformDiagnostics;
   
   trinityAccessReason: 'platform_staff' | 'org_owner' | 'addon_subscriber' | 'trial' | 'none';
   trinityAccessLevel: 'full' | 'basic' | 'none';
+  trinityMode: 'demo' | 'business_pro' | 'guru';
   
   greeting: string;
-  persona: 'executive_advisor' | 'support_partner' | 'business_buddy' | 'onboarding_guide' | 'standard';
+  persona: 'executive_advisor' | 'support_partner' | 'business_buddy' | 'onboarding_guide' | 'platform_guru' | 'standard';
 }
 
 interface TrinityContextResponse {

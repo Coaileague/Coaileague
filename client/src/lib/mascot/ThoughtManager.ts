@@ -88,6 +88,19 @@ export interface OrgIntelligence {
   priorityInsights: string[];
 }
 
+// Platform diagnostics for Guru mode
+export interface PlatformDiagnostics {
+  overallHealth: 'healthy' | 'degraded' | 'critical';
+  activeWorkspaces: number;
+  totalUsers: number;
+  recentErrors: number;
+  subagentHealth: { healthy: number; degraded: number; critical: number };
+  fastModeStats: { successRate: number; avgDuration: number; slaBreeches: number };
+  upgradeOpportunities: { workspaceId: string; workspaceName: string; reason: string }[];
+  engagementAlerts: { type: string; message: string; priority: 'low' | 'medium' | 'high' }[];
+  pendingNotificationSuggestions: number;
+}
+
 // Trinity context for role-aware persona selection
 export interface TrinityPersonaContext {
   platformRole: string;
@@ -106,7 +119,9 @@ export interface TrinityPersonaContext {
     isNewOrg: boolean;
   };
   orgIntelligence?: OrgIntelligence;
-  persona: 'executive_advisor' | 'support_partner' | 'business_buddy' | 'onboarding_guide' | 'standard';
+  platformDiagnostics?: PlatformDiagnostics;
+  trinityMode?: 'demo' | 'business_pro' | 'guru';
+  persona: 'executive_advisor' | 'support_partner' | 'business_buddy' | 'onboarding_guide' | 'platform_guru' | 'standard';
   greeting?: string;
 }
 
@@ -968,7 +983,69 @@ class ThoughtManager {
     }
     
     // Fallback to persona-based thought pools
-    if (ctx?.isRootAdmin || ctx?.isPlatformStaff) {
+    // GURU MODE - Platform diagnostics, health analysis, engagement opportunities
+    if (ctx?.trinityMode === 'guru' || ctx?.persona === 'platform_guru') {
+      const diag = ctx?.platformDiagnostics;
+      thoughtPool = [];
+      
+      // Priority: Surface platform diagnostics data
+      if (diag) {
+        // Health status thoughts
+        if (diag.overallHealth === 'healthy') {
+          thoughtPool.push(`${displayName}, platform health is optimal. ${diag.activeWorkspaces} active workspaces, ${diag.totalUsers} users.`);
+          thoughtPool.push(`All systems green. ${diag.subagentHealth.healthy} of ${diag.subagentHealth.healthy + diag.subagentHealth.degraded + diag.subagentHealth.critical} subagents performing well.`);
+        } else if (diag.overallHealth === 'degraded') {
+          thoughtPool.push(`${displayName}, platform health is degraded. ${diag.recentErrors} errors today need attention.`);
+          thoughtPool.push(`Monitoring alert: Some systems need attention. Let me show you the details.`);
+        } else if (diag.overallHealth === 'critical') {
+          thoughtPool.push(`${displayName}, critical platform issues detected. ${diag.recentErrors} failures today - investigation recommended.`);
+        }
+        
+        // Upgrade opportunities
+        if (diag.upgradeOpportunities.length > 0) {
+          const opp = diag.upgradeOpportunities[0];
+          thoughtPool.push(`${displayName}, I found an upgrade opportunity: ${opp.workspaceName} - ${opp.reason}`);
+          thoughtPool.push(`${diag.upgradeOpportunities.length} workspace(s) showing high engagement on free tier. Good upsell candidates.`);
+        }
+        
+        // Engagement alerts
+        if (diag.engagementAlerts.length > 0) {
+          const highPriority = diag.engagementAlerts.filter(a => a.priority === 'high');
+          if (highPriority.length > 0) {
+            thoughtPool.push(`${displayName}, high priority alert: ${highPriority[0].message}`);
+          }
+          const medPriority = diag.engagementAlerts.filter(a => a.priority === 'medium');
+          if (medPriority.length > 0) {
+            thoughtPool.push(`${medPriority.length} engagement alert(s) need review: ${medPriority[0].message}`);
+          }
+        }
+        
+        // Subagent health
+        if (diag.subagentHealth.degraded > 0) {
+          thoughtPool.push(`${diag.subagentHealth.degraded} subagent(s) showing degraded confidence. Want me to investigate?`);
+        }
+        if (diag.subagentHealth.critical > 0) {
+          thoughtPool.push(`${displayName}, ${diag.subagentHealth.critical} subagent(s) need immediate attention - confidence critically low.`);
+        }
+      }
+      
+      // Guru mode general thoughts - proactive platform management
+      thoughtPool.push(
+        `${displayName}, I'm continuously monitoring platform health and looking for optimization opportunities.`,
+        `Platform diagnostics running. I can suggest new features or improvements for our users.`,
+        `${displayName}, shall I analyze engagement patterns across workspaces?`,
+        `I can identify orgs that might benefit from Business Buddy based on their activity.`,
+        `Running automated checks on subagent performance and confidence scores.`,
+        `${displayName}, I can draft notification suggestions for the System tab when I spot opportunities.`,
+        `Monitoring FAST mode execution for SLA compliance and credit efficiency.`,
+        `I'm tracking automation graduation readiness across all workspaces.`,
+        `${displayName}, want me to summarize today's platform activity and trends?`,
+        `I can suggest workflow improvements based on common support patterns.`,
+        `Analyzing user engagement - I can identify feature adoption opportunities.`,
+        `${displayName}, I've got visibility into all org metrics. Ask me anything about platform performance.`,
+      );
+    } else if (ctx?.isRootAdmin || ctx?.isPlatformStaff) {
+      // Fallback for platform staff without explicit guru mode
       thoughtPool = [
         `${displayName}, platform metrics are within normal parameters.`,
         `All systems operational. Standing by for review.`,
@@ -979,6 +1056,7 @@ class ThoughtManager {
         `Subagent confidence scores are tracking well across workspaces.`,
       ];
     } else if (ctx?.isSupportRole) {
+      // Support role without guru mode
       thoughtPool = [
         `${displayName}, support queue is available for review.`,
         `Support systems ready. I can help streamline responses.`,
