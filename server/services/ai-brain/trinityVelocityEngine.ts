@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { EventEmitter } from 'events';
 import { createHash } from 'crypto';
+import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './providers/geminiClient';
 
 interface CacheEntry {
   value: any;
@@ -113,9 +114,11 @@ export class TrinityVelocityEngine extends EventEmitter {
     this.config = { ...DEFAULT_CONFIG, ...config };
     
     this.flashModel = this.genAI.getGenerativeModel({
-      model: 'gemini-1.5-flash',
+      model: GEMINI_MODELS.SUPERVISOR,
       generationConfig: {
         responseMimeType: 'application/json',
+        maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
+        temperature: ANTI_YAP_PRESETS.supervisor.temperature,
       },
     });
     
@@ -252,9 +255,11 @@ Return a JSON object with a "subtasks" array.`;
 
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: GEMINI_MODELS.ORCHESTRATOR,
         generationConfig: {
           responseMimeType: 'application/json',
+          maxOutputTokens: ANTI_YAP_PRESETS.orchestrator.maxTokens,
+          temperature: ANTI_YAP_PRESETS.orchestrator.temperature,
         },
       });
 
@@ -363,9 +368,11 @@ Context:
 Provide your response with a confidence score (0.0-1.0) and any recommendations.`;
 
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: GEMINI_MODELS.SUPERVISOR,
         generationConfig: {
           responseMimeType: 'application/json',
+          maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
+          temperature: ANTI_YAP_PRESETS.supervisor.temperature,
         },
       });
 
@@ -481,9 +488,11 @@ Synthesize these results into a coherent, actionable response for the user. Use 
 
     try {
       const model = this.genAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: GEMINI_MODELS.ORCHESTRATOR,
         generationConfig: {
           responseMimeType: 'application/json',
+          maxOutputTokens: ANTI_YAP_PRESETS.orchestrator.maxTokens,
+          temperature: ANTI_YAP_PRESETS.orchestrator.temperature,
         },
       });
 

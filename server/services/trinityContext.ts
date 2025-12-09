@@ -857,6 +857,13 @@ export async function handleNotificationSuggestion(
   }
 }
 
+/**
+ * Generate a contextual thought for Trinity using REAL Gemini AI
+ * 
+ * This function builds rich context from the TrinityContext and sends it to
+ * Gemini for intelligent, personality-driven thought generation.
+ * Falls back to simple thoughts if AI is unavailable.
+ */
 export async function generateContextualThought(context: TrinityContext): Promise<string | null> {
   if (context.trinityAccessLevel === 'none') {
     return null;
@@ -867,127 +874,150 @@ export async function generateContextualThought(context: TrinityContext): Promis
   const employeeCount = context.orgStats?.employeeCount || 0;
   const intel = context.orgIntelligence;
   
-  if (intel?.priorityInsights && intel.priorityInsights.length > 0 && Math.random() < 0.5) {
-    const insight = intel.priorityInsights[Math.floor(Math.random() * intel.priorityInsights.length)];
-    return `${name}, ${insight}`;
+  // Build rich context string for AI
+  const contextParts: string[] = [];
+  
+  // Add user/org context
+  contextParts.push(`User: ${name}`);
+  contextParts.push(`Organization: ${org}`);
+  if (employeeCount > 0) {
+    contextParts.push(`Team size: ${employeeCount} employees`);
   }
   
-  if (intel?.automationReadiness && Math.random() < 0.3) {
+  // Add role context
+  if (context.isRootAdmin) {
+    contextParts.push('Role: Root administrator with full platform access');
+  } else if (context.isSupportRole) {
+    contextParts.push('Role: Platform support staff');
+  } else if (context.isOrgOwner) {
+    contextParts.push('Role: Organization owner');
+  } else if (context.isManager) {
+    contextParts.push('Role: Manager');
+  } else {
+    contextParts.push('Role: Team member');
+  }
+  
+  // Add subscription context
+  if (context.hasTrinityPro) {
+    contextParts.push('Subscription: Trinity Pro (advanced features unlocked)');
+  } else if (context.hasBusinessBuddy) {
+    contextParts.push('Subscription: Business Buddy tier');
+  }
+  
+  // Add live intelligence data if available
+  if (intel?.priorityInsights?.length) {
+    contextParts.push(`Priority insights: ${intel.priorityInsights.slice(0, 2).join('; ')}`);
+  }
+  
+  if (intel?.automationReadiness) {
     const auto = intel.automationReadiness;
-    if (auto.canGraduate) {
-      return `${name}, your automation readiness is at ${auto.score}% - ready to graduate to the next level!`;
-    }
-    if (auto.recommendations.length > 0) {
-      return `${name}, AI recommendation: ${auto.recommendations[0]}`;
+    contextParts.push(`Automation readiness: ${auto.score}%${auto.canGraduate ? ' (ready to graduate!)' : ''}`);
+    if (auto.recommendations?.length) {
+      contextParts.push(`AI recommendation: ${auto.recommendations[0]}`);
     }
   }
   
-  if (intel?.workboardStats && intel.workboardStats.completedToday > 0 && Math.random() < 0.25) {
-    return `${name}, ${intel.workboardStats.completedToday} AI tasks completed today. ${intel.workboardStats.pendingTasks > 0 ? `${intel.workboardStats.pendingTasks} still pending.` : 'Queue is clear!'}`;
+  if (intel?.workboardStats) {
+    const wb = intel.workboardStats;
+    if (wb.completedToday > 0 || wb.pendingTasks > 0) {
+      contextParts.push(`AI tasks: ${wb.completedToday} completed today, ${wb.pendingTasks} pending`);
+    }
   }
   
-  if (intel?.businessMetrics?.invoicesOverdueCount && intel.businessMetrics.invoicesOverdueCount > 0 && Math.random() < 0.35) {
-    return `${name}, you have ${intel.businessMetrics.invoicesOverdueCount} overdue invoice(s) that need attention.`;
+  if (intel?.businessMetrics) {
+    const bm = intel.businessMetrics;
+    if (bm.invoicesOverdueCount && bm.invoicesOverdueCount > 0) {
+      contextParts.push(`Attention needed: ${bm.invoicesOverdueCount} overdue invoice(s)`);
+    }
+    if (bm.invoicesPendingCount && bm.invoicesPendingCount > 0) {
+      contextParts.push(`Pending invoices: ${bm.invoicesPendingCount}`);
+    }
   }
   
-  // Try to get health insight for platform staff
+  // Add platform health for staff
   if (context.isRootAdmin || context.isSupportRole) {
     try {
       const { platformHealthMonitor } = await import('./ai-brain/platformHealthMonitor');
       const healthInsight = await platformHealthMonitor.getTrinityHealthInsight();
-      if (Math.random() < 0.4 && healthInsight) {
-        return healthInsight;
+      if (healthInsight) {
+        contextParts.push(`Platform health: ${healthInsight}`);
       }
     } catch {
+      // Ignore health monitor errors
     }
   }
   
+  // Add new org onboarding context
+  if (context.orgStats?.isNewOrg) {
+    contextParts.push('Status: New organization, just getting started');
+  }
+  
+  // Determine Trinity mode
+  let mode: 'demo' | 'business' | 'guru' = 'demo';
+  if (context.isRootAdmin || context.isSupportRole) {
+    mode = 'guru';
+  } else if (context.hasBusinessBuddy || context.hasTrinityPro || context.isOrgOwner) {
+    mode = 'business';
+  }
+  
+  // Try to generate AI thought
+  try {
+    const { geminiClient } = await import('./ai-brain/providers/geminiClient');
+    
+    const aiThought = await geminiClient.generateTrinityThought({
+      context: contextParts.join('\n'),
+      displayName: name,
+      workspaceId: context.workspaceId,
+      mode,
+    });
+    
+    if (aiThought) {
+      console.log(`[Trinity] AI-generated thought for ${name} (${mode} mode)`);
+      return aiThought;
+    }
+  } catch (error) {
+    console.warn('[Trinity] AI thought generation unavailable, using fallback:', error);
+  }
+  
+  // Fallback to simple context-aware thoughts if AI fails
+  return generateFallbackThought(context, name, org, employeeCount);
+}
+
+/**
+ * Fallback thought generation when Gemini is unavailable
+ * Uses minimal, context-appropriate responses
+ */
+function generateFallbackThought(
+  context: TrinityContext, 
+  name: string, 
+  org: string, 
+  employeeCount: number
+): string {
   if (context.isRootAdmin) {
-    const thoughts = [
-      `As root administrator, you have full platform oversight. All ${employeeCount} employees and systems are operational.`,
-      `Platform status: All services running. I can help analyze performance metrics or run system diagnostics.`,
-      `Root access confirmed. Need to broadcast updates, manage services, or review platform health?`,
-      `I'm monitoring all ${employeeCount > 0 ? employeeCount + ' active' : ''} workspaces. Want a platform health summary?`,
-      `The AI orchestration engine has ${Math.floor(Math.random() * 20) + 50} actions ready. Need to trigger any workflows?`,
-      `System metrics look healthy. I can run predictive analysis on platform usage patterns if you'd like.`,
-      `I can diagnose issues and suggest hotfixes. Visit the Control Tower for maintenance options.`,
-      `Need to push a quick fix? I can queue hotfix suggestions for your approval.`,
-    ];
-    return thoughts[Math.floor(Math.random() * thoughts.length)];
+    return `${name}, platform systems are operational. Ready to assist with diagnostics or administration.`;
   }
   
   if (context.isSupportRole) {
-    const thoughts = [
-      `Support console ready. I can help escalate issues, broadcast alerts, or assist users across workspaces.`,
-      `All systems nominal. Any support tickets need AI-assisted triage today?`,
-      `Standing by for support operations. I can access platform-wide analytics on your behalf.`,
-      `I can help draft support responses or search the knowledge base for solutions.`,
-      `Need to send a platform-wide announcement? I can help compose and broadcast it.`,
-      `I'm tracking user activity patterns. Want insights on common support requests?`,
-      `I can diagnose platform issues and suggest fixes. Want me to run a health check?`,
-      `If you spot a bug, I can help queue a hotfix for admin approval.`,
-      `Platform maintenance tools are available. I can help analyze logs or suggest optimizations.`,
-    ];
-    return thoughts[Math.floor(Math.random() * thoughts.length)];
+    return `Standing by for support operations. How can I help today?`;
   }
   
-  if (context.isOrgOwner && context.orgStats?.isNewOrg) {
-    const thoughts = [
-      `I notice ${org} is just getting started! Would you like help setting up departments and inviting team members?`,
-      `Welcome aboard! I can guide you through configuring your workspace for optimal team productivity.`,
-      `New organization detected! Let me show you the key features that will help ${org} thrive.`,
-      `First things first: let's set up your department structure. How many teams do you have?`,
-      `I can help you import employee data or create your first schedule. What would you prefer?`,
-    ];
-    return thoughts[Math.floor(Math.random() * thoughts.length)];
+  if (context.orgStats?.isNewOrg) {
+    return `Welcome to CoAIleague, ${name}! Let me help you get ${org} set up.`;
   }
   
   if (context.hasTrinityPro) {
-    const thoughts = [
-      `${name}, your Trinity Pro subscription gives you access to advanced analytics. Want a workforce insights report?`,
-      `I've been analyzing your scheduling patterns. I found some optimization opportunities.`,
-      `Pro feature available: I can predict staffing needs based on historical data. Interested?`,
-      `Your AI advisor is ready with strategic recommendations for ${org}.`,
-      `I can generate executive-level reports on team performance. Would that be helpful?`,
-      `Trinity Pro tip: I can automate recurring scheduling tasks. Want me to set that up?`,
-    ];
-    return thoughts[Math.floor(Math.random() * thoughts.length)];
+    return `${name}, your Trinity Pro features are ready. Need strategic insights?`;
   }
   
-  if (context.hasBusinessBuddy || context.persona === 'business_buddy') {
-    const thoughts = [
-      `I'm here to help ${org} succeed. Ask me about scheduling optimization, team insights, or growth strategies!`,
-      `Your business buddy is ready! I can analyze workforce patterns, suggest improvements, or help with planning.`,
-      `How can I help grow ${org} today? I'm great with data analysis and strategic planning.`,
-      `I notice you have ${employeeCount} team members. Want tips on improving team efficiency?`,
-      `Business insight: Regular schedule optimization can reduce overtime costs by up to 15%.`,
-      `Let me help you build a smarter workforce strategy. What's your biggest challenge right now?`,
-    ];
-    return thoughts[Math.floor(Math.random() * thoughts.length)];
+  if (context.hasBusinessBuddy || context.isOrgOwner) {
+    return `${name}, ready to help optimize ${org}'s workforce operations.`;
   }
   
-  if (context.isOrgOwner || context.isManager) {
-    const thoughts = [
-      `${name}, I can help you manage your team's schedules more efficiently.`,
-      `Need to review time-off requests or approve timesheets? I'm here to help.`,
-      `I can analyze your team's productivity patterns. Would you like some insights?`,
-      `Tip: Setting up recurring shifts can save you hours of scheduling work.`,
-      `Want me to check for any scheduling conflicts or compliance issues?`,
-      `I can help you balance workload across your ${employeeCount > 0 ? employeeCount + ' team members' : 'team'}.`,
-    ];
-    return thoughts[Math.floor(Math.random() * thoughts.length)];
+  if (context.isManager) {
+    return `${name}, I can help with scheduling, approvals, or team insights.`;
   }
   
-  // Standard user thoughts with more variety
-  const thoughts = [
-    `Hey ${name}, I'm here if you need any help navigating the platform.`,
-    `Did you know you can view your upcoming shifts in the calendar view?`,
-    `Need to request time off? I can guide you through the process.`,
-    `I can help you find information about company policies or procedures.`,
-    `Check out your dashboard for updates on your schedule and notifications.`,
-    `If you have questions about your timesheet, just ask!`,
-  ];
-  return thoughts[Math.floor(Math.random() * thoughts.length)];
+  return `Hey ${name}, I'm here to help. What do you need today?`;
 }
 
 export const trinityContextService = {

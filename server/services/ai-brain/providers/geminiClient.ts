@@ -36,6 +36,173 @@ if (!apiKey) {
 
 const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
 
+// ============================================================================
+// TIERED MODEL ARCHITECTURE - Right Intelligence for Right Task
+// ============================================================================
+
+/**
+ * GEMINI MODEL TIERS
+ * 
+ * Tier 1 (Pro): Complex reasoning, diagnostics, orchestration, code analysis
+ * Tier 2 (Flash): Conversational agents, Trinity thoughts, supervisors  
+ * Tier 3 (Lite): Simple status checks, quick lookups, routine tasks
+ * 
+ * Model selection rationale:
+ * - gemini-2.5-pro: Full Pro model for complex orchestration and diagnostics
+ * - gemini-2.5-flash: Fast flash model for conversational AI and supervisors
+ * - gemini-2.0-flash-exp: Experimental flash for creative mascot thoughts
+ * - gemini-1.5-flash-8b: Lightweight for simple/fast tasks
+ */
+export const GEMINI_MODELS = {
+  // Tier 1: Maximum intelligence for complex tasks (Pro-level reasoning)
+  ORCHESTRATOR: 'gemini-2.5-pro',       // Master orchestration, function calling
+  ARCHITECT: 'gemini-2.5-pro',          // Deep code analysis and diagnostics  
+  DIAGNOSTICS: 'gemini-2.5-pro',        // System health and debugging
+  
+  // Tier 2: Balanced speed + intelligence for conversational use
+  CONVERSATIONAL: 'gemini-2.0-flash-exp',  // Trinity mascot thoughts (fast + creative)
+  SUPERVISOR: 'gemini-2.5-flash',          // Subagent supervisors (needs reasoning)
+  HELLOS: 'gemini-2.5-flash',              // HelpAI chat responses
+  
+  // Tier 3: Fast and efficient for simple tasks
+  SIMPLE: 'gemini-1.5-flash-8b',        // Quick status checks (ultra-fast)
+  NOTIFICATION: 'gemini-1.5-flash-8b',  // Notification generation
+  LOOKUP: 'gemini-1.5-flash-8b',        // FAQ and data lookups
+} as const;
+
+export type GeminiModelTier = keyof typeof GEMINI_MODELS;
+
+/**
+ * THINKING LEVEL CONTROLS
+ * 
+ * Controls how much "deep thinking" the model does:
+ * - 'high': Full reasoning chain, best for complex analysis (costs more, slower)
+ * - 'medium': Balanced thinking for moderate complexity
+ * - 'low': Minimal thinking, prioritizes speed (best for quick responses)
+ * - 'none': No extended thinking, fastest response
+ */
+export type ThinkingLevel = 'high' | 'medium' | 'low' | 'none';
+
+/**
+ * ANTI-YAPPING PRESETS
+ * 
+ * Pre-configured settings to prevent verbose AI responses.
+ * Each preset optimizes for specific use cases.
+ */
+export const ANTI_YAP_PRESETS = {
+  // Trinity mascot thoughts: Brief, personality-driven, under 150 tokens
+  mascot: {
+    maxTokens: 150,
+    temperature: 0.6,
+    thinkingLevel: 'low' as ThinkingLevel,
+    systemPromptSuffix: 'Be concise and direct. Maximum 1-2 sentences. No flowery language.',
+  },
+  
+  // Supervisor responses: Moderate detail, action-oriented
+  supervisor: {
+    maxTokens: 300,
+    temperature: 0.5,
+    thinkingLevel: 'low' as ThinkingLevel,
+    systemPromptSuffix: 'Be actionable and focused. Use bullet points when listing.',
+  },
+  
+  // HelpAI chat: Conversational but efficient
+  helpai: {
+    maxTokens: 500,
+    temperature: 0.7,
+    thinkingLevel: 'low' as ThinkingLevel,
+    systemPromptSuffix: 'Be helpful but concise. Answer directly, then offer to elaborate if needed.',
+  },
+  
+  // Orchestrator: Complex reasoning, allow more depth
+  orchestrator: {
+    maxTokens: 1000,
+    temperature: 0.7,
+    thinkingLevel: 'high' as ThinkingLevel,
+    systemPromptSuffix: 'Analyze thoroughly. Provide structured reasoning when complex.',
+  },
+  
+  // Diagnostics: Detailed analysis, full reasoning
+  diagnostics: {
+    maxTokens: 2000,
+    temperature: 0.3,
+    thinkingLevel: 'high' as ThinkingLevel,
+    systemPromptSuffix: 'Provide detailed technical analysis with root cause identification.',
+  },
+  
+  // Simple responses: Ultra-brief, status-oriented
+  simple: {
+    maxTokens: 100,
+    temperature: 0.3,
+    thinkingLevel: 'none' as ThinkingLevel,
+    systemPromptSuffix: 'One sentence maximum. Facts only.',
+  },
+} as const;
+
+export type AntiYapPreset = keyof typeof ANTI_YAP_PRESETS;
+
+/**
+ * Get the appropriate model for a given tier
+ */
+export function getModelForTier(tier: GeminiModelTier): string {
+  return GEMINI_MODELS[tier];
+}
+
+/**
+ * Get anti-yapping configuration for a preset
+ */
+export function getAntiYapConfig(preset: AntiYapPreset) {
+  return ANTI_YAP_PRESETS[preset];
+}
+
+/**
+ * Build generation config with anti-yapping controls
+ * Converts preset configuration into Gemini API-compatible format
+ */
+export function buildGenerationConfig(preset: AntiYapPreset) {
+  const config = ANTI_YAP_PRESETS[preset];
+  
+  // Map thinking level to Gemini's think parameter budget
+  // Higher thinking = more internal reasoning tokens allowed
+  const thinkingBudgets: Record<ThinkingLevel, number | undefined> = {
+    high: 8192,    // Full reasoning chain
+    medium: 2048,  // Moderate thinking
+    low: 512,      // Minimal thinking
+    none: undefined // No extended thinking
+  };
+  
+  return {
+    maxOutputTokens: config.maxTokens,
+    temperature: config.temperature,
+    // Thinking budget helps control verbosity by limiting internal reasoning
+    thinkingBudget: thinkingBudgets[config.thinkingLevel],
+    systemPromptSuffix: config.systemPromptSuffix,
+  };
+}
+
+/**
+ * Create a configured model instance with anti-yapping settings
+ */
+export function createConfiguredModel(
+  tier: GeminiModelTier, 
+  preset: AntiYapPreset,
+  additionalConfig?: Partial<{ responseMimeType: string; tools: FunctionDeclarationsTool[] }>
+) {
+  if (!genAI) return null;
+  
+  const config = buildGenerationConfig(preset);
+  
+  return genAI.getGenerativeModel({
+    model: GEMINI_MODELS[tier],
+    generationConfig: {
+      maxOutputTokens: config.maxOutputTokens,
+      temperature: config.temperature,
+      ...(additionalConfig?.responseMimeType && { responseMimeType: additionalConfig.responseMimeType }),
+    },
+    ...(additionalConfig?.tools && { tools: additionalConfig.tools }),
+  });
+}
+
 export interface GeminiRequest {
   workspaceId?: string;
   userId?: string;
@@ -47,6 +214,20 @@ export interface GeminiRequest {
   maxTokens?: number;
   tools?: FunctionDeclarationsTool[];
   enableToolCalling?: boolean;
+  // NEW: Tiered architecture support
+  modelTier?: GeminiModelTier;
+  antiYapPreset?: AntiYapPreset;
+}
+
+/**
+ * Lightweight request for quick AI-generated content (mascot thoughts, summaries)
+ */
+export interface QuickThoughtRequest {
+  context: string;
+  persona?: string;
+  displayName?: string;
+  workspaceId?: string;
+  mode?: 'demo' | 'business' | 'guru';
 }
 
 export interface GeminiResponse {
@@ -663,26 +844,39 @@ async function executeUpdateFaq(
 export class UnifiedGeminiClient {
   private model: GenerativeModel | null;
   private toolsModel: GenerativeModel | null;
-  private jsonModel: GenerativeModel | null; // UPGRADE 1: JSON Mode for structured output
+  private jsonModel: GenerativeModel | null;
 
   constructor() {
+    // Use HELLOS tier for general chat/conversation
     this.model = genAI ? genAI.getGenerativeModel({ 
-      model: "gemini-2.0-flash-exp" 
-    }) : null;
-    
-    this.toolsModel = genAI ? genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
-      tools: [{ functionDeclarations: AI_BRAIN_TOOLS }]
-    }) : null;
-
-    // UPGRADE 1: JSON Mode model for structured agent output
-    // Agents like PayrollPro, ScheduleMaster return clean JSON data
-    this.jsonModel = genAI ? genAI.getGenerativeModel({
-      model: "gemini-2.0-flash-exp",
+      model: GEMINI_MODELS.HELLOS,
       generationConfig: {
-        responseMimeType: "application/json"
+        maxOutputTokens: ANTI_YAP_PRESETS.helpai.maxTokens,
+        temperature: ANTI_YAP_PRESETS.helpai.temperature,
       }
     }) : null;
+    
+    // Use ORCHESTRATOR tier for tool-calling (complex reasoning)
+    this.toolsModel = genAI ? genAI.getGenerativeModel({
+      model: GEMINI_MODELS.ORCHESTRATOR,
+      tools: [{ functionDeclarations: AI_BRAIN_TOOLS }],
+      generationConfig: {
+        maxOutputTokens: ANTI_YAP_PRESETS.orchestrator.maxTokens,
+        temperature: ANTI_YAP_PRESETS.orchestrator.temperature,
+      }
+    }) : null;
+
+    // Use SUPERVISOR tier for JSON Mode structured output
+    this.jsonModel = genAI ? genAI.getGenerativeModel({
+      model: GEMINI_MODELS.SUPERVISOR,
+      generationConfig: {
+        responseMimeType: "application/json",
+        maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
+        temperature: ANTI_YAP_PRESETS.supervisor.temperature,
+      }
+    }) : null;
+    
+    console.log('[AI Brain] UnifiedGeminiClient initialized with tiered architecture');
   }
 
   /**
@@ -1194,6 +1388,7 @@ Guidelines:
 
   /**
    * Generate vision response (for schedule migration, etc.)
+   * Uses DIAGNOSTICS tier for image analysis (complex reasoning)
    */
   async generateVision(request: GeminiRequest & { imageData: string }): Promise<GeminiResponse> {
     if (!this.model) {
@@ -1201,7 +1396,13 @@ Guidelines:
     }
 
     try {
-      const visionModel = genAI!.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
+      const visionModel = genAI!.getGenerativeModel({ 
+        model: GEMINI_MODELS.DIAGNOSTICS,
+        generationConfig: {
+          maxOutputTokens: ANTI_YAP_PRESETS.diagnostics.maxTokens,
+          temperature: ANTI_YAP_PRESETS.diagnostics.temperature,
+        }
+      });
       
       const result = await visionModel.generateContent([
         request.systemPrompt + "\n\n" + request.userMessage,
@@ -1228,7 +1429,7 @@ Guidelines:
           usageUnit: 'tokens',
           activityType: 'ai_brain_vision',
           metadata: {
-            model: 'gemini-2.0-flash-exp',
+            model: GEMINI_MODELS.DIAGNOSTICS,
             hasImage: true
           }
         });
@@ -1250,6 +1451,134 @@ Guidelines:
    */
   getAvailableTools(): string[] {
     return AI_BRAIN_TOOLS.map(t => t.name);
+  }
+
+  // ============================================================================
+  // TRINITY AI THOUGHT GENERATION - Real Gemini-Powered Mascot Thoughts
+  // ============================================================================
+
+  /**
+   * Generate a quick AI thought for Trinity mascot
+   * Uses anti-yapping preset for concise, personality-driven responses
+   * 
+   * @param request - Context for thought generation
+   * @returns AI-generated thought string or null if unavailable
+   */
+  async generateTrinityThought(request: QuickThoughtRequest): Promise<string | null> {
+    if (!genAI) {
+      console.warn('[Trinity AI] Gemini not available for thought generation');
+      return null;
+    }
+
+    try {
+      const config = ANTI_YAP_PRESETS.mascot;
+      const model = genAI.getGenerativeModel({ 
+        model: GEMINI_MODELS.CONVERSATIONAL 
+      });
+
+      // Build persona-aware system prompt
+      const modeDescriptions: Record<string, string> = {
+        demo: 'You are showcasing CoAIleague platform capabilities to a potential customer.',
+        business: 'You are advising a business owner using the platform for workforce management.',
+        guru: 'You are assisting platform staff with system diagnostics and administration.',
+      };
+
+      const modeContext = modeDescriptions[request.mode || 'demo'];
+      const greeting = request.displayName ? `${request.displayName}` : 'there';
+
+      const systemPrompt = `You are Trinity, the friendly and insightful AI mascot of CoAIleague, an AI-powered workforce management platform.
+
+Your personality:
+- Warm, helpful, and genuinely interested in the user's success
+- Confident but not arrogant - you're a trusted advisor, not a know-it-all
+- Occasionally witty but always professional
+- You speak directly to the user by name when provided
+
+Current mode: ${modeContext}
+
+CRITICAL RULES:
+- Maximum 1-2 short sentences
+- Be specific and actionable when possible
+- Never use emojis
+- Never start with "I" - address the user directly
+- Vary your language - don't repeat the same phrases
+- ${config.systemPromptSuffix}`;
+
+      const userPrompt = `Generate a single contextual thought for ${greeting} based on this context:
+${request.context}
+
+Your response should feel natural, like a quick aside from a helpful colleague. One thought only.`;
+
+      const result = await model.generateContent({
+        contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
+        systemInstruction: systemPrompt,
+        generationConfig: {
+          maxOutputTokens: config.maxTokens,
+          temperature: config.temperature,
+        },
+      });
+
+      const response = result.response;
+      const text = response.text().trim();
+      const usage = response.usageMetadata;
+      const tokensUsed = (usage?.promptTokenCount || 0) + (usage?.candidatesTokenCount || 0);
+
+      console.log(`[Trinity AI] Generated thought (${tokensUsed} tokens): ${text.substring(0, 50)}...`);
+
+      // Record usage for billing
+      if (tokensUsed > 0 && request.workspaceId) {
+        await usageMeteringService.recordUsage({
+          workspaceId: request.workspaceId,
+          userId: undefined,
+          featureKey: 'trinity_thought',
+          usageType: 'token',
+          usageAmount: tokensUsed,
+          usageUnit: 'tokens',
+          activityType: 'ai_brain_thought',
+          metadata: {
+            model: GEMINI_MODELS.CONVERSATIONAL,
+            mode: request.mode || 'demo',
+            preset: 'mascot'
+          }
+        });
+      }
+
+      return text || null;
+    } catch (error: any) {
+      console.error('[Trinity AI] Thought generation failed:', error.message);
+      return null;
+    }
+  }
+
+  /**
+   * Generate a quick status insight for dashboards
+   * Uses simple preset for ultra-brief responses
+   */
+  async generateQuickInsight(topic: string, data: string): Promise<string | null> {
+    if (!genAI) return null;
+
+    try {
+      const config = ANTI_YAP_PRESETS.simple;
+      const model = genAI.getGenerativeModel({ 
+        model: GEMINI_MODELS.SIMPLE 
+      });
+
+      const result = await model.generateContent({
+        contents: [{ 
+          role: 'user', 
+          parts: [{ text: `One sentence insight about ${topic}: ${data}` }] 
+        }],
+        generationConfig: {
+          maxOutputTokens: config.maxTokens,
+          temperature: config.temperature,
+        },
+      });
+
+      return result.response.text().trim() || null;
+    } catch (error: any) {
+      console.error('[AI Brain] Quick insight failed:', error.message);
+      return null;
+    }
   }
 }
 
