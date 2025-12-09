@@ -15,7 +15,7 @@
  */
 
 import { db } from '../../db';
-import { eq, and, desc, isNull } from 'drizzle-orm';
+import { eq, and, desc, isNull, gte, SQL } from 'drizzle-orm';
 import {
   aiSubagentDefinitions,
   subagentTelemetry,
@@ -929,8 +929,8 @@ class SubagentSupervisor {
         }
       }
 
-      // PHASE 4: COMPLETE
-      await this.completeTelemetry(telemetryId, 'completed', currentResult, Date.now() - startTime);
+      // PHASE 4: COMPLETE - Pass retriesUsed for observability metrics
+      await this.completeTelemetry(telemetryId, 'completed', currentResult, Date.now() - startTime, undefined, retryCount);
       this.activeExecutions.delete(executionId);
 
       return {
@@ -1544,7 +1544,8 @@ class SubagentSupervisor {
     status: SubagentStatus,
     result: any,
     durationMs: number,
-    errorMessage?: string
+    errorMessage?: string,
+    retriesUsed?: number
   ): Promise<void> {
     await db.update(subagentTelemetry)
       .set({
@@ -1554,8 +1555,21 @@ class SubagentSupervisor {
         outputPayload: result,
         errorMessage,
         confidenceScore: status === 'completed' ? 1.0 : 0.0,
+        retryCount: retriesUsed || 0,
       })
       .where(eq(subagentTelemetry.id, telemetryId));
+
+    // Emit observability event for retry metrics
+    if (retriesUsed && retriesUsed > 0) {
+      platformEventBus.emit('subagent:self_correction', {
+        telemetryId,
+        retriesUsed,
+        status,
+        durationMs,
+        timestamp: new Date().toISOString(),
+      });
+      console.log(`[SubagentSupervisor] Self-correction metrics: ${retriesUsed} retries, status=${status}, duration=${durationMs}ms`);
+    }
   }
 
   private async handleHeartbeat(event: any): Promise<void> {
@@ -1711,6 +1725,83 @@ class SubagentSupervisor {
     }
 
     return health;
+  }
+
+  /**
+   * OBSERVABILITY: Get self-correction metrics for retry loop monitoring
+   * Returns aggregate stats on subagent retries for dashboard/analytics
+   */
+  async getSelfCorrectionMetrics(params?: {
+    workspaceId?: string;
+    subagentId?: string;
+    since?: Date;
+  }): Promise<{
+    totalExecutions: number;
+    executionsWithRetries: number;
+    totalRetries: number;
+    avgRetriesPerExecution: number;
+    retrySuccessRate: number;
+    bySubagent: Record<string, { executions: number; retries: number; successRate: number }>;
+  }> {
+    const sinceDate = params?.since || new Date(Date.now() - 24 * 60 * 60 * 1000); // Default: last 24h
+    
+    // Build query filters safely - only include non-undefined conditions
+    const conditions: SQL[] = [];
+    conditions.push(gte(subagentTelemetry.createdAt, sinceDate)); // Push since filter to SQL
+    
+    if (params?.workspaceId) {
+      conditions.push(eq(subagentTelemetry.workspaceId, params.workspaceId));
+    }
+    if (params?.subagentId) {
+      conditions.push(eq(subagentTelemetry.subagentId, params.subagentId));
+    }
+    
+    // Execute query with safe conditions - handle single vs multiple predicates
+    const whereClause = conditions.length === 1 
+      ? conditions[0] 
+      : conditions.length > 1 
+        ? and(...conditions) 
+        : undefined;
+    
+    const telemetryRecords = await db.select().from(subagentTelemetry)
+      .where(whereClause)
+      .orderBy(desc(subagentTelemetry.createdAt));
+
+    const totalExecutions = telemetryRecords.length;
+    const executionsWithRetries = telemetryRecords.filter(t => (t.retryCount || 0) > 0).length;
+    const totalRetries = telemetryRecords.reduce((sum, t) => sum + (t.retryCount || 0), 0);
+    const successfulWithRetries = telemetryRecords.filter(t => 
+      (t.retryCount || 0) > 0 && t.status === 'completed'
+    ).length;
+
+    // Group by subagent
+    const bySubagent: Record<string, { executions: number; retries: number; successRate: number }> = {};
+    for (const t of telemetryRecords) {
+      const id = t.subagentId || 'unknown';
+      if (!bySubagent[id]) {
+        bySubagent[id] = { executions: 0, retries: 0, successRate: 0 };
+      }
+      bySubagent[id].executions++;
+      bySubagent[id].retries += t.retryCount || 0;
+    }
+
+    // Calculate success rates per subagent
+    for (const id of Object.keys(bySubagent)) {
+      const subagentRecords = telemetryRecords.filter(t => t.subagentId === id);
+      const successes = subagentRecords.filter(t => t.status === 'completed').length;
+      bySubagent[id].successRate = subagentRecords.length > 0 
+        ? successes / subagentRecords.length 
+        : 0;
+    }
+
+    return {
+      totalExecutions,
+      executionsWithRetries,
+      totalRetries,
+      avgRetriesPerExecution: totalExecutions > 0 ? totalRetries / totalExecutions : 0,
+      retrySuccessRate: executionsWithRetries > 0 ? successfulWithRetries / executionsWithRetries : 0,
+      bySubagent,
+    };
   }
 
   /**
@@ -2015,30 +2106,32 @@ class SubagentSupervisor {
     });
 
     // Map domain to AI Brain skill (using valid aiBrainService skill names)
+    // Available skills: helpos_support, scheduleos_generation, intelligenceos_prediction, 
+    // business_insight, platform_recommendation, faq_update, platform_awareness, issue_diagnosis
     const skillMapping: Record<SubagentDomain, string> = {
       scheduling: 'scheduleos_generation',
       payroll: 'business_insight',
       invoicing: 'business_insight',
       compliance: 'issue_diagnosis',
       notifications: 'platform_awareness',
-      analytics: 'business_insight',
+      analytics: 'intelligenceos_prediction', // OPTIMIZED: Use prediction for analytics
       gamification: 'platform_awareness',
       communication: 'helpos_support',
       health: 'issue_diagnosis',
       testing: 'issue_diagnosis',
-      deployment: 'platform_awareness',
+      deployment: 'platform_recommendation', // OPTIMIZED: Use recommendation for deployments
       recovery: 'issue_diagnosis',
       orchestration: 'platform_awareness',
-      security: 'platform_awareness',
+      security: 'issue_diagnosis', // OPTIMIZED: Security issues need diagnosis
       escalation: 'helpos_support',
       automation: 'platform_awareness',
       lifecycle: 'platform_awareness',
       assist: 'helpos_support',
       filesystem: 'platform_awareness',
       workflow: 'platform_awareness',
-      onboarding: 'helpos_support',
+      onboarding: 'faq_update', // OPTIMIZED: Onboarding often updates FAQs
       expense: 'business_insight',
-      pricing: 'business_insight'
+      pricing: 'intelligenceos_prediction' // OPTIMIZED: Pricing benefits from prediction
     };
 
     const skill = skillMapping[subagent.domain as SubagentDomain] || 'helpos_support';

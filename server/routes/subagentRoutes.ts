@@ -241,6 +241,31 @@ router.get('/telemetry/:executionId', requireSubagentAccess, async (req: Request
 });
 
 // ============================================================================
+// SELF-CORRECTION METRICS (Observability for retry loop monitoring)
+// ============================================================================
+
+router.get('/metrics/self-correction', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, subagentId, since } = req.query;
+    
+    const metrics = await subagentSupervisor.getSelfCorrectionMetrics({
+      workspaceId: workspaceId as string | undefined,
+      subagentId: subagentId as string | undefined,
+      since: since ? new Date(since as string) : undefined
+    });
+    
+    res.json({ 
+      success: true, 
+      metrics,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error: any) {
+    console.error('[SubagentRoutes] Error fetching self-correction metrics:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
 // SUPPORT INTERVENTIONS (Approval Workflow)
 // ============================================================================
 
