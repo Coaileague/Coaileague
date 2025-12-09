@@ -88,6 +88,7 @@ import Workspace from "@/pages/workspace";
 import Billing from "@/pages/billing";
 import UsageDashboard from "@/pages/usage-dashboard";
 import OwnerAnalytics from "@/pages/owner-analytics";
+import CreditAnalyticsDashboard from "@/pages/credit-analytics-dashboard";
 import HRBenefits from "@/pages/hr-benefits";
 import HRReviews from "@/pages/hr-reviews";
 import HRPTO from "@/pages/hr-pto";
@@ -858,6 +859,11 @@ function AppContent() {
               <Route path="/owner-analytics">
                 <OwnerRoute>
                   <OwnerAnalytics />
+                </OwnerRoute>
+              </Route>
+              <Route path="/credit-analytics">
+                <OwnerRoute>
+                  <CreditAnalyticsDashboard />
                 </OwnerRoute>
               </Route>
               <Route path="/integrations" component={IntegrationsPage} />
