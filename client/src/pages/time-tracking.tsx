@@ -1552,7 +1552,7 @@ export default function TimeTracking() {
                     <img
                       src={capturedPhoto}
                       alt="Captured"
-                      className="w-full rounded-lg"
+                      className="w-full rounded-lg object-cover max-h-48"
                     />
                     <Button
                       variant="outline"
@@ -1663,7 +1663,7 @@ export default function TimeTracking() {
                 {selectedEntry.clockInPhotoUrl && (
                   <div>
                     <Label>Clock In Photo</Label>
-                    <img src={selectedEntry.clockInPhotoUrl} alt="Clock in verification" className="mt-2 rounded-lg max-h-64" />
+                    <img src={selectedEntry.clockInPhotoUrl} alt="Clock in verification" className="mt-2 rounded-lg max-h-64 w-full object-cover" />
                   </div>
                 )}
               </div>
@@ -1762,7 +1762,7 @@ export default function TimeTracking() {
                     <img
                       src={capturedPhoto}
                       alt="Captured"
-                      className="w-full rounded-lg"
+                      className="w-full rounded-lg object-cover max-h-48"
                     />
                     <Button
                       variant="outline"

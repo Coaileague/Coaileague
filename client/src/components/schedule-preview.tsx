@@ -47,13 +47,13 @@ export function SchedulePreview() {
       </div>
 
       {/* Grid Container - GetSling-style interface */}
-      <div className="p-2 overflow-auto">
-        <div className="min-w-[500px]">
+      <div className="p-2 overflow-x-auto">
+        <div className="min-w-[400px] sm:min-w-[500px]">
           {/* Time header row */}
-          <div className="flex gap-1 mb-2">
-            <div className="w-24 flex-shrink-0" /> {/* Employee column spacer */}
+          <div className="flex gap-0.5 sm:gap-1 mb-2">
+            <div className="w-16 sm:w-24 flex-shrink-0" /> {/* Employee column spacer */}
             {timeSlots.map((time) => (
-              <div key={time} className="flex-1 text-center text-[10px] font-medium text-muted-foreground py-1">
+              <div key={time} className="flex-1 text-center text-[8px] sm:text-[10px] font-medium text-muted-foreground py-1 min-w-[40px]">
                 {time}
               </div>
             ))}
@@ -62,30 +62,30 @@ export function SchedulePreview() {
           {/* Employee rows with shift cards */}
           <div className="space-y-1">
             {employees.map((employee) => (
-              <div key={employee.id} className="flex gap-1">
+              <div key={employee.id} className="flex gap-0.5 sm:gap-1">
                 {/* Employee header cell */}
-                <div className="w-24 flex-shrink-0 flex items-center gap-2 py-1 px-2 rounded bg-muted/30">
-                  <Avatar className="h-6 w-6">
-                    <AvatarFallback className="text-[10px]">{employee.initials}</AvatarFallback>
+                <div className="w-16 sm:w-24 flex-shrink-0 flex items-center gap-1 sm:gap-2 py-1 px-1 sm:px-2 rounded bg-muted/30">
+                  <Avatar className="h-5 w-5 sm:h-6 sm:w-6">
+                    <AvatarFallback className="text-[8px] sm:text-[10px]">{employee.initials}</AvatarFallback>
                   </Avatar>
-                  <span className="text-xs font-medium truncate">{employee.name}</span>
+                  <span className="text-[10px] sm:text-xs font-medium truncate hidden xs:block sm:block">{employee.name}</span>
                 </div>
 
                 {/* Time slot cells */}
                 {timeSlots.map((time) => {
                   const shift = shifts.find(s => s.employeeId === employee.id && s.timeSlot === time);
                   return (
-                    <div key={time} className="flex-1 min-h-[48px] p-0.5">
+                    <div key={time} className="flex-1 min-h-[40px] sm:min-h-[48px] p-0.5 min-w-[40px]">
                       {shift ? (
-                        <Card className={`h-full p-2 relative border-2 ${getStatusColor(shift.status)} hover-elevate cursor-grab active:cursor-grabbing transition-all`}>
-                          <div className="absolute top-0.5 left-0.5 text-muted-foreground/50">
+                        <Card className={`h-full p-1 sm:p-2 relative border-2 ${getStatusColor(shift.status)} hover-elevate cursor-grab active:cursor-grabbing transition-all overflow-hidden`}>
+                          <div className="absolute top-0.5 left-0.5 text-muted-foreground/50 hidden sm:block">
                             <GripVertical className="h-3 w-3" />
                           </div>
-                          <div className="text-[10px] font-semibold truncate pl-3">{shift.client}</div>
-                          <div className="text-[9px] text-muted-foreground">{shift.hours}</div>
+                          <div className="text-[8px] sm:text-[10px] font-semibold truncate sm:pl-3">{shift.client}</div>
+                          <div className="text-[7px] sm:text-[9px] text-muted-foreground">{shift.hours}</div>
                           <Badge 
                             variant={shift.status === "published" ? "default" : "secondary"}
-                            className="absolute -top-1 -right-1 h-4 px-1 text-[8px]"
+                            className="absolute -top-1 -right-1 h-3 sm:h-4 px-0.5 sm:px-1 text-[6px] sm:text-[8px]"
                           >
                             {shift.status === "published" ? "✓" : "!"}
                           </Badge>
