@@ -1,11 +1,13 @@
 /**
  * Business Owner Analytics Routes
  * Executive-level usage analytics endpoints for org owners and admins
+ * Includes AI credit tracking, ROI metrics, and advanced usage insights
  */
 
 import { Router, Response } from 'express';
 import { type AuthenticatedRequest } from '../rbac';
 import { businessOwnerAnalyticsService } from '../services/businessOwnerAnalyticsService';
+import { advancedUsageAnalyticsService } from '../services/advancedUsageAnalyticsService';
 import { z } from 'zod';
 
 export const ownerAnalyticsRouter = Router();
@@ -189,6 +191,149 @@ ownerAnalyticsRouter.get('/comparison', requireOwnerRole, async (req: Authentica
     });
   } catch (error: any) {
     console.error('[OwnerAnalytics] Comparison error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ========================
+// ADVANCED USAGE ANALYTICS
+// ========================
+
+ownerAnalyticsRouter.get('/credits', requireOwnerRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace ID required' });
+    }
+
+    const summary = await advancedUsageAnalyticsService.getCreditSummary(workspaceId);
+    
+    res.json({
+      success: true,
+      data: summary
+    });
+  } catch (error: any) {
+    console.error('[OwnerAnalytics] Credits error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+ownerAnalyticsRouter.get('/credits/usage', requireOwnerRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace ID required' });
+    }
+
+    const { period } = periodSchema.parse(req.query);
+    const usageByCategory = await advancedUsageAnalyticsService.getUsageByCategory(workspaceId, period);
+    
+    res.json({
+      success: true,
+      data: usageByCategory
+    });
+  } catch (error: any) {
+    console.error('[OwnerAnalytics] Credit usage error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+ownerAnalyticsRouter.get('/credits/trends', requireOwnerRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace ID required' });
+    }
+
+    const { period } = periodSchema.parse(req.query);
+    const trends = await advancedUsageAnalyticsService.getDailyUsageTrends(workspaceId, period);
+    
+    res.json({
+      success: true,
+      data: trends
+    });
+  } catch (error: any) {
+    console.error('[OwnerAnalytics] Credit trends error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+ownerAnalyticsRouter.get('/credits/transactions', requireOwnerRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace ID required' });
+    }
+
+    const limit = parseInt(req.query.limit as string) || 50;
+    const transactions = await advancedUsageAnalyticsService.getRecentTransactions(workspaceId, limit);
+    
+    res.json({
+      success: true,
+      data: transactions
+    });
+  } catch (error: any) {
+    console.error('[OwnerAnalytics] Transactions error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+ownerAnalyticsRouter.get('/ai-tasks', requireOwnerRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace ID required' });
+    }
+
+    const { period } = periodSchema.parse(req.query);
+    const analytics = await advancedUsageAnalyticsService.getAITaskAnalytics(workspaceId, period);
+    
+    res.json({
+      success: true,
+      data: analytics
+    });
+  } catch (error: any) {
+    console.error('[OwnerAnalytics] AI tasks error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+ownerAnalyticsRouter.get('/roi', requireOwnerRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace ID required' });
+    }
+
+    const { period } = periodSchema.parse(req.query);
+    const metrics = await advancedUsageAnalyticsService.getROIMetrics(workspaceId, period);
+    
+    res.json({
+      success: true,
+      data: metrics
+    });
+  } catch (error: any) {
+    console.error('[OwnerAnalytics] ROI error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+ownerAnalyticsRouter.get('/full-report', requireOwnerRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace ID required' });
+    }
+
+    const { period } = periodSchema.parse(req.query);
+    const report = await advancedUsageAnalyticsService.getFullReport(workspaceId, period);
+    
+    res.json({
+      success: true,
+      data: report
+    });
+  } catch (error: any) {
+    console.error('[OwnerAnalytics] Full report error:', error);
     res.status(500).json({ error: error.message });
   }
 });
