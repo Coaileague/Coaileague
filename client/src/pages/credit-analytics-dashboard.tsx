@@ -121,7 +121,7 @@ export default function CreditAnalyticsDashboard() {
   const [period, setPeriod] = useState('last_30_days');
 
   const { data: reportData, isLoading, error } = useQuery<{ success: boolean; data: FullReport }>({
-    queryKey: ['/api/analytics/owner/full-report', period],
+    queryKey: [`/api/analytics/owner/full-report?period=${period}`],
     enabled: isAuthenticated,
   });
 
