@@ -21,7 +21,7 @@ import {
   platformRoles
 } from '@shared/schema';
 import { eq, and, desc, sql, gte, isNull, or, inArray, ne } from 'drizzle-orm';
-import { broadcastToAllClients, broadcastToWorkspace, broadcastNotificationToUser } from '../../websocket';
+import { broadcastToAllClients, broadcastToWorkspace, broadcastNotificationToUser, getLiveConnectionStats } from '../../websocket';
 import { publishPlatformUpdate, platformEventBus } from '../platformEventBus';
 import { notificationStateManager } from '../notificationStateManager';
 import { UniversalNotificationEngine } from '../universalNotificationEngine';
@@ -598,6 +598,7 @@ class TrinityNotificationBridge {
   getMetrics(): {
     totalSent: number;
     totalFailed: number;
+    failureRate: number;
     averageDeliveryTime: number;
     queueDepth: number;
     failedInQueue: number;
@@ -609,16 +610,22 @@ class TrinityNotificationBridge {
     const pendingInQueue = this.batchQueue.filter(b => b.status === 'pending').length;
     
     let health: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
-    if (this.deliveryMetrics.totalFailed > this.deliveryMetrics.totalSent * 0.1) {
+    const totalAttempts = this.deliveryMetrics.totalSent + this.deliveryMetrics.totalFailed;
+    const failureRate = totalAttempts > 0 ? this.deliveryMetrics.totalFailed / totalAttempts : 0;
+    
+    // More than 10% failure rate = degraded
+    if (failureRate > 0.1 || this.deliveryMetrics.totalFailed > 5) {
       health = 'degraded';
     }
-    if (failedInQueue > 10 || this.deliveryMetrics.totalFailed > this.deliveryMetrics.totalSent * 0.5) {
+    // More than 50% failure rate OR too many failed in queue = unhealthy
+    if (failedInQueue > 10 || failureRate > 0.5 || this.deliveryMetrics.totalFailed > 20) {
       health = 'unhealthy';
     }
 
     return {
       totalSent: this.deliveryMetrics.totalSent,
       totalFailed: this.deliveryMetrics.totalFailed,
+      failureRate: Math.round(failureRate * 100) / 100,
       averageDeliveryTime: Math.round(this.deliveryMetrics.averageDeliveryTime),
       queueDepth: pendingInQueue,
       failedInQueue,
@@ -677,7 +684,12 @@ class TrinityNotificationBridge {
     try {
       const wsTest = await this.testWebSocketDelivery();
       if (!wsTest.success) {
-        issues.push('WebSocket notification delivery test failed');
+        issues.push('WebSocket server not operational');
+      }
+      // Log connection stats for monitoring
+      if (wsTest.activeConnections !== undefined && wsTest.activeConnections === 0) {
+        // Not an issue - just informational that no clients are connected
+        console.log('[TrinityNotificationWatchdog] No active WebSocket connections (normal during quiet periods)');
       }
     } catch (error) {
       issues.push('WebSocket connectivity check failed');
@@ -715,10 +727,18 @@ class TrinityNotificationBridge {
     }
   }
 
-  private async testWebSocketDelivery(): Promise<{ success: boolean }> {
+  private async testWebSocketDelivery(): Promise<{ success: boolean; activeConnections?: number }> {
     try {
-      // Simple test - just verify WebSocket functions are available
-      return { success: typeof broadcastToAllClients === 'function' };
+      // Get real connection stats to verify WebSocket is operational
+      const stats = getLiveConnectionStats();
+      const hasActiveServer = stats && typeof stats === 'object';
+      const totalConnections = stats?.totalConnections || 0;
+      
+      // Consider healthy if server is operational (even with 0 connections during quiet periods)
+      return { 
+        success: hasActiveServer, 
+        activeConnections: totalConnections 
+      };
     } catch {
       return { success: false };
     }
