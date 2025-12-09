@@ -1133,28 +1133,42 @@ class ThoughtManager {
         `Knowledge base suggestions ready based on ticket patterns.`,
       ];
     } else if (ctx?.hasTrinityPro) {
-      // COMPREHENSIVE BUSINESS EXPERTISE - Trinity Pro level
+      // EMPIRE MODE - Chief Strategy Officer Level
+      // Trinity becomes an Autonomous Chief Growth Officer
       thoughtPool = [
-        // Growth & Strategy
-        `${displayName}, I've analyzed growth opportunities in your market segment.`,
+        // Empire Mode - Strategic Consultant Voice
+        `${displayName}, I've found money sitting on the table. Let's go get it.`,
+        `Your Empire Score is calculated. Want to see where we can optimize?`,
+        `I've identified cash that's waiting to be collected. Shall we?`,
+        `I know a guy... well, another AI actually. Their Org needs exactly what you sell.`,
+        `Your payroll is eating too much of your income. I have a fix ready.`,
+        `I see revenue that's waiting to be collected. Want me to activate follow-ups?`,
+        // Holistic Growth Intelligence
+        `${displayName}, I've cross-referenced your goals, income, spending, and manpower.`,
+        `Your margins are slipping. I've re-optimized next week's schedule to save $1,200.`,
+        `Green Light for Growth: You've hit your 'Safe Harbor' savings target.`,
+        `You're paying a human to do a robot's job. Let me take over.`,
+        `Efficiency Boost: You have idle staff. I can fill that capacity with a flash sale.`,
+        `Speed is the new currency in sales. Let me help you respond faster.`,
+        // Empire Mode Cashflow
+        `I noticed overdue invoices totaling significant cash. Want me to recover it?`,
+        `Your competitors respond in 5 minutes. Let's match that.`,
+        `I can deploy automated follow-ups that recover ~40% of overdue cash in 7 days.`,
+        // Growth Strategy
         `Revenue trends show patterns. Want me to identify optimization areas?`,
         `I can model customer acquisition cost versus lifetime value for you.`,
         `Your competitive positioning analysis is ready when you need it.`,
+        `Labor costs are high this week. I've identified overtime to eliminate.`,
         // Operations Excellence
         `Operational efficiency metrics are available. Shall I highlight bottlenecks?`,
         `I've identified labor cost optimization opportunities worth reviewing.`,
         `Break compliance is at 98% - one department needs attention.`,
         `Schedule coverage gaps detected for next week. Want recommendations?`,
-        // Sales & Revenue
-        `Sales pipeline analysis shows promising conversion patterns.`,
-        `I can help forecast revenue based on current booking trends.`,
-        `Client retention metrics suggest upsell opportunities.`,
-        `Your invoicing cycle efficiency is above industry average.`,
         // Financial Management
+        `${displayName}, I've found a way to improve your margins by 4% this month. Interested?`,
         `Payroll projections for this period are ready for review.`,
         `I can simulate overtime scenarios to optimize labor spend.`,
-        `Tax withholding calculations are current. Any adjustments needed?`,
-        `Invoice aging report shows 3 overdue accounts needing attention.`,
+        `Invoice aging report shows overdue accounts needing attention.`,
         // Workforce Intelligence
         `Employee sentiment analysis from recent interactions is available.`,
         `Scheduling AI confidence is high - ready for autonomous mode.`,

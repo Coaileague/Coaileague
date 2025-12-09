@@ -91,6 +91,7 @@ import emailRouter from "./routes/emails";
 import { calendarRouter } from "./routes/calendarRoutes";
 import { smsRouter } from "./routes/smsRoutes";
 import { whatsNewRouter } from "./routes/whatsNewRoutes";
+import empireRouter from "./routes/empireRoutes"; // Empire Mode (Trinity CSO upgrade)
 import { supportCommandRouter } from "./routes/support-command-console";
 import { sessionCheckpointRouter } from "./routes/sessionCheckpointRoutes";
 import { aiBrainConsoleRouter } from "./routes/ai-brain-console";
@@ -2927,6 +2928,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register Trinity AI Business Intelligence routes
   app.use("/api/trinity", trinityInsightsRouter);
   app.use("/api/trinity/maintenance", trinityMaintenanceRouter); // Trinity Platform Maintenance
+  app.use("/api/trinity", empireRouter); // Empire Mode routes
   app.use("/api/quick-fixes", quickFixRouter); // Quick Fix System
   app.use("/api/device", deviceLoaderRouter); // Universal Device Loader
   // ============================================================================
