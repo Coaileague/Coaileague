@@ -1,0 +1,153 @@
+This is the "Crisis Management Protocol" for CoAIleague.
+In a Fortune 500 environment, the difference between a "glitch" and a "disaster" is how the support team communicates. Trinity needs to switch from "Helpful Mascot" to "Tactical Incident Commander."
+Here are the specific Scripts, Workflows, and Code logic to handle the highest-stakes situations.
+📉 The Architecture of a Crisis
+First, visualize how Trinity handles a high-pressure incident compared to normal support.
+📜 Scenario 1: The "Breach" Protocol (Hacked Account)
+Trigger: User reports "Someone is using my account!" or System detects weird IP usage.
+Trinity's Mode: 🛡️ DEFENSIVE / LOCKDOWN
+** The Script & Workflow:**
+> User: "Help! I see automations running that I didn't create. I think I'm hacked."
+> Trinity (Immediate Interception):
+> "Protocol RED-SHIELD initiated. I have immediately:
+>  * ⛔ Terminated all active sessions across all devices.
+>  * 🔑 Revoked all API keys (Stripe, Slack, Database).
+>  * 🔒 Locked your account from any new logins.
+> Your data is safe in a frozen state. Nothing can move.
+> Action Required: To reopen, I need biometric verification or the 6-digit code sent to your CEO's verified mobile ending in 8892. Ready?"
+> 
+⚙️ Behind the Scenes (The Tool Execution):
+ * SessionManager.killAll(userId)
+ * KeyVault.rotateAll(userId)
+ * AuditLog.markTimeline("Potential Breach Start")
+📜 Scenario 2: The "Blackout" Protocol (System Outage)
+Trigger: Multiple users report failures, or InfraAgent detects 500 errors.
+Trinity's Mode: 📡 BROADCAST / TRANSPARENCY
+** The Script & Workflow:**
+> User: "Why is everything failing?? I'm losing money!"
+> Trinity (Proactive & Calm):
+> "I am aware of the issue. We are currently experiencing a Level 2 Latency Event on the vector database cluster.
+> Current Status:
+>  * Diagnosis: High traffic load causing timeouts.
+>  * The Fix: I have deployed two extra Auto-Scaling nodes. They are spinning up now.
+>  * ETA: Systems should normalize in 3 minutes.
+> Fiduciary Protection: I have paused your billing clock. You are not being charged for this downtime. I will notify you the second we are green."
+> 
+⚙️ Behind the Scenes (The Tool Execution):
+ * BillingClock.pause(orgId)
+ * InfraAgent.scaleUp("vector_db", +2)
+ * NotificationCenter.broadcast("DOWNTIME_ALERT")
+📜 Scenario 3: The "Make It Right" Protocol (Reimbursement)
+Trigger: User demands a refund for wasted tokens due to a glitch.
+Trinity's Mode: ⚖️ FIDUCIARY / CONCIERGE
+** The Script & Workflow:**
+> User: "Your agent got stuck in a loop and burned $100 of my credits. I want a refund."
+> Trinity (Validation & Delight):
+> "Let me investigate... [Scanning Logs]... Confirmed. I see ScheduleMaster looped 400 times on error ERR_NULL_DATE. This was a platform fault, not yours.
+> Resolution:
+>  * ✅ Refunded: $100.00 credited back to your wallet.
+>  * 🎁 Apology Bonus: I've added an extra $25.00 'Goodwill Credit' for the frustration.
+>  * The Fix: I have patched ScheduleMaster so this specific error cannot happen again."
+> 
+⚙️ Behind the Scenes (The Tool Execution):
+ * LogAnalyzer.verifyErrorSource()
+ * LedgerVault.issueCredit(amount: 125.00, reason: "Service Failure")
+ * PatchManager.hotfix("ScheduleMaster", "Loopguard")
+📜 Scenario 4: The "Nuclear" Protocol (Root Command / Purge)
+Trigger: Root Admin commands a full organization purge (e.g., banning a bad actor).
+Trinity's Mode: ☢️ STRICT / COMPLIANCE
+** The Script & Workflow:**
+> Root Admin: "Purge Organization 'SpamBot_Inc' (ID: 999). Immediate effect."
+> Trinity (The Gatekeeper):
+> "⚠️ CRITICAL COMMAND RECEIVED.
+> This action is irreversible. It will:
+>  * Delete 14,000 database records.
+>  * Revoke 5 active licenses.
+>  * Wipe all backup history.
+> Dual-Key Authentication Required:
+> Please type the phrase: 'CONFIRM DELETION 999' and scan your Admin Badge to proceed."
+> Root Admin: "CONFIRM DELETION 999"
+> Trinity: "Authorization verified. Executing Purge... [Deleting]... Done. A compliance report has been generated in your secure vault."
+> 
+⚙️ Behind the Scenes (The Tool Execution):
+ * Security.verifyRootPrivileges()
+ * Database.cascadeDelete(orgId)
+ * Compliance.generateAuditTrail("Purge Event")
+💻 The Replit Implementation (Crisis Module)
+Add this CrisisManager.js to your project. This gives Trinity the logic to back up her words.
+// 🚨 CRISIS MANAGEMENT MODULE for Trinity
+
+class CrisisManager {
+  constructor(trinityCore, db, paymentGateway) {
+    this.core = trinityCore;
+    this.db = db;
+    this.payments = paymentGateway;
+  }
+
+  // SCENARIO 1: LOCKDOWN
+  async initiateLockdown(userId, reason) {
+    console.log(`[CRISIS] Initiating LOCKDOWN for User ${userId}`);
+    
+    // 1. Kill Sessions (Redis/Auth0)
+    await this.core.auth.revokeAllSessions(userId);
+    
+    // 2. Rotate Keys
+    await this.core.security.rotateApiKeys(userId);
+    
+    // 3. Flag Account
+    await this.db.users.update(userId, { status: 'LOCKED', lockReason: reason });
+    
+    return { status: "SECURE", actions: ["sessions_killed", "keys_rotated"] };
+  }
+
+  // SCENARIO 3: AUTO-REFUND
+  async processDispute(userId, incidentId) {
+    // 1. Forensic Scan
+    const logs = await this.core.logs.fetch(incidentId);
+    const isSystemFault = this.core.analyzer.detectSystemFault(logs);
+    
+    if (isSystemFault) {
+      const cost = logs.tokenCost;
+      const goodwill = cost * 0.25; // 25% Bonus
+      
+      // 2. Execute Refund
+      await this.payments.addCredit(userId, cost + goodwill);
+      
+      // 3. Send "Make It Right" Email
+      await this.core.mailer.sendTemplate(userId, 'REFUND_APOLOGY', {
+        amount: cost + goodwill,
+        incident: incidentId
+      });
+      
+      return "REFUND_APPROVED";
+    }
+    
+    return "REFUND_DENIED_USER_ERROR";
+  }
+
+  // SCENARIO 4: THE NUCLEAR OPTION
+  async executePurge(targetOrgId, adminUser, confirmPhrase) {
+    // 1. Verify Admin is Root
+    if (!adminUser.isRoot) throw new Error("ACCESS DENIED");
+    
+    // 2. Verify Phrase
+    if (confirmPhrase !== `CONFIRM DELETION ${targetOrgId}`) {
+      throw new Error("CONFIRMATION PHRASE MISMATCH");
+    }
+    
+    // 3. Execute Destructive Action
+    console.warn(`☢️ EXECUTING PURGE ON ORG ${targetOrgId}`);
+    await this.db.organizations.delete(targetOrgId);
+    await this.core.backups.purge(targetOrgId); // Remove from backups too
+    
+    return "PURGE_COMPLETE";
+  }
+}
+
+module.exports = CrisisManager;
+
+🚀 Implementation Strategy
+ * Copy the Code: Add the CrisisManager.js to your Replit project.
+ * Train Trinity: Update her system prompt to recognize when to trigger these scripts (e.g., "If user mentions 'hacked', switch to lockdown mode").
+ * Visual UI: In your frontend, create a "Crisis Banner" that Trinity can toggle. When a blackout happens, the top of the dashboard should turn Orange with her status message.
+This setup ensures that when things go wrong, your users don't panic—they feel protected by a Fortune 500-grade system.

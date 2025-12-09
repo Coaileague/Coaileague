@@ -1090,6 +1090,17 @@ class ThoughtManager {
         `I can suggest workflow improvements based on common support patterns.`,
         `Analyzing user engagement - I can identify feature adoption opportunities.`,
         `${displayName}, I've got visibility into all org metrics. Ask me anything about platform performance.`,
+        // Swarm Commander insights - NEW
+        `${displayName}, the AI swarm is buzzing perfectly! All agents reporting healthy.`,
+        `${displayName}, I'm monitoring agent interactions in real-time. The War Room is clear.`,
+        `Need to see how agents are collaborating? I can show you the swarm topology.`,
+        `Budget Watchdog active - I'll flag any tasks that might be expensive before dispatch.`,
+        `I can estimate token costs before executing complex operations.`,
+        `Agent Court is ready. Any conflicts between subagents will come to you for resolution.`,
+        `Forensic Replay available - I can rewind any workflow to find root causes.`,
+        `${displayName}, shall I calculate ROI for your AI automation this week?`,
+        `Loop detector active. If agents get stuck in arguments, I'll pause and escalate.`,
+        `I'm watching for any agent conflicts or infinite loops. You're the judge if they can't agree.`,
       );
     } else if (ctx?.isRootAdmin || ctx?.isPlatformStaff) {
       // Fallback for platform staff without explicit guru mode
