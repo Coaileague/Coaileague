@@ -63,6 +63,7 @@ const DOMAIN_CREDIT_COSTS: Record<SubagentDomain, keyof typeof CREDIT_COSTS> = {
   onboarding: 'ai_general',
   expense: 'ai_general',
   pricing: 'ai_predictions',
+  data_migration: 'ai_general',
 };
 
 // ============================================================================
@@ -74,7 +75,7 @@ export type SubagentDomain =
   | 'analytics' | 'gamification' | 'communication' | 'health' | 'testing'
   | 'deployment' | 'recovery' | 'orchestration' | 'security'
   | 'escalation' | 'automation' | 'lifecycle' | 'assist' | 'filesystem'
-  | 'workflow' | 'onboarding' | 'expense' | 'pricing';
+  | 'workflow' | 'onboarding' | 'expense' | 'pricing' | 'data_migration';
 
 export type SubagentPhase = 'prepare' | 'execute' | 'validate' | 'escalate';
 export type SubagentStatus = 'idle' | 'preparing' | 'executing' | 'validating' | 'escalating' | 'completed' | 'failed' | 'derailed' | 'retrying';
@@ -721,6 +722,93 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     requiresApproval: true,
     allowedRoles: ['root_admin', 'deputy_admin', 'org_owner', 'org_admin'],
     bypassAuthFor: ['root_admin'],
+    isActive: true,
+    version: '1.0.0',
+  },
+  {
+    name: 'DataMigrationAgent',
+    domain: 'data_migration',
+    description: 'Enterprise-grade data migration subagent for new org onboarding. Executes 5-step workflow: Gate Check → Data Ingestion → Extraction & Structuring → Analysis & Validation → Final Setup Automation. Uses Gemini 2.5 Pro for document analysis and Gemini 2.5 Flash for automation tasks.',
+    capabilities: [
+      'migration.gate_check',
+      'migration.ingest_data',
+      'migration.extract_structure',
+      'migration.analyze_validate',
+      'migration.setup_automation',
+      'migration.bulk_import_employees',
+      'migration.bulk_import_teams',
+      'migration.bulk_import_schedules',
+      'migration.assign_hierarchy',
+      'migration.create_departments'
+    ],
+    requiredTools: [
+      'pdf_extractor',
+      'excel_parser',
+      'csv_importer',
+      'gemini_vision',
+      'hierarchy_builder',
+      'validation_engine',
+      'bulk_import_engine'
+    ],
+    escalationPolicy: {
+      maxRetries: 2,
+      escalateOn: ['extraction_failed', 'validation_critical', 'import_blocked', 'hierarchy_conflict'],
+      alwaysNotify: true,
+      notifyRoles: ['root_admin', 'deputy_admin', 'support_manager']
+    },
+    diagnosticWorkflow: {
+      diagnose: [
+        'check_file_format',
+        'verify_data_integrity',
+        'validate_schema_compatibility',
+        'scan_for_duplicates',
+        'check_hierarchy_consistency'
+      ],
+      fix: [
+        'normalize_data_format',
+        'resolve_duplicates',
+        'auto_map_columns',
+        'rebuild_hierarchy',
+        'apply_default_values'
+      ],
+      validate: [
+        'verify_import_counts',
+        'check_relationship_integrity',
+        'validate_hierarchy_tree',
+        'confirm_no_orphans'
+      ],
+      report: [
+        'generate_migration_summary',
+        'create_import_manifest',
+        'log_validation_results'
+      ]
+    },
+    knownPatterns: [
+      'column_mapping_mismatch',
+      'duplicate_employee',
+      'invalid_date_format',
+      'missing_required_field',
+      'hierarchy_cycle_detected',
+      'department_not_found',
+      'manager_not_found',
+      'invalid_pay_rate'
+    ],
+    fixStrategies: {
+      column_mapping_mismatch: 'auto_detect_and_map',
+      duplicate_employee: 'merge_or_skip_with_flag',
+      invalid_date_format: 'parse_with_fallback_formats',
+      missing_required_field: 'prompt_or_apply_default',
+      hierarchy_cycle_detected: 'break_cycle_at_lowest_level',
+      department_not_found: 'create_placeholder_department',
+      manager_not_found: 'assign_to_org_owner',
+      invalid_pay_rate: 'flag_for_review'
+    },
+    maxRetries: 2,
+    timeoutMs: 120000,
+    confidenceThreshold: 0.85,
+    requiresApproval: true,
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner'],
+    bypassAuthFor: ['root_admin', 'deputy_admin', 'sysop', 'Bot'],
     isActive: true,
     version: '1.0.0',
   },

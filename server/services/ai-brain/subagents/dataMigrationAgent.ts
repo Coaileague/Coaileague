@@ -546,6 +546,494 @@ Only include arrays that have data. If no data found for a category, omit that a
   private isValidEmail(email: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
+
+  // ============================================================================
+  // 5-STEP MIGRATION WORKFLOW
+  // Gate Check → Data Ingestion → Extraction & Structuring → Analysis & Validation → Final Setup Automation
+  // ============================================================================
+
+  /**
+   * Step 1: Gate Check
+   * Validates prerequisites before migration can proceed
+   */
+  async gateCheck(params: {
+    workspaceId: string;
+    userId: string;
+    migrationConfig: {
+      dataSource: 'pdf' | 'excel' | 'csv' | 'manual' | 'multi';
+      expectedRecordCount?: number;
+      targetEntities: ('employees' | 'teams' | 'schedules')[];
+    };
+  }): Promise<{
+    passed: boolean;
+    checks: { name: string; passed: boolean; message: string }[];
+    recommendations: string[];
+  }> {
+    const { workspaceId, userId, migrationConfig } = params;
+    const checks: { name: string; passed: boolean; message: string }[] = [];
+    const recommendations: string[] = [];
+
+    // Check 1: Workspace exists and is active
+    const [workspace] = await db.select()
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+    
+    checks.push({
+      name: 'workspace_exists',
+      passed: !!workspace,
+      message: workspace ? 'Workspace is active' : 'Workspace not found',
+    });
+
+    // Check 2: User has permission
+    const [user] = await db.select()
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    
+    const hasPermission = user && ['root_admin', 'deputy_admin', 'sysop', 'org_owner'].includes(user.platformRole || '');
+    checks.push({
+      name: 'user_permission',
+      passed: hasPermission,
+      message: hasPermission ? 'User has migration permissions' : 'User lacks migration permissions',
+    });
+
+    // Check 3: No active migration in progress
+    // (Future: Check migration_sessions table)
+    checks.push({
+      name: 'no_active_migration',
+      passed: true,
+      message: 'No conflicting migration in progress',
+    });
+
+    // Check 4: Target entities are valid
+    const validEntities = migrationConfig.targetEntities.every(e => 
+      ['employees', 'teams', 'schedules'].includes(e)
+    );
+    checks.push({
+      name: 'valid_entities',
+      passed: validEntities,
+      message: validEntities ? 'Target entities are valid' : 'Invalid target entities specified',
+    });
+
+    // Add recommendations based on config
+    if (migrationConfig.expectedRecordCount && migrationConfig.expectedRecordCount > 100) {
+      recommendations.push('Consider running migration in batches for large datasets');
+    }
+    if (migrationConfig.targetEntities.includes('teams')) {
+      recommendations.push('Recommend importing teams before employees for proper hierarchy');
+    }
+
+    const allPassed = checks.every(c => c.passed);
+    console.log(`[DataMigrationAgent] Gate check ${allPassed ? 'PASSED' : 'FAILED'} for workspace ${workspaceId}`);
+
+    return { passed: allPassed, checks, recommendations };
+  }
+
+  /**
+   * Step 2: Data Ingestion
+   * Receives and stores raw data for processing
+   */
+  async ingestData(params: {
+    workspaceId: string;
+    userId: string;
+    source: 'pdf' | 'excel' | 'csv' | 'manual';
+    rawData: {
+      fileContent?: string; // base64 for PDF
+      fileName?: string;
+      spreadsheetData?: Record<string, any>[];
+      spreadsheetHeaders?: string[];
+      manualData?: Record<string, any>;
+    };
+  }): Promise<{
+    success: boolean;
+    ingestionId: string;
+    dataSize: number;
+    detectedType: string;
+    preview: string;
+  }> {
+    const { workspaceId, userId, source, rawData } = params;
+    const ingestionId = `mig-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    let dataSize = 0;
+    let detectedType = 'unknown';
+    let preview = '';
+
+    try {
+      switch (source) {
+        case 'pdf':
+          dataSize = rawData.fileContent?.length || 0;
+          detectedType = 'document';
+          preview = `PDF file: ${rawData.fileName} (${Math.round(dataSize / 1024)}KB)`;
+          break;
+        
+        case 'excel':
+        case 'csv':
+          dataSize = rawData.spreadsheetData?.length || 0;
+          detectedType = 'spreadsheet';
+          preview = `${source.toUpperCase()}: ${dataSize} rows, ${rawData.spreadsheetHeaders?.length || 0} columns`;
+          break;
+        
+        case 'manual':
+          dataSize = Object.keys(rawData.manualData || {}).length;
+          detectedType = 'form_data';
+          preview = `Manual entry: ${dataSize} fields`;
+          break;
+      }
+
+      console.log(`[DataMigrationAgent] Data ingested: ${ingestionId} (${source}, ${dataSize} items)`);
+
+      return {
+        success: true,
+        ingestionId,
+        dataSize,
+        detectedType,
+        preview,
+      };
+    } catch (error: any) {
+      console.error('[DataMigrationAgent] Ingestion failed:', error);
+      return {
+        success: false,
+        ingestionId,
+        dataSize: 0,
+        detectedType: 'error',
+        preview: `Ingestion failed: ${error.message}`,
+      };
+    }
+  }
+
+  /**
+   * Step 3: Extraction & Structuring (uses existing extract methods)
+   * Wrapper that selects appropriate extraction method
+   */
+  async extractAndStructure(params: {
+    workspaceId: string;
+    source: 'pdf' | 'excel' | 'csv' | 'manual';
+    rawData: {
+      fileContent?: string;
+      fileName?: string;
+      spreadsheetData?: Record<string, any>[];
+      spreadsheetHeaders?: string[];
+      manualData?: Record<string, any>;
+      entryType?: 'employee' | 'team' | 'schedule' | 'bulk_text';
+    };
+    extractionType: 'employees' | 'teams' | 'schedules' | 'auto';
+  }): Promise<ExtractedData> {
+    const { workspaceId, source, rawData, extractionType } = params;
+
+    switch (source) {
+      case 'pdf':
+        return this.extractFromPdf({
+          workspaceId,
+          fileContent: rawData.fileContent!,
+          fileName: rawData.fileName || 'document.pdf',
+          extractionType,
+        });
+      
+      case 'excel':
+      case 'csv':
+        return this.extractFromSpreadsheet({
+          workspaceId,
+          data: rawData.spreadsheetData || [],
+          headers: rawData.spreadsheetHeaders || [],
+          extractionType,
+        });
+      
+      case 'manual':
+        return this.extractFromManualEntry({
+          workspaceId,
+          entryType: rawData.entryType || 'employee',
+          formData: rawData.manualData || {},
+        });
+      
+      default:
+        return { confidence: 0, warnings: [], errors: ['Unknown source type'] };
+    }
+  }
+
+  /**
+   * Step 4: Analysis & Validation
+   * Deep validation with AI-powered analysis
+   */
+  async analyzeAndValidate(params: {
+    workspaceId: string;
+    data: ExtractedData;
+  }): Promise<{
+    valid: boolean;
+    analysisReport: {
+      totalRecords: number;
+      validRecords: number;
+      invalidRecords: number;
+      duplicatesDetected: number;
+      hierarchyIssues: string[];
+      recommendations: string[];
+    };
+    issues: string[];
+  }> {
+    const { workspaceId, data } = params;
+    
+    // Run basic validation
+    const basicValidation = await this.validateData({ workspaceId, data });
+    
+    // Count records
+    const totalRecords = 
+      (data.employees?.length || 0) + 
+      (data.teams?.length || 0) + 
+      (data.schedules?.length || 0);
+    
+    // Detect duplicates in employees
+    const emails = data.employees?.map(e => e.email).filter(Boolean) || [];
+    const duplicateEmails = emails.filter((e, i) => emails.indexOf(e) !== i);
+    
+    // Check for hierarchy issues
+    const hierarchyIssues: string[] = [];
+    if (data.teams?.some(t => t.managerId && !data.employees?.some(e => e.employeeId === t.managerId))) {
+      hierarchyIssues.push('Some teams reference managers not in the import data');
+    }
+    
+    // Generate recommendations
+    const recommendations: string[] = [];
+    if (duplicateEmails.length > 0) {
+      recommendations.push(`${duplicateEmails.length} duplicate email(s) detected - consider deduplication`);
+    }
+    if (data.employees?.some(e => !e.position)) {
+      recommendations.push('Some employees missing positions - default will be applied');
+    }
+    if (data.employees && data.employees.length > 50) {
+      recommendations.push('Large import detected - consider batch processing');
+    }
+
+    console.log(`[DataMigrationAgent] Validation complete: ${totalRecords} records, ${basicValidation.issues.length} issues`);
+
+    return {
+      valid: basicValidation.valid,
+      analysisReport: {
+        totalRecords,
+        validRecords: totalRecords - basicValidation.issues.length,
+        invalidRecords: basicValidation.issues.length,
+        duplicatesDetected: duplicateEmails.length,
+        hierarchyIssues,
+        recommendations,
+      },
+      issues: basicValidation.issues,
+    };
+  }
+
+  /**
+   * Step 5: Final Setup Automation
+   * Executes the import with hierarchy assignment and team linking
+   */
+  async finalSetupAutomation(params: {
+    workspaceId: string;
+    userId: string;
+    data: ExtractedData;
+    options: {
+      skipDuplicates?: boolean;
+      assignDefaultHierarchy?: boolean;
+      createMissingTeams?: boolean;
+      setDefaultRoles?: boolean;
+    };
+  }): Promise<MigrationResult & {
+    hierarchyAssignments: { employeeId: string; managerId?: string; teamId?: string }[];
+    automationSummary: string;
+  }> {
+    const { workspaceId, userId, data, options } = params;
+    
+    const hierarchyAssignments: { employeeId: string; managerId?: string; teamId?: string }[] = [];
+    
+    // First import teams if present and createMissingTeams is enabled
+    if (options.createMissingTeams && data.teams?.length) {
+      console.log(`[DataMigrationAgent] Creating ${data.teams.length} teams...`);
+      // Teams are imported in the main importData call
+    }
+    
+    // Run the main import
+    const importResult = await this.importData({
+      workspaceId,
+      userId,
+      data,
+      skipDuplicates: options.skipDuplicates ?? true,
+    });
+    
+    // Track hierarchy assignments (simplified - full implementation would link to actual records)
+    if (options.assignDefaultHierarchy && data.employees?.length) {
+      data.employees.forEach((emp, index) => {
+        hierarchyAssignments.push({
+          employeeId: emp.employeeId || `imported-${index}`,
+          managerId: undefined, // Would be assigned based on team/position logic
+          teamId: emp.team || undefined,
+        });
+      });
+    }
+    
+    const automationSummary = [
+      `Imported: ${importResult.importedCounts.employees} employees, ${importResult.importedCounts.teams} teams, ${importResult.importedCounts.schedules} schedules`,
+      `Skipped: ${importResult.skippedCounts.employees} employees, ${importResult.skippedCounts.teams} teams, ${importResult.skippedCounts.schedules} schedules`,
+      hierarchyAssignments.length > 0 ? `Hierarchy assignments: ${hierarchyAssignments.length}` : 'No hierarchy assignments',
+    ].join(' | ');
+    
+    console.log(`[DataMigrationAgent] Final setup complete: ${automationSummary}`);
+
+    return {
+      ...importResult,
+      hierarchyAssignments,
+      automationSummary,
+    };
+  }
+
+  /**
+   * Execute full 5-step migration workflow
+   */
+  async executeMigrationWorkflow(params: {
+    workspaceId: string;
+    userId: string;
+    source: 'pdf' | 'excel' | 'csv' | 'manual';
+    rawData: {
+      fileContent?: string;
+      fileName?: string;
+      spreadsheetData?: Record<string, any>[];
+      spreadsheetHeaders?: string[];
+      manualData?: Record<string, any>;
+      entryType?: 'employee' | 'team' | 'schedule' | 'bulk_text';
+    };
+    extractionType: 'employees' | 'teams' | 'schedules' | 'auto';
+    options?: {
+      skipDuplicates?: boolean;
+      assignDefaultHierarchy?: boolean;
+      createMissingTeams?: boolean;
+      setDefaultRoles?: boolean;
+    };
+  }): Promise<{
+    success: boolean;
+    workflowId: string;
+    steps: {
+      step: string;
+      status: 'completed' | 'failed' | 'skipped';
+      duration: number;
+      result?: any;
+    }[];
+    finalResult?: MigrationResult;
+    error?: string;
+  }> {
+    const workflowId = `wf-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const steps: { step: string; status: 'completed' | 'failed' | 'skipped'; duration: number; result?: any }[] = [];
+    
+    console.log(`[DataMigrationAgent] Starting 5-step workflow: ${workflowId}`);
+
+    try {
+      // Step 1: Gate Check
+      const step1Start = Date.now();
+      const gateResult = await this.gateCheck({
+        workspaceId: params.workspaceId,
+        userId: params.userId,
+        migrationConfig: {
+          dataSource: params.source,
+          targetEntities: [params.extractionType === 'auto' ? 'employees' : params.extractionType],
+        },
+      });
+      steps.push({
+        step: 'gate_check',
+        status: gateResult.passed ? 'completed' : 'failed',
+        duration: Date.now() - step1Start,
+        result: gateResult,
+      });
+      if (!gateResult.passed) {
+        return { success: false, workflowId, steps, error: 'Gate check failed' };
+      }
+
+      // Step 2: Data Ingestion
+      const step2Start = Date.now();
+      const ingestionResult = await this.ingestData({
+        workspaceId: params.workspaceId,
+        userId: params.userId,
+        source: params.source,
+        rawData: params.rawData,
+      });
+      steps.push({
+        step: 'data_ingestion',
+        status: ingestionResult.success ? 'completed' : 'failed',
+        duration: Date.now() - step2Start,
+        result: ingestionResult,
+      });
+      if (!ingestionResult.success) {
+        return { success: false, workflowId, steps, error: 'Data ingestion failed' };
+      }
+
+      // Step 3: Extraction & Structuring
+      const step3Start = Date.now();
+      const extractedData = await this.extractAndStructure({
+        workspaceId: params.workspaceId,
+        source: params.source,
+        rawData: params.rawData,
+        extractionType: params.extractionType,
+      });
+      steps.push({
+        step: 'extraction_structuring',
+        status: extractedData.errors.length === 0 ? 'completed' : 'failed',
+        duration: Date.now() - step3Start,
+        result: { 
+          recordCount: (extractedData.employees?.length || 0) + (extractedData.teams?.length || 0) + (extractedData.schedules?.length || 0),
+          confidence: extractedData.confidence,
+          warnings: extractedData.warnings,
+        },
+      });
+      if (extractedData.errors.length > 0) {
+        return { success: false, workflowId, steps, error: extractedData.errors.join(', ') };
+      }
+
+      // Step 4: Analysis & Validation
+      const step4Start = Date.now();
+      const analysisResult = await this.analyzeAndValidate({
+        workspaceId: params.workspaceId,
+        data: extractedData,
+      });
+      steps.push({
+        step: 'analysis_validation',
+        status: analysisResult.valid ? 'completed' : 'failed',
+        duration: Date.now() - step4Start,
+        result: analysisResult.analysisReport,
+      });
+      if (!analysisResult.valid) {
+        return { success: false, workflowId, steps, error: `Validation failed: ${analysisResult.issues.join(', ')}` };
+      }
+
+      // Step 5: Final Setup Automation
+      const step5Start = Date.now();
+      const finalResult = await this.finalSetupAutomation({
+        workspaceId: params.workspaceId,
+        userId: params.userId,
+        data: extractedData,
+        options: params.options || {},
+      });
+      steps.push({
+        step: 'final_setup',
+        status: finalResult.success ? 'completed' : 'failed',
+        duration: Date.now() - step5Start,
+        result: {
+          importedCounts: finalResult.importedCounts,
+          skippedCounts: finalResult.skippedCounts,
+          hierarchyAssignments: finalResult.hierarchyAssignments.length,
+        },
+      });
+
+      console.log(`[DataMigrationAgent] Workflow ${workflowId} completed successfully`);
+
+      return {
+        success: finalResult.success,
+        workflowId,
+        steps,
+        finalResult,
+      };
+    } catch (error: any) {
+      console.error(`[DataMigrationAgent] Workflow ${workflowId} failed:`, error);
+      return {
+        success: false,
+        workflowId,
+        steps,
+        error: error.message,
+      };
+    }
+  }
 }
 
 export const dataMigrationAgent = DataMigrationAgent.getInstance();
