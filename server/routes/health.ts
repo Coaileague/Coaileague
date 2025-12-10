@@ -8,7 +8,7 @@ import express from 'express';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { getHealthSummary, getServiceHealth, getGatewayHealth } from '../services/healthCheck';
-import { getDetailedHealthReport, getSystemMetrics, getResponseTimeHistory, getErrorLogs } from '../services/healthService';
+import { getDetailedHealthReport, getSystemMetrics, getResponseTimeHistory, getErrorLogs, runTrinityFastDiagnostics, DIAGNOSTIC_SERVICE_REGISTRY, DOMAIN_LABELS, getAllDomains } from '../services/healthService';
 import { storage } from '../storage';
 import type { ServiceIncidentReportPayload } from '../../shared/healthTypes';
 import { objectStorageClient } from '../objectStorage';
@@ -183,6 +183,37 @@ export function registerHealthRoutes(app: Express, requireAuth: any) {
       res.status(500).json({
         success: false,
         error: 'Failed to fetch error logs',
+      });
+    }
+  });
+
+  // Get comprehensive platform diagnostics (Trinity FAST mode)
+  // GET /api/health/comprehensive?mode=quick|full
+  healthRouter.get('/comprehensive', requireAuth, async (req: Request, res: Response) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const mode = (req.query.mode as string) === 'quick' ? 'quick' : 'full';
+      console.log(`[Health] Running comprehensive diagnostics (${mode} mode) for user ${authReq.user?.id}`);
+      
+      const result = await runTrinityFastDiagnostics(mode);
+      
+      res.json({
+        success: true,
+        ...result,
+        registeredServices: DIAGNOSTIC_SERVICE_REGISTRY.length,
+        domains: getAllDomains().map(d => ({
+          id: d,
+          label: DOMAIN_LABELS[d],
+          status: result.byDomain[d]?.status || 'operational',
+          serviceCount: result.byDomain[d]?.services?.length || 0,
+        })),
+      });
+    } catch (error: any) {
+      console.error('[Health] Comprehensive diagnostics failed:', error.message);
+      res.status(500).json({
+        success: false,
+        error: 'Comprehensive diagnostics failed',
+        message: error.message,
       });
     }
   });

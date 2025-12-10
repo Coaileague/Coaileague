@@ -8,6 +8,19 @@ import {
   checkEmail,
   getHealthSummary as getBasicHealthSummary 
 } from './healthCheck';
+import {
+  DIAGNOSTIC_SERVICE_REGISTRY,
+  runComprehensiveDiagnostics,
+  runFastModeBatchDiagnostics,
+  runParallelDiagnostics,
+  getServicesByDomain,
+  getServicesByTier,
+  getCriticalServices,
+  getAllDomains,
+  DOMAIN_LABELS,
+  type ComprehensiveDiagnosticResult,
+  type DiagnosticDomain,
+} from './diagnosticServiceRegistry';
 
 export interface SystemMetrics {
   memory: {
@@ -280,4 +293,82 @@ export async function runHealthCheck(): Promise<HealthSummary> {
     criticalServicesCount: report.data.services.filter(s => s.isCritical).length,
     operationalServicesCount: report.data.services.filter(s => s.status === 'operational').length,
   };
+}
+
+// COMPREHENSIVE DIAGNOSTICS - For Trinity FAST Mode
+// Exposes all 45+ platform service checks for parallel execution
+
+export {
+  DIAGNOSTIC_SERVICE_REGISTRY,
+  runComprehensiveDiagnostics,
+  runFastModeBatchDiagnostics,
+  runParallelDiagnostics,
+  getServicesByDomain,
+  getServicesByTier,
+  getCriticalServices,
+  getAllDomains,
+  DOMAIN_LABELS,
+};
+
+export type { ComprehensiveDiagnosticResult, DiagnosticDomain };
+
+export async function runTrinityFastDiagnostics(mode: 'quick' | 'full' = 'full'): Promise<ComprehensiveDiagnosticResult> {
+  console.log(`[HealthService] Running Trinity FAST diagnostics (${mode} mode)...`);
+  const startTime = Date.now();
+  
+  if (mode === 'quick') {
+    // Quick mode: Only critical + essential services (~20 checks)
+    const criticalAndEssential = DIAGNOSTIC_SERVICE_REGISTRY.filter(
+      s => s.tier === 'core' || s.tier === 'essential'
+    );
+    const results = await runParallelDiagnostics(criticalAndEssential);
+    
+    const byDomain: Record<DiagnosticDomain, { status: ServiceStatus; services: ServiceHealth[] }> = {} as any;
+    const domains = getAllDomains();
+    
+    for (const domain of domains) {
+      const domainServices = results.filter(r => {
+        const service = criticalAndEssential.find(s => s.id === r.service);
+        return service?.domain === domain;
+      });
+      
+      if (domainServices.length === 0) {
+        byDomain[domain] = { status: 'operational', services: [] };
+        continue;
+      }
+      
+      const hasDown = domainServices.some(s => s.status === 'down');
+      const hasDegraded = domainServices.some(s => s.status === 'degraded');
+      
+      byDomain[domain] = {
+        status: hasDown ? 'down' : hasDegraded ? 'degraded' : 'operational',
+        services: domainServices,
+      };
+    }
+    
+    const downCount = results.filter(r => r.status === 'down').length;
+    const degradedCount = results.filter(r => r.status === 'degraded').length;
+    const operationalCount = results.filter(r => r.status === 'operational').length;
+    
+    const criticalDown = results.some(r => r.status === 'down' && r.isCritical);
+    const criticalDegraded = results.some(r => r.status === 'degraded' && r.isCritical);
+    
+    console.log(`[HealthService] Quick diagnostics complete: ${results.length} services in ${Date.now() - startTime}ms`);
+    
+    return {
+      overall: criticalDown ? 'down' : criticalDegraded ? 'degraded' : 'operational',
+      totalServices: results.length,
+      operationalCount,
+      degradedCount,
+      downCount,
+      byDomain,
+      executionTimeMs: Date.now() - startTime,
+      timestamp: new Date().toISOString(),
+    };
+  }
+  
+  // Full mode: All services with FAST parallel batch execution
+  const result = await runFastModeBatchDiagnostics(15); // 15 services per batch
+  console.log(`[HealthService] Full diagnostics complete: ${result.totalServices} services in ${result.executionTimeMs}ms`);
+  return result;
 }
