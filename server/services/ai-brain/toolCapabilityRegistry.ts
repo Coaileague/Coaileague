@@ -17,7 +17,7 @@ import { TTLCache } from './cacheUtils';
 export interface ToolCapability {
   id: string;
   name: string;
-  category: 'scheduling' | 'payroll' | 'compliance' | 'analytics' | 'communication' | 'automation' | 'data' | 'integration' | 'diagnostic';
+  category: 'scheduling' | 'payroll' | 'compliance' | 'analytics' | 'communication' | 'automation' | 'data' | 'integration' | 'diagnostic' | 'gemini-reasoning';
   description: string;
   requiredPermissions: string[];
   requiredConsents: string[];
@@ -200,6 +200,72 @@ class ToolCapabilityRegistry {
         retryable: false,
         maxRetries: 0,
       },
+      // Gemini 3 Reasoning Tools
+      {
+        id: 'deep-think',
+        name: 'Deep Think',
+        category: 'gemini-reasoning',
+        description: 'Gemini 3 deep reasoning for complex multi-step analysis, strategic planning, and critical decision-making. Uses extended thinking time for thorough analysis.',
+        requiredPermissions: ['ai:deep-reasoning'],
+        requiredConsents: [],
+        prerequisites: ['gemini_configured'],
+        timeout: 180000,
+        retryable: true,
+        maxRetries: 1,
+        rateLimit: { requests: 10, windowMs: 60000 },
+      },
+      {
+        id: 'generate-ui',
+        name: 'Generate UI',
+        category: 'gemini-reasoning',
+        description: 'AI-powered UI component generation using Gemini 3 vision and code synthesis. Creates React components, layouts, and styling from descriptions.',
+        requiredPermissions: ['ai:generate-ui'],
+        requiredConsents: ['code_generation'],
+        prerequisites: ['gemini_configured'],
+        timeout: 120000,
+        retryable: true,
+        maxRetries: 2,
+        rateLimit: { requests: 20, windowMs: 60000 },
+      },
+      {
+        id: 'context-memory',
+        name: 'Context Memory',
+        category: 'gemini-reasoning',
+        description: 'Long-term conversation context and memory management. Stores, retrieves, and synthesizes context across sessions for personalized AI interactions.',
+        requiredPermissions: ['ai:memory'],
+        requiredConsents: ['memory_storage'],
+        prerequisites: ['gemini_configured', 'memory_service_active'],
+        timeout: 30000,
+        retryable: true,
+        maxRetries: 3,
+        rateLimit: { requests: 100, windowMs: 60000 },
+      },
+      {
+        id: 'vibe-coding',
+        name: 'Vibe Coding',
+        category: 'gemini-reasoning',
+        description: 'Natural language to code generation with style awareness. Translates user intent into production-ready code following project conventions and patterns.',
+        requiredPermissions: ['ai:code-generation'],
+        requiredConsents: ['code_generation'],
+        prerequisites: ['gemini_configured'],
+        timeout: 150000,
+        retryable: true,
+        maxRetries: 2,
+        rateLimit: { requests: 15, windowMs: 60000 },
+      },
+      {
+        id: 'fact-check',
+        name: 'Fact Check',
+        category: 'gemini-reasoning',
+        description: 'AI-powered fact verification and source validation. Validates claims, cross-references data, and provides confidence scores with citations.',
+        requiredPermissions: ['ai:fact-check'],
+        requiredConsents: [],
+        prerequisites: ['gemini_configured'],
+        timeout: 60000,
+        retryable: true,
+        maxRetries: 2,
+        rateLimit: { requests: 30, windowMs: 60000 },
+      },
     ];
 
     for (const tool of coreTools) {
@@ -272,8 +338,13 @@ class ToolCapabilityRegistry {
       restricted: [],
       requiresElevation: []
     },
+    'BRAIN': {
+      allowed: ['*'],
+      restricted: [],
+      requiresElevation: []
+    },
     'PRO_FALLBACK': { 
-      allowed: ['scheduling', 'payroll', 'compliance', 'analytics', 'communication', 'automation', 'data', 'integration', 'diagnostic'],
+      allowed: ['scheduling', 'payroll', 'compliance', 'analytics', 'communication', 'automation', 'data', 'integration', 'diagnostic', 'gemini-reasoning'],
       restricted: [],
       requiresElevation: []
     },

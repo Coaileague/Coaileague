@@ -88,12 +88,17 @@ const DOMAIN_COMPLEXITY: Record<string, 'low' | 'medium' | 'high' | 'critical'> 
   'code-analysis': 'critical',
   'multi-agent': 'critical',
   'crisis-management': 'critical',
+  'deep-think': 'critical',
+  'vibe-coding': 'critical',
+  'generate-ui': 'critical',
   
   // High - prefers Pro but can use Flash
   'compliance': 'high',
   'financial-analysis': 'high',
   'strategic-planning': 'high',
   'data-migration': 'high',
+  'fact-check': 'high',
+  'context-memory': 'high',
   
   // Medium - Flash models work well
   'conversation': 'medium',
@@ -119,6 +124,12 @@ const ACTION_PRESETS: Record<string, AntiYapPreset> = {
   'notify': 'notification',
   'lookup': 'lookup',
   'classify': 'simple',
+  // Gemini 3 tool presets
+  'deep-think': 'orchestrator',
+  'generate-ui': 'orchestrator',
+  'context-memory': 'helpai',
+  'vibe-coding': 'orchestrator',
+  'fact-check': 'diagnostics',
 };
 
 class ModelRoutingEngine {
