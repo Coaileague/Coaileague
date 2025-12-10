@@ -32828,6 +32828,34 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
   });
 
   /**
+   * POST /api/ai-brain/diagnostic/run-fast
+   * Run FAST mode platform diagnostic with AI analysis
+   */
+  app.post("/api/ai-brain/diagnostic/run-fast", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { runFastPlatformDiagnostic } = await import("./services/ai-brain/trinityFastDiagnostic");
+      
+      console.log("[API] Running FAST platform diagnostic for user:", req.userId);
+      
+      const report = await runFastPlatformDiagnostic({
+        userId: req.userId,
+        workspaceId: req.workspaceId,
+        sendNotifications: true,
+        applySelfHealing: true,
+      });
+      
+      res.json({ 
+        success: true, 
+        data: report,
+        message: `Diagnostic complete. Health: ${report.overallHealth}. Found ${report.findings.length} issues.`
+      });
+    } catch (error: any) {
+      console.error("[API] FAST diagnostic failed:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
    * GET /api/ai-brain/knowledge/insights/:queryType
    * Get learning insights for a query type
    */
