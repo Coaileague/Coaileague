@@ -491,7 +491,572 @@ class AIBrainMasterOrchestrator {
       }
     });
 
-    console.log('[AI Brain Master Orchestrator] Registered scheduling actions');
+    // Time Tracking Actions - Using existing time-entry service with proper authorization
+    helpaiOrchestrator.registerAction({
+      actionId: 'time_tracking.clock_in',
+      name: 'Clock In Employee',
+      category: 'scheduling',
+      description: 'Clock in an employee and start tracking their work hours',
+      requiredRoles: ['staff', 'manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { notes } = request.payload || {};
+        const effectiveWorkspaceId = request.workspaceId;
+        const userId = request.userId;
+        
+        try {
+          if (!effectiveWorkspaceId || !userId) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Workspace and user ID required for clock-in',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          // Lookup employee record for the user in their workspace
+          const employeeRecord = await db.select().from(employees)
+            .where(and(
+              eq(employees.userId, userId),
+              eq(employees.workspaceId, effectiveWorkspaceId)
+            ))
+            .limit(1);
+          
+          if (!employeeRecord.length) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'No employee record found for this user in workspace',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          const employeeId = employeeRecord[0].id;
+          
+          // Check for existing active clock-in
+          const activeEntry = await db.select().from(timeEntries)
+            .where(and(
+              eq(timeEntries.employeeId, employeeId),
+              eq(timeEntries.workspaceId, effectiveWorkspaceId),
+              eq(timeEntries.status, 'clocked_in')
+            ))
+            .limit(1);
+          
+          if (activeEntry.length > 0) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Already clocked in. Please clock out first.',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          const [entry] = await db.insert(timeEntries).values({
+            workspaceId: effectiveWorkspaceId,
+            employeeId,
+            clockIn: new Date(),
+            status: 'clocked_in',
+            notes,
+          }).returning();
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Successfully clocked in',
+            data: { timeEntryId: entry.id, clockIn: entry.clockIn, employeeId },
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: true
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'time_tracking.clock_out',
+      name: 'Clock Out Employee',
+      category: 'scheduling',
+      description: 'Clock out an employee and finalize their time entry',
+      requiredRoles: ['staff', 'manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const effectiveWorkspaceId = request.workspaceId;
+        const userId = request.userId;
+        
+        try {
+          if (!effectiveWorkspaceId || !userId) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Workspace and user ID required for clock-out',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          // Lookup employee record
+          const employeeRecord = await db.select().from(employees)
+            .where(and(
+              eq(employees.userId, userId),
+              eq(employees.workspaceId, effectiveWorkspaceId)
+            ))
+            .limit(1);
+          
+          if (!employeeRecord.length) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'No employee record found',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          const employeeId = employeeRecord[0].id;
+          
+          // Find the active entry for this employee in this workspace only
+          const activeEntry = await db.select().from(timeEntries)
+            .where(and(
+              eq(timeEntries.employeeId, employeeId),
+              eq(timeEntries.workspaceId, effectiveWorkspaceId),
+              eq(timeEntries.status, 'clocked_in')
+            ))
+            .limit(1);
+          
+          if (!activeEntry.length) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'No active clock-in found. Please clock in first.',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          const clockOut = new Date();
+          // Include workspaceId in WHERE clause to prevent cross-tenant manipulation
+          await db.update(timeEntries)
+            .set({ clockOut, status: 'pending_approval' })
+            .where(and(
+              eq(timeEntries.id, activeEntry[0].id),
+              eq(timeEntries.workspaceId, effectiveWorkspaceId)
+            ));
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Successfully clocked out',
+            data: { timeEntryId: activeEntry[0].id, clockOut, employeeId },
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: true
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'time_tracking.get_timesheet',
+      name: 'Get Employee Timesheet',
+      category: 'scheduling',
+      description: 'Retrieve timesheet data for an employee within a date range',
+      requiredRoles: ['staff', 'manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { startDate, endDate } = request.payload || {};
+        const effectiveWorkspaceId = request.workspaceId;
+        const userId = request.userId;
+        const userRole = request.userRole || 'staff';
+        
+        try {
+          if (!effectiveWorkspaceId || !userId) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Workspace and user required',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          // Staff can only see their own timesheet
+          const isManager = ['manager', 'admin', 'super_admin', 'org_owner', 'org_admin'].includes(userRole);
+          
+          // Get the employee ID for the requesting user
+          const employeeRecord = await db.select().from(employees)
+            .where(and(
+              eq(employees.userId, userId),
+              eq(employees.workspaceId, effectiveWorkspaceId)
+            ))
+            .limit(1);
+          
+          if (!employeeRecord.length && !isManager) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'No employee record found',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          // Build query with workspace scoping
+          const conditions = [eq(timeEntries.workspaceId, effectiveWorkspaceId)];
+          
+          // Staff can only see their own entries
+          if (!isManager && employeeRecord.length) {
+            conditions.push(eq(timeEntries.employeeId, employeeRecord[0].id));
+          }
+          
+          if (startDate) {
+            conditions.push(gte(timeEntries.clockIn, new Date(startDate)));
+          }
+          
+          const entries = await db.select()
+            .from(timeEntries)
+            .where(and(...conditions))
+            .orderBy(desc(timeEntries.clockIn))
+            .limit(100);
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Found ${entries.length} time entries`,
+            data: { entries, count: entries.length },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Advanced Scheduling Actions - With proper workspace scoping and authorization
+    helpaiOrchestrator.registerAction({
+      actionId: 'scheduling.create_recurring_shift',
+      name: 'Create Recurring Shift Pattern',
+      category: 'scheduling',
+      description: 'Create a recurring shift pattern that automatically generates shifts',
+      requiredRoles: ['manager', 'admin', 'super_admin', 'org_owner', 'org_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { employeeId, title, daysOfWeek, startTime: shiftStart, endTime, recurrencePattern } = request.payload || {};
+        const effectiveWorkspaceId = request.workspaceId;
+        
+        try {
+          if (!effectiveWorkspaceId) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Workspace ID required',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          if (!title) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Shift title required',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          // Verify employee belongs to this workspace if specified
+          if (employeeId) {
+            const emp = await db.select().from(employees)
+              .where(and(eq(employees.id, employeeId), eq(employees.workspaceId, effectiveWorkspaceId)))
+              .limit(1);
+            
+            if (!emp.length) {
+              return {
+                success: false,
+                actionId: request.actionId,
+                message: 'Employee not found in this workspace',
+                executionTimeMs: Date.now() - startTime
+              };
+            }
+          }
+          
+          const { createRecurringPattern } = await import('../advancedSchedulingService');
+          
+          const pattern = await createRecurringPattern({
+            workspaceId: effectiveWorkspaceId,
+            employeeId,
+            title,
+            daysOfWeek: daysOfWeek || [],
+            startTimeOfDay: shiftStart || '09:00',
+            endTimeOfDay: endTime || '17:00',
+            recurrencePattern: recurrencePattern || 'weekly',
+            startDate: new Date(),
+            isActive: true,
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Created recurring shift pattern: ${title}`,
+            data: { patternId: pattern.id, pattern },
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: true
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'scheduling.request_shift_swap',
+      name: 'Request Shift Swap',
+      category: 'scheduling',
+      description: 'Request to swap a shift with another employee',
+      requiredRoles: ['staff', 'manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { originalShiftId, requestedEmployeeId, reason } = request.payload || {};
+        const effectiveWorkspaceId = request.workspaceId;
+        const userId = request.userId;
+        
+        try {
+          if (!effectiveWorkspaceId || !userId) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Workspace and user required',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          if (!originalShiftId) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Shift ID required for swap request',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          // Get requesting employee first
+          const empRecord = await db.select().from(employees)
+            .where(and(eq(employees.userId, userId), eq(employees.workspaceId, effectiveWorkspaceId)))
+            .limit(1);
+          
+          if (!empRecord.length) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Employee record not found',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          // Verify shift exists, belongs to workspace, AND is assigned to this employee
+          const shift = await db.select().from(shifts)
+            .where(and(
+              eq(shifts.id, originalShiftId),
+              eq(shifts.workspaceId, effectiveWorkspaceId),
+              eq(shifts.employeeId, empRecord[0].id)
+            ))
+            .limit(1);
+          
+          if (!shift.length) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Shift not found or not assigned to you',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          const { requestShiftSwap } = await import('../advancedSchedulingService');
+          
+          const swapRequest = await requestShiftSwap({
+            workspaceId: effectiveWorkspaceId,
+            originalShiftId,
+            requestingEmployeeId: empRecord[0].id,
+            requestedEmployeeId,
+            reason,
+            status: 'pending',
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Shift swap request submitted',
+            data: { swapRequestId: swapRequest.id, status: swapRequest.status },
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: true
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'scheduling.approve_shift_swap',
+      name: 'Approve Shift Swap',
+      category: 'scheduling',
+      description: 'Approve or reject a shift swap request',
+      requiredRoles: ['manager', 'admin', 'super_admin', 'org_owner', 'org_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { swapRequestId, approved, managerNotes } = request.payload || {};
+        const effectiveWorkspaceId = request.workspaceId;
+        const userId = request.userId;
+        
+        try {
+          if (!effectiveWorkspaceId || !userId) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Workspace and user required',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          if (!swapRequestId) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Swap request ID required',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          // Verify swap request exists and belongs to workspace
+          const { shiftSwapRequests } = await import('@shared/schema');
+          const swapReq = await db.select().from(shiftSwapRequests)
+            .where(and(eq(shiftSwapRequests.id, swapRequestId), eq(shiftSwapRequests.workspaceId, effectiveWorkspaceId)))
+            .limit(1);
+          
+          if (!swapReq.length) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Swap request not found in this workspace',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          if (swapReq[0].status !== 'pending') {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: `Swap request already ${swapReq[0].status}`,
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          const { approveShiftSwap, rejectShiftSwap } = await import('../advancedSchedulingService');
+          
+          let result;
+          if (approved) {
+            result = await approveShiftSwap(swapRequestId, userId, managerNotes);
+          } else {
+            result = await rejectShiftSwap(swapRequestId, userId, managerNotes);
+          }
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: approved ? 'Shift swap approved' : 'Shift swap rejected',
+            data: result,
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: true
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'scheduling.duplicate_week',
+      name: 'Duplicate Week Schedule',
+      category: 'scheduling',
+      description: 'One-click duplication of an entire week schedule to the next week',
+      requiredRoles: ['manager', 'admin', 'super_admin', 'org_owner', 'org_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { sourceWeekStart, targetWeekStart } = request.payload || {};
+        const effectiveWorkspaceId = request.workspaceId;
+        
+        try {
+          if (!effectiveWorkspaceId) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Workspace ID required',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          if (!sourceWeekStart || !targetWeekStart) {
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: 'Source and target week start dates required',
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+          
+          const { duplicateWeekSchedule } = await import('../advancedSchedulingService');
+          
+          const result = await duplicateWeekSchedule(
+            effectiveWorkspaceId,
+            new Date(sourceWeekStart),
+            new Date(targetWeekStart)
+          );
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Duplicated ${result.shiftsCreated} shifts to new week`,
+            data: result,
+            executionTimeMs: Date.now() - startTime,
+            notificationSent: true
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered scheduling and time tracking actions');
   }
 
   // ============================================================================
