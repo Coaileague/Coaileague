@@ -33320,4 +33320,154 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.status(500).json({ success: false, error: error.message });
     }
   });
+
+  // ============================================================================
+  // FAST MODE & GRADUATION STATUS APIs
+  // ============================================================================
+
+  /**
+   * Get graduation status for the current workspace
+   * Returns trust score, auto-approval eligibility, and domain-level graduation
+   */
+  app.get("/api/ai-brain/graduation-status", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { subagentSupervisor } = await import("./services/ai-brain/subagentSupervisor");
+      const workspaceId = req.workspaceId || req.query.workspaceId as string;
+      
+      if (!workspaceId) {
+        return res.status(400).json({ success: false, error: "Workspace ID required" });
+      }
+
+      const graduationStatus = await subagentSupervisor.getGraduationStatus(workspaceId);
+      
+      res.json({
+        success: true,
+        graduationStatus,
+        thresholds: {
+          graduationThreshold: 99.9,
+          minimumExecutions: 100
+        }
+      });
+    } catch (error: any) {
+      console.error("[API] Failed to get graduation status:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Check if a specific action can be auto-approved based on graduation status
+   */
+  app.post("/api/ai-brain/can-auto-approve", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { subagentSupervisor } = await import("./services/ai-brain/subagentSupervisor");
+      const { domain, actionId } = req.body;
+      const workspaceId = req.workspaceId || req.body.workspaceId;
+
+      if (!workspaceId || !domain) {
+        return res.status(400).json({ success: false, error: "workspaceId and domain required" });
+      }
+
+      const result = await subagentSupervisor.canAutoApprove(workspaceId, domain, actionId);
+      res.json({ success: true, ...result });
+    } catch (error: any) {
+      console.error("[API] Auto-approval check failed:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Get Fast Mode tier configuration
+   */
+  app.get("/api/ai-brain/fast-mode/tiers", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { FAST_MODE_TIERS } = await import("./services/ai-brain/subagentSupervisor");
+      res.json({
+        success: true,
+        tiers: FAST_MODE_TIERS,
+        description: {
+          standard: "4 concurrent actions, 15s SLA, 1.5x credits",
+          premium: "8 concurrent actions, 10s SLA, 2x credits, parallel phases",
+          enterprise: "16 concurrent actions, 5s SLA, 2.5x credits, parallel phases, skip non-critical validation"
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Execute actions with Fast Mode context
+   * Provides full parallel execution with phase-level progress reporting
+   */
+  app.post("/api/ai-brain/fast-mode/execute", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { subagentSupervisor, FAST_MODE_TIERS } = await import("./services/ai-brain/subagentSupervisor");
+      const { getUserPlatformRole } = await import("./rbac");
+      
+      const userId = req.userId!;
+      const workspaceId = req.workspaceId || req.body.workspaceId;
+      const { tier = 'standard', actions } = req.body;
+
+      if (!workspaceId) {
+        return res.status(400).json({ success: false, error: "workspaceId required" });
+      }
+
+      if (!actions || !Array.isArray(actions) || actions.length === 0) {
+        return res.status(400).json({ success: false, error: "actions array required" });
+      }
+
+      const platformRole = await getUserPlatformRole(userId) || 'user';
+      const fastModeContext = FAST_MODE_TIERS[tier] || FAST_MODE_TIERS.standard;
+
+      // Map actions to executable format
+      const executableActions = actions.map((action: any) => ({
+        domain: action.domain,
+        actionId: action.actionId,
+        parameters: action.parameters || {},
+        actionHandler: async (params: Record<string, any>) => {
+          return { executed: true, params };
+        }
+      }));
+
+      const result = await subagentSupervisor.executeWithFastModeContext(
+        executableActions,
+        userId,
+        workspaceId,
+        platformRole,
+        fastModeContext
+      );
+
+      res.json({
+        success: result.success,
+        results: result.results,
+        totalDurationMs: result.totalDurationMs,
+        parallelExecuted: result.parallelExecuted,
+        phaseReports: result.phaseReports,
+        graduationImpact: result.graduationImpact,
+        tier: fastModeContext.tier
+      });
+    } catch (error: any) {
+      console.error("[API] Fast Mode execution failed:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Get Fast Mode metrics for the workspace
+   */
+  app.get("/api/ai-brain/fast-mode/metrics", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { subagentSupervisor } = await import("./services/ai-brain/subagentSupervisor");
+      const workspaceId = req.workspaceId || req.query.workspaceId as string;
+
+      if (!workspaceId) {
+        return res.status(400).json({ success: false, error: "workspaceId required" });
+      }
+
+      const metrics = await subagentSupervisor.getFastModeMetrics(workspaceId);
+      res.json({ success: true, metrics });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
 }
