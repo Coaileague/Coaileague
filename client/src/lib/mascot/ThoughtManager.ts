@@ -159,20 +159,24 @@ export interface ThoughtManagerState {
 
 type ThoughtListener = (thought: Thought | null) => void;
 
-// Calculate reading time based on text length (average reading speed: ~100 words/min for comfortable reading)
-// Minimum 18 seconds (user feedback: needs more time to ponder), maximum 60 seconds for long AI thoughts
+// Calculate reading time based on text length (average reading speed: ~60 words/min for SLOW comfortable reading)
+// User feedback: thoughts rotate too fast - increased minimum significantly for leisurely reading
+// Minimum 30 seconds, maximum 90 seconds for long AI thoughts
 function calculateReadingTime(text: string): number {
   const words = text.split(/\s+/).length;
-  const averageReadingWPM = 100; // Slower for casual users to comfortably read and ponder
+  const averageReadingWPM = 60; // Very slow for casual users - matches relaxed reading pace
   const baseTimeMs = (words / averageReadingWPM) * 60 * 1000;
-  const minTime = 18000; // 18 seconds minimum - give users time to ponder Trinity's insights
-  const maxTime = 60000; // 60 seconds maximum for long AI-generated thoughts
+  const minTime = 30000; // 30 seconds minimum - plenty of time to read and ponder
+  const maxTime = 90000; // 90 seconds maximum for long AI-generated thoughts
   // Add extra time for punctuation (pauses) and complex sentences
-  const punctuationPauses = (text.match(/[.!?,;:]/g) || []).length * 500; // Longer pauses
+  const punctuationPauses = (text.match(/[.!?,;:]/g) || []).length * 800; // Even longer pauses
   // Add cognitive processing time for questions or action items
   const hasQuestion = text.includes('?');
-  const questionBonus = hasQuestion ? 3000 : 0;
-  return Math.min(maxTime, Math.max(minTime, baseTimeMs + punctuationPauses + questionBonus + 5000));
+  const questionBonus = hasQuestion ? 5000 : 0;
+  // Add time based on content complexity (longer words = more complex)
+  const avgWordLength = text.replace(/\s+/g, '').length / Math.max(words, 1);
+  const complexityBonus = avgWordLength > 5 ? 3000 : 0;
+  return Math.min(maxTime, Math.max(minTime, baseTimeMs + punctuationPauses + questionBonus + complexityBonus + 8000));
 }
 
 class ThoughtManager {

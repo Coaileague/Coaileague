@@ -49,10 +49,10 @@ const PRIORITY_COLORS: Record<string, string> = {
 
 const TASK_BOX_CONFIG = {
   showDelay: 8000,
-  minDisplayTime: 5000,
-  maxDisplayTime: 15000,
-  cooldownTime: 30000,
-  taskRotateInterval: 10000,
+  minDisplayTime: 15000,   // Increased from 5s to 15s for comfortable reading
+  maxDisplayTime: 30000,   // Increased from 15s to 30s 
+  cooldownTime: 45000,     // Increased from 30s to 45s to match thought rotation
+  taskRotateInterval: 15000, // Increased from 10s to 15s
   boxWidth: 280,
   boxHeight: 140,
 };
@@ -192,11 +192,13 @@ export function MascotTaskBox({
   
   useEffect(() => {
     if (bubblePlacement.shouldAutoDismiss && isVisible) {
+      // Give users ample time to read task suggestions even in collision state
+      // 20 seconds minimum for comfortable reading
       const timer = setTimeout(() => {
         if (mountedRef.current) {
           hideTaskBox();
         }
-      }, 1500);
+      }, 20000);
       return () => clearTimeout(timer);
     }
   }, [bubblePlacement.shouldAutoDismiss, isVisible, hideTaskBox]);

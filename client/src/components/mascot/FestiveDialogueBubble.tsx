@@ -344,7 +344,11 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
     
     const totalChars = newLetters.length;
     const entryDuration = Math.min(totalChars * 60, 2500);
-    const displayDuration = Math.max(8000, thought.text.length * 150); // 8 sec minimum, 150ms per char
+    // User feedback: thoughts rotate too fast - use ThoughtManager's expiry if available
+    // Otherwise use generous timing: 30 sec minimum, 300ms per char for leisurely reading
+    const fallbackDisplayDuration = Math.max(30000, thought.text.length * 300);
+    const displayDuration = thought.expiresAt ? 
+      Math.max(thought.expiresAt - Date.now() - entryDuration - 2000, 25000) : fallbackDisplayDuration;
     const exitDuration = 1800;
     
     const animate = (timestamp: number) => {

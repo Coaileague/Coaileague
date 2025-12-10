@@ -342,9 +342,14 @@ function MascotRenderer() {
   
   useEffect(() => {
     if (bubblePlacement.shouldAutoDismiss && currentThought) {
+      // Give users ample time to read even when bubble is in collision position
+      // Use the thought's expiry time if available, otherwise default to 30 seconds
+      // This ensures bubbles stay visible long enough for comfortable reading
+      const remainingTime = currentThought.expiresAt ? 
+        Math.max(currentThought.expiresAt - Date.now(), 25000) : 30000;
       const timer = setTimeout(() => {
         setCurrentThought(null);
-      }, 1500);
+      }, remainingTime);
       return () => clearTimeout(timer);
     }
   }, [bubblePlacement.shouldAutoDismiss, currentThought]);

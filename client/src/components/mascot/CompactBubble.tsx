@@ -76,9 +76,15 @@ export const CompactBubble = memo(function CompactBubble({
     setShouldRender(true);
     setTimeout(() => setIsVisible(true), 50);
 
-    // Calculate reading time: 250ms per character, minimum 15 seconds, max 30 seconds
+    // Calculate reading time: use thought's expiresAt if available (set by ThoughtManager)
+    // Otherwise use generous fallback: 400ms per character, minimum 30 seconds, max 60 seconds
+    // User feedback: thoughts were rotating too fast, so we doubled the reading time
     const textLength = thought.text?.length || 0;
-    const readingTime = Math.min(Math.max(textLength * 250, 15000), 30000);
+    const fallbackReadingTime = Math.min(Math.max(textLength * 400, 30000), 60000);
+    
+    // Prefer ThoughtManager's calculated expiry time if available
+    const readingTime = thought.expiresAt ? 
+      Math.max(thought.expiresAt - Date.now(), 25000) : fallbackReadingTime;
     
     const dismissTimer = setTimeout(() => {
       setIsVisible(false);
