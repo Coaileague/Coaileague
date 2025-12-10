@@ -159,17 +159,20 @@ export interface ThoughtManagerState {
 
 type ThoughtListener = (thought: Thought | null) => void;
 
-// Calculate reading time based on text length (average reading speed: ~150 words/min for comfortable reading)
-// Minimum 12 seconds (user feedback: 6s was too fast), maximum 45 seconds for long AI thoughts
+// Calculate reading time based on text length (average reading speed: ~100 words/min for comfortable reading)
+// Minimum 18 seconds (user feedback: needs more time to ponder), maximum 60 seconds for long AI thoughts
 function calculateReadingTime(text: string): number {
   const words = text.split(/\s+/).length;
-  const averageReadingWPM = 120; // Even slower for casual users to comfortably read
+  const averageReadingWPM = 100; // Slower for casual users to comfortably read and ponder
   const baseTimeMs = (words / averageReadingWPM) * 60 * 1000;
-  const minTime = 12000; // 12 seconds minimum - comfortable reading time
-  const maxTime = 45000; // 45 seconds maximum for long AI-generated thoughts
+  const minTime = 18000; // 18 seconds minimum - give users time to ponder Trinity's insights
+  const maxTime = 60000; // 60 seconds maximum for long AI-generated thoughts
   // Add extra time for punctuation (pauses) and complex sentences
-  const punctuationPauses = (text.match(/[.!?,;:]/g) || []).length * 300;
-  return Math.min(maxTime, Math.max(minTime, baseTimeMs + punctuationPauses + 3000));
+  const punctuationPauses = (text.match(/[.!?,;:]/g) || []).length * 500; // Longer pauses
+  // Add cognitive processing time for questions or action items
+  const hasQuestion = text.includes('?');
+  const questionBonus = hasQuestion ? 3000 : 0;
+  return Math.min(maxTime, Math.max(minTime, baseTimeMs + punctuationPauses + questionBonus + 5000));
 }
 
 class ThoughtManager {

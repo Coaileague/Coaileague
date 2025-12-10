@@ -172,6 +172,8 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               // SIMPLIFIED: Just invalidate queries - server is source of truth
               queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
               queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+              // CRITICAL: Sync Trinity context with fresh notification counts for LIVE awareness
+              queryClient.invalidateQueries({ queryKey: ["/api/trinity/context"] });
               
               // Update unread count from server
               if (data.unreadCount !== undefined) {
@@ -226,6 +228,8 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               console.log('📖 Notification marked as read');
               queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
               queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+              // Sync Trinity context with updated counts
+              queryClient.invalidateQueries({ queryKey: ["/api/trinity/context"] });
               if (data.unreadCount !== undefined) {
                 setUnreadCount(data.unreadCount);
               }
@@ -254,6 +258,8 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
               queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
               queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
+              // CRITICAL: Sync Trinity with zero notification counts
+              queryClient.invalidateQueries({ queryKey: ["/api/trinity/context"] });
               break;
 
             case 'notification_count_updated':
@@ -294,6 +300,8 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               // Refresh combined data to get accurate counts
               queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
               queryClient.invalidateQueries({ queryKey: ["/api/notifications/unread-counts"] });
+              // CRITICAL: Keep Trinity in sync with LIVE notification counts
+              queryClient.invalidateQueries({ queryKey: ["/api/trinity/context"] });
               break;
 
             case 'notification_cleared_all':
@@ -324,6 +332,8 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
               queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
               queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
+              // CRITICAL: Sync Trinity with cleared notification state
+              queryClient.invalidateQueries({ queryKey: ["/api/trinity/context"] });
               // Dispatch event for WhatsNewBadge component
               window.dispatchEvent(new CustomEvent('whats_new_cleared', { detail: data }));
               break;

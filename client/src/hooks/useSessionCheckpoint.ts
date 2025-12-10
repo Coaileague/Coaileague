@@ -56,7 +56,7 @@ export function useSessionCheckpoint(options: UseSessionCheckpointOptions) {
   const sessionId = getSessionId();
 
   // Check for recoverable checkpoints on mount
-  const { data: recoverableData } = useQuery({
+  const { data: recoverableData } = useQuery<{ hasRecoverable: boolean; checkpoints: SessionCheckpoint[] }>({
     queryKey: ['/api/session-checkpoints/recoverable'],
     enabled: enabled,
     staleTime: 60000,
