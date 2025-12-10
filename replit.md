@@ -75,6 +75,9 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Onboarding Orchestrator (Enhanced):** Coordinates parallel execution of DataMigrationAgent and GamificationActivationAgent during new org creation. Now includes workspace-isolated Trinity AI initialization with tier-based personas (onboarding_guide, business_buddy, support_partner, executive_advisor) and capabilities, Trinity welcome notifications, end-to-end testing workflows, and workflow diagnostics.
 - **SubagentBanker:** AI Brain credit pre-authorization and ledger management system implementing subscriber-pays-all model.
 - **Advanced Credit Analytics Dashboard:** Executive-level analytics for business owners with credit summaries, usage breakdowns, trends, AI task analytics, ROI metrics, and transaction history.
+- **SeasonalSubagent:** Autonomous AI-powered holiday theming orchestrator. Monitors calendar for 7 holidays (Christmas, New Year, Valentine's, Easter, Independence Day, Halloween, Thanksgiving), generates creative themes using Gemini AI, applies CSS hotswaps without restart, auto-rollback after expiry, and hit detection for safe zones.
+- **ServiceOrchestrationWatchdog:** Platform service orchestration monitor detecting "rebel" (unmanaged) and "orphan" (stopped heartbeating) services. Tracks 31+ expected services, publishes alerts via event bus, proposes hotpatch/hotswap remediation, and uses AI analysis for recommendations.
+- **SeasonalDecorator Component:** Frontend React component consuming seasonal theme API, injecting CSS variables, rendering snow/confetti/banner decorations with AnimatePresence, pointer-events-none for click-through, and forced dark mode during holidays.
 
 **System Design Choices:**
 - **Modularity:** 87 backend service modules and 220+ frontend routes.
