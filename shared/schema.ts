@@ -9879,16 +9879,26 @@ export type OrganizationRoomOnboarding = typeof organizationRoomOnboarding.$infe
 
 // Platform update category enum
 export const platformUpdateCategoryEnum = pgEnum('platform_update_category', [
-  'feature',       // New feature release
-  'improvement',   // Enhancement to existing feature
-  'bugfix',        // Bug fix
-  'security',      // Security patch
-  'announcement',  // Platform announcement
-  'maintenance',   // System maintenance, scheduled downtime
-  'diagnostic',    // Trinity diagnostics, system health
-  'support',       // Support requests, help desk
-  'ai_brain',      // AI Brain messages, orchestration updates
-  'error',         // System errors, issues, incidents
+  'feature',               // New feature release
+  'improvement',           // Enhancement to existing feature
+  'bugfix',                // Bug fix
+  'security',              // Security patch
+  'announcement',          // Platform announcement
+  'maintenance',           // System maintenance, scheduled downtime
+  'diagnostic',            // Trinity diagnostics, system health
+  'support',               // Support requests, help desk
+  'ai_brain',              // AI Brain messages, orchestration updates
+  'error',                 // System errors, issues, incidents
+  // Extended system categories (for System tab "Clear All" support)
+  'fix',                   // Quick fixes, patches
+  'hotpatch',              // Live hotpatches
+  'deprecation',           // Deprecation notices
+  'system',                // General system notifications
+  'incident',              // Incident reports
+  'outage',                // Service outage alerts
+  'recovery',              // Recovery notifications
+  'maintenance_update',    // Maintenance status updates
+  'maintenance_postmortem',// Post-incident analysis
 ]);
 
 // Tab group type for filtering What's New notifications
