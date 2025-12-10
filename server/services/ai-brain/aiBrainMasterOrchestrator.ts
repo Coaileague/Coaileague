@@ -394,7 +394,7 @@ class AIBrainMasterOrchestrator {
     await this.registerSessionCheckpointActions();
     await this.registerElevatedSessionGuardianActions();
     this.registerMemoryAndGovernanceActions();
-    this.registerGemini3ToolActions();
+    await this.registerGemini3ToolActions();
     
     // Subscribe to platform events
     this.subscribeToEvents();
@@ -4633,7 +4633,24 @@ class AIBrainMasterOrchestrator {
   // GEMINI 3 REASONING TOOLS
   // ============================================================================
 
-  private registerGemini3ToolActions(): void {
+  private async validateGemini3Access(toolId: string): Promise<{ allowed: boolean; reason?: string }> {
+    try {
+      const { toolCapabilityRegistry } = await import('./toolCapabilityRegistry');
+      const tool = toolCapabilityRegistry.getTool(toolId);
+      if (!tool) {
+        return { allowed: false, reason: 'Tool not found in registry' };
+      }
+      if (tool.category !== 'gemini-reasoning') {
+        return { allowed: true };
+      }
+      return { allowed: true };
+    } catch (error: any) {
+      console.error(`[Gemini3Tools] Access validation error: ${error.message}`);
+      return { allowed: false, reason: 'Access validation failed' };
+    }
+  }
+
+  private async registerGemini3ToolActions(): Promise<void> {
     // Deep Think - Complex multi-step analysis
     helpaiOrchestrator.registerAction({
       actionId: 'ai.deep_think',
@@ -4646,6 +4663,17 @@ class AIBrainMasterOrchestrator {
         const { query, context, maxThinkingTokens } = request.payload || {};
         
         try {
+          const accessCheck = await this.validateGemini3Access('deep-think');
+          if (!accessCheck.allowed) {
+            console.warn(`[Gemini3Tools] Deep think access denied: ${accessCheck.reason}`);
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: `Access denied: ${accessCheck.reason}`,
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
           const { unifiedGeminiClient } = await import('./unifiedGeminiClient');
           const result = await unifiedGeminiClient.generateContent({
             prompt: `You are an expert strategic analyst. Think deeply and thoroughly about this query, considering multiple perspectives, potential implications, and actionable recommendations.
@@ -4664,6 +4692,7 @@ Provide a comprehensive analysis with:
             userId: request.userId,
           });
           
+          console.log(`[Gemini3Tools] Deep think completed in ${Date.now() - startTime}ms, tokens: ${result.tokensUsed}`);
           return {
             success: true,
             actionId: request.actionId,
@@ -4677,10 +4706,11 @@ Provide a comprehensive analysis with:
             executionTimeMs: Date.now() - startTime
           };
         } catch (error: any) {
+          console.error(`[Gemini3Tools] Deep think failed: ${error.message}`);
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: `Deep think failed: ${error.message}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4699,6 +4729,17 @@ Provide a comprehensive analysis with:
         const { description, componentType, styling, interactivity } = request.payload || {};
         
         try {
+          const accessCheck = await this.validateGemini3Access('generate-ui');
+          if (!accessCheck.allowed) {
+            console.warn(`[Gemini3Tools] Generate UI access denied: ${accessCheck.reason}`);
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: `Access denied: ${accessCheck.reason}`,
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
           const { unifiedGeminiClient } = await import('./unifiedGeminiClient');
           const result = await unifiedGeminiClient.generateContent({
             prompt: `You are an expert React/TypeScript developer. Generate a production-ready React component based on this description:
@@ -4721,6 +4762,7 @@ Return the complete component code with all imports.`,
             userId: request.userId,
           });
           
+          console.log(`[Gemini3Tools] Generate UI completed in ${Date.now() - startTime}ms, tokens: ${result.tokensUsed}`);
           return {
             success: true,
             actionId: request.actionId,
@@ -4733,10 +4775,11 @@ Return the complete component code with all imports.`,
             executionTimeMs: Date.now() - startTime
           };
         } catch (error: any) {
+          console.error(`[Gemini3Tools] Generate UI failed: ${error.message}`);
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: `Generate UI failed: ${error.message}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4755,6 +4798,17 @@ Return the complete component code with all imports.`,
         const { operation, key, value, namespace } = request.payload || {};
         
         try {
+          const accessCheck = await this.validateGemini3Access('context-memory');
+          if (!accessCheck.allowed) {
+            console.warn(`[Gemini3Tools] Context memory access denied: ${accessCheck.reason}`);
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: `Access denied: ${accessCheck.reason}`,
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
           const { trinityMemoryService } = await import('./trinityMemoryService');
           let result: any;
           
@@ -4788,6 +4842,7 @@ Return the complete component code with all imports.`,
               result = { error: 'Unknown operation' };
           }
           
+          console.log(`[Gemini3Tools] Context memory '${operation}' completed in ${Date.now() - startTime}ms`);
           return {
             success: true,
             actionId: request.actionId,
@@ -4796,10 +4851,11 @@ Return the complete component code with all imports.`,
             executionTimeMs: Date.now() - startTime
           };
         } catch (error: any) {
+          console.error(`[Gemini3Tools] Context memory failed: ${error.message}`);
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: `Context memory failed: ${error.message}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4818,6 +4874,17 @@ Return the complete component code with all imports.`,
         const { intent, language, framework, conventions } = request.payload || {};
         
         try {
+          const accessCheck = await this.validateGemini3Access('vibe-coding');
+          if (!accessCheck.allowed) {
+            console.warn(`[Gemini3Tools] Vibe coding access denied: ${accessCheck.reason}`);
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: `Access denied: ${accessCheck.reason}`,
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
           const { unifiedGeminiClient } = await import('./unifiedGeminiClient');
           const result = await unifiedGeminiClient.generateContent({
             prompt: `You are an expert programmer with deep knowledge of ${framework || 'modern web development'}. Generate production-ready code based on this natural language intent:
@@ -4840,6 +4907,7 @@ Return the complete implementation.`,
             userId: request.userId,
           });
           
+          console.log(`[Gemini3Tools] Vibe coding completed in ${Date.now() - startTime}ms, tokens: ${result.tokensUsed}`);
           return {
             success: true,
             actionId: request.actionId,
@@ -4853,10 +4921,11 @@ Return the complete implementation.`,
             executionTimeMs: Date.now() - startTime
           };
         } catch (error: any) {
+          console.error(`[Gemini3Tools] Vibe coding failed: ${error.message}`);
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: `Vibe coding failed: ${error.message}`,
             executionTimeMs: Date.now() - startTime
           };
         }
@@ -4875,6 +4944,17 @@ Return the complete implementation.`,
         const { claim, context, sources } = request.payload || {};
         
         try {
+          const accessCheck = await this.validateGemini3Access('fact-check');
+          if (!accessCheck.allowed) {
+            console.warn(`[Gemini3Tools] Fact check access denied: ${accessCheck.reason}`);
+            return {
+              success: false,
+              actionId: request.actionId,
+              message: `Access denied: ${accessCheck.reason}`,
+              executionTimeMs: Date.now() - startTime
+            };
+          }
+
           const { unifiedGeminiClient } = await import('./unifiedGeminiClient');
           const result = await unifiedGeminiClient.generateContent({
             prompt: `You are a fact-checking expert. Analyze the following claim and provide a thorough verification:
@@ -4896,6 +4976,7 @@ Provide your analysis in the following format:
             userId: request.userId,
           });
           
+          console.log(`[Gemini3Tools] Fact check completed in ${Date.now() - startTime}ms, tokens: ${result.tokensUsed}`);
           return {
             success: true,
             actionId: request.actionId,
@@ -4908,10 +4989,11 @@ Provide your analysis in the following format:
             executionTimeMs: Date.now() - startTime
           };
         } catch (error: any) {
+          console.error(`[Gemini3Tools] Fact check failed: ${error.message}`);
           return {
             success: false,
             actionId: request.actionId,
-            message: error.message,
+            message: `Fact check failed: ${error.message}`,
             executionTimeMs: Date.now() - startTime
           };
         }
