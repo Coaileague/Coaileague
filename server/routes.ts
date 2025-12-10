@@ -33470,4 +33470,136 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.status(500).json({ success: false, error: error.message });
     }
   });
+
+  // ============================================================================
+  // MAILER SUBAGENT & MAILING INSTRUCTIONS APIs
+  // ============================================================================
+
+  /**
+   * Get all mailing instructions for email governance
+   */
+  app.get("/api/ai-brain/mailing-instructions", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { MAILING_INSTRUCTIONS } = await import("./services/ai-brain/subagentSupervisor");
+      res.json({
+        success: true,
+        instructions: MAILING_INSTRUCTIONS,
+        categories: Object.keys(MAILING_INSTRUCTIONS),
+        description: "Specialized mailing instructions for all email categories"
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Get mailing instruction for a specific email category
+   */
+  app.get("/api/ai-brain/mailing-instructions/:category", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { getMailingInstruction } = await import("./services/ai-brain/subagentSupervisor");
+      const { category } = req.params;
+      
+      const instruction = getMailingInstruction(category);
+      if (!instruction) {
+        return res.status(404).json({ 
+          success: false, 
+          error: `Unknown email category: ${category}`,
+          availableCategories: ['password_reset', 'verification', 'shift_assignment', 'shift_reminder', 
+                               'invoice_generated', 'payroll_processed', 'platform_update', 
+                               'support_ticket_confirmation', 'employee_invitation', 'weekly_digest']
+        });
+      }
+
+      res.json({ success: true, category, instruction });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Validate email data against mailing instructions
+   */
+  app.post("/api/ai-brain/mailing-instructions/validate", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { validateEmailData } = await import("./services/ai-brain/subagentSupervisor");
+      const { category, data } = req.body;
+
+      if (!category || !data) {
+        return res.status(400).json({ success: false, error: "category and data required" });
+      }
+
+      const validation = validateEmailData(category, data);
+      res.json({ 
+        success: true, 
+        category,
+        validation,
+        ready: validation.valid
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Send email through MailerSubagent with proper governance
+   */
+  app.post("/api/ai-brain/mailer/send", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { getMailingInstruction, validateEmailData } = await import("./services/ai-brain/subagentSupervisor");
+      const { emailService } = await import("./services/emailService");
+      
+      const { category, recipient, data } = req.body;
+      const workspaceId = req.workspaceId || req.body.workspaceId;
+      const userId = req.userId!;
+
+      if (!category || !recipient || !data) {
+        return res.status(400).json({ success: false, error: "category, recipient, and data required" });
+      }
+
+      // Validate against mailing instructions
+      const instruction = getMailingInstruction(category);
+      if (!instruction) {
+        return res.status(400).json({ success: false, error: `Unknown email category: ${category}` });
+      }
+
+      const validation = validateEmailData(category, { email: recipient, ...data });
+      if (!validation.valid) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "Email data validation failed",
+          errors: validation.errors
+        });
+      }
+
+      // Log the email send attempt for telemetry
+      console.log(`[MailerSubagent] Sending ${category} email to ${recipient} via AI Brain governance`);
+      console.log(`[MailerSubagent] Priority: ${instruction.priority}, Max retries: ${instruction.maxRetries}`);
+
+      // Send via the emailService with telemetry tracking
+      const result = await emailService.sendEmail(
+        recipient,
+        data.subject || `CoAIleague ${category.replace(/_/g, ' ')}`,
+        data.html || `<p>${data.message || 'No content provided'}</p>`,
+        category,
+        workspaceId,
+        userId
+      );
+
+      res.json({
+        success: result.success,
+        messageId: result.messageId,
+        category,
+        instruction: {
+          priority: instruction.priority,
+          maxRetries: instruction.maxRetries,
+          deliveryRules: instruction.deliveryRules
+        },
+        governedByAiBrain: true
+      });
+    } catch (error: any) {
+      console.error("[MailerSubagent] Email send failed:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
 }
