@@ -16,10 +16,59 @@ import {
   workspaceCredits, 
   creditTransactions, 
   aiUsageEvents,
+  workspaces,
   type InsertCreditTransaction,
   type WorkspaceCredits 
 } from '@shared/schema';
 import { eq, and, desc, gte, lte, sql } from 'drizzle-orm';
+import { getUserPlatformRole, hasPlatformWideAccess, getUserWorkspaceRole, type PlatformRole } from '../../rbac';
+
+// ============================================================================
+// UNLIMITED CREDITS FOR PRIVILEGED USERS
+// ============================================================================
+
+/**
+ * Roles that receive unlimited credits:
+ * - Platform staff: root_admin, deputy_admin, sysop, support_manager, support_agent
+ * - Workspace owners (org_owner role)
+ */
+const UNLIMITED_CREDIT_ROLES: PlatformRole[] = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
+
+/**
+ * Check if a user has unlimited credits based on:
+ * 1. Platform-wide access (support/admin roles)
+ * 2. Being the workspace owner
+ */
+export async function isUnlimitedCreditUser(userId: string, workspaceId: string): Promise<boolean> {
+  // Check platform role first (most privileged)
+  const platformRole = await getUserPlatformRole(userId);
+  if (hasPlatformWideAccess(platformRole)) {
+    return true;
+  }
+  
+  // Check if user owns the workspace
+  const [workspace] = await db.select()
+    .from(workspaces)
+    .where(eq(workspaces.id, workspaceId))
+    .limit(1);
+  
+  if (workspace && workspace.ownerId === userId) {
+    return true;
+  }
+  
+  // Check if user has org_owner workspace role
+  const { role } = await getUserWorkspaceRole(userId, workspaceId);
+  if (role === 'org_owner') {
+    return true;
+  }
+  
+  return false;
+}
+
+/**
+ * Sentinel value for unlimited credits display
+ */
+export const UNLIMITED_CREDITS_BALANCE = 999999999;
 
 // Credit cost per feature (calibrated to AI token usage)
 export const CREDIT_COSTS = {
@@ -64,6 +113,7 @@ export interface CreditCheckResult {
   currentBalance: number;
   required: number;
   shortfall: number;
+  unlimitedCredits?: boolean;
 }
 
 export interface CreditDeductionResult {
@@ -146,12 +196,57 @@ export class CreditManager {
   }
 
   /**
+   * Get credit account with unlimited status check
+   * Returns account info with unlimitedCredits flag
+   */
+  async getCreditsAccountWithStatus(workspaceId: string, userId?: string): Promise<{
+    credits: WorkspaceCredits | null;
+    unlimitedCredits: boolean;
+    effectiveBalance: number;
+  }> {
+    // Check if user has unlimited credits
+    if (userId) {
+      const hasUnlimited = await isUnlimitedCreditUser(userId, workspaceId);
+      if (hasUnlimited) {
+        return {
+          credits: null,
+          unlimitedCredits: true,
+          effectiveBalance: UNLIMITED_CREDITS_BALANCE,
+        };
+      }
+    }
+    
+    const credits = await this.getCreditsAccount(workspaceId);
+    return {
+      credits,
+      unlimitedCredits: false,
+      effectiveBalance: credits?.currentBalance || 0,
+    };
+  }
+
+  /**
    * Check if workspace has enough credits for an operation
+   * Bypasses credit check for users with unlimited credits (support/owners)
    */
   async checkCredits(
     workspaceId: string,
-    featureKey: keyof typeof CREDIT_COSTS
+    featureKey: keyof typeof CREDIT_COSTS,
+    userId?: string
   ): Promise<CreditCheckResult> {
+    // Check if user has unlimited credits
+    if (userId) {
+      const hasUnlimited = await isUnlimitedCreditUser(userId, workspaceId);
+      if (hasUnlimited) {
+        return {
+          hasEnoughCredits: true,
+          currentBalance: UNLIMITED_CREDITS_BALANCE,
+          required: 0,
+          shortfall: 0,
+          unlimitedCredits: true,
+        };
+      }
+    }
+    
     const balance = await this.getBalance(workspaceId);
     const required = CREDIT_COSTS[featureKey] || 0;
     const hasEnough = balance >= required;
@@ -161,12 +256,14 @@ export class CreditManager {
       currentBalance: balance,
       required,
       shortfall: hasEnough ? 0 : required - balance,
+      unlimitedCredits: false,
     };
   }
 
   /**
    * Deduct credits for an automation operation
    * This is the critical function called before every AI operation
+   * Bypasses deduction for users with unlimited credits (support/owners)
    */
   async deductCredits(params: {
     workspaceId: string;
@@ -179,6 +276,19 @@ export class CreditManager {
     description?: string;
   }): Promise<CreditDeductionResult> {
     const { workspaceId, userId, featureKey, featureName, aiUsageEventId, relatedEntityType, relatedEntityId, description } = params;
+    
+    // Check if user has unlimited credits - bypass deduction
+    if (userId) {
+      const hasUnlimited = await isUnlimitedCreditUser(userId, workspaceId);
+      if (hasUnlimited) {
+        console.log(`[CreditManager] Bypassing credit deduction for unlimited user: ${userId}`);
+        return {
+          success: true,
+          transactionId: null,
+          newBalance: UNLIMITED_CREDITS_BALANCE,
+        };
+      }
+    }
     
     // Get current credits
     const credits = await this.getCreditsAccount(workspaceId);

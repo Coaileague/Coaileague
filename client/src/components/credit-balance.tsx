@@ -22,6 +22,7 @@ interface CreditBalance {
   lastResetAt: string;
   nextResetAt: string;
   subscriptionTier: string;
+  unlimitedCredits?: boolean;
 }
 
 interface CreditUsageBreakdown {
@@ -80,8 +81,8 @@ export function CreditBalanceCard({ onBuyCredits }: { onBuyCredits?: () => void 
     );
   }
 
-  // Check if user has unlimited credits (monthlyAllocation is very high or -1)
-  const isUnlimited = balance.monthlyAllocation === -1 || balance.monthlyAllocation > 999999;
+  // Check if user has unlimited credits (unlimitedCredits flag, monthlyAllocation is -1, or very high balance)
+  const isUnlimited = balance.unlimitedCredits === true || balance.monthlyAllocation === -1 || balance.monthlyAllocation > 999999;
   
   const usagePercent = isUnlimited ? 0 : (balance.monthlyAllocation > 0 
     ? ((balance.monthlyAllocation - balance.currentBalance) / balance.monthlyAllocation) * 100 
@@ -201,16 +202,18 @@ export function CreditBalanceCard({ onBuyCredits }: { onBuyCredits?: () => void 
           </div>
         )}
 
-        {/* Buy Credits Button */}
-        <Button 
-          onClick={handleBuyClick} 
-          className="w-full gap-2"
-          variant={isCritical ? 'default' : 'outline'}
-          data-testid="button-buy-credits"
-        >
-          <ShoppingCart className="h-4 w-4" />
-          {isCritical ? 'Buy Credits Now' : 'Buy More Credits'}
-        </Button>
+        {/* Buy Credits Button - hidden for unlimited users */}
+        {!isUnlimited && (
+          <Button 
+            onClick={handleBuyClick} 
+            className="w-full gap-2"
+            variant={isCritical ? 'default' : 'outline'}
+            data-testid="button-buy-credits"
+          >
+            <ShoppingCart className="h-4 w-4" />
+            {isCritical ? 'Buy Credits Now' : 'Buy More Credits'}
+          </Button>
+        )}
       </CardContent>
       
       <BuyCreditsModal open={showBuyModal} onOpenChange={setShowBuyModal} />
@@ -235,8 +238,10 @@ export function CreditBalanceBadge({ onClick }: { onClick?: () => void }) {
     );
   }
 
-  const isLow = balance.currentBalance < balance.monthlyAllocation * 0.2;
-  const isCritical = balance.currentBalance === 0;
+  // Check if user has unlimited credits
+  const isUnlimited = balance.unlimitedCredits === true || balance.monthlyAllocation === -1 || balance.monthlyAllocation > 999999;
+  const isLow = isUnlimited ? false : balance.currentBalance < balance.monthlyAllocation * 0.2;
+  const isCritical = isUnlimited ? false : balance.currentBalance === 0;
 
   return (
     <Button 
@@ -246,16 +251,16 @@ export function CreditBalanceBadge({ onClick }: { onClick?: () => void }) {
       className="gap-1.5"
       data-testid="button-credits-header"
     >
-      <Coins className={`h-4 w-4 ${isCritical ? 'text-destructive' : isLow ? 'text-orange-500' : 'text-primary'}`} />
-      <span className={`text-sm font-medium ${isCritical ? 'text-destructive' : isLow ? 'text-orange-600' : ''}`} data-testid="text-header-credits">
-        {balance.currentBalance.toLocaleString()}
+      <Coins className={`h-4 w-4 ${isCritical ? 'text-destructive' : isLow ? 'text-orange-500' : 'text-green-500'}`} />
+      <span className={`text-sm font-medium ${isCritical ? 'text-destructive' : isLow ? 'text-orange-600' : isUnlimited ? 'text-green-600' : ''}`} data-testid="text-header-credits">
+        {isUnlimited ? 'Unlimited' : balance.currentBalance.toLocaleString()}
       </span>
-      {isLow && !isCritical && (
+      {isLow && !isCritical && !isUnlimited && (
         <Badge variant="outline" className="h-5 px-1.5 text-[10px] border-orange-500 text-orange-600">
           LOW
         </Badge>
       )}
-      {isCritical && (
+      {isCritical && !isUnlimited && (
         <Badge variant="destructive" className="h-5 px-1.5 text-[10px]">
           EMPTY
         </Badge>

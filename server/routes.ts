@@ -4735,7 +4735,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ error: 'Workspace not found' });
       }
 
-      const { creditManager } = await import('./services/billing/creditManager');
+      const { creditManager, isUnlimitedCreditUser, UNLIMITED_CREDITS_BALANCE } = await import('./services/billing/creditManager');
+      
+      // Check if user has unlimited credits (support/owner)
+      const hasUnlimited = await isUnlimitedCreditUser(userId, workspaceId);
+      
+      if (hasUnlimited) {
+        // Return unlimited credits for privileged users
+        return res.json({
+          id: 'unlimited',
+          workspaceId,
+          currentBalance: UNLIMITED_CREDITS_BALANCE,
+          monthlyAllocation: -1, // Sentinel for unlimited
+          totalCreditsEarned: UNLIMITED_CREDITS_BALANCE,
+          totalCreditsSpent: 0,
+          totalCreditsPurchased: 0,
+          lastResetAt: new Date().toISOString(),
+          nextResetAt: new Date().toISOString(),
+          isActive: true,
+          isSuspended: false,
+          subscriptionTier: 'unlimited',
+          unlimitedCredits: true,
+        });
+      }
+      
       const credits = await creditManager.getCreditsAccount(workspaceId);
 
       if (!credits) {
@@ -4777,7 +4800,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: error || 'No workspace found' });
       }
 
-      const { creditManager } = await import('./services/billing/creditManager');
+      const { creditManager, isUnlimitedCreditUser, UNLIMITED_CREDITS_BALANCE } = await import('./services/billing/creditManager');
+      
+      // Check if user has unlimited credits (support/owner)
+      const hasUnlimited = await isUnlimitedCreditUser(userId, workspaceId);
+      
+      if (hasUnlimited) {
+        // Return unlimited credits for privileged users
+        return res.json({
+          id: 'unlimited',
+          workspaceId,
+          currentBalance: UNLIMITED_CREDITS_BALANCE,
+          monthlyAllocation: -1, // Sentinel for unlimited
+          totalCreditsEarned: UNLIMITED_CREDITS_BALANCE,
+          totalCreditsSpent: 0,
+          totalCreditsPurchased: 0,
+          lastResetAt: new Date().toISOString(),
+          nextResetAt: new Date().toISOString(),
+          isActive: true,
+          isSuspended: false,
+          subscriptionTier: 'unlimited',
+          unlimitedCredits: true,
+        });
+      }
+      
       const breakdown = await creditManager.getMonthlyUsageBreakdown(workspaceId);
 
       res.json(breakdown);
@@ -4815,7 +4861,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
 
-      const { creditManager } = await import('./services/billing/creditManager');
+      const { creditManager, isUnlimitedCreditUser, UNLIMITED_CREDITS_BALANCE } = await import('./services/billing/creditManager');
+      
+      // Check if user has unlimited credits (support/owner)
+      const hasUnlimited = await isUnlimitedCreditUser(userId, workspaceId);
+      
+      if (hasUnlimited) {
+        // Return unlimited credits for privileged users
+        return res.json({
+          id: 'unlimited',
+          workspaceId,
+          currentBalance: UNLIMITED_CREDITS_BALANCE,
+          monthlyAllocation: -1, // Sentinel for unlimited
+          totalCreditsEarned: UNLIMITED_CREDITS_BALANCE,
+          totalCreditsSpent: 0,
+          totalCreditsPurchased: 0,
+          lastResetAt: new Date().toISOString(),
+          nextResetAt: new Date().toISOString(),
+          isActive: true,
+          isSuspended: false,
+          subscriptionTier: 'unlimited',
+          unlimitedCredits: true,
+        });
+      }
+      
       const transactions = await creditManager.getTransactionHistory(workspaceId, limit, offset);
 
       res.json(transactions);
