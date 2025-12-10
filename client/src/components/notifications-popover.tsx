@@ -1021,7 +1021,7 @@ export function NotificationsPopover() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[480px] max-w-[calc(100vw-2rem)] p-0 overflow-hidden shadow-xl border-muted" 
+        className="w-[480px] max-w-[calc(100vw-2rem)] max-h-[80vh] p-0 overflow-hidden shadow-xl border-muted flex flex-col" 
         align="end"
         sideOffset={8}
       >
