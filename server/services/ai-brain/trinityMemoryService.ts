@@ -691,12 +691,44 @@ class TrinityMemoryService {
   }
 
   // ============================================================================
-  // MEMORY OPTIMIZATION - Context Window Management
+  // MEMORY OPTIMIZATION - Context Window Management with Model Tier Awareness
   // ============================================================================
 
+  // Default context budget (used when no tier specified)
   private readonly MAX_CONTEXT_TOKENS = 8000;
   private readonly SUMMARY_THRESHOLD = 4000;
   private contextTokenEstimates: Map<string, number> = new Map();
+
+  // Model tier-specific context budgets (in tokens)
+  // Based on Gemini model capabilities and optimal performance
+  private readonly TIER_CONTEXT_BUDGETS: Record<string, { maxTokens: number; summaryThreshold: number; priority: string[] }> = {
+    // Tier 1: Complex reasoning with Gemini 3 Pro (large context)
+    'ORCHESTRATOR': { maxTokens: 500000, summaryThreshold: 250000, priority: ['reasoning', 'history', 'tools', 'insights'] },
+    'DIAGNOSTICS': { maxTokens: 500000, summaryThreshold: 250000, priority: ['system_state', 'errors', 'history', 'patterns'] },
+    'PRO_FALLBACK': { maxTokens: 200000, summaryThreshold: 100000, priority: ['context', 'history', 'tools'] },
+    'SUPERVISOR': { maxTokens: 200000, summaryThreshold: 100000, priority: ['domain', 'tools', 'history'] },
+    'COMPLIANCE': { maxTokens: 200000, summaryThreshold: 100000, priority: ['rules', 'history', 'violations'] },
+    
+    // Tier 2: Conversational with Gemini 2.5 Flash (medium context)
+    'CONVERSATIONAL': { maxTokens: 50000, summaryThreshold: 25000, priority: ['recent', 'preferences', 'topics'] },
+    'HELLOS': { maxTokens: 50000, summaryThreshold: 25000, priority: ['user', 'issues', 'insights'] },
+    'ONBOARDING': { maxTokens: 32000, summaryThreshold: 16000, priority: ['user', 'progress', 'next_steps'] },
+    
+    // Tier 3: Simple bots with Gemini 1.5 Flash 8B (small context)
+    'SIMPLE': { maxTokens: 16000, summaryThreshold: 8000, priority: ['recent', 'essential'] },
+    'NOTIFICATION': { maxTokens: 16000, summaryThreshold: 8000, priority: ['message', 'recipients'] },
+  };
+
+  /**
+   * Get context budget configuration for a model tier
+   */
+  getContextBudgetForTier(tier: string): { maxTokens: number; summaryThreshold: number; priority: string[] } {
+    return this.TIER_CONTEXT_BUDGETS[tier] || { 
+      maxTokens: this.MAX_CONTEXT_TOKENS, 
+      summaryThreshold: this.SUMMARY_THRESHOLD,
+      priority: ['recent', 'essential'] 
+    };
+  }
 
   /**
    * Estimate token count for a string (rough approximation: 4 chars = 1 token)
@@ -708,13 +740,21 @@ class TrinityMemoryService {
   /**
    * Build optimized context with token budget management
    * Prioritizes recent and relevant information within token limits
+   * 
+   * @param modelTier - Optional model tier for tier-specific context budgeting
    */
   async buildOptimizedContext(
     userId: string,
     workspaceId: string | undefined,
     currentQuery: string,
-    maxTokens: number = this.MAX_CONTEXT_TOKENS
-  ): Promise<{ context: string; tokenCount: number; pruned: boolean }> {
+    maxTokens: number = this.MAX_CONTEXT_TOKENS,
+    modelTier?: string
+  ): Promise<{ context: string; tokenCount: number; pruned: boolean; tier?: string }> {
+    // Apply tier-specific context budget if provided
+    if (modelTier) {
+      const tierBudget = this.getContextBudgetForTier(modelTier);
+      maxTokens = Math.min(maxTokens, tierBudget.maxTokens);
+    }
     const sections: { priority: number; content: string; tokens: number }[] = [];
     let totalTokens = 0;
     
@@ -769,7 +809,7 @@ class TrinityMemoryService {
       }
     }
 
-    return { context, tokenCount: totalTokens, pruned };
+    return { context, tokenCount: totalTokens, pruned, tier: modelTier };
   }
 
   /**
