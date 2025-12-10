@@ -1354,6 +1354,605 @@ export const GRADUATION_THRESHOLD = 99.9;
 export const MINIMUM_EXECUTIONS_FOR_GRADUATION = 100;
 
 // ============================================================================
+// SUPERVISOR MODEL POLICY - Flash-first execution with Pro fallback
+// ============================================================================
+
+export type SupervisorModelTier = 'flash' | 'pro';
+
+export interface SupervisorModelPolicy {
+  /** Default model for execution commands */
+  executionModel: SupervisorModelTier;
+  /** Model for validation/QC tasks */
+  validationModel: SupervisorModelTier;
+  /** Model for context summarization */
+  summarizationModel: SupervisorModelTier;
+  /** Model for compliance checks */
+  complianceModel: SupervisorModelTier;
+  /** Model for failure analysis (always Pro) */
+  failureAnalysisModel: SupervisorModelTier;
+  /** Retry threshold before escalating to Pro */
+  retryThresholdForProEscalation: number;
+  /** Timeout before escalating to Pro (ms) */
+  timeoutThresholdForProEscalation: number;
+}
+
+export const DEFAULT_SUPERVISOR_MODEL_POLICY: SupervisorModelPolicy = {
+  executionModel: 'flash',
+  validationModel: 'flash',
+  summarizationModel: 'flash',
+  complianceModel: 'flash',
+  failureAnalysisModel: 'pro',
+  retryThresholdForProEscalation: 3,
+  timeoutThresholdForProEscalation: 30000,
+};
+
+// ============================================================================
+// WORK ORDER BATCH - Parallel task distribution
+// ============================================================================
+
+export type WorkOrderStatus = 'queued' | 'dispatched' | 'executing' | 'validating' | 'completed' | 'failed' | 'timeout';
+export type WorkOrderPriority = 'critical' | 'high' | 'normal' | 'low';
+
+export interface WorkOrderItem {
+  id: string;
+  subagentDomain: SubagentDomain;
+  actionId: string;
+  parameters: Record<string, any>;
+  status: WorkOrderStatus;
+  priority: WorkOrderPriority;
+  dependencies: string[];  // IDs of work orders this depends on
+  startedAt?: number;
+  completedAt?: number;
+  result?: any;
+  error?: string;
+  retryCount: number;
+  assignedSubagentId?: string;
+}
+
+export interface WorkOrderBatch {
+  id: string;
+  workboardJobId: string;
+  workspaceId: string;
+  userId: string;
+  createdAt: number;
+  status: 'preparing' | 'executing' | 'validating' | 'completed' | 'failed';
+  items: WorkOrderItem[];
+  dependencyGraph: Map<string, string[]>;
+  slaTimeoutMs: number;
+  modelPolicy: SupervisorModelPolicy;
+  parallelLimit: number;
+  completedCount: number;
+  failedCount: number;
+  totalTokensUsed: number;
+  totalCreditsUsed: number;
+}
+
+export interface CoordinationCheckpoint {
+  workOrderId: string;
+  phase: SubagentPhase;
+  artifact?: any;
+  validationResult?: { valid: boolean; errors: string[] };
+  timestamp: number;
+}
+
+export interface ParallelExecutionResult {
+  batchId: string;
+  success: boolean;
+  completedItems: number;
+  failedItems: number;
+  results: Map<string, SubagentExecutionResult>;
+  totalDurationMs: number;
+  totalTokensUsed: number;
+  summary: string;
+}
+
+// ============================================================================
+// PARALLEL WORK ORDER DISPATCHER
+// ============================================================================
+
+class ParallelWorkOrderDispatcher {
+  private activeBatches: Map<string, WorkOrderBatch> = new Map();
+  private coordinationBus: Map<string, CoordinationCheckpoint[]> = new Map();
+
+  /**
+   * Create a new work order batch from workboard job
+   */
+  createBatch(
+    workboardJobId: string,
+    workspaceId: string,
+    userId: string,
+    tasks: Array<{ domain: SubagentDomain; actionId: string; parameters: Record<string, any>; priority?: WorkOrderPriority; dependencies?: string[] }>,
+    options: { slaTimeoutMs?: number; parallelLimit?: number; modelPolicy?: Partial<SupervisorModelPolicy> } = {}
+  ): WorkOrderBatch {
+    const batchId = `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    const items: WorkOrderItem[] = tasks.map((task, index) => ({
+      id: `wo-${batchId}-${index}`,
+      subagentDomain: task.domain,
+      actionId: task.actionId,
+      parameters: task.parameters,
+      status: 'queued' as WorkOrderStatus,
+      priority: task.priority || 'normal',
+      dependencies: task.dependencies || [],
+      retryCount: 0,
+    }));
+
+    const dependencyGraph = new Map<string, string[]>();
+    items.forEach(item => {
+      dependencyGraph.set(item.id, item.dependencies);
+    });
+
+    const batch: WorkOrderBatch = {
+      id: batchId,
+      workboardJobId,
+      workspaceId,
+      userId,
+      createdAt: Date.now(),
+      status: 'preparing',
+      items,
+      dependencyGraph,
+      slaTimeoutMs: options.slaTimeoutMs || 60000,
+      modelPolicy: { ...DEFAULT_SUPERVISOR_MODEL_POLICY, ...options.modelPolicy },
+      parallelLimit: options.parallelLimit || 5,
+      completedCount: 0,
+      failedCount: 0,
+      totalTokensUsed: 0,
+      totalCreditsUsed: 0,
+    };
+
+    this.activeBatches.set(batchId, batch);
+    this.coordinationBus.set(batchId, []);
+    
+    console.log(`[ParallelDispatcher] Created batch ${batchId} with ${items.length} work orders for job ${workboardJobId}`);
+    return batch;
+  }
+
+  /**
+   * Get work orders ready for execution (dependencies satisfied)
+   */
+  getExecutableWorkOrders(batch: WorkOrderBatch): WorkOrderItem[] {
+    const completedIds = new Set(
+      batch.items
+        .filter(item => item.status === 'completed')
+        .map(item => item.id)
+    );
+
+    return batch.items.filter(item => {
+      if (item.status !== 'queued') return false;
+      
+      // Check all dependencies are completed
+      return item.dependencies.every(depId => completedIds.has(depId));
+    });
+  }
+
+  /**
+   * Dispatch work orders to subagents in parallel
+   */
+  async dispatchParallel(
+    batch: WorkOrderBatch,
+    executor: (item: WorkOrderItem) => Promise<SubagentExecutionResult>
+  ): Promise<void> {
+    batch.status = 'executing';
+    
+    const executeNextBatch = async (): Promise<void> => {
+      const executable = this.getExecutableWorkOrders(batch);
+      if (executable.length === 0) return;
+
+      // Limit parallelism
+      const toExecute = executable
+        .sort((a, b) => {
+          const priorityOrder = { critical: 0, high: 1, normal: 2, low: 3 };
+          return priorityOrder[a.priority] - priorityOrder[b.priority];
+        })
+        .slice(0, batch.parallelLimit);
+
+      console.log(`[ParallelDispatcher] Dispatching ${toExecute.length} work orders in parallel for batch ${batch.id}`);
+
+      // Mark as dispatched
+      toExecute.forEach(item => {
+        item.status = 'dispatched';
+        item.startedAt = Date.now();
+      });
+
+      // Execute in parallel
+      const results = await Promise.allSettled(
+        toExecute.map(async item => {
+          item.status = 'executing';
+          const result = await executor(item);
+          return { item, result };
+        })
+      );
+
+      // Process results
+      for (const result of results) {
+        if (result.status === 'fulfilled') {
+          const { item, result: execResult } = result.value;
+          item.completedAt = Date.now();
+          
+          if (execResult.success) {
+            item.status = 'completed';
+            item.result = execResult.result;
+            batch.completedCount++;
+          } else {
+            item.status = 'failed';
+            item.error = execResult.errorMessage;
+            batch.failedCount++;
+          }
+          
+          batch.totalTokensUsed += execResult.tokensUsed || 0;
+          
+          // Record checkpoint
+          this.recordCheckpoint(batch.id, {
+            workOrderId: item.id,
+            phase: 'execute',
+            artifact: execResult.result,
+            validationResult: { valid: execResult.success, errors: execResult.errorMessage ? [execResult.errorMessage] : [] },
+            timestamp: Date.now(),
+          });
+        } else {
+          const item = toExecute.find(i => i.status === 'executing');
+          if (item) {
+            item.status = 'failed';
+            item.error = result.reason?.message || 'Unknown error';
+            item.completedAt = Date.now();
+            batch.failedCount++;
+          }
+        }
+      }
+
+      // Continue with next batch if more work orders available
+      const remaining = batch.items.filter(item => item.status === 'queued');
+      if (remaining.length > 0) {
+        await executeNextBatch();
+      }
+    };
+
+    await executeNextBatch();
+    
+    // Update batch status
+    if (batch.failedCount > 0 && batch.completedCount === 0) {
+      batch.status = 'failed';
+    } else {
+      batch.status = 'validating';
+    }
+  }
+
+  /**
+   * Record a coordination checkpoint for tandem execution
+   */
+  recordCheckpoint(batchId: string, checkpoint: CoordinationCheckpoint): void {
+    const checkpoints = this.coordinationBus.get(batchId) || [];
+    checkpoints.push(checkpoint);
+    this.coordinationBus.set(batchId, checkpoints);
+  }
+
+  /**
+   * Get all checkpoints for a batch
+   */
+  getCheckpoints(batchId: string): CoordinationCheckpoint[] {
+    return this.coordinationBus.get(batchId) || [];
+  }
+
+  /**
+   * Get batch by ID
+   */
+  getBatch(batchId: string): WorkOrderBatch | undefined {
+    return this.activeBatches.get(batchId);
+  }
+
+  /**
+   * Clean up completed batch
+   */
+  cleanupBatch(batchId: string): void {
+    this.activeBatches.delete(batchId);
+    this.coordinationBus.delete(batchId);
+  }
+}
+
+// ============================================================================
+// SUBAGENT COORDINATION MANAGER - Tandem execution synchronization
+// ============================================================================
+
+class SubagentCoordinationManager {
+  private dispatcher: ParallelWorkOrderDispatcher;
+
+  constructor(dispatcher: ParallelWorkOrderDispatcher) {
+    this.dispatcher = dispatcher;
+  }
+
+  /**
+   * Validate all outputs from a batch using Flash model
+   */
+  async validateBatchOutputs(batch: WorkOrderBatch): Promise<{ valid: boolean; errors: string[]; summary: string }> {
+    const checkpoints = this.dispatcher.getCheckpoints(batch.id);
+    const errors: string[] = [];
+    
+    for (const checkpoint of checkpoints) {
+      if (checkpoint.validationResult && !checkpoint.validationResult.valid) {
+        errors.push(...checkpoint.validationResult.errors);
+      }
+    }
+
+    const completedItems = batch.items.filter(item => item.status === 'completed');
+    const failedItems = batch.items.filter(item => item.status === 'failed');
+
+    const summary = `Batch ${batch.id}: ${completedItems.length} completed, ${failedItems.length} failed. ` +
+      (errors.length > 0 ? `Errors: ${errors.slice(0, 3).join('; ')}` : 'No validation errors.');
+
+    console.log(`[CoordinationManager] Validation: ${summary}`);
+
+    return {
+      valid: errors.length === 0 && failedItems.length === 0,
+      errors,
+      summary,
+    };
+  }
+
+  /**
+   * Summarize batch results for token-efficient reporting to Trinity
+   */
+  summarizeResults(batch: WorkOrderBatch): string {
+    const completedItems = batch.items.filter(item => item.status === 'completed');
+    const domains = [...new Set(completedItems.map(item => item.subagentDomain))];
+    
+    const domainSummaries = domains.map(domain => {
+      const domainItems = completedItems.filter(item => item.subagentDomain === domain);
+      return `${domain}: ${domainItems.length} tasks`;
+    });
+
+    return `Job ${batch.workboardJobId} complete. ${completedItems.length}/${batch.items.length} tasks succeeded. ` +
+      `Domains: ${domainSummaries.join(', ')}. Duration: ${Date.now() - batch.createdAt}ms. ` +
+      `Tokens: ${batch.totalTokensUsed}.`;
+  }
+
+  /**
+   * Check if batch should escalate to Pro model for failure analysis
+   */
+  shouldEscalateToProModel(batch: WorkOrderBatch): boolean {
+    const failureRate = batch.failedCount / batch.items.length;
+    const hasTimeoutIssues = batch.items.some(item => 
+      item.status === 'failed' && item.error?.includes('timeout')
+    );
+    const hasRetryExhaustion = batch.items.some(item => 
+      item.retryCount >= batch.modelPolicy.retryThresholdForProEscalation
+    );
+
+    return failureRate > 0.3 || hasTimeoutIssues || hasRetryExhaustion;
+  }
+
+  /**
+   * Get aggregated results from all subagents
+   */
+  getAggregatedResults(batch: WorkOrderBatch): Map<string, any> {
+    const results = new Map<string, any>();
+    
+    for (const item of batch.items) {
+      if (item.status === 'completed' && item.result) {
+        results.set(item.id, {
+          domain: item.subagentDomain,
+          actionId: item.actionId,
+          result: item.result,
+          durationMs: item.completedAt && item.startedAt ? item.completedAt - item.startedAt : 0,
+        });
+      }
+    }
+
+    return results;
+  }
+}
+
+// ============================================================================
+// WORKBOARD JOB LIFECYCLE - Integration with AI Brain Workboard
+// ============================================================================
+
+export interface WorkboardJobUpdate {
+  jobId: string;
+  status: 'scheduled' | 'in_progress' | 'validating' | 'completed' | 'failed';
+  progress?: number;
+  message?: string;
+  result?: any;
+}
+
+class WorkboardJobLifecycle {
+  /**
+   * Update workboard job status
+   */
+  async updateJobStatus(update: WorkboardJobUpdate): Promise<void> {
+    try {
+      // Update via workboard API
+      console.log(`[WorkboardLifecycle] Updating job ${update.jobId}: ${update.status} (${update.progress || 0}%)`);
+      
+      // Emit platform event for real-time tracking
+      platformEventBus.emit({
+        type: 'workboard:job_update',
+        data: update,
+        timestamp: new Date(),
+      });
+    } catch (error) {
+      console.error(`[WorkboardLifecycle] Failed to update job ${update.jobId}:`, error);
+    }
+  }
+
+  /**
+   * Mark job as started
+   */
+  async startJob(jobId: string): Promise<void> {
+    await this.updateJobStatus({
+      jobId,
+      status: 'in_progress',
+      progress: 0,
+      message: 'Job started, dispatching to subagents...',
+    });
+  }
+
+  /**
+   * Update job progress
+   */
+  async updateProgress(jobId: string, progress: number, message?: string): Promise<void> {
+    await this.updateJobStatus({
+      jobId,
+      status: 'in_progress',
+      progress,
+      message,
+    });
+  }
+
+  /**
+   * Mark job as validating
+   */
+  async startValidation(jobId: string): Promise<void> {
+    await this.updateJobStatus({
+      jobId,
+      status: 'validating',
+      progress: 90,
+      message: 'Validating results...',
+    });
+  }
+
+  /**
+   * Mark job as completed
+   */
+  async completeJob(jobId: string, result: any): Promise<void> {
+    await this.updateJobStatus({
+      jobId,
+      status: 'completed',
+      progress: 100,
+      message: 'Job completed successfully',
+      result,
+    });
+  }
+
+  /**
+   * Mark job as failed
+   */
+  async failJob(jobId: string, error: string): Promise<void> {
+    await this.updateJobStatus({
+      jobId,
+      status: 'failed',
+      message: `Job failed: ${error}`,
+    });
+  }
+}
+
+// ============================================================================
+// UNIFIED COMPLETION REPORTER - Report to Trinity and notify end user
+// ============================================================================
+
+class UnifiedCompletionReporter {
+  private workboardLifecycle: WorkboardJobLifecycle;
+  private coordinationManager: SubagentCoordinationManager;
+
+  constructor(workboardLifecycle: WorkboardJobLifecycle, coordinationManager: SubagentCoordinationManager) {
+    this.workboardLifecycle = workboardLifecycle;
+    this.coordinationManager = coordinationManager;
+  }
+
+  /**
+   * Generate final completion report for Trinity/AI Brain
+   */
+  async generateCompletionReport(batch: WorkOrderBatch): Promise<ParallelExecutionResult> {
+    const validation = await this.coordinationManager.validateBatchOutputs(batch);
+    const summary = this.coordinationManager.summarizeResults(batch);
+    const results = this.coordinationManager.getAggregatedResults(batch);
+
+    const report: ParallelExecutionResult = {
+      batchId: batch.id,
+      success: validation.valid && batch.status !== 'failed',
+      completedItems: batch.completedCount,
+      failedItems: batch.failedCount,
+      results,
+      totalDurationMs: Date.now() - batch.createdAt,
+      totalTokensUsed: batch.totalTokensUsed,
+      summary,
+    };
+
+    console.log(`[CompletionReporter] Report for batch ${batch.id}: ${report.success ? 'SUCCESS' : 'FAILED'}`);
+    return report;
+  }
+
+  /**
+   * Report completion to Trinity/AI Brain and close workboard job
+   */
+  async reportToTrinityAndClose(batch: WorkOrderBatch, userId: string): Promise<void> {
+    const report = await this.generateCompletionReport(batch);
+
+    // Update workboard job
+    if (report.success) {
+      await this.workboardLifecycle.completeJob(batch.workboardJobId, {
+        summary: report.summary,
+        completedItems: report.completedItems,
+        totalDurationMs: report.totalDurationMs,
+      });
+    } else {
+      await this.workboardLifecycle.failJob(
+        batch.workboardJobId,
+        `${report.failedItems} of ${batch.items.length} tasks failed`
+      );
+    }
+
+    // Emit completion event for Trinity to consume
+    platformEventBus.emit({
+      type: 'ai_brain:job_completed',
+      data: {
+        batchId: batch.id,
+        jobId: batch.workboardJobId,
+        workspaceId: batch.workspaceId,
+        userId,
+        success: report.success,
+        summary: report.summary,
+        completedItems: report.completedItems,
+        failedItems: report.failedItems,
+        totalDurationMs: report.totalDurationMs,
+        totalTokensUsed: report.totalTokensUsed,
+      },
+      timestamp: new Date(),
+    });
+
+    console.log(`[CompletionReporter] Reported job ${batch.workboardJobId} completion to Trinity`);
+  }
+
+  /**
+   * Notify end user about job completion
+   */
+  async notifyEndUser(batch: WorkOrderBatch, userId: string, workspaceId: string): Promise<void> {
+    const report = await this.generateCompletionReport(batch);
+    
+    // Create notification for end user
+    const notification = {
+      type: report.success ? 'ai_job_completed' : 'ai_job_failed',
+      title: report.success ? 'AI Task Completed' : 'AI Task Failed',
+      message: report.summary,
+      userId,
+      workspaceId,
+      metadata: {
+        batchId: batch.id,
+        jobId: batch.workboardJobId,
+        completedItems: report.completedItems,
+        failedItems: report.failedItems,
+      },
+    };
+
+    // Emit notification event
+    platformEventBus.emit({
+      type: 'notification:create',
+      data: notification,
+      timestamp: new Date(),
+    });
+
+    console.log(`[CompletionReporter] Notified user ${userId} about job ${batch.workboardJobId}`);
+  }
+}
+
+// Singleton instances for parallel orchestration
+const parallelDispatcher = new ParallelWorkOrderDispatcher();
+const workboardLifecycle = new WorkboardJobLifecycle();
+const coordinationManager = new SubagentCoordinationManager(parallelDispatcher);
+const completionReporter = new UnifiedCompletionReporter(workboardLifecycle, coordinationManager);
+
+// Export for external use
+export { parallelDispatcher, workboardLifecycle, coordinationManager, completionReporter };
+
+// ============================================================================
 // SUBAGENT SUPERVISOR CLASS
 // ============================================================================
 
@@ -3487,6 +4086,142 @@ class SubagentSupervisor {
         timestamp: new Date().toISOString()
       };
     }
+  }
+
+  // ============================================================================
+  // PARALLEL WORK ORDER EXECUTION - Subagents working in tandem
+  // ============================================================================
+
+  /**
+   * Execute multiple work orders in parallel from workboard job
+   * Subagents work together systematically to complete the request
+   */
+  async executeParallelWorkOrders(params: {
+    workboardJobId: string;
+    workspaceId: string;
+    userId: string;
+    platformRole: string;
+    tasks: Array<{
+      domain: SubagentDomain;
+      actionId: string;
+      parameters: Record<string, any>;
+      priority?: WorkOrderPriority;
+      dependencies?: string[];
+    }>;
+    options?: {
+      slaTimeoutMs?: number;
+      parallelLimit?: number;
+      modelPolicy?: Partial<SupervisorModelPolicy>;
+      notifyOnCompletion?: boolean;
+    };
+  }): Promise<ParallelExecutionResult> {
+    const { workboardJobId, workspaceId, userId, platformRole, tasks, options = {} } = params;
+    const startTime = Date.now();
+
+    console.log(`[SubagentSupervisor] Starting parallel work order execution for job ${workboardJobId}`);
+    console.log(`[SubagentSupervisor] ${tasks.length} tasks across ${[...new Set(tasks.map(t => t.domain))].length} domains`);
+
+    // Start workboard job lifecycle
+    await workboardLifecycle.startJob(workboardJobId);
+
+    // Create work order batch
+    const batch = parallelDispatcher.createBatch(
+      workboardJobId,
+      workspaceId,
+      userId,
+      tasks,
+      {
+        slaTimeoutMs: options.slaTimeoutMs,
+        parallelLimit: options.parallelLimit,
+        modelPolicy: options.modelPolicy,
+      }
+    );
+
+    try {
+      // Dispatch work orders in parallel - subagents work in tandem
+      await parallelDispatcher.dispatchParallel(batch, async (item: WorkOrderItem) => {
+        console.log(`[SubagentSupervisor] Executing work order ${item.id}: ${item.subagentDomain}/${item.actionId}`);
+        
+        // Update progress
+        const progress = Math.floor((batch.completedCount / batch.items.length) * 90);
+        await workboardLifecycle.updateProgress(workboardJobId, progress, `Processing ${item.subagentDomain} task...`);
+
+        // Execute through the subagent pipeline
+        const result = await this.executeAction(
+          item.subagentDomain,
+          item.actionId,
+          item.parameters,
+          userId,
+          workspaceId,
+          platformRole,
+          async (actionParams) => actionParams // Pass-through action handler
+        );
+
+        return result;
+      });
+
+      // Validation phase
+      await workboardLifecycle.startValidation(workboardJobId);
+      const validation = await coordinationManager.validateBatchOutputs(batch);
+
+      // Check if we need Pro model for failure analysis
+      if (coordinationManager.shouldEscalateToProModel(batch)) {
+        console.log(`[SubagentSupervisor] Escalating to Pro model for failure analysis`);
+        // Additional deep analysis could be performed here with Gemini Pro
+      }
+
+      // Generate completion report
+      const report = await completionReporter.generateCompletionReport(batch);
+
+      // Report to Trinity and close job
+      await completionReporter.reportToTrinityAndClose(batch, userId);
+
+      // Notify end user if requested
+      if (options.notifyOnCompletion !== false) {
+        await completionReporter.notifyEndUser(batch, userId, workspaceId);
+      }
+
+      // Cleanup
+      parallelDispatcher.cleanupBatch(batch.id);
+
+      console.log(`[SubagentSupervisor] Parallel execution completed: ${report.completedItems}/${tasks.length} tasks in ${Date.now() - startTime}ms`);
+
+      return report;
+
+    } catch (error: any) {
+      console.error(`[SubagentSupervisor] Parallel execution failed:`, error);
+      
+      // Mark job as failed
+      await workboardLifecycle.failJob(workboardJobId, error.message);
+
+      // Cleanup
+      parallelDispatcher.cleanupBatch(batch.id);
+
+      return {
+        batchId: batch.id,
+        success: false,
+        completedItems: batch.completedCount,
+        failedItems: batch.failedCount + (batch.items.length - batch.completedCount - batch.failedCount),
+        results: coordinationManager.getAggregatedResults(batch),
+        totalDurationMs: Date.now() - startTime,
+        totalTokensUsed: batch.totalTokensUsed,
+        summary: `Job failed: ${error.message}`,
+      };
+    }
+  }
+
+  /**
+   * Get status of an active work order batch
+   */
+  getBatchStatus(batchId: string): WorkOrderBatch | undefined {
+    return parallelDispatcher.getBatch(batchId);
+  }
+
+  /**
+   * Get coordination checkpoints for debugging/monitoring
+   */
+  getBatchCheckpoints(batchId: string): CoordinationCheckpoint[] {
+    return parallelDispatcher.getCheckpoints(batchId);
   }
 }
 

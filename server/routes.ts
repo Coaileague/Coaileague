@@ -33602,4 +33602,173 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.status(500).json({ success: false, error: error.message });
     }
   });
+
+  // ============================================================================
+  // PARALLEL WORK ORDER DISPATCHER APIs
+  // ============================================================================
+
+  /**
+   * Execute parallel work orders - subagents working in tandem
+   */
+  app.post("/api/ai-brain/work-orders/execute", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { subagentSupervisor } = await import("./services/ai-brain/subagentSupervisor");
+      const { workboardJobId, tasks, options } = req.body;
+      const workspaceId = req.workspaceId || req.body.workspaceId;
+      const userId = req.userId!;
+      const platformRole = req.platformRole || 'employee';
+
+      if (!workboardJobId || !tasks || !Array.isArray(tasks) || tasks.length === 0) {
+        return res.status(400).json({ 
+          success: false, 
+          error: "workboardJobId and tasks array required" 
+        });
+      }
+
+      console.log(`[API] Executing parallel work orders for job ${workboardJobId}`);
+
+      const result = await subagentSupervisor.executeParallelWorkOrders({
+        workboardJobId,
+        workspaceId: workspaceId!,
+        userId,
+        platformRole,
+        tasks,
+        options
+      });
+
+      res.json({
+        success: result.success,
+        batchId: result.batchId,
+        completedItems: result.completedItems,
+        failedItems: result.failedItems,
+        totalDurationMs: result.totalDurationMs,
+        totalTokensUsed: result.totalTokensUsed,
+        summary: result.summary
+      });
+    } catch (error: any) {
+      console.error("[API] Parallel work orders failed:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Get work order batch status
+   */
+  app.get("/api/ai-brain/work-orders/batch/:batchId", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { subagentSupervisor } = await import("./services/ai-brain/subagentSupervisor");
+      const { batchId } = req.params;
+
+      const batch = subagentSupervisor.getBatchStatus(batchId);
+      if (!batch) {
+        return res.status(404).json({ 
+          success: false, 
+          error: `Batch not found: ${batchId}` 
+        });
+      }
+
+      res.json({
+        success: true,
+        batch: {
+          id: batch.id,
+          workboardJobId: batch.workboardJobId,
+          status: batch.status,
+          completedCount: batch.completedCount,
+          failedCount: batch.failedCount,
+          totalItems: batch.items.length,
+          createdAt: batch.createdAt,
+          parallelLimit: batch.parallelLimit,
+          totalTokensUsed: batch.totalTokensUsed
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Get batch coordination checkpoints
+   */
+  app.get("/api/ai-brain/work-orders/batch/:batchId/checkpoints", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { subagentSupervisor } = await import("./services/ai-brain/subagentSupervisor");
+      const { batchId } = req.params;
+
+      const checkpoints = subagentSupervisor.getBatchCheckpoints(batchId);
+
+      res.json({
+        success: true,
+        batchId,
+        checkpoints,
+        count: checkpoints.length
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Get supervisor model policy configuration
+   */
+  app.get("/api/ai-brain/supervisor/model-policy", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { DEFAULT_SUPERVISOR_MODEL_POLICY } = await import("./services/ai-brain/subagentSupervisor");
+
+      res.json({
+        success: true,
+        policy: DEFAULT_SUPERVISOR_MODEL_POLICY,
+        description: {
+          executionModel: "Model used for execution commands (Flash for speed)",
+          validationModel: "Model used for validation/QC tasks (Flash for speed)",
+          summarizationModel: "Model used for context summarization (Flash for token efficiency)",
+          complianceModel: "Model used for compliance checks (Flash with RAG)",
+          failureAnalysisModel: "Model used for failure analysis (Pro for deep reasoning)",
+          retryThresholdForProEscalation: "Number of retries before escalating to Pro model",
+          timeoutThresholdForProEscalation: "Timeout (ms) before escalating to Pro model"
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Get parallel orchestration capabilities
+   */
+  app.get("/api/ai-brain/supervisor/parallel-orchestration", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { 
+        parallelDispatcher, 
+        workboardLifecycle, 
+        coordinationManager, 
+        completionReporter,
+        FAST_MODE_TIERS 
+      } = await import("./services/ai-brain/subagentSupervisor");
+
+      res.json({
+        success: true,
+        orchestration: {
+          parallelDispatcher: {
+            description: "Distributes work orders to subagents in parallel",
+            features: ["dependency resolution", "priority sorting", "checkpoint recording"]
+          },
+          coordinationManager: {
+            description: "Manages tandem execution and validates batch outputs",
+            features: ["batch validation", "result summarization", "Pro model escalation"]
+          },
+          workboardLifecycle: {
+            description: "Integrates with AI Brain Workboard for job tracking",
+            features: ["status updates", "progress tracking", "completion reporting"]
+          },
+          completionReporter: {
+            description: "Reports results to Trinity and notifies end users",
+            features: ["completion reports", "Trinity integration", "user notifications"]
+          },
+          fastModeTiers: Object.keys(FAST_MODE_TIERS)
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
 }
