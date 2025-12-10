@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnimatedNotificationBell } from "./animated-notification-bell";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMobile } from "@/hooks/use-mobile";
@@ -242,15 +243,11 @@ export function NotificationsPopover() {
 
   useEffect(() => {
     if (open) {
-      // Refresh data when popover opens
+      // Refresh data when popover opens - but don't reset scroll position
       refetch();
-      // Only scroll to top on first open, not on every re-render or tab change
-      if (!hasOpenedRef.current && scrollRef.current) {
-        scrollRef.current.scrollTo({ top: 0, behavior: "smooth" });
-        hasOpenedRef.current = true;
-      }
+      hasOpenedRef.current = true;
     } else {
-      // Reset the flag when popover closes so next open scrolls to top
+      // Reset the flag when popover closes
       hasOpenedRef.current = false;
     }
   }, [open, refetch]);
@@ -567,15 +564,13 @@ export function NotificationsPopover() {
             </TabsList>
           </div>
 
-          <div 
-            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+          <ScrollArea 
+            className="flex-1 min-h-0"
             style={{ 
-              height: isMobile ? 'calc(85vh - 240px)' : 'min(50vh, 340px)',
-              WebkitOverflowScrolling: 'touch',
-              overscrollBehavior: 'contain',
+              height: isMobile ? 'calc(85vh - 200px)' : '400px',
             }}
-            ref={scrollRef}
           >
+            <div ref={scrollRef}>
             <TabsContent value="updates" className="mt-0 focus-visible:outline-none" forceMount={activeTab === 'updates' ? true : undefined}>
               {unviewedUpdates.length > 0 && (
                 <div className="px-4 py-3 flex items-center justify-between border-b bg-muted/30">
@@ -1034,7 +1029,8 @@ export function NotificationsPopover() {
                 </div>
               )}
             </TabsContent>
-          </div>
+            </div>
+          </ScrollArea>
         </Tabs>
       )}
 
