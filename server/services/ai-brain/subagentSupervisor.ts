@@ -890,7 +890,389 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     isActive: true,
     version: '1.0.0',
   },
+  {
+    name: 'MailerSubagent',
+    domain: 'notifications', // Uses existing notifications domain, specializes in email
+    description: 'Specialized Email Delivery Agent - Handles all transactional and notification emails with intelligent template selection, delivery tracking, retry logic, and Resend integration. Provides specialized mailing instructions for each email category with proper formatting, branding compliance, and GDPR/CAN-SPAM requirements.',
+    capabilities: [
+      'mailer.send_transactional',
+      'mailer.send_notification',
+      'mailer.send_bulk',
+      'mailer.send_digest',
+      'mailer.get_delivery_status',
+      'mailer.retry_failed',
+      'mailer.validate_template',
+      'mailer.preview_email',
+      'mailer.get_analytics'
+    ],
+    requiredTools: [
+      'resend_client',
+      'template_engine',
+      'delivery_tracker',
+      'bounce_handler',
+      'unsubscribe_manager',
+      'spam_score_checker',
+      'email_validator'
+    ],
+    escalationPolicy: {
+      maxRetries: 5,
+      escalateOn: ['delivery_failure_critical', 'bounce_rate_high', 'spam_complaint', 'template_error'],
+      alwaysNotify: false,
+      notifyRoles: ['root_admin', 'deputy_admin', 'sysop']
+    },
+    diagnosticWorkflow: {
+      diagnose: [
+        'check_delivery_status',
+        'verify_recipient_validity',
+        'validate_template_syntax',
+        'check_spam_score',
+        'verify_sender_reputation'
+      ],
+      fix: [
+        'retry_with_fallback_sender',
+        'switch_to_alternative_template',
+        'queue_for_later_delivery',
+        'update_recipient_status'
+      ],
+      validate: [
+        'confirm_delivery_receipt',
+        'check_open_rate',
+        'verify_unsubscribe_compliance'
+      ],
+      report: [
+        'generate_delivery_report',
+        'create_bounce_summary',
+        'publish_engagement_metrics'
+      ]
+    },
+    knownPatterns: [
+      'email_bounced_hard',
+      'email_bounced_soft',
+      'spam_complaint_received',
+      'rate_limit_exceeded',
+      'template_rendering_failed',
+      'recipient_unsubscribed',
+      'sender_reputation_low',
+      'attachment_too_large'
+    ],
+    fixStrategies: {
+      email_bounced_hard: 'mark_recipient_invalid_and_notify_admin',
+      email_bounced_soft: 'retry_with_exponential_backoff',
+      spam_complaint_received: 'add_to_suppression_list',
+      rate_limit_exceeded: 'queue_and_throttle',
+      template_rendering_failed: 'use_fallback_plain_text',
+      recipient_unsubscribed: 'respect_preference_and_skip',
+      sender_reputation_low: 'switch_to_backup_domain'
+    },
+    maxRetries: 5,
+    timeoutMs: 30000,
+    confidenceThreshold: 0.85,
+    requiresApproval: false,
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'org_owner', 'org_admin', 'Bot'],
+    bypassAuthFor: ['root_admin', 'deputy_admin', 'sysop', 'Bot'],
+    isActive: true,
+    version: '1.0.0',
+  },
 ];
+
+// ============================================================================
+// SPECIALIZED MAILING INSTRUCTIONS REGISTRY
+// ============================================================================
+
+/**
+ * MailingInstructions - Specialized instructions for each email category
+ * Ensures all emails meet branding, compliance, and delivery best practices
+ */
+export interface MailingInstruction {
+  category: string;
+  priority: 'critical' | 'high' | 'normal' | 'low';
+  requiredFields: string[];
+  optionalFields: string[];
+  templateId?: string;
+  maxRetries: number;
+  retryDelayMs: number;
+  complianceChecks: string[];
+  formattingRules: {
+    maxSubjectLength: number;
+    includeUnsubscribe: boolean;
+    includeCompanyAddress: boolean;
+    htmlRequired: boolean;
+    plainTextFallback: boolean;
+  };
+  deliveryRules: {
+    sendImmediately: boolean;
+    batchWithDigest: boolean;
+    respectQuietHours: boolean;
+    timezone?: string;
+  };
+}
+
+export const MAILING_INSTRUCTIONS: Record<string, MailingInstruction> = {
+  // Critical transactional emails - must send immediately
+  password_reset: {
+    category: 'security',
+    priority: 'critical',
+    requiredFields: ['email', 'firstName', 'resetUrl'],
+    optionalFields: [],
+    templateId: 'passwordReset',
+    maxRetries: 5,
+    retryDelayMs: 1000,
+    complianceChecks: ['valid_email', 'rate_limit_ok'],
+    formattingRules: {
+      maxSubjectLength: 50,
+      includeUnsubscribe: false, // Security emails exempt
+      includeCompanyAddress: true,
+      htmlRequired: true,
+      plainTextFallback: true,
+    },
+    deliveryRules: {
+      sendImmediately: true,
+      batchWithDigest: false,
+      respectQuietHours: false, // Critical, send anytime
+    },
+  },
+
+  verification: {
+    category: 'security',
+    priority: 'critical',
+    requiredFields: ['email', 'firstName', 'verificationUrl'],
+    optionalFields: [],
+    templateId: 'verification',
+    maxRetries: 5,
+    retryDelayMs: 1000,
+    complianceChecks: ['valid_email'],
+    formattingRules: {
+      maxSubjectLength: 50,
+      includeUnsubscribe: false,
+      includeCompanyAddress: true,
+      htmlRequired: true,
+      plainTextFallback: true,
+    },
+    deliveryRules: {
+      sendImmediately: true,
+      batchWithDigest: false,
+      respectQuietHours: false,
+    },
+  },
+
+  // High priority operational emails
+  shift_assignment: {
+    category: 'operations',
+    priority: 'high',
+    requiredFields: ['email', 'employeeName', 'shiftDate', 'shiftTime', 'location'],
+    optionalFields: ['managerName', 'notes'],
+    templateId: 'shiftAssignment',
+    maxRetries: 3,
+    retryDelayMs: 5000,
+    complianceChecks: ['valid_email', 'employee_active', 'notification_preference'],
+    formattingRules: {
+      maxSubjectLength: 60,
+      includeUnsubscribe: true,
+      includeCompanyAddress: true,
+      htmlRequired: true,
+      plainTextFallback: true,
+    },
+    deliveryRules: {
+      sendImmediately: true,
+      batchWithDigest: false,
+      respectQuietHours: true,
+      timezone: 'employee_local',
+    },
+  },
+
+  shift_reminder: {
+    category: 'operations',
+    priority: 'high',
+    requiredFields: ['email', 'employeeName', 'shiftDate', 'shiftTime'],
+    optionalFields: ['location', 'checklistUrl'],
+    templateId: 'shiftReminder',
+    maxRetries: 2,
+    retryDelayMs: 10000,
+    complianceChecks: ['valid_email', 'employee_active', 'notification_preference'],
+    formattingRules: {
+      maxSubjectLength: 50,
+      includeUnsubscribe: true,
+      includeCompanyAddress: true,
+      htmlRequired: true,
+      plainTextFallback: true,
+    },
+    deliveryRules: {
+      sendImmediately: true,
+      batchWithDigest: false,
+      respectQuietHours: false, // Reminders should arrive on time
+    },
+  },
+
+  invoice_generated: {
+    category: 'billing',
+    priority: 'high',
+    requiredFields: ['email', 'clientName', 'invoiceNumber', 'amount', 'dueDate'],
+    optionalFields: ['invoiceUrl', 'paymentLink'],
+    templateId: 'invoiceGenerated',
+    maxRetries: 3,
+    retryDelayMs: 10000,
+    complianceChecks: ['valid_email', 'client_active'],
+    formattingRules: {
+      maxSubjectLength: 60,
+      includeUnsubscribe: true,
+      includeCompanyAddress: true,
+      htmlRequired: true,
+      plainTextFallback: true,
+    },
+    deliveryRules: {
+      sendImmediately: true,
+      batchWithDigest: false,
+      respectQuietHours: true,
+    },
+  },
+
+  payroll_processed: {
+    category: 'payroll',
+    priority: 'high',
+    requiredFields: ['email', 'employeeName', 'payPeriod', 'netAmount'],
+    optionalFields: ['paystubUrl', 'grossAmount', 'deductions'],
+    templateId: 'payrollProcessed',
+    maxRetries: 3,
+    retryDelayMs: 5000,
+    complianceChecks: ['valid_email', 'employee_active'],
+    formattingRules: {
+      maxSubjectLength: 50,
+      includeUnsubscribe: true,
+      includeCompanyAddress: true,
+      htmlRequired: true,
+      plainTextFallback: true,
+    },
+    deliveryRules: {
+      sendImmediately: true,
+      batchWithDigest: false,
+      respectQuietHours: true,
+    },
+  },
+
+  // Normal priority notifications
+  platform_update: {
+    category: 'system',
+    priority: 'normal',
+    requiredFields: ['email', 'title', 'description'],
+    optionalFields: ['actionUrl', 'releaseNotes'],
+    templateId: 'platformUpdate',
+    maxRetries: 2,
+    retryDelayMs: 30000,
+    complianceChecks: ['valid_email', 'notification_preference'],
+    formattingRules: {
+      maxSubjectLength: 60,
+      includeUnsubscribe: true,
+      includeCompanyAddress: true,
+      htmlRequired: true,
+      plainTextFallback: true,
+    },
+    deliveryRules: {
+      sendImmediately: false,
+      batchWithDigest: true,
+      respectQuietHours: true,
+    },
+  },
+
+  support_ticket_confirmation: {
+    category: 'support',
+    priority: 'normal',
+    requiredFields: ['email', 'name', 'ticketNumber', 'subject'],
+    optionalFields: ['ticketUrl'],
+    templateId: 'supportTicketConfirmation',
+    maxRetries: 3,
+    retryDelayMs: 5000,
+    complianceChecks: ['valid_email'],
+    formattingRules: {
+      maxSubjectLength: 60,
+      includeUnsubscribe: false, // Support emails exempt
+      includeCompanyAddress: true,
+      htmlRequired: true,
+      plainTextFallback: true,
+    },
+    deliveryRules: {
+      sendImmediately: true,
+      batchWithDigest: false,
+      respectQuietHours: false,
+    },
+  },
+
+  employee_invitation: {
+    category: 'onboarding',
+    priority: 'normal',
+    requiredFields: ['email', 'inviterName', 'workspaceName', 'joinUrl'],
+    optionalFields: ['firstName', 'roleName', 'expiresInDays'],
+    templateId: 'employeeInvitation',
+    maxRetries: 3,
+    retryDelayMs: 10000,
+    complianceChecks: ['valid_email', 'not_already_member'],
+    formattingRules: {
+      maxSubjectLength: 60,
+      includeUnsubscribe: false, // Invitation, not marketing
+      includeCompanyAddress: true,
+      htmlRequired: true,
+      plainTextFallback: true,
+    },
+    deliveryRules: {
+      sendImmediately: true,
+      batchWithDigest: false,
+      respectQuietHours: true,
+    },
+  },
+
+  // Low priority / digest-able notifications
+  weekly_digest: {
+    category: 'digest',
+    priority: 'low',
+    requiredFields: ['email', 'recipientName', 'digestContent'],
+    optionalFields: ['highlights', 'actionItems'],
+    templateId: 'weeklyDigest',
+    maxRetries: 2,
+    retryDelayMs: 60000,
+    complianceChecks: ['valid_email', 'digest_preference_enabled'],
+    formattingRules: {
+      maxSubjectLength: 70,
+      includeUnsubscribe: true,
+      includeCompanyAddress: true,
+      htmlRequired: true,
+      plainTextFallback: true,
+    },
+    deliveryRules: {
+      sendImmediately: false,
+      batchWithDigest: false, // Is the digest itself
+      respectQuietHours: true,
+      timezone: 'recipient_local',
+    },
+  },
+};
+
+/**
+ * Get mailing instruction for a given email category
+ */
+export function getMailingInstruction(category: string): MailingInstruction | null {
+  return MAILING_INSTRUCTIONS[category] || null;
+}
+
+/**
+ * Validate email data against mailing instructions
+ */
+export function validateEmailData(
+  category: string, 
+  data: Record<string, any>
+): { valid: boolean; errors: string[] } {
+  const instruction = getMailingInstruction(category);
+  if (!instruction) {
+    return { valid: false, errors: [`Unknown email category: ${category}`] };
+  }
+
+  const errors: string[] = [];
+  for (const field of instruction.requiredFields) {
+    if (!data[field]) {
+      errors.push(`Missing required field: ${field}`);
+    }
+  }
+
+  return { valid: errors.length === 0, errors };
+}
 
 // ============================================================================
 // FAST MODE CONTEXT & GRADUATED APPROVAL SYSTEM
