@@ -245,6 +245,36 @@ export const CATEGORY_CONFIG = {
     label: "AI Mascot",
     priority: 4,
   },
+  system: {
+    iconName: "Settings",
+    color: "text-slate-500",
+    label: "System",
+    priority: 3,
+  },
+  error: {
+    iconName: "AlertTriangle",
+    color: "text-red-500",
+    label: "Error",
+    priority: 0,
+  },
+  diagnostic: {
+    iconName: "Activity",
+    color: "text-cyan-500",
+    label: "Diagnostic",
+    priority: 2,
+  },
+  support: {
+    iconName: "HelpCircle",
+    color: "text-blue-500",
+    label: "Support",
+    priority: 3,
+  },
+  maintenance: {
+    iconName: "Wrench",
+    color: "text-amber-500",
+    label: "Maintenance",
+    priority: 1,
+  },
 } as const;
 
 export type CategoryType = keyof typeof CATEGORY_CONFIG;
@@ -474,6 +504,16 @@ export const VALID_DB_CATEGORIES = [
   'support',
   'ai_brain',
   'error',
+  // Extended system categories (for System tab "Clear All" support)
+  'fix',
+  'hotpatch',
+  'deprecation',
+  'system',
+  'incident',
+  'outage',
+  'recovery',
+  'maintenance_update',
+  'maintenance_postmortem',
 ] as const;
 
 /**
