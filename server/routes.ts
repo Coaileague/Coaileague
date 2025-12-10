@@ -33771,4 +33771,119 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.status(500).json({ success: false, error: error.message });
     }
   });
+
+  // ============================================================================
+  // CHAT SERVER SUBAGENT APIs - Self-Aware Chat Orchestration
+  // ============================================================================
+
+  /**
+   * Get live presence report (users + bots online)
+   */
+  app.get("/api/chatserver/presence", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { getChatServerLivePresence } = await import("./services/ai-brain/chatServerSubagent");
+      const presence = await getChatServerLivePresence();
+      res.json({ success: true, presence });
+    } catch (error: any) {
+      console.error("[ChatServerSubagent] Presence error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Run diagnostics and get health report
+   */
+  app.get("/api/chatserver/diagnostics", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { runChatServerDiagnostics } = await import("./services/ai-brain/chatServerSubagent");
+      const report = await runChatServerDiagnostics();
+      res.json({ success: true, report });
+    } catch (error: any) {
+      console.error("[ChatServerSubagent] Diagnostics error:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Get self-awareness state
+   */
+  app.get("/api/chatserver/self-awareness", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { getChatServerSelfAwareness } = await import("./services/ai-brain/chatServerSubagent");
+      const awareness = getChatServerSelfAwareness();
+      res.json({ success: true, awareness });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Get UX improvement suggestions
+   */
+  app.get("/api/chatserver/ux-suggestions", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { generateChatServerUXSuggestions } = await import("./services/ai-brain/chatServerSubagent");
+      const suggestions = await generateChatServerUXSuggestions();
+      res.json({ success: true, suggestions });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Trigger self-healing manually
+   */
+  app.post("/api/chatserver/self-heal", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { runChatServerDiagnostics } = await import("./services/ai-brain/chatServerSubagent");
+      const report = await runChatServerDiagnostics();
+      
+      res.json({ 
+        success: true, 
+        status: report.status,
+        issuesFound: report.issues.length,
+        healingActions: report.selfHealingActions.length,
+        message: report.status === 'healthy' 
+          ? 'Chat server is healthy, no healing needed' 
+          : `Self-healing triggered for ${report.issues.length} issues`
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * Get combined chat server status (for Trinity dashboard)
+   */
+  app.get("/api/chatserver/status", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { getChatServerLivePresence, runChatServerDiagnostics, getChatServerSelfAwareness } = 
+        await import("./services/ai-brain/chatServerSubagent");
+      
+      const [presence, health, awareness] = await Promise.all([
+        getChatServerLivePresence(),
+        runChatServerDiagnostics(),
+        Promise.resolve(getChatServerSelfAwareness())
+      ]);
+
+      res.json({
+        success: true,
+        status: {
+          health: health.status,
+          totalOnline: presence.totalParticipants,
+          usersOnline: presence.totalUsersOnline,
+          botsOnline: presence.totalBotsOnline,
+          activeRooms: health.metrics.activeRooms,
+          issueCount: health.issues.length,
+          selfAwareness: {
+            state: awareness.currentState,
+            confidence: awareness.confidenceScore,
+            lastDiagnostic: awareness.lastDiagnostic
+          }
+        }
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
 }

@@ -973,6 +973,102 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     isActive: true,
     version: '1.0.0',
   },
+  {
+    name: 'ChatServerAgent',
+    domain: 'communication',
+    description: 'Self-aware AI-powered chat server orchestrator. Analyzes itself, fixes issues autonomously, reports live users (including bots), communicates with AI Brain/Trinity, handles chatroom issues, integrates with ticket system, and suggests UI/UX improvements.',
+    capabilities: [
+      'chatserver.get_live_presence',
+      'chatserver.get_room_health',
+      'chatserver.diagnose_issues',
+      'chatserver.self_heal',
+      'chatserver.report_to_trinity',
+      'chatserver.suggest_improvements',
+      'chatserver.handle_ticket_escalation',
+      'chatserver.broadcast_announcement',
+      'chatserver.get_bot_status',
+      'chatserver.optimize_rooms'
+    ],
+    requiredTools: [
+      'websocket_monitor',
+      'room_analyzer',
+      'presence_tracker',
+      'ticket_bridge',
+      'trinity_reporter',
+      'ux_analyzer',
+      'self_healer'
+    ],
+    escalationPolicy: {
+      maxRetries: 5,
+      escalateOn: ['websocket_failure', 'room_corruption', 'data_loss', 'bot_unresponsive'],
+      alwaysNotify: true,
+      notifyRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager']
+    },
+    diagnosticWorkflow: {
+      diagnose: [
+        'scan_active_rooms',
+        'check_websocket_health',
+        'verify_presence_accuracy',
+        'analyze_message_delivery',
+        'check_bot_responsiveness',
+        'audit_room_persistence',
+        'detect_anomaly_patterns'
+      ],
+      fix: [
+        'restart_stale_rooms',
+        'resync_presence_state',
+        'reconnect_websockets',
+        'repair_room_data',
+        'reactivate_bots',
+        'clear_message_queue',
+        'restore_from_checkpoint'
+      ],
+      validate: [
+        'verify_rooms_operational',
+        'confirm_presence_synced',
+        'check_message_flow',
+        'validate_bot_responses',
+        'confirm_data_integrity'
+      ],
+      report: [
+        'generate_health_summary',
+        'report_to_trinity',
+        'create_improvement_suggestions',
+        'log_to_audit',
+        'update_dashboard_metrics'
+      ]
+    },
+    knownPatterns: [
+      'websocket_disconnect_spike',
+      'room_not_loading',
+      'presence_out_of_sync',
+      'message_delivery_delay',
+      'bot_timeout',
+      'helpdesk_overload',
+      'stale_room_data',
+      'memory_pressure',
+      'connection_pool_exhausted'
+    ],
+    fixStrategies: {
+      websocket_disconnect_spike: 'implement_reconnect_with_backoff',
+      room_not_loading: 'clear_cache_and_reload',
+      presence_out_of_sync: 'force_resync_from_database',
+      message_delivery_delay: 'flush_queue_and_prioritize',
+      bot_timeout: 'restart_bot_process',
+      helpdesk_overload: 'enable_queue_throttling',
+      stale_room_data: 'refresh_from_source',
+      memory_pressure: 'garbage_collect_inactive_sessions',
+      connection_pool_exhausted: 'expand_pool_and_cleanup'
+    },
+    maxRetries: 5,
+    timeoutMs: 30000,
+    confidenceThreshold: 0.8,
+    requiresApproval: false,
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'Bot'],
+    bypassAuthFor: ['root_admin', 'deputy_admin', 'sysop', 'Bot'],
+    isActive: true,
+    version: '1.0.0',
+  },
 ];
 
 // ============================================================================
