@@ -254,11 +254,119 @@ class ToolCapabilityRegistry {
     return Array.from(this.tools.values());
   }
 
+  // Model tier to tool complexity mapping
+  // Determines which tiers can use which tool categories
+  private readonly TIER_TOOL_ACCESS: Record<string, { 
+    allowed: string[];
+    restricted: string[];
+    requiresElevation: string[];
+  }> = {
+    // Tier 1: Full access for orchestration/diagnostics
+    'ORCHESTRATOR': { 
+      allowed: ['*'],
+      restricted: [],
+      requiresElevation: []
+    },
+    'DIAGNOSTICS': { 
+      allowed: ['*'],
+      restricted: [],
+      requiresElevation: []
+    },
+    'PRO_FALLBACK': { 
+      allowed: ['scheduling', 'payroll', 'compliance', 'analytics', 'communication', 'automation', 'data', 'integration', 'diagnostic'],
+      restricted: [],
+      requiresElevation: []
+    },
+    'SUPERVISOR': { 
+      allowed: ['scheduling', 'payroll', 'compliance', 'analytics', 'communication', 'data'],
+      restricted: ['integration'],
+      requiresElevation: ['automation']
+    },
+    'COMPLIANCE': { 
+      allowed: ['compliance', 'analytics', 'communication'],
+      restricted: ['payroll', 'integration', 'automation'],
+      requiresElevation: ['scheduling']
+    },
+    
+    // Tier 2: Medium access for conversational
+    'CONVERSATIONAL': { 
+      allowed: ['communication', 'analytics', 'data'],
+      restricted: ['payroll', 'integration', 'automation', 'diagnostic'],
+      requiresElevation: ['scheduling', 'compliance']
+    },
+    'HELLOS': { 
+      allowed: ['communication', 'data'],
+      restricted: ['payroll', 'scheduling', 'integration', 'automation', 'diagnostic'],
+      requiresElevation: ['compliance', 'analytics']
+    },
+    'ONBOARDING': { 
+      allowed: ['communication', 'data'],
+      restricted: ['payroll', 'compliance', 'integration', 'automation', 'diagnostic'],
+      requiresElevation: ['scheduling', 'analytics']
+    },
+    
+    // Tier 3: Limited access for simple bots
+    'SIMPLE': { 
+      allowed: ['communication', 'data'],
+      restricted: ['payroll', 'scheduling', 'compliance', 'analytics', 'automation', 'integration', 'diagnostic'],
+      requiresElevation: []
+    },
+    'NOTIFICATION': { 
+      allowed: ['communication'],
+      restricted: ['*'],
+      requiresElevation: []
+    },
+  };
+
+  /**
+   * Validate if a model tier has access to a specific tool
+   */
+  validateToolAccessForTier(toolId: string, modelTier: string): { 
+    allowed: boolean; 
+    requiresElevation: boolean; 
+    reason?: string;
+  } {
+    const tool = this.tools.get(toolId);
+    if (!tool) {
+      return { allowed: false, requiresElevation: false, reason: 'Tool not found' };
+    }
+
+    const tierAccess = this.TIER_TOOL_ACCESS[modelTier];
+    if (!tierAccess) {
+      // Unknown tier - default to restricted access
+      return { allowed: false, requiresElevation: false, reason: `Unknown model tier: ${modelTier}` };
+    }
+
+    // Check if tier has wildcard access
+    if (tierAccess.allowed.includes('*')) {
+      return { allowed: true, requiresElevation: false };
+    }
+
+    // Check if tool category is explicitly restricted
+    if (tierAccess.restricted.includes(tool.category) || tierAccess.restricted.includes('*')) {
+      return { allowed: false, requiresElevation: false, reason: `Tool category '${tool.category}' is restricted for tier ${modelTier}` };
+    }
+
+    // Check if tool category requires elevation
+    if (tierAccess.requiresElevation.includes(tool.category)) {
+      return { allowed: true, requiresElevation: true, reason: `Tool category '${tool.category}' requires elevated session for tier ${modelTier}` };
+    }
+
+    // Check if tool category is allowed
+    if (tierAccess.allowed.includes(tool.category)) {
+      return { allowed: true, requiresElevation: false };
+    }
+
+    // Default to not allowed if not explicitly listed
+    return { allowed: false, requiresElevation: false, reason: `Tool category '${tool.category}' not allowed for tier ${modelTier}` };
+  }
+
   async validateToolExecution(
     toolId: string,
     subagentId: string,
     userPermissions: string[],
-    userConsents: string[]
+    userConsents: string[],
+    modelTier?: string
   ): Promise<ToolValidationResult> {
     const tool = this.tools.get(toolId);
     if (!tool) {
@@ -273,6 +381,16 @@ class ToolCapabilityRegistry {
 
     const errors: string[] = [];
     const warnings: string[] = [];
+
+    // Validate model tier access if provided
+    if (modelTier) {
+      const tierAccess = this.validateToolAccessForTier(toolId, modelTier);
+      if (!tierAccess.allowed) {
+        errors.push(tierAccess.reason || `Tool not allowed for model tier ${modelTier}`);
+      } else if (tierAccess.requiresElevation) {
+        warnings.push(tierAccess.reason || `Tool requires elevated session for tier ${modelTier}`);
+      }
+    }
 
     const missingPermissions = tool.requiredPermissions.filter(
       perm => !userPermissions.includes(perm) && !userPermissions.includes('*')
