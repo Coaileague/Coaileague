@@ -17,6 +17,7 @@ import {
   trinityAccessControl,
 } from '@shared/schema';
 import { subagentSupervisor } from '../services/ai-brain/subagentSupervisor';
+import { subagentPerformanceMeetingService, MeetingMode } from '../services/ai-brain/subagentPerformanceMeetingService';
 import { aiBrainAuthorizationService, AI_BRAIN_AUTHORITY_ROLES } from '../services/ai-brain/aiBrainAuthorizationService';
 import { storage } from '../storage';
 import type { AuthenticatedRequest } from '../rbac';
@@ -623,15 +624,136 @@ router.post('/execute', requireSubagentAccess, async (req: Request, res: Respons
 });
 
 // ============================================================================
+// PERFORMANCE MEETING ENDPOINTS
+// ============================================================================
+
+const meetingModeSchema = z.object({
+  mode: z.enum(['standard', 'fast', 'emergency']).optional(),
+}).strict();
+
+router.post('/performance-meetings/conduct', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const workspaceId = req.body.workspaceId || authReq.session?.workspaceId || 'platform-system';
+    
+    const validation = meetingModeSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid input',
+        details: validation.error.errors 
+      });
+    }
+    
+    const mode = (validation.data.mode || 'standard') as MeetingMode;
+    const result = await subagentPerformanceMeetingService.triggerManualMeeting(workspaceId, mode);
+    
+    res.json({ success: true, meeting: result });
+  } catch (error: any) {
+    console.error('[SubagentRoutes] Performance meeting failed:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/performance-meetings/fast', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthenticatedRequest;
+    const workspaceId = req.body.workspaceId || authReq.session?.workspaceId || 'platform-system';
+    
+    const result = await subagentPerformanceMeetingService.triggerFastMeeting(workspaceId);
+    
+    res.json({ success: true, meeting: result });
+  } catch (error: any) {
+    console.error('[SubagentRoutes] FAST meeting failed:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/performance-meetings/history', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
+    const meetings = subagentPerformanceMeetingService.getMeetingHistory(limit);
+    
+    res.json({ success: true, meetings });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/performance-meetings/:meetingId', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const meeting = subagentPerformanceMeetingService.getMeeting(req.params.meetingId);
+    
+    if (!meeting) {
+      return res.status(404).json({ success: false, error: 'Meeting not found' });
+    }
+    
+    res.json({ success: true, meeting });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/performance-meetings/supervisors/status', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const supervisors = subagentPerformanceMeetingService.getHandlerSupervisors();
+    
+    res.json({ success: true, supervisors });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/performance-meetings/schedule', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const config = subagentPerformanceMeetingService.getScheduleConfig();
+    
+    res.json({ success: true, schedule: config });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.put('/performance-meetings/schedule', requireSubagentAccess, async (req: Request, res: Response) => {
+  try {
+    const configSchema = z.object({
+      enabled: z.boolean().optional(),
+      frequency: z.enum(['daily', 'weekly', 'biweekly', 'monthly']).optional(),
+      dayOfWeek: z.number().min(0).max(6).optional(),
+      timeOfDay: z.string().regex(/^\d{2}:\d{2}$/).optional(),
+      fastModeThreshold: z.number().min(0).max(100).optional(),
+      autoOptimize: z.boolean().optional(),
+    }).strict();
+    
+    const validation = configSchema.safeParse(req.body);
+    if (!validation.success) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invalid schedule configuration',
+        details: validation.error.errors 
+      });
+    }
+    
+    subagentPerformanceMeetingService.updateScheduleConfig(validation.data);
+    const config = subagentPerformanceMeetingService.getScheduleConfig();
+    
+    res.json({ success: true, schedule: config });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
 // INITIALIZE SUBAGENT SUPERVISOR ON ROUTE LOAD
 // ============================================================================
 
 (async () => {
   try {
     await subagentSupervisor.initialize();
-    console.log('[SubagentRoutes] Subagent supervisor initialized');
+    await subagentPerformanceMeetingService.initialize();
+    console.log('[SubagentRoutes] Subagent supervisor and performance meeting service initialized');
   } catch (error) {
-    console.error('[SubagentRoutes] Failed to initialize subagent supervisor:', error);
+    console.error('[SubagentRoutes] Failed to initialize subagent services:', error);
   }
 })();
 
