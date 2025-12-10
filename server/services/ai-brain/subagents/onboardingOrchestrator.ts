@@ -373,6 +373,160 @@ class OnboardingOrchestrator {
       },
     });
   }
+
+  /**
+   * Generate Trinity welcome message for new org
+   * Creates a personalized AI greeting for the workspace-isolated Trinity instance
+   */
+  async generateTrinityWelcome(params: {
+    workspaceId: string;
+    workspaceName: string;
+    ownerName: string;
+    inviteSource?: 'signup' | 'invite' | 'subscription';
+  }): Promise<{
+    welcomeMessage: string;
+    suggestedNextSteps: string[];
+    trinityPersonality: string;
+  }> {
+    const { workspaceName, ownerName, inviteSource } = params;
+
+    const sourceContext = {
+      signup: 'who just signed up',
+      invite: 'who was invited to join',
+      subscription: 'who just subscribed',
+    };
+
+    const greeting = sourceContext[inviteSource || 'signup'];
+
+    return {
+      welcomeMessage: `Hello ${ownerName}! I'm Trinity, your dedicated AI assistant for ${workspaceName}. ` +
+        `I operate exclusively within your organization to help you manage your workforce efficiently. ` +
+        `I'm powered by Gemini 3 Pro and I'm here to guide you through setting up your organization, ` +
+        `answer any questions, and help optimize your operations with intelligent recommendations.`,
+      suggestedNextSteps: [
+        'Import your employee data (PDF, Excel, or CSV)',
+        'Set up your team structure and departments',
+        'Configure your first shift schedule',
+        'Explore the gamification system to unlock automation features',
+        'Ask me anything about CoAIleague features!',
+      ],
+      trinityPersonality: 'helpful_professional',
+    };
+  }
+
+  /**
+   * Complete full invitation workflow with Trinity integration
+   * Handles: email -> welcome page -> signup -> data migration -> gamification -> automation
+   */
+  async processInvitationAcceptance(params: {
+    inviteToken: string;
+    userId: string;
+    workspaceId: string;
+    workspaceName: string;
+    ownerName: string;
+  }): Promise<{
+    success: boolean;
+    onboardingResult?: OnboardingResult;
+    trinityWelcome?: {
+      welcomeMessage: string;
+      suggestedNextSteps: string[];
+      trinityPersonality: string;
+    };
+    errors: string[];
+  }> {
+    const errors: string[] = [];
+
+    try {
+      console.log(`[OnboardingOrchestrator] Processing invitation acceptance for workspace ${params.workspaceId}`);
+
+      // Step 1: Generate Trinity welcome
+      const trinityWelcome = await this.generateTrinityWelcome({
+        workspaceId: params.workspaceId,
+        workspaceName: params.workspaceName,
+        ownerName: params.ownerName,
+        inviteSource: 'invite',
+      });
+
+      // Step 2: Trigger onboarding (gamification activation, basic automation unlock)
+      const onboardingResult = await this.triggerForNewOrg({
+        workspaceId: params.workspaceId,
+        ownerId: params.userId,
+        inviteSource: 'invite',
+      });
+
+      if (!onboardingResult.success) {
+        errors.push(...onboardingResult.errors);
+      }
+
+      console.log(`[OnboardingOrchestrator] Invitation acceptance complete:`, {
+        workspaceId: params.workspaceId,
+        success: onboardingResult.success,
+        gamificationActive: onboardingResult.gamificationActivation?.success,
+        automationGatesUnlocked: onboardingResult.summary.automationGatesUnlocked,
+      });
+
+      return {
+        success: onboardingResult.success,
+        onboardingResult,
+        trinityWelcome,
+        errors,
+      };
+
+    } catch (error: any) {
+      console.error('[OnboardingOrchestrator] Invitation acceptance failed:', error);
+      errors.push(error.message);
+      return {
+        success: false,
+        errors,
+      };
+    }
+  }
+
+  /**
+   * Get migration capabilities for display to new users
+   */
+  getMigrationCapabilities(): {
+    automated: { name: string; description: string; sources: string[] }[];
+    manual: { name: string; description: string }[];
+  } {
+    return {
+      automated: [
+        {
+          name: 'Employee Roster',
+          description: 'Import employee data with AI-powered field mapping',
+          sources: ['PDF', 'Excel', 'CSV'],
+        },
+        {
+          name: 'Team Structures',
+          description: 'Extract department and team hierarchies',
+          sources: ['PDF', 'Excel'],
+        },
+        {
+          name: 'Schedule Patterns',
+          description: 'Import existing shift schedules',
+          sources: ['Excel', 'CSV'],
+        },
+      ],
+      manual: [
+        {
+          name: 'Payroll Settings',
+          description: 'Configure pay rates, overtime rules, and tax settings',
+        },
+        {
+          name: 'Client Relationships',
+          description: 'Set up client accounts and billing preferences',
+        },
+        {
+          name: 'Compliance Rules',
+          description: 'Configure state-specific labor law compliance',
+        },
+        {
+          name: 'Integrations',
+          description: 'Connect to Stripe, QuickBooks, or other services',
+        },
+      ],
+    };
+  }
 }
 
 export const onboardingOrchestrator = OnboardingOrchestrator.getInstance();

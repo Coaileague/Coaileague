@@ -395,6 +395,113 @@ const emailTemplates = {
       </div>
     `
   }),
+
+  /**
+   * ORGANIZATION INVITATION TEMPLATE
+   * Premium template for inviting new organizations to join CoAIleague
+   * Includes Trinity AI assistant introduction and data migration options
+   */
+  organizationInvitation: (data: {
+    recipientName: string;
+    recipientEmail: string;
+    inviterName: string;
+    inviterCompany?: string;
+    organizationName: string;
+    welcomeUrl: string;
+    inviteToken: string;
+    expiresIn: string;
+    migrationFeatures: string[];
+  }) => ({
+    subject: `You're Invited to Join CoAIleague - AI-Powered Workforce Intelligence`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb;">
+        <!-- Header with gradient -->
+        <div style="text-align: center; padding: 40px 30px; background: linear-gradient(135deg, #2563eb 0%, #7c3aed 50%, #ec4899 100%); border-radius: 8px 8px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 32px; font-weight: 700;">Welcome to CoAIleague</h1>
+          <p style="color: #e0e7ff; margin: 15px 0 0 0; font-size: 18px;">AI-Powered Workforce Intelligence Platform</p>
+          <div style="margin-top: 20px;">
+            <span style="background: rgba(255,255,255,0.2); color: white; padding: 8px 16px; border-radius: 20px; font-size: 14px;">
+              Powered by Gemini 3 Pro AI Brain
+            </span>
+          </div>
+        </div>
+        
+        <!-- Main content -->
+        <div style="padding: 40px 30px; background-color: white;">
+          <p style="font-size: 18px; color: #1f2937;">Hello ${data.recipientName},</p>
+          
+          <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+            <strong>${data.inviterName}</strong>${data.inviterCompany ? ` from <strong>${data.inviterCompany}</strong>` : ''} 
+            has invited you to set up <strong>${data.organizationName}</strong> on CoAIleague, 
+            the next-generation workforce management platform powered by AI.
+          </p>
+          
+          <!-- Trinity Introduction Box -->
+          <div style="background: linear-gradient(135deg, #f0f9ff 0%, #f5f3ff 100%); padding: 25px; border-radius: 12px; margin: 30px 0; border: 1px solid #c7d2fe;">
+            <div style="display: flex; align-items: center; margin-bottom: 15px;">
+              <div style="font-size: 36px; margin-right: 15px;">&#11088;&#11088;</div>
+              <div>
+                <h3 style="color: #4338ca; margin: 0; font-size: 20px;">Meet Trinity - Your AI Assistant</h3>
+                <p style="color: #6366f1; margin: 5px 0 0 0; font-size: 14px;">Powered by Gemini 3 Pro</p>
+              </div>
+            </div>
+            <p style="color: #4b5563; margin: 0; font-size: 15px; line-height: 1.5;">
+              Trinity is your dedicated AI assistant that operates exclusively within your organization. 
+              Trinity will guide you through setup, answer questions, and help optimize your workforce operations 
+              with intelligent recommendations.
+            </p>
+          </div>
+          
+          <!-- CTA Button -->
+          <div style="text-align: center; margin: 40px 0;">
+            <a href="${data.welcomeUrl}?token=${data.inviteToken}" 
+               style="background: linear-gradient(135deg, #2563eb 0%, #7c3aed 100%); color: white; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; display: inline-block; font-size: 18px; box-shadow: 0 4px 14px rgba(37, 99, 235, 0.4);">
+              Start Your Organization Setup
+            </a>
+          </div>
+          
+          <!-- What's included section -->
+          <div style="background-color: #f9fafb; padding: 25px; border-radius: 12px; margin: 30px 0;">
+            <h3 style="color: #1f2937; margin: 0 0 20px 0; font-size: 18px;">What You Can Migrate & Set Up:</h3>
+            <ul style="margin: 0; padding: 0; list-style: none;">
+              ${data.migrationFeatures.map(feature => `
+                <li style="padding: 10px 0; border-bottom: 1px solid #e5e7eb; color: #4b5563; font-size: 15px;">
+                  <span style="color: #16a34a; margin-right: 10px;">&#10003;</span> ${feature}
+                </li>
+              `).join('')}
+            </ul>
+          </div>
+          
+          <!-- Automation unlock teaser -->
+          <div style="background: linear-gradient(135deg, #ecfdf5 0%, #f0fdf4 100%); padding: 20px; border-radius: 10px; margin: 25px 0; border-left: 4px solid #16a34a;">
+            <h4 style="color: #15803d; margin: 0 0 10px 0;">Unlock AI Automation</h4>
+            <p style="color: #166534; margin: 0; font-size: 14px; line-height: 1.5;">
+              Complete your setup and gamification challenges to unlock powerful AI automation features 
+              including smart scheduling, payroll auto-calculation, and compliance monitoring.
+            </p>
+          </div>
+          
+          <!-- Expiration notice -->
+          <div style="background-color: #fef3c7; padding: 15px 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #f59e0b;">
+            <p style="margin: 0; font-size: 14px; color: #92400e;">
+              <strong>Note:</strong> This invitation expires in <strong>${data.expiresIn}</strong>. Please accept before it expires.
+            </p>
+          </div>
+        </div>
+        
+        <!-- Footer -->
+        <div style="padding: 25px 30px; background-color: #f3f4f6; border-radius: 0 0 8px 8px; text-align: center;">
+          <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0;">
+            Questions? Chat with Trinity once you sign up, or contact ${data.inviterName} directly.
+          </p>
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+            This invitation was sent to ${data.recipientEmail} by CoAIleague Platform.<br>
+            If you did not expect this invitation, you can safely ignore this email.
+          </p>
+        </div>
+      </div>
+    `
+  }),
 };
 
 // ============================================================================
@@ -999,6 +1106,52 @@ export class EmailService {
       'onboarding_complete',
       workspaceId,
       userId
+    );
+  }
+
+  /**
+   * Send organization invitation email
+   * Premium template for inviting new organizations with Trinity AI introduction
+   */
+  async sendOrganizationInvitation(params: {
+    recipientEmail: string;
+    recipientName: string;
+    inviterName: string;
+    inviterCompany?: string;
+    organizationName: string;
+    inviteToken: string;
+    expiresInDays?: number;
+    workspaceId?: string;
+  }): Promise<EmailResult> {
+    const welcomeUrl = `${getAppBaseUrl()}/welcome`;
+    
+    const migrationFeatures = [
+      'Employee roster from PDF, Excel, or CSV files',
+      'Team structures and departments',
+      'Existing schedules and shift patterns',
+      'Manual data entry with AI-assisted validation',
+      'Gamification achievements and leaderboards',
+      'AI automation unlocked progressively',
+    ];
+    
+    const template = emailTemplates.organizationInvitation({
+      recipientName: params.recipientName || 'there',
+      recipientEmail: params.recipientEmail,
+      inviterName: params.inviterName,
+      inviterCompany: params.inviterCompany,
+      organizationName: params.organizationName || 'Your Organization',
+      welcomeUrl,
+      inviteToken: params.inviteToken,
+      expiresIn: `${params.expiresInDays || 7} days`,
+      migrationFeatures,
+    });
+
+    return this.sendEmail(
+      params.recipientEmail,
+      template.subject,
+      template.html,
+      'organization_invitation',
+      params.workspaceId
     );
   }
 }

@@ -29101,6 +29101,135 @@ app.post("/api/sales/invitations/send", requireAuth, async (req, res) => {
   }
 });
 
+// Enhanced organization invitation with Trinity AI integration
+app.post("/api/sales/invitations/send-enhanced", requireAuth, async (req, res) => {
+  try {
+    const { email, organizationName, contactName, offeredTier, inviterCompany, expiresInDays } = req.body;
+    
+    if (!email || !organizationName || !contactName) {
+      return res.status(400).json({ error: "email, organizationName, and contactName are required" });
+    }
+    
+    const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+    const expiryDays = expiresInDays || 14;
+    
+    // Create invitation record
+    const [invitation] = await db.insert(orgInvitations).values({
+      email,
+      organizationName,
+      contactName,
+      offeredTier: offeredTier || "starter",
+      invitationToken: token,
+      invitationTokenExpiry: new Date(Date.now() + expiryDays * 24 * 60 * 60 * 1000),
+      sentBy: req.user?.id,
+      status: "pending",
+    }).returning();
+    
+    // Send enhanced email with Trinity introduction
+    const { emailService } = await import('./services/emailService');
+    const inviterName = req.user?.firstName ? `${req.user.firstName} ${req.user.lastName || ''}`.trim() : 'CoAIleague Team';
+    
+    const emailResult = await emailService.sendOrganizationInvitation({
+      recipientEmail: email,
+      recipientName: contactName,
+      inviterName,
+      inviterCompany,
+      organizationName,
+      inviteToken: token,
+      expiresInDays: expiryDays,
+    });
+    
+    // Get migration capabilities for display
+    const { onboardingOrchestrator } = await import('./services/ai-brain/subagents/onboardingOrchestrator');
+    const migrationCapabilities = onboardingOrchestrator.getMigrationCapabilities();
+    
+    res.json({ 
+      success: true, 
+      invitation,
+      emailSent: emailResult.success,
+      emailId: emailResult.resendId,
+      migrationCapabilities,
+      message: emailResult.success 
+        ? `Invitation sent to ${email} with Trinity AI introduction`
+        : `Invitation created but email failed: ${emailResult.error}`,
+    });
+  } catch (error: any) {
+    console.error("[Enhanced Invitation] Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Accept organization invitation and trigger onboarding
+app.post("/api/sales/invitations/accept", async (req, res) => {
+  try {
+    const { token, userId, workspaceId, workspaceName, ownerName } = req.body;
+    
+    if (!token) {
+      return res.status(400).json({ error: "Invitation token is required" });
+    }
+    
+    // Find and validate invitation
+    const [invitation] = await db.select().from(orgInvitations)
+      .where(eq(orgInvitations.invitationToken, token));
+    
+    if (!invitation) {
+      return res.status(404).json({ error: "Invitation not found" });
+    }
+    
+    if (invitation.status === 'accepted') {
+      return res.status(400).json({ error: "Invitation already accepted" });
+    }
+    
+    if (invitation.invitationTokenExpiry && new Date() > new Date(invitation.invitationTokenExpiry)) {
+      return res.status(400).json({ error: "Invitation has expired" });
+    }
+    
+    // Update invitation status
+    await db.update(orgInvitations)
+      .set({ 
+        status: 'accepted',
+        acceptedAt: new Date(),
+        acceptedBy: userId || null,
+        acceptedWorkspaceId: workspaceId || null,
+      })
+      .where(eq(orgInvitations.id, invitation.id));
+    
+    // Trigger onboarding with Trinity integration
+    let onboardingResult = null;
+    if (userId && workspaceId) {
+      const { onboardingOrchestrator } = await import('./services/ai-brain/subagents/onboardingOrchestrator');
+      onboardingResult = await onboardingOrchestrator.processInvitationAcceptance({
+        inviteToken: token,
+        userId,
+        workspaceId,
+        workspaceName: workspaceName || invitation.organizationName,
+        ownerName: ownerName || invitation.contactName,
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: "Invitation accepted successfully",
+      organizationName: invitation.organizationName,
+      onboarding: onboardingResult,
+    });
+  } catch (error: any) {
+    console.error("[Accept Invitation] Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get onboarding migration capabilities
+app.get("/api/onboarding/migration-capabilities", async (req, res) => {
+  try {
+    const { onboardingOrchestrator } = await import('./services/ai-brain/subagents/onboardingOrchestrator');
+    const capabilities = onboardingOrchestrator.getMigrationCapabilities();
+    res.json(capabilities);
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get("/api/sales/proposals", requireAuth, async (req, res) => {
   try {
     const list = await db.select().from(salesProposals);
