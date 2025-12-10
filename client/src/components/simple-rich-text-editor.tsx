@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from "react";
+import DOMPurify from 'isomorphic-dompurify';
 import { Button } from "@/components/ui/button";
 import {
   Bold,
@@ -39,11 +40,13 @@ export function SimpleRichTextEditor({
 
   useEffect(() => {
     if (editorRef.current && value !== editorRef.current.innerHTML) {
-      // Sanitize HTML to prevent XSS - only allow safe formatting tags
-      const sanitized = value
-        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
-        .replace(/on\w+\s*=/gi, 'data-blocked=')
-        .replace(/javascript:/gi, 'blocked:');
+      // Sanitize HTML to prevent XSS using DOMPurify - robust allowlist-based sanitization
+      const sanitized = DOMPurify.sanitize(value, {
+        ALLOWED_TAGS: ['b', 'i', 'u', 'strong', 'em', 'a', 'br', 'p', 'ul', 'ol', 'li', 'pre', 'code', 'blockquote', 'h1', 'h2', 'h3'],
+        ALLOWED_ATTR: ['href', 'target', 'rel'],
+        ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+        ALLOW_DATA_ATTR: false,
+      });
       editorRef.current.innerHTML = sanitized;
     }
   }, [value]);
