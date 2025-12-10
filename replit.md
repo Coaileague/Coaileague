@@ -55,7 +55,9 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **ElevatedSessionGuardian Subagent:** AI-powered security subagent for session anomaly detection and self-healing.
 - **Automation Governance System:** Confidence-driven execution gates across three tiers with consent tracking and audit trails.
 - **TrinityContextManager:** Multi-turn conversation memory with context building, knowledge gap detection, and human escalation.
-- **TrinityMemoryService:** Long-term memory persistence for AI learning, user/workspace profiles, and interaction pattern detection.
+- **TrinityMemoryService:** Long-term memory persistence for AI learning, user/workspace profiles, interaction pattern detection, and memory optimization with token-aware context window management.
+- **SessionSyncService:** Real-time multi-device synchronization ensuring mobile and desktop clients see the same data. Features user connection tracking, workspace-scoped event broadcasting, and TanStack Query cache invalidation.
+- **ToolCapabilityRegistry:** Centralized registry for AI Brain subagent tools with health checking, permission validation, usage analytics, and telemetry integration.
 - **Trinity Org Intelligence:** Real-time org awareness system providing Trinity with live business metrics.
 - **ThoughtManager Automation Integration:** Real-time WebSocket subscription for automation events.
 - **Trinity 3-Mode System:** Explicit operational modes: Demo, Business Pro, and Guru, with enhanced `PlatformDiagnostics` for Guru mode.

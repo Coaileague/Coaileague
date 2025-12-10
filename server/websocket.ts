@@ -391,7 +391,17 @@ interface DispatchUnitStatusUpdatePayload {
   incidentId?: number | null;
 }
 
-type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload | RequestSecurePayload | SecureResponsePayload | ReleaseSpectatorPayload | TransferUserPayload | SilenceUserPayload | GiveVoicePayload | BanUserPayload | JoinShiftUpdatesPayload | ShiftUpdatePayload | JoinNotificationsPayload | NotificationUpdatePayload | CallInitiatedPayload | CallAcceptedPayload | CallRejectedPayload | CallEndedPayload | WebRTCOfferPayload | WebRTCAnswerPayload | WebRTCIceCandidatePayload | JoinDispatchUpdatesPayload | DispatchGPSUpdatePayload | DispatchIncidentUpdatePayload | DispatchUnitStatusUpdatePayload;
+interface SessionSyncRegisterPayload {
+  type: 'session_sync_register';
+  deviceType?: string;
+  timestamp?: string;
+}
+
+interface SessionSyncPingPayload {
+  type: 'session_sync_ping';
+}
+
+type WebSocketMessage = ChatMessagePayload | JoinConversationPayload | TypingPayload | StatusChangePayload | KickUserPayload | RequestSecurePayload | SecureResponsePayload | ReleaseSpectatorPayload | TransferUserPayload | SilenceUserPayload | GiveVoicePayload | BanUserPayload | JoinShiftUpdatesPayload | ShiftUpdatePayload | JoinNotificationsPayload | NotificationUpdatePayload | CallInitiatedPayload | CallAcceptedPayload | CallRejectedPayload | CallEndedPayload | WebRTCOfferPayload | WebRTCAnswerPayload | WebRTCIceCandidatePayload | JoinDispatchUpdatesPayload | DispatchGPSUpdatePayload | DispatchIncidentUpdatePayload | DispatchUnitStatusUpdatePayload | SessionSyncRegisterPayload | SessionSyncPingPayload;
 
 // In-memory MOTD storage (staff can update)
 let currentMOTD = "Welcome to HelpAI Support - Your satisfaction is our priority - 24/7/365";
@@ -520,6 +530,71 @@ export function broadcastToAllClients(message: any) {
   console.log(`[WebSocket] Broadcast sent to ${count} clients`);
   return count;
 }
+
+// =============================================================================
+// SESSION SYNC: Multi-Device Real-Time Synchronization
+// =============================================================================
+import { sessionSyncService } from './services/ai-brain/sessionSyncService';
+
+/**
+ * Register a WebSocket connection for session sync
+ * Call this when a client connects to enable multi-device sync
+ */
+export function registerSessionSync(
+  userId: string, 
+  ws: WebSocket, 
+  sessionId: string,
+  deviceInfo?: { deviceType?: string; workspaceId?: string }
+): void {
+  sessionSyncService.registerConnection(userId, ws, sessionId, deviceInfo);
+}
+
+/**
+ * Unregister a WebSocket connection from session sync
+ */
+export function unregisterSessionSync(userId: string, sessionId: string): void {
+  sessionSyncService.unregisterConnection(userId, sessionId);
+}
+
+/**
+ * Notify all of a user's connected devices about data changes
+ */
+export function syncToUserDevices(
+  userId: string,
+  resource: string,
+  action: 'create' | 'update' | 'delete',
+  data?: Record<string, any>,
+  queryKeys?: string[]
+): number {
+  return sessionSyncService.broadcastToUser(userId, {
+    type: 'data_sync',
+    action,
+    resource,
+    data,
+    queryKeys,
+    timestamp: new Date().toISOString(),
+  });
+}
+
+/**
+ * Invalidate TanStack Query cache across all user devices
+ */
+export function invalidateUserQueries(
+  userId: string,
+  queryKeys: string[],
+  resource: string = 'data'
+): number {
+  return sessionSyncService.notifyQueryInvalidation(userId, null, queryKeys, resource);
+}
+
+/**
+ * Get session sync statistics
+ */
+export function getSessionSyncStats(): { totalUsers: number; totalConnections: number; workspaces: number } {
+  return sessionSyncService.getGlobalStats();
+}
+
+export { sessionSyncService };
 
 export function broadcastToWorkspace(workspaceId: string, data: any) {
   if (!globalBroadcaster) {
@@ -871,6 +946,42 @@ export function setupWebSocket(server: Server) {
         const payload: WebSocketMessage = JSON.parse(data.toString());
 
         switch (payload.type) {
+          case 'session_sync_register': {
+            // Handle session sync registration for multi-device sync
+            if (ws.serverAuth?.userId) {
+              const deviceType = (payload as any).deviceType || 'unknown';
+              sessionSyncService.registerConnection(
+                ws.serverAuth.userId,
+                ws,
+                connectionId,
+                { 
+                  deviceType, 
+                  workspaceId: ws.serverAuth.workspaceId 
+                }
+              );
+              ws.send(JSON.stringify({
+                type: 'session_sync_registered',
+                success: true,
+                deviceCount: sessionSyncService.getUserDeviceCount(ws.serverAuth.userId),
+                timestamp: new Date().toISOString(),
+              }));
+              console.log(`[SessionSync] Registered device for user ${ws.serverAuth.userId} (${deviceType})`);
+            } else {
+              ws.send(JSON.stringify({
+                type: 'session_sync_registered',
+                success: false,
+                error: 'Authentication required for session sync',
+              }));
+            }
+            break;
+          }
+          case 'session_sync_ping': {
+            // Update last activity for session sync
+            if (ws.serverAuth?.userId) {
+              sessionSyncService.updatePing(ws.serverAuth.userId, connectionId);
+            }
+            break;
+          }
           case 'join_conversation': {
             // Check if this is a support room slug instead of conversation ID
             let conversationId = payload.conversationId;
@@ -4473,6 +4584,11 @@ export function setupWebSocket(server: Server) {
       // Clean up heartbeat interval
       if (ws.pingInterval) {
         clearInterval(ws.pingInterval);
+      }
+
+      // SESSION SYNC CLEANUP: Unregister from multi-device sync
+      if (ws.serverAuth?.userId) {
+        sessionSyncService.unregisterConnection(ws.serverAuth.userId, connectionId);
       }
 
       // GLOBAL TRACKING CLEANUP: Remove from platform-wide stats

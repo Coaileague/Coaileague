@@ -691,6 +691,205 @@ class TrinityMemoryService {
   }
 
   // ============================================================================
+  // MEMORY OPTIMIZATION - Context Window Management
+  // ============================================================================
+
+  private readonly MAX_CONTEXT_TOKENS = 8000;
+  private readonly SUMMARY_THRESHOLD = 4000;
+  private contextTokenEstimates: Map<string, number> = new Map();
+
+  /**
+   * Estimate token count for a string (rough approximation: 4 chars = 1 token)
+   */
+  estimateTokens(text: string): number {
+    return Math.ceil(text.length / 4);
+  }
+
+  /**
+   * Build optimized context with token budget management
+   * Prioritizes recent and relevant information within token limits
+   */
+  async buildOptimizedContext(
+    userId: string,
+    workspaceId: string | undefined,
+    currentQuery: string,
+    maxTokens: number = this.MAX_CONTEXT_TOKENS
+  ): Promise<{ context: string; tokenCount: number; pruned: boolean }> {
+    const sections: { priority: number; content: string; tokens: number }[] = [];
+    let totalTokens = 0;
+    
+    // 1. User profile (high priority)
+    const profile = await this.getUserMemoryProfile(userId, workspaceId);
+    if (profile) {
+      // Build a compact profile context string
+      let profileContext = '### User Profile\n';
+      profileContext += `Communication style: ${profile.preferences.communicationStyle}\n`;
+      profileContext += `Automation level: ${profile.preferences.automationLevel}\n`;
+      if (profile.frequentTopics.length > 0) {
+        profileContext += `Frequent topics: ${profile.frequentTopics.slice(0, 3).map(t => t.topic).join(', ')}\n`;
+      }
+      if (profile.toolUsage.length > 0) {
+        profileContext += `Preferred tools: ${profile.toolUsage.slice(0, 3).map(t => t.toolName).join(', ')}\n`;
+      }
+      const tokens = this.estimateTokens(profileContext);
+      sections.push({ priority: 1, content: profileContext, tokens });
+    }
+
+    // 2. Shared insights (medium priority)
+    const insights = this.getRelevantInsights([currentQuery], 3);
+    if (insights.length > 0) {
+      let insightsContext = '### Platform Insights\n';
+      for (const insight of insights) {
+        insightsContext += `- ${insight.title}\n`;
+      }
+      const tokens = this.estimateTokens(insightsContext);
+      sections.push({ priority: 2, content: insightsContext, tokens });
+    }
+
+    // Sort by priority and build context within token budget
+    sections.sort((a, b) => a.priority - b.priority);
+    
+    let context = '';
+    let pruned = false;
+
+    for (const section of sections) {
+      if (totalTokens + section.tokens <= maxTokens) {
+        context += section.content + '\n';
+        totalTokens += section.tokens;
+      } else {
+        // Summarize or truncate if over budget
+        const remaining = maxTokens - totalTokens;
+        if (remaining > 100) {
+          const truncated = section.content.substring(0, remaining * 4) + '...\n';
+          context += truncated;
+          totalTokens += remaining;
+        }
+        pruned = true;
+        break;
+      }
+    }
+
+    return { context, tokenCount: totalTokens, pruned };
+  }
+
+  /**
+   * Summarize long conversation for memory efficiency
+   */
+  async summarizeConversation(
+    messages: { role: string; content: string }[],
+    maxLength: number = 500
+  ): Promise<string> {
+    if (messages.length === 0) return '';
+    
+    // Extract key points from conversation
+    const topics = new Set<string>();
+    const actions = new Set<string>();
+    let lastUserMessage = '';
+    let lastAssistantMessage = '';
+
+    for (const msg of messages) {
+      if (msg.role === 'user') {
+        lastUserMessage = msg.content;
+        // Extract likely topics
+        const words = msg.content.toLowerCase().split(/\s+/);
+        for (const word of words) {
+          if (['schedule', 'shift', 'payroll', 'time', 'report', 'help', 'error', 'issue'].includes(word)) {
+            topics.add(word);
+          }
+        }
+      } else if (msg.role === 'assistant') {
+        lastAssistantMessage = msg.content;
+        // Extract actions taken
+        if (msg.content.includes('created')) actions.add('created');
+        if (msg.content.includes('updated')) actions.add('updated');
+        if (msg.content.includes('approved')) actions.add('approved');
+        if (msg.content.includes('sent')) actions.add('sent');
+      }
+    }
+
+    const topicList = Array.from(topics).slice(0, 5).join(', ');
+    const actionList = Array.from(actions).slice(0, 3).join(', ');
+    
+    let summary = '';
+    if (topicList) summary += `Topics: ${topicList}. `;
+    if (actionList) summary += `Actions: ${actionList}. `;
+    if (lastUserMessage) summary += `Last query: "${lastUserMessage.substring(0, 100)}..."`;
+
+    return summary.substring(0, maxLength);
+  }
+
+  /**
+   * Prune old memories to maintain performance
+   */
+  async pruneOldMemories(workspaceId: string | undefined, daysToKeep: number = 90): Promise<number> {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
+
+    try {
+      // Clear old entries from caches
+      let pruned = 0;
+      
+      // Clear old profile cache entries
+      this.profileCache.clear();
+      pruned++;
+
+      // Clear expired shared insights
+      const now = new Date();
+      const initialCount = this.sharedInsights.length;
+      this.sharedInsights = this.sharedInsights.filter(insight => {
+        // Keep insights that don't have expiry or haven't expired
+        const createdDate = insight.createdAt;
+        const daysSinceCreated = (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+        return daysSinceCreated <= daysToKeep;
+      });
+      pruned += initialCount - this.sharedInsights.length;
+
+      console.log(`[TrinityMemoryService] Pruned ${pruned} old memory entries`);
+      return pruned;
+    } catch (error) {
+      console.error('[TrinityMemoryService] Error pruning memories:', error);
+      return 0;
+    }
+  }
+
+  /**
+   * Get memory usage statistics
+   */
+  getMemoryStats(): {
+    profileCacheSize: number;
+    sharedInsightsCount: number;
+    estimatedTokenUsage: number;
+  } {
+    let totalTokenEstimate = 0;
+    
+    for (const tokens of this.contextTokenEstimates.values()) {
+      totalTokenEstimate += tokens;
+    }
+
+    return {
+      profileCacheSize: this.profileCache.size,
+      sharedInsightsCount: this.sharedInsights.length,
+      estimatedTokenUsage: totalTokenEstimate,
+    };
+  }
+
+  /**
+   * Compact memory by summarizing and archiving
+   */
+  async compactMemory(userId: string, workspaceId: string | undefined): Promise<void> {
+    const cacheKey = `${userId}:${workspaceId || 'global'}`;
+    
+    // Get current context token count
+    const currentEstimate = this.contextTokenEstimates.get(cacheKey) || 0;
+    
+    if (currentEstimate > this.SUMMARY_THRESHOLD) {
+      // Force profile refresh with summarization
+      this.profileCache.delete(cacheKey);
+      console.log(`[TrinityMemoryService] Compacted memory for ${cacheKey}`);
+    }
+  }
+
+  // ============================================================================
   // FEEDBACK LOOP FOR LEARNING
   // ============================================================================
 

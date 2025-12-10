@@ -197,6 +197,7 @@ import { useCreditAwareness } from "@/hooks/use-credit-awareness";
 import { useBusinessBuddyTier, getAllowedModes, getUpgradeNudgeMessage } from "@/hooks/use-business-buddy-tier";
 import { useTrinityPersona } from "@/hooks/use-trinity-persona";
 import { useTrinityDiagnostics } from "@/hooks/use-trinity-diagnostics";
+import { useSessionSync } from "@/hooks/use-session-sync";
 import { Maximize2, Minimize2, RotateCcw } from "lucide-react";
 import { MobileVoiceCommandOverlay } from "@/components/mobile/MobileVoiceCommandOverlay";
 
@@ -209,6 +210,9 @@ function MascotRenderer() {
   useMascotAIIntegration(workspaceId);
   useMascotObserver(true);
   useCreditAwareness(); // Business Buddy credit awareness for low balance warnings
+  
+  // Session sync for multi-device real-time updates (mobile + desktop see same data)
+  useSessionSync({ autoInvalidate: true });
   
   // Trinity context integration - syncs RBAC context with ThoughtManager for role-aware persona
   useTrinityPersona(workspaceId);
