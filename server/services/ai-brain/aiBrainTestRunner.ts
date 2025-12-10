@@ -14,6 +14,7 @@
 
 import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
+import { sql } from 'drizzle-orm';
 import { broadcastToAllClients } from '../../websocket';
 import { aiBrainFileSystemTools } from './aiBrainFileSystemTools';
 
