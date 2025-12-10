@@ -394,6 +394,7 @@ class AIBrainMasterOrchestrator {
     await this.registerSessionCheckpointActions();
     await this.registerElevatedSessionGuardianActions();
     this.registerMemoryAndGovernanceActions();
+    this.registerGemini3ToolActions();
     
     // Subscribe to platform events
     this.subscribeToEvents();
@@ -4626,6 +4627,298 @@ class AIBrainMasterOrchestrator {
     });
 
     console.log('[AI Brain Master Orchestrator] Registered memory and governance actions');
+  }
+
+  // ============================================================================
+  // GEMINI 3 REASONING TOOLS
+  // ============================================================================
+
+  private registerGemini3ToolActions(): void {
+    // Deep Think - Complex multi-step analysis
+    helpaiOrchestrator.registerAction({
+      actionId: 'ai.deep_think',
+      name: 'Deep Think Analysis',
+      category: 'analytics',
+      description: 'Use Gemini 3 Pro deep reasoning for complex multi-step analysis, strategic planning, and critical decision-making with extended thinking time',
+      requiredRoles: ['manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { query, context, maxThinkingTokens } = request.payload || {};
+        
+        try {
+          const { unifiedGeminiClient } = await import('./unifiedGeminiClient');
+          const result = await unifiedGeminiClient.generateContent({
+            prompt: `You are an expert strategic analyst. Think deeply and thoroughly about this query, considering multiple perspectives, potential implications, and actionable recommendations.
+
+Query: ${query}
+
+Context: ${context || 'No additional context provided'}
+
+Provide a comprehensive analysis with:
+1. Key insights and findings
+2. Potential risks and opportunities
+3. Recommended actions
+4. Confidence assessment`,
+            purpose: 'deep-think',
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Deep think analysis completed',
+            data: { 
+              analysis: result.text,
+              tokensUsed: result.tokensUsed,
+              modelTier: 'BRAIN',
+              thinkingDepth: 'comprehensive'
+            },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Generate UI - AI-powered component generation
+    helpaiOrchestrator.registerAction({
+      actionId: 'ai.generate_ui',
+      name: 'Generate UI Component',
+      category: 'automation',
+      description: 'Use Gemini 3 to generate React UI components from natural language descriptions with styling and interactivity',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { description, componentType, styling, interactivity } = request.payload || {};
+        
+        try {
+          const { unifiedGeminiClient } = await import('./unifiedGeminiClient');
+          const result = await unifiedGeminiClient.generateContent({
+            prompt: `You are an expert React/TypeScript developer. Generate a production-ready React component based on this description:
+
+Description: ${description}
+Component Type: ${componentType || 'functional'}
+Styling: ${styling || 'tailwind'}
+Interactivity: ${interactivity || 'standard'}
+
+Requirements:
+- Use TypeScript with proper types
+- Use Tailwind CSS for styling
+- Follow React best practices
+- Include proper accessibility attributes
+- Add data-testid attributes for testing
+
+Return the complete component code with all imports.`,
+            purpose: 'generate-ui',
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'UI component generated',
+            data: { 
+              code: result.text,
+              tokensUsed: result.tokensUsed,
+              modelTier: 'BRAIN'
+            },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Context Memory - Long-term memory management
+    helpaiOrchestrator.registerAction({
+      actionId: 'ai.context_memory',
+      name: 'Context Memory Operations',
+      category: 'analytics',
+      description: 'Manage long-term AI conversation context and memory for personalized interactions across sessions',
+      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { operation, key, value, namespace } = request.payload || {};
+        
+        try {
+          const { trinityMemoryService } = await import('./trinityMemoryService');
+          let result: any;
+          
+          switch (operation) {
+            case 'store':
+              await trinityMemoryService.storeMemory(
+                request.workspaceId!,
+                request.userId!,
+                namespace || 'default',
+                key,
+                value
+              );
+              result = { stored: true, key };
+              break;
+            case 'retrieve':
+              result = await trinityMemoryService.retrieveMemory(
+                request.workspaceId!,
+                request.userId!,
+                namespace || 'default',
+                key
+              );
+              break;
+            case 'build_context':
+              result = await trinityMemoryService.buildContext(
+                request.workspaceId!,
+                request.userId!,
+                { maxTokens: 4000 }
+              );
+              break;
+            default:
+              result = { error: 'Unknown operation' };
+          }
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `Memory operation '${operation}' completed`,
+            data: result,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Vibe Coding - Natural language to code
+    helpaiOrchestrator.registerAction({
+      actionId: 'ai.vibe_coding',
+      name: 'Vibe Coding',
+      category: 'automation',
+      description: 'Translate natural language intent into production-ready code following project conventions and patterns',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { intent, language, framework, conventions } = request.payload || {};
+        
+        try {
+          const { unifiedGeminiClient } = await import('./unifiedGeminiClient');
+          const result = await unifiedGeminiClient.generateContent({
+            prompt: `You are an expert programmer with deep knowledge of ${framework || 'modern web development'}. Generate production-ready code based on this natural language intent:
+
+Intent: ${intent}
+Language: ${language || 'TypeScript'}
+Framework: ${framework || 'React/Express'}
+Conventions: ${conventions || 'Follow modern best practices, use async/await, proper error handling, and clean code principles'}
+
+Requirements:
+- Write clean, maintainable code
+- Include proper error handling
+- Add helpful comments where needed
+- Follow the specified conventions
+- Make the code production-ready
+
+Return the complete implementation.`,
+            purpose: 'vibe-coding',
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Code generated from intent',
+            data: { 
+              code: result.text,
+              tokensUsed: result.tokensUsed,
+              modelTier: 'BRAIN',
+              language: language || 'TypeScript'
+            },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    // Fact Check - AI-powered verification
+    helpaiOrchestrator.registerAction({
+      actionId: 'ai.fact_check',
+      name: 'Fact Check',
+      category: 'analytics',
+      description: 'AI-powered fact verification with confidence scores, cross-referencing, and source validation',
+      requiredRoles: ['employee', 'manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const { claim, context, sources } = request.payload || {};
+        
+        try {
+          const { unifiedGeminiClient } = await import('./unifiedGeminiClient');
+          const result = await unifiedGeminiClient.generateContent({
+            prompt: `You are a fact-checking expert. Analyze the following claim and provide a thorough verification:
+
+Claim: ${claim}
+
+Additional Context: ${context || 'None provided'}
+Referenced Sources: ${sources ? JSON.stringify(sources) : 'None provided'}
+
+Provide your analysis in the following format:
+1. **Verdict**: (True/False/Partially True/Unverifiable)
+2. **Confidence Score**: (0-100%)
+3. **Analysis**: Detailed breakdown of your reasoning
+4. **Key Facts**: Verified facts that support or refute the claim
+5. **Potential Biases**: Any biases or limitations in the analysis
+6. **Recommendations**: Suggested actions or further verification steps`,
+            purpose: 'fact-check',
+            workspaceId: request.workspaceId,
+            userId: request.userId,
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: 'Fact check completed',
+            data: { 
+              analysis: result.text,
+              tokensUsed: result.tokensUsed,
+              modelTier: 'DIAGNOSTICS'
+            },
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: error.message,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered 5 Gemini 3 reasoning tool actions');
   }
 }
 
