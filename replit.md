@@ -44,11 +44,11 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **AI Brain Code Editor:** Staged code editing with approval workflow and HelpAI integration.
 - **AI Brain Master Orchestrator:** Central hub coordinating 93 actions across 16 categories, connecting Gemini AI to platform services.
 - **SubagentSupervisor:** Manages 23 specialized domain subagents with diagnostic workflow, RBAC, and escalation policies. Uses consolidated configuration for tiered agent definitions.
-- **SubagentConfidenceMonitor:** Trinity AI Brain service that monitors subagent performance, maintains persistent confidence scores, and calculates org-level automation readiness for graduation from HAND_HELD → GRADUATED → FULL_AUTOMATION modes.
-- **Trinity Fast Mode v2:** Premium parallel execution with three tiers (Fast, Turbo, Instant) offering faster SLA, credit governance, SLA breach remediation, and ROI analytics.
+- **SubagentConfidenceMonitor:** Monitors subagent performance, maintains persistent confidence scores, and calculates org-level automation readiness.
+- **Trinity Fast Mode v2:** Premium parallel execution with three tiers offering faster SLA, credit governance, and ROI analytics.
 - **AI Expense Categorization:** Receipt OCR via Gemini Vision, intelligent categorization, and spending pattern analysis.
 - **AI Dynamic Pricing:** Client-specific pricing analysis, reports, and bulk rate adjustment simulations.
-- **AI Brain File System Tools:** Comprehensive and secure file access with read, write, edit, delete, list, search, diff, and metadata retrieval.
+- **AI Brain File System Tools:** Comprehensive and secure file access with various operations.
 - **AI Brain Authorization Service:** Role-based permission model with a 9-level hierarchy.
 - **AI Brain Orchestration Infrastructure:** Durable workflow execution with persistence and multi-agent coordination.
 - **Elevated Session Authentication:** HMAC-signed session elevation for support roles and AI services with TTL expiry and audit logging.
@@ -56,22 +56,22 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Automation Governance System:** Confidence-driven execution gates across three tiers with consent tracking and audit trails.
 - **TrinityContextManager:** Multi-turn conversation memory with context building, knowledge gap detection, and human escalation.
 - **TrinityMemoryService:** Long-term memory persistence for AI learning, user/workspace profiles, and interaction pattern detection.
-- **Trinity Org Intelligence:** Real-time org awareness system providing Trinity with live business metrics, aggregating automation readiness, workboard stats, notification summaries, and invoice status.
-- **ThoughtManager Automation Integration:** Real-time WebSocket subscription for automation events, including job completion, FAST mode SLA tracking, graduation milestones, and priority insight injection.
-- **Trinity 3-Mode System:** Explicit operational modes: (1) Demo mode for public guests with limited showcase, (2) Business Pro mode for Business Buddy/Trinity Pro subscribers with org intelligence awareness, (3) Guru mode for platform staff (support_agent, support_manager, sysop, deputy_admin, root_admin) with platform diagnostics. Enhanced `PlatformDiagnostics` includes: overallHealth, activeWorkspaces, totalUsers, recentErrors, subagentHealth, fastModeStats (real task duration/SLA metrics), upgradeOpportunities, engagementAlerts, supportTicketBacklog, trialExpirations, churnRiskCount, and pendingNotificationSuggestions. Uses 5-minute caching.
-- **Guru Mode Notification Workflow:** Trinity Guru can propose platform notifications via `createNotificationSuggestion()`. Pending suggestions stored in `aiSuggestions` table with type='platform_notification' and source='trinity_guru'. System tab can list via `getPendingNotificationSuggestions()` and approve/reject via `handleNotificationSuggestion()`.
-- **Swarm Commander Service:** "God Mode" control center for AI agent orchestration. Features: (1) War Room - live agent topology visualization with interaction edges, (2) Loop Detector - infinite argument detection and intervention, (3) Agent Court - conflict resolution with human judge for resolving agent disagreements, (4) Budget Watchdog - predictive token economics with cost estimation before execution, (5) Forensic Replay - state snapshots for time-travel debugging, (6) ROI Dashboard - real-time dollar value calculator showing human hours saved vs API costs. Available via `/api/trinity/swarm/*` endpoints for Guru mode users.
-- **Crisis Management Protocol:** Fortune 500-grade incident response system with four protocols: (1) RED-SHIELD/Lockdown - immediately terminates sessions, revokes API keys, and freezes compromised accounts with biometric verification for release, (2) BLACKOUT - system outage handling with ETA updates, auto-scaling, and automatic billing pause, (3) Make It Right - automated dispute resolution with forensic log analysis, refund processing, and 25% goodwill bonus credits, (4) NUCLEAR - root-level organization purge with dual-key authentication (`CONFIRM DELETION {orgId}`) and comprehensive audit trails. Trinity transforms from "Helpful Mascot" to "Tactical Incident Commander" during crises. Available via `/api/trinity/crisis/*` endpoints.
-- **Empire Mode (Trinity Pro CSO Upgrade):** Transforms Trinity from COO to Chief Strategy Officer with three autonomous engines: (1) **GrowthStrategist** - 4 Pillars scanning: Cashflow Optimization (overdue invoice recovery), B2B Matchmaker (complementary business networking), Sales Velocity (lead conversion optimization), Tool Expansion (manual friction detection). Produces Strategy Cards with priority levels, ROI estimates, and actionable proposals. (2) **Blue Dot Protocol** - Precision maintenance system with cryptographic SHA256 signatures, AI-calculated countdown timers, and transparent "God Mode" messaging ("I am performing open-heart surgery on the code"). (3) **Holistic Growth Engine** - CEO-level cross-data synthesis analyzing Goals + Income + Spending + Manpower to provide executive summaries, health scores, and growth strategies. Available via `/api/trinity/empire/*` and `/api/trinity/bluedot/*` endpoints for Trinity Pro subscribers.
-- **AI Tool Capability Catalog:** Workspace-scoped tool registry with success metrics, health signals, and usage statistics.
+- **Trinity Org Intelligence:** Real-time org awareness system providing Trinity with live business metrics.
+- **ThoughtManager Automation Integration:** Real-time WebSocket subscription for automation events.
+- **Trinity 3-Mode System:** Explicit operational modes: Demo, Business Pro, and Guru, with enhanced `PlatformDiagnostics` for Guru mode.
+- **Guru Mode Notification Workflow:** Trinity Guru can propose and manage platform notifications.
+- **Swarm Commander Service:** "God Mode" control center for AI agent orchestration with visualization, loop detection, conflict resolution, budget monitoring, forensic replay, and ROI dashboard.
+- **Crisis Management Protocol:** Fortune 500-grade incident response system with four protocols: RED-SHIELD/Lockdown, BLACKOUT, Make It Right, and NUCLEAR.
+- **Empire Mode (Trinity Pro CSO Upgrade):** Transforms Trinity to Chief Strategy Officer with GrowthStrategist, Blue Dot Protocol, and Holistic Growth Engine.
+- **AI Tool Capability Catalog:** Workspace-scoped tool registry with metrics and usage statistics.
 - **Cross-Bot Knowledge Sharing:** Shared insights system enabling AI components to learn from each other.
 - **Experience Feedback Loop:** Automation outcomes feed back into confidence models and agent learning.
 - **AI Brain Workboard:** Central job queue system for AI orchestration, routing user requests to specialized agents, tracking task lifecycle, and managing Trinity credits.
-- **Onboarding Data Migration Subagent:** Specialized AI agent for new org setup, extracting data from various sources for bulk import of employees, teams, and schedules.
-- **Gamification Activation Subagent:** Universal activation agent for gamification during org onboarding, setting up achievements, points, and leaderboards, and managing automation gates.
+- **Data Migration Subagent (Enhanced):** Enterprise-grade AI agent for new org onboarding with a 5-step workflow.
+- **Gamification Activation Subagent:** Universal activation agent for gamification during org onboarding.
 - **Onboarding Orchestrator:** Coordinates parallel execution of DataMigrationAgent and GamificationActivationAgent during new org creation.
-- **SubagentBanker:** AI Brain credit pre-authorization and ledger management system implementing subscriber-pays-all model. Features: (1) **Workload Simulation** - estimates credits before execution based on task complexity, token count, and execution mode, (2) **Credit Quoting** - generates time-limited quotes requiring user agreement before proceeding, (3) **Credit Reservation** - atomic reservation with 10-minute TTL preventing double-spend, (4) **Consumption Finalization** - deducts actual credits used with full ledger tracking, (5) **Credit Refill** - handles purchases, bonuses, promos, and refunds, (6) **Ledger Management** - complete transaction history with debits/credits and balance tracking. Complexity multipliers: Simple (1x), Standard (1.5x), Complex (2.5x), Enterprise (4x). Fast Mode multipliers: Normal (1x), Fast (1.5x), Turbo (2x), Instant (3x).
-- **Advanced Credit Analytics Dashboard:** Executive-level analytics for business owners at `/credit-analytics`. Features: (1) **Credit Summary** - real-time balance, lifetime purchased/used, average daily usage, projected days remaining, low balance warnings, (2) **Usage by Category** - pie chart breakdown of credit consumption by action type with percentages, (3) **Daily Trends** - bar and line charts for credit usage and AI task completion over time, (4) **AI Task Analytics** - success rates, fast mode vs normal mode distribution, top AI agents by usage with progress bars, (5) **ROI Metrics** - estimated hours saved, labor cost savings at $50/hour rate, cost per hour saved, automation ROI percentage, top value-generating features, (6) **Transaction History** - complete ledger with debit/credit indicators and balance tracking. Supports 8 period presets (today, this week, last 7 days, last 30 days, this month, last month, this quarter, this year). RBAC-protected for org_owner and org_admin roles only.
+- **SubagentBanker:** AI Brain credit pre-authorization and ledger management system implementing subscriber-pays-all model.
+- **Advanced Credit Analytics Dashboard:** Executive-level analytics for business owners with credit summaries, usage breakdowns, trends, AI task analytics, ROI metrics, and transaction history.
 
 **System Design Choices:**
 - **Modularity:** 87 backend service modules and 220+ frontend routes.
@@ -80,8 +80,8 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Audit Logging:** Comprehensive logging with 90-day retention and archival.
 - **Security:** AES-256-GCM encryption, PBKDF2-SHA256, RBAC, per-org credential isolation, and expiry warnings.
 - **Unified Config Registry:** Single source of truth with Zod validation.
-- **AI/Automation Bypass Pattern:** Elevated session bypass for AI features and automation services using HMAC-signed elevation tokens for authenticated operations, with audit logging.
-- **ChatServerHub Architecture:** Unified gateway connecting chat rooms to AI Brain, notifications, tickets, and analytics, supporting various room types, WebSocket integration, and elevated access for bots and support roles.
+- **AI/Automation Bypass Pattern:** Elevated session bypass for AI features and automation services using HMAC-signed elevation tokens.
+- **ChatServerHub Architecture:** Unified gateway connecting chat rooms to AI Brain, notifications, tickets, and analytics.
 
 ### External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
