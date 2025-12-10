@@ -196,6 +196,7 @@ async function gatherOrgIntelligence(workspaceId: string, userId: string): Promi
   }
   
   try {
+    // Get unread notification count
     const [unread] = await db
       .select({ count: count() })
       .from(notifications)
@@ -204,14 +205,41 @@ async function gatherOrgIntelligence(workspaceId: string, userId: string): Promi
         eq(notifications.isRead, false)
       ));
     
+    // Get urgent/high priority notification count (LIVE data, no cache)
+    const [urgent] = await db
+      .select({ count: count() })
+      .from(notifications)
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.isRead, false),
+        sql`${notifications.priority} IN ('urgent', 'high')`
+      ));
+    
+    // Get category breakdown for unread notifications
+    const categoryBreakdown = await db
+      .select({
+        type: notifications.type,
+        count: count(),
+      })
+      .from(notifications)
+      .where(and(
+        eq(notifications.userId, userId),
+        eq(notifications.isRead, false)
+      ))
+      .groupBy(notifications.type);
+    
     notificationSummary = {
       unreadCount: unread?.count || 0,
-      urgentCount: 0,
-      categories: [],
+      urgentCount: urgent?.count || 0,
+      categories: categoryBreakdown.map(c => ({ type: c.type || 'general', count: c.count })),
     };
     
-    if (notificationSummary.unreadCount > 10) {
-      priorityInsights.push(`${notificationSummary.unreadCount} unread notifications`);
+    // Lower threshold - show notification summary more often
+    if (notificationSummary.unreadCount > 0) {
+      priorityInsights.push(`${notificationSummary.unreadCount} unread notification${notificationSummary.unreadCount !== 1 ? 's' : ''}`);
+    }
+    if (notificationSummary.urgentCount > 0) {
+      priorityInsights.unshift(`${notificationSummary.urgentCount} urgent notification${notificationSummary.urgentCount !== 1 ? 's' : ''} need attention`);
     }
   } catch {
   }

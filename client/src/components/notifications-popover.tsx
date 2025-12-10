@@ -27,6 +27,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
+import { useTrinityContext } from "@/hooks/use-trinity-context";
 import { 
   SEVERITY_CONFIG, 
   CATEGORY_CONFIG, 
@@ -75,6 +76,10 @@ interface MaintenanceAlert {
   scheduledEndTime: string;
   affectedServices: string[];
   isAcknowledged?: boolean;
+  // Guru mode quick fix action
+  quickFixCode?: string;
+  quickFixLabel?: string;
+  quickFixTargetId?: string;
 }
 
 interface Notification {
@@ -95,6 +100,10 @@ interface Notification {
     sourceName?: string;
     timestamp?: string;
     changeEventId?: string;
+    // Guru mode quick fix action
+    quickFixCode?: string;
+    quickFixLabel?: string;
+    quickFixTargetId?: string;
   };
 }
 
@@ -181,6 +190,10 @@ export function NotificationsPopover() {
   const { user } = useAuth();
   const userId = (user as any)?.id;
   const workspaceId = (user as any)?.activeWorkspaceId || (user as any)?.workspaceId;
+  
+  // Trinity context for Guru mode detection - enables push action buttons
+  const { context: trinityContext } = useTrinityContext(workspaceId);
+  const isGuruMode = trinityContext?.trinityMode === 'guru';
   
   // Connect to WebSocket for real-time notification updates
   // This syncs notifications in real-time and updates the cache directly
@@ -434,6 +447,29 @@ export function NotificationsPopover() {
       if (context?.previousData) {
         queryClient.setQueryData(["/api/notifications/combined"], context.previousData);
       }
+    },
+  });
+
+  // Guru mode: Execute quick fix action for platform issues
+  const quickFixMutation = useMutation({
+    mutationFn: async (params: { actionCode: string; targetId?: string; metadata?: Record<string, any> }) => {
+      const response = await apiRequest("POST", "/api/quick-fix/execute", {
+        actionCode: params.actionCode,
+        targetId: params.targetId,
+        metadata: params.metadata,
+        deviceType: isMobile ? 'mobile' : 'desktop',
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.success) {
+        // Refresh all notification data after fix
+        queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/trinity/context"] });
+      }
+    },
+    onError: (err) => {
+      console.error('[QuickFix] Error executing action:', err);
     },
   });
 
@@ -948,18 +984,41 @@ export function NotificationsPopover() {
                               </div>
                             )}
                           </div>
-                          {!alert.isAcknowledged && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 shrink-0 hover:bg-background/50"
-                              onClick={() => acknowledgeAlertMutation.mutate(alert.id)}
-                              disabled={acknowledgeAlertMutation.isPending}
-                              data-testid={`button-acknowledge-${alert.id}`}
-                            >
-                              <Check className="h-4 w-4" />
-                            </Button>
-                          )}
+                          <div className="flex flex-col gap-1 shrink-0">
+                            {/* Guru mode: Quick fix button for actionable alerts */}
+                            {isGuruMode && alert.quickFixCode && (
+                              <Button
+                                variant="default"
+                                size="sm"
+                                className="h-7 px-2 text-xs bg-primary hover:bg-primary/90"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  quickFixMutation.mutate({
+                                    actionCode: alert.quickFixCode!,
+                                    targetId: alert.quickFixTargetId || alert.id,
+                                    metadata: { alertId: alert.id, source: 'notification_popover' }
+                                  });
+                                }}
+                                disabled={quickFixMutation.isPending}
+                                data-testid={`button-quickfix-${alert.id}`}
+                              >
+                                <Zap className="h-3 w-3 mr-1" />
+                                {alert.quickFixLabel || 'Fix Now'}
+                              </Button>
+                            )}
+                            {!alert.isAcknowledged && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-8 w-8 hover:bg-background/50"
+                                onClick={() => acknowledgeAlertMutation.mutate(alert.id)}
+                                disabled={acknowledgeAlertMutation.isPending}
+                                data-testid={`button-acknowledge-${alert.id}`}
+                              >
+                                <Check className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );
