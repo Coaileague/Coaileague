@@ -409,6 +409,15 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
     containerRef.current.style.left = `${pos.left}px`;
   }, [isActive, mascotPosition, mascotSize, isMobile, bubbleDimensionsReady]);
   
+  // Debug: trace why bubble might not be visible
+  console.log('[FestiveBubble] Render check:', { 
+    isActive, 
+    hasThought: !!thought, 
+    thoughtId: thought?.id,
+    dims: bubbleDimensionsRef.current,
+    phase: phaseRef.current
+  });
+  
   if (!isActive || !thought) return null;
   
   return (

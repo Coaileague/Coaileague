@@ -356,6 +356,7 @@ function MascotRenderer() {
   
   useEffect(() => {
     const unsubscribe = thoughtManager.subscribe((thought) => {
+      console.log('[App] ThoughtManager delivered thought:', thought?.id, thought?.text?.slice(0, 30));
       setCurrentThought(thought);
     });
     thoughtManager.startRotation();
@@ -662,6 +663,12 @@ function MascotRenderer() {
       </div>
       
       {/* Dialogue bubble - uses festive version during any holiday season */}
+      {console.log('[App] Bubble decision:', { 
+        hasThought: !!currentThought, 
+        thoughtId: currentThought?.id,
+        holiday: holiday?.key,
+        shouldShowFestive: !!(currentThought && holiday && holiday.key !== 'default')
+      })}
       {currentThought && holiday && holiday.key !== 'default' ? (
         <FestiveDialogueBubble
           thought={currentThought}
