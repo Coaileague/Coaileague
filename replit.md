@@ -69,7 +69,7 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **AI Brain Workboard:** Central job queue system for AI orchestration, routing user requests to specialized agents, tracking task lifecycle, and managing Trinity credits.
 - **Data Migration Subagent (Enhanced):** Enterprise-grade AI agent for new org onboarding with a 5-step workflow.
 - **Gamification Activation Subagent:** Universal activation agent for gamification during org onboarding.
-- **Onboarding Orchestrator:** Coordinates parallel execution of DataMigrationAgent and GamificationActivationAgent during new org creation.
+- **Onboarding Orchestrator (Enhanced):** Coordinates parallel execution of DataMigrationAgent and GamificationActivationAgent during new org creation. Now includes workspace-isolated Trinity AI initialization with tier-based personas (onboarding_guide, business_buddy, support_partner, executive_advisor) and capabilities, Trinity welcome notifications, end-to-end testing workflows, and workflow diagnostics.
 - **SubagentBanker:** AI Brain credit pre-authorization and ledger management system implementing subscriber-pays-all model.
 - **Advanced Credit Analytics Dashboard:** Executive-level analytics for business owners with credit summaries, usage breakdowns, trends, AI task analytics, ROI metrics, and transaction history.
 

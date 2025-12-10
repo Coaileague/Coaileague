@@ -29290,6 +29290,89 @@ app.get("/api/onboarding/migration-capabilities", async (req, res) => {
   }
 });
 
+// ============================================================================
+// ONBOARDING WORKFLOW TESTING ENDPOINTS
+// ============================================================================
+
+// Test invitation workflow end-to-end (dry run by default)
+app.post("/api/onboarding/test-workflow", requireAuth, async (req, res) => {
+  try {
+    const user = req.user as any;
+    const { testWorkspaceId, testWorkspaceName, testOwnerName, dryRun = true } = req.body;
+    
+    const { onboardingOrchestrator } = await import('./services/ai-brain/subagents/onboardingOrchestrator');
+    const result = await onboardingOrchestrator.testInvitationWorkflow({
+      testUserId: user.id,
+      testWorkspaceId: testWorkspaceId || user.activeWorkspaceId,
+      testWorkspaceName: testWorkspaceName || 'Test Organization',
+      testOwnerName: testOwnerName || user.firstName || 'Test User',
+      dryRun,
+    });
+    
+    res.json(result);
+  } catch (error: any) {
+    console.error("[Test Workflow] Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get workflow diagnostics for a workspace
+app.get("/api/onboarding/diagnostics/:workspaceId", requireAuth, async (req, res) => {
+  try {
+    const { workspaceId } = req.params;
+    
+    const { onboardingOrchestrator } = await import('./services/ai-brain/subagents/onboardingOrchestrator');
+    const diagnostics = await onboardingOrchestrator.getWorkflowDiagnostics(workspaceId);
+    
+    res.json(diagnostics);
+  } catch (error: any) {
+    console.error("[Workflow Diagnostics] Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Initialize workspace-isolated Trinity (manual trigger)
+app.post("/api/onboarding/initialize-trinity", requireAuth, async (req, res) => {
+  try {
+    const user = req.user as any;
+    const { workspaceId, workspaceName, ownerName, subscriptionTier } = req.body;
+    
+    const { onboardingOrchestrator } = await import('./services/ai-brain/subagents/onboardingOrchestrator');
+    const result = await onboardingOrchestrator.initializeWorkspaceTrinity({
+      workspaceId: workspaceId || user.activeWorkspaceId,
+      workspaceName: workspaceName || 'My Organization',
+      ownerId: user.id,
+      ownerName: ownerName || user.firstName || 'User',
+      subscriptionTier: subscriptionTier || 'starter',
+    });
+    
+    res.json(result);
+  } catch (error: any) {
+    console.error("[Initialize Trinity] Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get onboarding status for current workspace
+app.get("/api/onboarding/status", requireAuth, async (req, res) => {
+  try {
+    const user = req.user as any;
+    const workspaceId = req.query.workspaceId as string || user.activeWorkspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: "Workspace ID required" });
+    }
+    
+    const { onboardingOrchestrator } = await import('./services/ai-brain/subagents/onboardingOrchestrator');
+    const status = await onboardingOrchestrator.getOnboardingStatus(workspaceId);
+    
+    res.json(status);
+  } catch (error: any) {
+    console.error("[Onboarding Status] Error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 app.get("/api/sales/proposals", requireAuth, async (req, res) => {
   try {
     const list = await db.select().from(salesProposals);
