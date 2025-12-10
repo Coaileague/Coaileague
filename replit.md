@@ -67,6 +67,7 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Cross-Bot Knowledge Sharing:** Shared insights system enabling AI components to learn from each other.
 - **Experience Feedback Loop:** Automation outcomes feed back into confidence models and agent learning.
 - **AI Brain Workboard:** Central job queue system for AI orchestration, routing user requests to specialized agents, tracking task lifecycle, and managing Trinity credits.
+- **AI Brain Knowledge Orchestration Service:** Advanced knowledge management and intelligent routing using Gemini 3 Pro. Features knowledge graph management, intelligent query routing to optimal model tiers, context enrichment, learning pipeline for continuous improvement, cross-domain reasoning chains, domain expert mapping, and integration with HelpAI Action Orchestrator for automated learning from all platform actions.
 - **Data Migration Subagent (Enhanced):** Enterprise-grade AI agent for new org onboarding with a 5-step workflow.
 - **Gamification Activation Subagent:** Universal activation agent for gamification during org onboarding.
 - **Onboarding Orchestrator (Enhanced):** Coordinates parallel execution of DataMigrationAgent and GamificationActivationAgent during new org creation. Now includes workspace-isolated Trinity AI initialization with tier-based personas (onboarding_guide, business_buddy, support_partner, executive_advisor) and capabilities, Trinity welcome notifications, end-to-end testing workflows, and workflow diagnostics.

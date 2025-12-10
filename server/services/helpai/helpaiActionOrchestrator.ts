@@ -19,6 +19,7 @@ import { db } from '../../db';
 import { notifications, platformUpdates, maintenanceAlerts, systemAuditLogs } from '@shared/schema';
 import { eq, and, desc, gte } from 'drizzle-orm';
 import { automationGovernanceService, type ActionContext, type ConfidenceFactors } from '../ai-brain/automationGovernanceService';
+import { knowledgeOrchestrationService } from '../ai-brain/knowledgeOrchestrationService';
 
 // ============================================================================
 // ACTION TYPES & INTERFACES
@@ -61,6 +62,13 @@ export interface ActionRequest {
   priority?: ActionPriority;
   requiresConfirmation?: boolean;
   isTestMode?: boolean;
+  metadata?: {
+    source?: string;
+    conversationId?: string;
+    sessionId?: string;
+    originalToolName?: string;
+    [key: string]: any;
+  };
 }
 
 export interface ActionResult {
@@ -1169,6 +1177,32 @@ class HelpaiActionOrchestrator {
         }
       } catch (postAiError) {
         console.warn('[HelpAI Orchestrator] Trinity post-action check failed:', postAiError);
+      }
+
+      // ============================================================================
+      // KNOWLEDGE ORCHESTRATION - Learning Pipeline Integration
+      // ============================================================================
+      try {
+        const executionTime = Date.now() - startTime;
+        const skipLearning = ['test', 'health_check'].includes(handler.category);
+        
+        if (!skipLearning) {
+          knowledgeOrchestrationService.recordLearning({
+            queryType: handler.category,
+            userIntent: handler.name,
+            selectedRoute: `action:${request.actionId}`,
+            wasSuccessful: result.success,
+            executionTimeMs: executionTime,
+            metadata: {
+              userId: request.userId,
+              workspaceId: request.workspaceId,
+              actionCategory: handler.category,
+              governanceScore: governanceDecision?.confidenceScore,
+            },
+          });
+        }
+      } catch (learningError) {
+        console.warn('[HelpAI Orchestrator] Knowledge learning failed:', learningError);
       }
 
       // Enhance result with Trinity decision if available

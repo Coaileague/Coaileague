@@ -32752,6 +32752,192 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     }
   });
 
+
+  // ============================================================================
+  // AI BRAIN KNOWLEDGE ORCHESTRATION
+  // ============================================================================
+
+  /**
+   * POST /api/ai-brain/knowledge/route-query
+   * Intelligent query routing with context enrichment
+   */
+  app.post("/api/ai-brain/knowledge/route-query", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { knowledgeOrchestrationService } = await import("./services/ai-brain/knowledgeOrchestrationService");
+      const { query, currentPage, recentActions } = req.body;
+
+      if (!query) {
+        return res.status(400).json({ success: false, error: "query required" });
+      }
+
+      const context = {
+        userId: req.userId!,
+        workspaceId: req.user?.activeWorkspaceId,
+        userRole: req.user?.platformRole || 'user',
+        currentPage,
+        recentActions,
+      };
+
+      const decision = await knowledgeOrchestrationService.routeQuery(query, context);
+      res.json({ success: true, data: decision });
+    } catch (error: any) {
+      console.error("Error routing query:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * GET /api/ai-brain/knowledge/diagnostics
+   * Get knowledge orchestration diagnostics
+   */
+  app.get("/api/ai-brain/knowledge/diagnostics", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { knowledgeOrchestrationService } = await import("./services/ai-brain/knowledgeOrchestrationService");
+      const diagnostics = knowledgeOrchestrationService.getDiagnostics();
+      res.json({ success: true, data: diagnostics });
+    } catch (error: any) {
+      console.error("Error getting knowledge diagnostics:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/ai-brain/knowledge/record-learning
+   * Record a learning entry from user interaction
+   */
+  app.post("/api/ai-brain/knowledge/record-learning", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { knowledgeOrchestrationService } = await import("./services/ai-brain/knowledgeOrchestrationService");
+      const { queryType, userIntent, selectedRoute, wasSuccessful, executionTimeMs, userFeedback } = req.body;
+
+      knowledgeOrchestrationService.recordLearning({
+        queryType,
+        userIntent,
+        selectedRoute,
+        wasSuccessful,
+        executionTimeMs,
+        userFeedback,
+        metadata: { userId: req.userId },
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error recording learning:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * GET /api/ai-brain/knowledge/insights/:queryType
+   * Get learning insights for a query type
+   */
+  app.get("/api/ai-brain/knowledge/insights/:queryType", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { knowledgeOrchestrationService } = await import("./services/ai-brain/knowledgeOrchestrationService");
+      const { queryType } = req.params;
+      const insights = knowledgeOrchestrationService.getLearningInsights(queryType);
+      res.json({ success: true, data: insights });
+    } catch (error: any) {
+      console.error("Error getting insights:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/ai-brain/knowledge/reasoning-chain
+   * Build a reasoning chain for complex queries
+   */
+  app.post("/api/ai-brain/knowledge/reasoning-chain", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { knowledgeOrchestrationService } = await import("./services/ai-brain/knowledgeOrchestrationService");
+      const { query, observations = [] } = req.body;
+
+      if (!query) {
+        return res.status(400).json({ success: false, error: "query required" });
+      }
+
+      const context = {
+        userId: req.userId!,
+        workspaceId: req.user?.activeWorkspaceId,
+        userRole: req.user?.platformRole || 'user',
+      };
+
+      const chain = knowledgeOrchestrationService.buildReasoningChain(query, context, observations);
+      res.json({ success: true, data: chain });
+    } catch (error: any) {
+      console.error("Error building reasoning chain:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+
+  /**
+   * POST /api/ai-brain/knowledge/test-orchestration
+   * Test the full AI Brain orchestration pipeline
+   */
+  app.post("/api/ai-brain/knowledge/test-orchestration", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { knowledgeOrchestrationService } = await import("./services/ai-brain/knowledgeOrchestrationService");
+      const { testQuery = "Show me employee schedules for next week" } = req.body;
+
+      const context = {
+        userId: req.userId!,
+        workspaceId: req.user?.activeWorkspaceId,
+        userRole: req.user?.platformRole || 'user',
+        currentPage: '/test',
+      };
+
+      const startTime = Date.now();
+
+      // Test 1: Query Routing
+      const routingResult = await knowledgeOrchestrationService.routeQuery(testQuery, context);
+
+      // Test 2: Reasoning Chain
+      const reasoningResult = await knowledgeOrchestrationService.buildReasoningChain(
+        testQuery,
+        context,
+        ['System is operational', 'Gemini 3 Pro connected']
+      );
+
+      // Test 3: Diagnostics
+      const diagnostics = knowledgeOrchestrationService.getDiagnostics();
+
+      const totalTime = Date.now() - startTime;
+
+      res.json({
+        success: true,
+        testResults: {
+          routing: {
+            targetModel: routingResult.targetModel,
+            preset: routingResult.preset,
+            confidence: routingResult.confidenceScore,
+            aiGenerated: routingResult.aiGenerated,
+            reasoning: routingResult.reasoning,
+          },
+          reasoning: {
+            stepsCount: reasoningResult.steps.length,
+            conclusion: reasoningResult.conclusion,
+            confidence: reasoningResult.confidence,
+            aiGenerated: reasoningResult.aiGenerated,
+            modelUsed: reasoningResult.modelUsed,
+            tokensUsed: reasoningResult.tokensUsed,
+          },
+          diagnostics: {
+            geminiEnabled: diagnostics.geminiEnabled,
+            knowledgeNodes: diagnostics.knowledgeNodeCount,
+            learningEntries: diagnostics.learningEntryCount,
+          },
+          performance: {
+            totalTimeMs: totalTime,
+          },
+        },
+      });
+    } catch (error: any) {
+      console.error("Error testing orchestration:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   /**
    * POST /api/ai-brain/workflow/search-and-fix
    * Search for suggestions for an issue type and execute workflow
