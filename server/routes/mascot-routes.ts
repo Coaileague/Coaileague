@@ -52,24 +52,15 @@ async function reportMascotError(
     // Log to console for immediate visibility
     console.error(`[Mascot AI Brain] Action failed: ${action}`, { error, context, errorId });
     
-    // Create support notification for human review
-    await db.insert(notifications).values({
-      userId: '0', // System notification (string ID)
-      type: 'system_alert',
-      title: `Mascot Action Failed: ${action}`,
-      message: `Error: ${error}\n\nContext: ${JSON.stringify(context || {}, null, 2)}`,
-      priority: 'high',
-      metadata: {
-        errorId,
-        action,
-        error,
-        context,
-        source: 'ai_brain_mascot',
-        requiresWorkflowApproval: true,
-        suggestedFix: 'Review mascot orchestration code and console commands',
-      },
-      isRead: false,
-      createdAt: new Date(),
+    // Log error to console instead of creating notification (userId '0' doesn't exist)
+    console.error(`[Mascot AI Brain] Error notification for support:`, {
+      errorId,
+      action,
+      error,
+      context,
+      source: 'ai_brain_mascot',
+      requiresWorkflowApproval: true,
+      suggestedFix: 'Review mascot orchestration code and console commands',
     });
     
     // Broadcast to support staff via WebSocket for real-time alert
@@ -759,9 +750,7 @@ router.get('/personalized-greeting', requireAuth, requireTrinityAccess, async (r
       // Get user info
       const [user] = await db.select({
         id: users.id,
-        username: users.username,
         email: users.email,
-        displayName: users.displayName,
         firstName: users.firstName,
         lastName: users.lastName,
         role: users.role

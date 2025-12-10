@@ -98,7 +98,35 @@ export const CREDIT_COSTS = {
   
   // General AI
   'ai_general': 3,                // Generic AI operation
+  
+  // Trinity Conversations (FREE - no credits charged)
+  'trinity_thought': 0,           // Trinity thought bubbles
+  'trinity_chat': 0,              // Trinity conversations
+  'trinity_insight': 0,           // Trinity insights
+  'mascot_ask': 0,                // Mascot ask endpoint
+  'mascot_advice': 0,             // Mascot business advice
+  'mascot_insight': 0,            // Mascot insights
+  'helpai_chat': 0,               // HelpAI conversations
 } as const;
+
+// ============================================================================
+// CREDIT-EXEMPT FEATURES
+// These features use AI tokens but don't charge workspace credits
+// Trinity conversations are free to encourage engagement and showcase value
+// ============================================================================
+export const CREDIT_EXEMPT_FEATURES = new Set([
+  // Trinity mascot features - FREE (tokens used, no credits charged)
+  'trinity_thought',
+  'trinity_chat', 
+  'trinity_insight',
+  'mascot_ask',
+  'mascot_advice',
+  'mascot_insight',
+  'helpai_chat',
+  // Guest mode features - FREE to showcase platform
+  'guest_demo',
+  'public_demo',
+]);
 
 // Monthly credit allocation by subscription tier
 export const TIER_CREDIT_ALLOCATIONS = {
@@ -226,13 +254,26 @@ export class CreditManager {
 
   /**
    * Check if workspace has enough credits for an operation
-   * Bypasses credit check for users with unlimited credits (support/owners)
+   * Bypasses credit check for:
+   * - Users with unlimited credits (support/owners)
+   * - Credit-exempt features (Trinity conversations)
    */
   async checkCredits(
     workspaceId: string,
     featureKey: keyof typeof CREDIT_COSTS,
     userId?: string
   ): Promise<CreditCheckResult> {
+    // Check if feature is credit-exempt (Trinity conversations are FREE)
+    if (CREDIT_EXEMPT_FEATURES.has(featureKey)) {
+      return {
+        hasEnoughCredits: true,
+        currentBalance: -1, // Sentinel: feature was exempt
+        required: 0,
+        shortfall: 0,
+        unlimitedCredits: false, // Not unlimited, just exempt
+      };
+    }
+    
     // Check if user has unlimited credits
     if (userId) {
       const hasUnlimited = await isUnlimitedCreditUser(userId, workspaceId);
@@ -263,7 +304,9 @@ export class CreditManager {
   /**
    * Deduct credits for an automation operation
    * This is the critical function called before every AI operation
-   * Bypasses deduction for users with unlimited credits (support/owners)
+   * Bypasses deduction for:
+   * - Users with unlimited credits (support/owners)
+   * - Credit-exempt features (Trinity conversations, guest demos)
    */
   async deductCredits(params: {
     workspaceId: string;
@@ -276,6 +319,16 @@ export class CreditManager {
     description?: string;
   }): Promise<CreditDeductionResult> {
     const { workspaceId, userId, featureKey, featureName, aiUsageEventId, relatedEntityType, relatedEntityId, description } = params;
+    
+    // Check if feature is credit-exempt (Trinity conversations are FREE)
+    if (CREDIT_EXEMPT_FEATURES.has(featureKey)) {
+      console.log(`[CreditManager] Feature "${featureKey}" is credit-exempt (Trinity conversations are FREE)`);
+      return {
+        success: true,
+        transactionId: null,
+        newBalance: -1, // Sentinel: feature was exempt, balance not queried
+      };
+    }
     
     // Check if user has unlimited credits - bypass deduction
     if (userId) {
