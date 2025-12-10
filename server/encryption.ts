@@ -227,8 +227,8 @@ export async function decryptFile(encryptedBuffer: Buffer, iv: string, keyId: st
 /**
  * Export key as base64 for storage (wrapped/encrypted in production)
  */
-export function exportKey(keyId: string): string {
-  const encKey = getEncryptionKey(keyId);
+export async function exportKey(keyId: string): Promise<string> {
+  const encKey = await getEncryptionKey(keyId);
   if (!encKey) {
     throw new Error(`Encryption key not found: ${keyId}`);
   }

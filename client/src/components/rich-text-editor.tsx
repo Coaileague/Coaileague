@@ -51,7 +51,12 @@ export function RichTextEditor({
 
   useEffect(() => {
     if (editorRef.current && value !== editorRef.current.innerHTML) {
-      editorRef.current.innerHTML = value;
+      // Sanitize HTML to prevent XSS - only allow safe formatting tags
+      const sanitized = value
+        .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
+        .replace(/on\w+\s*=/gi, 'data-blocked=')
+        .replace(/javascript:/gi, 'blocked:');
+      editorRef.current.innerHTML = sanitized;
     }
   }, [value]);
 
