@@ -16,7 +16,8 @@
  */
 
 import { GoogleGenerativeAI, GenerativeModel, SchemaType } from "@google/generative-ai";
-import { GEMINI_MODELS, ANTI_YAP_PRESETS, createConfiguredModel } from './providers/geminiClient';
+import { GEMINI_MODELS, ANTI_YAP_PRESETS, createConfiguredModel, GeminiModelTier } from './providers/geminiClient';
+import { modelRoutingEngine, RoutingContext as ModelRoutingContext, RoutingDecision as ModelRoutingDecision, recordModelResult } from './modelRoutingEngine';
 import { db } from '../../db';
 import { eq, and, desc, gte, sql } from 'drizzle-orm';
 
@@ -62,12 +63,15 @@ export interface QueryContext {
 
 export interface RoutingDecision {
   targetModel: string;
+  modelTier: GeminiModelTier;
   preset: keyof typeof ANTI_YAP_PRESETS;
   enrichedContext: string;
   suggestedTools: string[];
   confidenceScore: number;
   reasoning: string;
   aiGenerated: boolean;
+  contextBudget: number;
+  fallbackChain: GeminiModelTier[];
 }
 
 export interface LearningEntry {
@@ -355,14 +359,29 @@ Respond with JSON:
       const preset = this.mapModelToPreset(analysis.suggestedModel, analysis.complexity);
       const enrichedContext = await this.enrichContext(query, analysis.domain as KnowledgeDomain, context);
 
+      // Use ModelRoutingEngine for tier selection and fallback chain
+      const routingContext: ModelRoutingContext = {
+        domain: analysis.domain,
+        action: analysis.intent,
+        complexity: analysis.complexity === 'complex' ? 'critical' : analysis.complexity === 'moderate' ? 'high' : 'low',
+        toolsRequired: analysis.suggestedTools,
+        workspaceId: context.workspaceId,
+        userId: context.userId,
+      };
+
+      const engineDecision = modelRoutingEngine.route(routingContext);
+
       const decision: RoutingDecision = {
         targetModel,
+        modelTier: engineDecision.selectedTier,
         preset,
         enrichedContext,
         suggestedTools: analysis.suggestedTools || [],
         confidenceScore: analysis.confidence,
-        reasoning: analysis.reasoning,
+        reasoning: `AI Analysis: ${analysis.reasoning} | ${engineDecision.reason}`,
         aiGenerated: true,
+        contextBudget: engineDecision.contextBudget,
+        fallbackChain: engineDecision.fallbackChain,
       };
 
       // Cache successful routing
@@ -383,7 +402,7 @@ Respond with JSON:
   }
 
   /**
-   * Rule-based fallback routing
+   * Rule-based fallback routing - now integrates with ModelRoutingEngine
    */
   private ruleBasedRouting(
     query: string,
@@ -393,22 +412,35 @@ Respond with JSON:
     const intent = this.classifyIntent(query);
     const domain = this.identifyDomain(query, intent);
     const complexity = this.calculateComplexity(query, context);
-    const targetModel = this.selectModel(intent, complexity, domain);
-    const preset = this.selectPreset(intent, complexity);
     const suggestedTools = this.suggestTools(domain, intent);
     const confidence = this.calculateRoutingConfidence(intent, domain, complexity);
 
+    // Use ModelRoutingEngine for intelligent tier selection
+    const routingContext: ModelRoutingContext = {
+      domain,
+      action: intent,
+      complexity: complexity === 'complex' ? 'critical' : complexity === 'moderate' ? 'high' : 'low',
+      toolsRequired: suggestedTools,
+      workspaceId: context.workspaceId,
+      userId: context.userId,
+    };
+
+    const engineDecision = modelRoutingEngine.route(routingContext);
+
     const decision: RoutingDecision = {
-      targetModel,
-      preset,
+      targetModel: engineDecision.selectedModel,
+      modelTier: engineDecision.selectedTier,
+      preset: engineDecision.antiYapPreset,
       enrichedContext: `User Role: ${context.userRole}, Domain: ${domain}, Intent: ${intent}`,
       suggestedTools,
       confidenceScore: confidence,
-      reasoning: `Rule-based: Intent=${intent}, Domain=${domain}, Complexity=${complexity}`,
+      reasoning: `ModelRoutingEngine: ${engineDecision.reason}`,
       aiGenerated: false,
+      contextBudget: engineDecision.contextBudget,
+      fallbackChain: engineDecision.fallbackChain,
     };
 
-    console.log(`[KnowledgeOrchestration] Rule-based routing in ${Date.now() - startTime}ms`);
+    console.log(`[KnowledgeOrchestration] Rule-based routing via ModelRoutingEngine in ${Date.now() - startTime}ms`);
     return decision;
   }
 
