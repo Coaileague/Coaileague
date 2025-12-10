@@ -64,6 +64,7 @@ const DOMAIN_CREDIT_COSTS: Record<SubagentDomain, keyof typeof CREDIT_COSTS> = {
   expense: 'ai_general',
   pricing: 'ai_predictions',
   data_migration: 'ai_general',
+  scoring: 'ai_general',
 };
 
 // ============================================================================
@@ -75,7 +76,7 @@ export type SubagentDomain =
   | 'analytics' | 'gamification' | 'communication' | 'health' | 'testing'
   | 'deployment' | 'recovery' | 'orchestration' | 'security'
   | 'escalation' | 'automation' | 'lifecycle' | 'assist' | 'filesystem'
-  | 'workflow' | 'onboarding' | 'expense' | 'pricing' | 'data_migration';
+  | 'workflow' | 'onboarding' | 'expense' | 'pricing' | 'data_migration' | 'scoring';
 
 export type SubagentPhase = 'prepare' | 'execute' | 'validate' | 'escalate';
 export type SubagentStatus = 'idle' | 'preparing' | 'executing' | 'validating' | 'escalating' | 'completed' | 'failed' | 'derailed' | 'retrying';
@@ -812,7 +813,163 @@ const DEFAULT_SUBAGENTS: Omit<InsertAiSubagentDefinition, 'id' | 'createdAt' | '
     isActive: true,
     version: '1.0.0',
   },
+  {
+    name: 'ScoringAgent',
+    domain: 'scoring',
+    description: 'Trust scoring and graduated approval system. Calculates org-level trust scores from execution telemetry, manages auto-approval thresholds (99.9% accuracy grants auto-approval), coaches subagents on accuracy improvements, and reports graduation status. Uses Gemini 2.5 Pro for scoring analysis and pattern recognition.',
+    capabilities: [
+      'scoring.calculate_trust_score',
+      'scoring.check_graduation_status',
+      'scoring.grant_auto_approval',
+      'scoring.revoke_auto_approval',
+      'scoring.analyze_accuracy_trends',
+      'scoring.coach_subagent',
+      'scoring.generate_trust_report',
+      'scoring.evaluate_execution',
+      'scoring.bulk_score_update'
+    ],
+    requiredTools: [
+      'telemetry_analyzer',
+      'accuracy_calculator',
+      'trend_detector',
+      'coaching_engine',
+      'graduation_evaluator',
+      'confidence_aggregator'
+    ],
+    escalationPolicy: {
+      maxRetries: 1,
+      escalateOn: ['scoring_anomaly', 'graduation_revoked', 'accuracy_drop'],
+      alwaysNotify: true,
+      notifyRoles: ['root_admin', 'deputy_admin', 'support_manager', 'org_owner']
+    },
+    diagnosticWorkflow: {
+      diagnose: [
+        'analyze_execution_history',
+        'calculate_accuracy_metrics',
+        'identify_failure_patterns',
+        'check_confidence_trends'
+      ],
+      fix: [
+        'recalibrate_scoring_weights',
+        'apply_coaching_recommendations',
+        'adjust_threshold_for_domain'
+      ],
+      validate: [
+        'verify_scoring_consistency',
+        'confirm_graduation_eligibility',
+        'validate_accuracy_calculations'
+      ],
+      report: [
+        'generate_trust_dashboard',
+        'create_graduation_summary',
+        'publish_accuracy_report'
+      ]
+    },
+    knownPatterns: [
+      'accuracy_degradation',
+      'false_positive_spike',
+      'false_negative_spike',
+      'domain_weakness',
+      'graduation_threshold_breach',
+      'confidence_calibration_drift'
+    ],
+    fixStrategies: {
+      accuracy_degradation: 'identify_root_cause_and_retrain',
+      false_positive_spike: 'increase_validation_strictness',
+      false_negative_spike: 'relax_overly_strict_checks',
+      domain_weakness: 'coach_specific_subagent',
+      graduation_threshold_breach: 'revoke_and_notify',
+      confidence_calibration_drift: 'recalibrate_confidence_weights'
+    },
+    maxRetries: 1,
+    timeoutMs: 30000,
+    confidenceThreshold: 0.95,
+    requiresApproval: false,
+    allowedRoles: ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'org_owner', 'org_admin'],
+    bypassAuthFor: ['root_admin', 'deputy_admin', 'sysop', 'Bot'],
+    isActive: true,
+    version: '1.0.0',
+  },
 ];
+
+// ============================================================================
+// FAST MODE CONTEXT & GRADUATED APPROVAL SYSTEM
+// ============================================================================
+
+/**
+ * FastModeContext - Propagated through all subagent executions when Fast Mode is enabled
+ * All orchestrators, supervisors, and subagents must understand and respect this context
+ */
+export interface FastModeContext {
+  enabled: boolean;
+  tier: 'standard' | 'premium' | 'enterprise';
+  maxConcurrent: number;
+  slaTimeoutMs: number;
+  priorityBoost: number;
+  creditMultiplier: number;
+  parallelPhases: boolean; // Execute prepare/execute/validate phases in parallel where safe
+  progressReporting: boolean; // Enable real-time phase-level progress reporting
+  skipNonCriticalValidation: boolean; // Skip validations that aren't blocking for speed
+}
+
+/**
+ * GraduationStatus - Tracks org-level trust for auto-approval eligibility
+ */
+export interface GraduationStatus {
+  workspaceId: string;
+  trustScore: number; // 0-100, auto-approval at >= 99.9
+  totalExecutions: number;
+  successfulExecutions: number;
+  accuracyPercent: number;
+  isGraduated: boolean;
+  graduatedAt?: Date;
+  lastEvaluatedAt: Date;
+  autoApprovalDomains: SubagentDomain[]; // Domains where auto-approval is granted
+  pendingReviewDomains: SubagentDomain[]; // Domains still requiring manual approval
+}
+
+/**
+ * Default Fast Mode configuration by tier
+ */
+export const FAST_MODE_TIERS: Record<string, FastModeContext> = {
+  standard: {
+    enabled: true,
+    tier: 'standard',
+    maxConcurrent: 4,
+    slaTimeoutMs: 15000,
+    priorityBoost: 1.5,
+    creditMultiplier: 1.5,
+    parallelPhases: false,
+    progressReporting: true,
+    skipNonCriticalValidation: false,
+  },
+  premium: {
+    enabled: true,
+    tier: 'premium',
+    maxConcurrent: 8,
+    slaTimeoutMs: 10000,
+    priorityBoost: 2.0,
+    creditMultiplier: 2.0,
+    parallelPhases: true,
+    progressReporting: true,
+    skipNonCriticalValidation: true,
+  },
+  enterprise: {
+    enabled: true,
+    tier: 'enterprise',
+    maxConcurrent: 16,
+    slaTimeoutMs: 5000,
+    priorityBoost: 3.0,
+    creditMultiplier: 2.5,
+    parallelPhases: true,
+    progressReporting: true,
+    skipNonCriticalValidation: true,
+  },
+};
+
+/** Graduation threshold - org must achieve 99.9% accuracy for auto-approval */
+export const GRADUATION_THRESHOLD = 99.9;
+export const MINIMUM_EXECUTIONS_FOR_GRADUATION = 100;
 
 // ============================================================================
 // SUBAGENT SUPERVISOR CLASS
@@ -1317,6 +1474,372 @@ class SubagentSupervisor {
         popularDomains: []
       };
     }
+  }
+
+  // ============================================================================
+  // FAST MODE CONTEXT-AWARE EXECUTION
+  // ============================================================================
+
+  /**
+   * Execute with full Fast Mode context awareness
+   * All subagents receive and respect the FastModeContext configuration
+   */
+  async executeWithFastModeContext(
+    actions: Array<{
+      domain: SubagentDomain;
+      actionId: string;
+      parameters: Record<string, any>;
+      actionHandler: (params: Record<string, any>) => Promise<any>;
+    }>,
+    userId: string,
+    workspaceId: string,
+    platformRole: string,
+    fastModeContext: FastModeContext,
+    onProgress?: (phase: string, completed: number, total: number, message: string) => void
+  ): Promise<{
+    success: boolean;
+    results: SubagentExecutionResult[];
+    totalDurationMs: number;
+    parallelExecuted: number;
+    phaseReports: Array<{ phase: string; status: string; durationMs: number }>;
+    graduationImpact?: { newTrustScore: number; isGraduated: boolean };
+  }> {
+    const startTime = Date.now();
+    const phaseReports: Array<{ phase: string; status: string; durationMs: number }> = [];
+    
+    console.log(`[SubagentSupervisor] Fast Mode Context Execution:`, {
+      tier: fastModeContext.tier,
+      maxConcurrent: fastModeContext.maxConcurrent,
+      parallelPhases: fastModeContext.parallelPhases,
+      actionsCount: actions.length
+    });
+
+    // Phase 1: Pre-flight checks
+    const prefightStart = Date.now();
+    onProgress?.('preflight', 0, actions.length, 'Running pre-flight checks...');
+    
+    // Check graduation status for auto-approval optimization
+    const graduationStatus = await this.getGraduationStatus(workspaceId);
+    
+    phaseReports.push({
+      phase: 'preflight',
+      status: 'completed',
+      durationMs: Date.now() - prefightStart
+    });
+
+    // Phase 2: Parallel execution with FastModeContext
+    const executeStart = Date.now();
+    onProgress?.('execute', 0, actions.length, 'Executing actions in parallel...');
+
+    // Prepare actions with FastModeContext injected
+    const contextualizedActions = actions.map(action => ({
+      ...action,
+      parameters: {
+        ...action.parameters,
+        _fastModeContext: fastModeContext,
+        _isGraduated: graduationStatus.isGraduated,
+        _autoApprovalEnabled: graduationStatus.autoApprovalDomains.includes(action.domain),
+        _priorityBoost: fastModeContext.priorityBoost,
+        _creditMultiplier: fastModeContext.creditMultiplier
+      }
+    }));
+
+    // Execute with parallel batching based on tier
+    const results = await this.executeParallelBatch(
+      contextualizedActions,
+      userId,
+      workspaceId,
+      platformRole,
+      fastModeContext,
+      (completed, total) => {
+        onProgress?.('execute', completed, total, `Completed ${completed}/${total} actions`);
+      }
+    );
+
+    phaseReports.push({
+      phase: 'execute',
+      status: results.every(r => r.success) ? 'completed' : 'partial_failure',
+      durationMs: Date.now() - executeStart
+    });
+
+    // Phase 3: Validation (can be parallelized or skipped in Fast Mode)
+    const validateStart = Date.now();
+    if (!fastModeContext.skipNonCriticalValidation) {
+      onProgress?.('validate', 0, results.length, 'Running post-execution validation...');
+      // Validation happens within each action, so we just report
+    }
+    phaseReports.push({
+      phase: 'validate',
+      status: 'completed',
+      durationMs: Date.now() - validateStart
+    });
+
+    // Phase 4: Update graduation metrics
+    const metricsStart = Date.now();
+    onProgress?.('metrics', 0, 1, 'Updating trust metrics...');
+    
+    const successCount = results.filter(r => r.success).length;
+    const newGraduationStatus = await this.updateGraduationMetrics(
+      workspaceId,
+      results.length,
+      successCount
+    );
+
+    phaseReports.push({
+      phase: 'metrics',
+      status: 'completed',
+      durationMs: Date.now() - metricsStart
+    });
+
+    const totalDurationMs = Date.now() - startTime;
+    onProgress?.('complete', actions.length, actions.length, `All phases complete in ${totalDurationMs}ms`);
+
+    console.log(`[SubagentSupervisor] Fast Mode Context Execution Complete:`, {
+      totalDurationMs,
+      successRate: (successCount / results.length * 100).toFixed(1) + '%',
+      newTrustScore: newGraduationStatus.trustScore,
+      isGraduated: newGraduationStatus.isGraduated
+    });
+
+    return {
+      success: results.every(r => r.success),
+      results,
+      totalDurationMs,
+      parallelExecuted: results.length,
+      phaseReports,
+      graduationImpact: {
+        newTrustScore: newGraduationStatus.trustScore,
+        isGraduated: newGraduationStatus.isGraduated
+      }
+    };
+  }
+
+  /**
+   * Execute batch with FastModeContext tier-specific concurrency
+   */
+  private async executeParallelBatch(
+    actions: Array<{
+      domain: SubagentDomain;
+      actionId: string;
+      parameters: Record<string, any>;
+      actionHandler: (params: Record<string, any>) => Promise<any>;
+    }>,
+    userId: string,
+    workspaceId: string,
+    platformRole: string,
+    fastModeContext: FastModeContext,
+    onBatchProgress?: (completed: number, total: number) => void
+  ): Promise<SubagentExecutionResult[]> {
+    const results: SubagentExecutionResult[] = [];
+    const { maxConcurrent, slaTimeoutMs } = fastModeContext;
+
+    // Create batches based on tier concurrency
+    const batches: typeof actions[] = [];
+    for (let i = 0; i < actions.length; i += maxConcurrent) {
+      batches.push(actions.slice(i, i + maxConcurrent));
+    }
+
+    for (const batch of batches) {
+      const batchPromises = batch.map(async (action) => {
+        const timeoutPromise = new Promise<SubagentExecutionResult>((_, reject) => {
+          setTimeout(() => reject(new Error(`SLA timeout (${slaTimeoutMs}ms)`)), slaTimeoutMs);
+        });
+
+        const executionPromise = this.executeAction(
+          action.domain,
+          action.actionId,
+          action.parameters,
+          userId,
+          workspaceId,
+          platformRole,
+          action.actionHandler
+        );
+
+        try {
+          return await Promise.race([executionPromise, timeoutPromise]);
+        } catch (error: any) {
+          return {
+            success: false,
+            phase: 'execute' as const,
+            status: 'failed' as const,
+            error: { code: 'sla_timeout', message: error.message },
+            durationMs: slaTimeoutMs,
+            confidenceScore: 0
+          };
+        }
+      });
+
+      const batchResults = await Promise.all(batchPromises);
+      results.push(...batchResults);
+      onBatchProgress?.(results.length, actions.length);
+    }
+
+    return results;
+  }
+
+  // ============================================================================
+  // GRADUATED APPROVAL SYSTEM (99.9% Accuracy Auto-Approval)
+  // ============================================================================
+
+  /**
+   * Get graduation status for a workspace
+   * Determines if the org has earned auto-approval privileges
+   */
+  async getGraduationStatus(workspaceId: string): Promise<GraduationStatus> {
+    try {
+      // Query execution history from telemetry
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      
+      const telemetryRecords = await db.select()
+        .from(subagentTelemetry)
+        .where(and(
+          eq(subagentTelemetry.workspaceId, workspaceId),
+          gte(subagentTelemetry.startedAt, thirtyDaysAgo)
+        ))
+        .limit(1000);
+
+      const totalExecutions = telemetryRecords.length;
+      const successfulExecutions = telemetryRecords.filter(t => t.status === 'completed').length;
+      const accuracyPercent = totalExecutions > 0 
+        ? (successfulExecutions / totalExecutions) * 100 
+        : 0;
+
+      // Calculate trust score (weighted by domain criticality)
+      const domainWeights: Record<string, number> = {
+        payroll: 1.5, invoicing: 1.5, compliance: 1.3,
+        scheduling: 1.0, analytics: 1.0, notifications: 0.8
+      };
+
+      let weightedSuccess = 0;
+      let totalWeight = 0;
+
+      for (const record of telemetryRecords) {
+        const weight = domainWeights[record.domain] || 1.0;
+        totalWeight += weight;
+        if (record.status === 'completed') {
+          weightedSuccess += weight;
+        }
+      }
+
+      const trustScore = totalWeight > 0 ? (weightedSuccess / totalWeight) * 100 : 0;
+      const isGraduated = trustScore >= GRADUATION_THRESHOLD && 
+                          totalExecutions >= MINIMUM_EXECUTIONS_FOR_GRADUATION;
+
+      // Determine which domains qualify for auto-approval
+      const domainStats = new Map<string, { success: number; total: number }>();
+      for (const record of telemetryRecords) {
+        const stats = domainStats.get(record.domain) || { success: 0, total: 0 };
+        stats.total++;
+        if (record.status === 'completed') stats.success++;
+        domainStats.set(record.domain, stats);
+      }
+
+      const autoApprovalDomains: SubagentDomain[] = [];
+      const pendingReviewDomains: SubagentDomain[] = [];
+
+      for (const [domain, stats] of domainStats.entries()) {
+        const domainAccuracy = (stats.success / stats.total) * 100;
+        if (domainAccuracy >= GRADUATION_THRESHOLD && stats.total >= 10) {
+          autoApprovalDomains.push(domain as SubagentDomain);
+        } else {
+          pendingReviewDomains.push(domain as SubagentDomain);
+        }
+      }
+
+      return {
+        workspaceId,
+        trustScore: Math.round(trustScore * 100) / 100,
+        totalExecutions,
+        successfulExecutions,
+        accuracyPercent: Math.round(accuracyPercent * 100) / 100,
+        isGraduated,
+        graduatedAt: isGraduated ? new Date() : undefined,
+        lastEvaluatedAt: new Date(),
+        autoApprovalDomains,
+        pendingReviewDomains
+      };
+    } catch (error) {
+      console.error('[SubagentSupervisor] Failed to get graduation status:', error);
+      return {
+        workspaceId,
+        trustScore: 0,
+        totalExecutions: 0,
+        successfulExecutions: 0,
+        accuracyPercent: 0,
+        isGraduated: false,
+        lastEvaluatedAt: new Date(),
+        autoApprovalDomains: [],
+        pendingReviewDomains: []
+      };
+    }
+  }
+
+  /**
+   * Update graduation metrics after execution batch
+   */
+  private async updateGraduationMetrics(
+    workspaceId: string,
+    executionsAdded: number,
+    successesAdded: number
+  ): Promise<GraduationStatus> {
+    // Re-evaluate graduation status with new data
+    const status = await this.getGraduationStatus(workspaceId);
+
+    // Publish graduation update if newly graduated
+    if (status.isGraduated && status.trustScore >= GRADUATION_THRESHOLD) {
+      publishPlatformUpdate({
+        type: 'graduation_achieved',
+        workspaceId,
+        trustScore: status.trustScore,
+        message: `Org has achieved ${status.trustScore.toFixed(1)}% trust score - auto-approval enabled!`
+      });
+    }
+
+    return status;
+  }
+
+  /**
+   * Check if an action can be auto-approved based on graduation status
+   */
+  async canAutoApprove(
+    workspaceId: string,
+    domain: SubagentDomain,
+    actionId: string
+  ): Promise<{
+    canAutoApprove: boolean;
+    reason: string;
+    trustScore: number;
+  }> {
+    const status = await this.getGraduationStatus(workspaceId);
+
+    if (!status.isGraduated) {
+      return {
+        canAutoApprove: false,
+        reason: `Trust score (${status.trustScore.toFixed(1)}%) below graduation threshold (${GRADUATION_THRESHOLD}%)`,
+        trustScore: status.trustScore
+      };
+    }
+
+    if (!status.autoApprovalDomains.includes(domain)) {
+      return {
+        canAutoApprove: false,
+        reason: `Domain '${domain}' not yet graduated (needs ${GRADUATION_THRESHOLD}% accuracy with 10+ executions)`,
+        trustScore: status.trustScore
+      };
+    }
+
+    return {
+      canAutoApprove: true,
+      reason: `Auto-approved: domain '${domain}' graduated with ${status.trustScore.toFixed(1)}% trust score`,
+      trustScore: status.trustScore
+    };
+  }
+
+  /**
+   * Get Fast Mode context by tier
+   */
+  getFastModeContext(tier: 'standard' | 'premium' | 'enterprise' = 'standard'): FastModeContext {
+    return FAST_MODE_TIERS[tier] || FAST_MODE_TIERS.standard;
   }
 
   // ============================================================================

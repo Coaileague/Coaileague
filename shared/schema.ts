@@ -16855,6 +16855,7 @@ export const subagentDomainEnum = pgEnum('subagent_domain', [
   'expense',         // Expense management: receipt OCR, categorization
   'pricing',         // Dynamic pricing: analysis, competitiveness, simulations
   'data_migration',  // Data migration: org onboarding, bulk import, hierarchy assignment
+  'scoring',         // Trust scoring: graduated approval system, accuracy tracking, auto-approval
 ]);
 
 // Subagent execution status
