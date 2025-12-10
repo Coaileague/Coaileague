@@ -32,43 +32,27 @@ const DEFAULT_MINUTES_SAVED_PER_PAYROLL = 40; // 45min manual - 5min AI (from co
 
 /**
  * Get workspace-specific admin hourly rate for cost avoidance calculations
+ * Uses default rate since workspace config is not stored in database
  */
-async function getWorkspaceAdminHourlyRate(workspaceId: string): Promise<number | null> {
-  try {
-    const workspace = await db.query.workspaces.findFirst({
-      where: eq(workspaces.id, workspaceId),
-    });
-    
-    if (workspace?.config && typeof workspace.config === 'object') {
-      const config = workspace.config as any;
-      if (config.adminHourlyRate && typeof config.adminHourlyRate === 'number') {
-        return config.adminHourlyRate;
-      }
-    }
-    return null;
-  } catch {
-    return null;
-  }
+function getWorkspaceAdminHourlyRate(_workspaceId: string): number {
+  // Return default rate - workspace-specific rates would require schema extension
+  return DEFAULT_ADMIN_HOURLY_RATE;
 }
 
 /**
  * Set workspace admin hourly rate for cost avoidance calculations
+ * Note: Currently uses default rate - workspace-specific rates require schema extension
  */
 export async function setWorkspaceAdminHourlyRate(
-  workspaceId: string,
+  _workspaceId: string,
   hourlyRate: number
 ): Promise<void> {
   if (hourlyRate <= 0 || hourlyRate > 500) {
     throw new Error('Hourly rate must be between $1 and $500');
   }
   
-  await db.update(workspaces)
-    .set({
-      config: {
-        adminHourlyRate: hourlyRate,
-      },
-    })
-    .where(eq(workspaces.id, workspaceId));
+  // TODO: Add adminHourlyRate column to workspaces table to enable per-workspace rates
+  console.log(`[AutomationMetrics] Workspace rate configuration not yet supported. Using default: $${DEFAULT_ADMIN_HOURLY_RATE}/hr`);
 }
 
 interface AutomationMetrics {
