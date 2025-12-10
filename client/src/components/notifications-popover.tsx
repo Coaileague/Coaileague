@@ -520,23 +520,14 @@ export function NotificationsPopover() {
         </div>
       </div>
 
-      <div 
-        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y"
-        style={{ 
-          height: isMobile ? 'calc(85vh - 180px)' : 'min(65vh, 400px)',
-          WebkitOverflowScrolling: 'touch',
-        }}
-        ref={scrollRef}
-      >
-        <div className="overscroll-contain">
-        {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
-          </div>
-        ) : (
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b">
-              <TabsList className="grid w-full grid-cols-3 h-12 p-1.5 bg-transparent gap-1">
+      {isLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+        </div>
+      ) : (
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0">
+          <div className="shrink-0 bg-background border-b">
+            <TabsList className="grid w-full grid-cols-3 h-12 p-1.5 bg-transparent gap-1">
                 <TabsTrigger 
                   value="updates" 
                   className="text-xs font-medium relative data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-sm rounded-md transition-all" 
@@ -573,10 +564,19 @@ export function NotificationsPopover() {
                     </span>
                   )}
                 </TabsTrigger>
-              </TabsList>
-            </div>
+            </TabsList>
+          </div>
 
-            <TabsContent value="updates" className="mt-0 focus-visible:outline-none">
+          <div 
+            className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden"
+            style={{ 
+              height: isMobile ? 'calc(85vh - 240px)' : 'min(50vh, 340px)',
+              WebkitOverflowScrolling: 'touch',
+              overscrollBehavior: 'contain',
+            }}
+            ref={scrollRef}
+          >
+            <TabsContent value="updates" className="mt-0 focus-visible:outline-none" forceMount={activeTab === 'updates' ? true : undefined}>
               {unviewedUpdates.length > 0 && (
                 <div className="px-4 py-3 flex items-center justify-between border-b bg-muted/30">
                   <div className="flex items-center gap-3">
@@ -762,7 +762,7 @@ export function NotificationsPopover() {
                               )}
                             </div>
                             <div 
-                              className="text-sm text-muted-foreground leading-relaxed mb-2 max-h-20 overflow-y-auto overscroll-contain"
+                              className="text-sm text-muted-foreground leading-relaxed mb-2"
                               data-testid={`text-notification-message-${notification.id}`}
                             >
                               {notification.metadata?.endUserSummary || notification.message || 'You have a new notification.'}
@@ -1034,10 +1034,9 @@ export function NotificationsPopover() {
                 </div>
               )}
             </TabsContent>
-          </Tabs>
-        )}
-        </div>
-      </div>
+          </div>
+        </Tabs>
+      )}
 
       <div className="border-t bg-muted/20 shrink-0">
         <div className="p-3">
