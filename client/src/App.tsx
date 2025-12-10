@@ -1315,7 +1315,7 @@ export default function App() {
                         </ResponsiveAppFrame>
                         {/* Seasonal effects layer - snowfall, ornaments, etc. */}
                         <SeasonalEffectsLayer />
-                        {/* Floating Setup Guide - RBAC-aware onboarding panel (positioned bottom-right) */}
+                        {/* Floating Setup Guide - Stripe-style universal widget (positioned bottom-right) */}
                         <div className="fixed bottom-6 right-6 z-[70]">
                           <SetupGuidePanel />
                         </div>

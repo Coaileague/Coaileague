@@ -1,8 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Progress } from "@/components/ui/progress";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   Accordion,
   AccordionContent,
@@ -23,13 +31,17 @@ import {
   Calendar,
   Shield,
   Zap,
-  ChevronDown,
+  Link2,
+  Rocket,
+  Briefcase,
+  Loader2,
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useTrinityContext } from "@/hooks/use-trinity-context";
 import { Link } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
 
 interface SetupTask {
   id: string;
@@ -65,6 +77,9 @@ const sectionIcons = {
   scheduling: Calendar,
   compliance: Shield,
   automation: Zap,
+  integrations: Link2,
+  launch: Rocket,
+  payroll: Briefcase,
 } as const;
 
 function getIconForSection(iconKey: keyof typeof sectionIcons) {
@@ -79,11 +94,12 @@ interface SetupGuidePanelProps {
 
 export function SetupGuidePanel({
   className,
-  defaultExpanded = true,
+  defaultExpanded = false,
   onClose,
 }: SetupGuidePanelProps) {
-  const [isMinimized, setIsMinimized] = useState(!defaultExpanded);
+  const [isOpen, setIsOpen] = useState(defaultExpanded);
   const [expandedSections, setExpandedSections] = useState<string[]>([]);
+  const [completingTaskId, setCompletingTaskId] = useState<string | null>(null);
   const { user } = useAuth();
   const workspaceId = (user as any)?.activeWorkspaceId || (user as any)?.workspaceId;
   const { context: trinityContext } = useTrinityContext(workspaceId);
@@ -94,8 +110,18 @@ export function SetupGuidePanel({
     staleTime: 30000,
   });
 
+  useEffect(() => {
+    if (guideData?.sections && expandedSections.length === 0) {
+      const firstIncomplete = guideData.sections.find(s => s.tasks.some(t => !t.isCompleted));
+      if (firstIncomplete) {
+        setExpandedSections([firstIncomplete.id]);
+      }
+    }
+  }, [guideData?.sections]);
+
   const completeTaskMutation = useMutation({
     mutationFn: async (taskId: string) => {
+      setCompletingTaskId(taskId);
       const response = await apiRequest("POST", `/api/onboarding/complete-task/${taskId}`);
       return response.json();
     },
@@ -103,23 +129,13 @@ export function SetupGuidePanel({
       queryClient.invalidateQueries({ queryKey: ["/api/onboarding/setup-guide"] });
       queryClient.invalidateQueries({ queryKey: ["/api/trinity/context"] });
     },
+    onSettled: () => {
+      setCompletingTaskId(null);
+    },
   });
 
-  if (isLoading) {
-    return (
-      <Card className={cn("w-80 shadow-lg", className)} data-testid="setup-guide-loading">
-        <CardHeader className="py-3 px-4">
-          <div className="h-5 w-24 bg-muted animate-pulse rounded" />
-        </CardHeader>
-        <CardContent className="py-2 px-4">
-          <div className="space-y-2">
-            {[1, 2, 3].map((i) => (
-              <div key={i} className="h-8 bg-muted animate-pulse rounded" />
-            ))}
-          </div>
-        </CardContent>
-      </Card>
-    );
+  if (isLoading && !guideData) {
+    return null;
   }
 
   if (!guideData || guideData.completionPercent >= 100) {
@@ -134,88 +150,47 @@ export function SetupGuidePanel({
     return null;
   }
 
-  if (isMinimized) {
-    return (
-      <Card
-        className={cn(
-          "w-80 shadow-lg cursor-pointer hover-elevate transition-all",
-          className
-        )}
-        onClick={() => setIsMinimized(false)}
-        data-testid="setup-guide-minimized"
-      >
-        <CardHeader className="py-3 px-4 flex flex-row items-center justify-between">
-          <div className="flex items-center gap-2">
-            <CardTitle className="text-sm font-medium">Setup guide</CardTitle>
-            <Badge variant="secondary" className="text-xs">
-              {guideData.completedTasks}/{guideData.totalTasks}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6"
-              onClick={(e) => {
-                e.stopPropagation();
-                setIsMinimized(false);
-              }}
-              data-testid="button-expand-guide"
-            >
-              <Maximize2 className="h-3.5 w-3.5" />
-            </Button>
-            {onClose && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onClose();
-                }}
-                data-testid="button-close-guide"
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-      </Card>
-    );
-  }
-
-  return (
-    <Card
-      className={cn("w-80 shadow-lg max-h-[70vh] flex flex-col", className)}
-      data-testid="setup-guide-panel"
-    >
-      <CardHeader className="py-3 px-4 flex flex-row items-center justify-between border-b shrink-0">
-        <CardTitle className="text-sm font-medium">Setup guide</CardTitle>
+  const panelContent = (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
+        <span className="text-sm font-semibold">Setup guide</span>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
             size="icon"
-            className="h-6 w-6"
-            onClick={() => setIsMinimized(true)}
+            className="h-7 w-7"
+            onClick={() => setIsOpen(false)}
             data-testid="button-minimize-guide"
           >
-            <Minimize2 className="h-3.5 w-3.5" />
+            <Minimize2 className="h-4 w-4" />
           </Button>
           {onClose && (
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6"
+              className="h-7 w-7"
               onClick={onClose}
               data-testid="button-close-guide"
             >
-              <X className="h-3.5 w-3.5" />
+              <X className="h-4 w-4" />
             </Button>
           )}
         </div>
-      </CardHeader>
+      </div>
 
-      <CardContent className="py-0 px-0 overflow-y-auto flex-1">
+      <div className="px-4 py-3 border-b shrink-0">
+        <Progress value={guideData.completionPercent} className="h-1.5" />
+        <div className="flex items-center justify-between mt-2">
+          <span className="text-xs text-muted-foreground">
+            {guideData.completedTasks} of {guideData.totalTasks} tasks complete
+          </span>
+          <span className="text-xs font-medium text-primary">
+            {guideData.completionPercent}%
+          </span>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto">
         {trinityContext?.trinityMode === "guru" && guideData.trinityGreeting && (
           <div className="px-4 py-2 bg-primary/5 border-b text-xs text-muted-foreground flex items-start gap-2">
             <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
@@ -250,21 +225,17 @@ export function SetupGuidePanel({
                   data-testid={`trigger-section-${section.id}`}
                 >
                   <div className="flex items-center gap-3 flex-1">
-                    <SectionIcon className={cn(
-                      "h-4 w-4 shrink-0",
-                      isFullyComplete ? "text-green-500" : "text-muted-foreground"
-                    )} />
+                    {isFullyComplete ? (
+                      <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                    ) : (
+                      <SectionIcon className="h-4 w-4 text-muted-foreground shrink-0" />
+                    )}
                     <span className={cn(
                       "font-medium text-left",
                       isFullyComplete && "line-through"
                     )}>
                       {section.title}
                     </span>
-                    {!isFullyComplete && (
-                      <Badge variant="secondary" className="ml-auto mr-2 text-[10px] px-1.5 py-0">
-                        {completedCount}/{totalCount}
-                      </Badge>
-                    )}
                   </div>
                 </AccordionTrigger>
 
@@ -276,13 +247,13 @@ export function SetupGuidePanel({
                     </div>
                   )}
 
-                  <div className="space-y-0.5">
+                  <div className="space-y-0.5 pb-2">
                     {section.tasks.map((task) => (
                       <TaskItem
                         key={task.id}
                         task={task}
                         onComplete={() => completeTaskMutation.mutate(task.id)}
-                        isCompleting={completeTaskMutation.isPending}
+                        isCompleting={completingTaskId === task.id}
                       />
                     ))}
                   </div>
@@ -291,8 +262,76 @@ export function SetupGuidePanel({
             );
           })}
         </Accordion>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
+  );
+
+  return (
+    <>
+      <div className="hidden md:block">
+        <AnimatePresence mode="wait">
+          {isOpen ? (
+            <motion.div
+              key="panel"
+              initial={{ opacity: 0, y: 20, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.95 }}
+              transition={{ duration: 0.2 }}
+            >
+              <Card
+                className={cn("w-80 shadow-lg max-h-[70vh] flex flex-col overflow-hidden", className)}
+                data-testid="setup-guide-panel"
+              >
+                {panelContent}
+              </Card>
+            </motion.div>
+          ) : (
+            <motion.div
+              key="button"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              transition={{ duration: 0.15 }}
+            >
+              <Button
+                onClick={() => setIsOpen(true)}
+                className="rounded-full h-11 px-4 gap-2 shadow-lg"
+                data-testid="button-open-setup-guide"
+              >
+                <Settings className="w-4 h-4" />
+                <span className="font-medium">Setup guide</span>
+                <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground text-xs px-1.5">
+                  {guideData.completionPercent}%
+                </Badge>
+              </Button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <div className="md:hidden">
+        <Sheet open={isOpen} onOpenChange={setIsOpen}>
+          <SheetTrigger asChild>
+            <Button
+              className="rounded-full h-11 px-4 gap-2 shadow-lg"
+              data-testid="button-open-setup-guide-mobile"
+            >
+              <Settings className="w-4 h-4" />
+              <span className="font-medium">Setup</span>
+              <Badge variant="secondary" className="bg-primary-foreground/20 text-primary-foreground text-xs px-1.5">
+                {guideData.completionPercent}%
+              </Badge>
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="h-[85vh] p-0 rounded-t-xl">
+            <SheetHeader className="sr-only">
+              <SheetTitle>Setup Guide</SheetTitle>
+            </SheetHeader>
+            {panelContent}
+          </SheetContent>
+        </Sheet>
+      </div>
+    </>
   );
 }
 
@@ -308,16 +347,24 @@ function TaskItem({
   const content = (
     <div
       className={cn(
-        "flex items-center gap-3 px-4 py-2 text-sm hover:bg-muted/30 transition-colors cursor-pointer",
+        "flex items-center gap-3 px-4 py-2.5 text-sm hover:bg-muted/30 transition-colors cursor-pointer",
         task.isCompleted && "opacity-60"
       )}
-      onClick={() => !task.isCompleted && !isCompleting && onComplete()}
+      onClick={(e) => {
+        if (task.isCompleted || isCompleting) return;
+        if (!task.href) {
+          e.preventDefault();
+          onComplete();
+        }
+      }}
       data-testid={`task-item-${task.id}`}
     >
-      {task.isCompleted ? (
-        <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+      {isCompleting ? (
+        <Loader2 className="h-4 w-4 text-primary animate-spin shrink-0" />
+      ) : task.isCompleted ? (
+        <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
       ) : (
-        <Circle className="h-4 w-4 text-muted-foreground shrink-0" />
+        <Circle className="h-4 w-4 text-muted-foreground/40 shrink-0" />
       )}
       <span
         className={cn(
