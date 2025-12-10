@@ -5936,6 +5936,582 @@ Provide your analysis in the following format:
     });
 
     console.log('[AI Brain Master Orchestrator] Registered 10 architect-grade execution actions');
+
+    // ============================================================================
+    // GAMIFICATION DOMAIN ACTIONS
+    // ============================================================================
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'gamification.award_points',
+      name: 'Award Points',
+      category: 'gamification',
+      description: 'Award points to an employee for achievements, activities, or manual recognition',
+      requiredRoles: ['workspace_admin', 'manager', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const payload = request.payload || {};
+        const { employeeId, points, reason, transactionType } = payload;
+        
+        // Validate workspace context
+        if (!request.workspaceId) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Workspace context required for gamification actions',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+        
+        if (!employeeId || points === undefined || points === null) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Missing required parameters: employeeId, points',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+        
+        // Validate points is a valid number
+        const pointsNum = parseInt(String(points), 10);
+        if (isNaN(pointsNum) || pointsNum <= 0) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Points must be a positive integer',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+        
+        try {
+          const { gamificationService } = await import('../gamification/gamificationService');
+          const result = await gamificationService.awardPoints({
+            workspaceId: request.workspaceId,
+            employeeId,
+            points: pointsNum,
+            transactionType: transactionType || 'manual_award',
+            description: reason || 'Manual points award via Trinity',
+            awardedBy: request.userId,
+          });
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            data: result,
+            message: `Awarded ${pointsNum} points to employee. New total: ${result.newTotal}${result.levelUp ? ` (Level Up to ${result.newLevel}!)` : ''}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Failed to award points: ${error.message}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'gamification.get_leaderboard',
+      name: 'Get Leaderboard',
+      category: 'gamification',
+      description: 'Retrieve the gamification leaderboard for a workspace',
+      requiredRoles: ['employee', 'manager', 'workspace_admin', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const payload = request.payload || {};
+        const { period, limit } = payload;
+        
+        try {
+          const { gamificationService } = await import('../gamification/gamificationService');
+          const leaderboard = await gamificationService.getLeaderboard(
+            request.workspaceId || '',
+            period || 'all_time',
+            limit || 10
+          );
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            data: { leaderboard, period: period || 'all_time', count: leaderboard.length },
+            message: `Retrieved ${leaderboard.length} entries for ${period || 'all_time'} leaderboard`,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Failed to get leaderboard: ${error.message}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'gamification.list_achievements',
+      name: 'List Achievements',
+      category: 'gamification',
+      description: 'List all available achievements in the workspace',
+      requiredRoles: ['employee', 'manager', 'workspace_admin', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        
+        try {
+          const { gamificationService } = await import('../gamification/gamificationService');
+          const achievements = await gamificationService.getWorkspaceAchievements(request.workspaceId || '');
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            data: { achievements, count: achievements.length },
+            message: `Found ${achievements.length} achievements in workspace`,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Failed to list achievements: ${error.message}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'gamification.get_engagement_stats',
+      name: 'Get Engagement Stats',
+      category: 'gamification',
+      description: 'Get gamification engagement statistics for the workspace',
+      requiredRoles: ['manager', 'workspace_admin', 'admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        
+        try {
+          const { gamificationService } = await import('../gamification/gamificationService');
+          const [leaderboardAll, leaderboardWeek, leaderboardMonth, achievements] = await Promise.all([
+            gamificationService.getLeaderboard(request.workspaceId || '', 'all_time', 100),
+            gamificationService.getLeaderboard(request.workspaceId || '', 'weekly', 100),
+            gamificationService.getLeaderboard(request.workspaceId || '', 'monthly', 100),
+            gamificationService.getWorkspaceAchievements(request.workspaceId || ''),
+          ]);
+          
+          const stats = {
+            totalActiveParticipants: leaderboardAll.length,
+            weeklyActiveParticipants: leaderboardWeek.length,
+            monthlyActiveParticipants: leaderboardMonth.length,
+            totalAchievements: achievements.length,
+            topPerformers: leaderboardAll.slice(0, 5),
+            weeklyTopPerformers: leaderboardWeek.slice(0, 5),
+          };
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            data: stats,
+            message: `Engagement stats: ${stats.totalActiveParticipants} active participants, ${stats.totalAchievements} achievements available`,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Failed to get engagement stats: ${error.message}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered 4 gamification domain actions');
+
+    // ============================================================================
+    // DEPLOYMENT DOMAIN ACTIONS
+    // ============================================================================
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'deployment.get_status',
+      name: 'Get Deployment Status',
+      category: 'automation',
+      description: 'Get current deployment status and environment info',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        
+        try {
+          const status = {
+            environment: process.env.NODE_ENV || 'development',
+            replitDeployment: !!process.env.REPLIT_DEPLOYMENT,
+            version: process.env.npm_package_version || '1.0.0',
+            uptime: process.uptime(),
+            nodeVersion: process.version,
+            memoryUsage: process.memoryUsage(),
+            lastDeployAt: process.env.REPLIT_DEPLOYMENT ? new Date().toISOString() : null,
+          };
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            data: status,
+            message: `Deployment status: ${status.environment} environment, uptime ${Math.floor(status.uptime / 60)} minutes`,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Failed to get deployment status: ${error.message}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'deployment.list_services',
+      name: 'List Platform Services',
+      category: 'automation',
+      description: 'List all registered platform services and their health status',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        
+        try {
+          const { serviceOrchestrationWatchdog } = await import('./serviceOrchestrationWatchdog');
+          const orphanServices = serviceOrchestrationWatchdog.getOrphanServices();
+          const sentinel = trinitySentinel.getStatus();
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            data: {
+              orphanServices,
+              orphanCount: orphanServices.length,
+              sentinelStatus: sentinel,
+              overallHealth: sentinel.overallHealth,
+            },
+            message: `Platform services: ${sentinel.healthChecks} monitored, ${orphanServices.length} orphaned, overall health: ${sentinel.overallHealth}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Failed to list services: ${error.message}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered 2 deployment domain actions');
+
+    // ============================================================================
+    // RECOVERY DOMAIN ACTIONS
+    // ============================================================================
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'recovery.get_system_health',
+      name: 'Get System Health Summary',
+      category: 'automation',
+      description: 'Get comprehensive system health summary for recovery assessment',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        
+        try {
+          const [sentinelStatus, routerHealth] = await Promise.all([
+            trinitySentinel.getStatus(),
+            platformIntentRouter.getHealth(),
+          ]);
+          
+          const healthSummary = {
+            sentinel: sentinelStatus,
+            router: routerHealth,
+            overallHealth: sentinelStatus.overallHealth,
+            unresolvedAlerts: sentinelStatus.unresolvedAlerts,
+            recommendedActions: [] as string[],
+          };
+          
+          if (sentinelStatus.unresolvedAlerts > 0) {
+            healthSummary.recommendedActions.push('Review and resolve pending alerts');
+          }
+          if (sentinelStatus.overallHealth === 'critical') {
+            healthSummary.recommendedActions.push('Immediate intervention required - check critical components');
+          }
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            data: healthSummary,
+            message: `System health: ${sentinelStatus.overallHealth}, ${sentinelStatus.unresolvedAlerts} unresolved alerts`,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Failed to get system health: ${error.message}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'recovery.list_alerts',
+      name: 'List Recovery Alerts',
+      category: 'automation',
+      description: 'List all active alerts that may require recovery actions',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const payload = request.payload || {};
+        const { severity, limit } = payload;
+        
+        try {
+          const alerts = trinitySentinel.getAlerts(severity, limit || 50);
+          
+          const categorized = {
+            critical: alerts.filter(a => a.severity === 'critical'),
+            error: alerts.filter(a => a.severity === 'error'),
+            warning: alerts.filter(a => a.severity === 'warning'),
+            info: alerts.filter(a => a.severity === 'info'),
+          };
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            data: {
+              alerts,
+              totalCount: alerts.length,
+              bySeverity: {
+                critical: categorized.critical.length,
+                error: categorized.error.length,
+                warning: categorized.warning.length,
+                info: categorized.info.length,
+              },
+            },
+            message: `Found ${alerts.length} alerts: ${categorized.critical.length} critical, ${categorized.error.length} errors`,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Failed to list alerts: ${error.message}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'recovery.list_checkpoints',
+      name: 'List Recovery Checkpoints',
+      category: 'automation',
+      description: 'List available session checkpoints for recovery (alias for session.get_recoverable)',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        
+        try {
+          const { elevatedSessionGuardian } = await import('./elevatedSessionGuardian');
+          const recoverables = await elevatedSessionGuardian.getRecoverableSessions(
+            request.userId,
+            request.workspaceId
+          );
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            data: {
+              checkpoints: recoverables,
+              count: recoverables.length,
+            },
+            message: `Found ${recoverables.length} recoverable checkpoints`,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Failed to list checkpoints: ${error.message}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'recovery.restore_checkpoint',
+      name: 'Restore Checkpoint',
+      category: 'automation',
+      description: 'Restore from a specific checkpoint (alias for session.rollback_to_checkpoint)',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        const payload = request.payload || {};
+        const { sessionId, checkpointId, reason } = payload;
+        
+        if (!sessionId && !checkpointId) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: 'Missing required parameter: sessionId or checkpointId',
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+        
+        try {
+          const { elevatedSessionGuardian } = await import('./elevatedSessionGuardian');
+          const result = await elevatedSessionGuardian.rollbackToCheckpoint(
+            sessionId || checkpointId,
+            request.userId,
+            reason || 'Recovery initiated via Trinity'
+          );
+          
+          return {
+            success: result.success,
+            actionId: request.actionId,
+            data: result,
+            message: result.success 
+              ? `Checkpoint restored successfully: ${result.message}` 
+              : `Checkpoint restore failed: ${result.message}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Failed to restore checkpoint: ${error.message}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered 4 recovery domain actions');
+
+    // ============================================================================
+    // UNIFIED MONITORING DASHBOARD ACTION
+    // ============================================================================
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'monitoring.unified_dashboard',
+      name: 'Unified Monitoring Dashboard',
+      category: 'automation',
+      description: 'Aggregates all supervisor/monitor data into a single unified dashboard view for Trinity',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request: ActionRequest) => {
+        const startTime = Date.now();
+        
+        try {
+          // Parallel fetch from all monitoring sources
+          const [
+            sentinelStatus,
+            routerHealth,
+            subagentHealth,
+            orchestrationStatus,
+          ] = await Promise.all([
+            Promise.resolve(trinitySentinel.getStatus()),
+            Promise.resolve(platformIntentRouter.getHealth()),
+            subagentSupervisor.getSystemHealth(),
+            import('./orchestrationBridge').then(m => m.getOrchestrationStatus()),
+          ]);
+          
+          // Try to get confidence monitor data
+          let confidenceData = null;
+          try {
+            const { subagentConfidenceMonitor } = await import('./subagentConfidenceMonitor');
+            if (request.workspaceId) {
+              confidenceData = await subagentConfidenceMonitor.getOrgAutomationReadiness(request.workspaceId);
+            }
+          } catch (e) {
+            // Confidence monitor may not be available
+          }
+          
+          // Try to get service watchdog data
+          let watchdogData = null;
+          try {
+            const { serviceOrchestrationWatchdog } = await import('./serviceOrchestrationWatchdog');
+            watchdogData = {
+              orphanServices: serviceOrchestrationWatchdog.getOrphanServices(),
+            };
+          } catch (e) {
+            // Watchdog may not be available
+          }
+          
+          const unifiedDashboard = {
+            timestamp: new Date().toISOString(),
+            overallHealth: sentinelStatus.overallHealth,
+            
+            // Sentinel Summary
+            sentinel: {
+              running: sentinelStatus.running,
+              alertCount: sentinelStatus.alertCount,
+              unresolvedAlerts: sentinelStatus.unresolvedAlerts,
+              healthChecks: sentinelStatus.healthChecks,
+              lastScanAt: sentinelStatus.lastScanAt,
+            },
+            
+            // Router Summary
+            router: {
+              status: routerHealth.status,
+              successRate: routerHealth.successRate,
+              avgLatencyMs: routerHealth.avgLatencyMs,
+              totalIntents: routerHealth.totalIntents,
+              activeHandlers: routerHealth.activeHandlers,
+            },
+            
+            // Subagent Health
+            subagents: {
+              totalSubagents: subagentHealth.totalSubagents,
+              healthyCount: subagentHealth.healthySubagents,
+              degradedCount: subagentHealth.degradedSubagents,
+              avgConfidence: subagentHealth.averageConfidence,
+              domainBreakdown: subagentHealth.byDomain,
+            },
+            
+            // Orchestration Status
+            orchestration: orchestrationStatus,
+            
+            // Confidence Monitor (workspace-specific)
+            confidenceReadiness: confidenceData,
+            
+            // Service Watchdog
+            serviceWatchdog: watchdogData,
+            
+            // Quick Actions Available
+            quickActions: [
+              { action: 'sentinel.get_alerts', description: 'View all alerts' },
+              { action: 'sentinel.trigger_remediation', description: 'Trigger self-healing' },
+              { action: 'recovery.get_system_health', description: 'Detailed health check' },
+              { action: 'subagent.list_all', description: 'List all subagents' },
+            ],
+          };
+          
+          return {
+            success: true,
+            actionId: request.actionId,
+            data: unifiedDashboard,
+            message: `Unified Dashboard: Overall health ${sentinelStatus.overallHealth}, ${sentinelStatus.unresolvedAlerts} alerts, ${subagentHealth.totalSubagents} subagents (${subagentHealth.healthySubagents} healthy)`,
+            executionTimeMs: Date.now() - startTime
+          };
+        } catch (error: any) {
+          return {
+            success: false,
+            actionId: request.actionId,
+            message: `Failed to build unified dashboard: ${error.message}`,
+            executionTimeMs: Date.now() - startTime
+          };
+        }
+      }
+    });
+
+    console.log('[AI Brain Master Orchestrator] Registered unified monitoring dashboard action');
+    console.log('[AI Brain Master Orchestrator] Total new domain actions: 11 (gamification: 4, deployment: 2, recovery: 4, monitoring: 1)');
   }
 }
 
