@@ -19,7 +19,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -274,6 +273,21 @@ export function NotificationsPopover() {
     },
   });
 
+  const markUpdateAsViewedMutation = useMutation({
+    mutationFn: async (updateId: string) => {
+      const response = await apiRequest("POST", `/api/platform-updates/${updateId}/mark-viewed`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
+      refetch();
+    },
+    onError: (error) => {
+      console.error('[Notifications] Error marking update as viewed:', error);
+    },
+  });
+
   const acknowledgeSelectedMutation = useMutation({
     mutationFn: async () => {
       const idsToAcknowledge = Array.from(selectedIds);
@@ -466,13 +480,15 @@ export function NotificationsPopover() {
         </div>
       </div>
 
-      <ScrollArea 
-        className="flex-1 min-h-0"
+      <div 
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain touch-pan-y"
         style={{ 
-          height: isMobile ? 'calc(80vh - 160px)' : 'min(70vh, 420px)',
+          height: isMobile ? 'calc(85vh - 180px)' : 'min(65vh, 400px)',
+          WebkitOverflowScrolling: 'touch',
         }}
+        ref={scrollRef}
       >
-        <div ref={scrollRef} className="overscroll-contain">
+        <div className="overscroll-contain">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
@@ -594,7 +610,7 @@ export function NotificationsPopover() {
                               </div>
                             </div>
                             <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-                              {update.metadata?.endUserSummary || update.description}
+                              {update.metadata?.endUserSummary || update.description || 'A platform update was made to improve your experience.'}
                             </p>
                             <div className="flex items-center gap-2 flex-wrap">
                               <Badge variant="outline" className={`text-[10px] px-2 py-0.5 ${config.color} border-current/30`}>
@@ -706,7 +722,7 @@ export function NotificationsPopover() {
                               )}
                             </div>
                             <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-                              {notification.metadata?.endUserSummary || notification.message}
+                              {notification.metadata?.endUserSummary || notification.message || 'You have a new notification.'}
                             </p>
                             <div className="flex items-center gap-2 flex-wrap">
                               {config && (
@@ -846,16 +862,28 @@ export function NotificationsPopover() {
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-                              {update.description}
+                              {update.metadata?.endUserSummary || update.description || 'A system update was made.'}
                             </p>
                             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                               <Clock className="h-3.5 w-3.5" />
                               <span>{safeFormatTimestamp(update.createdAt)}</span>
                             </div>
                           </div>
-                          {!update.isViewed && (
-                            <div className="h-2 w-2 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 shrink-0 mt-2" />
-                          )}
+                          {!update.isViewed ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8 shrink-0 hover:bg-muted"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                markUpdateAsViewedMutation.mutate(update.id);
+                              }}
+                              disabled={markUpdateAsViewedMutation.isPending}
+                              data-testid={`button-dismiss-system-${update.id}`}
+                            >
+                              <X className="h-4 w-4" />
+                            </Button>
+                          ) : null}
                         </div>
                       </div>
                     );
@@ -883,7 +911,7 @@ export function NotificationsPopover() {
                               </Badge>
                             </div>
                             <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-                              {alert.description}
+                              {alert.description || 'A maintenance alert has been scheduled.'}
                             </p>
                             <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-2">
                               <Clock className="h-3.5 w-3.5" />
@@ -937,9 +965,9 @@ export function NotificationsPopover() {
           </Tabs>
         )}
         </div>
-      </ScrollArea>
+      </div>
 
-      <div className="border-t bg-muted/20">
+      <div className="border-t bg-muted/20 shrink-0">
         <div className="p-3">
           <Button
             variant="ghost"
@@ -968,9 +996,12 @@ export function NotificationsPopover() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent 
-            className="w-[calc(100vw-1rem)] max-w-[480px] h-[85vh] max-h-[85vh] p-0 gap-0 flex flex-col"
+            className="w-[calc(100vw-1rem)] max-w-[480px] h-[90vh] max-h-[90vh] p-0 gap-0 flex flex-col rounded-xl"
             showHomeButton={false}
-            style={{ overflow: 'hidden' }}
+            style={{ 
+              overflow: 'hidden',
+              maxWidth: 'calc(100vw - 1rem)',
+            }}
           >
             <NotificationsContent />
           </DialogContent>

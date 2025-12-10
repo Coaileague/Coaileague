@@ -130,11 +130,22 @@ export async function generatePlatformUpdate(data: AIInsightData): Promise<{ id:
         temperature: ANTI_YAP_PRESETS.notification.temperature,
       }
     });
-    const prompt = `You are CoAIleague's AI brain. Rewrite this platform update description to be engaging, clear, and professional for end users. Keep it under 200 characters.
+    const prompt = `You are CoAIleague's AI assistant writing platform update summaries for end users.
 
-Original: ${data.description}
+RULES:
+1. Write a clear, engaging summary in 1-2 sentences (max 180 chars)
+2. NEVER output "undefined", "null", empty text, or placeholder values
+3. Focus on WHAT changed and WHY it matters to users
+4. Use active voice and present tense
+5. Be specific about the feature or area affected
 
-Enhanced description:`;
+INPUT TITLE: ${data.title || 'Platform Update'}
+INPUT DESCRIPTION: ${data.description || 'A platform improvement was made'}
+CATEGORY: ${data.category || 'improvement'}
+
+Write a brief, professional summary. Example format: "The [feature name] has been enhanced to provide [benefit]. This update improves [specific area]."
+
+SUMMARY:`;
     
     const result = await model.generateContent(prompt);
     const response = result.response.text().trim();
