@@ -32855,6 +32855,207 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     }
   });
 
+
+  // ============================================================================
+  // SEASONAL SUBAGENT API - Holiday Theming Orchestration
+  // ============================================================================
+
+  /**
+   * GET /api/seasonal/current-theme
+   * Get the currently active seasonal theme
+   */
+  app.get("/api/seasonal/current-theme", async (_req, res) => {
+    try {
+      const { getSeasonalSubagent } = await import("./services/ai-brain/seasonalSubagent");
+      const agent = getSeasonalSubagent();
+      const theme = agent.getActiveTheme();
+      
+      res.json({
+        success: true,
+        ...theme,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * GET /api/seasonal/holidays
+   * Get the full holiday calendar
+   */
+  app.get("/api/seasonal/holidays", async (_req, res) => {
+    try {
+      const { getSeasonalSubagent } = await import("./services/ai-brain/seasonalSubagent");
+      const agent = getSeasonalSubagent();
+      const holidays = agent.getHolidayCalendar();
+      
+      res.json({
+        success: true,
+        holidays,
+        currentHoliday: agent.getCurrentHoliday(new Date())?.id || null,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/seasonal/activate/:holidayId
+   * Force activate a specific holiday theme (admin only)
+   */
+  app.post("/api/seasonal/activate/:holidayId", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { holidayId } = req.params;
+      const { getSeasonalSubagent } = await import("./services/ai-brain/seasonalSubagent");
+      const agent = getSeasonalSubagent();
+      
+      const theme = await agent.forceActivateHoliday(holidayId);
+      
+      if (!theme) {
+        return res.status(404).json({ success: false, error: "Holiday not found" });
+      }
+      
+      res.json({
+        success: true,
+        message: `${theme.holidayName} theme activated!`,
+        theme,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/seasonal/deactivate
+   * Deactivate the current seasonal theme
+   */
+  app.post("/api/seasonal/deactivate", requireAuth, async (_req: AuthenticatedRequest, res) => {
+    try {
+      const { getSeasonalSubagent } = await import("./services/ai-brain/seasonalSubagent");
+      const agent = getSeasonalSubagent();
+      
+      await agent.deactivateTheme();
+      
+      res.json({
+        success: true,
+        message: "Seasonal theme deactivated",
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * GET /api/seasonal/preview/:holidayId
+   * Preview a holiday theme without activating it
+   */
+  app.get("/api/seasonal/preview/:holidayId", async (req, res) => {
+    try {
+      const { holidayId } = req.params;
+      const { getSeasonalSubagent } = await import("./services/ai-brain/seasonalSubagent");
+      const agent = getSeasonalSubagent();
+      
+      const preview = await agent.previewHolidayTheme(holidayId);
+      
+      if (!preview) {
+        return res.status(404).json({ success: false, error: "Holiday not found" });
+      }
+      
+      res.json({
+        success: true,
+        holidayId,
+        preview,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // ============================================================================
+  // SERVICE ORCHESTRATION WATCHDOG API
+  // ============================================================================
+
+  /**
+   * GET /api/ai-brain/services/registry
+   * Get the service registry status
+   */
+  app.get("/api/ai-brain/services/registry", requireAuth, async (_req: AuthenticatedRequest, res) => {
+    try {
+      const { getServiceWatchdog } = await import("./services/ai-brain/serviceOrchestrationWatchdog");
+      const watchdog = getServiceWatchdog();
+      const registry = watchdog.getServiceRegistry();
+      
+      res.json({
+        success: true,
+        ...registry,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * GET /api/ai-brain/services/orphans
+   * Get orphan/rebel services
+   */
+  app.get("/api/ai-brain/services/orphans", requireAuth, async (_req: AuthenticatedRequest, res) => {
+    try {
+      const { getServiceWatchdog } = await import("./services/ai-brain/serviceOrchestrationWatchdog");
+      const watchdog = getServiceWatchdog();
+      const orphans = watchdog.getOrphanServices();
+      
+      res.json({
+        success: true,
+        count: orphans.length,
+        services: orphans,
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/ai-brain/services/:serviceId/heartbeat
+   * Record a heartbeat from a service
+   */
+  app.post("/api/ai-brain/services/:serviceId/heartbeat", async (req, res) => {
+    try {
+      const { serviceId } = req.params;
+      const { healthScore } = req.body;
+      
+      const { getServiceWatchdog } = await import("./services/ai-brain/serviceOrchestrationWatchdog");
+      const watchdog = getServiceWatchdog();
+      watchdog.recordHeartbeat(serviceId, healthScore);
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/ai-brain/services/:serviceId/hotpatch
+   * Request a hotpatch for a service
+   */
+  app.post("/api/ai-brain/services/:serviceId/hotpatch", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { serviceId } = req.params;
+      const { type, payload, requiresApproval = true } = req.body;
+      
+      const { getServiceWatchdog } = await import("./services/ai-brain/serviceOrchestrationWatchdog");
+      const watchdog = getServiceWatchdog();
+      
+      const result = await watchdog.requestHotpatch(serviceId, {
+        type,
+        payload,
+        requiresApproval,
+      });
+      
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
   /**
    * GET /api/ai-brain/knowledge/insights/:queryType
    * Get learning insights for a query type

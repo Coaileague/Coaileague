@@ -190,6 +190,24 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize orchestration services:', error);
   }
 
+  // Initialize Seasonal Subagent - AI-powered holiday theming
+  try {
+    const { initializeSeasonalSubagent } = await import('./services/ai-brain/seasonalSubagent');
+    await initializeSeasonalSubagent();
+    console.log('[Server] Seasonal Subagent initialized - Holiday theming active');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Seasonal Subagent:', error);
+  }
+
+  // Initialize Service Orchestration Watchdog - detects orphan/rebel services
+  try {
+    const { initializeServiceWatchdog } = await import('./services/ai-brain/serviceOrchestrationWatchdog');
+    await initializeServiceWatchdog();
+    console.log('[Server] Service Orchestration Watchdog initialized');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Service Watchdog:', error);
+  }
+
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
