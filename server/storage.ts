@@ -816,6 +816,7 @@ export interface IStorage {
   getPlatformUpdatesWithReadState(userId: string, workspaceId: string, limit?: number): Promise<Array<PlatformUpdate & { isViewed: boolean }>>;
   markPlatformUpdateAsViewed(userId: string, updateId: string): Promise<void>;
   markAllPlatformUpdatesAsViewed(userId: string, workspaceId?: string): Promise<number>;
+  markPlatformUpdatesByCategories(userId: string, categories: string[], workspaceId?: string): Promise<number>;
   createPlatformUpdate(update: InsertPlatformUpdate): Promise<PlatformUpdate>;
 
   // ========================================================================
@@ -6710,6 +6711,56 @@ export class DatabaseStorage implements IStorage {
           updateId: u.id,
           viewedAt: new Date(),
           viewSource: 'mark_all_read',
+        }))
+      )
+      .onConflictDoNothing();
+
+    return unviewedUpdates.length;
+  }
+
+  async markPlatformUpdatesByCategories(userId: string, categories: string[], workspaceId?: string): Promise<number> {
+    if (categories.length === 0) return 0;
+    
+    // Get all unviewed platform updates for this user in the specified categories
+    // Using inArray() for proper Drizzle array handling instead of raw SQL ANY()
+    // Filter to only updates visible to this user's workspace (global or workspace-specific)
+    const unviewedUpdates = await db
+      .select({ id: platformUpdates.id })
+      .from(platformUpdates)
+      .leftJoin(
+        userPlatformUpdateViews,
+        and(
+          eq(userPlatformUpdateViews.updateId, platformUpdates.id),
+          eq(userPlatformUpdateViews.userId, userId)
+        )
+      )
+      .where(
+        and(
+          isNull(userPlatformUpdateViews.viewedAt),
+          inArray(platformUpdates.category, categories),
+          // Visibility filter: global updates (visibility='all' or no workspace) or user's workspace
+          workspaceId 
+            ? or(
+                eq(platformUpdates.visibility, 'all'),
+                isNull(platformUpdates.workspaceId),
+                eq(platformUpdates.workspaceId, workspaceId)
+              )
+            : sql`true` // If no workspaceId provided, mark all matching categories
+        )
+      );
+
+    if (unviewedUpdates.length === 0) return 0;
+
+    // Insert view records for all unviewed updates in these categories
+    await db
+      .insert(userPlatformUpdateViews)
+      .values(
+        unviewedUpdates.map(u => ({
+          id: `${userId}-${u.id}`,
+          userId,
+          updateId: u.id,
+          viewedAt: new Date(),
+          viewSource: 'clear_tab_system',
         }))
       )
       .onConflictDoNothing();

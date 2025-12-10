@@ -725,9 +725,12 @@ export function NotificationsPopover() {
                                 <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1.5 animate-pulse" />
                               )}
                             </div>
-                            <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+                            <div 
+                              className="text-sm text-muted-foreground leading-relaxed mb-2 max-h-20 overflow-y-auto overscroll-contain"
+                              data-testid={`text-notification-message-${notification.id}`}
+                            >
                               {notification.metadata?.endUserSummary || notification.message || 'You have a new notification.'}
-                            </p>
+                            </div>
                             <div className="flex items-center gap-2 flex-wrap">
                               {config && (
                                 <Badge variant="outline" className={`text-[10px] px-2 py-0.5 ${iconColor} border-current/30`}>
@@ -865,9 +868,12 @@ export function NotificationsPopover() {
                                 {catStyles.label}
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+                            <div 
+                              className="text-sm text-muted-foreground leading-relaxed mb-2 max-h-20 overflow-y-auto overscroll-contain"
+                              data-testid={`text-system-update-message-${update.id}`}
+                            >
                               {update.metadata?.endUserSummary || update.description || 'A system update was made.'}
-                            </p>
+                            </div>
                             <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
                               <Clock className="h-3.5 w-3.5" />
                               <span>{safeFormatTimestamp(update.createdAt)}</span>
@@ -914,9 +920,12 @@ export function NotificationsPopover() {
                                 {statusLabels[alert.status]}
                               </Badge>
                             </div>
-                            <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+                            <div 
+                              className="text-sm text-muted-foreground leading-relaxed mb-2 max-h-20 overflow-y-auto overscroll-contain"
+                              data-testid={`text-alert-message-${alert.id}`}
+                            >
                               {alert.description || 'A maintenance alert has been scheduled.'}
-                            </p>
+                            </div>
                             <div className="flex items-center gap-2 text-[10px] text-muted-foreground mb-2">
                               <Clock className="h-3.5 w-3.5" />
                               <span>

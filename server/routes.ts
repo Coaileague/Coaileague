@@ -843,6 +843,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Acknowledge all maintenance alerts (System tab)
         const { aiNotificationService } = await import("./services/aiNotificationService");
         cleared.alerts = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId);
+        
+        // Also clear system-category platform updates (diagnostics, errors, security, etc.)
+        const { getCategoriesForTab } = await import("@shared/config/notificationConfig");
+        const systemCategories = getCategoriesForTab('system');
+        cleared.platformUpdates = await storage.markPlatformUpdatesByCategories(userId, systemCategories, workspaceId);
       }
 
       // WebSocket broadcast for real-time sync

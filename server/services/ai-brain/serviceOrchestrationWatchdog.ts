@@ -111,31 +111,47 @@ export class ServiceOrchestrationWatchdog {
 
   /**
    * Initialize expected services in the registry
+   * Note: Services start as 'pending' (not 'inactive') to avoid false orphan detection
+   * during startup grace period
    */
   private initializeExpectedServices(): void {
+    const now = new Date();
     for (const service of EXPECTED_SERVICES) {
       this.registeredServices.set(service.id, {
         id: service.id,
         name: service.name,
         category: service.category,
         status: 'inactive', // Will be updated when service registers
-        registeredAt: new Date(),
-        lastHeartbeat: new Date(0), // Never heartbeated
-        orchestratedBy: 'unknown',
+        registeredAt: now,
+        lastHeartbeat: now, // Initialize with current time to avoid immediate orphan detection
+        orchestratedBy: 'trinity', // Assume Trinity orchestration for expected services
         capabilities: [],
-        healthScore: 0,
+        healthScore: 50, // Start with neutral health
         issueCount: 0,
-        metadata: {},
+        metadata: { initialized: true, startupGrace: true },
       });
     }
   }
+
+  private startupTime: Date = new Date();
+  private readonly STARTUP_GRACE_PERIOD_MS = 3 * 60 * 1000; // 3 minutes grace period on startup
 
   /**
    * Start the watchdog monitoring
    */
   async start(): Promise<void> {
     console.log('[ServiceWatchdog] Starting service orchestration monitoring...');
+    this.startupTime = new Date();
     
+    // Register self FIRST before any scanning
+    this.registerService({
+      id: 'service-orchestration-watchdog',
+      name: 'Service Orchestration Watchdog',
+      category: 'ai-brain',
+      capabilities: ['service-discovery', 'orphan-detection', 'health-monitoring', 'hotswap'],
+      orchestratedBy: 'trinity',
+    });
+
     // Subscribe to AI brain events for service registration
     platformEventBus.subscribe('ai_brain_action', {
       name: 'ServiceWatchdog',
@@ -146,22 +162,16 @@ export class ServiceOrchestrationWatchdog {
       },
     });
 
-    // Initial scan
-    await this.scanForOrphanServices();
+    // Delay initial scan to allow services to register during startup
+    console.log('[ServiceWatchdog] Waiting for startup grace period before first scan...');
+    setTimeout(async () => {
+      await this.scanForOrphanServices();
+    }, this.STARTUP_GRACE_PERIOD_MS);
 
-    // Set up periodic scanning
+    // Set up periodic scanning (after grace period)
     this.scanInterval = setInterval(async () => {
       await this.scanForOrphanServices();
     }, this.SCAN_INTERVAL_MS);
-
-    // Register self with AI Brain
-    this.registerService({
-      id: 'service-orchestration-watchdog',
-      name: 'Service Orchestration Watchdog',
-      category: 'ai-brain',
-      capabilities: ['service-discovery', 'orphan-detection', 'health-monitoring', 'hotswap'],
-      orchestratedBy: 'trinity',
-    });
 
     // Publish registration event
     await platformEventBus.publish({
@@ -176,7 +186,7 @@ export class ServiceOrchestrationWatchdog {
       },
     });
 
-    console.log('[ServiceWatchdog] Monitoring active');
+    console.log('[ServiceWatchdog] Monitoring active (first scan after 3min grace period)');
   }
 
   /**
@@ -286,6 +296,16 @@ export class ServiceOrchestrationWatchdog {
   }
 
   /**
+   * Services to exclude from orphan/rebel detection
+   * These are core system services that don't need heartbeat monitoring
+   */
+  private readonly EXCLUDED_FROM_ORPHAN_DETECTION = new Set([
+    'service-orchestration-watchdog', // Self - always exclude
+    'gemini-client', // Stateless utility
+    'model-routing-engine', // Stateless utility
+  ]);
+
+  /**
    * Scan for orphan/rebel services
    */
   async scanForOrphanServices(): Promise<void> {
@@ -293,25 +313,44 @@ export class ServiceOrchestrationWatchdog {
     
     const now = new Date();
     const staleThreshold = 10 * 60 * 1000; // 10 minutes
+    const timeSinceStartup = now.getTime() - this.startupTime.getTime();
+    
+    // During startup grace period, only check for explicit rebels
+    const inGracePeriod = timeSinceStartup < this.STARTUP_GRACE_PERIOD_MS;
+    if (inGracePeriod) {
+      console.log(`[ServiceWatchdog] Still in startup grace period (${Math.round(timeSinceStartup / 1000)}s elapsed), skipping orphan detection`);
+      return;
+    }
+    
     let orphansFound = 0;
     let rebelsFound = 0;
 
     for (const [id, service] of this.registeredServices) {
+      // Skip excluded services
+      if (this.EXCLUDED_FROM_ORPHAN_DETECTION.has(id)) {
+        continue;
+      }
+      
+      // Skip services that are still in their initial state (never actually started)
+      if (service.metadata?.startupGrace && service.status === 'inactive') {
+        continue;
+      }
+      
       const timeSinceHeartbeat = now.getTime() - service.lastHeartbeat.getTime();
       
+      // Only mark as orphan if service was previously active and stopped heartbeating
       if (service.status === 'active' && timeSinceHeartbeat > staleThreshold) {
-        // Service hasn't heartbeated - mark as orphan
         service.status = 'orphan';
         this.orphanServices.set(id, service);
         orphansFound++;
         console.log(`[ServiceWatchdog] Orphan detected: ${service.name} (no heartbeat for ${Math.round(timeSinceHeartbeat / 1000)}s)`);
       }
       
-      if (service.orchestratedBy === 'standalone' || service.orchestratedBy === 'unknown') {
-        // Rebel service - not under Trinity control
+      // Only flag as rebel if explicitly marked as standalone
+      if (service.orchestratedBy === 'standalone') {
         service.status = 'rebel';
         rebelsFound++;
-        console.log(`[ServiceWatchdog] Rebel service detected: ${service.name} (not orchestrated by Trinity)`);
+        console.log(`[ServiceWatchdog] Rebel service detected: ${service.name} (running outside Trinity orchestration)`);
       }
     }
 
@@ -337,6 +376,8 @@ export class ServiceOrchestrationWatchdog {
 
       // Use AI to analyze and recommend actions
       await this.analyzeOrchestrationIssues();
+    } else {
+      console.log('[ServiceWatchdog] All services healthy - no orphans or rebels detected');
     }
 
     console.log(`[ServiceWatchdog] Scan complete. Orphans: ${orphansFound}, Rebels: ${rebelsFound}`);

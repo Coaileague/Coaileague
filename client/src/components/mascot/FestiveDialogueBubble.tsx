@@ -232,7 +232,9 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
   
   // Stage 1: Activate bubble when new thought arrives OR deactivate when cleared
   useEffect(() => {
-    // Handle thought being cleared - reset isActive to prevent Stage 2 crash
+    // Handle thought being cleared - start exit animation, do NOT reset lastThoughtIdRef here
+    // The ref is reset in the exit completion block (line ~411) to prevent race conditions
+    // where Stage 2 could run with mismatched thought during animation
     if (!thought) {
       if (isActive && phaseRef.current !== 'exiting' && phaseRef.current !== 'done') {
         // Thought cleared while bubble was active - let it exit gracefully
