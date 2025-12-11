@@ -454,7 +454,186 @@ export function registerUACPActions(orchestrator: any): void {
     }
   });
 
-  console.log('[AI Brain Master Orchestrator] Registered 13 UACP access control actions');
+  // ============================================================================
+  // PLATFORM SUPPORT ROLE MANAGEMENT ACTIONS
+  // ============================================================================
+
+  orchestrator.registerAction({
+    actionId: 'uacp.create_support_employee',
+    name: 'Create Platform Support Employee',
+    category: 'security',
+    description: 'Create a new employee in the Operations workspace with platform support role',
+    requiredRoles: ['sysop', 'root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const startTime = Date.now();
+      const { firstName, lastName, email, platformRole, permissions } = request.payload || {};
+      
+      if (!firstName || !lastName || !email) {
+        return {
+          success: false,
+          actionId: request.actionId,
+          message: 'Missing required fields: firstName, lastName, email',
+          executionTimeMs: Date.now() - startTime
+        };
+      }
+      
+      const { employees, platformRoles, users } = await import('@shared/schema');
+      
+      // Check if employee already exists
+      const existingEmployee = await db.select()
+        .from(employees)
+        .where(eq(employees.email, email))
+        .limit(1);
+      
+      if (existingEmployee.length > 0) {
+        return {
+          success: false,
+          actionId: request.actionId,
+          message: `Employee with email ${email} already exists`,
+          executionTimeMs: Date.now() - startTime
+        };
+      }
+      
+      // Create support employee in Operations workspace
+      const [newEmployee] = await db.insert(employees).values({
+        workspaceId: 'ops-workspace-00000000',
+        firstName,
+        lastName,
+        email,
+        role: 'Platform Support Specialist',
+        workspaceRole: 'support',
+        isActive: true,
+      }).returning();
+      
+      // Optionally create platform role assignment
+      if (platformRole && newEmployee.userId) {
+        await db.insert(platformRoles).values({
+          userId: newEmployee.userId,
+          role: platformRole,
+          assignedBy: request.userId || 'system',
+        }).onConflictDoUpdate({
+          target: platformRoles.userId,
+          set: { role: platformRole, updatedAt: new Date() }
+        });
+      }
+      
+      return {
+        success: true,
+        actionId: request.actionId,
+        message: `Created platform support employee: ${firstName} ${lastName}`,
+        data: { employee: newEmployee },
+        executionTimeMs: Date.now() - startTime
+      };
+    }
+  });
+
+  orchestrator.registerAction({
+    actionId: 'uacp.assign_platform_role',
+    name: 'Assign Platform Role',
+    category: 'security',
+    description: 'Assign or update platform-wide role for a user (support, admin, super_admin, sysop)',
+    requiredRoles: ['sysop', 'root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const startTime = Date.now();
+      const { userId, role } = request.payload || {};
+      
+      if (!userId || !role) {
+        return {
+          success: false,
+          actionId: request.actionId,
+          message: 'Missing required fields: userId, role',
+          executionTimeMs: Date.now() - startTime
+        };
+      }
+      
+      const validRoles = ['support', 'admin', 'super_admin', 'sysop', 'root_admin'];
+      if (!validRoles.includes(role)) {
+        return {
+          success: false,
+          actionId: request.actionId,
+          message: `Invalid role. Must be one of: ${validRoles.join(', ')}`,
+          executionTimeMs: Date.now() - startTime
+        };
+      }
+      
+      const { platformRoles } = await import('@shared/schema');
+      
+      // Update or create platform role
+      const [updatedRole] = await db.insert(platformRoles).values({
+        userId,
+        role,
+        assignedBy: request.userId || 'system',
+      }).onConflictDoUpdate({
+        target: platformRoles.userId,
+        set: { role, updatedAt: new Date(), assignedBy: request.userId || 'system' }
+      }).returning();
+      
+      // Emit access control event
+      await db.insert(accessControlEvents).values({
+        eventType: 'role_changed',
+        priority: 'high',
+        actorType: 'human',
+        actorId: request.userId || 'system',
+        actorRole: 'sysop',
+        targetType: 'human',
+        targetId: userId,
+        changeDetails: { action: 'assign_platform_role', newRole: role },
+        newState: { role },
+      });
+      
+      return {
+        success: true,
+        actionId: request.actionId,
+        message: `Assigned platform role '${role}' to user ${userId}`,
+        data: { platformRole: updatedRole },
+        executionTimeMs: Date.now() - startTime
+      };
+    }
+  });
+
+  orchestrator.registerAction({
+    actionId: 'uacp.list_support_team',
+    name: 'List Support Team',
+    category: 'security',
+    description: 'List all support employees and AI agents in the platform support org',
+    requiredRoles: ['admin', 'super_admin', 'sysop', 'root_admin'],
+    handler: async (request: ActionRequest): Promise<ActionResult> => {
+      const startTime = Date.now();
+      const { employees } = await import('@shared/schema');
+      
+      // Get human support employees
+      const supportEmployees = await db.select()
+        .from(employees)
+        .where(eq(employees.workspaceId, 'ops-workspace-00000000'));
+      
+      // Get AI agents
+      const aiAgents = await db.select()
+        .from(agentIdentities)
+        .where(eq(agentIdentities.workspaceId, 'ops-workspace-00000000'));
+      
+      const humanCount = supportEmployees.filter(e => !e.id.includes('-employee')).length;
+      const botCount = supportEmployees.filter(e => e.id.includes('-employee')).length;
+      
+      return {
+        success: true,
+        actionId: request.actionId,
+        message: `Support team: ${humanCount} humans, ${botCount} AI bots, ${aiAgents.length} registered agents`,
+        data: { 
+          employees: supportEmployees,
+          agents: aiAgents,
+          summary: {
+            totalEmployees: supportEmployees.length,
+            humanEmployees: humanCount,
+            aiEmployees: botCount,
+            registeredAgents: aiAgents.length
+          }
+        },
+        executionTimeMs: Date.now() - startTime
+      };
+    }
+  });
+
+  console.log('[AI Brain Master Orchestrator] Registered 16 UACP access control actions');
 }
 
 /**
@@ -480,5 +659,8 @@ export function getUACPActionDefinitions(): Array<{
     { id: 'uacp.invalidate_cache', description: 'Force invalidate PDP authorization cache', category: 'security', requiredRole: 'sysop' },
     { id: 'uacp.get_recent_events', description: 'Get recent access control events', category: 'security', requiredRole: 'admin' },
     { id: 'uacp.security_audit', description: 'Run security audit (suspended agents, critical events)', category: 'security', requiredRole: 'sysop' },
+    { id: 'uacp.create_support_employee', description: 'Create platform support employee in Operations workspace', category: 'security', requiredRole: 'sysop' },
+    { id: 'uacp.assign_platform_role', description: 'Assign platform-wide role to user (support, admin, sysop)', category: 'security', requiredRole: 'sysop' },
+    { id: 'uacp.list_support_team', description: 'List all support employees and AI agents', category: 'security', requiredRole: 'admin' },
   ];
 }

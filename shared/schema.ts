@@ -193,6 +193,10 @@ export const workspaces = pgTable("workspaces", {
   organizationId: varchar("organization_id").unique(), // Format: wfosupport-#########
   organizationSerial: varchar("organization_serial").unique(), // Format: ORG-XXXX-XXXX (Enterprise license key for tier unlocking)
 
+  // Workspace type - distinguishes platform support orgs from regular business orgs
+  workspaceType: varchar("workspace_type").default("business"), // 'business' (default) | 'platform_support' | 'internal'
+  isPlatformSupport: boolean("is_platform_support").default(false), // Quick check for platform support workspace
+
   // Business information
   companyName: varchar("company_name"),
   businessCategory: businessCategoryEnum("business_category").default("general"), // Industry type
