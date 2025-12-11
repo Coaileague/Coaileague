@@ -371,28 +371,25 @@ export async function acknowledgeMaintenanceAlert(
   }
 }
 
-// Acknowledge ALL active maintenance alerts for a user (used by clear-all)
+// Acknowledge ALL maintenance alerts for a user (used by clear-all in System tab)
 export async function acknowledgeAllMaintenanceAlerts(
   userId: string,
   workspaceId?: string
 ): Promise<number> {
   try {
-    // Get all active/scheduled alerts (don't filter by workspace - user can see all)
-    const activeAlerts = await db.select({ id: maintenanceAlerts.id })
-      .from(maintenanceAlerts)
-      .where(
-        or(
-          eq(maintenanceAlerts.status, 'scheduled'),
-          eq(maintenanceAlerts.status, 'in_progress')
-        )
-      );
+    // Get ALL alerts regardless of status - user wants to clear everything in System tab
+    // This includes scheduled, in_progress, completed, and cancelled alerts
+    const allAlerts = await db.select({ id: maintenanceAlerts.id })
+      .from(maintenanceAlerts);
     
-    if (activeAlerts.length === 0) {
+    console.log(`[AINotification] acknowledgeAllMaintenanceAlerts: Found ${allAlerts.length} total alerts to acknowledge for user ${userId}`);
+    
+    if (allAlerts.length === 0) {
       return 0;
     }
     
     let acknowledged = 0;
-    for (const alert of activeAlerts) {
+    for (const alert of allAlerts) {
       // Check if already acknowledged
       const existing = await db.select()
         .from(maintenanceAcknowledgments)

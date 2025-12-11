@@ -514,6 +514,7 @@ export const VALID_DB_CATEGORIES = [
   'recovery',
   'maintenance_update',
   'maintenance_postmortem',
+  'orchestration_update',
 ] as const;
 
 /**
