@@ -15,6 +15,11 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -409,13 +414,20 @@ export function FloatingFeedbackButton() {
     <div className="fixed bottom-20 right-4 z-50 md:bottom-6">
       <FeedbackForm
         trigger={
-          <Button
-            size="icon"
-            className="h-12 w-12 rounded-full shadow-lg"
-            data-testid="button-floating-feedback"
-          >
-            <MessageSquare className="h-5 w-5" />
-          </Button>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="icon"
+                className="h-12 w-12 rounded-full shadow-lg"
+                data-testid="button-floating-feedback"
+              >
+                <Bug className="h-5 w-5" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="left" className="font-medium">
+              Bug Report
+            </TooltipContent>
+          </Tooltip>
         }
       />
     </div>
