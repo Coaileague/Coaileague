@@ -27,6 +27,7 @@ import { registerUACPActions } from "../uacp/uacpOrchestrationActions";
 import { registerCoreSubagentActions } from "./subagents/coreSubagentOrchestration";
 import { registerTrinityCodeOpsActions } from "./trinityCodeOpsActions";
 import { registerScheduleLiveNotifierActions } from "./scheduleLiveNotifierActions";
+import { registerTrinityWorkOrderActions } from "./trinityWorkOrderActions";
 import { db } from '../../db';
 import { eq, desc, and, gte, sql, isNotNull } from 'drizzle-orm';
 import {
@@ -404,6 +405,7 @@ class AIBrainMasterOrchestrator {
     registerCoreSubagentActions(helpaiOrchestrator); // Fortune 500-grade Core Subagent Actions (Scheduling, Payroll, Invoice, Notification)
     registerTrinityCodeOpsActions(helpaiOrchestrator); // Trinity Autonomous Coding Actions (grep, patch, commit, FAST mode)
     registerScheduleLiveNotifierActions(); // Real-time schedule notification actions
+    registerTrinityWorkOrderActions(); // Trinity Work Order System (intake, decompose, execute, summarize)
     
     // Subscribe to platform events
     this.subscribeToEvents();
