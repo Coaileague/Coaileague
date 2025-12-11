@@ -891,6 +891,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Universal Platform Diagnostics API (AI Brain Trinity orchestrated with Gemini 3)
+  app.get("/api/platform/diagnostics", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      const platformRole = (authReq.user as any)?.platformRole || "admin";
+      const domain = req.query.domain as string | undefined;
+
+      // RBAC check - only platform support and above can access
+      const allowedRoles = ["platform_support", "platform_admin", "root_admin"];
+      if (!allowedRoles.includes(platformRole)) {
+        return res.status(403).json({ success: false, message: "Insufficient permissions for platform diagnostics" });
+      }
+
+      const { universalDiagnosticOrchestrator } = await import("./services/ai-brain/universalDiagnosticOrchestrator");
+      
+      if (domain) {
+        const issues = await universalDiagnosticOrchestrator.runDomainDiagnostic(domain as any);
+        return res.json({ success: true, domain, issues });
+      } else {
+        const report = await universalDiagnosticOrchestrator.runFullDiagnostic(userId || "system", platformRole);
+        return res.json({ success: true, report });
+      }
+    } catch (error: any) {
+      console.error("Error running platform diagnostics:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Hotpatch execution API with RBAC
+  app.post("/api/platform/hotpatch", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      const platformRole = (authReq.user as any)?.platformRole || "admin";
+      const { hotpatch, approvalCode, secondApprovalCode } = req.body;
+
+      if (!hotpatch) {
+        return res.status(400).json({ success: false, message: "Hotpatch object required" });
+      }
+
+      const { universalDiagnosticOrchestrator } = await import("./services/ai-brain/universalDiagnosticOrchestrator");
+      const execution = await universalDiagnosticOrchestrator.executeHotpatch(
+        hotpatch,
+        userId || "system",
+        platformRole,
+        approvalCode,
+        secondApprovalCode
+      );
+
+      res.json({ success: execution.status === "success", execution });
+    } catch (error: any) {
+      console.error("Error executing hotpatch:", error);
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  // Get diagnostic subagents list
+  app.get("/api/platform/diagnostics/subagents", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { DOMAIN_SUBAGENTS } = await import("./services/ai-brain/universalDiagnosticOrchestrator");
+      const subagents = DOMAIN_SUBAGENTS.map(s => ({
+        domain: s.domain,
+        name: s.name,
+        description: s.description,
+        commonPatterns: s.commonPatterns
+      }));
+      res.json({ success: true, subagents });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // Acknowledge a single notification
   app.post("/api/notifications/acknowledge/:id", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {

@@ -6516,3 +6516,6 @@ Provide your analysis in the following format:
 }
 
 export const aiBrainMasterOrchestrator = AIBrainMasterOrchestrator.getInstance();
+
+// Note: registerUniversalDiagnosticActions has been moved to universalDiagnosticOrchestrator.ts
+// to avoid circular dependencies. It is imported and called from server/index.ts

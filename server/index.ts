@@ -175,8 +175,18 @@ process.on('SIGTERM', () => {
     const totalActions = Object.values(actionSummary).reduce((a, b) => a + b, 0);
     console.log(`[Server] AI Brain Master Orchestrator initialized - ${totalActions} actions registered`);
     console.log('[Server] Action categories:', JSON.stringify(actionSummary));
+
+    // Register Universal Diagnostic Orchestrator actions (import from separate module to avoid circular dependency)
+    try {
+      const { registerUniversalDiagnosticActions } = await import("./services/ai-brain/universalDiagnosticOrchestrator");
+      const { helpaiOrchestrator } = await import("./services/helpai/helpaiActionOrchestrator");
+      await registerUniversalDiagnosticActions(helpaiOrchestrator);
+      console.log("[Server] Universal Diagnostic Orchestrator initialized");
+    } catch (diagError) {
+      console.error("[Server] Warning: Failed to initialize Universal Diagnostic Orchestrator:", diagError);
+    }
   } catch (error) {
-    console.error('[Server] Warning: Failed to initialize AI Brain Master Orchestrator:', error);
+    console.error("[Server] Warning: Failed to initialize AI Brain Master Orchestrator:", error);
   }
 
   // Initialize AI Brain Orchestration Services (WorkflowLedger, CommitmentManager, etc.)
