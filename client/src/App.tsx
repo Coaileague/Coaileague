@@ -170,7 +170,6 @@ import { PageBreadcrumb } from "@/components/page-breadcrumb";
 import { NotificationsPopover } from "@/components/notifications-popover";
 import { WorkspaceTabsNav } from "@/components/workspace-tabs-nav";
 import { FloatingSupportChat } from "@/components/floating-support-chat";
-import { CoAITwinMascot } from "@/components/coai-twin-mascot";
 import { SetupGuidePanel } from "@/components/setup-guide-panel";
 import TrinityRedesign from "@/components/trinity-redesign";
 import { CompactBubble } from "@/components/mascot/CompactBubble";

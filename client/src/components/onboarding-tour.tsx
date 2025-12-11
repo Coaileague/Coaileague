@@ -12,7 +12,7 @@ import {
   Globe, Layers, Star, Mail, Camera, BellRing, LayoutDashboard
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import { CoAITwinMascot } from "@/components/coai-twin-mascot";
+import TrinityRedesign from "@/components/trinity-redesign";
 import MASCOT_CONFIG from "@/config/mascotConfig";
 
 interface TourStep {
@@ -452,11 +452,10 @@ export function OnboardingTour({ forceShow = false, userId, workspaceId, onCompl
         className="relative rounded-full overflow-hidden bg-gradient-to-br from-purple-500/10 to-blue-500/10"
         style={{ width: size, height: size }}
       >
-        <CoAITwinMascot 
+        <TrinityRedesign 
           mode={mode}
           size={size}
           mini={true}
-          variant="mini"
         />
       </div>
       {/* Animated glow ring */}

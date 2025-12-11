@@ -1,5 +1,5 @@
 /**
- * useMascotMode - Maps application state to CoAITwinMascot modes
+ * useMascotMode - Maps application state to Trinity mascot modes
  * 
  * This hook observes the global loading context and other system states
  * to determine the appropriate mascot animation mode.

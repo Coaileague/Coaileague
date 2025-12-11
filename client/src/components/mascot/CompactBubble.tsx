@@ -14,7 +14,7 @@ import { useState, useEffect, memo } from 'react';
 import { Link } from 'wouter';
 import { X, Sparkles } from 'lucide-react';
 import type { Thought } from '@/lib/mascot/ThoughtManager';
-import type { MascotMode } from '@/components/coai-twin-mascot';
+import type { MascotMode } from '@/config/mascotConfig';
 
 interface CompactBubbleProps {
   thought: Thought | null;

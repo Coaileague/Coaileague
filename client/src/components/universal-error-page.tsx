@@ -17,7 +17,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { CoAIleagueStaticLogo } from "@/components/coaileague-static-logo";
-import { CoAITwinMascot } from "@/components/coai-twin-mascot";
+import TrinityRedesign from "@/components/trinity-redesign";
 import { errorConfig, getErrorMessage, getRecoveryActions } from "@/config/errorConfig";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -153,7 +153,7 @@ export function UniversalErrorPage({
           </div>
 
           <div className="mx-auto mb-4 flex justify-center">
-            <CoAITwinMascot mode={config.mascotMode} variant="mini" size={64} />
+            <TrinityRedesign mode={config.mascotMode} size={64} mini={true} />
           </div>
 
           <div className={`${config.bubbleStyle} border rounded-lg p-3 mb-4 mx-auto max-w-sm`}>
