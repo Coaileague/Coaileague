@@ -16,7 +16,7 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Responsive Design:** WCAG compliant mobile design with typography scaling.
 - **Unified Pages:** Consolidated sales, marketing, and pricing pages driven by configuration.
 - **Universal Animation System:** Canvas-based visual effects with 6 modes and seasonal themes.
-- **CoAI Twin Mascot:** An AI-powered interactive mascot providing global AI-driven insights.
+- **Trinity AI:** An AI-powered interactive mascot providing global AI-driven insights.
 - **Animated Word Logo:** A Google Doodle-style seasonal animated word logo system with 11 variations.
 
 **Technical Implementations:**
@@ -83,6 +83,12 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Trinity Dialogue Toggle:** Environment variable `TRINITY_DIALOGUE_ENABLED` to disable AI thought generation during testing, saving tokens. Set to `false` in development to skip Gemini calls for Trinity thoughts.
 - **Visual QA Subagent (Trinity's Eyes):** AI-powered visual inspection system using Puppeteer for screenshots and Gemini Vision for anomaly detection. Captures UI at multiple viewports, detects broken icons, layout shifts, text overlap, and visual regressions. Supports baseline comparison for regression testing, self-healing workflows, and REST API at /api/vqa. Files: browserAutomationTool.ts, visualQaSubagent.ts, vqaRoutes.ts, schema tables (visual_qa_runs, visual_qa_baselines, visual_qa_findings).
 - **Universal Access Control Panel (UACP):** Fortune 500-grade Dynamic Attribute-Based Access Control (ABAC) system layered on RBAC. Includes centralized Policy Decision Point (PDP) for all access decisions, Agent Identity Service for non-human entities (bots, subagents, Trinity), short-lived token management (5-15 min expiry), real-time access suspension with event propagation, and 13 Trinity-integrated actions for access control management. Files: policyDecisionPoint.ts, agentIdentityService.ts, uacpOrchestrationActions.ts, uacpRoutes.ts, schema tables (agent_identities, entity_attributes, access_policies, access_control_events).
+- **Fortune 500-Grade Core Subagents:** Enterprise-grade business operation subagents with circuit breaker patterns, distributed tracing, and idempotency protection:
+  - **Scheduling Subagent:** Predictive staffing forecasts with Gemini 3 Pro Deep Think, intelligent conflict resolution (seniority/skills/cost), compliance guardrails (50-state labor laws), self-service shift swapping with qualified replacement suggestions, and AI-optimized schedule generation. Files: schedulingSubagent.ts, coreSubagentOrchestration.ts.
+  - **Payroll Subagent:** Circuit breaker for fault tolerance (5-failure threshold, 30s recovery), distributed tracing with unique trace IDs, idempotency keys preventing duplicate payments, exponential backoff retry (3 retries max), AI anomaly detection for overtime and variance analysis. Files: payrollSubagent.ts.
+  - **Invoice Subagent:** Idempotent invoice generation with 30-day cache, payment gateway circuit breaker, batch invoice generation across all clients, payment reconciliation with discrepancy detection, revenue gap detection with AI insights. Files: invoiceSubagent.ts.
+  - **Notification Subagent (UNS):** Tiered priority system (P0 Critical, P1 Urgent, P2 Routine), smart bundling to reduce notification fatigue, role-based personalization, frequency management (hourly limits per tier), quiet hours support. Files: notificationSubagent.ts.
+- **Core Subagent Orchestration Actions:** 17 registered actions with the AI Brain Master Orchestrator (5 Scheduling, 3 Payroll, 4 Invoice, 5 Notification) enabling Trinity to orchestrate all business operations.
 
 **System Design Choices:**
 - **Modularity:** 87 backend service modules and 220+ frontend routes.

@@ -1390,7 +1390,7 @@ export default function App() {
                         <div className="fixed bottom-6 right-6 z-[70]">
                           <SetupGuidePanel />
                         </div>
-                        {/* CoAI Twin Mascot - UNIVERSAL visibility on ALL pages including public/guest routes */}
+                        {/* Trinity AI Mascot - UNIVERSAL visibility on ALL pages including public/guest routes */}
                         <MascotRenderer />
                       </SeasonalThemeProvider>
                     </UniversalAnimationProvider>

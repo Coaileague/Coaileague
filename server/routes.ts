@@ -25,7 +25,7 @@ import { db, pool } from "./db";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { setupAuth as setupCustomAuth, requireAuth } from "./auth"; // Custom auth
 import authRoutes from "./authRoutes"; // Custom auth routes
-import mascotRouter from "./routes/mascot-routes"; // CoAI Twin Mascot routes
+import mascotRouter from "./routes/mascot-routes"; // Trinity AI Mascot routes
 import { billingRouter } from "./billing-api"; // Billing API routes
 import { aiBrainRouter } from "./ai-brain-routes"; // Unified AI Brain System
 import { helpaiRouter } from "./helpai-routes"; // HelpAI Orchestration System (Phases 2-5)
@@ -3028,7 +3028,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register Unified AI Brain System (cross-org learning, job execution, global patterns)
   app.use('/api/ai-brain', aiBrainRouter);
   app.use('/api/helpai', helpaiRouter);
-  app.use('/api/mascot', mascotRouter); // CoAI Twin Mascot
+  app.use('/api/mascot', mascotRouter); // Trinity AI Mascot
 
   app.use("/api/platform", serviceControlRouter);
   // Core Automation routes (Scheduling, Invoicing, Payroll) - REQUIRES AUTH

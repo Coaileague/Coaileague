@@ -1,5 +1,5 @@
 /**
- * EmotesLibrary - Comprehensive emotes and expressions for CoAI Twin Mascot
+ * EmotesLibrary - Comprehensive emotes and expressions for Trinity AI Mascot
  * 
  * 50+ unique emotes covering all user interaction scenarios:
  * - Loading/waiting states

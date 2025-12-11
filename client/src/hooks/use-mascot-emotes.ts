@@ -1,5 +1,5 @@
 /**
- * useMascotEmotes - Emote management hook for CoAI Twin mascot
+ * useMascotEmotes - Emote management hook for Trinity AI mascot
  * 
  * Manages emote state, triggers, and transitions based on:
  * - User navigation

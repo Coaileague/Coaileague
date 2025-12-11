@@ -569,8 +569,8 @@ export const BOT_CONFIG = {
 // ============================================================================
 export const COAI_TWIN = {
   // Bot Identity - Same authority as HelpAI (one level under root_admin)
-  name: "CoAI Twin",
-  fullName: "CoAI Twin Mascot",
+  name: "Trinity AI",
+  fullName: "Trinity AI Mascot",
   description: "Interactive AI mascot with BOT-level platform authority",
   workId: "CoAI-00-BOT-01-0001",
   
@@ -624,7 +624,7 @@ export const COAI_TWIN = {
   
   // Greeting Templates
   greetings: {
-    default: "Hi! I'm your CoAI Twin, here to help navigate and assist!",
+    default: "Hi! I'm your Trinity AI, here to help navigate and assist!",
     returning: "Welcome back! Ready to help you today.",
     newPage: "I see you're exploring. Need any guidance?",
     idle: "Just floating around... tap me if you need anything!",

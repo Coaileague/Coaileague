@@ -1,7 +1,7 @@
 /**
  * Mascot Intelligence Routes
  * 
- * Backend API endpoints for the CoAI Twin mascot's AI-powered features:
+ * Backend API endpoints for the Trinity AI mascot's AI-powered features:
  * - Live FAQ data pulling
  * - Business insights and advice
  * - Task suggestions for account setup and growth
