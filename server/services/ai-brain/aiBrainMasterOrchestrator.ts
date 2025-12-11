@@ -26,6 +26,7 @@ import { broadcastNotificationToUser, broadcastUserScopedNotification, broadcast
 import { registerUACPActions } from "../uacp/uacpOrchestrationActions";
 import { registerCoreSubagentActions } from "./subagents/coreSubagentOrchestration";
 import { registerTrinityCodeOpsActions } from "./trinityCodeOpsActions";
+import { registerScheduleLiveNotifierActions } from "./scheduleLiveNotifierActions";
 import { db } from '../../db';
 import { eq, desc, and, gte, sql, isNotNull } from 'drizzle-orm';
 import {
@@ -402,6 +403,7 @@ class AIBrainMasterOrchestrator {
     registerUACPActions(helpaiOrchestrator); // UACP Access Control Actions
     registerCoreSubagentActions(helpaiOrchestrator); // Fortune 500-grade Core Subagent Actions (Scheduling, Payroll, Invoice, Notification)
     registerTrinityCodeOpsActions(helpaiOrchestrator); // Trinity Autonomous Coding Actions (grep, patch, commit, FAST mode)
+    registerScheduleLiveNotifierActions(); // Real-time schedule notification actions
     
     // Subscribe to platform events
     this.subscribeToEvents();
