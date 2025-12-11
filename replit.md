@@ -80,6 +80,7 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Adaptive Supervision Router:** Smart routing based on task complexity and risk assessment, selecting optimal model tiers and supervision levels.
 - **Behavioral Monitoring Service:** Model drift detection and anomaly tracking system, recording behavior samples and identifying anomalies.
 - **Trinity Command Center (TCC):** Universal cognitive command center at /trinity/command-center. RBAC-gated quick actions (role-based tool access), natural language & voice command interface with Trinity AI, real-time AI output panels, subagent testing, hotfix deployment, mobile-first design, and full orchestration hierarchy integration.
+- **Trinity Dialogue Toggle:** Environment variable `TRINITY_DIALOGUE_ENABLED` to disable AI thought generation during testing, saving tokens. Set to `false` in development to skip Gemini calls for Trinity thoughts.
 
 **System Design Choices:**
 - **Modularity:** 87 backend service modules and 220+ frontend routes.
