@@ -12,6 +12,7 @@
 import { db } from '../db';
 import { platformUpdates, notifications, platformRoles, systemAuditLogs, employees } from '@shared/schema';
 import { eq, and, inArray, gte, isNull } from 'drizzle-orm';
+import { generatePlatformUpdate as aiGeneratePlatformUpdate } from './aiNotificationService';
 
 export type PlatformEventType = 
   | 'feature_released'
@@ -138,66 +139,65 @@ class PlatformEventBus {
   }
 
   /**
-   * Store event in What's New database table
+   * Store event in What's New database table via AI Brain articulation
+   * - Uses aiNotificationService.generatePlatformUpdate for Gemini-enhanced descriptions
    * - workspaceId: null = global platform update, set = workspace-specific
    * - visibility: controls RBAC who can see the update
-   * - Includes smart deduplication to prevent similar updates within 1 hour
+   * - Includes smart deduplication via aiNotificationService
    */
   private async storeInWhatsNew(event: PlatformEvent): Promise<void> {
     try {
-      // Smart deduplication: check for similar titles in the last hour
-      const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
-      const normalizedTitle = event.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-      
-      // Check for exact or similar title within the dedup window
-      const recentSimilar = await db.select({ id: platformUpdates.id, title: platformUpdates.title })
-        .from(platformUpdates)
-        .where(
-          and(
-            gte(platformUpdates.createdAt, oneHourAgo),
-            event.workspaceId 
-              ? eq(platformUpdates.workspaceId, event.workspaceId)
-              : isNull(platformUpdates.workspaceId)
-          )
-        )
-        .limit(50);
-      
-      // Check if any recent update has a similar normalized title (80% word overlap)
-      const isDuplicate = recentSimilar.some(existing => {
-        const existingNormalized = existing.title.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
-        const titleWords = new Set(normalizedTitle.split(/\s+/));
-        const existingWords = new Set(existingNormalized.split(/\s+/));
-        const commonWords = [...titleWords].filter(w => existingWords.has(w));
-        const overlapRatio = commonWords.length / Math.max(titleWords.size, existingWords.size);
-        return overlapRatio >= 0.8; // 80% word overlap threshold
-      });
-      
-      if (isDuplicate) {
-        console.log(`[EventBus] Skipping duplicate platform update (similar title within 1hr): ${event.title}`);
-        return;
-      }
-      
-      const id = `${event.type}-${event.title.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
-      
-      await db.insert(platformUpdates).values({
-        id,
+      // Use AI Brain articulation via aiNotificationService
+      // This provides:
+      // 1. Gemini-enhanced descriptions (NOTIFICATION tier)
+      // 2. Smart deduplication (idempotency keys)
+      // 3. Proper platform update storage
+      const result = await aiGeneratePlatformUpdate({
         title: event.title,
         description: event.description,
-        category: event.category,
-        version: event.version,
-        isNew: event.isNew ?? true,
-        priority: event.priority,
+        category: event.category as any,
+        workspaceId: event.workspaceId,
+        priority: event.priority || 1,
         learnMoreUrl: event.learnMoreUrl,
-        metadata: event.metadata,
-        date: new Date(),
-        workspaceId: event.workspaceId || null, // null = global, set = tenant-scoped
-        visibility: event.visibility || 'all', // RBAC visibility control
+        metadata: {
+          ...event.metadata,
+          sourceType: 'ai_brain',
+          eventType: event.type,
+          version: event.version,
+          visibility: event.visibility || 'all',
+        },
       });
       
-      const scope = event.workspaceId ? `workspace:${event.workspaceId}` : 'global';
-      console.log(`[EventBus] Stored in What's New (${scope}): ${event.title}`);
+      if (result) {
+        const scope = event.workspaceId ? `workspace:${event.workspaceId}` : 'global';
+        console.log(`[EventBus] AI-articulated update stored (${scope}): ${event.title} [${result.id}]`);
+      } else {
+        console.log(`[EventBus] Skipped duplicate/rate-limited update: ${event.title}`);
+      }
     } catch (error) {
-      console.error('[EventBus] Failed to store in What\'s New:', error);
+      console.error('[EventBus] Failed to store AI-articulated update:', error);
+      
+      // Fallback to direct insert if AI articulation fails
+      try {
+        const id = `${event.type}-${event.title.toLowerCase().replace(/\s+/g, '-')}-${Date.now()}`;
+        await db.insert(platformUpdates).values({
+          id,
+          title: event.title,
+          description: event.description,
+          category: event.category,
+          version: event.version,
+          isNew: event.isNew ?? true,
+          priority: event.priority,
+          learnMoreUrl: event.learnMoreUrl,
+          metadata: { ...event.metadata, sourceType: 'fallback' },
+          date: new Date(),
+          workspaceId: event.workspaceId || null,
+          visibility: event.visibility || 'all',
+        });
+        console.log(`[EventBus] Fallback: Stored update directly: ${event.title}`);
+      } catch (fallbackError) {
+        console.error('[EventBus] Fallback insert also failed:', fallbackError);
+      }
     }
   }
 

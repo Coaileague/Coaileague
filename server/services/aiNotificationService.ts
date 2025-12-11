@@ -28,6 +28,7 @@ function sanitizeCategory(category: string | undefined): UpdateCategory {
   }
   
   // Map detailed/invalid categories to valid enum values
+  // Extended to support platformEventBus categories (maintenance, diagnostic, ai_brain, error, support)
   const categoryMapping: Record<string, UpdateCategory> = {
     'hotpatch': 'bugfix',
     'service': 'feature',
@@ -38,6 +39,12 @@ function sanitizeCategory(category: string | undefined): UpdateCategory {
     'backend_update': 'improvement',
     'performance': 'improvement',
     'documentation': 'announcement',
+    // platformEventBus extended categories
+    'maintenance': 'announcement',
+    'diagnostic': 'improvement',
+    'ai_brain': 'feature',
+    'error': 'bugfix',
+    'support': 'announcement',
   };
   
   return categoryMapping[category] || 'announcement';
