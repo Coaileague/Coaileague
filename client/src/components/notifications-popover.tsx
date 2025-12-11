@@ -1135,6 +1135,8 @@ export function NotificationsPopover() {
           <DialogContent 
             className="w-[calc(100vw-1rem)] max-w-[420px] h-[80vh] p-0 gap-0 flex flex-col rounded-xl overflow-hidden"
             showHomeButton={false}
+            data-testid="notification-dialog-content"
+            data-trinity-avoid="true"
           >
             <NotificationsContent />
           </DialogContent>
@@ -1157,6 +1159,8 @@ export function NotificationsPopover() {
         className="w-[420px] max-w-[calc(100vw-2rem)] max-h-[min(70vh,550px)] p-0 overflow-hidden shadow-xl border-muted flex flex-col" 
         align="end"
         sideOffset={8}
+        data-testid="notification-popover-content"
+        data-trinity-avoid="true"
         onInteractOutside={(e) => {
           // Prevent closing when interacting with Trinity mascot or its components
           const target = e.target as HTMLElement;

@@ -683,7 +683,7 @@ function MascotRenderer() {
       {/* Mascot visual container with transforms */}
       <div 
         ref={mascotContainerRef}
-        className={`fixed select-none pointer-events-none mascot-container ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className="fixed select-none pointer-events-none mascot-container cursor-default"
         data-mascot="container"
         data-trinity="true"
         style={{ 
@@ -704,7 +704,6 @@ function MascotRenderer() {
       >
         <div 
           className="w-full h-full pointer-events-auto" 
-          {...dragHandlers}
           onClick={handleTap}
           style={{ background: 'transparent' }}
         >

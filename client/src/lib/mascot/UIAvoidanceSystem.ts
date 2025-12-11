@@ -137,14 +137,14 @@ const UI_SELECTORS: Record<UIElementType, string> = {
   select: 'select, [role="listbox"], [role="combobox"], [data-testid*="select"]',
   form: 'form, [data-testid*="form"]',
   navigation: 'nav, [role="navigation"], header nav, .sidebar-nav, [data-testid*="nav"]',
-  modal: '[role="dialog"], [role="alertdialog"], .modal, .dialog, [data-testid*="modal"], [data-testid*="dialog"]',
-  dialog: 'dialog, [role="dialog"]',
-  popover: '[role="menu"], [role="tooltip"], .popover, .dropdown-menu, [data-testid*="popover"], [data-testid*="dropdown"], [data-testid*="notification"], [data-testid*="whats-new"], [data-testid="notification-bell"], [data-testid="whats-new-badge"], .notification-popover, .whats-new-popover',
+  modal: '[role="dialog"], [role="alertdialog"], .modal, .dialog, [data-testid*="modal"], [data-testid*="dialog"], [data-trinity-avoid="true"]',
+  dialog: 'dialog, [role="dialog"], [data-trinity-avoid="true"]',
+  popover: '[role="menu"], [role="tooltip"], .popover, .dropdown-menu, [data-testid*="popover"], [data-testid*="dropdown"], [data-testid*="notification"], [data-testid*="whats-new"], [data-testid="notification-bell"], [data-testid="whats-new-badge"], .notification-popover, .whats-new-popover, [data-trinity-avoid="true"], [data-radix-popper-content-wrapper]',
   menu: '[role="menu"], [role="menubar"], .menu, [data-testid*="menu"]',
   sidebar: 'aside, [role="complementary"], .sidebar, [data-testid*="sidebar"]',
   header: 'header, [role="banner"], [data-testid*="header"]',
   footer: 'footer, [role="contentinfo"], [data-testid*="footer"]',
-  fixed: '[style*="position: fixed"], [style*="position:fixed"], [role="alert"], [role="status"], .notification-badge, .whats-new-badge, .notification-bell',
+  fixed: '[style*="position: fixed"], [style*="position:fixed"], [role="alert"], [role="status"], .notification-badge, .whats-new-badge, .notification-bell, [data-radix-popper-content-wrapper]',
   sticky: '[style*="position: sticky"], [style*="position:sticky"], .sticky',
   focusable: ':focus, :focus-within'
 };
