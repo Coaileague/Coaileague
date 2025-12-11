@@ -200,6 +200,8 @@ router.post('/cache/clear', async (req: Request, res: Response) => {
  * GET /api/trinity/context
  * Get the full Trinity context for the current user
  * This tells Trinity who it's talking to and how to respond
+ * 
+ * Set TRINITY_DIALOGUE_ENABLED=false to disable AI thought generation (saves tokens during testing)
  */
 router.get('/context', async (req: Request, res: Response) => {
   try {
@@ -211,12 +213,20 @@ router.get('/context', async (req: Request, res: Response) => {
     const workspaceId = req.query.workspaceId as string | undefined;
     const context = await trinityContextService.resolve(user.id, workspaceId);
     
-    const contextualThought = await trinityContextService.generateThought(context);
+    // Check if Trinity dialogue is enabled (default: true)
+    // Set TRINITY_DIALOGUE_ENABLED=false to disable AI thoughts during testing
+    const dialogueEnabled = process.env.TRINITY_DIALOGUE_ENABLED !== 'false';
+    
+    let contextualThought: string | null = null;
+    if (dialogueEnabled) {
+      contextualThought = await trinityContextService.generateThought(context);
+    }
     
     res.json({
       success: true,
       context,
       initialThought: contextualThought,
+      dialogueEnabled, // Let frontend know if dialogue is active
     });
   } catch (error: any) {
     console.error('[Trinity Context API] Error resolving context:', error);
@@ -262,12 +272,25 @@ router.get('/access', async (req: Request, res: Response) => {
 /**
  * POST /api/trinity/thought
  * Generate a contextual thought based on current state
+ * 
+ * Set TRINITY_DIALOGUE_ENABLED=false to disable AI thought generation (saves tokens during testing)
  */
 router.post('/thought', async (req: Request, res: Response) => {
   try {
     const user = await getAuthenticatedUser(req);
     if (!user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    // Check if Trinity dialogue is enabled (default: true)
+    const dialogueEnabled = process.env.TRINITY_DIALOGUE_ENABLED !== 'false';
+    if (!dialogueEnabled) {
+      return res.json({
+        success: true,
+        thought: null,
+        reason: 'dialogue_disabled',
+        dialogueEnabled: false,
+      });
     }
     
     const { workspaceId, trigger } = req.body;
@@ -286,6 +309,7 @@ router.post('/thought', async (req: Request, res: Response) => {
     res.json({
       success: true,
       thought,
+      dialogueEnabled: true,
       context: {
         persona: context.persona,
         greeting: context.greeting,
