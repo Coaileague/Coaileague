@@ -37,9 +37,19 @@ export type PlatformEventType =
   | 'ai_timeout'
   | 'system_maintenance'
   | 'queue_update'
-  | 'staff_action';
+  | 'staff_action'
+  // Schedule-specific events for real-time workforce notifications
+  | 'schedule_published'
+  | 'shift_created'
+  | 'shift_updated'
+  | 'shift_deleted'
+  | 'shift_swap_requested'
+  | 'shift_swap_approved'
+  | 'shift_swap_denied'
+  | 'shift_assigned'
+  | 'shift_unassigned';
 
-export type EventCategory = 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement' | 'maintenance' | 'diagnostic' | 'support' | 'ai_brain' | 'error';
+export type EventCategory = 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement' | 'maintenance' | 'diagnostic' | 'support' | 'ai_brain' | 'error' | 'schedule';
 
 // Event visibility levels - must match update_visibility enum in database
 // Available: 'all', 'staff', 'supervisor', 'manager', 'admin'
@@ -415,5 +425,204 @@ export async function announceAutomationComplete(
     workspaceId,
     metadata,
     priority: 2,
+  });
+}
+
+// ============================================================================
+// SCHEDULE LIVE NOTIFICATIONS - Real-time workforce schedule updates
+// ============================================================================
+
+export interface ScheduleChangeEvent {
+  workspaceId: string;
+  affectedEmployeeIds: string[];
+  shiftId?: string;
+  shiftDate?: string;
+  shiftTime?: string;
+  changedBy: string;
+  changedByRole: string;
+  reason?: string;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Publish schedule change to affected employees immediately
+ * Used when schedules are published, shifts created/updated/deleted
+ */
+export async function publishScheduleChange(
+  eventType: 'schedule_published' | 'shift_created' | 'shift_updated' | 'shift_deleted' | 'shift_assigned' | 'shift_unassigned',
+  params: ScheduleChangeEvent & { title: string; description: string }
+): Promise<void> {
+  await publishPlatformUpdate({
+    type: eventType,
+    category: 'schedule',
+    title: params.title,
+    description: params.description,
+    workspaceId: params.workspaceId,
+    userId: params.changedBy,
+    visibility: 'all',
+    priority: 1,
+    metadata: {
+      affectedEmployeeIds: params.affectedEmployeeIds,
+      shiftId: params.shiftId,
+      shiftDate: params.shiftDate,
+      shiftTime: params.shiftTime,
+      changedByRole: params.changedByRole,
+      reason: params.reason,
+      ...params.metadata,
+    },
+  });
+  console.log(`[ScheduleLive] ${eventType}: Notified ${params.affectedEmployeeIds.length} employees`);
+}
+
+/**
+ * Notify employees when a schedule is published
+ */
+export async function notifySchedulePublished(params: {
+  workspaceId: string;
+  weekStart: string;
+  weekEnd: string;
+  affectedEmployeeIds: string[];
+  publishedBy: string;
+  publishedByRole: string;
+  totalShifts: number;
+}): Promise<void> {
+  await publishScheduleChange('schedule_published', {
+    workspaceId: params.workspaceId,
+    affectedEmployeeIds: params.affectedEmployeeIds,
+    changedBy: params.publishedBy,
+    changedByRole: params.publishedByRole,
+    title: 'Schedule Published',
+    description: `Your schedule for ${params.weekStart} - ${params.weekEnd} is now available. ${params.totalShifts} shifts assigned.`,
+    metadata: {
+      weekStart: params.weekStart,
+      weekEnd: params.weekEnd,
+      totalShifts: params.totalShifts,
+    },
+  });
+}
+
+/**
+ * Notify employee when a shift is created/assigned to them
+ */
+export async function notifyShiftCreated(params: {
+  workspaceId: string;
+  employeeId: string;
+  employeeName: string;
+  shiftId: string;
+  shiftDate: string;
+  shiftTime: string;
+  createdBy: string;
+  createdByRole: string;
+}): Promise<void> {
+  await publishScheduleChange('shift_created', {
+    workspaceId: params.workspaceId,
+    affectedEmployeeIds: [params.employeeId],
+    shiftId: params.shiftId,
+    shiftDate: params.shiftDate,
+    shiftTime: params.shiftTime,
+    changedBy: params.createdBy,
+    changedByRole: params.createdByRole,
+    title: 'New Shift Assigned',
+    description: `You have a new shift on ${params.shiftDate} at ${params.shiftTime}`,
+  });
+}
+
+/**
+ * Notify employee when their shift is updated
+ */
+export async function notifyShiftUpdated(params: {
+  workspaceId: string;
+  employeeId: string;
+  shiftId: string;
+  shiftDate: string;
+  shiftTime: string;
+  changedBy: string;
+  changedByRole: string;
+  changes: string;
+}): Promise<void> {
+  await publishScheduleChange('shift_updated', {
+    workspaceId: params.workspaceId,
+    affectedEmployeeIds: [params.employeeId],
+    shiftId: params.shiftId,
+    shiftDate: params.shiftDate,
+    shiftTime: params.shiftTime,
+    changedBy: params.changedBy,
+    changedByRole: params.changedByRole,
+    title: 'Shift Updated',
+    description: `Your shift on ${params.shiftDate} has been updated: ${params.changes}`,
+    metadata: { changes: params.changes },
+  });
+}
+
+/**
+ * Notify employee when their shift is deleted
+ */
+export async function notifyShiftDeleted(params: {
+  workspaceId: string;
+  employeeId: string;
+  shiftId: string;
+  shiftDate: string;
+  shiftTime: string;
+  deletedBy: string;
+  deletedByRole: string;
+  reason?: string;
+}): Promise<void> {
+  await publishScheduleChange('shift_deleted', {
+    workspaceId: params.workspaceId,
+    affectedEmployeeIds: [params.employeeId],
+    shiftId: params.shiftId,
+    shiftDate: params.shiftDate,
+    shiftTime: params.shiftTime,
+    changedBy: params.deletedBy,
+    changedByRole: params.deletedByRole,
+    reason: params.reason,
+    title: 'Shift Removed',
+    description: `Your shift on ${params.shiftDate} at ${params.shiftTime} has been removed${params.reason ? `: ${params.reason}` : ''}`,
+  });
+}
+
+/**
+ * Notify employees about shift swap requests/approvals
+ */
+export async function notifyShiftSwap(
+  eventType: 'shift_swap_requested' | 'shift_swap_approved' | 'shift_swap_denied',
+  params: {
+    workspaceId: string;
+    requesterId: string;
+    targetEmployeeId?: string;
+    shiftId: string;
+    shiftDate: string;
+    actionBy: string;
+    actionByRole: string;
+    reason?: string;
+  }
+): Promise<void> {
+  const titles: Record<string, string> = {
+    shift_swap_requested: 'Shift Swap Request',
+    shift_swap_approved: 'Shift Swap Approved',
+    shift_swap_denied: 'Shift Swap Denied',
+  };
+
+  const affectedIds = [params.requesterId];
+  if (params.targetEmployeeId) affectedIds.push(params.targetEmployeeId);
+
+  await publishPlatformUpdate({
+    type: eventType,
+    category: 'schedule',
+    title: titles[eventType],
+    description: `Shift swap for ${params.shiftDate}${params.reason ? `: ${params.reason}` : ''}`,
+    workspaceId: params.workspaceId,
+    userId: params.actionBy,
+    visibility: 'all',
+    priority: 1,
+    metadata: {
+      affectedEmployeeIds: affectedIds,
+      shiftId: params.shiftId,
+      shiftDate: params.shiftDate,
+      requesterId: params.requesterId,
+      targetEmployeeId: params.targetEmployeeId,
+      actionByRole: params.actionByRole,
+      reason: params.reason,
+    },
   });
 }

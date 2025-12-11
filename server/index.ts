@@ -16,6 +16,7 @@ import { startNotificationCleanupScheduler } from "./services/notificationCleanu
 import { initializeOrchestrationServices, setOrchestrationWebSocketBroadcaster } from "./services/ai-brain/orchestrationBridge";
 import { broadcastToWorkspace } from "./websocket";
 import { initializeSkillsSystem } from "./services/ai-brain/skills/skill-loader";
+import "./services/scheduleLiveNotifier";
 
 const app = express();
 app.use(express.json());
