@@ -396,11 +396,11 @@ export const TAB_ROUTING: Record<string, NotificationTab> = {
   backend_update: 'whats_new',
   performance: 'whats_new',
   documentation: 'whats_new',
-  ai_brain: 'whats_new',           // AI Brain upgrades go to What's New
+  ai_brain: 'system',               // AI Brain orchestration updates go to System tab
   workflow: 'whats_new',            // Workflow improvements
   api_change: 'whats_new',          // API changes for developers
   subagent_added: 'whats_new',      // New subagents added to orchestration
-  orchestration_update: 'whats_new', // Orchestration improvements
+  orchestration_update: 'system',   // AI orchestration updates go to System tab
   ai_mascot: 'whats_new',           // Mascot updates
   welcome: 'whats_new',             // Welcome messages
   welcome_org: 'whats_new',         // Org welcome

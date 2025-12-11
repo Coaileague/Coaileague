@@ -459,7 +459,16 @@ Respond ONLY with valid JSON (no markdown, no explanations):
   }
   
   // Valid platform_update_category enum values from shared/schema.ts
-  private static readonly VALID_CATEGORIES = ['feature', 'improvement', 'bugfix', 'security', 'announcement'] as const;
+  // Must include ALL enum values for direct match validation
+  private static readonly VALID_CATEGORIES = [
+    // What's New tab categories
+    'feature', 'improvement', 'announcement',
+    // System tab categories
+    'bugfix', 'security', 'maintenance', 'diagnostic', 'support', 
+    'ai_brain', 'error', 'fix', 'hotpatch', 'system', 'incident', 'outage', 'recovery',
+    // Additional schema enum values
+    'deprecation', 'maintenance_update', 'maintenance_postmortem'
+  ] as const;
 
   private mapToDetailedCategory(changeType: string): string {
     // Maps internal change types to valid platform_update_category enum values
@@ -476,28 +485,57 @@ Respond ONLY with valid JSON (no markdown, no explanations):
   }
 
   // Sanitizes any category string to a valid enum value
-  private sanitizeCategory(category: string | undefined): 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement' {
-    if (!category) return 'announcement';
+  // Now includes System tab categories for AI Brain notifications
+  private sanitizeCategory(category: string | undefined): string {
+    if (!category) return 'announcement'; // Default generic updates go to What's New
     
     // Direct match to valid enum value
     if (PlatformChangeMonitorService.VALID_CATEGORIES.includes(category as any)) {
-      return category as any;
+      return category;
     }
     
     // Map detailed categories to valid enum values
-    const categoryMapping: Record<string, 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement'> = {
-      'hotpatch': 'bugfix',
+    // Categories that go to System tab: bugfix, security, maintenance, diagnostic, support, ai_brain, error, fix, hotpatch, system, incident, outage, recovery
+    // Categories that go to What's New: feature, improvement, announcement
+    const categoryMapping: Record<string, string> = {
+      // System tab categories
+      'hotpatch': 'hotpatch',
+      'hot_patch': 'hotpatch',
+      'fix': 'fix',
+      'quick_fix': 'fix',
+      'bugfix': 'bugfix',
+      'bug_fix': 'bugfix',
+      'security_fix': 'security',
+      'diagnostic': 'diagnostic',
+      'diagnostics': 'diagnostic',
+      'system_health': 'diagnostic',
+      'health_check': 'diagnostic',
+      'error': 'error',
+      'incident': 'incident',
+      'outage': 'outage',
+      'recovery': 'recovery',
+      'maintenance': 'maintenance',
+      'support': 'support',
+      'ai_brain': 'ai_brain',
+      'orchestration': 'ai_brain',
+      'orchestration_update': 'ai_brain',
+      'system': 'system',
+      'platform_monitor': 'diagnostic',
+      
+      // What's New categories
       'service': 'feature',
       'bot_automation': 'feature',
-      'deprecation': 'announcement',
+      'deprecation': 'deprecation',
       'integration': 'feature',
       'ui_update': 'improvement',
       'backend_update': 'improvement',
       'performance': 'improvement',
       'documentation': 'announcement',
+      'feature_added': 'feature',
+      'enhancement': 'improvement',
     };
     
-    return categoryMapping[category] || 'announcement';
+    return categoryMapping[category] || 'announcement'; // Default unknown to What's New
   }
 
   private buildModuleContext(modules: string[]): string {
