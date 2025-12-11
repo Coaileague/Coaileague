@@ -573,14 +573,15 @@ export function NotificationsPopover() {
             </TabsList>
           </div>
 
-          <ScrollArea 
-            className="flex-1 min-h-0 overflow-hidden"
+          <div 
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+            ref={scrollRef}
             style={{ 
-              height: isMobile ? 'calc(90vh - 180px)' : '420px',
-              maxHeight: isMobile ? 'calc(90vh - 180px)' : '420px',
+              height: isMobile ? 'calc(85vh - 180px)' : '380px',
+              maxHeight: isMobile ? 'calc(85vh - 180px)' : '380px',
             }}
           >
-            <div ref={scrollRef} className="h-full">
+            <div>
             <TabsContent value="updates" className="mt-0 focus-visible:outline-none" forceMount={activeTab === 'updates' ? true : undefined}>
               {unviewedUpdates.length > 0 && (
                 <div className="px-4 py-3 flex items-center justify-between border-b bg-muted/30">
@@ -1039,9 +1040,9 @@ export function NotificationsPopover() {
                 </div>
               )}
             </TabsContent>
-            <div className="pb-2" />
+            <div className="pb-4" />
             </div>
-          </ScrollArea>
+          </div>
         </Tabs>
       )}
 
