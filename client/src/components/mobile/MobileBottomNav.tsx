@@ -10,7 +10,7 @@
  * - Keyboard-aware hiding
  */
 
-import { Home, Calendar, Clock, MessageSquare, Menu, LayoutDashboard, Users, LogOut, ArrowLeft } from "lucide-react";
+import { Home, Calendar, Clock, MessageSquare, Menu, DollarSign, Users, LogOut, ArrowLeft, ClipboardCheck, Settings, User } from "lucide-react";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { performLogout, setLogoutAnimationContext } from "@/lib/logoutHandler";
 import { useUniversalAnimation } from "@/contexts/universal-animation-context";
+import { useQuery } from "@tanstack/react-query";
 
 interface NavItemProps {
   icon: typeof Home;
@@ -83,6 +84,14 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [keyboardVisible, setKeyboardVisible] = useState(false);
   const animationContext = useUniversalAnimation();
+  
+  // Fetch employee info for RBAC-based menu items
+  const { data: employee } = useQuery<{ workspaceRole?: string }>({
+    queryKey: ['/api/employees/me'],
+  });
+  
+  const workspaceRole = employee?.workspaceRole || 'staff';
+  const isSupervisor = ['org_owner', 'org_admin', 'manager', 'supervisor', 'hr_manager'].includes(workspaceRole);
   
   useEffect(() => {
     // Wire animation context to logout handler
@@ -199,26 +208,48 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
             <div className="p-5 space-y-4">
               <h3 className="font-bold text-lg text-white mb-4">Quick Access</h3>
               
+              {/* Workforce-focused quick actions */}
               <div className="grid grid-cols-3 gap-3">
                 <QuickNavButton 
-                  icon={Users} 
-                  label="Employees" 
-                  href="/employees" 
-                  onNavigate={() => { setLocation('/employees'); setMenuOpen(false); }}
+                  icon={DollarSign} 
+                  label="My Pay" 
+                  href="/payroll" 
+                  onNavigate={() => { setLocation('/payroll'); setMenuOpen(false); }}
                 />
                 <QuickNavButton 
-                  icon={LayoutDashboard} 
-                  label="Reports" 
-                  href="/reports" 
-                  onNavigate={() => { setLocation('/reports'); setMenuOpen(false); }}
+                  icon={ClipboardCheck} 
+                  label="Time Off" 
+                  href="/pto" 
+                  onNavigate={() => { setLocation('/pto'); setMenuOpen(false); }}
                 />
                 <QuickNavButton 
                   icon={Calendar} 
-                  label="Approvals" 
-                  href="/workflow-approvals" 
-                  onNavigate={() => { setLocation('/workflow-approvals'); setMenuOpen(false); }}
+                  label="Availability" 
+                  href="/availability" 
+                  onNavigate={() => { setLocation('/availability'); setMenuOpen(false); }}
                 />
               </div>
+              
+              {/* Supervisor-only tools */}
+              {isSupervisor && (
+                <div className="pt-4 border-t border-slate-700">
+                  <p className="text-xs text-slate-500 uppercase tracking-wide mb-3">Supervisor Tools</p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <QuickNavButton 
+                      icon={Users} 
+                      label="Team" 
+                      href="/employees" 
+                      onNavigate={() => { setLocation('/employees'); setMenuOpen(false); }}
+                    />
+                    <QuickNavButton 
+                      icon={ClipboardCheck} 
+                      label="Approvals" 
+                      href="/workflow-approvals" 
+                      onNavigate={() => { setLocation('/workflow-approvals'); setMenuOpen(false); }}
+                    />
+                  </div>
+                </div>
+              )}
               
               <div className="pt-4 border-t border-slate-700">
                 <Button 
@@ -227,7 +258,7 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
                   onClick={() => { setLocation('/profile'); setMenuOpen(false); }}
                   data-testid="nav-profile"
                 >
-                  <Users className="w-5 h-5 text-cyan-400" />
+                  <User className="w-5 h-5 text-cyan-400" />
                   My Profile
                 </Button>
               </div>
@@ -239,7 +270,7 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
                   onClick={() => { setLocation('/settings'); setMenuOpen(false); }}
                   data-testid="nav-settings"
                 >
-                  <Menu className="w-5 h-5 text-cyan-400" />
+                  <Settings className="w-5 h-5 text-cyan-400" />
                   Settings
                 </Button>
               </div>
