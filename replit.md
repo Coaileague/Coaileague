@@ -81,6 +81,7 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Behavioral Monitoring Service:** Model drift detection and anomaly tracking system, recording behavior samples and identifying anomalies.
 - **Trinity Command Center (TCC):** Universal cognitive command center at /trinity/command-center. RBAC-gated quick actions (role-based tool access), natural language & voice command interface with Trinity AI, real-time AI output panels, subagent testing, hotfix deployment, mobile-first design, and full orchestration hierarchy integration.
 - **Trinity Dialogue Toggle:** Environment variable `TRINITY_DIALOGUE_ENABLED` to disable AI thought generation during testing, saving tokens. Set to `false` in development to skip Gemini calls for Trinity thoughts.
+- **Visual QA Subagent (Trinity's Eyes):** AI-powered visual inspection system using Puppeteer for screenshots and Gemini Vision for anomaly detection. Captures UI at multiple viewports, detects broken icons, layout shifts, text overlap, and visual regressions. Supports baseline comparison for regression testing, self-healing workflows, and REST API at /api/vqa. Files: browserAutomationTool.ts, visualQaSubagent.ts, vqaRoutes.ts, schema tables (visual_qa_runs, visual_qa_baselines, visual_qa_findings).
 
 **System Design Choices:**
 - **Modularity:** 87 backend service modules and 220+ frontend routes.

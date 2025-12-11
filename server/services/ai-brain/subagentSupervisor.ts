@@ -47,6 +47,7 @@ const DOMAIN_CREDIT_COSTS: Record<SubagentDomain, keyof typeof CREDIT_COSTS> = {
   invoicing: 'ai_invoice_generation',
   compliance: 'ai_general',
   notifications: 'ai_general',
+  visual_qa: 'ai_general', // Visual QA subagent
   analytics: 'ai_analytics_report',
   gamification: 'ai_general',
   communication: 'ai_chat_query',
@@ -78,7 +79,8 @@ export type SubagentDomain =
   | 'analytics' | 'gamification' | 'communication' | 'health' | 'testing'
   | 'deployment' | 'recovery' | 'orchestration' | 'security'
   | 'escalation' | 'automation' | 'lifecycle' | 'assist' | 'filesystem'
-  | 'workflow' | 'onboarding' | 'expense' | 'pricing' | 'data_migration' | 'scoring';
+  | 'workflow' | 'onboarding' | 'expense' | 'pricing' | 'data_migration' | 'scoring'
+  | 'visual_qa'; // Trinity's Eyes - Visual QA system
 
 export type SubagentPhase = 'prepare' | 'execute' | 'validate' | 'escalate';
 export type SubagentStatus = 'idle' | 'preparing' | 'executing' | 'validating' | 'escalating' | 'completed' | 'failed' | 'derailed' | 'retrying';
@@ -4001,6 +4003,7 @@ class SubagentSupervisor {
       pricing: ['price', 'rate', 'quote', 'estimate'],
       data_migration: ['migrate', 'import', 'export', 'transfer', 'data'],
       scoring: ['score', 'rating', 'evaluate', 'rank', 'grade'],
+      visual_qa: ['screenshot', 'visual', 'ui check', 'layout', 'broken icon', 'visual regression', 'eyes'],
     };
 
     for (const [domain, keywords] of Object.entries(domainKeywords)) {
@@ -4094,6 +4097,7 @@ class SubagentSupervisor {
       onboarding: 'ONBOARDING',
       filesystem: 'SIMPLE',
       scoring: 'SIMPLE',
+      visual_qa: 'DIAGNOSTICS', // Visual QA uses vision model for anomaly detection
     };
 
     const preferredTier = domainTierMapping[domain] || 'CONVERSATIONAL';
@@ -4321,6 +4325,7 @@ class SubagentSupervisor {
       pricing: 'intelligenceos_prediction', // OPTIMIZED: Pricing benefits from prediction
       data_migration: 'platform_awareness', // Data migration uses platform awareness
       scoring: 'intelligenceos_prediction', // Scoring uses prediction models
+      visual_qa: 'issue_diagnosis', // Visual QA diagnoses UI issues
     };
 
     const skill = skillMapping[subagent.domain as SubagentDomain] || 'helpos_support';

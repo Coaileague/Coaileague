@@ -17940,3 +17940,162 @@ export const insertAiApprovalRequestSchema = createInsertSchema(aiApprovalReques
 });
 export type InsertAiApprovalRequest = z.infer<typeof insertAiApprovalRequestSchema>;
 export type AiApprovalRequest = typeof aiApprovalRequests.$inferSelect;
+
+// ============================================================================
+// VISUAL QA SYSTEM - AI Brain Eyes
+// ============================================================================
+
+/**
+ * Visual QA Runs - Tracks visual inspection sessions
+ */
+export const visualQaRuns = pgTable("visual_qa_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Trigger source
+  triggerSource: varchar("trigger_source", { length: 50 }).notNull().default('manual'), // 'manual', 'scheduled', 'trinity', 'monitoring'
+  triggeredBy: varchar("triggered_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Target page
+  pageUrl: text("page_url").notNull(),
+  pageName: varchar("page_name", { length: 255 }),
+  viewport: jsonb("viewport").default(sql`'{"width": 1920, "height": 1080}'::jsonb`), // { width, height, deviceName? }
+  
+  // Screenshot storage (object storage reference)
+  screenshotRef: text("screenshot_ref"), // GCS/object storage URL
+  screenshotBase64: text("screenshot_base64"), // Fallback for smaller images
+  
+  // Baseline comparison
+  baselineId: varchar("baseline_id").references(() => visualQaBaselines.id, { onDelete: 'set null' }),
+  
+  // Status tracking
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // 'pending', 'capturing', 'analyzing', 'completed', 'failed', 'self_healing'
+  
+  // Analysis results
+  analysisResult: jsonb("analysis_result").default(sql`'{}'::jsonb`), // Full Gemini response
+  anomalyCount: integer("anomaly_count").default(0),
+  selfHealAttempted: boolean("self_heal_attempted").default(false),
+  selfHealSuccess: boolean("self_heal_success"),
+  
+  // Performance metrics
+  captureTimeMs: integer("capture_time_ms"),
+  analysisTimeMs: integer("analysis_time_ms"),
+  totalTimeMs: integer("total_time_ms"),
+  tokensUsed: integer("tokens_used").default(0),
+  
+  // Error tracking
+  errorMessage: text("error_message"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("visual_qa_runs_workspace_idx").on(table.workspaceId),
+  index("visual_qa_runs_status_idx").on(table.status),
+  index("visual_qa_runs_trigger_idx").on(table.triggerSource),
+  index("visual_qa_runs_created_idx").on(table.createdAt),
+]);
+
+export const insertVisualQaRunSchema = createInsertSchema(visualQaRuns).omit({
+  id: true,
+  createdAt: true,
+  completedAt: true,
+});
+export type InsertVisualQaRun = z.infer<typeof insertVisualQaRunSchema>;
+export type VisualQaRun = typeof visualQaRuns.$inferSelect;
+
+/**
+ * Visual QA Baselines - Reference screenshots for comparison
+ */
+export const visualQaBaselines = pgTable("visual_qa_baselines", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Page identification
+  pageId: varchar("page_id", { length: 255 }).notNull(), // Unique page identifier (e.g., '/dashboard', '/payroll')
+  pageName: varchar("page_name", { length: 255 }),
+  pageUrl: text("page_url").notNull(),
+  
+  // Viewport specification
+  viewport: jsonb("viewport").default(sql`'{"width": 1920, "height": 1080}'::jsonb`),
+  deviceName: varchar("device_name", { length: 100 }), // 'desktop', 'mobile', 'tablet', 'iPhone 15', etc.
+  
+  // Screenshot storage
+  screenshotRef: text("screenshot_ref").notNull(), // Object storage URL
+  screenshotHash: varchar("screenshot_hash", { length: 64 }), // SHA-256 for quick comparison
+  
+  // Design system metadata
+  designHash: varchar("design_hash", { length: 64 }), // Hash of design_guidelines.md at capture time
+  expectedElements: jsonb("expected_elements").default(sql`'[]'::jsonb`), // Key elements that should exist
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  version: integer("version").default(1),
+  
+  // Metadata
+  capturedBy: varchar("captured_by").references(() => users.id, { onDelete: 'set null' }),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("visual_qa_baselines_workspace_idx").on(table.workspaceId),
+  index("visual_qa_baselines_page_idx").on(table.pageId),
+  uniqueIndex("visual_qa_baselines_unique_idx").on(table.workspaceId, table.pageId, table.deviceName),
+]);
+
+export const insertVisualQaBaselineSchema = createInsertSchema(visualQaBaselines).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertVisualQaBaseline = z.infer<typeof insertVisualQaBaselineSchema>;
+export type VisualQaBaseline = typeof visualQaBaselines.$inferSelect;
+
+/**
+ * Visual QA Findings - Individual anomalies detected
+ */
+export const visualQaFindings = pgTable("visual_qa_findings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  runId: varchar("run_id").notNull().references(() => visualQaRuns.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Finding details
+  severity: varchar("severity", { length: 20 }).notNull().default('medium'), // 'critical', 'high', 'medium', 'low', 'info'
+  category: varchar("category", { length: 50 }).notNull(), // 'broken_icon', 'layout_shift', 'text_overlap', 'missing_element', 'color_mismatch', 'font_issue'
+  description: text("description").notNull(),
+  
+  // Location data
+  boundingBox: jsonb("bounding_box"), // { y_min, x_min, y_max, x_max }
+  elementSelector: text("element_selector"), // CSS selector if identifiable
+  elementType: varchar("element_type", { length: 50 }), // 'button', 'icon', 'text', 'image', etc.
+  
+  // AI-suggested fix
+  suggestedFix: text("suggested_fix"),
+  suggestedCss: text("suggested_css"),
+  confidence: decimal("confidence", { precision: 5, scale: 4 }).default('0.0'), // 0.0-1.0
+  
+  // Resolution tracking
+  status: varchar("status", { length: 20 }).notNull().default('open'), // 'open', 'acknowledged', 'fixed', 'ignored', 'false_positive'
+  resolvedBy: varchar("resolved_by").references(() => users.id, { onDelete: 'set null' }),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+  
+  // Self-healing tracking
+  autoFixApplied: boolean("auto_fix_applied").default(false),
+  autoFixResult: varchar("auto_fix_result", { length: 20 }), // 'success', 'failed', 'rolled_back'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("visual_qa_findings_run_idx").on(table.runId),
+  index("visual_qa_findings_workspace_idx").on(table.workspaceId),
+  index("visual_qa_findings_severity_idx").on(table.severity),
+  index("visual_qa_findings_category_idx").on(table.category),
+  index("visual_qa_findings_status_idx").on(table.status),
+]);
+
+export const insertVisualQaFindingSchema = createInsertSchema(visualQaFindings).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertVisualQaFinding = z.infer<typeof insertVisualQaFindingSchema>;
+export type VisualQaFinding = typeof visualQaFindings.$inferSelect;

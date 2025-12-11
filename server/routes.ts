@@ -99,6 +99,7 @@ import { aiBrainConsoleRouter } from "./routes/ai-brain-console";
 import aiBrainControlRouter from "./routes/aiBrainControlRoutes";
 import subagentRouter from "./routes/subagentRoutes";
 import codeEditorRouter from "./routes/code-editor";
+import vqaRouter from "./routes/vqaRoutes"; // Visual QA (AI Brain Eyes)
 import { onboardingRouter } from "./routes/onboardingRoutes";
 import { onboardingAssistantRouter } from "./routes/onboarding-assistant-routes";
 import { timesheetReportRouter } from "./routes/timesheetReportRoutes";
@@ -3098,6 +3099,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/trinity/notifications", trinityNotificationRouter); // Trinity Notification Bridge
   app.use("/api/quick-fixes", quickFixRouter); // Quick Fix System
   app.use("/api/device", deviceLoaderRouter); // Universal Device Loader
+  app.use("/api/vqa", requireAuth, vqaRouter); // Visual QA (AI Brain Eyes)
   // ============================================================================
   // AUTH ROUTES
   // ============================================================================
