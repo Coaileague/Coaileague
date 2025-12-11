@@ -349,10 +349,12 @@ export function registerHealthRoutes(app: Express, requireAuth: any) {
         }
 
         // Create incident report in database
+        // Cast serviceKey to database enum type - validated by zod schema above
+        const dbServiceKey = reportData.serviceKey as 'database' | 'chat_websocket' | 'gemini_ai' | 'object_storage' | 'stripe' | 'email';
         const incident = await storage.createServiceIncidentReport({
           workspaceId,
           userId,
-          serviceKey: reportData.serviceKey,
+          serviceKey: dbServiceKey,
           errorType: reportData.errorType,
           isCriticalService,
           userMessage: reportData.userMessage,
@@ -367,17 +369,15 @@ export function registerHealthRoutes(app: Express, requireAuth: any) {
         // Auto-create support ticket for critical services
         if (isCriticalService) {
           try {
+            const ticketNumber = `TKT-${new Date().getFullYear()}-${Date.now().toString(36).toUpperCase()}`;
             const supportTicket = await storage.createSupportTicket({
               workspaceId,
-              userId,
-              title: `[CRITICAL] ${reportData.serviceKey} failure - ${reportData.errorType}`,
-              description: `Auto-generated from incident report:\n\nService: ${reportData.serviceKey}\nError: ${reportData.errorMessage}\n\nUser Message: ${reportData.userMessage}`,
+              ticketNumber,
+              type: 'support',
+              subject: `[CRITICAL] ${reportData.serviceKey} failure - ${reportData.errorType}`,
+              description: `Auto-generated from incident report:\n\nService: ${reportData.serviceKey}\nError: ${reportData.errorMessage}\n\nUser Message: ${reportData.userMessage}\n\nIncident ID: ${incident.id}`,
               priority: 'high',
               status: 'open',
-              category: 'technical',
-              screenshotKey,
-              incidentId: incident.id,
-              assignedTo: undefined, // Will be assigned by support routing
             });
             console.log(`[AUTO-TICKET] Support ticket created: ${supportTicket.id} for incident ${incident.id}`);
           } catch (ticketError: any) {

@@ -101,6 +101,7 @@ import subagentRouter from "./routes/subagentRoutes";
 import codeEditorRouter from "./routes/code-editor";
 import vqaRouter from "./routes/vqaRoutes"; // Visual QA (AI Brain Eyes)
 import uacpRouter from "./routes/uacpRoutes"; // Universal Access Control Panel (UACP)
+import bugRemediationRouter from "./routes/bugRemediation"; // Bug Report AI Analysis & Auto-Fix
 import { onboardingRouter } from "./routes/onboardingRoutes";
 import { onboardingAssistantRouter } from "./routes/onboarding-assistant-routes";
 import { timesheetReportRouter } from "./routes/timesheetReportRoutes";
@@ -3029,6 +3030,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/ai-brain', aiBrainRouter);
   app.use('/api/helpai', helpaiRouter);
   app.use('/api/mascot', mascotRouter); // Trinity AI Mascot
+  app.use('/api/bug-remediation', bugRemediationRouter); // Bug Report AI Analysis & Auto-Fix
 
   app.use("/api/platform", serviceControlRouter);
   // Core Automation routes (Scheduling, Invoicing, Payroll) - REQUIRES AUTH
