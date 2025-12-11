@@ -826,9 +826,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Authentication required" });
       }
 
-      const validTabs = ['updates', 'notifications', 'maintenance'];
+      const validTabs = ['updates', 'notifications', 'maintenance', 'system'];
       if (!validTabs.includes(tab)) {
-        return res.status(400).json({ message: "Invalid tab. Must be: updates, notifications, or maintenance" });
+        return res.status(400).json({ message: "Invalid tab. Must be: updates, notifications, maintenance, or system" });
       }
 
       let cleared = { platformUpdates: 0, notifications: 0, alerts: 0 };
@@ -839,7 +839,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (tab === 'notifications') {
         // Clear user notifications (Alerts tab)
         cleared.notifications = await storage.clearAllNotifications(userId);
-      } else if (tab === 'maintenance') {
+      } else if (tab === 'maintenance' || tab === 'system') {
         // Acknowledge all maintenance alerts (System tab)
         const { aiNotificationService } = await import("./services/aiNotificationService");
         cleared.alerts = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId);
