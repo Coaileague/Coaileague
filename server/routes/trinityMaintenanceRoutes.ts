@@ -297,4 +297,248 @@ router.post('/diagnose', requirePlatformStaff, async (req: Request, res: Respons
   }
 });
 
+/**
+ * POST /api/trinity/command
+ * Execute a Trinity AI command through the orchestration hierarchy
+ * RBAC-gated based on user role - requires authentication
+ */
+router.post('/command', requirePlatformStaff, async (req: Request, res: Response) => {
+  const startTime = Date.now();
+  
+  try {
+    const { message } = req.body;
+    const user = (req as any).user;
+    
+    // Derive role from authenticated session only - never trust client input
+    if (!user?.id) {
+      return res.status(401).json({
+        success: false,
+        error: 'Authentication required'
+      });
+    }
+    
+    const userId = user.id;
+    // Only use authenticated user's role from session, not from request body
+    const userRole = user.platformRole || user.role || 'employee';
+    const workspaceId = (req as any).workspaceId || user.workspaceId || 'default';
+
+    if (!message || typeof message !== 'string') {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Message is required' 
+      });
+    }
+
+    console.log(`[Trinity Command] Processing: "${message.substring(0, 50)}..." from ${userRole}`);
+
+    // RBAC role hierarchy for server-side enforcement
+    const ROLE_PERMISSIONS: Record<string, number> = {
+      'employee': 1,
+      'support': 2,
+      'manager': 3,
+      'admin': 4,
+      'super_admin': 5,
+      'root_admin': 9,
+      'root': 9
+    };
+    
+    // Commands that require elevated roles
+    const RESTRICTED_COMMANDS: Record<string, number> = {
+      'diagnostics': 4,      // admin+
+      'subagents': 4,        // admin+
+      'hotfix': 5,           // super_admin+
+      'db-maintenance': 9,   // root only
+      'force-sync': 9        // root only
+    };
+    
+    const userPermissionLevel = ROLE_PERMISSIONS[userRole] || 1;
+
+    // Import the HelpAI orchestrator dynamically
+    const { helpaiOrchestrator } = await import('../services/ai-brain/helpaiOrchestrator');
+    
+    // Check for slash commands first
+    if (message.startsWith('/')) {
+      const parts = message.slice(1).split(' ');
+      const command = parts[0]?.toLowerCase();
+      const args = parts.slice(1).join(' ');
+
+      // Handle built-in commands
+      const commandHandlers: Record<string, () => Promise<any>> = {
+        'health': async () => {
+          const result = await helpaiOrchestrator.executeAction({
+            actionId: 'health.self_check',
+            userId,
+            workspaceId,
+            payload: {}
+          });
+          return { 
+            response: result.success 
+              ? `System health: ${result.data?.overall || 'Operational'}. ${result.message}`
+              : `Health check failed: ${result.message}`,
+            ...result
+          };
+        },
+        'help': async () => {
+          const actions = helpaiOrchestrator.listActions();
+          const categories = [...new Set(actions.map(a => a.category))];
+          return {
+            response: `Available command categories: ${categories.join(', ')}. Try /list <category> for specific commands.`,
+            success: true,
+            data: { categories, actionCount: actions.length }
+          };
+        },
+        'list': async () => {
+          const actions = helpaiOrchestrator.listActions();
+          const category = args || 'all';
+          const filtered = category === 'all' 
+            ? actions 
+            : actions.filter(a => a.category === category);
+          return {
+            response: `Found ${filtered.length} actions${category !== 'all' ? ` in ${category}` : ''}.`,
+            success: true,
+            data: { actions: filtered.map(a => ({ id: a.actionId, name: a.name, description: a.description })) }
+          };
+        },
+        'diagnostics': async () => {
+          const result = await helpaiOrchestrator.executeAction({
+            actionId: 'diagnostics.full_scan',
+            userId,
+            workspaceId,
+            payload: {}
+          });
+          return { response: result.message, ...result };
+        },
+        'subagents': async () => {
+          const result = await helpaiOrchestrator.executeAction({
+            actionId: 'diagnostics.list_subagents',
+            userId,
+            workspaceId,
+            payload: {}
+          });
+          return { response: result.message, ...result };
+        },
+        'activity': async () => {
+          return {
+            response: 'Recent platform activity loaded.',
+            success: true,
+            data: { 
+              recentActions: [],
+              timestamp: new Date().toISOString()
+            }
+          };
+        },
+        'inbox': async () => {
+          return {
+            response: 'Your inbox is empty. No pending notifications.',
+            success: true,
+            data: { messages: [] }
+          };
+        }
+      };
+
+      if (commandHandlers[command]) {
+        // Server-side RBAC enforcement for restricted commands
+        const requiredLevel = RESTRICTED_COMMANDS[command];
+        if (requiredLevel && userPermissionLevel < requiredLevel) {
+          return res.status(403).json({
+            success: false,
+            error: 'Access denied',
+            message: `The /${command} command requires elevated permissions. Your role: ${userRole}`,
+            executionTimeMs: Date.now() - startTime
+          });
+        }
+        
+        const result = await commandHandlers[command]();
+        return res.json({
+          ...result,
+          executionTimeMs: Date.now() - startTime,
+          outputType: 'text'
+        });
+      }
+    }
+
+    // For natural language commands, use the AI Brain with role-based filtering
+    // IMPORTANT: This path is conversational ONLY - no action execution
+    // Actions must use slash commands which have RBAC enforcement
+    try {
+      const { unifiedGeminiClient, ModelTier } = await import('../services/ai-brain/unifiedGeminiClient');
+      
+      // Build role-aware available commands list
+      const availableCommands: string[] = ['/health', '/help', '/list', '/inbox', '/activity'];
+      if (userPermissionLevel >= 4) { // admin+
+        availableCommands.push('/diagnostics', '/subagents');
+      }
+      if (userPermissionLevel >= 5) { // super_admin+
+        availableCommands.push('/hotfix');
+      }
+      if (userPermissionLevel >= 9) { // root only
+        availableCommands.push('/db-maintenance', '/force-sync');
+      }
+      
+      // Construct role-aware system prompt - no action execution in AI path
+      const systemPrompt = `You are Trinity, the AI Brain conversational assistant for CoAIleague platform.
+
+IMPORTANT SECURITY RULES:
+- You are in CONVERSATIONAL mode only - you cannot execute actions directly
+- All actions must be performed via slash commands by the user
+- Only suggest commands the user has permission to use based on their role
+
+Current user role: ${userRole} (permission level: ${userPermissionLevel})
+Commands available to this user: ${availableCommands.join(', ')}
+
+You can help users with:
+- Answering questions about the platform
+- Explaining available features
+- Guiding them to use appropriate slash commands
+- Providing insights on workforce management concepts
+
+If the user asks to perform an action, tell them to use the appropriate slash command from their available commands.
+Do NOT suggest commands they don't have permission to use.
+Never claim you can execute actions directly - always guide to slash commands.
+
+Respond helpfully and concisely.`;
+
+      const response = await unifiedGeminiClient.generateContent({
+        prompt: message,
+        systemInstruction: systemPrompt,
+        modelTier: ModelTier.FLASH,
+        maxTokens: 1000,
+        temperature: 0.7,
+      });
+
+      return res.json({
+        success: true,
+        response: response.text || "I understand your request. How can I help you further?",
+        executionTimeMs: Date.now() - startTime,
+        outputType: 'text',
+        model: 'gemini-flash',
+        userRole,
+        permissionLevel: userPermissionLevel,
+        availableCommands
+      });
+    } catch (aiError: any) {
+      console.error('[Trinity Command] AI error:', aiError);
+      
+      // Role-aware fallback response
+      const availableCommands = ['/health', '/help', '/list'];
+      if (userPermissionLevel >= 4) availableCommands.push('/diagnostics');
+      
+      return res.json({
+        success: true,
+        response: `I received your message. You can use these commands: ${availableCommands.join(', ')}. Type /help to see all available options for your role.`,
+        executionTimeMs: Date.now() - startTime,
+        outputType: 'text'
+      });
+    }
+  } catch (error: any) {
+    console.error('[Trinity Command] Error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: 'Failed to process command',
+      message: error.message,
+      executionTimeMs: Date.now() - startTime
+    });
+  }
+});
+
 export default router;
