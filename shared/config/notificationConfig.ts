@@ -494,6 +494,7 @@ export function isCategoryInTab(category: string, tab: NotificationTab): boolean
  * IMPORTANT: Keep this in sync with platformUpdateCategoryEnum in shared/schema.ts
  */
 export const VALID_DB_CATEGORIES = [
+  // Core categories (must match platformUpdateCategoryEnum in shared/schema.ts)
   'feature',
   'improvement', 
   'bugfix',
@@ -504,17 +505,14 @@ export const VALID_DB_CATEGORIES = [
   'support',
   'ai_brain',
   'error',
-  // Extended system categories (for System tab "Clear All" support)
+  // Extended system categories
   'fix',
   'hotpatch',
   'deprecation',
   'system',
   'incident',
-  'outage',
-  'recovery',
-  'maintenance_update',
-  'maintenance_postmortem',
-  'orchestration_update',
+  // NOTE: Do NOT add values here unless they exist in platformUpdateCategoryEnum!
+  // Invalid values will cause PostgreSQL "invalid input value for enum" errors
 ] as const;
 
 /**
