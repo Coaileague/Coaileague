@@ -87,6 +87,10 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Core Subagent Orchestration Actions:** 17 registered actions with the AI Brain Master Orchestrator.
 - **Trinity Work Order System:** Full parity with autonomous AI agents for understanding and executing user requests, including Work Order Intake, Task Decomposition Engine, Solution Discovery Loop, Confident Commit Protocol, Clarification Protocol, and Work Summary Engine.
 - **Schedule Live Notifier:** Real-time push notifications for all schedule changes via AI Brain orchestration.
+- **Cognitive Onboarding Service:** Third-party API integrations (QuickBooks, Gusto, ADP, Paychex, Zenefits, Rippling, BambooHR, Workday) for automatic employee/payroll/financial data extraction during org setup. OAuth2 flows with AI-powered field mapping.
+- **Shared Knowledge Graph:** Persistent agent-to-agent learning system with semantic knowledge nodes, entity relationships, business rule encoding, and cross-domain reasoning. Enables agents to learn from each other's successes and failures.
+- **Agent-to-Agent (A2A) Communication Protocol:** Direct subagent messaging without orchestrator overhead, collaboration team formation, trust frameworks with condition-based validation, and negotiation protocols.
+- **Reinforcement Learning Loop:** Continuous self-improvement system tracking success/failure outcomes, confidence calibration, strategy adaptation, and reward-based learning to reduce human escalations.
 
 **System Design Choices:**
 - **Modularity:** 87 backend service modules and 220+ frontend routes.

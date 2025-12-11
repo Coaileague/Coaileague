@@ -1486,10 +1486,17 @@ export class TrinityWorkOrderOrchestrator {
     const attempts = this.solutionLoop.getAttempts(workOrder.id);
     const summary = await this.summaryEngine.generateSummary(workOrder, attempts);
     
-    platformEventBus.emit('work_order_completed', {
-      workOrderId: workOrder.id,
-      success: workOrder.status === 'completed',
-      summary: summary.title,
+    platformEventBus.publish({
+      type: 'work_order_completed',
+      category: 'feature',
+      title: 'Work Order Completed',
+      description: `Work order ${workOrder.id} completed`,
+      workspaceId: workOrder.workspaceId,
+      metadata: {
+        workOrderId: workOrder.id,
+        success: workOrder.status === 'completed',
+        summary: summary.title,
+      },
     });
     
     return {

@@ -20,6 +20,7 @@
 
 import { dataMigrationAgent, type ExtractedData, type MigrationResult } from './dataMigrationAgent';
 import { gamificationActivationAgent, type ActivationResult, AUTOMATION_GATES } from './gamificationActivationAgent';
+import { cognitiveOnboardingService, type IntegrationProvider, type DataSyncType } from '../cognitiveOnboardingService';
 import { db } from '../../../db';
 import { workspaces, notifications } from '@shared/schema';
 import { eq } from 'drizzle-orm';
@@ -537,6 +538,12 @@ class OnboardingOrchestrator {
           sources: ['Excel', 'CSV'],
         },
       ],
+      apiIntegrations: cognitiveOnboardingService.getSupportedProviders().map(p => ({
+          provider: p.provider,
+          name: p.name,
+          description: `Auto-import from ${p.name}`,
+          dataTypes: p.dataTypes,
+        })),
       manual: [
         {
           name: 'Payroll Settings',
@@ -549,10 +556,6 @@ class OnboardingOrchestrator {
         {
           name: 'Compliance Rules',
           description: 'Configure state-specific labor law compliance',
-        },
-        {
-          name: 'Integrations',
-          description: 'Connect to Stripe, QuickBooks, or other services',
         },
       ],
     };
