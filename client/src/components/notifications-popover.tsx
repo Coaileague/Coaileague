@@ -187,7 +187,7 @@ export function NotificationsPopover() {
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [selectedAlertIds, setSelectedAlertIds] = useState<Set<string>>(new Set());
   const [selectedSystemIds, setSelectedSystemIds] = useState<Set<string>>(new Set());
-  const scrollRef = useRef<HTMLDivElement>(null);
+  // Removed old scrollRef - now using tab-specific refs for scroll preservation
   const { isMobile } = useMobile();
   const { toast } = useToast();
   
@@ -236,6 +236,40 @@ export function NotificationsPopover() {
   // Track if this is the first open to prevent scroll reset on every render
   const hasOpenedRef = useRef(false);
   
+  // Scroll position preservation refs for each tab
+  const updatesScrollRef = useRef<HTMLDivElement>(null);
+  const alertsScrollRef = useRef<HTMLDivElement>(null);
+  const systemScrollRef = useRef<HTMLDivElement>(null);
+  const scrollPositionsRef = useRef<Record<string, number>>({ updates: 0, notifications: 0, system: 0 });
+  
+  // Save scroll position before mutations/refetches
+  const saveScrollPosition = () => {
+    if (updatesScrollRef.current && activeTab === 'updates') {
+      scrollPositionsRef.current.updates = updatesScrollRef.current.scrollTop;
+    }
+    if (alertsScrollRef.current && activeTab === 'notifications') {
+      scrollPositionsRef.current.notifications = alertsScrollRef.current.scrollTop;
+    }
+    if (systemScrollRef.current && activeTab === 'system') {
+      scrollPositionsRef.current.system = systemScrollRef.current.scrollTop;
+    }
+  };
+  
+  // Restore scroll position after mutations/refetches
+  const restoreScrollPosition = () => {
+    requestAnimationFrame(() => {
+      if (updatesScrollRef.current && activeTab === 'updates') {
+        updatesScrollRef.current.scrollTop = scrollPositionsRef.current.updates;
+      }
+      if (alertsScrollRef.current && activeTab === 'notifications') {
+        alertsScrollRef.current.scrollTop = scrollPositionsRef.current.notifications;
+      }
+      if (systemScrollRef.current && activeTab === 'system') {
+        systemScrollRef.current.scrollTop = scrollPositionsRef.current.system;
+      }
+    });
+  };
+  
   // Live timestamp ticker - forces re-render every 60s for "live" relative timestamps
   const [timestampTick, setTimestampTick] = useState(0);
   useEffect(() => {
@@ -247,26 +281,29 @@ export function NotificationsPopover() {
 
   useEffect(() => {
     if (open) {
-      // Refresh data when popover opens - but don't reset scroll position
-      refetch();
-      hasOpenedRef.current = true;
+      // Don't auto-refetch on open to prevent scroll jumps - WebSocket handles updates
+      if (!hasOpenedRef.current) {
+        hasOpenedRef.current = true;
+      }
     } else {
-      // Reset the flag when popover closes
+      // Reset the flag and scroll positions when popover closes
       hasOpenedRef.current = false;
+      scrollPositionsRef.current = { updates: 0, notifications: 0, system: 0 };
     }
-  }, [open, refetch]);
+  }, [open]);
   
   // REMOVED: No longer scroll to top on tab change to prevent glitchy scroll reset
 
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: string) => {
+      saveScrollPosition();
       const response = await apiRequest("POST", `/api/notifications/acknowledge/${notificationId}`);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
-      refetch();
+      setTimeout(restoreScrollPosition, 50);
     },
     onError: (error) => {
       console.error('[Notifications] Error marking as read:', error);
@@ -275,12 +312,13 @@ export function NotificationsPopover() {
 
   const acknowledgeAlertMutation = useMutation({
     mutationFn: async (alertId: string) => {
+      saveScrollPosition();
       const response = await apiRequest("POST", `/api/maintenance-alerts/${alertId}/acknowledge`);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
-      refetch();
+      setTimeout(restoreScrollPosition, 50);
     },
     onError: (error) => {
       console.error('[Notifications] Error acknowledging alert:', error);
@@ -289,13 +327,14 @@ export function NotificationsPopover() {
 
   const markUpdateAsViewedMutation = useMutation({
     mutationFn: async (updateId: string) => {
+      saveScrollPosition();
       const response = await apiRequest("POST", `/api/platform-updates/${updateId}/mark-viewed`);
       return response.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
-      refetch();
+      setTimeout(restoreScrollPosition, 50);
     },
     onError: (error) => {
       console.error('[Notifications] Error marking update as viewed:', error);
@@ -304,6 +343,7 @@ export function NotificationsPopover() {
 
   const acknowledgeSelectedMutation = useMutation({
     mutationFn: async () => {
+      saveScrollPosition();
       const idsToAcknowledge = Array.from(selectedIds);
       if (idsToAcknowledge.length === 0) return { success: true };
       
@@ -318,18 +358,19 @@ export function NotificationsPopover() {
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
       queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
-      setTimeout(() => refetch(), 100);
+      setTimeout(restoreScrollPosition, 100);
     },
     onError: (error) => {
       console.error('[Notifications] Error:', error);
       setSelectedIds(new Set());
-      setTimeout(() => refetch(), 100);
+      setTimeout(restoreScrollPosition, 100);
     }
   });
 
   // Bulk acknowledge for My Alerts tab
   const acknowledgeSelectedAlertsMutation = useMutation({
     mutationFn: async () => {
+      saveScrollPosition();
       const idsToAcknowledge = Array.from(selectedAlertIds);
       if (idsToAcknowledge.length === 0) return { success: true };
       
@@ -349,7 +390,7 @@ export function NotificationsPopover() {
         title: "Acknowledged",
         description: "Selected alerts have been acknowledged.",
       });
-      setTimeout(() => refetch(), 100);
+      setTimeout(restoreScrollPosition, 100);
     },
     onError: (error) => {
       console.error('[Notifications] Error acknowledging alerts:', error);
@@ -365,6 +406,7 @@ export function NotificationsPopover() {
   // Bulk acknowledge for System tab
   const acknowledgeSelectedSystemMutation = useMutation({
     mutationFn: async () => {
+      saveScrollPosition();
       const idsToAcknowledge = Array.from(selectedSystemIds);
       if (idsToAcknowledge.length === 0) return { success: true };
       
@@ -398,7 +440,7 @@ export function NotificationsPopover() {
         title: "Acknowledged",
         description: "Selected system items have been acknowledged.",
       });
-      setTimeout(() => refetch(), 100);
+      setTimeout(restoreScrollPosition, 100);
     },
     onError: (error) => {
       console.error('[Notifications] Error acknowledging system items:', error);
@@ -770,7 +812,7 @@ export function NotificationsPopover() {
             </TabsList>
           </div>
 
-            <TabsContent value="updates" className="mt-0 flex-1 min-h-0 overflow-y-auto overscroll-contain focus-visible:outline-none data-[state=inactive]:hidden" forceMount={activeTab === 'updates' ? true : undefined} ref={activeTab === 'updates' ? scrollRef : undefined}>
+            <TabsContent value="updates" className="mt-0 flex-1 min-h-0 overflow-y-auto overscroll-contain focus-visible:outline-none data-[state=inactive]:hidden" forceMount={activeTab === 'updates' ? true : undefined} ref={updatesScrollRef}>
               {unviewedUpdates.length > 0 && (
                 <div className="px-4 py-3 flex items-center justify-between border-b bg-muted/30">
                   <div className="flex items-center gap-3">
@@ -898,7 +940,7 @@ export function NotificationsPopover() {
               )}
             </TabsContent>
 
-            <TabsContent value="notifications" className="mt-0 flex-1 min-h-0 overflow-y-auto overscroll-contain focus-visible:outline-none data-[state=inactive]:hidden">
+            <TabsContent value="notifications" className="mt-0 flex-1 min-h-0 overflow-y-auto overscroll-contain focus-visible:outline-none data-[state=inactive]:hidden" ref={alertsScrollRef}>
               {filteredNotifications.length > 0 && (
                 <div className="px-4 py-3 flex items-center justify-between border-b bg-muted/30">
                   <div className="flex items-center gap-3">
@@ -1083,7 +1125,7 @@ export function NotificationsPopover() {
               )}
             </TabsContent>
 
-            <TabsContent value="system" className="mt-0 flex-1 min-h-0 overflow-y-auto overscroll-contain focus-visible:outline-none data-[state=inactive]:hidden">
+            <TabsContent value="system" className="mt-0 flex-1 min-h-0 overflow-y-auto overscroll-contain focus-visible:outline-none data-[state=inactive]:hidden" ref={systemScrollRef}>
               {(unacknowledgedAlerts.length > 0 || unviewedSystemUpdates.length > 0) && (
                 <div className="px-4 py-3 flex items-center justify-between border-b bg-amber-500/10">
                   <div className="flex items-center gap-3">
