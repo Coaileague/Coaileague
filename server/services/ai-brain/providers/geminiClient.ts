@@ -53,7 +53,7 @@ const genAI = apiKey ? new GoogleGenerativeAI(apiKey) : null;
  * - gemini-2.5-pro: Fallback pro model for rate limits
  * - gemini-2.5-flash: Fast flash model for conversational AI and supervisors
  * - gemini-2.0-flash-exp: Experimental flash for creative mascot thoughts
- * - gemini-1.5-flash-8b: Lightweight for simple/fast tasks
+ * - gemini-1.5-flash: Lightweight for simple/fast tasks
  * 
  * Gemini 3 Pro Features:
  * - 1M token context window
@@ -79,9 +79,9 @@ export const GEMINI_MODELS = {
   ONBOARDING: 'gemini-2.5-flash',          // Onboarding assistance
   
   // Tier 3: Fast and efficient for simple tasks
-  SIMPLE: 'gemini-1.5-flash-8b',        // Quick status checks (ultra-fast)
-  NOTIFICATION: 'gemini-1.5-flash-8b',  // Notification generation
-  LOOKUP: 'gemini-1.5-flash-8b',        // FAQ and data lookups
+  SIMPLE: 'gemini-1.5-flash',           // Quick status checks (ultra-fast)
+  NOTIFICATION: 'gemini-1.5-flash',     // Notification generation
+  LOOKUP: 'gemini-1.5-flash',           // FAQ and data lookups
 } as const;
 
 export type GeminiModelTier = keyof typeof GEMINI_MODELS;

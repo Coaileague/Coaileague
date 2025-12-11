@@ -335,7 +335,7 @@ AVAILABLE MODEL TIERS:
 - BRAIN (gemini-3-pro-preview): Complex reasoning, diagnostics, multi-step planning
 - ORCHESTRATOR (gemini-3-pro-preview): Workflow automation, function calling
 - CONVERSATIONAL (gemini-2.5-flash): Chat, quick responses, Trinity thoughts
-- SIMPLE (gemini-1.5-flash-8b): Quick lookups, status checks
+- SIMPLE (gemini-1.5-flash): Quick lookups, status checks
 
 Respond with JSON:
 {
