@@ -381,15 +381,15 @@ export function NotificationsPopover() {
   const clearTabMutation = useMutation({
     mutationFn: async (tab: 'updates' | 'notifications' | 'maintenance') => {
       console.log('[Clear Tab] Starting clear for tab:', tab);
-      try {
-        const response = await apiRequest("POST", `/api/notifications/clear-tab/${tab}`);
-        const data = await response.json();
-        console.log('[Clear Tab] Success:', data);
-        return data;
-      } catch (e) {
-        console.error('[Clear Tab] API error:', e instanceof Error ? e.message : e);
-        throw e;
+      const response = await apiRequest("POST", `/api/notifications/clear-tab/${tab}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[Clear Tab] API error:', response.status, errorText);
+        throw new Error(`Failed to clear tab: ${response.status}`);
       }
+      const data = await response.json();
+      console.log('[Clear Tab] Success:', data);
+      return data;
     },
     onSuccess: (data, tab) => {
       console.log('[Clear Tab] Mutation success, invalidating queries for tab:', tab);
