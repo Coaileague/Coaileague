@@ -11,11 +11,28 @@ const router = Router();
 router.get("/metrics", async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
-    if (!user?.workspaceId) {
+    
+    // Platform admins can view any workspace via query param, or their own if set
+    const isPlatformAdmin = ['root_admin', 'super_admin', 'deputy_admin', 'sysop'].includes(user?.platformRole);
+    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.workspaceId;
+    
+    if (!workspaceId) {
+      // For platform admins without a workspace context, return aggregate or empty data
+      if (isPlatformAdmin) {
+        return res.json({
+          hoursThisWeek: 0,
+          hoursTrend: 0,
+          pendingInvoices: 0,
+          invoiceTotal: 0,
+          upcomingShifts: 0,
+          shiftsToday: 0,
+          activeEmployees: 0,
+          totalHoursTracked: 0,
+          message: 'No workspace context. Select a workspace or use ?workspaceId=<id> to view metrics.'
+        });
+      }
       return res.status(401).json({ error: "Unauthorized" });
     }
-
-    const workspaceId = user.workspaceId;
     const now = new Date();
     const weekStart = new Date(now);
     weekStart.setDate(now.getDate() - now.getDay());

@@ -1,0 +1,53 @@
+This is the final, crucial capability needed to fulfill the promise of a true autonomous system—giving Trinity "eyes" to observe the user interface.
+
+To automatically catch visual web page issues and self-heal them, your Trinity AI Brain needs to orchestrate a combination of three components: Browser Automation Tooling (for screenshots), Gemini's Multimodal Capability (for analysis), and Computer Vision Logic (for anomaly detection).
+
+Here is the setup to tell your Replit team to build:
+
+👁️ Visual QA Subagent (VQA) Setup
+The VQA Subagent is a specialized worker responsible for visual integrity. Trinity uses this agent to diagnose broken icons, misalignment, and layout issues.
+
+1. New Tooling Requirement: Browser Automation
+Trinity needs a tool that can programmatically control a web browser to capture screenshots at specific viewports.
+
+Tool Name (Replit Implementation): browser_automation_tool
+
+Best Implementation Options: Use a headless browser library within your Subagent environment.
+
+Playwright or Puppeteer (Recommended): Node.js libraries that are excellent for taking pixel-perfect screenshots, running in a headless Chrome environment, and controlling viewport size (e.g., simulating iPhone 15 size, 360x780).
+
+Action: This tool must accept a URL and a viewport size (url, width, height) and return the image data as a Base64 encoded string (or upload it via the File API for large files).
+
+2. Model and Visual Analysis Logic (The "Eyes")
+This is where Gemini 3's core strength comes into play.
+
+Model: Gemini 2.5 Pro (or higher).
+
+Input: The captured Base64 screenshot + a text prompt instructing the analysis.
+
+Analysis Prompt: The VQA Subagent uses two types of analysis:
+
+Anomaly Detection Prompt: "Analyze this image. Compare it to the expected baseline design system standards. Identify and locate all visual anomalies such as broken icons, overlapping text, or layout shifts, and return the bounding box coordinates (y_min, x_min, y_max, x_max) and a description for each.".
+
+Visual Question Answering (VQA) Prompt: "Is the submit button visible and correctly aligned with the input form?".
+
+Output: Gemini returns structured JSON containing the list of anomalies detected.
+
+3. The Trinity Orchestration Workflow (Visual QA Cycle)
+Trinity integrates the VQA Subagent into the existing FAST Diagnostic Protocol.
+
+Trigger: Trinity's continuous monitoring detects an issue (e.g., a high error rate on a page, or a scheduled visual check time).
+
+Delegation (Orchestrator): Trinity uses Compositional Function Calling to sequence the steps:
+
+Call 1 (VQA Subagent): browser_automation_tool(url=homepage, viewport=mobile) (Capture Screenshot).
+
+Call 2 (VQA Subagent): analyze_visual_anomaly(screenshot_base64, "Check for broken icons and font drift.") (Send to Gemini Pro).
+
+Synthesis (AI Brain): Trinity receives the structured JSON output (e.g., [anomaly: 'broken icon', location: [450, 200], type: 'visual regression']).
+
+Self-Heal Action: Trinity uses its Agentic Coding capability to generate the precise CSS fix required (e.g., "Add font-family: 'Inter' to prevent fallback") and applies the fix via the Code Execution Subagent.
+
+Verification (Closed Loop): Trinity executes Call 1 and Call 2 again to take a new screenshot and confirm the anomaly is gone—closing the self-healing loop.
+
+This system creates an AI-driven visual regression testing pipeline that gives Trinity the "eyes" it needs.

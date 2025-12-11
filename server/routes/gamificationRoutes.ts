@@ -9,8 +9,29 @@ const router = Router();
 router.get("/stats", async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
-    if (!user?.id || !user?.workspaceId) {
+    if (!user?.id) {
       return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    // Platform admins can view any workspace via query param, or their own if set
+    const isPlatformAdmin = ['root_admin', 'super_admin', 'deputy_admin', 'sysop'].includes(user?.platformRole);
+    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.workspaceId;
+    
+    if (!workspaceId) {
+      // For platform admins without a workspace context, return default gamification data
+      if (isPlatformAdmin) {
+        return res.json({
+          points: 0,
+          level: 1,
+          streak: 0,
+          rank: 0,
+          totalUsers: 0,
+          badges: [],
+          totalHours: 0,
+          message: 'No workspace context. Select a workspace to view gamification stats.'
+        });
+      }
+      return res.status(401).json({ error: "Workspace context required" });
     }
 
     // Get employee record
@@ -20,7 +41,7 @@ router.get("/stats", async (req: Request, res: Response) => {
       .where(
         and(
           eq(employees.userId, user.id),
-          eq(employees.workspaceId, user.workspaceId)
+          eq(employees.workspaceId, workspaceId)
         )
       )
       .limit(1);
@@ -86,7 +107,7 @@ router.get("/stats", async (req: Request, res: Response) => {
         totalMinutes: sum(timeEntries.duration)
       })
       .from(timeEntries)
-      .where(eq(timeEntries.workspaceId, user.workspaceId))
+      .where(eq(timeEntries.workspaceId, workspaceId))
       .groupBy(timeEntries.employeeId)
       .orderBy(desc(sum(timeEntries.duration)));
 

@@ -20,11 +20,25 @@ interface ScheduleSuggestion {
 router.get("/suggestions", async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
-    if (!user?.workspaceId) {
+    if (!user?.id) {
       return res.status(401).json({ error: "Unauthorized" });
     }
-
-    const workspaceId = user.workspaceId;
+    
+    // Platform admins can view any workspace via query param, or their own if set
+    const isPlatformAdmin = ['root_admin', 'super_admin', 'deputy_admin', 'sysop'].includes(user?.platformRole);
+    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.workspaceId;
+    
+    if (!workspaceId) {
+      // For platform admins without a workspace context, return empty suggestions
+      if (isPlatformAdmin) {
+        return res.json({
+          suggestions: [],
+          analyzedShifts: 0,
+          message: 'No workspace context. Select a workspace to view scheduling suggestions.'
+        });
+      }
+      return res.status(401).json({ error: "Workspace context required" });
+    }
     const now = new Date();
     const nextWeek = new Date(now);
     nextWeek.setDate(nextWeek.getDate() + 7);
