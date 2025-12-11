@@ -574,12 +574,13 @@ export function NotificationsPopover() {
           </div>
 
           <ScrollArea 
-            className="flex-1 min-h-0"
+            className="flex-1 min-h-0 overflow-hidden"
             style={{ 
-              height: isMobile ? 'calc(85vh - 200px)' : '400px',
+              height: isMobile ? 'calc(90vh - 180px)' : '420px',
+              maxHeight: isMobile ? 'calc(90vh - 180px)' : '420px',
             }}
           >
-            <div ref={scrollRef}>
+            <div ref={scrollRef} className="h-full">
             <TabsContent value="updates" className="mt-0 focus-visible:outline-none" forceMount={activeTab === 'updates' ? true : undefined}>
               {unviewedUpdates.length > 0 && (
                 <div className="px-4 py-3 flex items-center justify-between border-b bg-muted/30">
@@ -1038,6 +1039,7 @@ export function NotificationsPopover() {
                 </div>
               )}
             </TabsContent>
+            <div className="pb-2" />
             </div>
           </ScrollArea>
         </Tabs>
@@ -1072,7 +1074,7 @@ export function NotificationsPopover() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent 
-            className="w-[calc(100vw-1rem)] max-w-[480px] h-[90vh] max-h-[90vh] p-0 gap-0 flex flex-col rounded-xl"
+            className="w-[calc(100vw-1rem)] max-w-[420px] h-[85vh] max-h-[85vh] p-0 gap-0 flex flex-col rounded-xl"
             showHomeButton={false}
             style={{ 
               overflow: 'hidden',
@@ -1097,9 +1099,10 @@ export function NotificationsPopover() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[480px] max-w-[calc(100vw-2rem)] max-h-[80vh] p-0 overflow-hidden shadow-xl border-muted flex flex-col" 
+        className="w-[420px] max-w-[calc(100vw-2rem)] p-0 overflow-hidden shadow-xl border-muted flex flex-col" 
         align="end"
         sideOffset={8}
+        style={{ maxHeight: '600px' }}
       >
         <NotificationsContent />
       </PopoverContent>
