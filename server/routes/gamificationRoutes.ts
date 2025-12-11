@@ -47,6 +47,35 @@ router.get("/stats", async (req: Request, res: Response) => {
       .limit(1);
 
     const employee = employeeResult[0];
+    
+    // Platform admin viewing another workspace without employee record
+    if (!employee && isPlatformAdmin) {
+      return res.json({
+        points: 0,
+        level: 1,
+        streak: 0,
+        rank: 0,
+        totalUsers: 0,
+        badges: [],
+        totalHours: 0,
+        message: 'Viewing workspace as platform admin. No personal gamification stats available.',
+        viewingAsAdmin: true
+      });
+    }
+    
+    // Regular user without employee record
+    if (!employee) {
+      return res.json({
+        points: 0,
+        level: 1,
+        streak: 0,
+        rank: 0,
+        totalUsers: 0,
+        badges: [],
+        totalHours: 0,
+        message: 'No employee record found in this workspace.'
+      });
+    }
 
     // Calculate points based on activities
     const weekAgo = new Date();
