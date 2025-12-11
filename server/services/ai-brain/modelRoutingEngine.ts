@@ -467,10 +467,13 @@ class ModelRoutingEngine {
       { subagentId: 'financial', preferredTier: 'PRO_FALLBACK', maxTier: 'PRO_FALLBACK', fallbackPolicy: 'cascade', contextBudget: 200000 },
       { subagentId: 'data-migration', preferredTier: 'PRO_FALLBACK', maxTier: 'BRAIN', fallbackPolicy: 'cascade', contextBudget: 200000 },
       
+      // Revenue-Critical: Use BRAIN tier for maximum accuracy (Gemini 3 Pro)
+      { subagentId: 'scheduling', preferredTier: 'ORCHESTRATOR', maxTier: 'BRAIN', fallbackPolicy: 'cascade', contextBudget: 200000 },
+      { subagentId: 'payroll', preferredTier: 'ORCHESTRATOR', maxTier: 'BRAIN', fallbackPolicy: 'cascade', contextBudget: 200000 },
+      { subagentId: 'invoice', preferredTier: 'ORCHESTRATOR', maxTier: 'BRAIN', fallbackPolicy: 'cascade', contextBudget: 200000 },
+      
       // Tier 2: Flash-level subagents
-      { subagentId: 'scheduling', preferredTier: 'SUPERVISOR', maxTier: 'CONVERSATIONAL', fallbackPolicy: 'cascade', contextBudget: 50000 },
       { subagentId: 'hr-assistant', preferredTier: 'SUPERVISOR', maxTier: 'CONVERSATIONAL', fallbackPolicy: 'cascade', contextBudget: 50000 },
-      { subagentId: 'payroll', preferredTier: 'SUPERVISOR', maxTier: 'CONVERSATIONAL', fallbackPolicy: 'cascade', contextBudget: 50000 },
       { subagentId: 'analytics', preferredTier: 'SUPERVISOR', maxTier: 'PRO_FALLBACK', fallbackPolicy: 'cascade', contextBudget: 100000 },
       { subagentId: 'onboarding', preferredTier: 'ONBOARDING', maxTier: 'CONVERSATIONAL', fallbackPolicy: 'cascade', contextBudget: 50000 },
       { subagentId: 'gamification', preferredTier: 'ONBOARDING', maxTier: 'CONVERSATIONAL', fallbackPolicy: 'cascade', contextBudget: 50000 },
@@ -479,7 +482,6 @@ class ModelRoutingEngine {
       { subagentId: 'sentiment', preferredTier: 'CONVERSATIONAL', maxTier: 'CONVERSATIONAL', fallbackPolicy: 'cascade', contextBudget: 30000 },
       { subagentId: 'document', preferredTier: 'SUPERVISOR', maxTier: 'CONVERSATIONAL', fallbackPolicy: 'cascade', contextBudget: 50000 },
       { subagentId: 'calendar', preferredTier: 'SUPERVISOR', maxTier: 'CONVERSATIONAL', fallbackPolicy: 'cascade', contextBudget: 30000 },
-      { subagentId: 'invoice', preferredTier: 'SUPERVISOR', maxTier: 'CONVERSATIONAL', fallbackPolicy: 'cascade', contextBudget: 50000 },
       
       // Tier 3: Lite-level subagents
       { subagentId: 'notification', preferredTier: 'NOTIFICATION', maxTier: 'SIMPLE', fallbackPolicy: 'cascade', contextBudget: 16000 },

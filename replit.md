@@ -21,7 +21,8 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Animated Word Logo:** A Google Doodle-style seasonal animated word logo system with 11 variations.
 
 **Technical Implementations:**
-- **AI Brain Services:** AI capabilities for document extraction, issue detection, autonomous scheduling, and HelpAI orchestration, powered by Gemini 2.0 Flash for knowledge governance.
+- **AI Brain Services:** AI capabilities for document extraction, issue detection, autonomous scheduling, and HelpAI orchestration. Uses 4-tier Gemini architecture: Tier 0 (BRAIN) = Gemini 3 Pro for deep diagnostics/orchestration; Tier 1 (PRO) = Gemini 2.5 Pro for compliance; Tier 2 (FLASH) = Gemini 2.5 Flash for conversational/supervisors; Tier 3 (LITE) = Gemini 1.5 Flash 8B for quick lookups/notifications.
+- **Universal Diagnostic Orchestrator:** 7 specialized domain subagents (notifications, scheduling, payroll, compliance, analytics, security, system health) with Gemini 3 Pro for root cause analysis, hotpatch suggestions, and RBAC-controlled execution with two-code approval for destructive operations.
 - **Universal Chat (HelpAI):** A unified AI chatbot routing all interactions through HelpAI Orchestration.
 - **Gemini Function Calling:** 8-step workflow with multi-turn conversation support for FAQ, support tickets, and business insights.
 - **Financials:** Real Stripe integration for payments, payroll, invoicing, and tax.
@@ -99,7 +100,9 @@ The system features a multi-tenant architecture with RBAC security and isolation
 ### External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
 - **Resend**: Email delivery and notification workflows.
-- **Gemini 2.0 Flash**: AI-driven features including document extraction, sentiment analysis, intelligent scheduling, and HelpAI orchestration.
+- **Gemini 3 Pro Preview**: Primary AI Brain intelligence for deep diagnostics, complex reasoning, and orchestration. Used by revenue-critical operations (payroll, scheduling, invoicing).
+- **Gemini 2.5 Pro/Flash**: Secondary tiers for compliance, conversational AI, and supervisor tasks.
+- **Gemini 1.5 Flash 8B**: Lightweight tier for notifications, lookups, and simple status checks.
 - **WebSocket**: Real-time notifications.
 - **Google Cloud Storage (GCS)**: File management.
 - **PostgreSQL**: Primary relational database.
