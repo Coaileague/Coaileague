@@ -486,7 +486,7 @@ export function NotificationsPopover() {
   });
 
   const NotificationsContent = () => (
-    <div className="flex flex-col h-full overflow-hidden" style={{ height: '100%' }}>
+    <div className="flex flex-col h-full overflow-hidden">
       <div className="flex items-center justify-between px-5 py-4 border-b bg-gradient-to-r from-background to-muted/30 flex-shrink-0">
         <div className="flex items-center gap-3">
           <div className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10">
@@ -537,7 +537,7 @@ export function NotificationsPopover() {
           <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
         </div>
       ) : (
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0 h-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="flex flex-col flex-1 min-h-0 overflow-hidden">
           <div className="flex-shrink-0 bg-background border-b">
             <TabsList className="grid w-full grid-cols-3 h-12 p-1.5 bg-transparent gap-1">
                 <TabsTrigger 
@@ -580,7 +580,7 @@ export function NotificationsPopover() {
           </div>
 
           <div 
-            className="flex-1 min-h-0 h-full overflow-y-auto overscroll-contain scroll-smooth"
+            className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
             ref={scrollRef}
           >
             <TabsContent value="updates" className="mt-0 focus-visible:outline-none" forceMount={activeTab === 'updates' ? true : undefined}>
@@ -1096,7 +1096,7 @@ export function NotificationsPopover() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[420px] max-w-[calc(100vw-2rem)] h-[min(70vh,550px)] p-0 overflow-hidden shadow-xl border-muted flex flex-col" 
+        className="w-[420px] max-w-[calc(100vw-2rem)] max-h-[min(70vh,550px)] p-0 overflow-hidden shadow-xl border-muted flex flex-col" 
         align="end"
         sideOffset={8}
       >
