@@ -350,6 +350,12 @@ export function NotificationsPopover() {
   // unviewedUpdates for selection/acknowledge - only unviewed What's New items
   const unviewedUpdates = whatsNewPlatformUpdates.filter(u => !u.isViewed);
   
+  // unviewedSystemUpdates - only unviewed System tab items (consistent with Updates tab behavior)
+  const unviewedSystemUpdates = systemPlatformUpdates.filter(u => !u.isViewed);
+  
+  // unacknowledgedAlerts - only unacknowledged maintenance alerts
+  const unacknowledgedAlerts = filteredMaintenanceAlerts.filter((a: any) => !a.isAcknowledged);
+  
   // SIMPLIFIED: Server is the single source of truth for all counts
   // This eliminates race conditions between WebSocket state and server state
   const unreadPlatformUpdates = data?.unreadPlatformUpdates ?? 0;
@@ -564,9 +570,9 @@ export function NotificationsPopover() {
                   data-testid="tab-maintenance"
                 >
                   System
-                  {(unreadAlerts + systemPlatformUpdates.filter(u => !u.isViewed).length) > 0 && (
+                  {(unacknowledgedAlerts.length + unviewedSystemUpdates.length) > 0 && (
                     <span className="absolute -top-1 -right-1 h-5 w-5 rounded-full bg-amber-500 text-white text-[10px] font-bold flex items-center justify-center shadow-sm">
-                      {(unreadAlerts + systemPlatformUpdates.filter(u => !u.isViewed).length) > 9 ? '9+' : (unreadAlerts + systemPlatformUpdates.filter(u => !u.isViewed).length)}
+                      {(unacknowledgedAlerts.length + unviewedSystemUpdates.length) > 9 ? '9+' : (unacknowledgedAlerts.length + unviewedSystemUpdates.length)}
                     </span>
                   )}
                 </TabsTrigger>
@@ -863,10 +869,10 @@ export function NotificationsPopover() {
             </TabsContent>
 
             <TabsContent value="maintenance" className="mt-0 focus-visible:outline-none">
-              {(filteredMaintenanceAlerts.length > 0 || systemPlatformUpdates.length > 0) && (
+              {(unacknowledgedAlerts.length > 0 || unviewedSystemUpdates.length > 0) && (
                 <div className="px-4 py-3 flex items-center justify-between border-b bg-amber-500/10">
                   <span className="text-xs text-muted-foreground">
-                    {filteredMaintenanceAlerts.filter(a => !a.isAcknowledged).length + systemPlatformUpdates.filter(u => !u.isViewed).length} unread system alerts
+                    {unacknowledgedAlerts.length + unviewedSystemUpdates.length} unread system alerts
                   </span>
                   <Button
                     variant="ghost"
@@ -881,9 +887,9 @@ export function NotificationsPopover() {
                   </Button>
                 </div>
               )}
-              {(filteredMaintenanceAlerts.length > 0 || systemPlatformUpdates.length > 0) ? (
+              {(unacknowledgedAlerts.length > 0 || unviewedSystemUpdates.length > 0) ? (
                 <div className="divide-y">
-                  {systemPlatformUpdates.map((update) => {
+                  {unviewedSystemUpdates.map((update) => {
                     const catStyles = getCategoryStyles(update.category);
                     const CategoryIcon = catStyles.icon;
                     return (
@@ -935,13 +941,13 @@ export function NotificationsPopover() {
                       </div>
                     );
                   })}
-                  {filteredMaintenanceAlerts.map((alert) => {
+                  {unacknowledgedAlerts.map((alert) => {
                     const config = getSeverityStyles(alert.severity);
                     const SeverityIcon = config.icon;
                     return (
                       <div
                         key={alert.id}
-                        className={`px-4 py-4 ${config.bg} ${alert.isAcknowledged ? 'opacity-60' : ''}`}
+                        className={`px-4 py-4 ${config.bg}`}
                         data-testid={`alert-item-${alert.id}`}
                       >
                         <div className="flex gap-3">
