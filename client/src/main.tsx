@@ -33,21 +33,23 @@ if (import.meta.env.DEV) {
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-// Register service worker for PWA support (offline, caching, installability)
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
+// Register service worker for PWA support and push notifications
+if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
       .register('/service-worker.js')
       .then((registration) => {
-        console.log('CoAIleague PWA: Service Worker registered', registration.scope);
+        console.log('[CoAIleague] Service Worker registered', registration.scope);
         
-        // Check for updates periodically
-        setInterval(() => {
-          registration.update();
-        }, 60000); // Check every minute
+        // Check for updates periodically in production
+        if (import.meta.env.PROD) {
+          setInterval(() => {
+            registration.update();
+          }, 60000); // Check every minute
+        }
       })
       .catch((error) => {
-        console.error('CoAIleague PWA: Service Worker registration failed', error);
+        console.error('[CoAIleague] Service Worker registration failed', error);
       });
   });
 }

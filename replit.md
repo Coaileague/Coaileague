@@ -37,7 +37,11 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Analytics Dashboard:** Metrics endpoints for time, revenue, scheduling, and performance with AI insights and heat map visualizations.
 - **Break Compliance:** 50-state labor law configuration, auto-scheduling, and compliance checking.
 - **AI Brain Platform Awareness:** Registry of 100+ features, natural language feature discovery, and diagnostic endpoints.
-- **Automation Jobs:** 13 scheduled jobs for billing, scheduling, payroll, reminders, and maintenance.
+- **Automation Jobs:** 14 scheduled jobs for billing, scheduling, payroll, reminders, daily digest emails, and maintenance.
+- **Daily Digest Email Service:** Automated morning digest emails sent at 7 AM with personalized content including upcoming shifts, pending approvals, compliance alerts, and weekly hours summary per employee.
+- **Interactive Onboarding Tour:** Step-by-step guided tour component with 11 steps covering dashboard, scheduling, time tracking, employees, invoicing, analytics, Trinity AI, notifications, and settings. Progress tracked via localStorage with ability to restart.
+- **Feedback Form with Screenshot Capture:** User feedback submission system with bug reports, feature requests, and questions. Supports screen capture via browser API and image upload alternatives.
+- **Web Push Notifications:** Browser push notification system with VAPID key support, subscription management API, service worker handling, and specialized alerts for shifts, approvals, and compliance expiration.
 - **AI Brain Platform Change Monitor:** Autonomous service scanning for AI-summarized change notifications.
 - **Notification System:** Configuration-driven notifications for platform updates, support alerts, and real-time user history.
 - **Support Command Console:** Force-push updates system for support staff.

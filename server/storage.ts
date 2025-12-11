@@ -71,6 +71,7 @@ import {
   organizationRoomMembers,
   organizationRoomOnboarding,
   notifications,
+  pushSubscriptions,
   userNotificationPreferences,
   auditEvents,
   idRegistry,
@@ -199,6 +200,8 @@ import {
   type InsertPolicyAcknowledgment,
   type Notification,
   type InsertNotification,
+  type PushSubscription,
+  type InsertPushSubscription,
   type UserNotificationPreferences,
   type InsertUserNotificationPreferences,
   type AuditEvent,
@@ -809,6 +812,17 @@ export interface IStorage {
   // Notification Preferences - User notification settings
   getNotificationPreferences(userId: string, workspaceId: string): Promise<UserNotificationPreferences | undefined>;
   createOrUpdateNotificationPreferences(userId: string, workspaceId: string, data: Partial<InsertUserNotificationPreferences>): Promise<UserNotificationPreferences>;
+
+  // ========================================================================
+  // PUSH NOTIFICATIONS - WEB PUSH SUBSCRIPTIONS
+  // ========================================================================
+  createPushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription>;
+  getPushSubscriptionsByUser(userId: string): Promise<PushSubscription[]>;
+  getPushSubscriptionByEndpoint(userId: string, endpoint: string): Promise<PushSubscription | undefined>;
+  updatePushSubscription(id: string, data: Partial<InsertPushSubscription>): Promise<PushSubscription | undefined>;
+  deletePushSubscription(id: string): Promise<boolean>;
+  deletePushSubscriptionsByUser(userId: string, endpoint?: string): Promise<number>;
+  deactivatePushSubscription(id: string): Promise<boolean>;
 
   // ========================================================================
   // PLATFORM UPDATES - WHAT'S NEW FEED
@@ -6613,6 +6627,83 @@ export class DatabaseStorage implements IStorage {
       })
       .returning();
     return prefs;
+  }
+
+  // ============================================================================
+  // PUSH NOTIFICATIONS METHODS - WEB PUSH SUBSCRIPTIONS
+  // ============================================================================
+
+  async createPushSubscription(subscription: InsertPushSubscription): Promise<PushSubscription> {
+    const [newSub] = await db
+      .insert(pushSubscriptions)
+      .values(subscription)
+      .returning();
+    return newSub;
+  }
+
+  async getPushSubscriptionsByUser(userId: string): Promise<PushSubscription[]> {
+    return await db
+      .select()
+      .from(pushSubscriptions)
+      .where(and(
+        eq(pushSubscriptions.userId, userId),
+        eq(pushSubscriptions.isActive, true)
+      ));
+  }
+
+  async getPushSubscriptionByEndpoint(userId: string, endpoint: string): Promise<PushSubscription | undefined> {
+    const [sub] = await db
+      .select()
+      .from(pushSubscriptions)
+      .where(and(
+        eq(pushSubscriptions.userId, userId),
+        eq(pushSubscriptions.endpoint, endpoint)
+      ));
+    return sub;
+  }
+
+  async updatePushSubscription(id: string, data: Partial<InsertPushSubscription>): Promise<PushSubscription | undefined> {
+    const [updated] = await db
+      .update(pushSubscriptions)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(pushSubscriptions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePushSubscription(id: string): Promise<boolean> {
+    const result = await db
+      .delete(pushSubscriptions)
+      .where(eq(pushSubscriptions.id, id))
+      .returning({ id: pushSubscriptions.id });
+    return result.length > 0;
+  }
+
+  async deletePushSubscriptionsByUser(userId: string, endpoint?: string): Promise<number> {
+    if (endpoint) {
+      const result = await db
+        .delete(pushSubscriptions)
+        .where(and(
+          eq(pushSubscriptions.userId, userId),
+          eq(pushSubscriptions.endpoint, endpoint)
+        ))
+        .returning({ id: pushSubscriptions.id });
+      return result.length;
+    }
+    const result = await db
+      .delete(pushSubscriptions)
+      .where(eq(pushSubscriptions.userId, userId))
+      .returning({ id: pushSubscriptions.id });
+    return result.length;
+  }
+
+  async deactivatePushSubscription(id: string): Promise<boolean> {
+    const result = await db
+      .update(pushSubscriptions)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(eq(pushSubscriptions.id, id))
+      .returning({ id: pushSubscriptions.id });
+    return result.length > 0;
   }
 
   // ============================================================================

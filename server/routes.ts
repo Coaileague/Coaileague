@@ -32643,6 +32643,114 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
   });
 
   // ============================================================================
+  // ============================================================================
+  // PUSH NOTIFICATIONS - Web Push Subscription Management
+  // ============================================================================
+
+  /**
+   * GET /api/push/vapid-public-key
+   * Get VAPID public key for push subscription
+   */
+  app.get("/api/push/vapid-public-key", async (_req, res) => {
+    try {
+      const { pushNotificationService } = await import("./services/pushNotificationService");
+      const publicKey = await pushNotificationService.getVapidPublicKey();
+      res.json({ success: true, publicKey });
+    } catch (error: any) {
+      console.error("Error getting VAPID key:", error);
+      res.status(500).json({ success: false, error: "Failed to get VAPID key" });
+    }
+  });
+
+  /**
+   * POST /api/push/subscribe
+   * Register a push subscription for the authenticated user
+   */
+  app.post("/api/push/subscribe", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { subscription, deviceInfo } = req.body;
+      
+      if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
+        return res.status(400).json({ success: false, error: "Invalid subscription data" });
+      }
+      
+      const { pushNotificationService } = await import("./services/pushNotificationService");
+      const result = await pushNotificationService.registerPushSubscription(
+        req.userId!,
+        subscription,
+        deviceInfo
+      );
+      
+      if (result.success) {
+        res.json({ success: true, subscriptionId: result.subscriptionId });
+      } else {
+        res.status(500).json({ success: false, error: result.error });
+      }
+    } catch (error: any) {
+      console.error("Error subscribing to push:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to subscribe" });
+    }
+  });
+
+  /**
+   * DELETE /api/push/unsubscribe
+   * Unregister push subscriptions for the authenticated user
+   */
+  app.delete("/api/push/unsubscribe", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { endpoint } = req.body;
+      
+      const { pushNotificationService } = await import("./services/pushNotificationService");
+      const result = await pushNotificationService.unregisterPushSubscription(req.userId!, endpoint);
+      
+      res.json({ success: true, unsubscribed: result.unsubscribed });
+    } catch (error: any) {
+      console.error("Error unsubscribing from push:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to unsubscribe" });
+    }
+  });
+
+  /**
+   * GET /api/push/subscriptions
+   * Get users active push subscriptions
+   */
+  app.get("/api/push/subscriptions", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { pushNotificationService } = await import("./services/pushNotificationService");
+      const subscriptions = await pushNotificationService.getUserSubscriptions(req.userId!);
+      res.json({ success: true, subscriptions });
+    } catch (error: any) {
+      console.error("Error getting subscriptions:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to get subscriptions" });
+    }
+  });
+
+  /**
+   * POST /api/push/test
+   * Send a test push notification to the authenticated user
+   */
+  app.post("/api/push/test", requireAuth, mutationLimiter, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { pushNotificationService } = await import("./services/pushNotificationService");
+      const result = await pushNotificationService.sendPushToUser(req.userId!, {
+        title: "Test Notification",
+        body: "Push notifications are working correctly!",
+        tag: "test-notification",
+        data: { type: "test" }
+      });
+      
+      res.json({ 
+        success: result.sent > 0, 
+        sent: result.sent, 
+        failed: result.failed,
+        message: result.sent > 0 ? "Test notification sent" : "No active subscriptions found"
+      });
+    } catch (error: any) {
+      console.error("Error sending test push:", error);
+      res.status(500).json({ success: false, error: error.message || "Failed to send test notification" });
+    }
+  });
+
   // SUGGESTED CHANGES REGISTRY - AI Brain Template Library
   // ============================================================================
 

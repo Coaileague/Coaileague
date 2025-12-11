@@ -1897,6 +1897,43 @@ export function startAutonomousScheduler() {
   console.log(`   Schedule: ${maintenanceConfig.schedule} (weekly Sundays 3 AM)`);
   console.log(`   ${maintenanceConfig.description}\n`);
 
+  // Daily Digest Email - Every day at 7 AM
+  cron.schedule("0 7 * * *", () => {
+    console.log(`📧 [DAILY DIGEST] Scheduled digest job triggered at ${new Date().toISOString()}`);
+    const startTime = Date.now();
+    (async () => {
+      try {
+        const { runDailyDigestJob } = await import('./dailyDigestService');
+        const stats = await runDailyDigestJob();
+        console.log(`📧 [DAILY DIGEST] Complete: ${stats.sent} sent, ${stats.failed} failed, ${stats.skipped} skipped`);
+        
+        await emitAutomationEvent({
+          jobName: 'Daily Digest Emails',
+          category: 'notification',
+          success: stats.failed === 0,
+          duration: Date.now() - startTime,
+          recordsProcessed: stats.sent,
+          details: {
+            sent: stats.sent,
+            failed: stats.failed,
+            skipped: stats.skipped,
+          },
+        });
+      } catch (error: any) {
+        console.error('📧 [DAILY DIGEST] ❌ Job error:', error);
+        await emitAutomationEvent({
+          jobName: 'Daily Digest Emails',
+          category: 'notification',
+          success: false,
+          details: { error: error.message },
+        });
+      }
+    })();
+  });
+  console.log('✅ Daily Digest Email Automation:');
+  console.log('   Schedule: 0 7 * * * (daily at 7 AM)');
+  console.log('   Sends personalized daily digest emails to employees\n');
+
   // Platform Change Monitor - Every 15 minutes
   cron.schedule("*/15 * * * *", () => {
     console.log(`🧠 [AI BRAIN] 🕐 Scheduled platform scan triggered at ${new Date().toISOString()}`);
@@ -1950,6 +1987,7 @@ export const manualTriggers = {
   compliance: checkExpiringCertifications,
   creditReset: resetMonthlyCredits,
   shiftReminders: async () => { const { processShiftReminders } = await import('./shiftRemindersService'); return processShiftReminders(); },
+  dailyDigest: async () => { const { runDailyDigestJob } = await import('./dailyDigestService'); return runDailyDigestJob(); },
   platformScan: async () => platformChangeMonitor.triggerManualScan(),
   databaseMaintenance: runAllMaintenanceJobs,
   trinityProactiveScan: async () => {
