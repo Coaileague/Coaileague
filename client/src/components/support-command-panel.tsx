@@ -16,11 +16,12 @@ import { Separator } from "@/components/ui/separator";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Megaphone, Bell, RefreshCw, Wrench, AlertTriangle, 
   Send, Loader2, CheckCircle, Radio, Zap, Sparkles,
-  MessageCircle, RotateCcw, TrendingUp
+  MessageCircle, RotateCcw, TrendingUp, ChevronDown
 } from "lucide-react";
 
 interface CommandResponse {
@@ -31,6 +32,7 @@ interface CommandResponse {
 
 export function SupportCommandPanel() {
   const { toast } = useToast();
+  const [isOpen, setIsOpen] = useState(false);
   const [whatsNewTitle, setWhatsNewTitle] = useState("");
   const [whatsNewDescription, setWhatsNewDescription] = useState("");
   const [whatsNewCategory, setWhatsNewCategory] = useState("announcement");
@@ -144,40 +146,42 @@ export function SupportCommandPanel() {
   });
 
   return (
-    <Card className="border-2 border-dashed border-yellow-500/50 bg-yellow-500/5">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <Radio className="h-5 w-5 text-yellow-500 animate-pulse" />
-          <CardTitle className="text-lg">Support Command Console</CardTitle>
-          <Badge variant="outline" className="ml-auto border-yellow-500 text-yellow-600">
-            <Zap className="h-3 w-3 mr-1" />
-            Live
-          </Badge>
-        </div>
-        <CardDescription>
-          Force-push real-time updates to all connected clients
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs defaultValue="whats-new" className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="whats-new" className="text-xs">
-              <Megaphone className="h-3 w-3 mr-1" />
-              What's New
-            </TabsTrigger>
-            <TabsTrigger value="broadcast" className="text-xs">
-              <Bell className="h-3 w-3 mr-1" />
-              Broadcast
-            </TabsTrigger>
-            <TabsTrigger value="mascot" className="text-xs">
-              <Sparkles className="h-3 w-3 mr-1" />
-              Mascot
-            </TabsTrigger>
-            <TabsTrigger value="sync" className="text-xs">
-              <RefreshCw className="h-3 w-3 mr-1" />
-              Sync
-            </TabsTrigger>
-          </TabsList>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="border border-yellow-500/30 bg-yellow-500/5">
+        <CollapsibleTrigger asChild>
+          <CardHeader className="py-2 px-4 cursor-pointer hover-elevate">
+            <div className="flex items-center gap-2">
+              <Radio className="h-4 w-4 text-yellow-500 animate-pulse" />
+              <CardTitle className="text-sm font-medium">Support Command Console</CardTitle>
+              <Badge variant="outline" className="ml-auto border-yellow-500/50 text-yellow-600 text-xs py-0 h-5">
+                <Zap className="h-2.5 w-2.5 mr-1" />
+                Live
+              </Badge>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0 pb-3 px-4">
+            <Tabs defaultValue="whats-new" className="w-full">
+              <TabsList className="grid w-full grid-cols-4 h-8">
+                <TabsTrigger value="whats-new" className="text-xs h-7">
+                  <Megaphone className="h-3 w-3 mr-1" />
+                  What's New
+                </TabsTrigger>
+                <TabsTrigger value="broadcast" className="text-xs h-7">
+                  <Bell className="h-3 w-3 mr-1" />
+                  Broadcast
+                </TabsTrigger>
+                <TabsTrigger value="mascot" className="text-xs h-7">
+                  <Sparkles className="h-3 w-3 mr-1" />
+                  Mascot
+                </TabsTrigger>
+                <TabsTrigger value="sync" className="text-xs h-7">
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Sync
+                </TabsTrigger>
+              </TabsList>
 
           <TabsContent value="whats-new" className="space-y-3 pt-3">
             <div className="space-y-2">
@@ -474,9 +478,11 @@ export function SupportCommandPanel() {
               </div>
             )}
           </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+            </Tabs>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }
 

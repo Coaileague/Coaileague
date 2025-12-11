@@ -358,6 +358,7 @@ export function CodeChangeReviewPanel() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useState<string>("pending");
+  const [isOpen, setIsOpen] = useState(false);
 
   const { data: changesData, isLoading: isLoadingChanges } = useQuery<CodeChangeResponse>({
     queryKey: ['/api/support/command/code/pending'],
@@ -429,40 +430,42 @@ export function CodeChangeReviewPanel() {
   const rejectedChanges = changes.filter(c => c.status === 'rejected' || c.status === 'failed');
 
   return (
-    <Card className="border-2 border-dashed border-primary/50 bg-primary/5">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-2">
-          <Code2 className="h-5 w-5 text-primary animate-pulse" />
-          <CardTitle className="text-lg">AI Brain Code Editor</CardTitle>
-          <Badge variant="outline" className="ml-auto border-primary text-primary">
-            <FileText className="h-3 w-3 mr-1" />
-            {changes.length} Changes
-          </Badge>
-        </div>
-        <CardDescription>
-          Review and approve code changes staged by AI Brain or HelpAI
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="pending" className="text-xs">
-              <Clock className="h-3 w-3 mr-1" />
-              Pending ({pendingChanges.length})
-            </TabsTrigger>
-            <TabsTrigger value="approved" className="text-xs">
-              <Check className="h-3 w-3 mr-1" />
-              Approved ({approvedChanges.length})
-            </TabsTrigger>
-            <TabsTrigger value="applied" className="text-xs">
-              <Play className="h-3 w-3 mr-1" />
-              Applied ({appliedChanges.length})
-            </TabsTrigger>
-            <TabsTrigger value="rejected" className="text-xs">
-              <X className="h-3 w-3 mr-1" />
-              Rejected ({rejectedChanges.length})
-            </TabsTrigger>
-          </TabsList>
+    <Collapsible open={isOpen} onOpenChange={setIsOpen}>
+      <Card className="border border-primary/30 bg-primary/5">
+        <CollapsibleTrigger asChild>
+          <CardHeader className="py-2 px-4 cursor-pointer hover-elevate">
+            <div className="flex items-center gap-2">
+              <Code2 className="h-4 w-4 text-primary" />
+              <CardTitle className="text-sm font-medium">AI Brain Code Editor</CardTitle>
+              <Badge variant="outline" className="ml-auto border-primary/50 text-primary text-xs py-0 h-5">
+                <FileText className="h-2.5 w-2.5 mr-1" />
+                {changes.length} Changes
+              </Badge>
+              <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+          </CardHeader>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          <CardContent className="pt-0 pb-3 px-4">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+              <TabsList className="grid w-full grid-cols-4 h-8">
+                <TabsTrigger value="pending" className="text-xs h-7">
+                  <Clock className="h-3 w-3 mr-1" />
+                  Pending ({pendingChanges.length})
+                </TabsTrigger>
+                <TabsTrigger value="approved" className="text-xs h-7">
+                  <Check className="h-3 w-3 mr-1" />
+                  Approved ({approvedChanges.length})
+                </TabsTrigger>
+                <TabsTrigger value="applied" className="text-xs h-7">
+                  <Play className="h-3 w-3 mr-1" />
+                  Applied ({appliedChanges.length})
+                </TabsTrigger>
+                <TabsTrigger value="rejected" className="text-xs h-7">
+                  <X className="h-3 w-3 mr-1" />
+                  Rejected ({rejectedChanges.length})
+                </TabsTrigger>
+              </TabsList>
 
           <TabsContent value="pending" className="space-y-3 pt-3">
             {isLoadingChanges ? (
@@ -567,8 +570,10 @@ export function CodeChangeReviewPanel() {
               </ScrollArea>
             )}
           </TabsContent>
-        </Tabs>
-      </CardContent>
-    </Card>
+            </Tabs>
+          </CardContent>
+        </CollapsibleContent>
+      </Card>
+    </Collapsible>
   );
 }

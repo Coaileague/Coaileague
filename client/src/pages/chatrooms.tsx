@@ -1127,12 +1127,12 @@ export default function Chatrooms() {
               <>
                 {filteredRooms.length === 0 ? (
                   <Card className="border-dashed">
-                    <CardContent className="pt-12 text-center pb-12">
-                      <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-50" />
-                      <p className="text-muted-foreground font-medium mb-2">
+                    <CardContent className="py-8 text-center">
+                      <MessageCircle className="h-8 w-8 mx-auto text-muted-foreground mb-3 opacity-50" />
+                      <p className="text-muted-foreground font-medium text-sm mb-1">
                         {searchQuery ? 'No rooms match your search' : CHATROOM_UI.emptyStateTitle}
                       </p>
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-xs text-muted-foreground">
                         {activeFilter === 'available'
                           ? 'You are already a member of all available rooms'
                           : CHATROOM_UI.emptyStateDescription}
