@@ -106,6 +106,9 @@ import { timesheetInvoiceRouter } from "./routes/timesheetInvoiceRoutes";
 import { advancedSchedulingRouter } from "./routes/advancedSchedulingRoutes";
 import { ownerAnalyticsRouter } from "./routes/ownerAnalytics";
 import serviceControlRouter from "./routes/service-control";
+import dashboardRoutes from "./routes/dashboardRoutes";
+import gamificationEnhancedRoutes from "./routes/gamificationRoutes";
+import aiSchedulingRoutes from "./routes/aiSchedulingRoutes";
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
 import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
@@ -3013,6 +3016,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register Gamification & Employee Engagement System
   app.use('/api/gamification', gamificationRouter);
+  app.use('/api/dashboard', requireAuth, dashboardRoutes);
+  app.use('/api/gamification/enhanced', requireAuth, gamificationEnhancedRoutes);
+  app.use('/api/ai/scheduling', requireAuth, aiSchedulingRoutes);
 
 
   // Register CoAIleague Autonomous Scheduler API
