@@ -553,7 +553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const trueUnreadNotifications = await storage.getTotalUnreadCountForUser(userId, workspaceId);
       
       // Get active maintenance alerts
-      const maintenanceAlerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+      const maintenanceAlerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId, userId);
       const unreadAlerts = maintenanceAlerts.filter((a: any) => !a.isAcknowledged).length;
       
       
@@ -598,7 +598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark all notifications as read
       const acknowledged = await storage.clearAllNotifications(userId, workspaceId);
       // Acknowledge all maintenance alerts
-      const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+      const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId, userId);
       let alertsAcknowledged = 0;
       for (const alert of alerts) {
         if (!(alert as any).isAcknowledged) {
@@ -667,7 +667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const acknowledged = await storage.clearAllNotifications(userId, workspaceId);
       
       // Acknowledge all maintenance alerts
-      const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId);
+      const alerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId, userId);
       let alertsAcknowledged = 0;
       for (const alert of alerts) {
         if (!(alert as any).isAcknowledged) {

@@ -295,7 +295,7 @@ export async function createMaintenanceAlert(
   }
 }
 
-export async function getActiveMaintenanceAlerts(workspaceId?: string): Promise<Array<{
+export async function getActiveMaintenanceAlerts(workspaceId?: string, userId?: string): Promise<Array<{
   id: string;
   title: string;
   description: string;
@@ -304,6 +304,7 @@ export async function getActiveMaintenanceAlerts(workspaceId?: string): Promise<
   scheduledStartTime: Date;
   scheduledEndTime: Date;
   affectedServices: string[];
+  isAcknowledged: boolean;
 }>> {
   const alerts = await db.select()
     .from(maintenanceAlerts)
@@ -322,6 +323,13 @@ export async function getActiveMaintenanceAlerts(workspaceId?: string): Promise<
     .orderBy(desc(maintenanceAlerts.scheduledStartTime))
     .limit(10);
   
+  // Get acknowledgments for this user if userId provided
+  const userAcks = userId ? await db.select({ alertId: maintenanceAcknowledgments.alertId })
+    .from(maintenanceAcknowledgments)
+    .where(eq(maintenanceAcknowledgments.userId, userId)) : [];
+  
+  const ackedAlertIds = new Set(userAcks.map(a => a.alertId));
+  
   return alerts.map(a => ({
     id: a.id,
     title: a.title,
@@ -331,6 +339,7 @@ export async function getActiveMaintenanceAlerts(workspaceId?: string): Promise<
     scheduledStartTime: a.scheduledStartTime,
     scheduledEndTime: a.scheduledEndTime,
     affectedServices: (a.affectedServices as string[]) || [],
+    isAcknowledged: ackedAlertIds.has(a.id),
   }));
 }
 
