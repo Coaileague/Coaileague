@@ -449,7 +449,9 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
   return (
     <div
       ref={containerRef}
-      className="pointer-events-none"
+      className="pointer-events-none trinity-bubble"
+      data-mascot="festive-dialogue"
+      data-trinity="true"
       style={{
         position: 'fixed',
         zIndex: 9990,

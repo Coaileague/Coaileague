@@ -113,9 +113,11 @@ export const CompactBubble = memo(function CompactBubble({
 
   return (
     <div
-      className={`fixed pointer-events-auto transition-all duration-300 ${
+      className={`fixed pointer-events-auto transition-all duration-300 trinity-bubble ${
         isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       }`}
+      data-mascot="compact-bubble"
+      data-trinity="true"
       style={{
         left: `${bubbleLeft}px`,
         top: `${bubbleTop}px`,

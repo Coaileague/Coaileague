@@ -1157,6 +1157,17 @@ export function NotificationsPopover() {
         className="w-[420px] max-w-[calc(100vw-2rem)] max-h-[min(70vh,550px)] p-0 overflow-hidden shadow-xl border-muted flex flex-col" 
         align="end"
         sideOffset={8}
+        onInteractOutside={(e) => {
+          // Prevent closing when interacting with Trinity mascot or its components
+          const target = e.target as HTMLElement;
+          const isMascotInteraction = target.closest('[data-mascot]') || 
+                                       target.closest('[data-trinity]') ||
+                                       target.closest('.mascot-container') ||
+                                       target.closest('.trinity-bubble');
+          if (isMascotInteraction) {
+            e.preventDefault();
+          }
+        }}
       >
         <NotificationsContent />
       </PopoverContent>

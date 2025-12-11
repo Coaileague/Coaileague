@@ -683,7 +683,9 @@ function MascotRenderer() {
       {/* Mascot visual container with transforms */}
       <div 
         ref={mascotContainerRef}
-        className={`fixed select-none pointer-events-none ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        className={`fixed select-none pointer-events-none mascot-container ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+        data-mascot="container"
+        data-trinity="true"
         style={{ 
           bottom: effectiveY,
           right: effectiveX,

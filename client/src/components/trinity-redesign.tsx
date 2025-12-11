@@ -715,6 +715,8 @@ const TrinityRedesign = memo(function TrinityRedesign({
   return (
     <div 
       className={`trinity-container ${className}`}
+      data-mascot="trinity"
+      data-trinity="true"
       style={{
         width: displaySize,
         height: displaySize,
