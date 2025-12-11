@@ -385,7 +385,7 @@ export function NotificationsPopover() {
 
   // Tab-specific clear mutation
   const clearTabMutation = useMutation({
-    mutationFn: async (tab: 'updates' | 'notifications' | 'maintenance') => {
+    mutationFn: async (tab: 'updates' | 'notifications' | 'system') => {
       console.log('[Clear Tab] Starting clear for tab:', tab);
       const response = await apiRequest("POST", `/api/notifications/clear-tab/${tab}`);
       if (!response.ok) {
@@ -565,9 +565,9 @@ export function NotificationsPopover() {
                   )}
                 </TabsTrigger>
                 <TabsTrigger 
-                  value="maintenance" 
+                  value="system" 
                   className="text-xs font-medium relative data-[state=active]:bg-amber-500/10 data-[state=active]:text-amber-600 dark:data-[state=active]:text-amber-400 data-[state=active]:shadow-sm rounded-md transition-all" 
-                  data-testid="tab-maintenance"
+                  data-testid="tab-system"
                 >
                   System
                   {(unacknowledgedAlerts.length + unviewedSystemUpdates.length) > 0 && (
@@ -868,7 +868,7 @@ export function NotificationsPopover() {
               )}
             </TabsContent>
 
-            <TabsContent value="maintenance" className="mt-0 focus-visible:outline-none">
+            <TabsContent value="system" className="mt-0 focus-visible:outline-none">
               {(unacknowledgedAlerts.length > 0 || unviewedSystemUpdates.length > 0) && (
                 <div className="px-4 py-3 flex items-center justify-between border-b bg-amber-500/10">
                   <span className="text-xs text-muted-foreground">
@@ -880,7 +880,7 @@ export function NotificationsPopover() {
                     className="text-xs h-7 px-2"
                     onClick={() => clearTabMutation.mutate('system')}
                     disabled={clearTabMutation.isPending}
-                    data-testid="button-clear-maintenance-tab"
+                    data-testid="button-clear-system-tab"
                   >
                     <X className="h-3 w-3 mr-1" />
                     Clear All
