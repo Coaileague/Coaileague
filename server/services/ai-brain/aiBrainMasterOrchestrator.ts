@@ -28,6 +28,7 @@ import { registerCoreSubagentActions } from "./subagents/coreSubagentOrchestrati
 import { registerTrinityCodeOpsActions } from "./trinityCodeOpsActions";
 import { registerScheduleLiveNotifierActions } from "./scheduleLiveNotifierActions";
 import { registerTrinityWorkOrderActions } from "./trinityWorkOrderActions";
+import { registerCognitiveBrainActions } from "./cognitiveBrainActions";
 import { db } from '../../db';
 import { eq, desc, and, gte, sql, isNotNull } from 'drizzle-orm';
 import {
@@ -406,6 +407,7 @@ class AIBrainMasterOrchestrator {
     registerTrinityCodeOpsActions(helpaiOrchestrator); // Trinity Autonomous Coding Actions (grep, patch, commit, FAST mode)
     registerScheduleLiveNotifierActions(); // Real-time schedule notification actions
     registerTrinityWorkOrderActions(); // Trinity Work Order System (intake, decompose, execute, summarize)
+    registerCognitiveBrainActions(); // Cognitive Brain: API integrations, Knowledge Graph, A2A, Reinforcement Learning
     
     // Subscribe to platform events
     this.subscribeToEvents();
