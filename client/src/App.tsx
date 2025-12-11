@@ -181,6 +181,7 @@ import { useMascotPosition } from "@/hooks/use-mascot-position";
 import { useMascotRoaming } from "@/hooks/use-mascot-roaming";
 import { useMascotMouseFollow } from "@/hooks/use-mascot-mouse-follow";
 import { useSmartBubblePlacement, getArrowStyles } from "@/hooks/use-smart-bubble-placement";
+import { useOverlayAwareness } from "@/hooks/use-overlay-awareness";
 import MASCOT_CONFIG, { 
   shouldHideMascot, 
   getDeviceSizes, 
@@ -306,6 +307,40 @@ function MascotRenderer() {
   const { position, isExpanded, isDragging, toggleExpanded, resetPosition, setRoamingPosition, dragHandlers } = useMascotPosition(sizes.defaultSize, isMobile);
   
   const bubbleSize = isExpanded ? sizes.expandedSize : sizes.defaultSize;
+  
+  // Overlay awareness - auto-shift Trinity when popovers/dialogs are open
+  const { isAnyOverlayOpen, getOverlayQuadrant } = useOverlayAwareness();
+  const overlayQuadrant = isAnyOverlayOpen ? getOverlayQuadrant() : null;
+  
+  // Calculate overlay avoidance offset - shift to opposite corner when overlay is in Trinity's area
+  const overlayAvoidanceOffset = useMemo(() => {
+    if (!isAnyOverlayOpen || !overlayQuadrant) return { x: 0, y: 0 };
+    
+    const viewportWidth = typeof window !== 'undefined' ? window.innerWidth : 1200;
+    const viewportHeight = typeof window !== 'undefined' ? window.innerHeight : 800;
+    const shiftDistance = Math.min(viewportWidth * 0.4, 250); // 40% of viewport width, max 250px
+    const verticalShift = Math.min(viewportHeight * 0.3, 200); // 30% of viewport height, max 200px
+    
+    // Trinity is positioned at bottom-right by default, so shift away from overlays in that area
+    // Overlay in top-right: move Trinity left (away from notifications popover area)
+    if (overlayQuadrant === 'top-right') {
+      return { x: shiftDistance, y: -verticalShift }; // Move left and up
+    }
+    // Overlay in bottom-right: move Trinity left
+    if (overlayQuadrant === 'bottom-right') {
+      return { x: shiftDistance, y: 0 }; // Move left
+    }
+    // Overlay in bottom-left: no need to move (Trinity is on opposite side)
+    if (overlayQuadrant === 'bottom-left') {
+      return { x: 0, y: 0 };
+    }
+    // Overlay in top-left: no need to move (Trinity is on opposite side)  
+    if (overlayQuadrant === 'top-left') {
+      return { x: 0, y: 0 };
+    }
+    
+    return { x: 0, y: 0 };
+  }, [isAnyOverlayOpen, overlayQuadrant]);
   
   const { isRoaming, currentEffect, effectConfig, triggerRoam } = useMascotRoaming(
     position,
@@ -627,8 +662,9 @@ function MascotRenderer() {
   // The mascot renders for ALL users; RBAC gates the AI/API calls, not the visual component
   if (!MASCOT_CONFIG.enabled || shouldHideMascot(location)) return null;
   
-  const effectiveX = position.x + (isDragging ? 0 : floatOffsetRef.current.x + targetInfluence.x);
-  const rawEffectiveY = position.y + (isDragging ? 0 : floatOffsetRef.current.y + targetInfluence.y);
+  // Apply overlay avoidance offset - shifts Trinity away from open popovers/dialogs
+  const effectiveX = position.x + (isDragging ? 0 : floatOffsetRef.current.x + targetInfluence.x + overlayAvoidanceOffset.x);
+  const rawEffectiveY = position.y + (isDragging ? 0 : floatOffsetRef.current.y + targetInfluence.y + overlayAvoidanceOffset.y);
   
   // Header exclusion zone: Keep mascot away from top-right header area (notification bell, search, etc.)
   // The header is ~64px tall, plus we need margin for the mascot size + buffer
