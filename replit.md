@@ -79,6 +79,7 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Planning Framework Service:** Structured reasoning frameworks for autonomous planning, supporting Chain-of-Thought, ReAct, and Tree-of-Thought.
 - **Adaptive Supervision Router:** Smart routing based on task complexity and risk assessment, selecting optimal model tiers and supervision levels.
 - **Behavioral Monitoring Service:** Model drift detection and anomaly tracking system, recording behavior samples and identifying anomalies.
+- **Trinity Command Center (TCC):** Universal cognitive command center at /trinity/command-center. RBAC-gated quick actions (role-based tool access), natural language & voice command interface with Trinity AI, real-time AI output panels, subagent testing, hotfix deployment, mobile-first design, and full orchestration hierarchy integration.
 
 **System Design Choices:**
 - **Modularity:** 87 backend service modules and 220+ frontend routes.
