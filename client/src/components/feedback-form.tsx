@@ -431,18 +431,24 @@ export function FloatingFeedbackButton() {
     <div className="fixed bottom-20 right-4 z-50 md:bottom-6">
       <FeedbackForm
         trigger={
-          <Tooltip>
+          <Tooltip delayDuration={100}>
             <TooltipTrigger asChild>
               <Button
                 size="icon"
-                className="h-12 w-12 rounded-full shadow-lg bg-primary hover:bg-primary/90"
+                className="h-12 w-12 rounded-full shadow-lg bg-red-500 hover:bg-red-600 text-white"
                 data-testid="button-floating-feedback"
+                title="Report a Bug - Click to submit bug reports and feedback"
+                aria-label="Report a Bug"
               >
-                <Bug className="h-5 w-5" />
+                <Bug className="h-6 w-6" />
               </Button>
             </TooltipTrigger>
-            <TooltipContent side="left" className="font-medium">
-              Report a Bug
+            <TooltipContent side="left" className="font-semibold bg-red-500 text-white border-red-600">
+              <div className="flex items-center gap-2">
+                <Bug className="h-4 w-4" />
+                <span>Report a Bug</span>
+              </div>
+              <p className="text-xs mt-1 opacity-90">Click to submit bug reports</p>
             </TooltipContent>
           </Tooltip>
         }
