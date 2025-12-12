@@ -171,7 +171,7 @@ export default function Support() {
           </Button>
           <Button
             size="sm"
-            onClick={() => window.location.href = "/api/login"}
+            onClick={() => window.location.href = "/dashboard"}
             className="h-8 text-xs bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white shadow-md"
             data-testid="button-launch-platform"
           >
