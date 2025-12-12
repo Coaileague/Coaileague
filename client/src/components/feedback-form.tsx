@@ -30,8 +30,9 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Camera, MessageSquare, Bug, Lightbulb, HelpCircle, 
-  Send, Trash2, Image, CheckCircle, Loader2, X
+  Send, Trash2, Image, CheckCircle, Loader2, X, Sparkles
 } from "lucide-react";
+import { TrinityRedesign } from "./trinity-redesign";
 
 type FeedbackType = 'bug' | 'feature' | 'question' | 'other';
 
@@ -264,18 +265,30 @@ export function FeedbackForm({ trigger, onSubmitSuccess }: FeedbackFormProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <MessageSquare className="h-5 w-5 text-primary" />
-            Send Feedback
-          </DialogTitle>
-          <DialogDescription>
-            Help us improve CoAIleague by sharing your feedback, reporting bugs, or suggesting features.
-          </DialogDescription>
-        </DialogHeader>
-
-        <div className="space-y-4 py-4">
+      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden">
+        {/* Branded Header */}
+        <div className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 dark:from-primary/20 dark:via-purple-500/20 dark:to-blue-500/20 px-6 py-4 border-b">
+          <DialogHeader className="space-y-2">
+            <DialogTitle className="flex items-center gap-3">
+              <div className="w-9 h-9 rounded-full bg-primary/10 dark:bg-primary/20 flex items-center justify-center">
+                <TrinityRedesign mode="IDLE" size={28} mini={true} />
+              </div>
+              <div className="flex flex-col">
+                <span className="flex items-center gap-1.5">
+                  <Sparkles className="h-3.5 w-3.5 text-primary" />
+                  Send Feedback
+                </span>
+                <span className="text-xs font-normal text-muted-foreground">CoAIleague Support</span>
+              </div>
+            </DialogTitle>
+            <DialogDescription className="text-sm">
+              Help us improve CoAIleague by sharing your feedback, reporting bugs, or suggesting features.
+            </DialogDescription>
+          </DialogHeader>
+        </div>
+        
+        <div className="px-6 pb-4">
+        <div className="space-y-4 pt-2">
           <div className="space-y-2">
             <Label>Feedback Type</Label>
             <div className="flex flex-wrap gap-2">
@@ -381,29 +394,33 @@ export function FeedbackForm({ trigger, onSubmitSuccess }: FeedbackFormProps) {
             )}
           </div>
         </div>
+        </div>
 
-        <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            onClick={() => setOpen(false)}
-            data-testid="button-cancel-feedback"
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSubmit}
-            disabled={submitMutation.isPending || !title.trim() || !description.trim()}
-            className="gap-2"
-            data-testid="button-submit-feedback"
-          >
-            {submitMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Send className="h-4 w-4" />
-            )}
-            Submit Feedback
-          </Button>
-        </DialogFooter>
+        {/* Branded Footer */}
+        <div className="border-t bg-muted/30 px-6 py-4">
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button
+              variant="outline"
+              onClick={() => setOpen(false)}
+              data-testid="button-cancel-feedback"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleSubmit}
+              disabled={submitMutation.isPending || !title.trim() || !description.trim()}
+              className="gap-2"
+              data-testid="button-submit-feedback"
+            >
+              {submitMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="h-4 w-4" />
+              )}
+              Submit Feedback
+            </Button>
+          </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
@@ -418,14 +435,14 @@ export function FloatingFeedbackButton() {
             <TooltipTrigger asChild>
               <Button
                 size="icon"
-                className="h-12 w-12 rounded-full shadow-lg"
+                className="h-12 w-12 rounded-full shadow-lg bg-primary hover:bg-primary/90"
                 data-testid="button-floating-feedback"
               >
-                <MessageSquare className="h-5 w-5" />
+                <Bug className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="left" className="font-medium">
-              Send Feedback
+              Report a Bug
             </TooltipContent>
           </Tooltip>
         }

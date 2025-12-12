@@ -1,0 +1,61 @@
+Artifact Design: AI Audit Log Viewer (AALV)
+The AALV will consolidate data from the Audit Ledger, Knowledge Graph (KG), and Transactional Checkpoint System into a single, explorable timeline.
+
+1. Data Model: Trinity's Audit Output
+Each entry in the log is a distinct record from the Audit Ledger, structured to contain both the action and the cognitive metadata.
+
+JSON
+
+{
+  "log_id": "L-123456",
+  "workflow_id": "WFX-P-45", 
+  "timestamp": "2025-12-11T19:40:00Z",
+  "actor_type": "AI_BRAIN", // ACTOR: AI_BRAIN, RevenueOps Lead, Scheduling Subagent, Human User
+  "actor_id": "trinity-pro-instance-001",
+  
+  // The Main Display Line (What the user sees)
+  "action_summary": "Editing client/src/components/notifications-popov...",
+  "status": "COMPLETED", // COMPLETED, INITIATED, FAILED, TIMEOUT
+  "category_tag": "AGENTIC CODING", // Tag: PLANNING, TOOL_USE, CHECKPOINT, DIAGNOSTICS, HIL_WAIT
+  
+  // Collapsible Detail Data
+  "details": {
+    "gemini_metadata": {
+      "model_used": "gemini-3.0-pro",
+      "token_cost": 4500,
+      "thinking_level": "high",
+      "thought_signature": "cryptic-hash-of-reasoning-for-audit" // Crucial for accountability
+    },
+    "inputs": {
+      "target_file": "client/src/App.tsx",
+      "grep_pattern": "FooterIcon"
+    },
+    "outputs": {
+      "code_diff": "+ const FOOTER_ICON = 'new-trinity-logo.svg'", // Code change for audit
+      "new_status": "READY_FOR_REVIEW"
+    },
+    "failure_reason": null // Only present if status is FAILED
+  }
+}
+2. UI Implementation Strategy (Interactive Log)
+The log is a vertically stacked, responsive timeline:
+
+A. Main Timeline View (Default State)
+Structure: Each log entry is a small, single-line card.
+
+Iconography: Use icons to represent the action type (e.g., a Brain icon for AI_BRAIN/Reasoning, a Code Tag icon for AGENTIC CODING, a Clock icon for PLANNED WORKFLOW).
+
+Colors: Use your platform's brand colors for the actor tags (e.g., a blue "AI Brain" tag) to provide quick visual differentiation.
+
+Sorting: Default sort is Newest, but include filtering by actor_type, status, and workflow_id.
+
+B. Collapsible Detail Panel (On Click)
+When a user clicks a log entry, the card expands to show the critical audit data, addressing the "where does the information go" problem:
+
+Summary: Gemini Metadata (Model Used, Token Cost, Thinking Level)
+
+Audit Trail: The Thought Signature is displayed in a read-only field (providing the cryptographic link back to the policy and audit ledger).
+
+Code Review: A dedicated section for Code Diff or Payload Diff (e.g., showing the exact line-by-line code change applied by the Subagent).
+
+This design transforms a simple log into an AI Debugging and Governance Tool, allowing support users to instantly trace the logic, cost, and consequence of every autonomous action taken by Trinity.
