@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import {
   Select,
   SelectContent,
@@ -43,6 +45,11 @@ import {
   Coffee,
   AlertTriangle,
   MapPin,
+  User,
+  Settings2,
+  Sparkles,
+  CheckCircle2,
+  XCircle,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -50,10 +57,23 @@ import { WorkspaceLayout } from "@/components/workspace-layout";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes";
 import { SettingsCardSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
 
+// Settings section configuration for navigation
+const SETTINGS_SECTIONS = [
+  { id: 'quick', label: 'Quick Settings', icon: Sparkles, description: 'Most-used settings' },
+  { id: 'notifications', label: 'Notifications', icon: Bell, description: 'How you receive alerts' },
+  { id: 'organization', label: 'Organization', icon: Building2, description: 'Business info & branding' },
+  { id: 'automation', label: 'Automation', icon: Zap, description: 'AI-powered workflows' },
+  { id: 'compliance', label: 'Compliance', icon: Scale, description: 'Labor laws & breaks' },
+  { id: 'billing', label: 'Billing', icon: CreditCard, description: 'Plans & payments' },
+] as const;
+
+type SettingsSection = typeof SETTINGS_SECTIONS[number]['id'];
+
 export default function Settings() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const isMobile = useIsMobile();
+  const [activeSection, setActiveSection] = useState<SettingsSection>('quick');
   const [selectedCategory, setSelectedCategory] = useState<string>("");
   
   // Form state for workspace settings
@@ -690,24 +710,271 @@ export default function Settings() {
     ]);
   };
 
+  // Status indicators for hero summary
+  const statusItems = [
+    { 
+      label: 'Email', 
+      enabled: enableEmail, 
+      icon: Mail 
+    },
+    { 
+      label: 'Push', 
+      enabled: enablePush, 
+      icon: MessageSquare 
+    },
+    { 
+      label: 'SMS', 
+      enabled: enableSms && smsStatus?.configured, 
+      icon: Phone 
+    },
+    { 
+      label: 'AI Scheduling', 
+      enabled: autoSchedulingEnabled, 
+      icon: Zap 
+    },
+    { 
+      label: 'Auto Payroll', 
+      enabled: autoPayrollEnabled, 
+      icon: Clock 
+    },
+    { 
+      label: 'Break Alerts', 
+      enabled: breakComplianceAlerts, 
+      icon: Scale 
+    },
+  ];
+
   const pageContent = isLoading ? (
     <div className="space-y-4 sm:space-y-6">
       <PageHeaderSkeleton />
       <SettingsCardSkeleton count={4} />
     </div>
   ) : (
-    <div className="space-y-4 sm:space-y-6">
+    <div className="space-y-6">
+      {/* Hero Header with Status Summary */}
+      <div className="space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-settings-title">
               Settings
             </h2>
-            <p className="text-sm sm:text-base text-[hsl(var(--cad-text-secondary))]" data-testid="text-settings-subtitle">
-              Manage your workspace and billing settings
+            <p className="text-sm sm:text-base text-muted-foreground" data-testid="text-settings-subtitle">
+              Configure your workspace, notifications, and automation preferences
             </p>
           </div>
+          <div className="flex items-center gap-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleRefresh}
+              data-testid="button-refresh-settings"
+            >
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          </div>
+        </div>
 
-        {/* Workspace Settings */}
-        <Card data-testid="card-workspace-settings">
+        {/* Quick Status Overview */}
+        <Card className="bg-muted/30">
+          <CardContent className="py-4">
+            <div className="flex flex-wrap gap-3">
+              {statusItems.map((item) => (
+                <div 
+                  key={item.label}
+                  className="flex items-center gap-2 px-3 py-1.5 rounded-md bg-background border"
+                >
+                  <item.icon className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="text-sm font-medium">{item.label}</span>
+                  {item.enabled ? (
+                    <CheckCircle2 className="h-3.5 w-3.5 text-green-500" />
+                  ) : (
+                    <XCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Tabbed Navigation */}
+      <Tabs value={activeSection} onValueChange={(v) => setActiveSection(v as SettingsSection)} className="w-full">
+        <ScrollArea className="w-full">
+          <TabsList className="inline-flex w-full sm:w-auto h-auto p-1 gap-1 bg-muted/50">
+            {SETTINGS_SECTIONS.map((section) => (
+              <TabsTrigger
+                key={section.id}
+                value={section.id}
+                className="flex items-center gap-2 px-3 py-2 data-[state=active]:bg-background"
+                data-testid={`tab-${section.id}`}
+              >
+                <section.icon className="h-4 w-4" />
+                <span className="hidden sm:inline">{section.label}</span>
+                <span className="sm:hidden">{section.label.split(' ')[0]}</span>
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          <ScrollBar orientation="horizontal" />
+        </ScrollArea>
+
+        {/* Quick Settings Section */}
+        <TabsContent value="quick" className="mt-6 space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Quick Toggles Card */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Sparkles className="h-5 w-5 text-primary" />
+                  <div>
+                    <CardTitle>Quick Toggles</CardTitle>
+                    <CardDescription>Most frequently used settings</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Email Notifications</p>
+                      <p className="text-xs text-muted-foreground">Receive alerts via email</p>
+                    </div>
+                  </div>
+                  <Switch 
+                    checked={enableEmail} 
+                    onCheckedChange={setEnableEmail}
+                    data-testid="quick-switch-email"
+                  />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <MessageSquare className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Push Notifications</p>
+                      <p className="text-xs text-muted-foreground">In-app alerts</p>
+                    </div>
+                  </div>
+                  <Switch 
+                    checked={enablePush} 
+                    onCheckedChange={setEnablePush}
+                    data-testid="quick-switch-push"
+                  />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Zap className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">AI Scheduling</p>
+                      <p className="text-xs text-muted-foreground">Auto-generate schedules</p>
+                    </div>
+                  </div>
+                  <Switch 
+                    checked={autoSchedulingEnabled} 
+                    onCheckedChange={setAutoSchedulingEnabled}
+                    data-testid="quick-switch-scheduling"
+                  />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">AI Summarization</p>
+                      <p className="text-xs text-muted-foreground">Intelligent notification digests</p>
+                    </div>
+                  </div>
+                  <Switch 
+                    checked={enableAiSummarization} 
+                    onCheckedChange={setEnableAiSummarization}
+                    data-testid="quick-switch-ai-summary"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Automation Status Card */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Zap className="h-5 w-5 text-primary" />
+                  <div>
+                    <CardTitle>Automation Status</CardTitle>
+                    <CardDescription>AI-powered workflow status</CardDescription>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Auto Invoicing</p>
+                      <p className="text-xs text-muted-foreground">{invoiceSchedule} cycle</p>
+                    </div>
+                  </div>
+                  <Switch 
+                    checked={autoInvoicingEnabled} 
+                    onCheckedChange={setAutoInvoicingEnabled}
+                    data-testid="quick-switch-invoicing"
+                  />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Auto Payroll</p>
+                      <p className="text-xs text-muted-foreground">{payrollSchedule} cycle</p>
+                    </div>
+                  </div>
+                  <Switch 
+                    checked={autoPayrollEnabled} 
+                    onCheckedChange={setAutoPayrollEnabled}
+                    data-testid="quick-switch-payroll"
+                  />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Scale className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Break Compliance</p>
+                      <p className="text-xs text-muted-foreground">{laborLawJurisdiction}</p>
+                    </div>
+                  </div>
+                  <Switch 
+                    checked={breakComplianceAlerts} 
+                    onCheckedChange={setBreakComplianceAlerts}
+                    data-testid="quick-switch-break-alerts"
+                  />
+                </div>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bell className="h-4 w-4 text-muted-foreground" />
+                    <div>
+                      <p className="text-sm font-medium">Shift Reminders</p>
+                      <p className="text-xs text-muted-foreground">{shiftReminderTiming} before</p>
+                    </div>
+                  </div>
+                  <Switch 
+                    checked={enableShiftReminders} 
+                    onCheckedChange={setEnableShiftReminders}
+                    data-testid="quick-switch-reminders"
+                  />
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* Organization Section */}
+        <TabsContent value="organization" className="mt-6 space-y-6">
+          {/* Workspace Settings Card */}
+          <Card data-testid="card-workspace-settings">
           <CardHeader>
             <div className="flex items-center gap-3">
               <Building2 className="h-5 w-5 text-primary" />
@@ -858,7 +1125,10 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+        </TabsContent>
 
+        {/* Billing Section */}
+        <TabsContent value="billing" className="mt-6 space-y-6">
         {/* Subscription & Billing */}
         <Card data-testid="card-subscription">
           <CardHeader>
@@ -934,9 +1204,12 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+        </TabsContent>
 
+        {/* Notifications Section - populated with full notification content */}
+        <TabsContent value="notifications" className="mt-6 space-y-6">
         {/* Notifications */}
-        <Card data-testid="card-notifications">
+        <Card data-testid="card-notifications-full">
           <CardHeader>
             <div className="flex items-center gap-3">
               <Bell className="h-5 w-5 text-primary" />
@@ -1408,7 +1681,10 @@ export default function Settings() {
 
         {/* Calendar Integration */}
         <CalendarIntegrationCard />
+        </TabsContent>
 
+        {/* Automation Section */}
+        <TabsContent value="automation" className="mt-6 space-y-6">
         {/* Automation Settings */}
         <Card data-testid="card-automation-settings">
           <CardHeader>
@@ -1615,7 +1891,10 @@ export default function Settings() {
             </div>
           </CardContent>
         </Card>
+        </TabsContent>
 
+        {/* Compliance Section */}
+        <TabsContent value="compliance" className="mt-6 space-y-6">
         {/* Break Compliance Settings */}
         <Card data-testid="card-break-compliance">
           <CardHeader>
@@ -1769,6 +2048,9 @@ export default function Settings() {
             </Button>
           </CardContent>
         </Card>
+        </TabsContent>
+
+      </Tabs>
       </div>
   );
 
