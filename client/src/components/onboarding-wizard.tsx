@@ -321,12 +321,12 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
       <DialogContent className={cn(
         "overflow-y-auto",
         isMobile 
-          ? "max-w-[95vw] w-full p-3 max-h-[85vh] pb-safe" 
+          ? "max-w-[92vw] w-full p-2 max-h-[80vh] pb-safe" 
           : "max-w-4xl max-h-[90vh]"
       )}>
-        <DialogHeader>
-          <div className="flex justify-center mb-4 md:mb-6">
-            <CoAIleagueLogo width={isMobile ? 150 : 200} height={isMobile ? 38 : 50} showTagline={false} />
+        <DialogHeader className={cn(isMobile && "space-y-1")}>
+          <div className={cn("flex justify-center", isMobile ? "mb-2" : "mb-4 md:mb-6")}>
+            <CoAIleagueLogo width={isMobile ? 120 : 200} height={isMobile ? 30 : 50} showTagline={false} />
           </div>
           <div className={cn(
             "flex items-start justify-between gap-2",
@@ -340,8 +340,8 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
                 <StepIcon className={cn(isMobile ? "h-5 w-5" : "h-6 w-6", "text-primary")} />
               </div>
               <div className="flex-1 min-w-0">
-                <DialogTitle className={cn(isMobile ? "text-lg" : "text-2xl")}>{currentStep.title}</DialogTitle>
-                <DialogDescription className={cn(isMobile ? "text-sm" : "text-base", "line-clamp-2")}>
+                <DialogTitle className={cn(isMobile ? "text-base leading-tight" : "text-2xl")}>{currentStep.title}</DialogTitle>
+                <DialogDescription className={cn(isMobile ? "text-xs leading-tight" : "text-base", "line-clamp-2")}>
                   {currentStep.description}
                 </DialogDescription>
               </div>
@@ -353,12 +353,12 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
         </DialogHeader>
 
         {/* Progress Bar */}
-        <div className="space-y-2">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Overall Progress</span>
+        <div className={cn("space-y-1", isMobile && "py-1")}>
+          <div className={cn("flex items-center justify-between", isMobile ? "text-xs" : "text-sm")}>
+            <span className="text-muted-foreground">Progress</span>
             <span className="font-bold">{progressPercentage}%</span>
           </div>
-          <Progress value={progressPercentage} className="h-2" />
+          <Progress value={progressPercentage} className={cn(isMobile ? "h-1.5" : "h-2")} />
         </div>
 
         {/* Step Content */}
@@ -370,8 +370,8 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
-            <Card className="border-2">
-              <CardContent className={cn("pt-4 space-y-3", isMobile ? "pt-3 space-y-2 px-3" : "pt-6 space-y-4")}>
+            <Card className={cn(isMobile ? "border" : "border-2")}>
+              <CardContent className={cn("pt-4 space-y-3", isMobile ? "pt-2 space-y-1.5 px-2 pb-2" : "pt-6 space-y-4")}>
                 {/* Screenshot Placeholder */}
                 {currentStep.screenshot && (
                   <motion.div 
@@ -384,14 +384,14 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
                   </motion.div>
                 )}
 
-                {/* Features List */}
-                <div className={cn("space-y-2", isMobile ? "space-y-1.5" : "space-y-3")}>
-                  {currentStep.features.map((feature, index) => (
+                {/* Features List - show max 3 on mobile to save space */}
+                <div className={cn("space-y-2", isMobile ? "space-y-1" : "space-y-3")}>
+                  {(isMobile ? currentStep.features.slice(0, 3) : currentStep.features).map((feature, index) => (
                     <motion.div 
                       key={index} 
                       className={cn(
                         "flex items-start gap-2 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors",
-                        isMobile ? "p-2 gap-2" : "p-3 gap-3"
+                        isMobile ? "p-1.5 gap-1.5" : "p-3 gap-3"
                       )}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -402,11 +402,16 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.2 + index * 0.08, type: "spring", stiffness: 400 }}
                       >
-                        <CheckCircle2 className={cn(isMobile ? "h-4 w-4" : "h-5 w-5", "text-primary shrink-0 mt-0.5")} />
+                        <CheckCircle2 className={cn(isMobile ? "h-3.5 w-3.5" : "h-5 w-5", "text-primary shrink-0 mt-0.5")} />
                       </motion.div>
-                      <span className={cn(isMobile ? "text-xs" : "text-sm", "font-medium")}>{feature}</span>
+                      <span className={cn(isMobile ? "text-[11px] leading-tight" : "text-sm", "font-medium")}>{feature}</span>
                     </motion.div>
                   ))}
+                  {isMobile && currentStep.features.length > 3 && (
+                    <div className="text-[10px] text-muted-foreground text-center">
+                      +{currentStep.features.length - 3} more features
+                    </div>
+                  )}
                 </div>
 
                 {/* Launch Module Button */}
@@ -477,40 +482,40 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
 
         {/* Navigation Buttons */}
         <div className={cn(
-          "flex items-center justify-between gap-2 pt-4 border-t",
-          isMobile && "flex-col-reverse gap-3"
+          "flex items-center justify-between gap-2 pt-2 border-t",
+          isMobile && "flex-row gap-2 pt-2"
         )}>
           <Button
             variant="ghost"
             onClick={handleSkip}
             size="sm"
-            className={cn(isMobile && "w-full")}
+            className={cn(isMobile && "px-2 text-xs h-8")}
             data-testid="button-skip-tour"
           >
-            <X className="mr-2 h-4 w-4" />
-            Skip Tour
+            <X className={cn(isMobile ? "h-3 w-3 mr-1" : "mr-2 h-4 w-4")} />
+            Skip
           </Button>
 
-          <div className={cn("flex gap-2", isMobile && "w-full")}>
+          <div className="flex gap-1.5">
             <Button
               variant="outline"
               onClick={handlePrevious}
               disabled={currentStepIndex === 0}
-              className={cn(isMobile && "flex-1")}
-              size={isMobile ? "sm" : "default"}
+              size="sm"
+              className={cn(isMobile && "px-2 text-xs h-8")}
               data-testid="button-previous-step"
             >
-              <ArrowLeft className="mr-1 md:mr-2 h-4 w-4" />
-              {isMobile ? "Back" : "Previous"}
+              <ArrowLeft className={cn(isMobile ? "h-3 w-3" : "mr-1 h-4 w-4")} />
+              {!isMobile && "Back"}
             </Button>
             <Button
               onClick={handleNext}
-              className={cn(isMobile && "flex-1")}
-              size={isMobile ? "sm" : "default"}
+              size="sm"
+              className={cn(isMobile && "px-3 text-xs h-8")}
               data-testid="button-next-step"
             >
-              {currentStepIndex === totalSteps - 1 ? (isMobile ? "Finish" : "Finish Tour") : "Next"}
-              <ArrowRight className="ml-1 md:ml-2 h-4 w-4" />
+              {currentStepIndex === totalSteps - 1 ? "Done" : "Next"}
+              <ArrowRight className={cn(isMobile ? "h-3 w-3 ml-1" : "ml-1 h-4 w-4")} />
             </Button>
           </div>
         </div>
