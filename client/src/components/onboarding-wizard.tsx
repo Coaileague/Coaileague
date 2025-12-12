@@ -319,8 +319,10 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className={cn(
-        "max-h-[90vh] overflow-y-auto",
-        isMobile ? "max-w-[95vw] w-full p-4" : "max-w-4xl"
+        "overflow-y-auto",
+        isMobile 
+          ? "max-w-[95vw] w-full p-3 max-h-[85vh] pb-safe" 
+          : "max-w-4xl max-h-[90vh]"
       )}>
         <DialogHeader>
           <div className="flex justify-center mb-4 md:mb-6">
@@ -436,15 +438,16 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
             transition={{ duration: 0.3 }}
           >
             {[
-              { name: "Communication", key: "communication" as const, color: "blue" },
-              { name: "Operations", key: "operations" as const, color: "indigo" },
-              { name: "Growth", key: "growth" as const, color: "violet" },
-              { name: "Platform", key: "platform" as const, color: "red" }
+              { name: "Communication", shortName: "Comm", key: "communication" as const, bgClass: "bg-blue-500/10", borderClass: "border-blue-500/20", hoverClass: "hover:bg-blue-500/20", textClass: "text-blue-700 dark:text-blue-400" },
+              { name: "Operations", shortName: "Ops", key: "operations" as const, bgClass: "bg-indigo-500/10", borderClass: "border-indigo-500/20", hoverClass: "hover:bg-indigo-500/20", textClass: "text-indigo-700 dark:text-indigo-400" },
+              { name: "Growth", shortName: "Grow", key: "growth" as const, bgClass: "bg-violet-500/10", borderClass: "border-violet-500/20", hoverClass: "hover:bg-violet-500/20", textClass: "text-violet-700 dark:text-violet-400" },
+              { name: "Platform", shortName: "Plat", key: "platform" as const, bgClass: "bg-red-500/10", borderClass: "border-red-500/20", hoverClass: "hover:bg-red-500/20", textClass: "text-red-400" }
             ].map((family, idx) => (
               <motion.div 
                 key={family.key}
                 className={cn(
-                  `text-center rounded-lg bg-${family.color}-500/10 border border-${family.color}-500/20 hover:bg-${family.color}-500/20 transition-colors`,
+                  "text-center rounded-lg border transition-colors",
+                  family.bgClass, family.borderClass, family.hoverClass,
                   isMobile ? "p-1.5" : "p-2"
                 )}
                 initial={{ opacity: 0, scale: 0.9 }}
@@ -453,10 +456,10 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
                 whileHover={{ scale: 1.02 }}
               >
                 <div className={cn(
-                  `font-bold ${family.color === 'red' ? 'text-red-400' : 'text-blue-700 dark:text-blue-400'}`,
+                  "font-bold", family.textClass,
                   isMobile ? "text-[10px]" : "text-xs"
                 )}>
-                  {isMobile ? family.name.substring(0, 4) : family.name}
+                  {isMobile ? family.shortName : family.name}
                 </div>
                 <motion.div 
                   className={cn(isMobile ? "text-sm" : "text-lg", "font-black")}
