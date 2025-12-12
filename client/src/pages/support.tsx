@@ -3,8 +3,9 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/footer";
-import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { Input } from "@/components/ui/input";
+import { TrinityBadge } from "@/components/trinity-marketing-hero";
+import TrinityRedesign from "@/components/trinity-redesign";
 import {
   Book,
   Video,
@@ -25,6 +26,7 @@ import {
   ExternalLink,
   LifeBuoy,
   ArrowRight,
+  Sparkles,
 } from "lucide-react";
 import {
   Accordion,
@@ -146,16 +148,26 @@ export default function Support() {
   ];
 
   return (
-    <div className="min-h-screen bg-white">
-      {/* Top Bar */}
-      <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-white shadow-md border-b border-gray-200 flex items-center justify-between px-6">
-        <CoAIleagueAFLogo size="sm" variant="full" />
-        <div className="flex items-center gap-4">
+    <div className="min-h-screen bg-background dark:bg-background">
+      {/* Top Bar - Modern Trinity Branding */}
+      <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between px-6">
+        <div className="flex items-center gap-3">
+          <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+            <TrinityRedesign mode="IDLE" size={28} mini={true} />
+          </div>
+          <div className="flex flex-col">
+            <span className="font-bold text-lg bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400 bg-clip-text text-transparent">
+              CoAIleague
+            </span>
+            <span className="text-[10px] text-muted-foreground -mt-0.5">Help Center</span>
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => window.location.href = "/"}
-            className="text-xs h-8 text-gray-600 hover:text-gray-900"
+            className="text-xs h-9"
             data-testid="button-back"
           >
             Back
@@ -164,7 +176,7 @@ export default function Support() {
             variant="ghost"
             size="sm"
             onClick={() => window.location.href = "/contact"}
-            className="text-xs h-8 text-gray-600 hover:text-gray-900"
+            className="text-xs h-9"
             data-testid="button-contact"
           >
             Contact
@@ -172,28 +184,32 @@ export default function Support() {
           <Button
             size="sm"
             onClick={() => window.location.href = "/dashboard"}
-            className="h-8 text-xs bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700 text-white shadow-md"
+            className="h-9 text-xs bg-gradient-to-r from-violet-600 to-indigo-600 hover:from-violet-700 hover:to-indigo-700 text-white shadow-md"
             data-testid="button-launch-platform"
           >
+            <Sparkles className="h-3.5 w-3.5 mr-1.5" />
             Launch Platform
           </Button>
         </div>
       </nav>
 
-      {/* Support Hero */}
-      <section className="container mx-auto px-6 pt-24 pb-16 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50">
+      {/* Support Hero - Modern Trinity Gradient */}
+      <section className="container mx-auto px-6 pt-24 pb-16 bg-gradient-to-br from-violet-50/50 via-indigo-50/30 to-background dark:from-violet-950/20 dark:via-indigo-950/10 dark:to-background">
         <div className="text-center space-y-4 mb-12">
-          <div className="flex items-center justify-center gap-2">
-            <div className="h-1 w-12 bg-gradient-to-r from-blue-600 to-blue-600" />
-            <span className="text-xs uppercase tracking-wider text-gray-500 font-mono">
-              Help Center
-            </span>
-            <div className="h-1 w-12 bg-gradient-to-r from-blue-600 to-blue-600" />
+          <div className="flex items-center justify-center gap-3">
+            <div className="h-0.5 w-12 bg-gradient-to-r from-violet-500 to-indigo-500 rounded-full" />
+            <div className="flex items-center gap-2">
+              <TrinityBadge showLabel={false} />
+              <span className="text-xs uppercase tracking-wider text-muted-foreground font-medium">
+                Help Center
+              </span>
+            </div>
+            <div className="h-0.5 w-12 bg-gradient-to-r from-indigo-500 to-violet-500 rounded-full" />
           </div>
-          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight text-gray-900" data-testid="heading-support">
+          <h1 className="text-4xl lg:text-5xl font-bold tracking-tight" data-testid="heading-support">
             How Can We Help?
           </h1>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Search our knowledge base or browse resources to find answers
           </p>
         </div>
@@ -201,12 +217,12 @@ export default function Support() {
         {/* Search Bar */}
         <div className="max-w-2xl mx-auto mb-8">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-500" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder="Search for help articles, guides, and FAQs..."
-              className="pl-12 h-14 text-base bg-white border-gray-200"
+              className="pl-12 h-14 text-base bg-background border-border"
               data-testid="input-search"
             />
           </div>
@@ -214,33 +230,33 @@ export default function Support() {
 
         {/* Customer Support Portal CTA */}
         <div className="max-w-2xl mx-auto mb-16">
-          <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-200 shadow-md hover-elevate active-elevate-2 cursor-pointer transition-all duration-200" data-testid="card-support-tickets">
+          <Card className="bg-gradient-to-br from-violet-50 to-indigo-50 dark:from-violet-950/30 dark:to-indigo-950/30 border border-violet-200 dark:border-violet-800 shadow-md hover-elevate active-elevate-2 cursor-pointer transition-all duration-200" data-testid="card-support-tickets">
             <div className="p-6" onClick={() => window.location.href = "/support/tickets"}>
-              <div className="flex items-start justify-between gap-4">
+              <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="flex items-start gap-4">
-                  <div className="h-12 w-12 rounded-md bg-gradient-to-r from-blue-500 to-blue-600/20 flex items-center justify-center flex-shrink-0">
-                    <LifeBuoy className="h-6 w-6 text-blue-600" />
+                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/20">
+                    <LifeBuoy className="h-6 w-6 text-white" />
                   </div>
                   <div className="space-y-2">
-                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                    <h3 className="text-lg font-semibold flex items-center gap-2 flex-wrap">
                       Need Direct Support?
-                      <Badge className="bg-gradient-to-r from-blue-500 to-blue-600 text-white">24/7 Available</Badge>
+                      <Badge className="bg-gradient-to-r from-violet-500 to-indigo-600 text-white">24/7 Available</Badge>
                     </h3>
-                    <p className="text-sm text-gray-600">
+                    <p className="text-sm text-muted-foreground">
                       Submit a support ticket and our team will assist you. Track all your tickets, get priority help, and receive expert guidance for technical issues, billing questions, or feature requests.
                     </p>
-                    <div className="flex items-center gap-4 pt-2">
-                      <span className="text-xs text-gray-500">
-                        ⚡ Average response: 1 hour
+                    <div className="flex items-center gap-4 pt-2 flex-wrap">
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <Zap className="h-3 w-3 text-amber-500" /> Average response: 1 hour
                       </span>
-                      <span className="text-xs text-gray-500">
-                        📞 Phone & Email Support
+                      <span className="text-xs text-muted-foreground flex items-center gap-1">
+                        <MessageSquare className="h-3 w-3 text-violet-500" /> Phone & Email Support
                       </span>
                     </div>
                   </div>
                 </div>
                 <Button 
-                  className="bg-gradient-to-r from-blue-500 to-blue-600 hover:bg-gradient-to-r from-blue-500 to-blue-600/90 text-white flex-shrink-0"
+                  className="bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 text-white flex-shrink-0"
                   data-testid="button-open-tickets"
                 >
                   Open Tickets
@@ -252,22 +268,21 @@ export default function Support() {
         </div>
 
         {/* System Status */}
-        <Card className="bg-white border-gray-200 mb-16" data-testid="card-status">
+        <Card className="bg-card border-border mb-16" data-testid="card-status">
           <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-md bg-green-600/10 flex items-center justify-center">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                  <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                 </div>
                 <div>
                   <h3 className="font-semibold">System Status</h3>
-                  <p className="text-sm text-gray-500">All systems operational</p>
+                  <p className="text-sm text-muted-foreground">All systems operational</p>
                 </div>
               </div>
               <Button
                 variant="outline"
                 size="sm"
-                className="border-gray-200"
                 data-testid="button-status-page"
               >
                 <ExternalLink className="h-4 w-4 mr-2" />
@@ -277,9 +292,9 @@ export default function Support() {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               {statusItems.map((item) => (
                 <div key={item.label} className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-green-600" />
+                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
                   <div className="flex-1">
-                    <p className="text-xs text-gray-500">{item.label}</p>
+                    <p className="text-xs text-muted-foreground">{item.label}</p>
                     <p className="text-sm font-medium">{item.value}</p>
                   </div>
                 </div>
@@ -295,7 +310,7 @@ export default function Support() {
             {resourceCategories.map((category) => (
               <Card
                 key={category.title}
-                className="bg-white border-2 border-gray-200 shadow-md p-6 space-y-4 hover:border-blue-300 hover-elevate active-elevate-2 transition-all duration-200 cursor-pointer"
+                className="bg-card border border-border p-6 space-y-4 hover:border-violet-300 dark:hover:border-violet-700 hover-elevate active-elevate-2 transition-all duration-200 cursor-pointer"
                 data-testid={`card-resource-${category.title.toLowerCase().replace(/\s+/g, "-")}`}
                 onClick={() => {
                   if (category.title === "Documentation") {
@@ -305,24 +320,23 @@ export default function Support() {
                   } else if (category.title === "Video Tutorials") {
                     window.open("/api/demo-login", "_self");
                   } else if (category.title === "Keyboard Shortcuts") {
-                    // Trigger command palette
                     const event = new KeyboardEvent('keydown', { key: 'k', ctrlKey: true });
                     document.dispatchEvent(event);
                   }
                 }}
               >
-                <div className={`h-12 w-12 rounded-md ${category.bgColor} flex items-center justify-center`}>
-                  <category.icon className={`h-6 w-6 ${category.textColor}`} />
+                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30 flex items-center justify-center">
+                  <category.icon className="h-6 w-6 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div className="space-y-2">
-                  <h3 className="font-semibold text-gray-900">{category.title}</h3>
-                  <p className="text-sm text-gray-600">
+                  <h3 className="font-semibold">{category.title}</h3>
+                  <p className="text-sm text-muted-foreground">
                     {category.description}
                   </p>
                 </div>
-                <ul className="space-y-1.5 pt-2 border-t border-gray-200">
+                <ul className="space-y-1.5 pt-2 border-t border-border">
                   {category.items.map((item) => (
-                    <li key={item} className="text-xs text-gray-600 flex items-center gap-2 hover:text-gray-900 transition-colors">
+                    <li key={item} className="text-xs text-muted-foreground flex items-center gap-2 hover:text-foreground transition-colors">
                       <ExternalLink className="h-3 w-3" />
                       {item}
                     </li>
@@ -347,7 +361,7 @@ export default function Support() {
             ].map((topic) => (
               <Card
                 key={topic.title}
-                className="bg-white border-2 border-gray-200 shadow-md p-5 flex items-center gap-4 hover:border-blue-300 hover-elevate active-elevate-2 transition-all duration-200 cursor-pointer"
+                className="bg-card border border-border p-5 flex items-center gap-4 hover:border-violet-300 dark:hover:border-violet-700 hover-elevate active-elevate-2 transition-all duration-200 cursor-pointer"
                 data-testid={`card-topic-${topic.title.toLowerCase().replace(/\s+/g, "-")}`}
                 onClick={() => {
                   if (topic.action) {
@@ -357,12 +371,12 @@ export default function Support() {
                   }
                 }}
               >
-                <topic.icon className="h-5 w-5 text-blue-600" />
+                <topic.icon className="h-5 w-5 text-violet-600 dark:text-violet-400" />
                 <div className="flex-1">
                   <h3 className="font-semibold text-sm">{topic.title}</h3>
-                  <p className="text-xs text-gray-500">{topic.articles} articles</p>
+                  <p className="text-xs text-muted-foreground">{topic.articles} articles</p>
                 </div>
-                <ExternalLink className="h-4 w-4 text-gray-500" />
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
               </Card>
             ))}
           </div>
@@ -371,14 +385,14 @@ export default function Support() {
         {/* FAQs */}
         <div className="mb-16">
           <h2 className="text-2xl font-bold mb-6">Frequently Asked Questions</h2>
-          <Card className="bg-white border-gray-200">
+          <Card className="bg-card border-border">
             <Accordion type="single" collapsible className="w-full" data-testid="accordion-faq">
               {faqs.map((faq, index) => (
-                <AccordionItem key={index} value={`item-${index}`} className="border-gray-200">
-                  <AccordionTrigger className="px-6 hover:no-underline hover:bg-white/50 data-testid={`faq-question-${index}`}">
+                <AccordionItem key={index} value={`item-${index}`} className="border-border">
+                  <AccordionTrigger className="px-6 hover:no-underline hover:bg-muted/50" data-testid={`faq-question-${index}`}>
                     <span className="text-left font-semibold">{faq.question}</span>
                   </AccordionTrigger>
-                  <AccordionContent className="px-6 pb-4 text-gray-600" data-testid={`faq-answer-${index}`}>
+                  <AccordionContent className="px-6 pb-4 text-muted-foreground" data-testid={`faq-answer-${index}`}>
                     {faq.answer}
                   </AccordionContent>
                 </AccordionItem>
@@ -389,16 +403,16 @@ export default function Support() {
 
         {/* Quick Actions */}
         <div className="grid md:grid-cols-3 gap-6 mb-16">
-          <Card className="bg-white border-2 border-gray-200 shadow-md p-6 space-y-4">
-            <MessageSquare className="h-8 w-8 text-blue-600" />
+          <Card className="bg-card border border-border p-6 space-y-4">
+            <MessageSquare className="h-8 w-8 text-violet-600 dark:text-violet-400" />
             <div className="space-y-2">
-              <h3 className="font-semibold text-gray-900">Still Have Questions?</h3>
-              <p className="text-sm text-gray-600">
+              <h3 className="font-semibold">Still Have Questions?</h3>
+              <p className="text-sm text-muted-foreground">
                 Our support team is available 24/7 to help you succeed
               </p>
             </div>
             <Button
-              className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white shadow-md"
+              className="w-full bg-gradient-to-r from-violet-500 to-indigo-600 hover:from-violet-600 hover:to-indigo-700 text-white shadow-md"
               onClick={() => window.location.href = "/contact"}
               data-testid="button-contact-support"
             >
@@ -406,20 +420,19 @@ export default function Support() {
             </Button>
           </Card>
 
-          <Card className="bg-white border-2 border-gray-200 shadow-md p-6 space-y-4">
-            <Download className="h-8 w-8 text-purple-600" />
+          <Card className="bg-card border border-border p-6 space-y-4">
+            <Download className="h-8 w-8 text-indigo-600 dark:text-indigo-400" />
             <div className="space-y-2">
-              <h3 className="font-semibold text-gray-900">Download Resources</h3>
-              <p className="text-sm text-gray-600">
+              <h3 className="font-semibold">Download Resources</h3>
+              <p className="text-sm text-muted-foreground">
                 Get PDFs, templates, and guides for offline reference
               </p>
             </div>
             <Button
               variant="outline"
-              className="w-full border-purple-600 text-purple-600 hover:bg-purple-50"
+              className="w-full border-indigo-500 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/30"
               data-testid="button-download-resources"
               onClick={() => {
-                // Open the features showcase and login guide
                 window.open("/docs/FEATURES_SHOWCASE.md", "_blank");
                 setTimeout(() => window.open("/docs/LOGIN_GUIDE.md", "_blank"), 500);
               }}
@@ -428,17 +441,17 @@ export default function Support() {
             </Button>
           </Card>
 
-          <Card className="bg-white border-2 border-gray-200 shadow-md p-6 space-y-4">
-            <Video className="h-8 w-8 text-blue-600" />
+          <Card className="bg-card border border-border p-6 space-y-4">
+            <Video className="h-8 w-8 text-violet-600 dark:text-violet-400" />
             <div className="space-y-2">
-              <h3 className="font-semibold text-gray-900">Video Walkthrough</h3>
-              <p className="text-sm text-gray-600">
+              <h3 className="font-semibold">Video Walkthrough</h3>
+              <p className="text-sm text-muted-foreground">
                 Watch our comprehensive platform tutorial series
               </p>
             </div>
             <Button
               variant="outline"
-              className="w-full border-blue-600 text-blue-600 hover:bg-blue-50"
+              className="w-full border-violet-500 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/30"
               data-testid="button-watch-tutorials"
               onClick={() => window.location.href = "/api/demo-login"}
             >
@@ -449,7 +462,7 @@ export default function Support() {
       </section>
 
       {/* Footer */}
-      <Footer variant="light" />
+      <Footer />
     </div>
   );
 }
