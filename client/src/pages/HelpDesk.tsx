@@ -201,8 +201,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     return stored !== null ? stored === 'true' : true; // Default enabled
   });
   
-  // Determine the conversation ID to join (escalation > default)
-  const conversationToJoin = urlConversationId || parsedEscalation?.conversationId || MAIN_ROOM_ID;
+  // Determine the conversation ID to join (mobile selection > URL > escalation > default)
+  const conversationToJoin = mobileSelectedRoom?.id || urlConversationId || parsedEscalation?.conversationId || MAIN_ROOM_ID;
   
   console.log('[HelpDesk] Conversation join logic:', {
     urlConversationId,
@@ -1025,8 +1025,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     if (showMobileRoomBrowser && !urlConversationId && !mobileSelectedRoom) {
       return (
         <div className="flex flex-col h-screen bg-background">
-          {/* Mobile Room Browser Header */}
-          <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-r from-violet-900 to-indigo-900 text-white">
+          {/* Mobile Room Browser Header - Trinity branding */}
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-r from-violet-600 to-indigo-600 text-white">
             <Button
               size="icon"
               variant="ghost"

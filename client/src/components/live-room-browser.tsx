@@ -295,14 +295,32 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
                   <Button
                     className={compact ? "w-full" : "flex-1"}
                     variant="default"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.stopPropagation();
+                      // Auto-join if not already a member, then navigate
+                      if (!room.isJoined) {
+                        try {
+                          await joinRoomMutation.mutateAsync(room.id);
+                        } catch (error) {
+                          toast({
+                            title: "Failed to join room",
+                            description: "Please try again",
+                            variant: "destructive",
+                          });
+                          return;
+                        }
+                      }
                       onRoomSelect(room.id, room.roomName);
                     }}
+                    disabled={joinRoomMutation.isPending}
                     data-testid={`button-enter-${room.slug}`}
                   >
-                    <MessageSquare className="h-4 w-4 mr-2" />
-                    Enter Chat
+                    {joinRoomMutation.isPending ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                    ) : (
+                      <MessageSquare className="h-4 w-4 mr-2" />
+                    )}
+                    {room.isJoined ? "Enter Chat" : "Join & Enter"}
                   </Button>
                 )}
                 {!compact && (
