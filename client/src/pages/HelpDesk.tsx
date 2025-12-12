@@ -417,8 +417,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
       queryClient.invalidateQueries({ queryKey: ['/api/helpdesk/motd'] });
       setShowMotd(false);
       toast({
-        title: "Welcome to CoAIleague HelpDesk!",
-        description: "You can now access the support chat powered by CoAIleague AI",
+        title: "Welcome to HelpDesk!",
+        description: "You can now access the support chat powered by HelpAI",
       });
     },
   });
@@ -482,8 +482,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             const positionInQueue = silencedUsers.size; // Count of silenced users
             
             sendMessage(
-              `${CHAT_CONFIG.messages.queueUpdate.label}\nTicket: ${newTicketId}\nWait Time: ${waitMinutes}m ${waitSeconds % 60}s\nPosition in Queue: #${positionInQueue}\n\nCoAIleague AI is reviewing your issue. An agent will be assigned shortly.`,
-              'CoAIleague AI',
+              `${CHAT_CONFIG.messages.queueUpdate.label}\nTicket: ${newTicketId}\nWait Time: ${waitMinutes}m ${waitSeconds % 60}s\nPosition in Queue: #${positionInQueue}\n\nHelpAI is reviewing your issue. An agent will be assigned shortly.`,
+              'HelpAI Bot',
               'system'
             );
           }
@@ -1184,7 +1184,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         {/* Header: Name with inline superscript role badge + Timestamp */}
                         <div className="flex items-center gap-1 sm:gap-1.5 mb-1 flex-wrap min-w-0">
                           <span className={`text-sm font-bold ${nameColor} truncate`}>
-                            {role === 'bot' ? 'CoAIleague AI' : actualName.split('(')[0].trim()}
+                            {role === 'bot' ? 'HelpAI Bot' : actualName.split('(')[0].trim()}
                             {/* Role badge as inline superscript like mathematical notation */}
                             {getRoleIcon(role)}
                           </span>
@@ -1303,7 +1303,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               {isGuest && isSilenced && !justGotVoice ? (
                 <div className="flex-grow p-3 sm:p-3.5 border-2 border-amber-200 dark:border-amber-900 rounded-xl sm:rounded-2xl bg-amber-50 dark:bg-amber-950/30 text-amber-900 dark:text-amber-100 text-base">
                   <p className="font-semibold mb-1">📞 You're in Queue (Spectator Mode)</p>
-                  <p className="text-sm">Your chat is read-only while waiting. CoAIleague AI will assist you shortly.</p>
+                  <p className="text-sm">Your chat is read-only while waiting. HelpAI will assist you shortly.</p>
                 </div>
               ) : (
                 <>
@@ -1457,7 +1457,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-0.5 flex-wrap">
                             <span className={`text-sm font-semibold break-words ${getRoleColor(u.role)}`}>
-                              {u.role === 'bot' ? 'CoAIleague AI' : u.name}
+                              {u.role === 'bot' ? 'HelpAI Bot' : u.name}
                               {/* Inline superscript role badge */}
                               {getRoleIcon(u.role)}
                             </span>
@@ -2162,7 +2162,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 });
                 
                 toast({
-                  title: newState ? "CoAIleague AI Enabled" : "CoAIleague AI Disabled",
+                  title: newState ? "HelpAI Enabled" : "HelpAI Disabled",
                   description: newState 
                     ? "AI costs are billed to customer credits" 
                     : "Standard support mode active",
@@ -2257,7 +2257,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                         </div>
                         <div>
                           <h3 className="text-gray-900 font-bold text-lg">
-                            {selectedUserId.startsWith('helpbot') ? 'CoAIleague AI' : 'System Bot'}
+                            {selectedUserId.startsWith('helpbot') ? 'HelpAI Bot' : 'System Bot'}
                           </h3>
                           <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 border-blue-500/30 mt-1">
                             System-Generated AI Assistant

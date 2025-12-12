@@ -49,8 +49,8 @@ export function CoAIleagueAiTester() {
     },
     onSuccess: () => {
       toast({
-        title: "✅ Workspace Selected",
-        description: "CoAIleague AI is ready",
+        title: "Workspace Selected",
+        description: "HelpAI is ready",
       });
     },
     onError: (error: any) => {
@@ -97,7 +97,7 @@ export function CoAIleagueAiTester() {
     onSuccess: (data: any) => {
       setAiResponse(data.message || "No response from AI");
       toast({
-        title: "✅ CoAIleague AI Active",
+        title: "HelpAI Active",
         description: "Intelligent automation system responding",
       });
     },

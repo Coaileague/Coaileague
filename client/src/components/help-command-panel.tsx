@@ -31,7 +31,7 @@ interface CommandItem {
 const COMMAND_BOXES: CommandItem[] = [
   // Chat & Support
   { id: 'welcome', name: 'Welcome', description: 'Greet new users', icon: MessageSquare, color: 'from-blue-500 to-blue-600', action: '/welcome', staffOnly: true },
-  { id: 'ai-intro', name: 'AI Intro', description: 'CoAIleague AI greeting', icon: Sparkles, color: 'from-violet-500 to-purple-600', action: '/intro', staffOnly: true },
+  { id: 'ai-intro', name: 'AI Intro', description: 'HelpAI greeting', icon: Sparkles, color: 'from-violet-500 to-purple-600', action: '/intro', staffOnly: true },
   { id: 'details', name: 'Request Details', description: 'Ask for more info', icon: FileText, color: 'from-blue-500 to-blue-600', action: '/details', staffOnly: true },
   { id: 'screenshot', name: 'Screenshot', description: 'Request screenshot', icon: Eye, color: 'from-primary to-accent', action: '/screenshot', staffOnly: true },
   
@@ -118,7 +118,7 @@ export function HelpCommandPanel({
               <DialogTitle className="text-2xl font-bold text-white flex items-center gap-2">
                 Command Center
                 <Badge className="bg-white/20 text-white border-white/30">
-                  CoAIleague AI
+                  HelpAI
                 </Badge>
               </DialogTitle>
               <p className="text-sm text-blue-100 mt-1">
