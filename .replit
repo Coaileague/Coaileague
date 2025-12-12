@@ -52,3 +52,6 @@ integrations = [
 
 [userenv.development]
 TRINITY_DIALOGUE_ENABLED = "false"
+
+[userenv.shared]
+DISABLE_SEASONAL_THEMING = "true"

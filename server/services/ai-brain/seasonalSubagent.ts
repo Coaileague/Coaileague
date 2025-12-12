@@ -678,6 +678,14 @@ export function getSeasonalSubagent(): SeasonalSubagent {
 // Initialize and start on import
 export async function initializeSeasonalSubagent(): Promise<SeasonalSubagent> {
   const agent = getSeasonalSubagent();
-  await agent.start();
+  
+  // Check for environment variable to disable seasonal theming
+  if (process.env.DISABLE_SEASONAL_THEMING === 'true') {
+    console.log('[SeasonalSubagent] Seasonal theming disabled via DISABLE_SEASONAL_THEMING env var');
+    await agent.forceDeactivateTheme('Disabled via environment variable');
+  } else {
+    await agent.start();
+  }
+  
   return agent;
 }
