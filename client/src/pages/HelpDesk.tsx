@@ -1021,8 +1021,11 @@ export function HelpDesk(props?: HelpDeskProps & any) {
 
   // MOBILE-OPTIMIZED CHAT - Full-featured mobile layout with tools
   if (shouldUseMobileLayout) {
-    // Show room browser first on mobile (unless URL has a specific conversation)
-    if (showMobileRoomBrowser && !urlConversationId && !mobileSelectedRoom) {
+    // Show room browser first on mobile (unless URL has a specific conversation or room selected)
+    // Default to true for new sessions without explicit room selection
+    const shouldShowRoomBrowser = showMobileRoomBrowser && !urlConversationId && !mobileSelectedRoom;
+    
+    if (shouldShowRoomBrowser) {
       return (
         <div className="flex flex-col h-screen bg-background">
           {/* Mobile Room Browser Header - Trinity branding */}

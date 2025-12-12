@@ -60,15 +60,16 @@ interface LiveRoomBrowserProps {
 }
 
 export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = false }: LiveRoomBrowserProps) {
-  const { user } = useAuth();
+  const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
 
-  // Fetch live rooms with user counts
-  const { data: rooms, isLoading } = useQuery<LiveRoom[]>({
+  // Fetch live rooms with user counts - enabled once auth is resolved and user is authenticated
+  const { data: rooms, isLoading: isRoomsLoading, isError } = useQuery<LiveRoom[]>({
     queryKey: ['/api/comm-os/rooms/live'],
-    enabled: !!user,
+    enabled: isAuthenticated && !isAuthLoading,
     refetchInterval: 5000, // Poll every 5 seconds for live updates
+    retry: 2, // Retry failed requests
   });
 
   // Join room mutation
@@ -152,23 +153,64 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
       .toUpperCase();
   };
 
-  if (isLoading) {
+  // Show loading state while auth is loading or rooms are fetching
+  if (isAuthLoading || isRoomsLoading) {
     return (
       <div className="flex items-center justify-center p-12">
         <div className="text-center space-y-2">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-sm text-muted-foreground">Loading rooms...</p>
+          <p className="text-sm text-muted-foreground">
+            {isAuthLoading ? 'Checking authentication...' : 'Loading rooms...'}
+          </p>
         </div>
       </div>
+    );
+  }
+
+  // Show login prompt if not authenticated (after auth loading completes)
+  if (!isAuthenticated) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center space-y-4">
+          <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto" />
+          <div>
+            <p className="text-muted-foreground font-medium">Sign in to view chat rooms</p>
+            <p className="text-sm text-muted-foreground mt-1">Authentication is required to access live chat</p>
+          </div>
+          <Button 
+            onClick={() => window.location.href = '/auth'}
+            className="mt-4"
+            data-testid="button-login-to-chat"
+          >
+            Sign In
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // Show error state
+  if (isError) {
+    return (
+      <Card>
+        <CardContent className="p-12 text-center space-y-4">
+          <MessageSquare className="h-12 w-12 text-destructive mx-auto" />
+          <div>
+            <p className="text-destructive font-medium">Failed to load chat rooms</p>
+            <p className="text-sm text-muted-foreground mt-1">Please try again later</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   if (!rooms || rooms.length === 0) {
     return (
       <Card>
-        <CardContent className="p-12 text-center">
-          <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+        <CardContent className="p-12 text-center space-y-4">
+          <MessageSquare className="h-12 w-12 text-muted-foreground mx-auto" />
           <p className="text-muted-foreground">No chat rooms available</p>
+          <p className="text-sm text-muted-foreground">Check back later or contact support</p>
         </CardContent>
       </Card>
     );
