@@ -3087,11 +3087,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/scheduling", advancedSchedulingRouter);
   // Register AI Communications Chat Upload routes (file uploads with security, workroom attachments)
   const chatUploadsRouter = (await import('./routes/chat-uploads')).default;
-  app.use('/api/chat/upload', chatUploadsRouter);
+  app.use('/api/chat/upload', attachWorkspaceId, chatUploadsRouter);
 
   // Register AI Communications Chat Room routes (room creation, participant management, shift-based rooms)
   const chatRoomsRouter = (await import('./routes/chat-rooms')).default;
-  app.use('/api/chat/rooms', chatRoomsRouter);
+  app.use('/api/chat/rooms', attachWorkspaceId, chatRoomsRouter);
 
   // Register HelpAI FAQ routes (AI-powered FAQ system with semantic search)
   registerFaqRoutes(app);
