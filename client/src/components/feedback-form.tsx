@@ -30,9 +30,10 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { 
   Camera, MessageSquare, Bug, Lightbulb, HelpCircle, 
-  Send, Trash2, Image, CheckCircle, Loader2, X, Sparkles
+  Send, Trash2, Image, CheckCircle, Loader2, X, Sparkles, Search
 } from "lucide-react";
 import TrinityRedesign from "./trinity-redesign";
+import { BugReportTracker } from "./bug-report-tracker";
 
 type FeedbackType = 'bug' | 'feature' | 'question' | 'other';
 
@@ -137,17 +138,33 @@ export function FeedbackForm({ trigger, onSubmitSuccess }: FeedbackFormProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
 
+  const [reportId, setReportId] = useState<string | null>(null);
+
   const submitMutation = useMutation({
     mutationFn: async (data: FeedbackData) => {
+      // Bug reports go to the bug remediation API for AI analysis and auto-fix
+      if (data.type === 'bug') {
+        const response = await apiRequest('POST', '/api/bug-remediation/submit', data);
+        return response.json();
+      }
+      // Other feedback types go to general feedback endpoint
       return apiRequest('POST', '/api/feedback', data);
     },
-    onSuccess: () => {
-      toast({
-        title: "Feedback Submitted",
-        description: "Thank you for your feedback! We'll review it shortly.",
-      });
-      resetForm();
-      setOpen(false);
+    onSuccess: (data: any) => {
+      if (type === 'bug' && data?.data?.reportId) {
+        setReportId(data.data.reportId);
+        toast({
+          title: "Bug Report Submitted",
+          description: `Your bug report is being analyzed by Trinity AI. Track ID: ${data.data.reportId}`,
+        });
+      } else {
+        toast({
+          title: "Feedback Submitted",
+          description: "Thank you for your feedback! We'll review it shortly.",
+        });
+        resetForm();
+        setOpen(false);
+      }
       onSubmitSuccess?.();
     },
     onError: (error: Error) => {
@@ -164,6 +181,7 @@ export function FeedbackForm({ trigger, onSubmitSuccess }: FeedbackFormProps) {
     setTitle('');
     setDescription('');
     setScreenshot(null);
+    setReportId(null);
   };
 
   const handleCaptureScreenshot = async () => {
@@ -287,140 +305,201 @@ export function FeedbackForm({ trigger, onSubmitSuccess }: FeedbackFormProps) {
           </DialogHeader>
         </div>
         
-        <div className="px-6 pb-4">
-        <div className="space-y-4 pt-2">
-          <div className="space-y-2">
-            <Label>Feedback Type</Label>
-            <div className="flex flex-wrap gap-2">
-              {FEEDBACK_TYPES.map((feedbackType) => (
-                <Badge
-                  key={feedbackType.value}
-                  variant={type === feedbackType.value ? "default" : "outline"}
-                  className={`cursor-pointer gap-1.5 py-1.5 px-3 ${type === feedbackType.value ? '' : 'hover-elevate'}`}
-                  onClick={() => setType(feedbackType.value)}
-                  data-testid={`badge-feedback-type-${feedbackType.value}`}
-                >
-                  {feedbackType.icon}
-                  {feedbackType.label}
-                </Badge>
-              ))}
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="feedback-title">Title</Label>
-            <Input
-              id="feedback-title"
-              placeholder="Brief summary of your feedback"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              data-testid="input-feedback-title"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="feedback-description">Description</Label>
-            <Textarea
-              id="feedback-description"
-              placeholder="Please describe your feedback in detail. For bugs, include steps to reproduce."
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={4}
-              data-testid="input-feedback-description"
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label>Screenshot (Optional)</Label>
-            <div className="flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleCaptureScreenshot}
-                disabled={isCapturing}
-                className="gap-2"
-                data-testid="button-capture-screenshot"
-              >
-                {isCapturing ? (
+        {reportId ? (
+          <>
+            <div className="px-6 py-8">
+              <div className="flex flex-col items-center text-center space-y-4">
+                <div className="w-16 h-16 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
+                  <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Bug Report Submitted</h3>
+                  <p className="text-sm text-muted-foreground">
+                    Trinity AI is now analyzing your bug report and will formulate a fix plan.
+                  </p>
+                </div>
+                <div className="bg-muted/50 rounded-lg p-4 w-full">
+                  <div className="text-xs text-muted-foreground mb-1">Tracking ID</div>
+                  <div className="font-mono text-sm font-semibold" data-testid="text-report-id">{reportId}</div>
+                </div>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Camera className="h-4 w-4" />
+                  <span>AI analysis in progress...</span>
+                </div>
+              </div>
+            </div>
+            <div className="border-t bg-muted/30 px-6 py-4">
+              <DialogFooter className="flex-col sm:flex-row gap-2 sm:gap-2">
+                <BugReportTracker
+                  reportId={reportId}
+                  trigger={
+                    <Button variant="outline" className="gap-2 w-full sm:w-auto" data-testid="button-track-report">
+                      <Search className="h-4 w-4" />
+                      Track Status
+                    </Button>
+                  }
+                />
+                <div className="flex gap-2 w-full sm:w-auto">
+                  <Button
+                    variant="ghost"
+                    onClick={() => {
+                      resetForm();
+                      setOpen(false);
+                    }}
+                    className="flex-1 sm:flex-none"
+                    data-testid="button-close-success"
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    onClick={() => resetForm()}
+                    className="gap-2 flex-1 sm:flex-none"
+                    data-testid="button-report-another"
+                  >
+                    <Bug className="h-4 w-4" />
+                    Report Another
+                  </Button>
+                </div>
+              </DialogFooter>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="px-6 pb-4">
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <Label>Feedback Type</Label>
+                <div className="flex flex-wrap gap-2">
+                  {FEEDBACK_TYPES.map((feedbackType) => (
+                    <Badge
+                      key={feedbackType.value}
+                      variant={type === feedbackType.value ? "default" : "outline"}
+                      className={`cursor-pointer gap-1.5 py-1.5 px-3 ${type === feedbackType.value ? '' : 'hover-elevate'}`}
+                      onClick={() => setType(feedbackType.value)}
+                      data-testid={`badge-feedback-type-${feedbackType.value}`}
+                    >
+                      {feedbackType.icon}
+                      {feedbackType.label}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="feedback-title">Title</Label>
+                <Input
+                  id="feedback-title"
+                  placeholder="Brief summary of your feedback"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  data-testid="input-feedback-title"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="feedback-description">Description</Label>
+                <Textarea
+                  id="feedback-description"
+                  placeholder="Please describe your feedback in detail. For bugs, include steps to reproduce."
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  rows={4}
+                  data-testid="input-feedback-description"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Screenshot (Optional)</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleCaptureScreenshot}
+                    disabled={isCapturing}
+                    className="gap-2"
+                    data-testid="button-capture-screenshot"
+                  >
+                    {isCapturing ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4" />
+                    )}
+                    Capture Screen
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="gap-2"
+                    data-testid="button-upload-screenshot"
+                  >
+                    <Image className="h-4 w-4" />
+                    Upload Image
+                  </Button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleFileUpload}
+                  />
+                </div>
+
+                {screenshot && (
+                  <div className="relative mt-2 rounded-lg border overflow-hidden">
+                    <img 
+                      src={screenshot} 
+                      alt="Screenshot preview" 
+                      className="w-full h-32 object-cover"
+                    />
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      size="icon"
+                      className="absolute top-2 right-2 h-6 w-6"
+                      onClick={() => setScreenshot(null)}
+                      data-testid="button-remove-screenshot"
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                    <Badge className="absolute bottom-2 left-2" variant="secondary">
+                      <CheckCircle className="h-3 w-3 mr-1" />
+                      Screenshot attached
+                    </Badge>
+                  </div>
                 )}
-                Capture Screen
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                className="gap-2"
-                data-testid="button-upload-screenshot"
-              >
-                <Image className="h-4 w-4" />
-                Upload Image
-              </Button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                className="hidden"
-                onChange={handleFileUpload}
-              />
+              </div>
+            </div>
             </div>
 
-            {screenshot && (
-              <div className="relative mt-2 rounded-lg border overflow-hidden">
-                <img 
-                  src={screenshot} 
-                  alt="Screenshot preview" 
-                  className="w-full h-32 object-cover"
-                />
+            <div className="border-t bg-muted/30 px-6 py-4">
+              <DialogFooter className="gap-2 sm:gap-2">
                 <Button
-                  type="button"
-                  variant="destructive"
-                  size="icon"
-                  className="absolute top-2 right-2 h-6 w-6"
-                  onClick={() => setScreenshot(null)}
-                  data-testid="button-remove-screenshot"
+                  variant="outline"
+                  onClick={() => setOpen(false)}
+                  data-testid="button-cancel-feedback"
                 >
-                  <X className="h-3 w-3" />
+                  Cancel
                 </Button>
-                <Badge className="absolute bottom-2 left-2" variant="secondary">
-                  <CheckCircle className="h-3 w-3 mr-1" />
-                  Screenshot attached
-                </Badge>
-              </div>
-            )}
-          </div>
-        </div>
-        </div>
-
-        {/* Branded Footer */}
-        <div className="border-t bg-muted/30 px-6 py-4">
-          <DialogFooter className="gap-2 sm:gap-2">
-            <Button
-              variant="outline"
-              onClick={() => setOpen(false)}
-              data-testid="button-cancel-feedback"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSubmit}
-              disabled={submitMutation.isPending || !title.trim() || !description.trim()}
-              className="gap-2"
-              data-testid="button-submit-feedback"
-            >
-              {submitMutation.isPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="h-4 w-4" />
-              )}
-              Submit Feedback
-            </Button>
-          </DialogFooter>
-        </div>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={submitMutation.isPending || !title.trim() || !description.trim()}
+                  className="gap-2"
+                  data-testid="button-submit-feedback"
+                >
+                  {submitMutation.isPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  Submit Feedback
+                </Button>
+              </DialogFooter>
+            </div>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );

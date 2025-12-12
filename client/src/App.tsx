@@ -149,6 +149,7 @@ import OversightHub from "@/pages/oversight-hub";
 import WorkflowApprovals from "@/pages/workflow-approvals";
 import AICommandCenter from "@/pages/ai-command-center";
 import SupportCommandConsole from "@/pages/support-command-console";
+import SupportBugDashboard from "@/pages/support-bug-dashboard";
 import TrinityCommandCenter from "@/pages/trinity-command-center";
 import AuditLogs from "@/pages/audit-logs";
 import AIAuditLogViewer from "@/pages/ai-audit-log-viewer";
@@ -934,6 +935,7 @@ function AppContent() {
               <Route path="/automation-control" component={AutomationControl} />
               <Route path="/ai/command-center" component={AICommandCenter} />
               <Route path="/support/console" component={SupportCommandConsole} />
+              <Route path="/support/bugs" component={SupportBugDashboard} />
               <Route path="/trinity/command-center" component={TrinityCommandCenter} />
               <Route path="/billing" component={Billing} />
               <Route path="/usage" component={UsageDashboard} />
