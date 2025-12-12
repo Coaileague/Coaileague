@@ -25,6 +25,9 @@ import {
   Clock,
   AlertCircle,
   Shield,
+  MoreVertical,
+  Edit,
+  Trash2,
 } from "lucide-react";
 import { SwipeToDelete } from "@/components/swipe-to-delete";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -46,6 +49,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Label } from "@/components/ui/label";
 import type { Employee, InsertEmployee } from "@shared/schema";
 import { insertEmployeeSchema } from "@shared/schema";
@@ -73,6 +93,16 @@ export default function Employees() {
   const [isApprovalDialogOpen, setIsApprovalDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [approvalPayRate, setApprovalPayRate] = useState("");
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [editFormData, setEditFormData] = useState({
+    firstName: "",
+    lastName: "",
+    email: "",
+    phone: "",
+    role: "",
+    hourlyRate: "",
+  });
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -305,11 +335,108 @@ export default function Employees() {
     await queryClient.invalidateQueries({ queryKey: queryKeys.employees.all });
   };
 
-  const handleDeleteEmployee = (employeeId: number | string) => {
-    toast({
-      title: "Delete Employee",
-      description: "Employee deletion requires confirmation. Feature coming soon.",
+  // Edit mutation - uses direct fetch to properly handle path params
+  const editMutation = useMutation({
+    mutationFn: async (data: { id: string; updates: Partial<Employee> }) => {
+      const response = await fetch(`/api/employees/${data.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(data.updates),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || 'Failed to update employee');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.employees.all });
+      toast({
+        title: "Success",
+        description: "Employee updated successfully",
+      });
+      setIsEditDialogOpen(false);
+      setSelectedEmployee(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update employee",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Delete mutation - uses direct fetch to properly handle path params
+  const deleteMutation = useMutation({
+    mutationFn: async (employeeId: string) => {
+      const response = await fetch(`/api/employees/${employeeId}`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || 'Failed to delete employee');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.employees.all });
+      toast({
+        title: "Success",
+        description: "Employee removed successfully",
+      });
+      setIsDeleteDialogOpen(false);
+      setSelectedEmployee(null);
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to remove employee",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEditEmployee = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setEditFormData({
+      firstName: employee.firstName || "",
+      lastName: employee.lastName || "",
+      email: employee.email || "",
+      phone: employee.phone || "",
+      role: employee.role || "",
+      hourlyRate: employee.hourlyRate?.toString() || "",
     });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSubmit = () => {
+    if (!selectedEmployee?.id) return;
+    editMutation.mutate({
+      id: selectedEmployee.id,
+      updates: {
+        firstName: editFormData.firstName,
+        lastName: editFormData.lastName,
+        email: editFormData.email,
+        phone: editFormData.phone || undefined,
+        role: editFormData.role || undefined,
+        hourlyRate: editFormData.hourlyRate ? parseFloat(editFormData.hourlyRate) : undefined,
+      },
+    });
+  };
+
+  const handleDeleteEmployee = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteEmployee = () => {
+    if (selectedEmployee?.id) {
+      deleteMutation.mutate(selectedEmployee.id);
+    }
   };
 
   const pageContent = (
@@ -612,6 +739,39 @@ export default function Employees() {
                       {getOnboardingStatusBadge(employee.onboardingStatus ?? undefined)}
                     </div>
                   </div>
+                  {/* Edit/Delete Dropdown Menu */}
+                  {!isMobile && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 shrink-0"
+                          data-testid={`button-employee-menu-${employee.id}`}
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem 
+                          onClick={() => handleEditEmployee(employee)}
+                          data-testid={`button-edit-employee-${employee.id}`}
+                        >
+                          <Edit className="h-4 w-4 mr-2" />
+                          Edit Employee
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => handleDeleteEmployee(employee)}
+                          className="text-destructive focus:text-destructive"
+                          data-testid={`button-delete-employee-${employee.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remove Employee
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
                 </CardHeader>
                 <CardContent className="space-y-3">
                   <div className="flex items-center gap-2 text-sm">
@@ -667,7 +827,7 @@ export default function Employees() {
                 return (
                   <SwipeToDelete 
                     key={employee.id}
-                    onDelete={() => handleDeleteEmployee(employee.id)}
+                    onDelete={() => handleDeleteEmployee(employee)}
                   >
                     {employeeCard}
                   </SwipeToDelete>
@@ -800,6 +960,146 @@ export default function Employees() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Edit Employee Dialog */}
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
+            <DialogHeader className="space-y-2 pb-3">
+              <DialogTitle className="text-lg sm:text-xl">Edit Employee</DialogTitle>
+              <DialogDescription className="text-xs sm:text-sm">
+                Update employee details
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3 py-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-firstName" className="text-xs">First Name *</Label>
+                  <Input 
+                    id="edit-firstName" 
+                    placeholder="John" 
+                    value={editFormData.firstName}
+                    onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
+                    data-testid="input-edit-firstName"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-lastName" className="text-xs">Last Name *</Label>
+                  <Input 
+                    id="edit-lastName" 
+                    placeholder="Doe" 
+                    value={editFormData.lastName}
+                    onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
+                    data-testid="input-edit-lastName"
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-email" className="text-xs">Email *</Label>
+                  <Input 
+                    id="edit-email" 
+                    type="email" 
+                    placeholder="john@example.com" 
+                    value={editFormData.email}
+                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
+                    data-testid="input-edit-email"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-phone" className="text-xs">Phone</Label>
+                  <Input 
+                    id="edit-phone" 
+                    placeholder="+1 (555) 123-4567" 
+                    value={editFormData.phone}
+                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
+                    data-testid="input-edit-phone"
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-role" className="text-xs">Position</Label>
+                  <Input 
+                    id="edit-role" 
+                    placeholder="Security Guard" 
+                    value={editFormData.role}
+                    onChange={(e) => setEditFormData({ ...editFormData, role: e.target.value })}
+                    data-testid="input-edit-role"
+                    className="h-9 text-sm"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="edit-hourlyRate" className="text-xs">Hourly Rate ($)</Label>
+                  <Input 
+                    id="edit-hourlyRate" 
+                    type="number" 
+                    placeholder="25.00" 
+                    value={editFormData.hourlyRate}
+                    onChange={(e) => setEditFormData({ ...editFormData, hourlyRate: e.target.value })}
+                    data-testid="input-edit-hourlyRate"
+                    className="h-9 text-sm"
+                  />
+                </div>
+              </div>
+            </div>
+            <DialogFooter className="flex-col sm:flex-row gap-2 pt-3">
+              <Button 
+                variant="outline" 
+                onClick={() => {
+                  setIsEditDialogOpen(false);
+                  setSelectedEmployee(null);
+                }}
+                className="w-full sm:w-auto h-9 text-sm"
+                data-testid="button-cancel-edit"
+              >
+                Cancel
+              </Button>
+              <Button 
+                onClick={handleEditSubmit}
+                disabled={editMutation.isPending}
+                data-testid="button-save-edit"
+                className="w-full sm:w-auto h-9 text-sm"
+              >
+                {editMutation.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Remove Employee</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to remove {selectedEmployee?.firstName} {selectedEmployee?.lastName}? 
+                This action cannot be undone and will remove all associated records.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel 
+                onClick={() => {
+                  setIsDeleteDialogOpen(false);
+                  setSelectedEmployee(null);
+                }}
+                data-testid="button-cancel-delete"
+              >
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={confirmDeleteEmployee}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                data-testid="button-confirm-delete"
+              >
+                {deleteMutation.isPending ? "Removing..." : "Remove Employee"}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
   );
 
