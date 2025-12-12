@@ -106,17 +106,16 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 
 ## Technical Debt & Cleanup Notes (December 2025)
 
-**Notification System Audit:**
+**Notification System (CLEANED):**
 - **Primary UNS:** `notifications-popover.tsx` - Main Universal Notification System implementation
 - **Active Utilities:** `animated-notification-bell.tsx`, `chatroom-notification-listener.tsx`, `universal-welcome-notification.tsx`, `push-notification-settings.tsx`
-- **DEAD CODE:** `live-updates-ticker.tsx` - NOT imported anywhere, can be safely removed
-- **Consolidation Candidate:** `ai-brain/notification-center.tsx` - Duplicates main UNS, only used in ai-brain-dashboard.tsx
+- **DELETED (Dec 2025):** `live-updates-ticker.tsx`, `ai-brain/notification-center.tsx`, `widgets-dashboard.tsx`
 
-**Page Inventory (113 pages):**
-- Multiple overlapping dashboards (9 total: dashboard, manager-dashboard, root-admin-dashboard, etc.)
-- Multiple command centers (4): admin-command-center, ai-command-center, trinity-command-center, support-command-console
-- Category pages (4): category-communication, category-growth, category-operations, category-platform
-- All pages are registered in router (264 route registrations)
+**Page Inventory (110 pages after cleanup):**
+- All dashboards serve unique purposes: dashboard.tsx (role-adaptive), manager-dashboard.tsx (manager approvals), root-admin-dashboard.tsx (platform admin), engagement-dashboard.tsx (employee engagement), usage-dashboard.tsx (cost tracking), credit-analytics-dashboard.tsx (AI credits)
+- Command centers are distinct: admin-command-center (quick admin actions), ai-command-center (AI Brain control), trinity-command-center (cognitive control), support-command-console (support ops)
+- Analytics pages are distinct: analytics.tsx (workforce ops), owner-analytics.tsx (workspace owner costs/usage)
+- Category pages (4): category-communication, category-growth, category-operations, category-platform - serve as organized entry points
 
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
