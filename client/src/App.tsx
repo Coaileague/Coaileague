@@ -715,9 +715,11 @@ function MascotRenderer() {
           onClick={handleTap}
           draggable={false}
           onDragStart={(e) => e.preventDefault()}
+          onMouseDown={(e) => e.preventDefault()}
+          onTouchStart={(e) => { /* Tap only - no drag */ }}
           style={{ 
             background: 'transparent', 
-            cursor: 'pointer', 
+            cursor: 'default', 
             userSelect: 'none', 
             WebkitUserDrag: 'none',
             WebkitTouchCallout: 'none',
