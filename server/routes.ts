@@ -4531,6 +4531,224 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ============================================================================
+  // ORGANIZATION MANAGEMENT ROUTES (For Org Owners/Admins)
+  // ============================================================================
+  
+  // Get organizations the current user manages (owner or admin of)
+  app.get('/api/organizations/managed', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.userId;
+      const workspaceId = req.workspaceId;
+      
+      if (!userId || !workspaceId) {
+        return res.status(400).json({ message: "User and workspace context required" });
+      }
+      
+      // Get employee record to check workspace role
+      const employee = await storage.getEmployeeByUserId(userId, workspaceId);
+      const isPlatformStaff = req.platformRole && ['root_admin', 'sysop', 'support_manager', 'support_agent'].includes(req.platformRole);
+      
+      // Only org_owner, org_admin, or platform staff can see managed organizations
+      if (!isPlatformStaff && employee?.workspaceRole !== 'org_owner' && employee?.workspaceRole !== 'org_admin') {
+        return res.status(403).json({ message: "Only organization owners and admins can access this" });
+      }
+      
+      // For now, return the current workspace as an "organization"
+      const workspace = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+      const employees = await storage.getEmployeesByWorkspace(workspaceId);
+      const clients = await db.select().from(clientsTable).where(eq(clientsTable.workspaceId, workspaceId));
+      
+      if (workspace.length === 0) {
+        return res.json([]);
+      }
+      
+      const org = {
+        id: workspace[0].id,
+        name: workspace[0].name,
+        memberCount: employees.length,
+        clientCount: clients.length,
+        createdAt: workspace[0].createdAt,
+        isOwner: employee?.workspaceRole === 'org_owner',
+      };
+      
+      res.json([org]);
+    } catch (error: any) {
+      console.error("Error fetching managed organizations:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch organizations" });
+    }
+  });
+  
+  // Get members of an organization (employees in the workspace)
+  // RBAC: Only org_owner, org_admin, or platform staff can view member list
+  app.get('/api/organizations/:orgId/members', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { orgId } = req.params;
+      const userId = req.userId;
+      const workspaceId = req.workspaceId;
+      
+      if (!userId || !workspaceId) {
+        return res.status(400).json({ message: "User and workspace context required" });
+      }
+      
+      // Check platform staff first
+      const isPlatformStaff = req.platformRole && ['root_admin', 'sysop', 'support_manager', 'support_agent'].includes(req.platformRole);
+      
+      // If not platform staff, verify org_owner or org_admin role
+      if (!isPlatformStaff) {
+        const employee = await storage.getEmployeeByUserId(userId, workspaceId);
+        if (employee?.workspaceRole !== 'org_owner' && employee?.workspaceRole !== 'org_admin') {
+          return res.status(403).json({ message: "Only organization owners and admins can view member lists" });
+        }
+      }
+      
+      // Verify the user has access to this specific organization
+      if (orgId !== workspaceId && !isPlatformStaff) {
+        return res.status(403).json({ message: "You do not have access to this organization" });
+      }
+      
+      // Get all employees in the organization
+      const employees = await storage.getEmployeesByWorkspace(orgId);
+      
+      // Map to member format
+      const members = employees.map(emp => ({
+        id: emp.id,
+        firstName: emp.firstName,
+        lastName: emp.lastName,
+        email: emp.email || '',
+        workspaceRole: emp.workspaceRole || 'staff',
+        isActive: emp.status === 'active',
+        lastActive: emp.lastLogin,
+      }));
+      
+      res.json(members);
+    } catch (error: any) {
+      console.error("Error fetching organization members:", error);
+      res.status(500).json({ message: error.message || "Failed to fetch members" });
+    }
+  });
+  
+  // Update employee workspace role (org owners/admins only)
+  app.patch('/api/employees/:employeeId/role', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { employeeId } = req.params;
+      const { workspaceRole: newRole } = req.body;
+      const userId = req.userId;
+      const workspaceId = req.workspaceId;
+      
+      if (!userId || !workspaceId) {
+        return res.status(400).json({ message: "User and workspace context required" });
+      }
+      
+      if (!newRole) {
+        return res.status(400).json({ message: "New role is required" });
+      }
+      
+      // Check if requester is org_owner, org_admin, or platform staff
+      const requesterEmployee = await storage.getEmployeeByUserId(userId, workspaceId);
+      const isPlatformStaff = req.platformRole && ['root_admin', 'sysop', 'support_manager'].includes(req.platformRole);
+      
+      if (!isPlatformStaff && requesterEmployee?.workspaceRole !== 'org_owner' && requesterEmployee?.workspaceRole !== 'org_admin') {
+        return res.status(403).json({ message: "Only organization owners and admins can change roles" });
+      }
+      
+      // Get target employee
+      const targetEmployee = await storage.getEmployee(employeeId);
+      if (!targetEmployee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      // Prevent demoting yourself from org_owner
+      if (targetEmployee.userId === userId && targetEmployee.workspaceRole === 'org_owner' && newRole !== 'org_owner') {
+        return res.status(400).json({ message: "You cannot demote yourself from organization owner" });
+      }
+      
+      // Only platform staff or org_owner can promote to org_owner
+      if (newRole === 'org_owner' && !isPlatformStaff && requesterEmployee?.workspaceRole !== 'org_owner') {
+        return res.status(403).json({ message: "Only platform staff or org owners can promote to org owner" });
+      }
+      
+      // Update the role
+      const updated = await storage.updateEmployee(employeeId, { workspaceRole: newRole });
+      
+      // Create audit log
+      await storage.createAuditLog({
+        workspaceId,
+        userId,
+        action: 'update',
+        entityType: 'employee',
+        entityId: employeeId,
+        details: { previousRole: targetEmployee.workspaceRole, newRole },
+      });
+      
+      res.json({ success: true, employee: updated });
+    } catch (error: any) {
+      console.error("Error updating employee role:", error);
+      res.status(500).json({ message: error.message || "Failed to update role" });
+    }
+  });
+  
+  // Toggle employee access (activate/deactivate)
+  app.patch('/api/employees/:employeeId/access', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { employeeId } = req.params;
+      const { isActive } = req.body;
+      const userId = req.userId;
+      const workspaceId = req.workspaceId;
+      
+      if (!userId || !workspaceId) {
+        return res.status(400).json({ message: "User and workspace context required" });
+      }
+      
+      if (typeof isActive !== 'boolean') {
+        return res.status(400).json({ message: "isActive must be a boolean" });
+      }
+      
+      // Check if requester is org_owner, org_admin, or platform staff
+      const requesterEmployee = await storage.getEmployeeByUserId(userId, workspaceId);
+      const isPlatformStaff = req.platformRole && ['root_admin', 'sysop', 'support_manager'].includes(req.platformRole);
+      
+      if (!isPlatformStaff && requesterEmployee?.workspaceRole !== 'org_owner' && requesterEmployee?.workspaceRole !== 'org_admin') {
+        return res.status(403).json({ message: "Only organization owners and admins can manage access" });
+      }
+      
+      // Get target employee
+      const targetEmployee = await storage.getEmployee(employeeId);
+      if (!targetEmployee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      // Prevent deactivating yourself
+      if (targetEmployee.userId === userId && !isActive) {
+        return res.status(400).json({ message: "You cannot deactivate yourself" });
+      }
+      
+      // Only platform staff can deactivate org_owner
+      if (targetEmployee.workspaceRole === 'org_owner' && !isActive && !isPlatformStaff) {
+        return res.status(403).json({ message: "Only platform staff can deactivate organization owners" });
+      }
+      
+      // Update status
+      const newStatus = isActive ? 'active' : 'inactive';
+      const updated = await storage.updateEmployee(employeeId, { status: newStatus });
+      
+      // Create audit log
+      await storage.createAuditLog({
+        workspaceId,
+        userId,
+        action: isActive ? 'activate' : 'deactivate',
+        entityType: 'employee',
+        entityId: employeeId,
+        details: { previousStatus: targetEmployee.status, newStatus },
+      });
+      
+      res.json({ success: true, employee: updated });
+    } catch (error: any) {
+      console.error("Error toggling employee access:", error);
+      res.status(500).json({ message: error.message || "Failed to toggle access" });
+    }
+  });
+
+  // ============================================================================
   // EMPLOYEE ROUTES (Multi-tenant isolated)
   // ============================================================================
   

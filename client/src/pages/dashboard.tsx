@@ -684,34 +684,34 @@ export default function Dashboard() {
         {/* Metrics Grid - Fortune 500 Compact Layout */}
         <ResponsiveSection>
         <div className="grid grid-cols-1 lg:grid-cols-[2fr_1fr] gap-4 mobile-compact-gap max-w-7xl mx-auto">
-          {/* Workspace Metrics */}
+          {/* Workspace Metrics - Clickable cards navigate to management pages */}
           <div className="grid grid-cols-[repeat(auto-fit,minmax(160px,1fr))] md:grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-4 mobile-compact-gap-sm">
             <MetricTile
               title="Total Organizations"
               value={totalOrganizations}
               icon={Building2}
-              data-testid="card-organizations"
+              href="/org-management"
             />
             
             <MetricTile
               title="Total Employees"
               value={totalEmployees}
               icon={Users}
-              data-testid="card-employees"
+              href="/employees"
             />
             
             <MetricTile
               title="Total Clients"
               value={totalClients}
               icon={Users}
-              data-testid="card-clients"
+              href="/clients"
             />
             
             <MetricTile
               title="Total Revenue"
               value={`$${totalRevenue >= 1000 ? `${(totalRevenue / 1000).toFixed(1)}K` : totalRevenue.toFixed(2)}`}
               icon={DollarSign}
-              data-testid="card-revenue"
+              href="/usage"
             />
           </div>
           

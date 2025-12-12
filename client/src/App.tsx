@@ -67,6 +67,7 @@ import WorkspaceSales from "@/pages/workspace-sales";
 import TimeTracking from "@/pages/time-tracking";
 import Employees from "@/pages/employees";
 import Clients from "@/pages/clients";
+import OrgManagement from "@/pages/org-management";
 import Invoices from "@/pages/invoices";
 import Analytics from "@/pages/analytics";
 import Settings from "@/pages/settings";
@@ -921,6 +922,7 @@ function AppContent() {
               <Route path="/sales" component={WorkspaceSales} />
               <Route path="/time-tracking" component={TimeTracking} />
               <Route path="/employees" component={Employees} />
+              <Route path="/org-management" component={OrgManagement} />
               <Route path="/role-management" component={RoleManagement} />
               <Route path="/manager-dashboard" component={ManagerDashboard} />
               <Route path="/engagement/dashboard" component={EngagementDashboard} />
@@ -1216,6 +1218,7 @@ function AppContent() {
                 <Route path="/sales" component={WorkspaceSales} />
                 <Route path="/time-tracking" component={TimeTracking} />
                 <Route path="/employees" component={Employees} />
+                <Route path="/org-management" component={OrgManagement} />
                 <Route path="/role-management" component={RoleManagement} />
                 <Route path="/manager-dashboard" component={ManagerDashboard} />
                 <Route path="/engagement/dashboard" component={EngagementDashboard} />
