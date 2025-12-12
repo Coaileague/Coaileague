@@ -10,6 +10,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { motion, AnimatePresence } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface OnboardingStep {
   id: string;
@@ -244,6 +246,7 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<string[]>([]);
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const currentStep = onboardingSteps[currentStepIndex];
   const totalSteps = onboardingSteps.length;
@@ -315,24 +318,33 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className={cn(
+        "max-h-[90vh] overflow-y-auto",
+        isMobile ? "max-w-[95vw] w-full p-4" : "max-w-4xl"
+      )}>
         <DialogHeader>
-          <div className="flex justify-center mb-6">
-            <CoAIleagueLogo width={200} height={50} showTagline={false} />
+          <div className="flex justify-center mb-4 md:mb-6">
+            <CoAIleagueLogo width={isMobile ? 150 : 200} height={isMobile ? 38 : 50} showTagline={false} />
           </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-primary/10 border border-primary/20">
-                <StepIcon className="h-6 w-6 text-primary" />
+          <div className={cn(
+            "flex items-start justify-between gap-2",
+            isMobile && "flex-col"
+          )}>
+            <div className="flex items-center gap-2 md:gap-3">
+              <div className={cn(
+                "rounded-xl bg-primary/10 border border-primary/20",
+                isMobile ? "p-1.5" : "p-2"
+              )}>
+                <StepIcon className={cn(isMobile ? "h-5 w-5" : "h-6 w-6", "text-primary")} />
               </div>
-              <div>
-                <DialogTitle className="text-2xl">{currentStep.title}</DialogTitle>
-                <DialogDescription className="text-base">
+              <div className="flex-1 min-w-0">
+                <DialogTitle className={cn(isMobile ? "text-lg" : "text-2xl")}>{currentStep.title}</DialogTitle>
+                <DialogDescription className={cn(isMobile ? "text-sm" : "text-base", "line-clamp-2")}>
                   {currentStep.description}
                 </DialogDescription>
               </div>
             </div>
-            <Badge variant="outline" className="ml-auto">
+            <Badge variant="outline" className={cn(isMobile && "self-end mt-1")}>
               {currentStepIndex + 1} / {totalSteps}
             </Badge>
           </div>
@@ -357,7 +369,7 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
             <Card className="border-2">
-              <CardContent className="pt-6 space-y-4">
+              <CardContent className={cn("pt-4 space-y-3", isMobile ? "pt-3 space-y-2 px-3" : "pt-6 space-y-4")}>
                 {/* Screenshot Placeholder */}
                 {currentStep.screenshot && (
                   <motion.div 
@@ -371,11 +383,14 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
                 )}
 
                 {/* Features List */}
-                <div className="space-y-3">
+                <div className={cn("space-y-2", isMobile ? "space-y-1.5" : "space-y-3")}>
                   {currentStep.features.map((feature, index) => (
                     <motion.div 
                       key={index} 
-                      className="flex items-start gap-3 p-3 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors"
+                      className={cn(
+                        "flex items-start gap-2 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors",
+                        isMobile ? "p-2 gap-2" : "p-3 gap-3"
+                      )}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: 0.1 + index * 0.08, duration: 0.25, ease: "easeOut" }}
@@ -385,9 +400,9 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.2 + index * 0.08, type: "spring", stiffness: 400 }}
                       >
-                        <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                        <CheckCircle2 className={cn(isMobile ? "h-4 w-4" : "h-5 w-5", "text-primary shrink-0 mt-0.5")} />
                       </motion.div>
-                      <span className="text-sm font-medium">{feature}</span>
+                      <span className={cn(isMobile ? "text-xs" : "text-sm", "font-medium")}>{feature}</span>
                     </motion.div>
                   ))}
                 </div>
@@ -415,7 +430,7 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
         {/* Family Progress Pills */}
         {currentStepIndex > 1 && (
           <motion.div 
-            className="grid grid-cols-2 md:grid-cols-4 gap-2"
+            className={cn("grid gap-2", isMobile ? "grid-cols-2 gap-1.5" : "grid-cols-4")}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3 }}
@@ -428,17 +443,23 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
             ].map((family, idx) => (
               <motion.div 
                 key={family.key}
-                className={`text-center p-2 rounded-lg bg-${family.color}-500/10 border border-${family.color}-500/20 hover:bg-${family.color}-500/20 transition-colors`}
+                className={cn(
+                  `text-center rounded-lg bg-${family.color}-500/10 border border-${family.color}-500/20 hover:bg-${family.color}-500/20 transition-colors`,
+                  isMobile ? "p-1.5" : "p-2"
+                )}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: idx * 0.08 }}
                 whileHover={{ scale: 1.02 }}
               >
-                <div className={`text-xs font-bold ${family.color === 'red' ? 'text-red-400' : 'text-blue-700 dark:text-blue-400'}`}>
-                  {family.name}
+                <div className={cn(
+                  `font-bold ${family.color === 'red' ? 'text-red-400' : 'text-blue-700 dark:text-blue-400'}`,
+                  isMobile ? "text-[10px]" : "text-xs"
+                )}>
+                  {isMobile ? family.name.substring(0, 4) : family.name}
                 </div>
                 <motion.div 
-                  className="text-lg font-black"
+                  className={cn(isMobile ? "text-sm" : "text-lg", "font-black")}
                   key={getFamilyProgress(family.key)}
                   initial={{ scale: 1.2, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
@@ -452,33 +473,41 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
         )}
 
         {/* Navigation Buttons */}
-        <div className="flex items-center justify-between gap-3 pt-4 border-t">
+        <div className={cn(
+          "flex items-center justify-between gap-2 pt-4 border-t",
+          isMobile && "flex-col-reverse gap-3"
+        )}>
           <Button
             variant="ghost"
             onClick={handleSkip}
             size="sm"
+            className={cn(isMobile && "w-full")}
             data-testid="button-skip-tour"
           >
             <X className="mr-2 h-4 w-4" />
             Skip Tour
           </Button>
 
-          <div className="flex gap-2">
+          <div className={cn("flex gap-2", isMobile && "w-full")}>
             <Button
               variant="outline"
               onClick={handlePrevious}
               disabled={currentStepIndex === 0}
+              className={cn(isMobile && "flex-1")}
+              size={isMobile ? "sm" : "default"}
               data-testid="button-previous-step"
             >
-              <ArrowLeft className="mr-2 h-4 w-4" />
-              Previous
+              <ArrowLeft className="mr-1 md:mr-2 h-4 w-4" />
+              {isMobile ? "Back" : "Previous"}
             </Button>
             <Button
               onClick={handleNext}
+              className={cn(isMobile && "flex-1")}
+              size={isMobile ? "sm" : "default"}
               data-testid="button-next-step"
             >
-              {currentStepIndex === totalSteps - 1 ? "Finish Tour" : "Next"}
-              <ArrowRight className="ml-2 h-4 w-4" />
+              {currentStepIndex === totalSteps - 1 ? (isMobile ? "Finish" : "Finish Tour") : "Next"}
+              <ArrowRight className="ml-1 md:ml-2 h-4 w-4" />
             </Button>
           </div>
         </div>
