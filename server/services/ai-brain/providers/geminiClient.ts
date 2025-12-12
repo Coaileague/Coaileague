@@ -27,6 +27,13 @@ import { aiGuardRails, type AIRequestContext } from '../../aiGuardRails';
 import { db } from '../../../db';
 import { helposFaqs, supportTickets, workspaces, employees, shifts, invoices, payrollRuns } from '@shared/schema';
 import { eq, ilike, or, desc, sql, and, gte, lte, count } from 'drizzle-orm';
+import { 
+  PERSONA_SYSTEM_INSTRUCTION, 
+  HUMANIZED_GENERATION_CONFIG,
+  buildPersonaPrompt,
+  formatTrinityResponse,
+  checkHumanParity
+} from '../trinityPersona';
 
 const apiKey = process.env.GEMINI_API_KEY;
 
@@ -105,67 +112,84 @@ export type ThinkingLevel = 'high' | 'medium' | 'low' | 'none';
  */
 export const ANTI_YAP_PRESETS = {
   // Trinity mascot thoughts: Brief, personality-driven, under 150 tokens
+  // Uses humanized topP for vocabulary variety
   mascot: {
     maxTokens: 150,
-    temperature: 0.6,
+    temperature: 1.0,
+    topP: 0.96,
     thinkingLevel: 'low' as ThinkingLevel,
-    systemPromptSuffix: 'Be concise and direct. Maximum 1-2 sentences. No flowery language.',
+    systemPromptSuffix: 'Be concise and direct. Maximum 1-2 sentences. Use natural language.',
+    humanized: true,
   },
   
   // Supervisor responses: Moderate detail, action-oriented
   supervisor: {
     maxTokens: 300,
-    temperature: 0.5,
+    temperature: 1.0,
+    topP: 0.95,
     thinkingLevel: 'low' as ThinkingLevel,
     systemPromptSuffix: 'Be actionable and focused. Use bullet points when listing.',
+    humanized: true,
   },
   
-  // HelpAI chat: Conversational but efficient
+  // HelpAI chat: Conversational but efficient - HUMANIZED
   helpai: {
     maxTokens: 500,
-    temperature: 0.7,
+    temperature: 1.0,
+    topP: 0.96,
     thinkingLevel: 'low' as ThinkingLevel,
     systemPromptSuffix: 'Be helpful but concise. Answer directly, then offer to elaborate if needed.',
+    humanized: true,
   },
   
-  // Orchestrator: Complex reasoning, allow more depth
+  // Orchestrator: Complex reasoning, allow more depth - HUMANIZED
   orchestrator: {
     maxTokens: 1000,
-    temperature: 0.7,
+    temperature: 1.0,
+    topP: 0.95,
     thinkingLevel: 'high' as ThinkingLevel,
     systemPromptSuffix: 'Analyze thoroughly. Provide structured reasoning when complex.',
+    humanized: true,
   },
   
-  // Diagnostics: Detailed analysis, full reasoning
+  // Diagnostics: Detailed analysis, full reasoning (precision mode)
   diagnostics: {
     maxTokens: 2000,
-    temperature: 0.3,
+    temperature: 0.8,
+    topP: 0.85,
     thinkingLevel: 'high' as ThinkingLevel,
     systemPromptSuffix: 'Provide detailed technical analysis with root cause identification.',
+    humanized: false,
   },
   
   // Simple responses: Ultra-brief, status-oriented
   simple: {
     maxTokens: 100,
-    temperature: 0.3,
+    temperature: 0.5,
+    topP: 0.9,
     thinkingLevel: 'none' as ThinkingLevel,
     systemPromptSuffix: 'One sentence maximum. Facts only.',
+    humanized: false,
   },
   
-  // Notification generation: Brief but informative
+  // Notification generation: Brief but informative - HUMANIZED
   notification: {
     maxTokens: 200,
-    temperature: 0.4,
+    temperature: 1.0,
+    topP: 0.95,
     thinkingLevel: 'none' as ThinkingLevel,
-    systemPromptSuffix: 'Create a brief, clear notification message. 2-3 sentences max.',
+    systemPromptSuffix: 'Create a brief, clear notification message. 2-3 sentences max. Use natural language.',
+    humanized: true,
   },
   
   // Search/Lookup: Quick, factual summaries
   lookup: {
     maxTokens: 150,
-    temperature: 0.3,
+    temperature: 0.5,
+    topP: 0.9,
     thinkingLevel: 'none' as ThinkingLevel,
     systemPromptSuffix: 'Summarize findings briefly. Focus on the most relevant result.',
+    humanized: false,
   },
 } as const;
 
@@ -186,8 +210,12 @@ export function getAntiYapConfig(preset: AntiYapPreset) {
 }
 
 /**
- * Build generation config with anti-yapping controls
+ * Build generation config with anti-yapping controls + humanization
  * Converts preset configuration into Gemini API-compatible format
+ * 
+ * Humanization parameters:
+ * - topP: 0.95-0.98 for vocabulary variety (wider word choice)
+ * - temperature: 1.0 for natural flow while maintaining accuracy
  */
 export function buildGenerationConfig(preset: AntiYapPreset) {
   const config = ANTI_YAP_PRESETS[preset];
@@ -204,14 +232,17 @@ export function buildGenerationConfig(preset: AntiYapPreset) {
   return {
     maxOutputTokens: config.maxTokens,
     temperature: config.temperature,
+    topP: config.topP || HUMANIZED_GENERATION_CONFIG.topP,
+    topK: HUMANIZED_GENERATION_CONFIG.topK,
     // Thinking budget helps control verbosity by limiting internal reasoning
     thinkingBudget: thinkingBudgets[config.thinkingLevel],
     systemPromptSuffix: config.systemPromptSuffix,
+    humanized: config.humanized,
   };
 }
 
 /**
- * Create a configured model instance with anti-yapping settings
+ * Create a configured model instance with anti-yapping + humanization settings
  */
 export function createConfiguredModel(
   tier: GeminiModelTier, 
@@ -227,8 +258,12 @@ export function createConfiguredModel(
     generationConfig: {
       maxOutputTokens: config.maxOutputTokens,
       temperature: config.temperature,
+      topP: config.topP,
+      topK: config.topK,
       ...(additionalConfig?.responseMimeType && { responseMimeType: additionalConfig.responseMimeType }),
     },
+    // Inject humanized system instruction for user-facing presets
+    ...(config.humanized && { systemInstruction: PERSONA_SYSTEM_INSTRUCTION }),
     ...(additionalConfig?.tools && { tools: additionalConfig.tools }),
   });
 }
@@ -877,36 +912,45 @@ export class UnifiedGeminiClient {
   private jsonModel: GenerativeModel | null;
 
   constructor() {
-    // Use HELLOS tier for general chat/conversation
+    // Use HELLOS tier for general chat/conversation - HUMANIZED
     this.model = genAI ? genAI.getGenerativeModel({ 
       model: GEMINI_MODELS.HELLOS,
+      systemInstruction: PERSONA_SYSTEM_INSTRUCTION,
       generationConfig: {
         maxOutputTokens: ANTI_YAP_PRESETS.helpai.maxTokens,
         temperature: ANTI_YAP_PRESETS.helpai.temperature,
+        topP: ANTI_YAP_PRESETS.helpai.topP,
+        topK: HUMANIZED_GENERATION_CONFIG.topK,
       }
     }) : null;
     
-    // Use ORCHESTRATOR tier for tool-calling (complex reasoning)
+    // Use ORCHESTRATOR tier for tool-calling (complex reasoning) - HUMANIZED
     this.toolsModel = genAI ? genAI.getGenerativeModel({
       model: GEMINI_MODELS.ORCHESTRATOR,
+      systemInstruction: PERSONA_SYSTEM_INSTRUCTION,
       tools: [{ functionDeclarations: AI_BRAIN_TOOLS }],
       generationConfig: {
         maxOutputTokens: ANTI_YAP_PRESETS.orchestrator.maxTokens,
         temperature: ANTI_YAP_PRESETS.orchestrator.temperature,
+        topP: ANTI_YAP_PRESETS.orchestrator.topP,
+        topK: HUMANIZED_GENERATION_CONFIG.topK,
       }
     }) : null;
 
-    // Use SUPERVISOR tier for JSON Mode structured output
+    // Use SUPERVISOR tier for JSON Mode structured output - HUMANIZED
     this.jsonModel = genAI ? genAI.getGenerativeModel({
       model: GEMINI_MODELS.SUPERVISOR,
+      systemInstruction: PERSONA_SYSTEM_INSTRUCTION,
       generationConfig: {
         responseMimeType: "application/json",
         maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
         temperature: ANTI_YAP_PRESETS.supervisor.temperature,
+        topP: ANTI_YAP_PRESETS.supervisor.topP,
+        topK: HUMANIZED_GENERATION_CONFIG.topK,
       }
     }) : null;
     
-    console.log('[AI Brain] UnifiedGeminiClient initialized with tiered architecture');
+    console.log('[AI Brain] UnifiedGeminiClient initialized with tiered architecture + humanized persona');
   }
 
   /**
