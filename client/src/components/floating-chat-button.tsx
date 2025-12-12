@@ -1,4 +1,4 @@
-import { MessageSquare, X } from "lucide-react";
+import { Bug, X } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState, useEffect, useRef } from "react";
 
@@ -161,16 +161,16 @@ export function FloatingChatButton() {
         onTouchEnd={handleTouchEnd}
         data-testid="button-floating-chat"
         className={`relative ${isDragging ? 'cursor-grabbing' : 'cursor-pointer md:cursor-pointer touch-none'}`}
-        aria-label="Open Live Support - Drag to move on mobile"
+        aria-label="Report a Bug - Drag to move on mobile"
       >
         <div 
           className="relative flex items-center overflow-hidden bg-[hsl(var(--cad-surface-elevated))] border border-[hsl(var(--cad-border-strong))] rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover-elevate"
           style={{ width: isHovered && !isDragging ? '16rem' : '4rem' }}
         >
-          {/* Icon - always visible */}
+          {/* Bug Icon - always visible */}
           <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center">
-              <MessageSquare className="h-5 w-5 text-white" />
+              <Bug className="h-5 w-5 text-white" />
             </div>
           </div>
           
@@ -180,8 +180,8 @@ export function FloatingChatButton() {
               isHovered && !isDragging ? 'opacity-100 delay-100' : 'opacity-0'
             }`}
           >
-            <span className="text-xs font-semibold text-[hsl(var(--cad-text-primary))]">Live Support</span>
-            <span className="text-[10px] text-[hsl(var(--cad-text-tertiary))]">We're here to help</span>
+            <span className="text-xs font-semibold text-[hsl(var(--cad-text-primary))]">Report Bug</span>
+            <span className="text-[10px] text-[hsl(var(--cad-text-tertiary))]">Help us improve</span>
           </div>
           
           {/* Online indicator */}
