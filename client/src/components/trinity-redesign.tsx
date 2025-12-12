@@ -724,6 +724,8 @@ const TrinityRedesign = memo(function TrinityRedesign({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
+        cursor: 'default',
+        userSelect: 'none',
       }}
     >
       <canvas

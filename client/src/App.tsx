@@ -623,6 +623,13 @@ function MascotRenderer() {
   
   const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
     e.stopPropagation();
+    
+    // Don't do anything when tapping Trinity if there's a current thought displayed
+    // This prevents tapping Trinity from closing/replacing the notice box
+    if (currentThought) {
+      return;
+    }
+    
     if (!isDragging) {
       // On mobile, tap opens voice command overlay for authenticated users
       if (isMobile && user) {
@@ -634,12 +641,12 @@ function MascotRenderer() {
           source: 'action',
         });
       } else {
-        // Trinity reacts to taps with a friendly response
+        // Trinity reacts to taps with a friendly response (only when no thought is showing)
         thoughtManager.triggerReaction('tap');
         triggerEmoteRef.current?.('happy');
       }
     }
-  }, [isDragging, isMobile, user]);
+  }, [isDragging, isMobile, user, currentThought]);
 
   const handleVoiceModeChange = useCallback((mode: 'LISTENING' | 'THINKING' | 'SUCCESS' | 'ERROR' | 'IDLE') => {
     setVoiceModeOverride(mode);
@@ -703,7 +710,7 @@ function MascotRenderer() {
         data-transport-effect={currentEffect || undefined}
       >
         <div 
-          className="w-full h-full pointer-events-auto" 
+          className="w-full h-full pointer-events-auto cursor-default" 
           onClick={handleTap}
           style={{ background: 'transparent' }}
         >
