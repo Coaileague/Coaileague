@@ -228,6 +228,15 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize Service Watchdog:', error);
   }
 
+  // Initialize Cleanup Agent Subagent (CAS) - AI-driven code cleanup with spec-index
+  try {
+    const { registerCleanupAgentActions } = await import('./services/ai-brain/cleanupAgentSubagent');
+    registerCleanupAgentActions();
+    console.log('[Server] Cleanup Agent Subagent initialized - spec-index.json active');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Cleanup Agent:', error);
+  }
+
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";

@@ -109,6 +109,12 @@ The system features a multi-tenant architecture with RBAC security and isolation
 - **Unified Config Registry:** Single source of truth with Zod validation.
 - **AI/Automation Bypass Pattern:** Elevated session bypass for AI features and automation services using HMAC-signed elevation tokens.
 - **ChatServerHub Architecture:** Unified gateway connecting chat rooms to AI Brain, notifications, tickets, and analytics.
+- **Spec-Driven Development:** Component registry (`spec-index.json`) with tier-based AI editing rules:
+    - **Tier 0 (Critical):** Human approval required (auth, RBAC, payments, database schema)
+    - **Tier 1 (Core):** LLM-as-Judge review (Trinity, UNS, scheduling, email)
+    - **Tier 2 (Feature):** Standard guardrails (dashboard, seasonal themes)
+    - **Tier 3 (Utility):** AI can freely modify (helpers, utils)
+- **Cleanup Agent Subagent (CAS):** Autonomous code cleanup with LLM-as-Judge integration, unused file discovery, and human-approved deletion proposals. 6 registered actions (cleanup.discover_unused, cleanup.create_proposal, spec.get_component, spec.find_components, spec.get_editing_rules, spec.get_stats).
 
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.

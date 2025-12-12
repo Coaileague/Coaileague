@@ -1,0 +1,255 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "version": "1.0.0",
+  "description": "CoAIleague Platform Component Registry - Central index for AI-driven code discovery and editing",
+  "lastUpdated": "2025-12-12",
+  "tiers": {
+    "tier0": "Critical infrastructure - requires human approval for changes",
+    "tier1": "Core business logic - AI can propose changes with LLM-as-Judge review",
+    "tier2": "Feature components - AI can edit with standard guardrails",
+    "tier3": "Utility/helper code - AI can freely modify"
+  },
+  "components": {
+    "CORE-APP-001": {
+      "name": "Application Shell",
+      "tier": "tier0",
+      "intent": "Main application entry point with routing, providers, and layout",
+      "files": ["client/src/App.tsx", "client/src/main.tsx"],
+      "dependencies": ["CORE-SIDEBAR-001", "CORE-THEME-001", "CORE-AUTH-001"],
+      "owner": "platform"
+    },
+    "CORE-SIDEBAR-001": {
+      "name": "Application Sidebar",
+      "tier": "tier1",
+      "intent": "Main navigation sidebar with role-based menu items",
+      "files": ["client/src/components/app-sidebar.tsx"],
+      "dependencies": ["CORE-NAV-CONFIG-001"],
+      "owner": "platform"
+    },
+    "CORE-NAV-CONFIG-001": {
+      "name": "Navigation Configuration",
+      "tier": "tier1",
+      "intent": "Centralized navigation routes and menu structure",
+      "files": ["client/src/config/navigationConfig.ts"],
+      "dependencies": [],
+      "owner": "platform"
+    },
+    "CORE-THEME-001": {
+      "name": "Theme System",
+      "tier": "tier1",
+      "intent": "Dark/light mode theming with CSS variables",
+      "files": ["client/src/index.css", "client/src/components/theme-toggle.tsx"],
+      "dependencies": [],
+      "owner": "platform"
+    },
+    "CORE-AUTH-001": {
+      "name": "Authentication System",
+      "tier": "tier0",
+      "intent": "User authentication, session management, and RBAC",
+      "files": [
+        "server/routes/auth.ts",
+        "server/services/sessionService.ts",
+        "client/src/hooks/useAuth.ts"
+      ],
+      "dependencies": ["CORE-RBAC-001"],
+      "owner": "security"
+    },
+    "CORE-RBAC-001": {
+      "name": "Role-Based Access Control",
+      "tier": "tier0",
+      "intent": "Platform and workspace role management with 8 platform and 7 workspace levels",
+      "files": [
+        "server/services/rbacService.ts",
+        "shared/rbac.ts",
+        "client/src/hooks/useWorkspaceAccess.ts"
+      ],
+      "dependencies": [],
+      "owner": "security"
+    },
+    "AI-BRAIN-001": {
+      "name": "AI Brain Master Orchestrator",
+      "tier": "tier0",
+      "intent": "Central hub coordinating 269+ actions across 18 categories",
+      "files": [
+        "server/services/ai-brain/masterOrchestrator.ts",
+        "server/services/ai-brain/helpaiOrchestrator.ts"
+      ],
+      "dependencies": ["AI-SUBAGENT-001", "AI-GEMINI-001"],
+      "owner": "ai-platform"
+    },
+    "AI-SUBAGENT-001": {
+      "name": "Subagent Supervisor",
+      "tier": "tier0",
+      "intent": "Manages 23 specialized domain subagents with diagnostic workflow and RBAC",
+      "files": ["server/services/ai-brain/subagentSupervisor.ts"],
+      "dependencies": ["AI-BRAIN-001"],
+      "owner": "ai-platform"
+    },
+    "AI-GEMINI-001": {
+      "name": "Unified Gemini Client",
+      "tier": "tier0",
+      "intent": "4-tier Gemini architecture for AI intelligence",
+      "files": ["server/services/ai-brain/unifiedGeminiClient.ts"],
+      "dependencies": [],
+      "owner": "ai-platform"
+    },
+    "AI-TRINITY-001": {
+      "name": "Trinity AI Mascot",
+      "tier": "tier1",
+      "intent": "Interactive AI mascot providing global insights and assistance",
+      "files": [
+        "client/src/components/trinity-redesign.tsx",
+        "server/services/trinityService.ts"
+      ],
+      "dependencies": ["AI-BRAIN-001"],
+      "owner": "ai-platform"
+    },
+    "UNS-001": {
+      "name": "Universal Notification System",
+      "tier": "tier1",
+      "intent": "Real-time notifications with WebSocket, priority levels, and cross-tab sync",
+      "files": [
+        "client/src/components/notifications-popover.tsx",
+        "server/services/notificationService.ts",
+        "client/src/hooks/use-notification-websocket.ts",
+        "client/src/hooks/use-notification-sync.ts"
+      ],
+      "dependencies": ["CORE-WEBSOCKET-001"],
+      "owner": "platform"
+    },
+    "CORE-WEBSOCKET-001": {
+      "name": "WebSocket Infrastructure",
+      "tier": "tier0",
+      "intent": "Real-time communication backbone for notifications, chat, and live updates",
+      "files": [
+        "server/services/websocketService.ts",
+        "server/ws.ts"
+      ],
+      "dependencies": [],
+      "owner": "platform"
+    },
+    "SCHED-001": {
+      "name": "Universal Schedule System",
+      "tier": "tier1",
+      "intent": "Drag-and-drop scheduling with AI recommendations and compliance",
+      "files": [
+        "client/src/pages/universal-schedule.tsx",
+        "client/src/pages/schedule-mobile-first.tsx",
+        "server/routes/schedules.ts"
+      ],
+      "dependencies": ["AI-BRAIN-001"],
+      "owner": "operations"
+    },
+    "PAY-001": {
+      "name": "Payroll System",
+      "tier": "tier0",
+      "intent": "Payroll processing with Stripe integration and compliance",
+      "files": [
+        "client/src/pages/payroll-dashboard.tsx",
+        "server/routes/payroll.ts",
+        "server/services/payrollService.ts"
+      ],
+      "dependencies": ["STRIPE-001"],
+      "owner": "finance"
+    },
+    "STRIPE-001": {
+      "name": "Stripe Integration",
+      "tier": "tier0",
+      "intent": "Payment processing, subscriptions, and billing",
+      "files": [
+        "server/services/stripeService.ts",
+        "server/routes/stripe.ts"
+      ],
+      "dependencies": [],
+      "owner": "finance"
+    },
+    "EMAIL-001": {
+      "name": "Email System (Resend)",
+      "tier": "tier1",
+      "intent": "Transactional email with templates and per-email billing",
+      "files": [
+        "server/services/emailService.ts",
+        "server/routes/email.ts"
+      ],
+      "dependencies": [],
+      "owner": "communications"
+    },
+    "DB-001": {
+      "name": "Database Schema",
+      "tier": "tier0",
+      "intent": "PostgreSQL schema with 150+ indexed tables via Drizzle ORM",
+      "files": [
+        "shared/schema.ts",
+        "server/db.ts",
+        "drizzle.config.ts"
+      ],
+      "dependencies": [],
+      "owner": "platform"
+    },
+    "STORAGE-001": {
+      "name": "Object Storage (GCS)",
+      "tier": "tier1",
+      "intent": "File storage for documents, images, and assets",
+      "files": [
+        "server/services/storageService.ts",
+        "server/routes/storage.ts"
+      ],
+      "dependencies": [],
+      "owner": "platform"
+    },
+    "DASH-001": {
+      "name": "Dashboard",
+      "tier": "tier2",
+      "intent": "Main user dashboard with widgets and quick actions",
+      "files": ["client/src/pages/dashboard.tsx"],
+      "dependencies": ["UNS-001", "AI-TRINITY-001"],
+      "owner": "platform"
+    },
+    "SEASONAL-001": {
+      "name": "Seasonal Theme System",
+      "tier": "tier2",
+      "intent": "AI-powered holiday theming with 11 seasonal variations",
+      "files": [
+        "client/src/context/SeasonalThemeContext.tsx",
+        "server/services/ai-brain/seasonalSubagent.ts"
+      ],
+      "dependencies": ["AI-BRAIN-001"],
+      "owner": "platform"
+    }
+  },
+  "secretsMap": {
+    "description": "Read-only reference for AI agents to understand credential usage",
+    "categories": {
+      "ai": ["GEMINI_API_KEY", "OPENAI_API_KEY"],
+      "payments": ["STRIPE_SECRET_KEY", "STRIPE_PUBLISHABLE_KEY", "STRIPE_WEBHOOK_SECRET"],
+      "email": ["RESEND_API_KEY"],
+      "sms": ["TWILIO_ACCOUNT_SID", "TWILIO_AUTH_TOKEN", "TWILIO_PHONE_NUMBER"],
+      "storage": ["REPLIT_OBJECT_STORE_ID"],
+      "database": ["DATABASE_URL", "PGHOST", "PGUSER", "PGPASSWORD", "PGDATABASE"],
+      "session": ["SESSION_SECRET"]
+    },
+    "rotationPolicy": "Secrets should be rotated quarterly. Use HMAC-signed elevation tokens for AI/automation bypass."
+  },
+  "aiEditingRules": {
+    "tier0": {
+      "canEdit": false,
+      "approvalRequired": "human",
+      "description": "Critical infrastructure - AI proposes changes via PR, human must approve"
+    },
+    "tier1": {
+      "canEdit": true,
+      "approvalRequired": "llm-as-judge",
+      "description": "Core business logic - AI can edit with LLM-as-Judge validation"
+    },
+    "tier2": {
+      "canEdit": true,
+      "approvalRequired": "standard-guardrails",
+      "description": "Feature components - AI can edit with credit budget and RBAC checks"
+    },
+    "tier3": {
+      "canEdit": true,
+      "approvalRequired": "none",
+      "description": "Utility code - AI can freely modify"
+    }
+  }
+}
