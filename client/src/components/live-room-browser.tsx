@@ -53,7 +53,13 @@ interface LiveRoom {
   lastActivity: string;
 }
 
-export function LiveRoomBrowser() {
+interface LiveRoomBrowserProps {
+  onRoomSelect?: (roomId: string, roomName: string) => void;
+  filterByOrg?: boolean; // For end users - show only org rooms
+  compact?: boolean; // Compact mode for mobile
+}
+
+export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = false }: LiveRoomBrowserProps) {
   const { user } = useAuth();
   const { toast } = useToast();
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
@@ -283,33 +289,51 @@ export function LiveRoomBrowser() {
                 </Badge>
               )}
 
-              {/* Join/Leave Button */}
-              <Button
-                className="w-full"
-                variant={room.isJoined ? "outline" : "default"}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  if (room.isJoined) {
-                    leaveRoomMutation.mutate(room.id);
-                  } else {
-                    joinRoomMutation.mutate(room.id);
-                  }
-                }}
-                disabled={joinRoomMutation.isPending || leaveRoomMutation.isPending}
-                data-testid={room.isJoined ? `button-leave-${room.slug}` : `button-join-${room.slug}`}
-              >
-                {room.isJoined ? (
-                  <>
-                    <LogOut className="h-4 w-4 mr-2" />
-                    Leave Room
-                  </>
-                ) : (
-                  <>
-                    <LogIn className="h-4 w-4 mr-2" />
-                    Join Room
-                  </>
+              {/* Action Buttons */}
+              <div className={compact ? "space-y-2" : "flex gap-2"}>
+                {onRoomSelect && (
+                  <Button
+                    className={compact ? "w-full" : "flex-1"}
+                    variant="default"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onRoomSelect(room.id, room.roomName);
+                    }}
+                    data-testid={`button-enter-${room.slug}`}
+                  >
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Enter Chat
+                  </Button>
                 )}
-              </Button>
+                {!compact && (
+                  <Button
+                    className={onRoomSelect ? "" : "w-full"}
+                    variant={room.isJoined ? "outline" : "secondary"}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (room.isJoined) {
+                        leaveRoomMutation.mutate(room.id);
+                      } else {
+                        joinRoomMutation.mutate(room.id);
+                      }
+                    }}
+                    disabled={joinRoomMutation.isPending || leaveRoomMutation.isPending}
+                    data-testid={room.isJoined ? `button-leave-${room.slug}` : `button-join-${room.slug}`}
+                  >
+                    {room.isJoined ? (
+                      <>
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Leave
+                      </>
+                    ) : (
+                      <>
+                        <LogIn className="h-4 w-4 mr-2" />
+                        Join
+                      </>
+                    )}
+                  </Button>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}

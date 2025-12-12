@@ -72,6 +72,7 @@ import { AgentToolbelt } from "@/components/agent-toolbelt";
 import { TicketContextPanel } from "@/components/ticket-context-panel";
 import { sanitizeMessage } from "@/lib/sanitize";
 import { MobileChatLayout } from "@/components/mobile-chat-layout";
+import { LiveRoomBrowser } from "@/components/live-room-browser";
 import { 
   HELP_DESK_CONFIG as CHAT_CONFIG, 
   MAIN_ROOM_ID,
@@ -189,6 +190,10 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   const [ticketStatus, setTicketStatus] = useState<'new' | 'assigned' | 'investigating' | 'waiting_user' | 'resolved' | 'escalated'>('investigating');
   const [showContextPanel, setShowContextPanel] = useState(true);
   const [priorityFilter, setPriorityFilter] = useState<'all' | 'low' | 'medium' | 'high'>('all');
+  
+  // Mobile room selection - show room browser first before chat
+  const [mobileSelectedRoom, setMobileSelectedRoom] = useState<{ id: string; name: string } | null>(null);
+  const [showMobileRoomBrowser, setShowMobileRoomBrowser] = useState(true);
   
   // Seasonal animations toggle (staff only)
   const [seasonalAnimationsEnabled, setSeasonalAnimationsEnabled] = useState(() => {
@@ -1016,6 +1021,51 @@ export function HelpDesk(props?: HelpDeskProps & any) {
 
   // MOBILE-OPTIMIZED CHAT - Full-featured mobile layout with tools
   if (shouldUseMobileLayout) {
+    // Show room browser first on mobile (unless URL has a specific conversation)
+    if (showMobileRoomBrowser && !urlConversationId && !mobileSelectedRoom) {
+      return (
+        <div className="flex flex-col h-screen bg-background">
+          {/* Mobile Room Browser Header */}
+          <div className="flex items-center justify-between px-4 py-3 border-b bg-gradient-to-r from-violet-900 to-indigo-900 text-white">
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white hover:bg-white/20"
+              onClick={() => navigate("/")}
+              data-testid="button-back-home"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Button>
+            <div className="text-center">
+              <h1 className="font-bold text-base">Live Chatrooms</h1>
+              <p className="text-xs text-white/70">{isStaff ? 'All platform rooms' : 'Your organization'}</p>
+            </div>
+            <Button
+              size="icon"
+              variant="ghost"
+              className="text-white hover:bg-white/20"
+              onClick={() => navigate("/")}
+              data-testid="button-home"
+            >
+              <Home className="h-5 w-5" />
+            </Button>
+          </div>
+          
+          {/* Room Browser */}
+          <div className="flex-1 overflow-auto p-4">
+            <LiveRoomBrowser
+              compact={true}
+              filterByOrg={!isStaff}
+              onRoomSelect={(roomId, roomName) => {
+                setMobileSelectedRoom({ id: roomId, name: roomName });
+                setShowMobileRoomBrowser(false);
+              }}
+            />
+          </div>
+        </div>
+      );
+    }
+    
     // Prepare users list for mobile chat
     const mobileUsers = uniqueUsers.map(u => ({
       id: u.id,
@@ -1068,7 +1118,11 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           sendMessage(`/voice ${userId}`, userName, 'system');
           toast({ title: "Voice Granted", description: `User can now speak` });
         }}
-        onExit={() => navigate("/")}
+        onExit={() => {
+          // Go back to room browser instead of home
+          setMobileSelectedRoom(null);
+          setShowMobileRoomBrowser(true);
+        }}
       />
     );
   }
