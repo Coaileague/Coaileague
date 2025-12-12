@@ -1,7 +1,7 @@
-import { X, Settings2 } from "lucide-react";
+import { X } from "lucide-react";
 import { useLocation } from "wouter";
 import { useState, useEffect, useRef } from "react";
-import { apiRequest } from "@/lib/queryClient";
+import { FeedbackForm } from "./feedback-form";
 
 // Custom Bug Report Icon - matches the design spec
 function BugReportIcon({ className }: { className?: string }) {
@@ -121,19 +121,14 @@ export function FloatingChatButton() {
     }
   };
 
-  // Handle click - only navigate if button wasn't dragged
+  // Handle click - only trigger feedback form if button wasn't dragged
   const handleClick = () => {
-    if (!hasMoved.current) {
-      // Detect mobile and send to appropriate chat
-      const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-      const isSmallScreen = window.innerWidth <= 768;
-      
-      if (isMobileDevice || isSmallScreen) {
-        setLocation("/mobile-chat");
-      } else {
-        setLocation("/chat");
-      }
+    // Click will be handled by FeedbackForm dialog trigger
+    // We just need to ensure dragging doesn't trigger it
+    if (hasMoved.current) {
+      return; // Don't trigger if user was dragging
     }
+    // Otherwise, let the click propagate to the DialogTrigger
   };
 
   // Handle close button click

@@ -10,8 +10,8 @@
  */
 
 import { useEffect, useRef, useState, memo, useMemo } from 'react';
-import { useSeasonalTheme } from '@/hooks/use-seasonal-theme';
-import { SeasonalTheme, ThemeDecorations } from '@/config/seasonalThemes';
+import { useSeasonalTheme } from '@/context/SeasonalThemeContext';
+import { SeasonalTheme, ThemeDecorations, getThemeConfig } from '@/config/seasonalThemes';
 import { cn } from '@/lib/utils';
 
 // Christmas color palette for alternating AI letter glow
@@ -465,12 +465,24 @@ export const AnimatedWordLogo = memo(function AnimatedWordLogo({
   const [hoveredLetter, setHoveredLetter] = useState<number | null>(null);
   const [glowPhase, setGlowPhase] = useState(0);
   
-  const { theme, config, prefersReducedMotion } = useSeasonalTheme({
-    override: themeOverride,
-    respectReducedMotion: true
-  });
+  // Use the orchestrated seasonal theme from context
+  const { seasonId, profile } = useSeasonalTheme();
   
-  const isChristmas = theme === 'christmas';
+  // Map seasonId to theme and get config
+  const theme: SeasonalTheme = themeOverride || (seasonId as SeasonalTheme) || 'default';
+  const config = getThemeConfig(theme);
+  
+  // Check for reduced motion preference
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setPrefersReducedMotion(mediaQuery.matches);
+    const handler = (e: MediaQueryListEvent) => setPrefersReducedMotion(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, []);
+  
+  const isChristmas = seasonId === 'christmas';
   const sizeConfig = SIZES[size];
   
   // Animate Christmas glow colors with alternating pattern

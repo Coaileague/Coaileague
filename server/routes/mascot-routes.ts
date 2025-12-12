@@ -122,6 +122,7 @@ import {
   type SeasonalCommand,
   type OrnamentDirective
 } from '../services/ai-brain/skills/seasonalOrchestrator';
+import { getSeasonalSubagent } from '../services/ai-brain/seasonalSubagent';
 
 const router = Router();
 
@@ -409,6 +410,13 @@ Keep your responses:
  */
 router.get('/holiday', requireAuth, requireTrinityAccess, async (_req, res) => {
   const result = await executeMascotAction('mascot.get_holiday', async () => {
+    // CRITICAL: Check AI Brain orchestration state first
+    const subagent = getSeasonalSubagent();
+    if (subagent.isSeasonalDisabled()) {
+      console.log('[Holiday] Seasonal theming disabled via AI Brain - returning no holiday');
+      return { holiday: null, isHoliday: false };
+    }
+    
     const now = new Date();
     const month = now.getMonth() + 1;
     const day = now.getDate();
@@ -1327,6 +1335,17 @@ router.get('/seasonal/state', requireAuth, requireTrinityAccess, async (req, res
  */
 router.get('/seasonal/quick', requireAuth, requireTrinityAccess, (req, res) => {
   try {
+    // Check if seasonal theming is disabled via AI Brain orchestration
+    const subagent = getSeasonalSubagent();
+    if (subagent.isSeasonalDisabled()) {
+      return res.json({
+        seasonId: 'default',
+        forceDarkMode: false,
+        disabled: true,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    
     res.json({
       seasonId: getCurrentSeasonId(),
       forceDarkMode: shouldForceDarkMode(),
@@ -1508,9 +1527,14 @@ router.post('/seasonal/managers/unregister', requireAuth, requireTrinityAccess, 
  */
 router.get('/seasonal/managers', requireAuth, requireTrinityAccess, (req, res) => {
   try {
+    // Check if seasonal theming is disabled via AI Brain orchestration
+    const subagent = getSeasonalSubagent();
+    const disabled = subagent.isSeasonalDisabled();
+    
     res.json({
       success: true,
-      managers: getActiveManagers(),
+      disabled,
+      managers: disabled ? [] : getActiveManagers(),
       timestamp: new Date().toISOString(),
     });
   } catch (error) {
@@ -1529,6 +1553,25 @@ router.get('/seasonal/managers', requireAuth, requireTrinityAccess, (req, res) =
  */
 router.get('/seasonal/ornaments', requireAuth, requireTrinityAccess, (req, res) => {
   try {
+    // Check if seasonal theming is disabled via AI Brain orchestration
+    const subagent = getSeasonalSubagent();
+    if (subagent.isSeasonalDisabled()) {
+      return res.json({
+        success: true,
+        seasonId: 'default',
+        disabled: true,
+        directive: {
+          profiles: [],
+          placements: [],
+          spawnRate: 0,
+          decayRate: 0,
+          syncWithSantaFlyover: false,
+          globalIntensity: 0,
+        },
+        timestamp: new Date().toISOString(),
+      });
+    }
+    
     const seasonId = getCurrentSeasonId();
     const directive = getModifiedOrnamentDirective(seasonId);
     
@@ -1568,6 +1611,20 @@ import { storage } from '../storage';
  */
 router.get('/holiday/directives', requireAuth, requireTrinityAccess, async (req, res) => {
   try {
+    // Check if seasonal theming is disabled via AI Brain orchestration
+    const subagent = getSeasonalSubagent();
+    if (subagent.isSeasonalDisabled()) {
+      return res.json({
+        success: true,
+        seasonId: 'default',
+        disabled: true,
+        holidayDecor: null,
+        motionProfile: null,
+        latestDirective: null,
+        timestamp: new Date().toISOString(),
+      });
+    }
+    
     const seasonId = getCurrentSeasonId();
     
     // Get holiday decor for current season from DB

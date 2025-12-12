@@ -129,65 +129,11 @@ const DEFAULT_PROFILE: SeasonalProfile = {
   aiGenerated: false,
 };
 
-// Client-side Christmas profile - used when API fails or on public pages during December
-const CHRISTMAS_PROFILE: SeasonalProfile = {
-  seasonId: 'christmas',
-  holidayName: 'Christmas',
-  isHoliday: true,
-  theme: {
-    forceDarkMode: true,
-    primaryColor: '#c41e3a',
-    secondaryColor: '#228b22',
-    accentColor: '#ffd700',
-    glowColor: '#ff6b6b',
-  },
-  effects: {
-    primary: 'snowfall',
-    secondary: 'ornaments',
-    cadence: 'slow',
-    intensity: SEASONAL_EFFECTS_CONFIG.snow.intensity,
-    accumulation: true,
-    accumulationCycle: {
-      formDuration: SEASONAL_EFFECTS_CONFIG.snow.formDuration,
-      holdDuration: SEASONAL_EFFECTS_CONFIG.snow.holdDuration,
-      dissolveDuration: SEASONAL_EFFECTS_CONFIG.snow.dissolveDuration,
-    },
-  },
-  ornaments: {
-    enabled: true,
-    types: ['ball', 'star', 'bell', 'candy-cane', 'snowflake'],
-    colors: ['#c41e3a', '#228b22', '#ffd700', '#ffffff', '#87ceeb'],
-    density: 'medium',
-  },
-  mascotHints: {
-    preferredZones: ['corners'],
-    avoidEffectZones: true,
-    seasonalEmotes: ['HOLIDAY', 'CELEBRATING'],
-    seasonalThoughts: [
-      "Happy Holidays! 🎄",
-      "Let it snow! ❄️",
-      "Season's greetings!",
-      "Ho ho ho! 🎅",
-    ],
-  },
-  validUntil: new Date(new Date().getFullYear(), 11, 31, 23, 59, 59).toISOString(),
-  aiGenerated: false,
-};
-
-// Check if we're in Christmas season (Dec 1-31)
-function isChristmasSeason(): boolean {
-  const now = new Date();
-  const month = now.getMonth(); // 0-indexed, so December = 11
-  return month === 11; // December
-}
-
-// Get appropriate fallback profile based on date
-function getDateBasedFallback(): SeasonalProfile {
-  if (isChristmasSeason()) {
-    return CHRISTMAS_PROFILE;
-  }
-  return DEFAULT_PROFILE;
-}
+// REMOVED: CHRISTMAS_PROFILE, isChristmasSeason(), getDateBasedFallback()
+// These calendar-based fallbacks bypass AI Brain orchestration.
+// Seasonal themes are now controlled exclusively via SeasonalSubagent on the server.
+// If DISABLE_SEASONAL_THEMING env var is set or Trinity issues force_disable,
+// the server returns seasonId: 'default' and the client respects that decision.
 
 const SeasonalThemeContext = createContext<SeasonalThemeContextValue | null>(null);
 
@@ -203,9 +149,13 @@ export function SeasonalThemeProvider({ children }: { children: React.ReactNode 
     retry: 1, // Reduce retries - we have date fallback
   });
   
-  // Use API profile if available, otherwise fall back to date-based detection
-  // This ensures Christmas decorations show even on public pages (401 errors)
-  const profile = data?.profile || getDateBasedFallback();
+  // Use API profile if available
+  // CRITICAL: If API returns a profile with seasonId: 'default', respect it (means seasonal is disabled)
+  // Only use date-based fallback if API call completely failed (network error, not 401)
+  // When seasonal is disabled via DISABLE_SEASONAL_THEMING env var, server returns seasonId: 'default'
+  const profile = data?.success && data?.profile 
+    ? data.profile 
+    : (isLoading ? DEFAULT_PROFILE : DEFAULT_PROFILE); // Use default when loading or on error - no client-side override!
   
   useEffect(() => {
     if (!profile) return;

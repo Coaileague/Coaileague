@@ -359,11 +359,22 @@ const SEASONAL_ORNAMENT_DIRECTIVES: Record<SeasonId, OrnamentDirective> = {
 
 // Get ornament directive for a season
 export function getOrnamentDirective(seasonId: SeasonId): OrnamentDirective {
+  // Check if seasonal theming is disabled via AI Brain orchestration
+  const subagent = getSeasonalSubagent();
+  if (subagent.isSeasonalDisabled()) {
+    return SEASONAL_ORNAMENT_DIRECTIVES.default;
+  }
   return SEASONAL_ORNAMENT_DIRECTIVES[seasonId] || SEASONAL_ORNAMENT_DIRECTIVES.default;
 }
 
 // Update ornament directive with intensity multiplier
 export function getModifiedOrnamentDirective(seasonId: SeasonId): OrnamentDirective {
+  // Check if seasonal theming is disabled via AI Brain orchestration
+  const subagent = getSeasonalSubagent();
+  if (subagent.isSeasonalDisabled()) {
+    return SEASONAL_ORNAMENT_DIRECTIVES.default;
+  }
+  
   const base = getOrnamentDirective(seasonId);
   const multiplier = supportOverrides.intensityMultiplier || 1.0;
   
@@ -419,6 +430,46 @@ function detectCurrentSeason(date: Date): HolidayDefinition {
 }
 
 export async function generateSeasonalProfile(workspaceId?: string): Promise<SeasonalProfile> {
+  // Check if seasonal theming is disabled via orchestration
+  const subagent = getSeasonalSubagent();
+  if (subagent.isSeasonalDisabled()) {
+    console.log('[SeasonalOrchestrator] Seasonal theming disabled - returning default profile');
+    return {
+      seasonId: 'default',
+      holidayName: null,
+      isHoliday: false,
+      theme: {
+        forceDarkMode: false,
+        primaryColor: THEME_PALETTES.default.primary,
+        secondaryColor: THEME_PALETTES.default.secondary,
+        accentColor: THEME_PALETTES.default.accent,
+        glowColor: THEME_PALETTES.default.glow,
+      },
+      effects: {
+        primary: 'none',
+        secondary: null,
+        cadence: 'medium',
+        intensity: 0,
+        accumulation: false,
+        accumulationCycle: null,
+      },
+      ornaments: {
+        enabled: false,
+        types: [],
+        colors: [],
+        density: 'sparse',
+      },
+      mascotHints: {
+        preferredZones: ['corners'],
+        avoidEffectZones: true,
+        seasonalEmotes: [],
+        seasonalThoughts: SEASONAL_THOUGHTS.default,
+      },
+      validUntil: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
+      aiGenerated: false,
+    };
+  }
+  
   const now = new Date();
   const holiday = detectCurrentHoliday(now);
   const season = detectCurrentSeason(now);
@@ -572,6 +623,12 @@ Respond in JSON: { "thought": "...", "intensity": 0.X, "moreOrnaments": true/fal
 }
 
 export function getCurrentSeasonId(): SeasonId {
+  // Check if seasonal theming is disabled via AI Brain orchestration
+  const subagent = getSeasonalSubagent();
+  if (subagent.isSeasonalDisabled()) {
+    return 'default';
+  }
+  
   const now = new Date();
   const holiday = detectCurrentHoliday(now);
   if (holiday) return holiday.id;
@@ -579,6 +636,12 @@ export function getCurrentSeasonId(): SeasonId {
 }
 
 export function shouldForceDarkMode(): boolean {
+  // Check if seasonal theming is disabled via AI Brain orchestration
+  const subagent = getSeasonalSubagent();
+  if (subagent.isSeasonalDisabled()) {
+    return false;
+  }
+  
   const now = new Date();
   const holiday = detectCurrentHoliday(now);
   if (holiday) return holiday.forceDarkMode;

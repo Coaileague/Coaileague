@@ -1,8 +1,14 @@
 /**
- * useSeasonalTheme - Hook for automatic seasonal theme detection
+ * useSeasonalTheme - DEPRECATED - Use SeasonalThemeContext instead
  * 
- * Provides the current seasonal theme based on the calendar date
- * with support for manual overrides and reduced motion preferences.
+ * @deprecated This hook detects season from calendar date WITHOUT checking AI Brain orchestration.
+ * Import { useSeasonalTheme } from '@/context/SeasonalThemeContext' for proper orchestration.
+ * 
+ * CRITICAL: This client-side detection bypasses Trinity's seasonal control.
+ * Any code using this hook will NOT respect:
+ * - DISABLE_SEASONAL_THEMING environment variable
+ * - Trinity force_disable/force_enable commands
+ * - AI Brain orchestration overrides
  */
 
 import { useState, useEffect, useMemo } from 'react';
@@ -12,6 +18,8 @@ import {
   getCurrentSeasonalTheme, 
   getThemeConfig 
 } from '@/config/seasonalThemes';
+
+console.warn('[DEPRECATED] use-seasonal-theme.ts is deprecated. Use SeasonalThemeContext instead for AI Brain orchestration.');
 
 interface UseSeasonalThemeOptions {
   override?: SeasonalTheme;
