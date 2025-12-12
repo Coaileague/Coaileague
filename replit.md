@@ -117,6 +117,13 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - Analytics pages are distinct: analytics.tsx (workforce ops), owner-analytics.tsx (workspace owner costs/usage)
 - Category pages (4): category-communication, category-growth, category-operations, category-platform - serve as organized entry points
 
+**Mobile Chat Room Browser (Dec 2025):**
+- Mobile chat flow now shows LiveRoomBrowser first before entering a conversation
+- "Join & Enter" button auto-joins room if user is not already a member, with loading state and error handling
+- Trinity branding gradient (violet-600 to indigo-600) applied to mobile room browser header
+- Exit button returns to room browser and properly resets state
+- End users see org-filtered rooms; support staff see all platform rooms
+
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
 - **Resend**: Email delivery and notification workflows.
