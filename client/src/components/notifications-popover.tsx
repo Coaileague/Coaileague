@@ -2,7 +2,8 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, 
-  Bot, Zap, ChevronRight, Eye, Filter, ArrowUpDown, Shield, UserCheck
+  Bot, Zap, ChevronRight, Eye, Filter, ArrowUpDown, Shield, UserCheck,
+  MessageCircle
 } from "lucide-react";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import {
@@ -24,7 +25,9 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
 import { useTrinityContext } from "@/hooks/use-trinity-context";
+import { useNotificationSync } from "@/hooks/use-notification-sync";
 import TrinityRedesign from "@/components/trinity-redesign";
+import { humanizeTitle, humanizeText, generateEndUserSummary } from "@shared/utils/humanFriendlyCopy";
 
 // Priority levels for UNS cards
 type Priority = 'critical' | 'high' | 'medium' | 'info';
@@ -95,19 +98,31 @@ const PRIORITY_STYLES: Record<Priority, { border: string; bg: string; text: stri
   },
 };
 
-// Map existing data to UNS format
+// Map existing data to UNS format with human-friendly language
 function mapToUNS(data: NotificationsData | undefined): UNSNotification[] {
   if (!data) return [];
   
   const notifications: UNSNotification[] = [];
+  const seenIds = new Set<string>();
   
   // Map platform updates
   data.platformUpdates?.forEach(update => {
+    // Skip duplicates within the same fetch (by ID only)
+    if (seenIds.has(update.id)) return;
+    seenIds.add(update.id);
+    
     const isSystem = ['maintenance', 'security_patch', 'system'].includes(update.category);
+    
+    // Apply human-friendly copy transformation
+    const friendlyTitle = humanizeTitle(update.title);
+    const friendlyMessage = update.metadata?.endUserSummary 
+      || generateEndUserSummary(update.description || '', update.category)
+      || humanizeText(update.description || '');
+    
     notifications.push({
       id: update.id,
-      title: update.title,
-      message: update.metadata?.endUserSummary || update.description || '',
+      title: friendlyTitle,
+      message: friendlyMessage,
       priority: update.category === 'security_patch' ? 'high' : 'info',
       category: isSystem ? 'system_alerts' : 'for_you',
       subCategory: update.category,
@@ -121,10 +136,14 @@ function mapToUNS(data: NotificationsData | undefined): UNSNotification[] {
   
   // Map maintenance alerts with orchestration actions
   data.maintenanceAlerts?.forEach(alert => {
+    // Skip duplicates
+    if (seenIds.has(alert.id)) return;
+    seenIds.add(alert.id);
+    
     const actions: UNSNotification['actions'] = [];
     if (alert.quickFixCode) {
       actions.push({
-        label: alert.quickFixLabel || 'Review & Fix',
+        label: alert.quickFixLabel || 'View & Apply Fix',
         type: 'orchestration',
         target: alert.quickFixCode,
         variant: 'primary',
@@ -137,14 +156,18 @@ function mapToUNS(data: NotificationsData | undefined): UNSNotification[] {
       variant: 'ghost',
     });
     
+    // Apply human-friendly copy
+    const friendlyTitle = humanizeTitle(alert.title);
+    const friendlyMessage = humanizeText(alert.description || '');
+    
     notifications.push({
       id: alert.id,
-      title: alert.title,
-      message: alert.description || '',
+      title: friendlyTitle,
+      message: friendlyMessage,
       priority: alert.severity === 'critical' ? 'critical' : alert.severity === 'warning' ? 'high' : 'medium',
       category: 'system_alerts',
       subCategory: 'maintenance',
-      serviceSource: 'System Operations',
+      serviceSource: humanizeText(alert.serviceSource || 'System Operations'),
       statusTag: alert.isAcknowledged ? undefined : 'ACTION REQUIRED',
       isRead: alert.isAcknowledged || false,
       createdAt: alert.scheduledStartTime,
@@ -157,6 +180,10 @@ function mapToUNS(data: NotificationsData | undefined): UNSNotification[] {
   data.notifications?.forEach(notif => {
     if (notif.isRead || notif.clearedAt) return;
     
+    // Skip duplicates
+    if (seenIds.has(notif.id)) return;
+    seenIds.add(notif.id);
+    
     const actions: UNSNotification['actions'] = [];
     if (notif.actionUrl) {
       actions.push({
@@ -167,24 +194,33 @@ function mapToUNS(data: NotificationsData | undefined): UNSNotification[] {
       });
     }
     
-    // Check for orchestration actions in metadata
+    // Check for orchestration actions in metadata - with user-friendly labels
     if (notif.metadata?.quickFixCode) {
       actions.unshift({
-        label: notif.metadata.quickFixLabel || 'Review & Trinity for Analysis',
+        label: notif.metadata.quickFixLabel || 'Review & Ask Trinity',
         type: 'orchestration',
         target: notif.metadata.quickFixCode,
         variant: 'primary',
       });
     }
     
+    // Apply human-friendly copy
+    const friendlyTitle = humanizeTitle(notif.title);
+    const friendlyMessage = notif.metadata?.endUserSummary 
+      || generateEndUserSummary(notif.message || '', notif.type)
+      || humanizeText(notif.message || '');
+    
+    // Humanize the service source name (e.g., "PayrollOps Lead" -> "Payroll Team")
+    const friendlySource = humanizeText(notif.metadata?.sourceName || notif.metadata?.subagent || 'Trinity AI');
+    
     notifications.push({
       id: notif.id,
-      title: notif.title,
-      message: notif.metadata?.endUserSummary || notif.message || '',
+      title: friendlyTitle,
+      message: friendlyMessage,
       priority: notif.type === 'error' ? 'critical' : notif.type === 'warning' ? 'high' : 'info',
       category: 'for_you',
       subCategory: notif.type,
-      serviceSource: notif.metadata?.sourceName || 'Trinity AI',
+      serviceSource: friendlySource,
       statusTag: 'NEW',
       isRead: notif.isRead,
       createdAt: notif.createdAt,
@@ -463,6 +499,9 @@ export function NotificationsPopover() {
   
   // WebSocket for real-time updates
   const { isConnected } = useNotificationWebSocket(userId, workspaceId);
+  
+  // Cross-tab notification sync - syncs read/cleared state across browser tabs
+  const { syncNotificationRead, syncClearAll } = useNotificationSync();
 
   // Fetch notifications
   const { data: rawData, isLoading } = useQuery<NotificationsData>({
@@ -510,15 +549,17 @@ export function NotificationsPopover() {
   const systemCount = allNotifications.filter(n => n.category === 'system_alerts' && !n.isRead).length;
   const totalUnread = rawData?.totalUnread ?? (forYouCount + systemCount);
 
-  // Mutations
+  // Mutations with cross-tab sync
   const dismissMutation = useMutation({
     mutationFn: async (id: string) => {
       // Try multiple endpoints based on notification type
       const response = await apiRequest("POST", `/api/notifications/acknowledge/${id}`);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, id) => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      // Sync across tabs
+      syncNotificationRead(id);
     },
   });
   
@@ -541,7 +582,9 @@ export function NotificationsPopover() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
-      toast({ title: "Cleared", description: "All notifications marked as read." });
+      // Sync across tabs
+      syncClearAll();
+      toast({ title: "Done", description: "All notifications cleared." });
     },
   });
   
