@@ -237,6 +237,15 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize Cleanup Agent:', error);
   }
 
+  // Initialize Trinity Agent Parity Layer - Replit Agent-equivalent capabilities
+  try {
+    const { trinityAgentParityLayer } = await import('./services/ai-brain/trinityAgentParityLayer');
+    const capabilities = trinityAgentParityLayer.getCapabilities();
+    console.log(`[Server] Trinity Agent Parity Layer initialized - ${capabilities.length} agent capabilities active`);
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Agent Parity Layer:', error);
+  }
+
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
