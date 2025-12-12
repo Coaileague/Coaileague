@@ -17218,6 +17218,169 @@ Summary:`;
     }
   });
 
+  // ============================================================================
+  // AI BRAIN ACTION LOG - AALV (AI Audit Log Viewer) Support Dashboard
+  // Support roles only: root_admin, deputy_admin, sysop, support_manager, support_agent
+  // ============================================================================
+
+  const AALV_SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
+
+  // GET /api/ai/audit-logs - Get AI Brain action logs (support only)
+  app.get('/api/ai/audit-logs', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      // Check platform role for support access
+      const user = await storage.getUser(userId);
+      if (!user?.platformRole || !AALV_SUPPORT_ROLES.includes(user.platformRole)) {
+        return res.status(403).json({ 
+          message: 'Access denied. AALV requires support role access.',
+          requiredRoles: AALV_SUPPORT_ROLES
+        });
+      }
+
+      const { 
+        actorType, 
+        status, 
+        categoryTag, 
+        workflowId, 
+        workspaceId,
+        requiresHumanReview,
+        startDate,
+        endDate,
+        limit = '100', 
+        offset = '0' 
+      } = req.query;
+
+      const filters = {
+        actorType: actorType ? String(actorType) : undefined,
+        status: status ? String(status) : undefined,
+        categoryTag: categoryTag ? String(categoryTag) : undefined,
+        workflowId: workflowId ? String(workflowId) : undefined,
+        workspaceId: workspaceId ? String(workspaceId) : undefined,
+        requiresHumanReview: requiresHumanReview === 'true' ? true : requiresHumanReview === 'false' ? false : undefined,
+        startDate: startDate ? new Date(String(startDate)) : undefined,
+        endDate: endDate ? new Date(String(endDate)) : undefined,
+        limit: Math.min(parseInt(String(limit), 10) || 100, 500),
+        offset: Math.max(parseInt(String(offset), 10) || 0, 0),
+      };
+
+      const logs = await storage.getAiBrainActionLogs(filters);
+
+      res.json({
+        success: true,
+        data: logs,
+        pagination: {
+          limit: filters.limit,
+          offset: filters.offset,
+          count: logs.length,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching AI Brain action logs:', error);
+      res.status(500).json({ message: 'Failed to fetch AI audit logs' });
+    }
+  });
+
+  // GET /api/ai/audit-logs/stats - Get aggregate stats for dashboard (support only)
+  app.get('/api/ai/audit-logs/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user?.platformRole || !AALV_SUPPORT_ROLES.includes(user.platformRole)) {
+        return res.status(403).json({ message: 'Access denied. AALV requires support role access.' });
+      }
+
+      const recentLogs = await storage.getAiBrainActionLogs({ limit: 1000 });
+      const pendingReview = await storage.getAiBrainActionLogs({ requiresHumanReview: true, limit: 100 });
+      
+      const statusCounts: Record<string, number> = {};
+      const actorTypeCounts: Record<string, number> = {};
+      const categoryCounts: Record<string, number> = {};
+
+      for (const log of recentLogs) {
+        statusCounts[log.status] = (statusCounts[log.status] || 0) + 1;
+        actorTypeCounts[log.actorType] = (actorTypeCounts[log.actorType] || 0) + 1;
+        if (log.categoryTag) {
+          categoryCounts[log.categoryTag] = (categoryCounts[log.categoryTag] || 0) + 1;
+        }
+      }
+
+      res.json({
+        success: true,
+        stats: {
+          totalLogs: recentLogs.length,
+          pendingReviewCount: pendingReview.length,
+          statusBreakdown: statusCounts,
+          actorTypeBreakdown: actorTypeCounts,
+          categoryBreakdown: categoryCounts,
+        },
+      });
+    } catch (error) {
+      console.error('Error fetching audit log stats:', error);
+      res.status(500).json({ message: 'Failed to fetch audit log stats' });
+    }
+  });
+
+  // GET /api/ai/audit-logs/:id - Get single AI Brain action log (support only)
+  app.get('/api/ai/audit-logs/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user?.platformRole || !AALV_SUPPORT_ROLES.includes(user.platformRole)) {
+        return res.status(403).json({ message: 'Access denied. AALV requires support role access.' });
+      }
+
+      const log = await storage.getAiBrainActionLog(req.params.id);
+      if (!log) {
+        return res.status(404).json({ message: 'AI Brain action log not found' });
+      }
+
+      res.json({ success: true, data: log });
+    } catch (error) {
+      console.error('Error fetching AI Brain action log:', error);
+      res.status(500).json({ message: 'Failed to fetch AI audit log' });
+    }
+  });
+
+  // POST /api/ai/audit-logs/:id/review - Mark action as reviewed (support only)
+  app.post('/api/ai/audit-logs/:id/review', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user?.platformRole || !AALV_SUPPORT_ROLES.includes(user.platformRole)) {
+        return res.status(403).json({ message: 'Access denied. AALV requires support role access.' });
+      }
+
+      const { notes } = req.body;
+      const updated = await storage.markAiBrainActionReviewed(req.params.id, userId, notes);
+      
+      if (!updated) {
+        return res.status(404).json({ message: 'AI Brain action log not found' });
+      }
+
+      res.json({ success: true, data: updated });
+    } catch (error) {
+      console.error('Error marking action as reviewed:', error);
+      res.status(500).json({ message: 'Failed to mark action as reviewed' });
+    }
+  });
+
   // ADMIN SUPPORT ROUTES - Platform Administration
   // ============================================================================
 
