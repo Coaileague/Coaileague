@@ -4927,6 +4927,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .catch(err => console.error('[Onboarding] Failed to initiate workflow:', err));
       }
       
+      // Post to AI Brain for observability (fire-and-forget, never blocks response)
+      setImmediate(async () => {
+        try {
+          const { postDatabaseEventToAIBrain } = await import('./services/ai-brain/workboardService');
+          postDatabaseEventToAIBrain({
+            eventType: 'employee_created',
+            workspaceId,
+            userId: req.user?.id || 'system',
+            entityType: 'employee',
+            entityId: employee.id,
+            metadata: { name: `${employee.firstName} ${employee.lastName}`, role: employee.role },
+          });
+        } catch (err) {
+          console.error('[AIBrain] Event post error:', err);
+        }
+      });
       res.json(updatedEmployee || employee);
     } catch (error: any) {
       console.error("Error creating employee:", error);

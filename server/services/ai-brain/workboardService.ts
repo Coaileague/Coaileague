@@ -892,3 +892,67 @@ class WorkboardService {
 }
 
 export const workboardService = WorkboardService.getInstance();
+
+// ============================================================================
+// AI BRAIN EVENT HELPER
+// Helper for action endpoints to notify AI Brain of database changes
+// This enables AI Brain to learn from platform operations and provide insights
+// ============================================================================
+
+export type DatabaseEventType = 
+  | 'employee_created' | 'employee_updated' | 'employee_deleted'
+  | 'shift_created' | 'shift_updated' | 'shift_deleted' | 'shift_assigned'
+  | 'payroll_approved' | 'payroll_processed'
+  | 'invoice_created' | 'invoice_approved' | 'invoice_sent'
+  | 'timesheet_submitted' | 'timesheet_approved'
+  | 'client_created' | 'client_updated'
+  | 'workspace_settings_updated'
+  | 'automation_triggered';
+
+export interface DatabaseEvent {
+  eventType: DatabaseEventType;
+  workspaceId: string;
+  userId: string;
+  entityType: string;
+  entityId: string;
+  changes?: Record<string, any>;
+  metadata?: Record<string, any>;
+}
+
+/**
+ * Post a database event to AI Brain workboard for observability
+ * This is a fire-and-forget operation - it logs the event asynchronously
+ * and does not block the calling endpoint
+ */
+export async function postDatabaseEventToAIBrain(event: DatabaseEvent): Promise<void> {
+  try {
+    // Fire and forget - don't await, just log
+    setImmediate(async () => {
+      try {
+        await workboardService.submitTask({
+          workspaceId: event.workspaceId,
+          userId: event.userId,
+          requestType: 'system',
+          requestContent: `[DB_EVENT] ${event.eventType}: ${event.entityType}#${event.entityId}`,
+          requestMetadata: {
+            eventType: event.eventType,
+            entityType: event.entityType,
+            entityId: event.entityId,
+            changes: event.changes,
+            ...event.metadata,
+            source: 'database_event',
+            timestamp: new Date().toISOString(),
+          },
+          priority: 'low', // Background observability task
+        });
+        console.log(`[AIBrain] Database event logged: ${event.eventType} for ${event.entityType}#${event.entityId}`);
+      } catch (err) {
+        // Silently log errors - don't let AI Brain logging affect main operations
+        console.error('[AIBrain] Failed to log database event:', err);
+      }
+    });
+  } catch (err) {
+    // Outer catch for any synchronous errors
+    console.error('[AIBrain] Error posting database event:', err);
+  }
+}
