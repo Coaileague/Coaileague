@@ -84,12 +84,12 @@ export const CHAT_BUBBLE_CONFIG = {
 
   // ===== COLORS =====
   colors: {
-    // Primary button colors
-    primary: 'from-blue-600 to-blue-500',
-    primaryHover: 'from-blue-700 to-blue-600',
+    // Primary button colors - Trinity brand gradient (purple to indigo)
+    primary: 'from-violet-600 to-indigo-600',
+    primaryHover: 'from-violet-700 to-indigo-700',
     
     // Secondary/header colors
-    secondary: 'from-blue-500/10 to-blue-500/10',
+    secondary: 'from-violet-500/10 to-indigo-500/10',
     
     // Status colors
     error: 'bg-red-500',
