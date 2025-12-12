@@ -18330,3 +18330,402 @@ export const accessControlEvents = pgTable("access_control_events", {
   index("access_control_events_workspace_idx").on(table.workspaceId),
   index("access_control_events_created_idx").on(table.createdAt),
 ]);
+
+// ============================================================================
+// COGNITIVE SYSTEMS PERSISTENCE - FORTUNE 500 GRADE
+// ============================================================================
+
+// Knowledge Graph Entity Types Enum
+export const knowledgeEntityTypeEnum = pgEnum("knowledge_entity_type", [
+  "concept", "rule", "pattern", "fact", "procedure", 
+  "constraint", "insight", "error_pattern", "success_pattern"
+]);
+
+// Knowledge Domain Enum
+export const knowledgeDomainEnum = pgEnum("knowledge_domain", [
+  "scheduling", "payroll", "compliance", "invoicing", "employees",
+  "clients", "automation", "security", "performance", "general"
+]);
+
+// Knowledge Graph Entities - Persistent knowledge storage
+export const knowledgeEntities = pgTable("knowledge_entities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  type: knowledgeEntityTypeEnum("type").notNull(),
+  name: varchar("name", { length: 500 }).notNull(),
+  description: text("description"),
+  domain: knowledgeDomainEnum("domain").notNull(),
+  attributes: jsonb("attributes").default('{}'),
+  
+  // Metrics
+  confidence: doublePrecision("confidence").default(0.8),
+  usageCount: integer("usage_count").default(0),
+  lastAccessedAt: timestamp("last_accessed_at"),
+  
+  // Source tracking
+  createdBy: varchar("created_by", { length: 255 }).notNull(),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("knowledge_entities_domain_idx").on(table.domain),
+  index("knowledge_entities_type_idx").on(table.type),
+  index("knowledge_entities_workspace_idx").on(table.workspaceId),
+]);
+
+export const insertKnowledgeEntitySchema = createInsertSchema(knowledgeEntities).omit({
+  id: true, createdAt: true, updatedAt: true, usageCount: true,
+});
+export type InsertKnowledgeEntity = z.infer<typeof insertKnowledgeEntitySchema>;
+export type KnowledgeEntityRecord = typeof knowledgeEntities.$inferSelect;
+
+// Knowledge Relationship Types Enum
+export const knowledgeRelationTypeEnum = pgEnum("knowledge_relation_type", [
+  "depends_on", "implies", "contradicts", "similar_to", "derived_from",
+  "applies_to", "causes", "prevents", "requires", "enables"
+]);
+
+// Knowledge Graph Relationships
+export const knowledgeRelationships = pgTable("knowledge_relationships", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  sourceId: varchar("source_id").notNull().references(() => knowledgeEntities.id, { onDelete: 'cascade' }),
+  targetId: varchar("target_id").notNull().references(() => knowledgeEntities.id, { onDelete: 'cascade' }),
+  type: knowledgeRelationTypeEnum("type").notNull(),
+  strength: doublePrecision("strength").default(0.8),
+  metadata: jsonb("metadata").default('{}'),
+  
+  createdBy: varchar("created_by", { length: 255 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("knowledge_rel_source_idx").on(table.sourceId),
+  index("knowledge_rel_target_idx").on(table.targetId),
+  index("knowledge_rel_type_idx").on(table.type),
+]);
+
+export const insertKnowledgeRelationshipSchema = createInsertSchema(knowledgeRelationships).omit({
+  id: true, createdAt: true,
+});
+export type InsertKnowledgeRelationship = z.infer<typeof insertKnowledgeRelationshipSchema>;
+export type KnowledgeRelationshipRecord = typeof knowledgeRelationships.$inferSelect;
+
+// Learning Entries - Knowledge acquisition tracking
+export const knowledgeLearningEntries = pgTable("knowledge_learning_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  domain: knowledgeDomainEnum("domain").notNull(),
+  agentId: varchar("agent_id", { length: 255 }).notNull(),
+  action: varchar("action", { length: 500 }).notNull(),
+  context: jsonb("context").default('{}'),
+  outcome: varchar("outcome", { length: 50 }).notNull(), // success, failure, partial
+  reward: doublePrecision("reward").default(0),
+  insights: text("insights").array().default(sql`ARRAY[]::text[]`),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("knowledge_learning_domain_idx").on(table.domain),
+  index("knowledge_learning_agent_idx").on(table.agentId),
+  index("knowledge_learning_workspace_idx").on(table.workspaceId),
+]);
+
+// A2A Agent Role Enum
+export const a2aAgentRoleEnum = pgEnum("a2a_agent_role", [
+  "coordinator", "executor", "validator", "analyst", "specialist", "monitor"
+]);
+
+// A2A Agent Status Enum
+export const a2aAgentStatusEnum = pgEnum("a2a_agent_status", [
+  "active", "busy", "offline", "suspended"
+]);
+
+// A2A Registered Agents
+export const a2aAgents = pgTable("a2a_agents", {
+  id: varchar("id").primaryKey(),
+  
+  name: varchar("name", { length: 255 }).notNull(),
+  role: a2aAgentRoleEnum("role").notNull(),
+  domain: knowledgeDomainEnum("domain").notNull(),
+  capabilities: text("capabilities").array().default(sql`ARRAY[]::text[]`),
+  
+  // Trust and metrics
+  trustScore: doublePrecision("trust_score").default(0.8),
+  messagesSent: integer("messages_sent").default(0),
+  messagesReceived: integer("messages_received").default(0),
+  successRate: doublePrecision("success_rate").default(1.0),
+  status: a2aAgentStatusEnum("status").default("active"),
+  
+  lastActiveAt: timestamp("last_active_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("a2a_agents_role_idx").on(table.role),
+  index("a2a_agents_domain_idx").on(table.domain),
+  index("a2a_agents_status_idx").on(table.status),
+]);
+
+// A2A Message Types Enum
+export const a2aMessageTypeEnum = pgEnum("a2a_message_type", [
+  "request", "response", "broadcast", "negotiation", "validation_request",
+  "validation_result", "knowledge_share", "error_report", "status_update", "handoff"
+]);
+
+// A2A Message Priority Enum
+export const a2aMessagePriorityEnum = pgEnum("a2a_message_priority", [
+  "critical", "high", "normal", "low"
+]);
+
+// A2A Message Status Enum
+export const a2aMessageStatusEnum = pgEnum("a2a_message_status", [
+  "pending", "delivered", "processed", "expired", "failed"
+]);
+
+// A2A Messages - Inter-agent communication logs
+export const a2aMessages = pgTable("a2a_messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  fromAgent: varchar("from_agent", { length: 255 }).notNull(),
+  toAgent: varchar("to_agent", { length: 255 }).notNull(),
+  type: a2aMessageTypeEnum("type").notNull(),
+  priority: a2aMessagePriorityEnum("priority").default("normal"),
+  payload: jsonb("payload").default('{}'),
+  
+  correlationId: varchar("correlation_id", { length: 255 }),
+  replyTo: varchar("reply_to", { length: 255 }),
+  status: a2aMessageStatusEnum("status").default("pending"),
+  metadata: jsonb("metadata").default('{}'),
+  
+  expiresAt: timestamp("expires_at"),
+  processedAt: timestamp("processed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("a2a_messages_from_idx").on(table.fromAgent),
+  index("a2a_messages_to_idx").on(table.toAgent),
+  index("a2a_messages_type_idx").on(table.type),
+  index("a2a_messages_status_idx").on(table.status),
+  index("a2a_messages_correlation_idx").on(table.correlationId),
+  index("a2a_messages_created_idx").on(table.createdAt),
+]);
+
+// A2A Collaboration Teams
+export const a2aTeams = pgTable("a2a_teams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  name: varchar("name", { length: 255 }).notNull(),
+  purpose: text("purpose"),
+  coordinator: varchar("coordinator", { length: 255 }).notNull(),
+  members: jsonb("members").default('[]'), // Array of TeamMember objects
+  status: varchar("status", { length: 50 }).default("forming"), // forming, active, completing, disbanded
+  taskId: varchar("task_id", { length: 255 }),
+  results: jsonb("results"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+}, (table) => [
+  index("a2a_teams_coordinator_idx").on(table.coordinator),
+  index("a2a_teams_status_idx").on(table.status),
+]);
+
+// A2A Trust Rules
+export const a2aTrustRules = pgTable("a2a_trust_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  sourceAgent: varchar("source_agent", { length: 255 }).notNull(),
+  targetAgent: varchar("target_agent", { length: 255 }).notNull(),
+  dataType: varchar("data_type", { length: 255 }).notNull(),
+  conditions: jsonb("conditions").default('[]'), // Array of TrustCondition objects
+  trustLevel: varchar("trust_level", { length: 50 }).default("conditional"), // full, verified, conditional, none
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("a2a_trust_source_idx").on(table.sourceAgent),
+  index("a2a_trust_target_idx").on(table.targetAgent),
+]);
+
+// RL Experience Outcome Enum
+export const rlOutcomeEnum = pgEnum("rl_outcome", [
+  "success", "failure", "partial", "escalated"
+]);
+
+// RL Experiences - Reinforcement learning history
+export const rlExperiences = pgTable("rl_experiences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  agentId: varchar("agent_id", { length: 255 }).notNull(),
+  domain: knowledgeDomainEnum("domain").notNull(),
+  action: varchar("action", { length: 500 }).notNull(),
+  
+  // State representation
+  stateData: jsonb("state_data").default('{}'), // Full state representation
+  complexity: varchar("complexity", { length: 50 }).default("medium"),
+  priorSuccessRate: doublePrecision("prior_success_rate").default(0.5),
+  confidenceLevel: doublePrecision("confidence_level").default(0.5),
+  
+  // Outcome
+  outcome: rlOutcomeEnum("outcome").notNull(),
+  reward: doublePrecision("reward").default(0),
+  humanIntervention: boolean("human_intervention").default(false),
+  feedback: varchar("feedback", { length: 50 }), // positive, negative, neutral
+  
+  // Context
+  contextWindow: jsonb("context_window").default('{}'),
+  executionTimeMs: integer("execution_time_ms").default(0),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("rl_experiences_agent_idx").on(table.agentId),
+  index("rl_experiences_domain_idx").on(table.domain),
+  index("rl_experiences_action_idx").on(table.action),
+  index("rl_experiences_outcome_idx").on(table.outcome),
+  index("rl_experiences_workspace_idx").on(table.workspaceId),
+  index("rl_experiences_created_idx").on(table.createdAt),
+]);
+
+// RL Confidence Models
+export const rlConfidenceModels = pgTable("rl_confidence_models", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  agentId: varchar("agent_id", { length: 255 }).notNull(),
+  domain: knowledgeDomainEnum("domain").notNull(),
+  action: varchar("action", { length: 500 }).notNull(),
+  
+  baseConfidence: doublePrecision("base_confidence").default(0.5),
+  adjustedConfidence: doublePrecision("adjusted_confidence").default(0.5),
+  experienceCount: integer("experience_count").default(0),
+  successRate: doublePrecision("success_rate").default(0.5),
+  factors: jsonb("factors").default('[]'), // Array of ConfidenceFactor objects
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("rl_confidence_agent_idx").on(table.agentId),
+  index("rl_confidence_domain_idx").on(table.domain),
+  index("rl_confidence_action_idx").on(table.action),
+  uniqueIndex("rl_confidence_unique_idx").on(table.agentId, table.domain, table.action),
+]);
+
+// RL Strategy Adaptations
+export const rlStrategyAdaptations = pgTable("rl_strategy_adaptations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  agentId: varchar("agent_id", { length: 255 }).notNull(),
+  domain: knowledgeDomainEnum("domain").notNull(),
+  action: varchar("action", { length: 500 }).notNull(),
+  
+  previousStrategy: text("previous_strategy"),
+  newStrategy: text("new_strategy"),
+  triggerReason: text("trigger_reason"),
+  expectedImprovement: doublePrecision("expected_improvement").default(0),
+  validated: boolean("validated").default(false),
+  validationResult: jsonb("validation_result"),
+  
+  appliedAt: timestamp("applied_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("rl_adaptations_agent_idx").on(table.agentId),
+  index("rl_adaptations_domain_idx").on(table.domain),
+  index("rl_adaptations_validated_idx").on(table.validated),
+]);
+
+// Domain Lead Supervisor Telemetry
+export const supervisorTelemetry = pgTable("supervisor_telemetry", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  supervisorId: varchar("supervisor_id", { length: 255 }).notNull(),
+  domain: varchar("domain", { length: 100 }).notNull(),
+  
+  // Metrics
+  tasksAssigned: integer("tasks_assigned").default(0),
+  tasksCompleted: integer("tasks_completed").default(0),
+  tasksFailed: integer("tasks_failed").default(0),
+  avgExecutionTimeMs: doublePrecision("avg_execution_time_ms").default(0),
+  escalationCount: integer("escalation_count").default(0),
+  
+  // Status
+  activeSubagents: integer("active_subagents").default(0),
+  pendingTasks: integer("pending_tasks").default(0),
+  lastHealthCheck: timestamp("last_health_check"),
+  healthStatus: varchar("health_status", { length: 50 }).default("healthy"),
+  
+  // Period
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("supervisor_telemetry_supervisor_idx").on(table.supervisorId),
+  index("supervisor_telemetry_domain_idx").on(table.domain),
+  index("supervisor_telemetry_period_idx").on(table.periodStart),
+]);
+
+// LLM Judge Evaluation History
+export const llmJudgeEvaluations = pgTable("llm_judge_evaluations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  evaluationType: varchar("evaluation_type", { length: 100 }).notNull(), // quality, risk, policy, regression
+  subjectId: varchar("subject_id", { length: 255 }).notNull(), // What was evaluated
+  subjectType: varchar("subject_type", { length: 100 }).notNull(), // action, hotpatch, response, output
+  
+  // Evaluation results
+  verdict: varchar("verdict", { length: 50 }).notNull(), // approved, rejected, needs_review
+  riskScore: doublePrecision("risk_score").default(0), // 0-100
+  confidenceScore: doublePrecision("confidence_score").default(0),
+  qualityScore: doublePrecision("quality_score").default(0),
+  
+  reasoning: text("reasoning"),
+  criteria: jsonb("criteria").default('[]'), // Array of evaluation criteria
+  policyViolations: text("policy_violations").array().default(sql`ARRAY[]::text[]`),
+  
+  // Context
+  requestContext: jsonb("request_context").default('{}'),
+  evaluatorModel: varchar("evaluator_model", { length: 100 }),
+  evaluationTimeMs: integer("evaluation_time_ms").default(0),
+  
+  // Enforcement
+  enforcementAction: varchar("enforcement_action", { length: 100 }), // blocked, allowed, flagged, escalated
+  enforcedBy: varchar("enforced_by", { length: 255 }),
+  
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("llm_judge_type_idx").on(table.evaluationType),
+  index("llm_judge_subject_idx").on(table.subjectId, table.subjectType),
+  index("llm_judge_verdict_idx").on(table.verdict),
+  index("llm_judge_risk_idx").on(table.riskScore),
+  index("llm_judge_workspace_idx").on(table.workspaceId),
+  index("llm_judge_created_idx").on(table.createdAt),
+]);
+
+// LLM Judge Regression Memory - Track patterns of failures
+export const llmJudgeRegressions = pgTable("llm_judge_regressions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  patternHash: varchar("pattern_hash", { length: 64 }).notNull(), // Hash of failure pattern
+  actionType: varchar("action_type", { length: 255 }).notNull(),
+  domain: varchar("domain", { length: 100 }),
+  
+  // Pattern details
+  failureSignature: text("failure_signature").notNull(),
+  failureCount: integer("failure_count").default(1),
+  lastFailureAt: timestamp("last_failure_at"),
+  
+  // Prevention
+  preventionRule: text("prevention_rule"),
+  isBlocked: boolean("is_blocked").default(false),
+  blockReason: text("block_reason"),
+  
+  // Learning
+  suggestedFix: text("suggested_fix"),
+  fixApplied: boolean("fix_applied").default(false),
+  fixResult: varchar("fix_result", { length: 50 }), // success, failed, partial
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("llm_judge_reg_pattern_idx").on(table.patternHash),
+  index("llm_judge_reg_action_idx").on(table.actionType),
+  index("llm_judge_reg_blocked_idx").on(table.isBlocked),
+  uniqueIndex("llm_judge_reg_unique_idx").on(table.patternHash),
+]);
