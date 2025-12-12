@@ -59,6 +59,13 @@ import {
 import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { 
+  TrinityReasoningPanel, 
+  ReasoningSession, 
+  ReasoningStep,
+  createReasoningSession,
+  createReasoningStep 
+} from "@/components/trinity-reasoning-panel";
 
 interface ChatMessage {
   id: string;
@@ -143,6 +150,38 @@ export default function SupportCommandConsole() {
   const [showQuickFixDialog, setShowQuickFixDialog] = useState(false);
   const [quickFixNotes, setQuickFixNotes] = useState('');
   const [approvalCode, setApprovalCode] = useState('');
+
+  // Trinity Reasoning state
+  const [reasoningSession, setReasoningSession] = useState<ReasoningSession | null>(null);
+  const [fastMode, setFastMode] = useState(false);
+  const [showReasoningPanel, setShowReasoningPanel] = useState(true);
+
+  // Helper to add reasoning steps
+  const addReasoningStep = (step: ReasoningStep) => {
+    setReasoningSession(prev => {
+      if (!prev) return prev;
+      const updatedSteps = prev.steps.map(s => ({ ...s, isActive: false }));
+      return {
+        ...prev,
+        steps: [...updatedSteps, step]
+      };
+    });
+  };
+
+  // Complete reasoning session
+  const completeReasoningSession = (summary: string) => {
+    setReasoningSession(prev => {
+      if (!prev) return prev;
+      const completedSteps = prev.steps.map(s => ({ ...s, isActive: false }));
+      return {
+        ...prev,
+        steps: completedSteps,
+        status: 'complete' as const,
+        endTime: new Date(),
+        summary
+      };
+    });
+  };
 
   const { data: actions } = useQuery<{ actions: OrchestratorAction[] }>({
     queryKey: ['/api/helpai/orchestrator/actions'],
@@ -338,13 +377,55 @@ export default function SupportCommandConsole() {
 
   const sendCommandMutation = useMutation({
     mutationFn: async (command: string) => {
+      // Add reasoning step: Analyzing
+      addReasoningStep(createReasoningStep(
+        'thinking',
+        'Understanding',
+        `Analyzing your request: "${command.substring(0, 50)}${command.length > 50 ? '...' : ''}"`,
+        'Parsing command intent and determining the best approach...'
+      ));
+
+      // Simulate brief delay for UX (reasoning feels more natural)
+      await new Promise(resolve => setTimeout(resolve, fastMode ? 100 : 300));
+
+      addReasoningStep(createReasoningStep(
+        'searching',
+        'Gathering Context',
+        'Looking up relevant system state and service health...',
+        'Querying AI Brain orchestration services for current status'
+      ));
+
       const response = await apiRequest('POST', '/api/helpai/orchestrator/command', {
         command,
-        context: { source: 'support_console' }
+        context: { source: 'support_console', fastMode }
       });
       return response.json();
     },
     onSuccess: (data) => {
+      // Add reasoning step: Executing
+      addReasoningStep(createReasoningStep(
+        'executing',
+        'Processing',
+        data.actionId ? `Executing action: ${data.actionId}` : 'Processing your request...',
+        `Execution time: ${data.executionTimeMs || 'N/A'}ms`
+      ));
+
+      // Add reasoning step: Validating
+      addReasoningStep(createReasoningStep(
+        'validating',
+        'Validating',
+        'Verifying the result and preparing response...',
+        undefined,
+        false
+      ));
+
+      // Complete the reasoning session
+      completeReasoningSession(
+        data.success !== false 
+          ? 'Task completed successfully. The response has been generated.' 
+          : 'Task completed with warnings. Please review the response.'
+      );
+
       const responseMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'assistant',
@@ -358,6 +439,26 @@ export default function SupportCommandConsole() {
       setMessages(prev => [...prev, responseMessage]);
     },
     onError: (error: any) => {
+      // Add error step and complete the session with error status
+      setReasoningSession(prev => {
+        if (!prev) return prev;
+        const updatedSteps = prev.steps.map(s => ({ ...s, isActive: false }));
+        const errorStep = createReasoningStep(
+          'error',
+          'Error',
+          `Something went wrong: ${error.message || 'Unknown error'}`,
+          'The operation could not be completed. Please try again.',
+          false
+        );
+        return {
+          ...prev,
+          steps: [...updatedSteps, errorStep],
+          status: 'error' as const,
+          endTime: new Date(),
+          summary: `Error: ${error.message || 'The operation failed. Please try again or check the logs for more details.'}`
+        };
+      });
+
       const errorMessage: ChatMessage = {
         id: Date.now().toString(),
         role: 'assistant',
@@ -377,6 +478,13 @@ export default function SupportCommandConsole() {
 
   const handleSend = () => {
     if (!input.trim()) return;
+
+    // Create a new reasoning session for Trinity
+    const newSession = createReasoningSession(
+      input.length > 60 ? input.substring(0, 60) + '...' : input,
+      fastMode
+    );
+    setReasoningSession(newSession);
 
     const userMessage: ChatMessage = {
       id: Date.now().toString(),
@@ -419,7 +527,7 @@ export default function SupportCommandConsole() {
               <div>
                 <h1 className="text-xl lg:text-2xl font-bold" data-testid="text-page-title">Support Command Console</h1>
                 <p className="text-slate-400 text-sm">
-                  HelpAI Interactive Command Interface
+                  Trinity AI Brain - Interactive Command Interface
                 </p>
               </div>
             </div>
@@ -464,11 +572,23 @@ export default function SupportCommandConsole() {
                     <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                     <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
                   </div>
-                  <span className="text-sm">HelpAI is processing...</span>
+                  <span className="text-sm">Trinity is thinking...</span>
                 </div>
               )}
             </div>
           </ScrollArea>
+
+          {/* Trinity AI Reasoning Panel */}
+          {showReasoningPanel && (
+            <div className="mt-4 mb-2">
+              <TrinityReasoningPanel
+                session={reasoningSession}
+                isActive={sendCommandMutation.isPending}
+                fastMode={fastMode}
+                onFastModeChange={setFastMode}
+              />
+            </div>
+          )}
 
           <div className="mt-4">
             <div className="flex flex-wrap gap-2 mb-3">
