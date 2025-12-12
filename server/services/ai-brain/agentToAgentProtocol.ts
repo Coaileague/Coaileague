@@ -14,6 +14,7 @@
 
 import { platformEventBus } from '../platformEventBus';
 import { sharedKnowledgeGraph, type KnowledgeDomain, type LearningEntry } from './sharedKnowledgeGraph';
+import { a2aProtocolRepository } from './cognitiveRepositories';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -144,12 +145,55 @@ class AgentToAgentProtocol {
   private trustRules: Map<string, TrustRule> = new Map();
   private messageHandlers: Map<string, (message: A2AMessage) => Promise<any>> = new Map();
 
+  private dbInitialized = false;
+
   static getInstance(): AgentToAgentProtocol {
     if (!this.instance) {
       this.instance = new AgentToAgentProtocol();
       this.instance.initializeCoreAgents();
+      this.instance.loadFromDatabase().catch(err => {
+        console.error('[A2A Protocol] Failed to load from database:', err.message);
+      });
     }
     return this.instance;
+  }
+
+  /**
+   * Load agents and teams from database on startup
+   */
+  private async loadFromDatabase(): Promise<void> {
+    if (this.dbInitialized) return;
+    
+    try {
+      const dbAgents = await a2aProtocolRepository.getAllAgents();
+
+      for (const dbAgent of dbAgents) {
+        if (!this.agents.has(dbAgent.id)) {
+          const agent: AgentProfile = {
+            id: dbAgent.id,
+            name: dbAgent.name,
+            role: dbAgent.role as AgentRole,
+            domain: (dbAgent.domains?.[0] || 'general') as KnowledgeDomain,
+            capabilities: dbAgent.capabilities || [],
+            trustScore: parseFloat(dbAgent.trustLevel || '0.5'),
+            lastActiveAt: dbAgent.lastActive || new Date(),
+            messagesSent: dbAgent.messageCount || 0,
+            messagesReceived: 0,
+            successRate: dbAgent.successCount && dbAgent.messageCount 
+              ? dbAgent.successCount / Math.max(1, dbAgent.messageCount) 
+              : 1.0,
+            status: (dbAgent.status as any) || 'active',
+          };
+          this.agents.set(agent.id, agent);
+          this.messageQueues.set(agent.id, []);
+        }
+      }
+
+      this.dbInitialized = true;
+      console.log(`[A2A Protocol] Loaded ${dbAgents.length} agents from database`);
+    } catch (error: any) {
+      console.error('[A2A Protocol] Database load error:', error.message);
+    }
   }
 
   // ============================================================================
@@ -168,6 +212,17 @@ class AgentToAgentProtocol {
 
     this.agents.set(agent.id, agent);
     this.messageQueues.set(agent.id, []);
+
+    // Persist to database (async, non-blocking)
+    a2aProtocolRepository.createAgent({
+      id: agent.id,
+      name: agent.name,
+      role: agent.role,
+      status: agent.status,
+      capabilities: agent.capabilities,
+      domains: [agent.domain],
+      trustLevel: agent.trustScore,
+    }).catch(err => console.error('[A2A Protocol] DB persist error:', err.message));
 
     platformEventBus.publish({
       type: 'agent_registered',

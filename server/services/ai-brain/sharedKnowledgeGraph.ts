@@ -16,6 +16,7 @@ import { db } from '../../db';
 import { systemAuditLogs } from '@shared/schema';
 import { platformEventBus } from '../platformEventBus';
 import { aiBrainService } from './aiBrainService';
+import { knowledgeGraphRepository } from './cognitiveRepositories';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -124,12 +125,70 @@ class SharedKnowledgeGraph {
   private entityIndex: Map<string, Set<string>> = new Map(); // domain -> entity IDs
   private patternCache: Map<string, any> = new Map();
 
+  private dbInitialized = false;
+
   static getInstance(): SharedKnowledgeGraph {
     if (!this.instance) {
       this.instance = new SharedKnowledgeGraph();
       this.instance.initializeBaseKnowledge();
+      this.instance.loadFromDatabase().catch(err => {
+        console.error('[SharedKnowledgeGraph] Failed to load from database:', err.message);
+      });
     }
     return this.instance;
+  }
+
+  /**
+   * Load entities and relationships from database on startup
+   */
+  private async loadFromDatabase(): Promise<void> {
+    if (this.dbInitialized) return;
+    
+    try {
+      const dbEntities = await knowledgeGraphRepository.getAllEntities(500);
+      const dbRelationships = await knowledgeGraphRepository.getAllRelationships(500);
+
+      for (const dbEntity of dbEntities) {
+        const entity: KnowledgeEntity = {
+          id: dbEntity.id,
+          type: dbEntity.entityType as EntityType,
+          name: dbEntity.name,
+          description: dbEntity.content,
+          domain: dbEntity.domain as KnowledgeDomain,
+          attributes: dbEntity.metadata || {},
+          createdAt: dbEntity.createdAt,
+          updatedAt: dbEntity.updatedAt || dbEntity.createdAt,
+          createdBy: dbEntity.sourceAgent || 'system',
+          confidence: parseFloat(dbEntity.confidence || '0.5'),
+          usageCount: dbEntity.accessCount || 0,
+          lastAccessedAt: dbEntity.lastAccessed || undefined,
+        };
+        this.entities.set(entity.id, entity);
+        
+        const domainSet = this.entityIndex.get(entity.domain) || new Set();
+        domainSet.add(entity.id);
+        this.entityIndex.set(entity.domain, domainSet);
+      }
+
+      for (const dbRel of dbRelationships) {
+        const rel: KnowledgeRelationship = {
+          id: dbRel.id,
+          sourceId: dbRel.sourceId,
+          targetId: dbRel.targetId,
+          type: dbRel.relationship as RelationshipType,
+          strength: parseFloat(dbRel.strength || '0.5'),
+          metadata: {},
+          createdAt: dbRel.createdAt,
+          createdBy: dbRel.createdBy || 'system',
+        };
+        this.relationships.set(rel.id, rel);
+      }
+
+      this.dbInitialized = true;
+      console.log(`[SharedKnowledgeGraph] Loaded ${dbEntities.length} entities and ${dbRelationships.length} relationships from database`);
+    } catch (error: any) {
+      console.error('[SharedKnowledgeGraph] Database load error:', error.message);
+    }
   }
 
   // ============================================================================
@@ -154,6 +213,18 @@ class SharedKnowledgeGraph {
     const domainSet = this.entityIndex.get(entity.domain) || new Set();
     domainSet.add(newEntity.id);
     this.entityIndex.set(entity.domain, domainSet);
+
+    // Persist to database (async, non-blocking)
+    knowledgeGraphRepository.createEntity({
+      id: newEntity.id,
+      entityType: newEntity.type,
+      domain: newEntity.domain,
+      name: newEntity.name,
+      content: newEntity.description,
+      confidence: newEntity.confidence,
+      sourceAgent: newEntity.createdBy,
+      metadata: newEntity.attributes,
+    }).catch(err => console.error('[SharedKnowledgeGraph] DB persist error:', err.message));
 
     // Emit event
     platformEventBus.publish({
@@ -204,6 +275,16 @@ class SharedKnowledgeGraph {
     };
 
     this.relationships.set(relationship.id, relationship);
+
+    // Persist to database (async, non-blocking)
+    knowledgeGraphRepository.createRelationship({
+      id: relationship.id,
+      sourceId: relationship.sourceId,
+      targetId: relationship.targetId,
+      relationship: relationship.type,
+      strength: relationship.strength,
+      createdBy: relationship.createdBy,
+    }).catch(err => console.error('[SharedKnowledgeGraph] DB persist error:', err.message));
 
     console.log(`[SharedKnowledgeGraph] Added relationship: ${source.name} --${params.type}--> ${target.name}`);
     return relationship;

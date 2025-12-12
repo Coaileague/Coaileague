@@ -15,6 +15,7 @@
 import { platformEventBus } from '../platformEventBus';
 import { sharedKnowledgeGraph, type KnowledgeDomain } from './sharedKnowledgeGraph';
 import { aiBrainService } from './aiBrainService';
+import { rlLoopRepository } from './cognitiveRepositories';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -109,11 +110,74 @@ class ReinforcementLearningLoop {
   private readonly PARTIAL_REWARD = 0.5;
   private readonly MIN_EXPERIENCES_FOR_ADAPTATION = 10;
 
+  private dbInitialized = false;
+
   static getInstance(): ReinforcementLearningLoop {
     if (!this.instance) {
       this.instance = new ReinforcementLearningLoop();
+      this.instance.loadFromDatabase().catch(err => {
+        console.error('[RL Loop] Failed to load from database:', err.message);
+      });
     }
     return this.instance;
+  }
+
+  /**
+   * Load experiences and confidence models from database on startup
+   */
+  private async loadFromDatabase(): Promise<void> {
+    if (this.dbInitialized) return;
+    
+    try {
+      const dbExperiences = await rlLoopRepository.getAllExperiences(500);
+      const dbModels = await rlLoopRepository.getAllConfidenceModels();
+
+      for (const dbExp of dbExperiences) {
+        const experience: Experience = {
+          id: dbExp.id,
+          agentId: dbExp.agentId,
+          domain: 'general' as KnowledgeDomain,
+          action: dbExp.actionType,
+          state: {
+            domain: 'general' as KnowledgeDomain,
+            action: dbExp.actionType,
+            complexity: 'medium',
+            priorSuccessRate: 0.5,
+            similarExperienceCount: 0,
+            confidenceLevel: 0.5,
+            contextFactors: dbExp.context || {},
+          },
+          outcome: dbExp.outcome as any,
+          reward: parseFloat(dbExp.reward || '0'),
+          humanIntervention: dbExp.humanValidated || false,
+          contextWindow: dbExp.context || {},
+          executionTimeMs: dbExp.executionTimeMs || 0,
+          timestamp: dbExp.createdAt,
+        };
+        this.experiences.set(experience.id, experience);
+      }
+
+      for (const dbModel of dbModels) {
+        const key = `${dbModel.agentId}-general-${dbModel.actionType}`;
+        const model: ConfidenceModel = {
+          agentId: dbModel.agentId,
+          domain: 'general' as KnowledgeDomain,
+          action: dbModel.actionType,
+          baseConfidence: 0.5,
+          adjustedConfidence: parseFloat(dbModel.currentConfidence || '0.5'),
+          experienceCount: dbModel.sampleCount || 0,
+          successRate: parseFloat(dbModel.successRate || '0.5'),
+          lastUpdated: dbModel.lastUpdate || new Date(),
+          factors: [],
+        };
+        this.confidenceModels.set(key, model);
+      }
+
+      this.dbInitialized = true;
+      console.log(`[RL Loop] Loaded ${dbExperiences.length} experiences and ${dbModels.length} confidence models from database`);
+    } catch (error: any) {
+      console.error('[RL Loop] Database load error:', error.message);
+    }
   }
 
   // ============================================================================
@@ -170,6 +234,18 @@ class ReinforcementLearningLoop {
 
     this.experiences.set(experience.id, experience);
     this.rewardHistory.push({ timestamp: new Date(), reward, domain });
+
+    // Persist to database (async, non-blocking)
+    rlLoopRepository.createExperience({
+      id: experience.id,
+      agentId,
+      actionType: action,
+      context: contextWindow,
+      outcome,
+      reward,
+      executionTimeMs,
+      humanValidated: humanIntervention,
+    }).catch(err => console.error('[RL Loop] DB persist error:', err.message));
 
     // Update confidence model
     this.updateConfidenceModel(agentId, domain, action, outcome, reward);
@@ -341,6 +417,17 @@ class ReinforcementLearningLoop {
     model.lastUpdated = new Date();
 
     this.confidenceModels.set(key, model);
+
+    // Persist to database (async, non-blocking)
+    rlLoopRepository.upsertConfidenceModel({
+      id: key,
+      agentId: model.agentId,
+      actionType: model.action,
+      currentConfidence: model.adjustedConfidence,
+      sampleCount: model.experienceCount,
+      successRate: model.successRate,
+      recentTrend: model.successRate > 0.6 ? 'improving' : model.successRate < 0.4 ? 'declining' : 'stable',
+    }).catch(err => console.error('[RL Loop] DB confidence model persist error:', err.message));
   }
 
   /**
