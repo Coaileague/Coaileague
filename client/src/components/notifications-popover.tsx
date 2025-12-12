@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, 
-  Bot, Zap, ChevronRight, Eye, Filter, ArrowUpDown
+  Bot, Zap, ChevronRight, Eye, Filter, ArrowUpDown, Shield, UserCheck
 } from "lucide-react";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import {
@@ -29,7 +29,7 @@ import TrinityRedesign from "@/components/trinity-redesign";
 // Priority levels for UNS cards
 type Priority = 'critical' | 'high' | 'medium' | 'info';
 type TabCategory = 'for_you' | 'system_alerts';
-type SubFilter = 'all' | 'action_required' | 'updates';
+type SubFilter = 'all' | 'system_alerts' | 'admin_review' | 'updates';
 
 interface UNSNotification {
   id: string;
@@ -220,7 +220,7 @@ function safeFormatTimestamp(timestamp: string | undefined): string {
   }
 }
 
-// UNS Notification Card Component
+// UNS Notification Card Component - Matching Design Spec
 function NotificationCard({ 
   notification, 
   onDismiss, 
@@ -234,101 +234,184 @@ function NotificationCard({
 }) {
   const styles = PRIORITY_STYLES[notification.priority];
   const isCritical = notification.priority === 'critical';
+  const isHigh = notification.priority === 'high';
   const hasActions = notification.actions && notification.actions.length > 0;
+  
+  // Critical cards have red background, High cards have amber/yellow background
+  const cardBg = isCritical 
+    ? 'bg-red-500 dark:bg-red-700' 
+    : isHigh 
+    ? 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800' 
+    : 'hover:bg-muted/40';
+  
+  const textColor = isCritical ? 'text-white' : isHigh ? 'text-amber-900 dark:text-amber-100' : '';
+  const mutedText = isCritical ? 'text-white/80' : isHigh ? 'text-amber-700 dark:text-amber-300' : 'text-muted-foreground';
   
   return (
     <div 
-      className={`relative ${styles.border} ${notification.isRead ? 'opacity-60' : ''}`}
+      className={`relative ${notification.isRead ? 'opacity-60' : ''}`}
       data-testid={`uns-card-${notification.id}`}
     >
-      {/* Critical Banner */}
-      {isCritical && (
-        <div className={`${styles.badge} px-2 py-1 text-[10px] font-bold uppercase tracking-wide`}>
-          CRITICAL
-        </div>
-      )}
-      
-      <div className={`p-4 ${isCritical ? styles.bg : 'hover:bg-muted/40'} transition-colors`}>
-        <div className="flex gap-3">
-          {/* AI Icon */}
-          <div className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isCritical ? 'bg-red-100 dark:bg-red-900/50' : 'bg-primary/10'}`}>
-            <Bot className={`h-4 w-4 ${isCritical ? 'text-red-600 dark:text-red-400' : 'text-primary'}`} />
-          </div>
+      {/* Critical/High Priority Cards */}
+      {(isCritical || isHigh) ? (
+        <div className={`${cardBg} rounded-lg mx-2 my-2 overflow-hidden`}>
+          {/* Critical Banner */}
+          {isCritical && (
+            <div className="bg-red-600 dark:bg-red-700 px-3 py-1 text-[10px] font-bold uppercase tracking-wide text-white">
+              CRITICAL
+            </div>
+          )}
           
-          {/* Content */}
-          <div className="flex-1 min-w-0">
-            <div className="flex items-start justify-between gap-2 mb-1">
-              <span className={`font-semibold text-sm leading-tight ${isCritical ? styles.text : ''}`}>
-                {notification.title}
-              </span>
-              {!notification.isRead && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 shrink-0 hover:bg-muted"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDismiss(notification.id);
-                  }}
-                  data-testid={`button-dismiss-${notification.id}`}
-                >
-                  <X className="h-3 w-3" />
-                </Button>
-              )}
+          <div className="p-4">
+            <div className="flex gap-3">
+              {/* AI Icon */}
+              <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${isCritical ? 'bg-white/20' : 'bg-amber-100 dark:bg-amber-900'}`}>
+                <Bot className={`h-5 w-5 ${isCritical ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} />
+              </div>
+              
+              {/* Content & Actions in Row Layout */}
+              <div className="flex-1 min-w-0 flex flex-col sm:flex-row gap-3">
+                {/* Message Content */}
+                <div className="flex-1 min-w-0">
+                  <span className={`font-bold text-sm leading-tight block ${textColor}`}>
+                    {notification.title}
+                  </span>
+                  <p className={`text-sm leading-relaxed mt-1 ${mutedText}`}>
+                    {notification.message}
+                  </p>
+                </div>
+                
+                {/* Action Buttons - Right Side */}
+                {hasActions && (
+                  <div className="flex flex-col gap-2 shrink-0">
+                    {notification.actions!.map((action, idx) => (
+                      <Button
+                        key={idx}
+                        variant={isCritical ? 'secondary' : 'outline'}
+                        size="sm"
+                        className={`h-8 text-xs whitespace-nowrap ${
+                          isCritical 
+                            ? 'bg-white text-red-700 hover:bg-red-50 border-0' 
+                            : 'border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-200 bg-amber-50 dark:bg-amber-900 hover:bg-amber-100 dark:hover:bg-amber-800'
+                        }`}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAction(notification, action);
+                        }}
+                        data-testid={`button-action-${notification.id}-${idx}`}
+                      >
+                        {action.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
             
-            <p className="text-sm text-muted-foreground leading-relaxed mb-2">
-              {notification.message}
-            </p>
-            
-            {/* Service Source & Time */}
-            <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-3">
-              <span className="font-medium">{notification.serviceSource}</span>
-              <span>•</span>
+            {/* Service Source & Time - Bottom */}
+            <div className={`flex items-center justify-between gap-2 text-[11px] mt-3 ${mutedText}`}>
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                <span className="font-medium">{notification.serviceSource}</span>
+              </div>
               <span>{safeFormatTimestamp(notification.createdAt)}</span>
             </div>
+          </div>
+          
+          {/* Status Tag Below Card */}
+          {notification.statusTag && notification.statusTag !== 'CRITICAL' && (
+            <div className="px-4 pb-3">
+              <Badge 
+                className={`text-[10px] px-2 py-0.5 font-bold ${
+                  notification.statusTag === 'ACTION REQUIRED' 
+                    ? 'bg-amber-600 text-white' 
+                    : 'bg-white/20 text-white'
+                }`}
+              >
+                {notification.statusTag}
+              </Badge>
+            </div>
+          )}
+        </div>
+      ) : (
+        /* Regular/Info Cards */
+        <div className={`${styles.border} hover:bg-muted/40 transition-colors`}>
+          <div className="p-4">
+            <div className="flex gap-3">
+              {/* AI Icon */}
+              <div className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center bg-primary/10">
+                <Bot className="h-4 w-4 text-primary" />
+              </div>
+              
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2 mb-1">
+                  <span className="font-semibold text-sm leading-tight">
+                    {notification.title}
+                  </span>
+                  <div className="flex items-center gap-2 shrink-0">
+                    {/* INFO Badge for info priority */}
+                    {notification.priority === 'info' && (
+                      <Badge variant="secondary" className="text-[10px] px-2 py-0 h-5">
+                        INFO
+                      </Badge>
+                    )}
+                    {/* Time */}
+                    <span className="text-[11px] text-muted-foreground">
+                      {safeFormatTimestamp(notification.createdAt)}
+                    </span>
+                  </div>
+                </div>
+                
+                <p className="text-sm text-muted-foreground leading-relaxed mb-2">
+                  {notification.message}
+                </p>
+                
+                {/* Service Source */}
+                <div className="flex items-center gap-2 text-[11px] text-muted-foreground mb-2">
+                  <span className="font-medium">{notification.serviceSource}</span>
+                </div>
+                
+                {/* Action Buttons */}
+                {hasActions && (
+                  <div className="flex flex-wrap gap-2">
+                    {notification.actions!.map((action, idx) => (
+                      <Button
+                        key={idx}
+                        variant="outline"
+                        size="sm"
+                        className="h-7 text-xs border-primary/30 text-primary hover:bg-primary/10"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onAction(notification, action);
+                        }}
+                        data-testid={`button-action-${notification.id}-${idx}`}
+                      >
+                        {action.label}
+                      </Button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
             
-            {/* Action Buttons - Show for all users, RBAC enforced server-side */}
-            {hasActions && (
-              <div className="flex flex-wrap gap-2">
-                {notification.actions!.map((action, idx) => (
-                  <Button
-                    key={idx}
-                    variant={action.variant === 'primary' ? 'default' : action.variant === 'ghost' ? 'ghost' : 'outline'}
-                    size="sm"
-                    className={`h-8 text-xs ${action.variant === 'primary' && isCritical ? 'bg-red-600 hover:bg-red-700 text-white' : ''}`}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onAction(notification, action);
-                    }}
-                    data-testid={`button-action-${notification.id}-${idx}`}
-                  >
-                    {action.type === 'orchestration' && <Zap className="h-3 w-3 mr-1" />}
-                    {action.label}
-                  </Button>
-                ))}
+            {/* Status Tag */}
+            {notification.statusTag && (
+              <div className="mt-2 ml-11">
+                <Badge 
+                  className={`text-[10px] px-2 py-0.5 font-bold ${
+                    notification.statusTag === 'ACTION REQUIRED' 
+                      ? 'bg-amber-500 text-white' 
+                      : 'bg-primary/10 text-primary'
+                  }`}
+                >
+                  {notification.statusTag}
+                </Badge>
               </div>
             )}
           </div>
         </div>
-        
-        {/* Status Tag */}
-        {notification.statusTag && (
-          <div className="mt-2 flex justify-start">
-            <Badge 
-              className={`text-[10px] px-2 py-0.5 font-bold ${
-                notification.statusTag === 'ACTION REQUIRED' 
-                  ? 'bg-amber-500 text-white' 
-                  : notification.statusTag === 'CRITICAL'
-                  ? 'bg-red-500 text-white'
-                  : 'bg-primary/10 text-primary'
-              }`}
-            >
-              {notification.statusTag}
-            </Badge>
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }
@@ -363,12 +446,25 @@ export function NotificationsPopover() {
   // Map to UNS format
   const allNotifications = mapToUNS(rawData);
   
-  // Filter notifications
+  // Sub-category counts - based on actual data patterns
+  const systemAlertsSubCount = allNotifications.filter(n => 
+    n.category === 'system_alerts' && !n.isRead
+  ).length;
+  const adminReviewCount = allNotifications.filter(n => 
+    (n.statusTag?.includes('ACTION') || n.priority === 'critical' || n.priority === 'high') && !n.isRead
+  ).length;
+  const updatesCount = allNotifications.filter(n => 
+    (n.subCategory === 'feature_release' || n.subCategory === 'update' || n.priority === 'info') && !n.isRead
+  ).length;
+
+  // Filter notifications - 'all' shows everything in the current tab
   const filteredNotifications = allNotifications.filter(n => {
     if (n.category !== activeTab) return false;
     if (showUnreadOnly && n.isRead) return false;
-    if (subFilter === 'action_required' && !n.statusTag?.includes('ACTION')) return false;
-    if (subFilter === 'updates' && n.subCategory !== 'feature_release' && n.subCategory !== 'update') return false;
+    // Sub-filters only apply when not 'all'
+    if (subFilter === 'system_alerts' && n.category !== 'system_alerts') return false;
+    if (subFilter === 'admin_review' && !(n.statusTag?.includes('ACTION') || n.priority === 'critical' || n.priority === 'high')) return false;
+    if (subFilter === 'updates' && !(n.subCategory === 'feature_release' || n.subCategory === 'update' || n.priority === 'info')) return false;
     return true;
   });
   
@@ -533,39 +629,86 @@ export function NotificationsPopover() {
         </Button>
       </div>
       
-      {/* Sub-filters & Sort Controls */}
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/20 flex-shrink-0 gap-2">
-        <div className="flex items-center gap-1.5">
-          {(['all', 'action_required', 'updates'] as SubFilter[]).map((filter) => (
-            <Button
-              key={filter}
-              variant={subFilter === filter ? 'default' : 'ghost'}
-              size="sm"
-              className="h-7 text-xs px-2"
-              onClick={() => setSubFilter(filter)}
-            >
-              {filter === 'all' ? 'All' : filter === 'action_required' ? 'Action Required' : 'Updates'}
-              {filter === 'action_required' && activeTab === 'system_alerts' && systemCount > 0 && (
-                <Badge className="ml-1 h-4 px-1 text-[9px] bg-amber-500">{systemCount}</Badge>
-              )}
-            </Button>
-          ))}
+      {/* Sub-filters - Pill Style Matching Design */}
+      <div className="px-3 py-2 border-b bg-muted/10 flex-shrink-0 overflow-x-auto">
+        <div className="flex items-center gap-2">
+          {/* System Alerts Sub-filter */}
+          <Button
+            variant={subFilter === 'system_alerts' ? 'default' : 'outline'}
+            size="sm"
+            className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
+              subFilter === 'system_alerts' ? '' : 'border-muted-foreground/30'
+            }`}
+            onClick={() => setSubFilter('system_alerts')}
+            data-testid="subfilter-system-alerts"
+          >
+            <Shield className="h-3 w-3 mr-1" />
+            System Alerts
+            {systemAlertsSubCount > 0 && (
+              <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-red-500 text-white rounded-full">
+                {systemAlertsSubCount}
+              </Badge>
+            )}
+          </Button>
+          
+          {/* Admin Review Sub-filter */}
+          <Button
+            variant={subFilter === 'admin_review' ? 'default' : 'outline'}
+            size="sm"
+            className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
+              subFilter === 'admin_review' ? '' : 'border-muted-foreground/30'
+            }`}
+            onClick={() => setSubFilter('admin_review')}
+            data-testid="subfilter-admin-review"
+          >
+            <UserCheck className="h-3 w-3 mr-1" />
+            Admin Review
+            {adminReviewCount > 0 && (
+              <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-red-500 text-white rounded-full">
+                {adminReviewCount}
+              </Badge>
+            )}
+          </Button>
+          
+          {/* Updates Sub-filter */}
+          <Button
+            variant={subFilter === 'updates' ? 'default' : 'outline'}
+            size="sm"
+            className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
+              subFilter === 'updates' ? '' : 'border-muted-foreground/30'
+            }`}
+            onClick={() => setSubFilter('updates')}
+            data-testid="subfilter-updates"
+          >
+            Updates
+            {updatesCount > 0 && (
+              <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-primary text-white rounded-full">
+                {updatesCount}
+              </Badge>
+            )}
+          </Button>
         </div>
+      </div>
+      
+      {/* Sort & Filter Row */}
+      <div className="flex items-center justify-between px-4 py-2 border-b bg-background flex-shrink-0 gap-2">
+        <span className="text-xs text-muted-foreground">
+          {sortedNotifications.filter(n => !n.isRead).length} unread {activeTab === 'system_alerts' ? 'system alerts' : 'notifications'}
+        </span>
         <div className="flex items-center gap-2 text-xs text-muted-foreground">
           <span>Sort by:</span>
           <Button
             variant="ghost"
             size="sm"
-            className="h-7 text-xs px-2"
+            className="h-6 text-xs px-2"
             onClick={() => setSortNewest(!sortNewest)}
           >
-            <ArrowUpDown className="h-3 w-3 mr-1" />
             {sortNewest ? 'Newest' : 'Oldest'}
           </Button>
           <Button
-            variant={showUnreadOnly ? 'default' : 'ghost'}
+            variant={showUnreadOnly ? 'secondary' : 'ghost'}
             size="sm"
-            className="h-7 text-xs px-2"
+            className="h-6 text-xs px-2"
             onClick={() => setShowUnreadOnly(!showUnreadOnly)}
           >
             <Eye className="h-3 w-3 mr-1" />
@@ -611,25 +754,31 @@ export function NotificationsPopover() {
         )}
       </ScrollArea>
       
-      {/* Footer: Ask Trinity for Help */}
-      <div className="border-t bg-gradient-to-r from-primary/5 via-purple-500/5 to-pink-500/5 shrink-0">
+      {/* Footer: Ask Trinity for Help - Matching Design */}
+      <div className="border-t bg-background shrink-0">
         <div className="p-3 flex flex-col gap-2">
           <Button
             variant="outline"
-            className="w-full justify-center text-sm h-10 font-medium border-primary/30 hover:bg-primary/5 hover:text-primary gap-2"
+            className="w-full justify-start text-sm h-11 font-medium border-muted-foreground/20 hover:bg-muted/50 gap-3"
             onClick={() => {
               setOpen(false);
-              // Trigger Trinity chat/command
               window.dispatchEvent(new CustomEvent('trinity_command', { detail: { action: 'open_chat' } }));
             }}
             data-testid="button-ask-trinity"
           >
-            <Bot className="h-4 w-4" />
-            Ask Trinity for Help
+            <div className="shrink-0">
+              <TrinityRedesign mode="IDLE" size={28} mini={true} />
+            </div>
+            <span className="flex items-center gap-1">
+              <Sparkles className="h-3 w-3 text-primary" />
+              Ask Trinity for Help
+            </span>
           </Button>
+        </div>
+        <div className="px-3 pb-3">
           <Button
             variant="ghost"
-            className="w-full justify-center text-xs h-8 font-medium hover:bg-muted"
+            className="w-full justify-center text-xs h-7 font-medium text-primary hover:text-primary hover:bg-primary/5"
             onClick={() => {
               setOpen(false);
               window.location.href = "/updates";
@@ -637,7 +786,6 @@ export function NotificationsPopover() {
             data-testid="button-view-all-updates"
           >
             View all updates
-            <ChevronRight className="h-3 w-3 ml-1" />
           </Button>
         </div>
       </div>

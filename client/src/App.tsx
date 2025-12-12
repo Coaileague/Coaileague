@@ -714,7 +714,13 @@ function MascotRenderer() {
           onClick={handleTap}
           draggable={false}
           onDragStart={(e) => e.preventDefault()}
-          style={{ background: 'transparent', cursor: 'default', userSelect: 'none', WebkitUserDrag: 'none' } as React.CSSProperties}
+          style={{ 
+            background: 'transparent', 
+            cursor: 'pointer', 
+            userSelect: 'none', 
+            WebkitUserDrag: 'none',
+            WebkitTouchCallout: 'none',
+          } as React.CSSProperties}
         >
           {/* Polished Trinity Redesign - Smooth mutations and state animations */}
           {/* Auto-cycles through states after 30 seconds of user inactivity */}

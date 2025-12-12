@@ -726,9 +726,10 @@ const TrinityRedesign = memo(function TrinityRedesign({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        cursor: 'default',
+        cursor: 'pointer',
         userSelect: 'none',
         WebkitUserDrag: 'none',
+        WebkitTouchCallout: 'none',
       } as React.CSSProperties}
     >
       <canvas
@@ -741,7 +742,9 @@ const TrinityRedesign = memo(function TrinityRedesign({
           height: displaySize,
           display: 'block',
           pointerEvents: 'none',
-        }}
+          userSelect: 'none',
+          WebkitUserDrag: 'none',
+        } as React.CSSProperties}
         data-testid="trinity-mascot-canvas"
       />
     </div>
