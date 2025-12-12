@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { LogIn, Zap, Shield, Crown } from "lucide-react";
 import { LOADING_MESSAGES, getRandomLoadingMessage } from "@/config/loading-messages";
 import { useOrgStatusNotification } from "@/hooks/useOrgStatusNotification";
+import TrinityMarketingHero from "@/components/trinity-marketing-hero";
 
 interface WelcomeNotificationProps {
   firstName?: string;
@@ -135,18 +136,27 @@ export function UniversalWelcomeNotification({
         `}</style>
 
         <div className="bg-gradient-to-br from-blue-600 via-blue-500 to-cyan-500 dark:from-blue-700 dark:via-blue-600 dark:to-cyan-600 rounded-xl p-3 sm:p-4 md:p-5 shadow-xl text-white border border-white/10">
-          {/* Header with Icon and Welcome */}
+          {/* Header with Trinity Icon and Welcome */}
           <div className="flex items-center gap-2.5 sm:gap-3 mb-2.5 sm:mb-3">
-            <div className="flex-shrink-0 w-8 h-8 sm:w-10 sm:h-10 bg-white/20 rounded-lg flex items-center justify-center backdrop-blur-sm">
-              <RoleIcon className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+            <div className="flex-shrink-0">
+              <TrinityMarketingHero 
+                variant="compact" 
+                iconOnly 
+                showGlow={false}
+                showSparkles={false}
+                animated={false}
+              />
             </div>
             <div className="flex-1 min-w-0">
               <h3 className="text-sm sm:text-base font-semibold text-white leading-tight truncate">
                 Welcome back, {displayName}!
               </h3>
-              <p className="text-blue-100/80 text-xs mt-0.5">
-                {roleInfo.label}
-              </p>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <RoleIcon className="w-3 h-3 text-blue-100/80" />
+                <p className="text-blue-100/80 text-xs">
+                  {roleInfo.label}
+                </p>
+              </div>
             </div>
           </div>
 
