@@ -58,8 +58,9 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
     return colors.map((_, i) => colors[(i + lightPhase) % colors.length]);
   }, [lightPhase]);
 
-  // RBAC-controlled: Only show notification features to authenticated users
-  const showNotificationFeatures = !!user;
+  // UNS is UNIVERSAL - always show notification bell for all users
+  // Unauthenticated users see platform updates, authenticated see full notifications
+  const showNotificationFeatures = true;
   
   // Safe scroll function for SPA navigation
   const scrollToFeatures = () => {

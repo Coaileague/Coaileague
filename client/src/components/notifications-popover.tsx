@@ -262,17 +262,20 @@ function NotificationCard({
   onDismiss, 
   onAction,
   isGuruMode,
+  canInteract,
 }: { 
   notification: UNSNotification; 
   onDismiss: (id: string) => void;
   onAction: (notification: UNSNotification, action: NonNullable<UNSNotification['actions']>[0]) => void;
   isGuruMode: boolean;
+  canInteract: boolean; // True when user is authenticated - controls action buttons visibility
 }) {
   const styles = PRIORITY_STYLES[notification.priority];
   const isCritical = notification.priority === 'critical';
   const isHigh = notification.priority === 'high';
   const isMedium = notification.priority === 'medium';
-  const hasActions = notification.actions && notification.actions.length > 0;
+  // Only show actions to authenticated users
+  const hasActions = canInteract && notification.actions && notification.actions.length > 0;
   
   // Critical: red background, High: amber/yellow, Medium: blue (schedule conflicts)
   const cardBg = isCritical 
@@ -504,11 +507,13 @@ export function NotificationsPopover() {
   const { syncNotificationRead, syncClearAll } = useNotificationSync();
 
   // Fetch notifications - truly live with instant refetch on WebSocket events
+  // UNS is UNIVERSAL - works for both authenticated AND unauthenticated users
+  // Unauthenticated users see platform updates only (backend handles this)
   const { data: rawData, isLoading, refetch } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications/combined"],
-    enabled: !!user,
+    enabled: true, // ALWAYS enabled - UNS is universal for all users
     staleTime: 0, // Always fresh - WebSocket triggers immediate refetch
-    refetchInterval: isConnected ? 30000 : 10000, // Faster polling as backup
+    refetchInterval: user ? (isConnected ? 30000 : 10000) : 60000, // Slower for public
     refetchOnWindowFocus: true, // Refetch when user returns to tab
   });
   
@@ -571,6 +576,15 @@ export function NotificationsPopover() {
     },
   });
   
+  // Guarded dismiss handler for UNS - requires auth
+  const handleDismiss = (id: string) => {
+    if (!user) {
+      toast({ title: "Sign In Required", description: "Please sign in to dismiss notifications.", variant: "destructive" });
+      return;
+    }
+    dismissMutation.mutate(id);
+  };
+  
   const clearAllMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", "/api/notifications/clear-all");
@@ -624,12 +638,22 @@ export function NotificationsPopover() {
       setOpen(false);
       window.location.href = action.target;
     } else if (action.type === 'orchestration') {
+      // Require auth for orchestration actions
+      if (!user) {
+        toast({ title: "Sign In Required", description: "Please sign in to perform this action.", variant: "destructive" });
+        return;
+      }
       orchestrationMutation.mutate({
         actionCode: action.target,
         targetId: notification.metadata?.workflowId || notification.id,
         metadata: { notificationId: notification.id, source: 'uns_popover' },
       });
     } else if (action.type === 'api_call') {
+      // Require auth for API calls
+      if (!user) {
+        toast({ title: "Sign In Required", description: "Please sign in to perform this action.", variant: "destructive" });
+        return;
+      }
       apiRequest("POST", action.target).then(() => {
         queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
         toast({ title: "Done", description: "Action completed." });
@@ -648,13 +672,23 @@ export function NotificationsPopover() {
             </div>
             <div>
               <h2 className="font-bold text-base leading-tight">Universal Notifications</h2>
-              <span className="text-xs text-primary font-medium">{totalUnread} unread</span>
+              <span className="text-xs text-primary font-medium">
+                {user ? `${totalUnread} unread` : 'Platform Updates'}
+              </span>
             </div>
           </div>
           <Badge variant="outline" className="text-xs px-3 py-1.5 font-medium bg-muted/50 border-muted-foreground/20">
-            {forYouCount + systemCount} New / {allNotifications.length} Total
+            {user ? `${forYouCount + systemCount} New / ${allNotifications.length} Total` : `${allNotifications.length} Updates`}
           </Badge>
         </div>
+        {/* Public User Banner */}
+        {!user && (
+          <div className="mt-2 px-3 py-2 rounded-lg bg-primary/10 border border-primary/20">
+            <p className="text-xs text-primary font-medium">
+              You're viewing public platform updates. Sign in for personalized notifications.
+            </p>
+          </div>
+        )}
       </div>
       
       {/* Main Tabs: For You | System Alerts | Clear All Read - Matching Design */}
@@ -702,16 +736,19 @@ export function NotificationsPopover() {
           )}
         </button>
         <div className="flex-1" />
-        <Button
-          variant="outline"
-          size="sm"
-          className="h-8 px-3 text-xs font-medium bg-background border-muted-foreground/20"
-          onClick={() => clearAllMutation.mutate()}
-          disabled={clearAllMutation.isPending || totalUnread === 0}
-          data-testid="button-clear-all-read"
-        >
-          Clear All Read
-        </Button>
+        {/* Only show Clear All button for authenticated users */}
+        {user && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3 text-xs font-medium bg-background border-muted-foreground/20"
+            onClick={() => clearAllMutation.mutate()}
+            disabled={clearAllMutation.isPending || totalUnread === 0}
+            data-testid="button-clear-all-read"
+          >
+            Clear All Read
+          </Button>
+        )}
       </div>
       
       {/* Sub-filters - Pill Style Matching Design */}
@@ -814,9 +851,10 @@ export function NotificationsPopover() {
               <NotificationCard
                 key={notification.id}
                 notification={notification}
-                onDismiss={(id) => dismissMutation.mutate(id)}
+                onDismiss={handleDismiss}
                 onAction={handleAction}
                 isGuruMode={isGuruMode}
+                canInteract={!!user}
               />
             ))}
           </div>
