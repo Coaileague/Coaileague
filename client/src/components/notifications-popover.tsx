@@ -98,8 +98,126 @@ const PRIORITY_STYLES: Record<Priority, { border: string; bg: string; text: stri
   },
 };
 
+// Roles that can see action buttons on notifications
+const ACTION_BUTTON_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
+
+// Check if user has permission to see action buttons
+function canSeeActionButtons(platformRole: string | null | undefined): boolean {
+  if (!platformRole) return false;
+  return ACTION_BUTTON_ROLES.includes(platformRole);
+}
+
+// Generate action buttons based on notification type and content
+function generateTypeBasedActions(
+  notif: any, 
+  platformRole: string | null | undefined
+): UNSNotification['actions'] {
+  const actions: UNSNotification['actions'] = [];
+  if (!canSeeActionButtons(platformRole)) return actions;
+  
+  const title = (notif.title || '').toLowerCase();
+  const message = (notif.message || '').toLowerCase();
+  const type = notif.type || notif.category || '';
+  
+  // Payroll-related notifications
+  if (title.includes('payroll') || type.includes('payroll')) {
+    if (title.includes('block') || title.includes('error') || title.includes('fail')) {
+      actions.push({
+        label: 'Review & Trinity Analysis',
+        type: 'orchestration',
+        target: 'trinity.analyze_payroll_issue',
+        variant: 'primary',
+      });
+    } else {
+      actions.push({
+        label: 'Review Payroll',
+        type: 'navigate',
+        target: '/payroll',
+        variant: 'secondary',
+      });
+    }
+  }
+  
+  // Schedule-related notifications
+  if (title.includes('schedule') || title.includes('shift') || type.includes('schedule')) {
+    if (title.includes('conflict')) {
+      actions.push({
+        label: 'View & Apply Fix',
+        type: 'orchestration',
+        target: 'scheduling.resolve_conflicts',
+        variant: 'primary',
+      });
+      actions.push({
+        label: 'Delay Decision',
+        type: 'api_call',
+        target: `/api/notifications/snooze/${notif.id}`,
+        variant: 'ghost',
+      });
+    } else {
+      actions.push({
+        label: 'View Schedule',
+        type: 'navigate',
+        target: '/scheduling',
+        variant: 'secondary',
+      });
+    }
+  }
+  
+  // Time-off request notifications
+  if (title.includes('time-off') || title.includes('time off') || title.includes('pto') || title.includes('leave request')) {
+    actions.push({
+      label: 'Review All',
+      type: 'navigate',
+      target: '/time-off',
+      variant: 'primary',
+    });
+  }
+  
+  // Approval-related notifications
+  if (title.includes('approval') || title.includes('pending') || message.includes('requires approval')) {
+    actions.push({
+      label: 'Review Now',
+      type: 'navigate',
+      target: '/approvals',
+      variant: 'primary',
+    });
+  }
+  
+  // Compliance-related notifications
+  if (title.includes('compliance') || title.includes('certification') || type.includes('compliance')) {
+    actions.push({
+      label: 'View Compliance',
+      type: 'navigate',
+      target: '/compliance',
+      variant: 'secondary',
+    });
+  }
+  
+  // Invoice-related notifications
+  if (title.includes('invoice') || type.includes('invoice')) {
+    actions.push({
+      label: 'View Invoice',
+      type: 'navigate',
+      target: '/invoices',
+      variant: 'secondary',
+    });
+  }
+  
+  // System self-healed notifications (for support roles)
+  if (title.includes('self-heal') || title.includes('healed') || title.includes('optimized')) {
+    actions.push({
+      label: 'View Details',
+      type: 'navigate',
+      target: '/diagnostics',
+      variant: 'ghost',
+    });
+  }
+  
+  return actions;
+}
+
 // Map existing data to UNS format with human-friendly language
-function mapToUNS(data: NotificationsData | undefined): UNSNotification[] {
+function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string | null): UNSNotification[] {
   if (!data) return [];
   
   const notifications: UNSNotification[] = [];
@@ -184,8 +302,11 @@ function mapToUNS(data: NotificationsData | undefined): UNSNotification[] {
     if (seenIds.has(notif.id)) return;
     seenIds.add(notif.id);
     
-    const actions: UNSNotification['actions'] = [];
-    if (notif.actionUrl) {
+    // Start with type-based actions for authorized users
+    const actions: UNSNotification['actions'] = [...generateTypeBasedActions(notif, userPlatformRole)];
+    
+    // Add actionUrl if present and no type-based actions generated
+    if (notif.actionUrl && actions.length === 0) {
       actions.push({
         label: 'View Details',
         type: 'navigate',
@@ -495,6 +616,7 @@ export function NotificationsPopover() {
   const { user } = useAuth();
   const userId = (user as any)?.id;
   const workspaceId = (user as any)?.activeWorkspaceId || (user as any)?.workspaceId;
+  const userPlatformRole = (user as any)?.platformRole as string | null | undefined;
   
   // Trinity context for mode detection
   const { context: trinityContext } = useTrinityContext(workspaceId);
@@ -524,8 +646,8 @@ export function NotificationsPopover() {
     }
   }, [open, refetch]);
   
-  // Map to UNS format
-  const allNotifications = mapToUNS(rawData);
+  // Map to UNS format with user's platform role for action button visibility
+  const allNotifications = mapToUNS(rawData, userPlatformRole);
   
   // Sub-category counts - based on actual data patterns
   const systemAlertsSubCount = allNotifications.filter(n => 
