@@ -421,11 +421,11 @@ export function FloatingFeedbackButton() {
                 className="h-12 w-12 rounded-full shadow-lg"
                 data-testid="button-floating-feedback"
               >
-                <Bug className="h-5 w-5" />
+                <MessageSquare className="h-5 w-5" />
               </Button>
             </TooltipTrigger>
             <TooltipContent side="left" className="font-medium">
-              Bug Report
+              Send Feedback
             </TooltipContent>
           </Tooltip>
         }

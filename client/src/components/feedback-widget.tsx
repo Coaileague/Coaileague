@@ -24,7 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Bug, Send } from "lucide-react";
+import { MessageSquare, Send } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export function FeedbackWidget() {
@@ -78,8 +78,8 @@ export function FeedbackWidget() {
           className="justify-start gap-2 h-9 w-full"
           data-testid="button-feedback"
         >
-          <Bug className="h-4 w-4" />
-          <span className="text-xs">Bug Report</span>
+          <MessageSquare className="h-4 w-4" />
+          <span className="text-xs">Send Feedback</span>
         </Button>
       </DialogTrigger>
       <DialogContent>
