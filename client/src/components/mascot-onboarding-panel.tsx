@@ -25,6 +25,7 @@ import {
   HelpCircle,
   MessageSquare
 } from "lucide-react";
+import TrinityMarketingHero, { TrinityBadge } from "@/components/trinity-marketing-hero";
 import { Link, useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
@@ -275,17 +276,18 @@ export function MascotOnboardingPanel({
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-center gap-3">
-            <div className={cn(
-              "p-2 rounded-lg",
-              isAllComplete 
-                ? "bg-primary/10 text-primary" 
-                : "bg-muted text-muted-foreground"
-            )}>
-              {isAllComplete ? <LockOpen className="h-5 w-5" /> : <Lock className="h-5 w-5" />}
-            </div>
+            <TrinityMarketingHero 
+              variant="compact" 
+              iconOnly 
+              showGlow={isAllComplete}
+              showSparkles={isAllComplete}
+              animated={isAllComplete}
+            />
             <div>
               <CardTitle className="text-lg flex items-center gap-2">
-                Organization Setup
+                <span className="bg-gradient-to-r from-cyan-600 via-blue-600 to-purple-600 dark:from-cyan-400 dark:via-blue-400 dark:to-purple-400 bg-clip-text text-transparent">
+                  Trinity Setup
+                </span>
                 {isAllComplete && (
                   <Badge variant="default" className="bg-gradient-to-r from-cyan-500 to-purple-500">
                     <Sparkles className="h-3 w-3 mr-1" />
@@ -429,9 +431,9 @@ export function MascotOnboardingPanel({
               Need Help?
             </Link>
             <span className="text-muted-foreground">|</span>
-            <Link href="/chat" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1" data-testid="link-onboarding-chat">
-              <MessageSquare className="h-4 w-4" />
-              Chat with Support
+            <Link href="/chat" className="text-muted-foreground hover:text-primary transition-colors flex items-center gap-1.5" data-testid="link-onboarding-chat">
+              <TrinityBadge showLabel={false} />
+              Ask Trinity
             </Link>
           </div>
         </>

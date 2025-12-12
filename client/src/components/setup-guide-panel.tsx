@@ -36,6 +36,7 @@ import {
   Briefcase,
   Loader2,
 } from "lucide-react";
+import { TrinityBadge } from "@/components/trinity-marketing-hero";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -198,7 +199,10 @@ export function SetupGuidePanel({
   const panelContent = isComplete ? completedPanelContent : (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b shrink-0">
-        <span className="text-sm font-semibold">Setup guide</span>
+        <div className="flex items-center gap-2">
+          <TrinityBadge showLabel={false} />
+          <span className="text-sm font-semibold">Setup Guide</span>
+        </div>
         <div className="flex items-center gap-1">
           <Button
             variant="ghost"
@@ -237,9 +241,9 @@ export function SetupGuidePanel({
 
       <div className="flex-1 overflow-y-auto">
         {trinityContext?.trinityMode === "guru" && guideData.trinityGreeting && (
-          <div className="px-4 py-2 bg-primary/5 border-b text-xs text-muted-foreground flex items-start gap-2">
-            <Sparkles className="h-3.5 w-3.5 text-primary shrink-0 mt-0.5" />
-            <span>{guideData.trinityGreeting}</span>
+          <div className="px-3 py-2 mx-2 my-2 rounded-lg bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 border border-cyan-500/20 text-xs text-muted-foreground flex items-start gap-2">
+            <TrinityBadge showLabel={false} className="shrink-0 mt-0.5" />
+            <span className="text-foreground/80">{guideData.trinityGreeting}</span>
           </div>
         )}
 
@@ -286,9 +290,9 @@ export function SetupGuidePanel({
 
                 <AccordionContent className="pb-0">
                   {section.trinityTip && trinityContext?.trinityMode === "guru" && (
-                    <div className="mx-4 mb-2 p-2 rounded bg-primary/5 text-xs text-muted-foreground flex items-start gap-2">
-                      <Sparkles className="h-3 w-3 text-primary shrink-0 mt-0.5" />
-                      <span>{section.trinityTip}</span>
+                    <div className="mx-4 mb-2 p-2 rounded-lg bg-gradient-to-r from-cyan-500/5 to-purple-500/5 border border-cyan-500/10 text-xs text-muted-foreground flex items-start gap-2">
+                      <TrinityBadge showLabel={false} className="shrink-0 mt-0.5" />
+                      <span className="text-foreground/70">{section.trinityTip}</span>
                     </div>
                   )}
 
