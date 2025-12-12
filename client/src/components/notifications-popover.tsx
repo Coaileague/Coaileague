@@ -27,6 +27,7 @@ import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
 import { useTrinityContext } from "@/hooks/use-trinity-context";
 import { useNotificationSync } from "@/hooks/use-notification-sync";
 import TrinityRedesign from "@/components/trinity-redesign";
+import { TrinityBadge } from "@/components/trinity-marketing-hero";
 import { humanizeTitle, humanizeText, generateEndUserSummary } from "@shared/utils/humanFriendlyCopy";
 
 // Priority levels for UNS cards
@@ -1074,19 +1075,21 @@ export function NotificationsPopover() {
         <div className="p-3 flex flex-col gap-2">
           <Button
             variant="outline"
-            className="w-full justify-start text-sm h-11 font-medium border-muted-foreground/20 hover:bg-muted/50 gap-3"
+            className="w-full justify-start text-sm h-11 font-medium border-muted-foreground/20 hover:bg-muted/50 gap-3 group"
             onClick={() => {
               setOpen(false);
               window.dispatchEvent(new CustomEvent('trinity_command', { detail: { action: 'open_chat' } }));
             }}
             data-testid="button-ask-trinity"
           >
-            <div className="shrink-0">
-              <TrinityRedesign mode="IDLE" size={28} mini={true} />
+            <div className="shrink-0 p-1 rounded-lg bg-gradient-to-br from-cyan-500/10 to-purple-500/10 group-hover:from-cyan-500/20 group-hover:to-purple-500/20 transition-colors">
+              <TrinityBadge showLabel={false} />
             </div>
-            <span className="flex items-center gap-1">
-              <Sparkles className="h-3 w-3 text-primary" />
-              Ask Trinity for Help
+            <span className="flex items-center gap-1.5">
+              <span className="font-semibold bg-gradient-to-r from-cyan-600 to-purple-600 dark:from-cyan-400 dark:to-purple-400 bg-clip-text text-transparent">
+                Ask Trinity
+              </span>
+              <span className="text-muted-foreground">for Help</span>
             </span>
           </Button>
         </div>
