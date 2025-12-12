@@ -235,25 +235,40 @@ function NotificationCard({
   const styles = PRIORITY_STYLES[notification.priority];
   const isCritical = notification.priority === 'critical';
   const isHigh = notification.priority === 'high';
+  const isMedium = notification.priority === 'medium';
   const hasActions = notification.actions && notification.actions.length > 0;
   
-  // Critical cards have red background, High cards have amber/yellow background
+  // Critical: red background, High: amber/yellow, Medium: blue (schedule conflicts)
   const cardBg = isCritical 
     ? 'bg-red-500 dark:bg-red-700' 
     : isHigh 
     ? 'bg-amber-50 dark:bg-amber-950 border border-amber-200 dark:border-amber-800' 
+    : isMedium
+    ? 'bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800'
     : 'hover:bg-muted/40';
   
-  const textColor = isCritical ? 'text-white' : isHigh ? 'text-amber-900 dark:text-amber-100' : '';
-  const mutedText = isCritical ? 'text-white/80' : isHigh ? 'text-amber-700 dark:text-amber-300' : 'text-muted-foreground';
+  const textColor = isCritical 
+    ? 'text-white' 
+    : isHigh 
+    ? 'text-amber-900 dark:text-amber-100' 
+    : isMedium 
+    ? 'text-blue-900 dark:text-blue-100' 
+    : '';
+  const mutedText = isCritical 
+    ? 'text-white/80' 
+    : isHigh 
+    ? 'text-amber-700 dark:text-amber-300' 
+    : isMedium 
+    ? 'text-blue-700 dark:text-blue-300' 
+    : 'text-muted-foreground';
   
   return (
     <div 
       className={`relative ${notification.isRead ? 'opacity-60' : ''}`}
       data-testid={`uns-card-${notification.id}`}
     >
-      {/* Critical/High Priority Cards */}
-      {(isCritical || isHigh) ? (
+      {/* Critical/High/Medium Priority Cards */}
+      {(isCritical || isHigh || isMedium) ? (
         <div className={`${cardBg} rounded-lg mx-2 my-2 overflow-hidden`}>
           {/* Critical Banner */}
           {isCritical && (
@@ -264,9 +279,21 @@ function NotificationCard({
           
           <div className="p-4">
             <div className="flex gap-3">
-              {/* AI Icon */}
-              <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${isCritical ? 'bg-white/20' : 'bg-amber-100 dark:bg-amber-900'}`}>
-                <Bot className={`h-5 w-5 ${isCritical ? 'text-white' : 'text-amber-600 dark:text-amber-400'}`} />
+              {/* AI Icon - color varies by priority */}
+              <div className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center ${
+                isCritical 
+                  ? 'bg-white/20' 
+                  : isHigh 
+                  ? 'bg-amber-100 dark:bg-amber-900' 
+                  : 'bg-blue-100 dark:bg-blue-900'
+              }`}>
+                <Bot className={`h-5 w-5 ${
+                  isCritical 
+                    ? 'text-white' 
+                    : isHigh 
+                    ? 'text-amber-600 dark:text-amber-400' 
+                    : 'text-blue-600 dark:text-blue-400'
+                }`} />
               </div>
               
               {/* Content & Actions in Row Layout */}
@@ -292,7 +319,9 @@ function NotificationCard({
                         className={`h-8 text-xs whitespace-nowrap ${
                           isCritical 
                             ? 'bg-white text-red-700 hover:bg-red-50 border-0' 
-                            : 'border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-200 bg-amber-50 dark:bg-amber-900 hover:bg-amber-100 dark:hover:bg-amber-800'
+                            : isHigh
+                            ? 'border-amber-300 dark:border-amber-600 text-amber-700 dark:text-amber-200 bg-amber-50 dark:bg-amber-900 hover:bg-amber-100 dark:hover:bg-amber-800'
+                            : 'border-blue-300 dark:border-blue-600 text-blue-700 dark:text-blue-200 bg-blue-50 dark:bg-blue-900 hover:bg-blue-100 dark:hover:bg-blue-800'
                         }`}
                         onClick={(e) => {
                           e.stopPropagation();
@@ -559,68 +588,73 @@ export function NotificationsPopover() {
 
   const NotificationsContent = () => (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* UNS Header with Trinity Branding */}
-      <div className="px-4 py-4 border-b bg-gradient-to-r from-primary/5 via-purple-500/5 to-pink-500/5 flex-shrink-0">
+      {/* UNS Header with Trinity Branding - Matching Design */}
+      <div className="px-4 py-3 border-b bg-card flex-shrink-0">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="relative">
-              <TrinityRedesign mode="IDLE" size={40} mini={true} />
+            <div className="relative w-10 h-10 rounded-lg bg-primary flex items-center justify-center overflow-hidden">
+              <TrinityRedesign mode="IDLE" size={32} mini={true} />
             </div>
             <div>
-              <h2 className="font-bold text-base">Universal Notifications</h2>
-              <span className="text-xs text-muted-foreground">{totalUnread} unread</span>
+              <h2 className="font-bold text-base leading-tight">Universal Notifications</h2>
+              <span className="text-xs text-primary font-medium">{totalUnread} unread</span>
             </div>
           </div>
-          <Badge variant="secondary" className="text-xs px-2 py-1">
+          <Badge variant="outline" className="text-xs px-3 py-1.5 font-medium bg-muted/50 border-muted-foreground/20">
             {forYouCount + systemCount} New / {allNotifications.length} Total
           </Badge>
         </div>
       </div>
       
-      {/* Main Tabs: For You | System Alerts */}
-      <div className="flex border-b bg-background flex-shrink-0">
+      {/* Main Tabs: For You | System Alerts | Clear All Read - Matching Design */}
+      <div className="flex items-center border-b bg-muted/30 flex-shrink-0 px-2">
         <button
           onClick={() => setActiveTab('for_you')}
-          className={`flex-1 py-3 text-sm font-medium relative transition-colors ${
+          className={`relative py-3 px-4 text-sm font-medium transition-colors ${
             activeTab === 'for_you' 
-              ? 'text-primary' 
+              ? 'text-foreground' 
               : 'text-muted-foreground hover:text-foreground'
           }`}
           data-testid="tab-for-you"
         >
-          For You
-          {forYouCount > 0 && (
-            <Badge className="absolute -top-1 right-4 h-5 w-5 p-0 flex items-center justify-center text-[10px] bg-primary">
-              {forYouCount > 9 ? '9+' : forYouCount}
-            </Badge>
-          )}
+          <span className="flex items-center gap-2">
+            For You
+            {forYouCount > 0 && (
+              <Badge className="h-5 min-w-5 px-1.5 flex items-center justify-center text-[10px] bg-primary text-white rounded-full">
+                {forYouCount > 9 ? '9+' : forYouCount}
+              </Badge>
+            )}
+          </span>
           {activeTab === 'for_you' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
+            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
           )}
         </button>
         <button
           onClick={() => setActiveTab('system_alerts')}
-          className={`flex-1 py-3 text-sm font-medium relative transition-colors ${
+          className={`relative py-3 px-4 text-sm font-medium transition-colors ${
             activeTab === 'system_alerts' 
-              ? 'text-amber-600 dark:text-amber-400' 
+              ? 'text-foreground' 
               : 'text-muted-foreground hover:text-foreground'
           }`}
           data-testid="tab-system-alerts"
         >
-          System Alerts
-          {systemCount > 0 && (
-            <Badge className="absolute -top-1 right-4 h-5 w-5 p-0 flex items-center justify-center text-[10px] bg-amber-500 text-white">
-              {systemCount > 9 ? '9+' : systemCount}
-            </Badge>
-          )}
+          <span className="flex items-center gap-2">
+            System Alerts
+            {systemCount > 0 && (
+              <Badge className="h-5 min-w-5 px-1.5 flex items-center justify-center text-[10px] bg-amber-500 text-white rounded-full">
+                {systemCount > 9 ? '9+' : systemCount}
+              </Badge>
+            )}
+          </span>
           {activeTab === 'system_alerts' && (
-            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500" />
+            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-amber-500 rounded-full" />
           )}
         </button>
+        <div className="flex-1" />
         <Button
-          variant="ghost"
+          variant="outline"
           size="sm"
-          className="px-3 text-xs"
+          className="h-8 px-3 text-xs font-medium bg-background border-muted-foreground/20"
           onClick={() => clearAllMutation.mutate()}
           disabled={clearAllMutation.isPending || totalUnread === 0}
           data-testid="button-clear-all-read"
