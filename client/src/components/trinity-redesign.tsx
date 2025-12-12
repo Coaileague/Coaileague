@@ -726,7 +726,7 @@ const TrinityRedesign = memo(function TrinityRedesign({
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        cursor: 'pointer',
+        cursor: 'default',
         userSelect: 'none',
         WebkitUserDrag: 'none',
         WebkitTouchCallout: 'none',

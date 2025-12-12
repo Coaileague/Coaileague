@@ -386,4 +386,112 @@ router.get('/viewports', async (req, res) => {
   }
 });
 
+/**
+ * POST /api/vqa/quick-scan
+ * Trinity-triggered quick scan of key application routes
+ * Returns a summary of any issues found
+ */
+router.post('/quick-scan', async (req, res) => {
+  try {
+    const user = req.user as any;
+    if (!user?.id || !user.currentWorkspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Key routes to scan - expandable
+    const baseUrl = process.env.REPLIT_DEV_DOMAIN 
+      ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+      : 'http://localhost:5000';
+    
+    const routesToScan = [
+      { path: '/', name: 'Dashboard' },
+      { path: '/schedule', name: 'Schedule' },
+      { path: '/employees', name: 'Employees' },
+      { path: '/time-tracking', name: 'Time Tracking' },
+      { path: '/payroll', name: 'Payroll' },
+    ];
+
+    const results: Array<{
+      route: string;
+      name: string;
+      status: 'ok' | 'warning' | 'error';
+      issues: number;
+      summary: string;
+    }> = [];
+
+    let totalIssues = 0;
+    let criticalCount = 0;
+    let warningCount = 0;
+
+    // Scan each route (limit to avoid timeout)
+    const scanLimit = Math.min(routesToScan.length, 3);
+    
+    for (let i = 0; i < scanLimit; i++) {
+      const route = routesToScan[i];
+      const url = `${baseUrl}${route.path}`;
+      
+      try {
+        const checkResult = await visualQaSubagent.runVisualCheck({
+          url,
+          workspaceId: user.currentWorkspaceId,
+          triggeredBy: user.id,
+          triggerSource: 'trinity',
+          deviceName: 'desktop-1080p',
+        });
+
+        const issueCount = checkResult.findings.length;
+        totalIssues += issueCount;
+        
+        const criticalFindings = checkResult.findings.filter(f => f.severity === 'critical' || f.severity === 'high');
+        criticalCount += criticalFindings.length;
+        warningCount += checkResult.findings.filter(f => f.severity === 'medium').length;
+
+        results.push({
+          route: route.path,
+          name: route.name,
+          status: criticalFindings.length > 0 ? 'error' : issueCount > 0 ? 'warning' : 'ok',
+          issues: issueCount,
+          summary: checkResult.analysis?.summary || (issueCount === 0 ? 'No issues detected' : `${issueCount} issues found`),
+        });
+      } catch (scanError) {
+        console.error(`[VQA] Failed to scan ${route.path}:`, scanError);
+        results.push({
+          route: route.path,
+          name: route.name,
+          status: 'error',
+          issues: 1,
+          summary: 'Failed to scan page',
+        });
+        criticalCount++;
+      }
+    }
+
+    // Generate Trinity summary
+    const overallStatus = criticalCount > 0 ? 'critical' : warningCount > 0 ? 'needs_attention' : 'healthy';
+    const trinitySummary = criticalCount > 0
+      ? `Found ${criticalCount} critical issue${criticalCount > 1 ? 's' : ''} requiring immediate attention.`
+      : warningCount > 0
+      ? `Found ${warningCount} minor issue${warningCount > 1 ? 's' : ''} to review.`
+      : `All ${scanLimit} scanned pages look healthy!`;
+
+    res.json({
+      success: true,
+      overallStatus,
+      summary: trinitySummary,
+      totalIssues,
+      criticalCount,
+      warningCount,
+      pagesScanned: scanLimit,
+      results,
+      scannedAt: new Date().toISOString(),
+    });
+  } catch (error) {
+    console.error('[VQA API] Quick scan failed:', error);
+    res.status(500).json({ 
+      error: 'Quick scan failed', 
+      message: error instanceof Error ? error.message : 'Unknown error' 
+    });
+  }
+});
+
 export default router;
