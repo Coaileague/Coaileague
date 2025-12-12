@@ -309,7 +309,7 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
     seenIds.add(notif.id);
     
     // Start with type-based actions for authorized users
-    const actions: UNSNotification['actions'] = [...generateTypeBasedActions(notif, userPlatformRole)];
+    const actions: UNSNotification['actions'] = [...(generateTypeBasedActions(notif, userPlatformRole) || [])];
     
     // Add actionUrl if present and no type-based actions generated
     if (notif.actionUrl && actions.length === 0) {
