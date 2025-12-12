@@ -14,7 +14,7 @@
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, X, MessageCircle, Minimize2, Maximize2, ExternalLink, Headset, Search, Brain, LineChart, Code2, Loader2 } from 'lucide-react';
+import { Send, Bot, User, X, Bug, Minimize2, Maximize2, ExternalLink, Headset, Search, Brain, LineChart, Code2, Loader2 } from 'lucide-react';
 import { useAIActivity, type AIActivityState } from '@/hooks/use-ai-activity';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -206,57 +206,12 @@ export function FloatingSupportChat() {
     return () => window.removeEventListener('resize', handleResize);
   }, [state]);
   
-  // Document-level drag handlers - always attached
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const handleDocumentMove = (e: MouseEvent) => {
-      if (!isDraggingRef.current) return;
-      
-      // Calculate max X based on current element width
-      let elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.floatingButton;
-      if (state.isOpen) {
-        elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.chatWindow;
-      } else if (state.isMinimized) {
-        elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.minimizedPill;
-      }
-      
-      const maxX = window.innerWidth - elementWidth;
-      const minY = CHAT_BUBBLE_CONFIG.positioning.topBoundary; // Prevent header overlap
-      const newX = Math.max(0, Math.min(e.clientX - dragStartRef.current.x, maxX));
-      const newY = Math.max(minY, Math.min(e.clientY - dragStartRef.current.y, window.innerHeight - CHAT_BUBBLE_CONFIG.positioning.bottomBoundary));
-      
-      setState(prev => ({
-        ...prev,
-        position: { x: newX, y: newY }
-      }));
-    };
-    
-    const handleDocumentUp = () => {
-      isDraggingRef.current = false;
-    };
-    
-    document.addEventListener('mousemove', handleDocumentMove);
-    document.addEventListener('mouseup', handleDocumentUp);
-    
-    return () => {
-      document.removeEventListener('mousemove', handleDocumentMove);
-      document.removeEventListener('mouseup', handleDocumentUp);
-    };
-  }, []);
+  // Document-level drag handlers removed - dragging is disabled
   
-  // Pointer Events drag handlers - simple start only
+  // Dragging disabled - clicking only
   const handlePointerDown = (e: React.MouseEvent) => {
-    if ((e.target as HTMLElement).closest('button, input, textarea')) {
-      return; // Don't drag when interacting with controls
-    }
-    
-    e.preventDefault();
-    isDraggingRef.current = true;
-    dragStartRef.current = {
-      x: e.clientX - state.position.x,
-      y: e.clientY - state.position.y
-    };
+    // Dragging is disabled - do nothing
+    return;
   };
   
   // Prevent click from firing when dragging
@@ -389,15 +344,14 @@ export function FloatingSupportChat() {
           top: `${state.position.y}px`,
           zIndex: CHAT_BUBBLE_CONFIG.zIndex,
           touchAction: CHAT_BUBBLE_CONFIG.touchAction as any,
-          cursor: isDraggingRef.current ? 'grabbing' : 'grab',
+          cursor: 'pointer',
           userSelect: CHAT_BUBBLE_CONFIG.userSelect as any
         }}
         className={`flex items-center gap-2 bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text} ${CHAT_BUBBLE_CONFIG.effects.rounded} px-${CHAT_BUBBLE_CONFIG.sizes.pillPaddingX} py-${CHAT_BUBBLE_CONFIG.sizes.pillPaddingY} ${CHAT_BUBBLE_CONFIG.effects.shadow} hover-elevate active-elevate-2`}
         onClick={handleClickWithDragCheck}
-        onMouseDown={handlePointerDown}
         data-testid="chat-bubble-minimized"
       >
-        <MessageCircle className={`w-${CHAT_BUBBLE_CONFIG.sizes.pillIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.pillIconSize}`} />
+        <Bug className={`w-${CHAT_BUBBLE_CONFIG.sizes.pillIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.pillIconSize}`} />
         <span className="font-medium text-sm">{CHAT_BUBBLE_CONFIG.content.buttonText.liveChat}</span>
       </div>
     );
@@ -413,10 +367,9 @@ export function FloatingSupportChat() {
           top: `${state.position.y}px`,
           zIndex: CHAT_BUBBLE_CONFIG.zIndex,
           touchAction: CHAT_BUBBLE_CONFIG.touchAction as any,
-          cursor: isDraggingRef.current ? 'grabbing' : 'grab',
+          cursor: 'pointer',
           userSelect: CHAT_BUBBLE_CONFIG.userSelect as any
         }}
-        onMouseDown={handlePointerDown}
         onClick={handleClickWithDragCheck}
         className="group"
       >
@@ -424,7 +377,7 @@ export function FloatingSupportChat() {
           className={`bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text} ${CHAT_BUBBLE_CONFIG.effects.rounded} p-${CHAT_BUBBLE_CONFIG.sizes.buttonPadding} ${CHAT_BUBBLE_CONFIG.effects.shadow} hover:shadow-blue-500/50 hover:scale-110 ${CHAT_BUBBLE_CONFIG.effects.transition} w-${CHAT_BUBBLE_CONFIG.sizes.buttonSize} h-${CHAT_BUBBLE_CONFIG.sizes.buttonSize} flex items-center justify-center pointer-events-none`}
           data-testid="button-open-chat"
         >
-          <MessageCircle className={`w-${CHAT_BUBBLE_CONFIG.sizes.buttonIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.buttonIconSize}`} />
+          <Bug className={`w-${CHAT_BUBBLE_CONFIG.sizes.buttonIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.buttonIconSize}`} />
           <div className={`absolute -top-1 -right-1 ${CHAT_BUBBLE_CONFIG.colors.error} ${CHAT_BUBBLE_CONFIG.colors.text} text-xs ${CHAT_BUBBLE_CONFIG.effects.rounded} w-5 h-5 flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 ${CHAT_BUBBLE_CONFIG.effects.transitionOpacity}`}>
             !
           </div>
@@ -453,10 +406,9 @@ export function FloatingSupportChat() {
       )}
       data-testid="chat-bubble-window"
     >
-      {/* Draggable header */}
+      {/* Header - no dragging */}
       <div
-        onMouseDown={handlePointerDown}
-        className={`p-${CHAT_BUBBLE_CONFIG.sizes.headerPadding} border-b cursor-move bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.secondary} ${CHAT_BUBBLE_CONFIG.effects.roundedLg}`}
+        className={`p-${CHAT_BUBBLE_CONFIG.sizes.headerPadding} border-b bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.secondary} ${CHAT_BUBBLE_CONFIG.effects.roundedLg}`}
         data-testid="chat-bubble-header"
       >
         <div className="flex justify-between items-center">
