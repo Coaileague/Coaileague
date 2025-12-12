@@ -225,6 +225,9 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
   
   // Map platform updates
   data.platformUpdates?.forEach(update => {
+    // Skip already viewed updates (cleared)
+    if (update.isViewed) return;
+    
     // Skip duplicates within the same fetch (by ID only)
     if (seenIds.has(update.id)) return;
     seenIds.add(update.id);
@@ -254,6 +257,9 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
   
   // Map maintenance alerts with orchestration actions
   data.maintenanceAlerts?.forEach(alert => {
+    // Skip already acknowledged alerts (cleared)
+    if (alert.isAcknowledged) return;
+    
     // Skip duplicates
     if (seenIds.has(alert.id)) return;
     seenIds.add(alert.id);
