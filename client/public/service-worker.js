@@ -1,11 +1,19 @@
-const CACHE_NAME = 'autoforce-v1.0.0';
+const CACHE_NAME = 'autoforce-v1.0.1';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache for offline functionality
 const STATIC_CACHE_URLS = [
-  '/',
   '/offline.html',
   '/manifest.json',
+];
+
+// Files that should always be fetched fresh (network-first)
+const NETWORK_FIRST_PATTERNS = [
+  /\.js$/,
+  /\.css$/,
+  /\.html$/,
+  /^\/$/,
+  /\/assets\//,
 ];
 
 // Install event - cache static assets
@@ -72,7 +80,37 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Static assets - cache first, network fallback
+  // Check if this request should be network-first (JS, CSS, HTML, assets)
+  const url = new URL(event.request.url);
+  const isNetworkFirst = NETWORK_FIRST_PATTERNS.some(pattern => pattern.test(url.pathname));
+
+  if (isNetworkFirst) {
+    // Network-first for JS/CSS/HTML - always get fresh content
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.status === 200) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache if offline
+          return caches.match(event.request).then((cachedResponse) => {
+            if (cachedResponse) return cachedResponse;
+            if (event.request.mode === 'navigate') {
+              return caches.match(OFFLINE_URL);
+            }
+          });
+        })
+    );
+    return;
+  }
+
+  // Static assets (images, fonts) - cache first, network fallback
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       if (cachedResponse) {
