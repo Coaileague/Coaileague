@@ -248,6 +248,9 @@ import {
   type InsertMaintenanceAlert,
   type MaintenanceAcknowledgment,
   type InsertMaintenanceAcknowledgment,
+  aiBrainActionLogs,
+  type AiBrainActionLog,
+  type InsertAiBrainActionLog,
 } from "@shared/schema";
 import type { PaginatedResponse, ClientWithInvoiceCount } from "@shared/types";
 import type { ClientsQueryParams } from "@shared/validation/pagination";
@@ -901,6 +904,27 @@ export interface IStorage {
   createHolidayMascotHistory(history: InsertHolidayMascotHistory): Promise<HolidayMascotHistory>;
   getHolidayMascotHistory(filters?: { holidayDecorId?: string; action?: string; triggeredBy?: string; limit?: number }): Promise<HolidayMascotHistory[]>;
   getLatestHolidayDirective(): Promise<HolidayMascotHistory | undefined>;
+
+  // ========================================================================
+  // AI BRAIN ACTION LOG - AALV (AI Audit Log Viewer) Support Dashboard
+  // ========================================================================
+  createAiBrainActionLog(log: InsertAiBrainActionLog): Promise<AiBrainActionLog>;
+  getAiBrainActionLog(id: string): Promise<AiBrainActionLog | undefined>;
+  getAiBrainActionLogs(filters?: {
+    actorType?: string;
+    status?: string;
+    categoryTag?: string;
+    workflowId?: string;
+    workspaceId?: string;
+    requiresHumanReview?: boolean;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<AiBrainActionLog[]>;
+  getAiBrainActionLogsByWorkflow(workflowId: string): Promise<AiBrainActionLog[]>;
+  updateAiBrainActionLog(id: string, data: Partial<InsertAiBrainActionLog>): Promise<AiBrainActionLog | undefined>;
+  markAiBrainActionReviewed(id: string, reviewedBy: string, notes?: string): Promise<AiBrainActionLog | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -7450,6 +7474,107 @@ export class DatabaseStorage implements IStorage {
       .orderBy(desc(holidayMascotHistory.createdAt))
       .limit(1);
     return latest;
+  }
+
+  // ============================================================================
+  // AI BRAIN ACTION LOG - AALV (AI Audit Log Viewer) Support Dashboard
+  // ============================================================================
+
+  async createAiBrainActionLog(log: InsertAiBrainActionLog): Promise<AiBrainActionLog> {
+    const [created] = await db.insert(aiBrainActionLogs).values(log).returning();
+    return created;
+  }
+
+  async getAiBrainActionLog(id: string): Promise<AiBrainActionLog | undefined> {
+    const [log] = await db.select().from(aiBrainActionLogs).where(eq(aiBrainActionLogs.id, id));
+    return log;
+  }
+
+  async getAiBrainActionLogs(filters?: {
+    actorType?: string;
+    status?: string;
+    categoryTag?: string;
+    workflowId?: string;
+    workspaceId?: string;
+    requiresHumanReview?: boolean;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<AiBrainActionLog[]> {
+    let query = db.select().from(aiBrainActionLogs).$dynamic();
+    
+    const conditions = [];
+    if (filters?.actorType) {
+      conditions.push(eq(aiBrainActionLogs.actorType, filters.actorType));
+    }
+    if (filters?.status) {
+      conditions.push(eq(aiBrainActionLogs.status, filters.status));
+    }
+    if (filters?.categoryTag) {
+      conditions.push(eq(aiBrainActionLogs.categoryTag, filters.categoryTag));
+    }
+    if (filters?.workflowId) {
+      conditions.push(eq(aiBrainActionLogs.workflowId, filters.workflowId));
+    }
+    if (filters?.workspaceId) {
+      conditions.push(eq(aiBrainActionLogs.workspaceId, filters.workspaceId));
+    }
+    if (filters?.requiresHumanReview !== undefined) {
+      conditions.push(eq(aiBrainActionLogs.requiresHumanReview, filters.requiresHumanReview));
+    }
+    if (filters?.startDate) {
+      conditions.push(sql`${aiBrainActionLogs.createdAt} >= ${filters.startDate}`);
+    }
+    if (filters?.endDate) {
+      conditions.push(sql`${aiBrainActionLogs.createdAt} <= ${filters.endDate}`);
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    query = query.orderBy(desc(aiBrainActionLogs.createdAt));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset);
+    }
+    
+    return await query;
+  }
+
+  async getAiBrainActionLogsByWorkflow(workflowId: string): Promise<AiBrainActionLog[]> {
+    return await db
+      .select()
+      .from(aiBrainActionLogs)
+      .where(eq(aiBrainActionLogs.workflowId, workflowId))
+      .orderBy(desc(aiBrainActionLogs.createdAt));
+  }
+
+  async updateAiBrainActionLog(id: string, data: Partial<InsertAiBrainActionLog>): Promise<AiBrainActionLog | undefined> {
+    const [updated] = await db
+      .update(aiBrainActionLogs)
+      .set(data)
+      .where(eq(aiBrainActionLogs.id, id))
+      .returning();
+    return updated;
+  }
+
+  async markAiBrainActionReviewed(id: string, reviewedBy: string, notes?: string): Promise<AiBrainActionLog | undefined> {
+    const [updated] = await db
+      .update(aiBrainActionLogs)
+      .set({
+        humanReviewedBy: reviewedBy,
+        humanReviewedAt: new Date(),
+        humanReviewNotes: notes,
+        requiresHumanReview: false,
+      })
+      .where(eq(aiBrainActionLogs.id, id))
+      .returning();
+    return updated;
   }
 }
 

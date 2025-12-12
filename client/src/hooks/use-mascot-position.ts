@@ -1,8 +1,8 @@
 /**
- * useMascotPosition - Manages draggable mascot positioning with localStorage persistence
+ * useMascotPosition - Manages mascot positioning with localStorage persistence
  * 
  * Features:
- * - Draggable positioning around the screen
+ * - DRAGGING PERMANENTLY DISABLED - Trinity is non-draggable
  * - localStorage persistence of position
  * - Bounds checking to keep mascot visible
  * - Reset to default position
@@ -11,7 +11,7 @@
  * Uses universal mascot configuration from @/config/mascotConfig
  */
 
-import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import MASCOT_CONFIG from '@/config/mascotConfig';
 
 interface Position {
@@ -25,10 +25,8 @@ export function useMascotPosition(bubbleSize: number = 80, isMobile: boolean = f
   const initialPosition = isMobile ? mobileDefaultPosition : defaultPosition;
   const [position, setPosition] = useState<Position>(initialPosition);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isDragging, setIsDragging] = useState(false);
-  const dragStart = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
-  
-  const isDraggable = MASCOT_CONFIG.draggable;
+  // Dragging is permanently disabled - isDragging always false
+  const isDragging = false;
 
   useEffect(() => {
     try {
@@ -70,48 +68,6 @@ export function useMascotPosition(bubbleSize: number = 80, isMobile: boolean = f
     }
   }, []);
 
-  const handleDragStart = useCallback((clientX: number, clientY: number) => {
-    setIsDragging(true);
-    dragStart.current = {
-      x: clientX,
-      y: clientY,
-      posX: position.x,
-      posY: position.y,
-    };
-  }, [position]);
-
-  const handleDragMove = useCallback((clientX: number, clientY: number) => {
-    if (!dragStart.current || !isDragging) return;
-
-    const deltaX = clientX - dragStart.current.x;
-    const deltaY = clientY - dragStart.current.y;
-
-    const newX = dragStart.current.posX - deltaX;
-    const newY = dragStart.current.posY - deltaY;
-
-    const maxX = window.innerWidth - bubbleSize - 16;
-    
-    // Header exclusion zone: Prevent dragging mascot into top area where header controls are
-    // Header height (~64px) + margin (24px) = minimum distance from top
-    const HEADER_HEIGHT = 64;
-    const HEADER_MARGIN = 24;
-    // Max bottom value (higher bottom = closer to top, so we cap how high it can go)
-    const maxY = window.innerHeight - HEADER_HEIGHT - bubbleSize - HEADER_MARGIN;
-
-    const clampedX = Math.max(16, Math.min(newX, maxX));
-    const clampedY = Math.max(16, Math.min(newY, maxY));
-
-    setPosition({ x: clampedX, y: clampedY });
-  }, [isDragging, bubbleSize]);
-
-  const handleDragEnd = useCallback(() => {
-    if (isDragging) {
-      savePosition(position);
-    }
-    setIsDragging(false);
-    dragStart.current = null;
-  }, [isDragging, position, savePosition]);
-
   const resetPosition = useCallback(() => {
     setPosition(defaultPosition);
     savePosition(defaultPosition);
@@ -127,25 +83,19 @@ export function useMascotPosition(bubbleSize: number = 80, isMobile: boolean = f
     }
   }, [isExpanded]);
 
+  // Drag handlers completely disabled - Trinity is non-draggable
+  // These are no-ops that prevent any drag behavior
   const onPointerDown = useCallback((e: React.PointerEvent) => {
-    if (!isDraggable) return;
-    e.preventDefault();
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
-    handleDragStart(e.clientX, e.clientY);
-  }, [handleDragStart, isDraggable]);
+    // Dragging completely disabled - do nothing
+  }, []);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
-    if (!isDraggable) return;
-    if (isDragging) {
-      handleDragMove(e.clientX, e.clientY);
-    }
-  }, [isDragging, handleDragMove, isDraggable]);
+    // Dragging completely disabled - do nothing
+  }, []);
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
-    if (!isDraggable) return;
-    (e.target as HTMLElement).releasePointerCapture(e.pointerId);
-    handleDragEnd();
-  }, [handleDragEnd, isDraggable]);
+    // Dragging completely disabled - do nothing
+  }, []);
 
   const setRoamingPosition = useCallback((pos: Position) => {
     setPosition(pos);

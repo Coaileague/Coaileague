@@ -153,6 +153,7 @@ import AICommandCenter from "@/pages/ai-command-center";
 import SupportCommandConsole from "@/pages/support-command-console";
 import TrinityCommandCenter from "@/pages/trinity-command-center";
 import AuditLogs from "@/pages/audit-logs";
+import AIAuditLogViewer from "@/pages/ai-audit-log-viewer";
 import AutomationControl from "@/pages/automation-control";
 import AdminBanners from "@/pages/admin-banners";
 import AdminTicketReviews from "@/pages/admin-ticket-reviews";
@@ -1042,6 +1043,7 @@ function AppContent() {
               <Route path="/automation/audit-log" component={AutomationAuditLog} />
               <Route path="/automation/settings" component={AutomationSettings} />
               <Route path="/ai/brain" component={AIBrainDashboard} />
+              <Route path="/ai/audit-log-viewer" component={AIAuditLogViewer} />
               <Route path="/ai/workboard" component={WorkboardDashboard} />
               <Route path="/trinity-insights">
                 <PlatformAdminRoute>
@@ -1230,6 +1232,7 @@ function AppContent() {
                 <Route path="/trinity/command-center" component={TrinityCommandCenter} />
                 <Route path="/ai/brain" component={AIBrainDashboard} />
                 <Route path="/ai/workboard" component={WorkboardDashboard} />
+                <Route path="/ai/audit-log-viewer" component={AIAuditLogViewer} />
                 <Route path="/support/ai-console" component={SupportAIConsole} />
                 <Route path="/trinity-insights">
                   <PlatformAdminRoute>

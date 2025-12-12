@@ -18729,3 +18729,68 @@ export const llmJudgeRegressions = pgTable("llm_judge_regressions", {
   index("llm_judge_reg_blocked_idx").on(table.isBlocked),
   uniqueIndex("llm_judge_reg_unique_idx").on(table.patternHash),
 ]);
+
+// ============================================================================
+// AI BRAIN ACTION LOG - AALV (AI Audit Log Viewer) Support Dashboard
+// ============================================================================
+// Centralized audit log for ALL AI Brain orchestrator actions, enabling
+// support staff to view, filter, and investigate Trinity's autonomous actions.
+
+export const aiBrainActionLogs = pgTable("ai_brain_action_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Workflow tracking
+  workflowId: varchar("workflow_id", { length: 255 }), // Groups related actions
+  
+  // Actor identification
+  actorType: varchar("actor_type", { length: 100 }).notNull(), // 'AI_BRAIN', 'RevenueOps Lead', 'Scheduling Subagent', 'Human User'
+  actorId: varchar("actor_id", { length: 255 }).notNull(), // Instance ID or user ID
+  
+  // Action summary (main display line)
+  actionSummary: text("action_summary").notNull(), // Human-readable action description
+  status: varchar("status", { length: 50 }).notNull().default("initiated"), // 'COMPLETED', 'INITIATED', 'FAILED', 'TIMEOUT', 'PENDING_HIL'
+  categoryTag: varchar("category_tag", { length: 100 }), // 'PLANNING', 'TOOL_USE', 'CHECKPOINT', 'DIAGNOSTICS', 'HIL_WAIT', 'AGENTIC_CODING'
+  
+  // Gemini metadata (collapsible detail data)
+  geminiMetadata: jsonb("gemini_metadata").default('{}'), // { model_used, token_cost, thinking_level, thought_signature }
+  
+  // Input/Output data
+  inputs: jsonb("inputs").default('{}'), // { target_file, grep_pattern, etc. }
+  outputs: jsonb("outputs").default('{}'), // { code_diff, new_status, etc. }
+  
+  // Error tracking
+  failureReason: text("failure_reason"),
+  errorStack: text("error_stack"),
+  
+  // Workspace context (optional - some actions are platform-wide)
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'set null' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Execution metrics
+  durationMs: integer("duration_ms"),
+  tokenCost: integer("token_cost"),
+  
+  // Escalation tracking
+  requiresHumanReview: boolean("requires_human_review").default(false),
+  humanReviewedBy: varchar("human_reviewed_by").references(() => users.id, { onDelete: 'set null' }),
+  humanReviewedAt: timestamp("human_reviewed_at"),
+  humanReviewNotes: text("human_review_notes"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("ai_brain_action_workflow_idx").on(table.workflowId),
+  index("ai_brain_action_actor_idx").on(table.actorType, table.actorId),
+  index("ai_brain_action_status_idx").on(table.status),
+  index("ai_brain_action_category_idx").on(table.categoryTag),
+  index("ai_brain_action_workspace_idx").on(table.workspaceId),
+  index("ai_brain_action_created_idx").on(table.createdAt),
+  index("ai_brain_action_review_idx").on(table.requiresHumanReview),
+]);
+
+export const insertAiBrainActionLogSchema = createInsertSchema(aiBrainActionLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAiBrainActionLog = z.infer<typeof insertAiBrainActionLogSchema>;
+export type AiBrainActionLog = typeof aiBrainActionLogs.$inferSelect;

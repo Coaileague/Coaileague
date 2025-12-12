@@ -32,7 +32,7 @@ import {
   Camera, MessageSquare, Bug, Lightbulb, HelpCircle, 
   Send, Trash2, Image, CheckCircle, Loader2, X, Sparkles
 } from "lucide-react";
-import { TrinityRedesign } from "./trinity-redesign";
+import TrinityRedesign from "./trinity-redesign";
 
 type FeedbackType = 'bug' | 'feature' | 'question' | 'other';
 
