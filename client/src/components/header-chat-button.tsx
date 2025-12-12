@@ -47,7 +47,7 @@ export function HeaderChatButton() {
         <div className="fixed top-14 left-1/2 transform -translate-x-1/2 z-50 w-[380px] max-w-[calc(100vw-16px)] animate-in fade-in slide-in-from-top-2">
           <div className="bg-card border rounded-lg shadow-2xl flex flex-col h-[500px]">
             {/* Header */}
-            <div className="p-3 border-b bg-gradient-to-r from-blue-500/10 to-blue-500/10 flex justify-between items-center">
+            <div className="p-3 border-b bg-gradient-to-r from-violet-500/10 to-indigo-500/10 flex justify-between items-center">
               <div className="flex-1">
                 <h3 className="font-bold text-sm">Support Chat</h3>
                 <p className="text-xs text-muted-foreground">Get help now</p>
@@ -79,7 +79,7 @@ export function HeaderChatButton() {
             <div className="p-3 border-t space-y-2">
               <Button
                 onClick={() => window.location.href = '/chat'}
-                className="w-full bg-gradient-to-r from-blue-600 to-blue-500 text-white"
+                className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white"
                 size="sm"
                 data-testid="button-full-chat"
               >
