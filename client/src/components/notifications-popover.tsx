@@ -1032,45 +1032,49 @@ export function NotificationsPopover() {
         </div>
       </div>
       
-      {/* Notification List - Using ScrollArea for better cross-browser scrolling */}
-      <ScrollArea className="flex-1 min-h-0">
-        <div className="h-full">
-          {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+      {/* Notification List - Native scrolling for reliability */}
+      <div 
+        className="flex-1 overflow-y-auto overscroll-contain"
+        style={{ 
+          maxHeight: 'calc(75vh - 280px)',
+          minHeight: '100px'
+        }}
+      >
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+          </div>
+        ) : sortedNotifications.length > 0 ? (
+          <div className="divide-y">
+            {sortedNotifications.map((notification) => (
+              <NotificationCard
+                key={notification.id}
+                notification={notification}
+                onDismiss={handleDismiss}
+                onAction={handleAction}
+                isGuruMode={isGuruMode}
+                canInteract={!!user}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
+            <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+              {activeTab === 'system_alerts' ? (
+                <Check className="h-8 w-8 text-emerald-500 opacity-70" />
+              ) : (
+                <Sparkles className="h-8 w-8 opacity-50" />
+              )}
             </div>
-          ) : sortedNotifications.length > 0 ? (
-            <div className="divide-y">
-              {sortedNotifications.map((notification) => (
-                <NotificationCard
-                  key={notification.id}
-                  notification={notification}
-                  onDismiss={handleDismiss}
-                  onAction={handleAction}
-                  isGuruMode={isGuruMode}
-                  canInteract={!!user}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-              <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                {activeTab === 'system_alerts' ? (
-                  <Check className="h-8 w-8 text-emerald-500 opacity-70" />
-                ) : (
-                  <Sparkles className="h-8 w-8 opacity-50" />
-                )}
-              </div>
-              <span className="text-sm font-medium">
-                {activeTab === 'system_alerts' ? 'All systems operational' : 'No notifications'}
-              </span>
-              <span className="text-xs mt-1">
-                {activeTab === 'system_alerts' ? 'No system alerts at this time' : "You're all caught up!"}
-              </span>
-            </div>
-          )}
-        </div>
-      </ScrollArea>
+            <span className="text-sm font-medium">
+              {activeTab === 'system_alerts' ? 'All systems operational' : 'No notifications'}
+            </span>
+            <span className="text-xs mt-1">
+              {activeTab === 'system_alerts' ? 'No system alerts at this time' : "You're all caught up!"}
+            </span>
+          </div>
+        )}
+      </div>
       
       {/* Footer: Ask Trinity for Help - Matching Design */}
       <div className="border-t bg-background shrink-0">
