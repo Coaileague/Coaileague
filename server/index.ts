@@ -219,6 +219,15 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize Seasonal Subagent:', error);
   }
 
+  // Initialize UI Control Subagent - Trinity's control layer for frontend UI components
+  try {
+    const { uiControlSubagent } = await import('./services/ai-brain/uiControlSubagent');
+    uiControlSubagent.registerActions();
+    console.log('[Server] UI Control Subagent initialized - Trinity can manage UI layers');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize UI Control Subagent:', error);
+  }
+
   // Initialize Service Orchestration Watchdog - detects orphan/rebel services
   try {
     const { initializeServiceWatchdog } = await import('./services/ai-brain/serviceOrchestrationWatchdog');

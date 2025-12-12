@@ -86,6 +86,7 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Trinity Root Access System:** Trinity AI has root-level platform control equivalent to root_admin user, implemented via dual-layer authorization with Trinity bypass logic and an emergency kill-switch.
 - **Trinity Control Console:** Real-time streaming of Trinity's cognitive process including thought signatures (reasoning between tool calls), action logs (structured tool execution records), and platform awareness events. Uses SSE for live streaming with WebSocket fallback, persistent database storage for historical queries, and fire-and-forget event posting pattern for non-blocking platform awareness.
 - **Platform Awareness Helper:** Fire-and-forget database event posting system (postDatabaseEventToAIBrain) that ensures Trinity has visibility into all CRUD operations without blocking the main request flow.
+- **UIControlSubagent:** Trinity's control layer for frontend UI components including layers, effects, managers, and handlers. Provides 10 AI Brain actions (ui.list_components, ui.get_state, ui.show, ui.hide, ui.enable, ui.disable, ui.configure, ui.reset, ui.batch, ui.by_category) for Trinity to manipulate any registered UI component. Broadcasts state changes via WebSocket to connected clients.
 
 **System Design Choices:**
 - **Modularity:** Extensive backend service modules and frontend routes.
