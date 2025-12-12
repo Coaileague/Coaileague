@@ -831,6 +831,7 @@ export interface IStorage {
   markPlatformUpdateAsViewed(userId: string, updateId: string): Promise<void>;
   markAllPlatformUpdatesAsViewed(userId: string, workspaceId?: string): Promise<number>;
   markPlatformUpdatesByCategories(userId: string, categories: string[], workspaceId?: string): Promise<number>;
+  deletePlatformUpdatesByCategories(userId: string, categories: string[], workspaceId?: string): Promise<number>;
   createPlatformUpdate(update: InsertPlatformUpdate): Promise<PlatformUpdate>;
 
   // ========================================================================
@@ -6857,6 +6858,41 @@ export class DatabaseStorage implements IStorage {
       .onConflictDoNothing();
 
     return unviewedUpdates.length;
+  }
+
+  async deletePlatformUpdatesByCategories(userId: string, categories: string[], workspaceId?: string): Promise<number> {
+    if (categories.length === 0) return 0;
+    
+    // Get all platform updates in the specified categories for this users workspace
+    const updatesToDelete = await db
+      .select({ id: platformUpdates.id })
+      .from(platformUpdates)
+      .where(
+        and(
+          inArray(platformUpdates.category, categories),
+          // Visibility filter: global updates (visibility=all or no workspace) or users workspace
+          workspaceId 
+            ? or(
+                eq(platformUpdates.visibility, 'all'),
+                isNull(platformUpdates.workspaceId),
+                eq(platformUpdates.workspaceId, workspaceId)
+              )
+            : sql`true`
+        )
+      );
+
+    if (updatesToDelete.length === 0) return 0;
+
+    const updateIds = updatesToDelete.map(u => u.id);
+    
+    // First delete any view records for these updates
+    await db.delete(userPlatformUpdateViews).where(inArray(userPlatformUpdateViews.updateId, updateIds));
+    
+    // Then delete the actual platform updates
+    await db.delete(platformUpdates).where(inArray(platformUpdates.id, updateIds));
+
+    console.log(`[Storage] Deleted ${updateIds.length} platform updates in categories: ${categories.join('\, ')}`);
+    return updateIds.length;
   }
 
   async createPlatformUpdate(update: InsertPlatformUpdate): Promise<PlatformUpdate> {

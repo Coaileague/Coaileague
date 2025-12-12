@@ -595,13 +595,12 @@ export function NotificationsPopover() {
             notifications: oldData.notifications?.map((n: any) => ({ ...n, isRead: true })) || [],
           };
         } else if (tab === 'system') {
+          const systemCategories = getCategoriesForTab('system');
           return {
             ...oldData,
-            maintenanceAlerts: oldData.maintenanceAlerts?.map((a: any) => ({ ...a, isAcknowledged: true })) || [],
-            platformUpdates: oldData.platformUpdates?.map((u: any) => 
-              u.category === 'maintenance' || u.category === 'security_patch'
-                ? { ...u, isViewed: true }
-                : u
+            maintenanceAlerts: [], // Delete all maintenance alerts
+            platformUpdates: oldData.platformUpdates?.filter((u: any) => 
+              !systemCategories.includes(u.category)
             ) || [],
           };
         }

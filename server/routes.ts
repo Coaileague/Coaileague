@@ -854,7 +854,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Also clear system-category platform updates (diagnostics, errors, security, etc.)
         const { getCategoriesForTab } = await import("@shared/config/notificationConfig");
         const systemCategories = getCategoriesForTab('system');
-        cleared.platformUpdates = await storage.markPlatformUpdatesByCategories(userId, systemCategories, workspaceId);
+        cleared.platformUpdates = await storage.deletePlatformUpdatesByCategories(userId, systemCategories, workspaceId);
       }
 
       // WebSocket broadcast for real-time sync
