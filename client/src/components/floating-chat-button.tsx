@@ -122,11 +122,13 @@ export function FloatingChatButton() {
   };
 
   // Handle click - only trigger feedback form if button wasn't dragged
-  const handleClick = () => {
-    // Click will be handled by FeedbackForm dialog trigger
-    // We just need to ensure dragging doesn't trigger it
+  const handleClick = (e: React.MouseEvent) => {
+    // If user was dragging, prevent dialog from opening
     if (hasMoved.current) {
-      return; // Don't trigger if user was dragging
+      e.preventDefault();
+      e.stopPropagation();
+      hasMoved.current = false;
+      return;
     }
     // Otherwise, let the click propagate to the DialogTrigger
   };
@@ -169,23 +171,19 @@ export function FloatingChatButton() {
   return (
     <FeedbackForm
       trigger={
-        <div 
-          className="fixed bottom-6 right-6 z-50 group" 
-          data-testid="container-floating-chat"
+        <button
+          ref={buttonRef}
+          onClick={handleClick}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
+          data-testid="button-floating-chat"
+          className={`fixed bottom-6 right-6 z-50 group relative ${isDragging ? 'cursor-grabbing' : 'cursor-pointer md:cursor-pointer touch-none'}`}
           style={getPositionStyle()}
+          aria-label="Report a Bug - Drag to move on mobile"
         >
-          <button
-            ref={buttonRef}
-            onClick={handleClick}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            data-testid="button-floating-chat"
-            className={`relative ${isDragging ? 'cursor-grabbing' : 'cursor-pointer md:cursor-pointer touch-none'}`}
-            aria-label="Report a Bug - Drag to move on mobile"
-          >
             <div 
               className="relative flex items-center overflow-hidden bg-gradient-to-br from-violet-600 to-indigo-600 border border-violet-500/30 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover-elevate"
               style={{ width: isHovered && !isDragging ? '16rem' : '4rem' }}
@@ -210,19 +208,17 @@ export function FloatingChatButton() {
               {/* Online indicator */}
               <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-muted/30 rounded-full animate-pulse" />
             </div>
-          </button>
-
           {/* Close button - always visible on mobile, hover on desktop */}
-          <button
+          <span
             onClick={handleClose}
             data-testid="button-close-chat-bubble"
-            className="absolute -top-2 -right-2 w-6 h-6 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 shadow-lg"
+            className="absolute -top-2 -right-2 w-6 h-6 bg-slate-900 hover:bg-slate-800 border border-slate-700 rounded-full flex items-center justify-center md:opacity-0 md:group-hover:opacity-100 transition-opacity duration-200 shadow-lg cursor-pointer"
             aria-label="Close chat bubble"
             title="Close chat bubble"
           >
             <X className="h-3.5 w-3.5 text-slate-300" />
-          </button>
-        </div>
+          </span>
+        </button>
       }
     />
   );

@@ -7,7 +7,6 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { OnboardingTour } from "@/components/onboarding-tour";
-import { FloatingFeedbackButton } from "@/components/feedback-form";
 import { GraduationCap, Settings2, Search, Menu, Sparkles, LogOut, User, Bell } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
@@ -1401,7 +1400,6 @@ export default function App() {
                           <ReenableChatButton />
                           <Toaster />
                           <AuthenticatedOnboardingTour />
-                          <FloatingFeedbackButton />
                         </ResponsiveAppFrame>
                         {/* Seasonal effects layer - snowfall, ornaments, etc. */}
                         <SeasonalEffectsLayer />
