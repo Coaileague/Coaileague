@@ -169,9 +169,9 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
             case 'notification_new':
               console.log('🔔 New notification received (LIVE):', data.notification?.title);
               
-              // SIMPLIFIED: Just invalidate queries - server is source of truth
-              queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
-              queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+              // IMMEDIATE refetch for truly live notifications (not just invalidate)
+              queryClient.refetchQueries({ queryKey: ["/api/notifications/combined"] });
+              queryClient.refetchQueries({ queryKey: ["/api/notifications"] });
               // CRITICAL: Sync Trinity context with fresh notification counts for LIVE awareness
               queryClient.invalidateQueries({ queryKey: ["/api/trinity/context"] });
               
@@ -194,13 +194,12 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
             case 'platform_update':
               console.log('📣 Platform update received (LIVE):', data.update?.title);
               
-              // SIMPLIFIED: Just invalidate queries - server is source of truth for isViewed state
-              // This prevents race conditions where we inject isViewed:false before server refetch
+              // IMMEDIATE refetch for truly live platform updates
               if (data.update) {
-                queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
-                queryClient.invalidateQueries({ queryKey: ["/api/whats-new"] });
-                queryClient.invalidateQueries({ queryKey: ["/api/whats-new/latest"] });
-                queryClient.invalidateQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
+                queryClient.refetchQueries({ queryKey: ["/api/notifications/combined"] });
+                queryClient.refetchQueries({ queryKey: ["/api/whats-new"] });
+                queryClient.refetchQueries({ queryKey: ["/api/whats-new/latest"] });
+                queryClient.refetchQueries({ queryKey: ["/api/whats-new/unviewed-count"] });
                 
                 // Dispatch event for WhatsNewBadge component
                 window.dispatchEvent(new CustomEvent('platform_update', { detail: data.update }));
