@@ -48,7 +48,7 @@
       "intent": "User authentication, session management, and RBAC",
       "files": [
         "server/routes/auth.ts",
-        "server/services/sessionService.ts",
+        "server/services/session/sessionService.ts",
         "client/src/hooks/useAuth.ts"
       ],
       "dependencies": ["CORE-RBAC-001"],
@@ -59,7 +59,7 @@
       "tier": "tier0",
       "intent": "Platform and workspace role management with 8 platform and 7 workspace levels",
       "files": [
-        "server/services/rbacService.ts",
+        "server/services/auth/rbacService.ts",
         "shared/rbac.ts",
         "client/src/hooks/useWorkspaceAccess.ts"
       ],
@@ -71,8 +71,8 @@
       "tier": "tier0",
       "intent": "Central hub coordinating 269+ actions across 18 categories",
       "files": [
-        "server/services/ai-brain/masterOrchestrator.ts",
-        "server/services/ai-brain/helpaiOrchestrator.ts"
+        "server/services/ai-brain/aiBrainMasterOrchestrator.ts",
+        "server/services/helpai/helpaiActionOrchestrator.ts"
       ],
       "dependencies": ["AI-SUBAGENT-001", "AI-GEMINI-001"],
       "owner": "ai-platform"
@@ -89,7 +89,7 @@
       "name": "Unified Gemini Client",
       "tier": "tier0",
       "intent": "4-tier Gemini architecture for AI intelligence",
-      "files": ["server/services/ai-brain/unifiedGeminiClient.ts"],
+      "files": ["server/services/ai-brain/providers/unifiedGeminiClient.ts"],
       "dependencies": [],
       "owner": "ai-platform"
     },
@@ -99,7 +99,7 @@
       "intent": "Interactive AI mascot providing global insights and assistance",
       "files": [
         "client/src/components/trinity-redesign.tsx",
-        "server/services/trinityService.ts"
+        "server/services/trinityContext.ts"
       ],
       "dependencies": ["AI-BRAIN-001"],
       "owner": "ai-platform"
@@ -122,7 +122,6 @@
       "tier": "tier0",
       "intent": "Real-time communication backbone for notifications, chat, and live updates",
       "files": [
-        "server/services/websocketService.ts",
         "server/ws.ts"
       ],
       "dependencies": [],
@@ -147,7 +146,7 @@
       "files": [
         "client/src/pages/payroll-dashboard.tsx",
         "server/routes/payroll.ts",
-        "server/services/payrollService.ts"
+        "server/services/billing/payrollService.ts"
       ],
       "dependencies": ["STRIPE-001"],
       "owner": "finance"
@@ -157,7 +156,7 @@
       "tier": "tier0",
       "intent": "Payment processing, subscriptions, and billing",
       "files": [
-        "server/services/stripeService.ts",
+        "server/services/billing/stripeService.ts",
         "server/routes/stripe.ts"
       ],
       "dependencies": [],
@@ -191,7 +190,6 @@
       "tier": "tier1",
       "intent": "File storage for documents, images, and assets",
       "files": [
-        "server/services/storageService.ts",
         "server/routes/storage.ts"
       ],
       "dependencies": [],

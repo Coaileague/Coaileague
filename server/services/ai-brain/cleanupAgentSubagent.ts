@@ -91,12 +91,36 @@ class CleanupAgentSubagent {
     return this.specIndexedFiles.has(filePath);
   }
 
+  private validatePath(directory: string): boolean {
+    const allowedRoots = ['attached_assets', 'client/src', 'server', 'shared'];
+    const normalizedDir = path.normalize(directory);
+    if (normalizedDir.includes('..') || path.isAbsolute(normalizedDir)) {
+      console.error('[CAS] Path traversal attempt blocked:', directory);
+      return false;
+    }
+    const isAllowed = allowedRoots.some(root => normalizedDir.startsWith(root));
+    if (!isAllowed) {
+      console.error('[CAS] Directory not in allowed roots:', directory);
+      return false;
+    }
+    return true;
+  }
+
   async discoverUnusedAssets(directory: string = 'attached_assets'): Promise<DiscoveryResult> {
     const startTime = Date.now();
     const unusedFiles: UnusedFile[] = [];
     const protectedFiles: string[] = [];
 
     try {
+      if (!this.validatePath(directory)) {
+        return {
+          unusedFiles: [],
+          protectedFiles: [],
+          specIndexedFiles: Array.from(this.specIndexedFiles),
+          scanDuration: Date.now() - startTime
+        };
+      }
+
       if (!fs.existsSync(directory)) {
         return {
           unusedFiles: [],
@@ -252,14 +276,30 @@ class CleanupAgentSubagent {
         }
       });
 
-      return {
-        score: result?.data?.score ?? 0.8,
-        reasoning: result?.data?.reasoning ?? 'Default approval - low risk cleanup'
-      };
+      const score = result?.data?.score;
+      const reasoning = result?.data?.reasoning;
+
+      if (typeof score !== 'number' || score < 0 || score > 1) {
+        console.warn('[CAS] Invalid LLM Judge score, failing closed:', score);
+        return {
+          score: 0.3,
+          reasoning: 'Invalid score from LLM Judge - manual review required'
+        };
+      }
+
+      if (typeof reasoning !== 'string' || reasoning.length < 10) {
+        console.warn('[CAS] Missing LLM Judge reasoning, failing closed');
+        return {
+          score: 0.3,
+          reasoning: 'Missing reasoning from LLM Judge - manual review required'
+        };
+      }
+
+      return { score, reasoning };
     } catch (error) {
       console.error('[CAS] LLM Judge review failed:', error);
       return {
-        score: 0.5,
+        score: 0.3,
         reasoning: 'LLM Judge unavailable - manual review required'
       };
     }
