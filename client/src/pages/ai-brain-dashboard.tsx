@@ -5,7 +5,6 @@ import {
   DocumentExtractionUpload,
   IssueDetectionViewer,
   GuardrailsDashboard,
-  NotificationCenter,
   MigrationReview,
 } from "@/components/ai-brain";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -105,11 +104,10 @@ export default function AIBrainDashboard() {
 
       {/* Main Tabs */}
       <Tabs defaultValue="extraction" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="extraction">Extract</TabsTrigger>
           <TabsTrigger value="issues">Issues</TabsTrigger>
           <TabsTrigger value="guardrails">Guardrails</TabsTrigger>
-          <TabsTrigger value="notifications">Notifications</TabsTrigger>
           <TabsTrigger value="review">Review</TabsTrigger>
         </TabsList>
 
@@ -171,23 +169,6 @@ export default function AIBrainDashboard() {
             </CardHeader>
             <CardContent>
               <GuardrailsDashboard />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Notifications Tab */}
-        <TabsContent value="notifications" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Notification Center</CardTitle>
-              <CardDescription>
-                Manage automation notifications and preferences
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {user && (
-                <NotificationCenter userId={user.id} workspaceId={user.workspaceId} />
-              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -58,7 +58,6 @@ import Support from "@/pages/support";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import Dashboard from "@/pages/dashboard";
-import WidgetsDashboard from "@/pages/widgets-dashboard";
 import { Redirect } from "wouter";
 import UniversalSchedule from "@/pages/universal-schedule";
 import DailySchedule from "@/pages/daily-schedule";
@@ -914,7 +913,6 @@ function AppContent() {
               </Route>
               <Route path="/mobile-dashboard"><Redirect to="/dashboard" /></Route>
               <Route path="/dashboard" component={Dashboard} />
-              <Route path="/widgets-dashboard" component={WidgetsDashboard} />
               <Route path="/schedule" component={UniversalSchedule} />
               <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
               <Route path="/daily-schedule" component={DailySchedule} />
@@ -1210,7 +1208,6 @@ function AppContent() {
                 </Route>
                 <Route path="/mobile-dashboard"><Redirect to="/dashboard" /></Route>
                 <Route path="/dashboard" component={Dashboard} />
-              <Route path="/widgets-dashboard" component={WidgetsDashboard} />
                 <Route path="/schedule" component={UniversalSchedule} />
                 <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
                 <Route path="/daily-schedule" component={DailySchedule} />
