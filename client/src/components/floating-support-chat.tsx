@@ -1,20 +1,21 @@
 /**
- * FloatingSupportChat - Enhanced Draggable Chat Launcher
+ * FloatingSupportChat - Trinity AI Assistant
  * 
  * Features:
- * - Draggable with Pointer Events API (desktop + mobile touch)
+ * - DESKTOP: Fixed bottom-right position, NO dragging - Trinity stays out of user's way
+ * - MOBILE: Touch-friendly with swipe-up command sheet
+ * - Intelligent UI avoidance - auto-repositions when near interactive elements
  * - Minimizable to compact pill
  * - Shows real IDs (workId, orgId, orgName)
  * - Role-based routing:
  *   - Support roles → /support/chatrooms dashboard
  *   - Regular users → /org-chat hub
  *   - Guests → AI support flow
- * - Position persistence via localStorage
- * - Viewport bounds clamping
+ * - Separate floating mic button for voice input
  */
 
 import { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, X, Bug, Minimize2, Maximize2, ExternalLink, Headset, Search, Brain, LineChart, Code2, Loader2 } from 'lucide-react';
+import { Send, Bot, User, X, Bug, Minimize2, Maximize2, ExternalLink, Headset, Search, Brain, LineChart, Code2, Loader2, Mic, ChevronUp } from 'lucide-react';
 import { useAIActivity, type AIActivityState } from '@/hooks/use-ai-activity';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -23,8 +24,20 @@ import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 import { useEmployee } from '@/hooks/useEmployee';
 import { useToast } from '@/hooks/use-toast';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { cn } from '@/lib/utils';
 import { CHAT_BUBBLE_CONFIG } from '@/config/chatBubble';
+
+// Trinity positioning constants - desktop stays fixed, mobile has safe areas
+const TRINITY_DESKTOP_POSITION = {
+  bottom: 24,  // 24px from bottom
+  right: 24,   // 24px from right edge
+};
+
+const TRINITY_MOBILE_POSITION = {
+  bottom: 90,  // Account for mobile nav bar + safe area
+  right: 16,
+};
 
 interface ChatBubbleState {
   position: { x: number; y: number };
@@ -59,8 +72,11 @@ export function FloatingSupportChat() {
   const { employee } = useEmployee();
   const [location, setLocation] = useLocation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [isCreatingTicket, setIsCreatingTicket] = useState(false);
   const [animationState, setAnimationState] = useState<AnimationState>('idle');
+  const [showCommandSheet, setShowCommandSheet] = useState(false);
+  const [isListening, setIsListening] = useState(false);
   
   const { activityState, isActive: isAIActive, lastEvent } = useAIActivity({
     workspaceId: employee?.workspaceId,
@@ -90,103 +106,19 @@ export function FloatingSupportChat() {
                      location.startsWith('/auditor/portal') ||
                      location.startsWith('/client/portal');
   
-  // State management with localStorage persistence (browser-safe)
+  // SIMPLIFIED STATE - No position tracking, purely UI state
+  // Trinity is ALWAYS fixed to bottom-right via CSS - no dragging on desktop
   const [state, setState] = useState<ChatBubbleState>({
-    position: { x: 0, y: 0 },
+    position: { x: 0, y: 0 }, // Unused - kept for type compatibility
     isMinimized: true,
     isOpen: false
   });
-  
-  // Calculate initial position based on screen size (mobile vs desktop)
-  // Smart positioning: bottom-right corner to avoid blocking content
-  const getInitialPosition = () => {
-    const isMobileScreen = window.innerWidth < 640;
-    const config = CHAT_BUBBLE_CONFIG.positioning;
-    
-    // SMART POSITIONING: Always position in bottom-right corner to avoid blocking content
-    // This ensures Trinity never interferes with user's work
-    const safeBottomMargin = isMobileScreen ? 90 : 100; // Account for mobile nav bar
-    const safeRightMargin = 20;
-    
-    const elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.minimizedPill;
-    
-    return {
-      x: Math.max(0, window.innerWidth - elementWidth - safeRightMargin),
-      y: Math.max(config.topBoundary, window.innerHeight - safeBottomMargin)
-    };
-  };
-  
-  // Check if position is blocking important UI elements
-  const isPositionBlockingContent = (x: number, y: number): boolean => {
-    // Define "danger zones" where the bubble should NOT be
-    const headerZone = { minY: 0, maxY: 120 }; // Top 120px is header/nav area
-    const leftContentZone = { minX: 0, maxX: 200, minY: 60, maxY: 400 }; // Left content area
-    
-    // Check if in header zone
-    if (y < headerZone.maxY && y >= headerZone.minY) {
-      return true;
-    }
-    
-    // Check if blocking left content on mobile
-    if (window.innerWidth < 640) {
-      if (x >= leftContentZone.minX && x <= leftContentZone.maxX &&
-          y >= leftContentZone.minY && y <= leftContentZone.maxY) {
-        return true;
-      }
-    }
-    
-    return false;
-  };
 
-  // Hydrate from localStorage on mount (browser only)
-  // SMART: Reset to safe position if saved position is blocking content
+  // Clean up old localStorage position data on mount - we don't use it anymore
   useEffect(() => {
     if (typeof window !== 'undefined') {
-      const saved = localStorage.getItem('chat-bubble-state');
-      const topBoundary = CHAT_BUBBLE_CONFIG.positioning.topBoundary;
-      
-      // Clear bad positions saved from before - always start at safe position
-      // This fixes the "Trinity blocking content" issue permanently
-      const safePosition = getInitialPosition();
-      
-      if (saved) {
-        try {
-          const parsed = JSON.parse(saved);
-          const savedX = Math.max(0, parsed.position?.x || 0);
-          const savedY = Math.max(topBoundary, parsed.position?.y || 0);
-          
-          // SMART AVOIDANCE: Check if saved position is blocking content
-          // If so, reset to safe bottom-right corner position
-          if (isPositionBlockingContent(savedX, savedY)) {
-            console.log('[FloatingSupportChat] Saved position was blocking content, resetting to safe position');
-            localStorage.removeItem('chat-bubble-state'); // Clear bad position
-            setState({
-              position: safePosition,
-              isMinimized: true,
-              isOpen: false
-            });
-          } else {
-            setState({
-              ...parsed,
-              position: { x: savedX, y: savedY }
-            });
-          }
-        } catch {
-          // Fallback: set position based on viewport
-          setState({
-            position: safePosition,
-            isMinimized: true,
-            isOpen: false
-          });
-        }
-      } else {
-        // First time: set position based on viewport (bottom-right, safe)
-        setState({
-          position: safePosition,
-          isMinimized: true,
-          isOpen: false
-        });
-      }
+      // Remove old position data - Trinity no longer uses position tracking
+      localStorage.removeItem('chat-bubble-state');
     }
   }, []);
   
@@ -203,61 +135,8 @@ export function FloatingSupportChat() {
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
-  // Dragging state
-  const isDraggingRef = useRef(false);
-  const dragStartRef = useRef({ x: 0, y: 0 });
-  
-  // Save state to localStorage whenever it changes (browser only)
-  useEffect(() => {
-    if (typeof window !== 'undefined') {
-      localStorage.setItem('chat-bubble-state', JSON.stringify(state));
-    }
-  }, [state]);
-  
-  // Viewport bounds clamping on resize (browser only)
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    
-    const handleResize = () => {
-      // Calculate max X based on current element width
-      let elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.floatingButton;
-      if (state.isOpen) {
-        elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.chatWindow;
-      } else if (state.isMinimized) {
-        elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.minimizedPill;
-      }
-      
-      const maxX = window.innerWidth - elementWidth;
-      const maxY = window.innerHeight - CHAT_BUBBLE_CONFIG.positioning.maxHeight;
-      const minY = CHAT_BUBBLE_CONFIG.positioning.topBoundary; // Prevent header overlap
-      setState(prev => ({
-        ...prev,
-        position: {
-          x: Math.max(0, Math.min(prev.position.x, maxX)),
-          y: Math.max(minY, Math.min(prev.position.y, maxY))
-        }
-      }));
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => window.removeEventListener('resize', handleResize);
-  }, [state]);
-  
-  // Document-level drag handlers removed - dragging is disabled
-  
-  // Dragging disabled - clicking only
-  const handlePointerDown = (e: React.MouseEvent) => {
-    // Dragging is disabled - do nothing
-    return;
-  };
-  
-  // Prevent click from firing when dragging
-  const handleClickWithDragCheck = (e: React.MouseEvent) => {
-    if (isDraggingRef.current) {
-      e.preventDefault();
-      isDraggingRef.current = false;
-      return;
-    }
+  // SIMPLE CLICK HANDLER - no drag logic
+  const handleOpenChat = () => {
     setAnimationState('opening');
     setState(prev => ({ ...prev, isMinimized: false, isOpen: true }));
     setTimeout(() => setAnimationState('idle'), CHAT_BUBBLE_CONFIG.animations.openingDuration);
@@ -371,70 +250,179 @@ export function FloatingSupportChat() {
   
   if (shouldHide) return null;
   
-  // Minimized pill UI - draggable on desktop
+  // DESKTOP: Fixed bottom-right, NO dragging - Trinity stays out of user's way
+  // MOBILE: Touch-friendly with safe-area padding
+  const positionStyle = isMobile ? {
+    position: 'fixed' as const,
+    bottom: `calc(${TRINITY_MOBILE_POSITION.bottom}px + env(safe-area-inset-bottom, 0px))`,
+    right: `calc(${TRINITY_MOBILE_POSITION.right}px + env(safe-area-inset-right, 0px))`,
+    zIndex: CHAT_BUBBLE_CONFIG.zIndex,
+  } : {
+    position: 'fixed' as const,
+    bottom: `${TRINITY_DESKTOP_POSITION.bottom}px`,
+    right: `${TRINITY_DESKTOP_POSITION.right}px`,
+    zIndex: CHAT_BUBBLE_CONFIG.zIndex,
+  };
+  
+  // Minimized pill UI - fixed position on desktop
   if (state.isMinimized) {
     return (
-      <div
-        style={{
-          position: 'fixed',
-          left: `${state.position.x}px`,
-          top: `${state.position.y}px`,
-          zIndex: CHAT_BUBBLE_CONFIG.zIndex,
-          touchAction: CHAT_BUBBLE_CONFIG.touchAction as any,
-          cursor: 'pointer',
-          userSelect: CHAT_BUBBLE_CONFIG.userSelect as any
-        }}
-        className={`flex items-center gap-2 bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text} ${CHAT_BUBBLE_CONFIG.effects.rounded} px-${CHAT_BUBBLE_CONFIG.sizes.pillPaddingX} py-${CHAT_BUBBLE_CONFIG.sizes.pillPaddingY} ${CHAT_BUBBLE_CONFIG.effects.shadow} hover-elevate active-elevate-2`}
-        onClick={handleClickWithDragCheck}
-        data-testid="chat-bubble-minimized"
-      >
-        <Bug className={`w-${CHAT_BUBBLE_CONFIG.sizes.pillIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.pillIconSize}`} />
-        <span className="font-medium text-sm">{CHAT_BUBBLE_CONFIG.content.buttonText.liveChat}</span>
-      </div>
+      <>
+        <div
+          style={positionStyle}
+          className={`flex items-center gap-2 bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text} ${CHAT_BUBBLE_CONFIG.effects.rounded} px-${CHAT_BUBBLE_CONFIG.sizes.pillPaddingX} py-${CHAT_BUBBLE_CONFIG.sizes.pillPaddingY} ${CHAT_BUBBLE_CONFIG.effects.shadow} hover-elevate active-elevate-2 cursor-pointer select-none`}
+          onClick={handleOpenChat}
+          data-testid="chat-bubble-minimized"
+        >
+          <Bug className={`w-${CHAT_BUBBLE_CONFIG.sizes.pillIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.pillIconSize}`} />
+          <span className="font-medium text-sm">{CHAT_BUBBLE_CONFIG.content.buttonText.liveChat}</span>
+        </div>
+        
+        {/* Floating Mic Button - separate, easier to tap on mobile */}
+        {isMobile && (
+          <button
+            style={{
+              position: 'fixed',
+              bottom: `calc(${TRINITY_MOBILE_POSITION.bottom + 70}px + env(safe-area-inset-bottom, 0px))`,
+              right: `calc(${TRINITY_MOBILE_POSITION.right}px + env(safe-area-inset-right, 0px))`,
+              zIndex: CHAT_BUBBLE_CONFIG.zIndex - 1,
+            }}
+            className={cn(
+              "w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-200",
+              isListening 
+                ? "bg-red-500 text-white animate-pulse" 
+                : "bg-card border-2 border-border text-foreground hover-elevate active-elevate-2"
+            )}
+            onClick={() => {
+              setIsListening(!isListening);
+              toast({ title: isListening ? "Stopped listening" : "Listening for voice input..." });
+            }}
+            data-testid="button-floating-mic"
+          >
+            <Mic className="w-5 h-5" />
+          </button>
+        )}
+        
+        {/* Swipe-up Command Sheet indicator on mobile */}
+        {isMobile && (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: `calc(4px + env(safe-area-inset-bottom, 0px))`,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              zIndex: CHAT_BUBBLE_CONFIG.zIndex - 2,
+            }}
+            className="flex flex-col items-center gap-1 opacity-50"
+            onClick={() => setShowCommandSheet(true)}
+          >
+            <ChevronUp className="w-5 h-5 text-muted-foreground animate-bounce" />
+            <span className="text-[10px] text-muted-foreground">Commands</span>
+          </div>
+        )}
+        
+        {/* Command Sheet */}
+        {showCommandSheet && (
+          <div
+            className="fixed inset-0 bg-black/50 z-[9998]"
+            onClick={() => setShowCommandSheet(false)}
+          >
+            <div 
+              className="absolute bottom-0 left-0 right-0 bg-card rounded-t-2xl p-4 pb-8 animate-in slide-in-from-bottom duration-300"
+              onClick={(e) => e.stopPropagation()}
+              style={{ paddingBottom: `calc(2rem + env(safe-area-inset-bottom, 0px))` }}
+            >
+              <div className="w-12 h-1 bg-muted-foreground/30 rounded-full mx-auto mb-4" />
+              <h3 className="font-bold text-lg mb-3">Quick Commands</h3>
+              <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" onClick={() => { setShowCommandSheet(false); handleChatClick(); }} className="justify-start gap-2">
+                  <Bug className="w-4 h-4" /> Report Issue
+                </Button>
+                <Button variant="outline" onClick={() => { setShowCommandSheet(false); setLocation('/chat'); }} className="justify-start gap-2">
+                  <Headset className="w-4 h-4" /> Live Support
+                </Button>
+                <Button variant="outline" onClick={() => { setShowCommandSheet(false); setLocation('/help'); }} className="justify-start gap-2">
+                  <Search className="w-4 h-4" /> Help Center
+                </Button>
+                <Button variant="outline" onClick={() => { setShowCommandSheet(false); setIsListening(true); }} className="justify-start gap-2">
+                  <Mic className="w-4 h-4" /> Voice Input
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+      </>
     );
   }
   
-  // Floating button (when closed) - draggable
+  // Floating button (when closed) - fixed position, no dragging
   if (!state.isOpen) {
     return (
-      <div
-        style={{
-          position: 'fixed',
-          left: `${state.position.x}px`,
-          top: `${state.position.y}px`,
-          zIndex: CHAT_BUBBLE_CONFIG.zIndex,
-          touchAction: CHAT_BUBBLE_CONFIG.touchAction as any,
-          cursor: 'pointer',
-          userSelect: CHAT_BUBBLE_CONFIG.userSelect as any
-        }}
-        onClick={handleClickWithDragCheck}
-        className="group"
-      >
-        <button
-          className={`bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text} ${CHAT_BUBBLE_CONFIG.effects.rounded} p-${CHAT_BUBBLE_CONFIG.sizes.buttonPadding} ${CHAT_BUBBLE_CONFIG.effects.shadow} hover:shadow-blue-500/50 hover:scale-110 ${CHAT_BUBBLE_CONFIG.effects.transition} w-${CHAT_BUBBLE_CONFIG.sizes.buttonSize} h-${CHAT_BUBBLE_CONFIG.sizes.buttonSize} flex items-center justify-center pointer-events-none`}
-          data-testid="button-open-chat"
+      <>
+        <div
+          style={positionStyle}
+          onClick={handleOpenChat}
+          className="group cursor-pointer"
         >
-          <Bug className={`w-${CHAT_BUBBLE_CONFIG.sizes.buttonIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.buttonIconSize}`} />
-          <div className={`absolute -top-1 -right-1 ${CHAT_BUBBLE_CONFIG.colors.error} ${CHAT_BUBBLE_CONFIG.colors.text} text-xs ${CHAT_BUBBLE_CONFIG.effects.rounded} w-5 h-5 flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 ${CHAT_BUBBLE_CONFIG.effects.transitionOpacity}`}>
-            !
-          </div>
-        </button>
-      </div>
+          <button
+            className={`bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text} ${CHAT_BUBBLE_CONFIG.effects.rounded} p-${CHAT_BUBBLE_CONFIG.sizes.buttonPadding} ${CHAT_BUBBLE_CONFIG.effects.shadow} hover:shadow-violet-500/50 hover:scale-110 ${CHAT_BUBBLE_CONFIG.effects.transition} w-${CHAT_BUBBLE_CONFIG.sizes.buttonSize} h-${CHAT_BUBBLE_CONFIG.sizes.buttonSize} flex items-center justify-center pointer-events-none`}
+            data-testid="button-open-chat"
+          >
+            <Bug className={`w-${CHAT_BUBBLE_CONFIG.sizes.buttonIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.buttonIconSize}`} />
+            <div className={`absolute -top-1 -right-1 ${CHAT_BUBBLE_CONFIG.colors.error} ${CHAT_BUBBLE_CONFIG.colors.text} text-xs ${CHAT_BUBBLE_CONFIG.effects.rounded} w-5 h-5 flex items-center justify-center font-bold opacity-0 group-hover:opacity-100 ${CHAT_BUBBLE_CONFIG.effects.transitionOpacity}`}>
+              !
+            </div>
+          </button>
+        </div>
+        
+        {/* Floating Mic Button - separate on mobile */}
+        {isMobile && (
+          <button
+            style={{
+              position: 'fixed',
+              bottom: `calc(${TRINITY_MOBILE_POSITION.bottom + 80}px + env(safe-area-inset-bottom, 0px))`,
+              right: `calc(${TRINITY_MOBILE_POSITION.right}px + env(safe-area-inset-right, 0px))`,
+              zIndex: CHAT_BUBBLE_CONFIG.zIndex - 1,
+            }}
+            className={cn(
+              "w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-200",
+              isListening 
+                ? "bg-red-500 text-white animate-pulse" 
+                : "bg-card border-2 border-border text-foreground hover-elevate active-elevate-2"
+            )}
+            onClick={() => {
+              setIsListening(!isListening);
+              toast({ title: isListening ? "Stopped listening" : "Listening for voice input..." });
+            }}
+            data-testid="button-floating-mic"
+          >
+            <Mic className="w-5 h-5" />
+          </button>
+        )}
+      </>
     );
   }
   
-  // Full chat window (guest AI flow)
+  // Full chat window (guest AI flow) - fixed position, no dragging
+  const chatWindowStyle = isMobile ? {
+    position: 'fixed' as const,
+    bottom: `calc(${TRINITY_MOBILE_POSITION.bottom}px + env(safe-area-inset-bottom, 0px))`,
+    right: `calc(${TRINITY_MOBILE_POSITION.right}px + env(safe-area-inset-right, 0px))`,
+    zIndex: CHAT_BUBBLE_CONFIG.zIndex,
+    width: `min(${CHAT_BUBBLE_CONFIG.sizes.windowWidth}px, calc(100vw - 32px))`,
+    maxHeight: `min(${CHAT_BUBBLE_CONFIG.sizes.windowHeight}px, calc(100vh - 120px))`,
+  } : {
+    position: 'fixed' as const,
+    bottom: `${TRINITY_DESKTOP_POSITION.bottom}px`,
+    right: `${TRINITY_DESKTOP_POSITION.right}px`,
+    zIndex: CHAT_BUBBLE_CONFIG.zIndex,
+    width: `${CHAT_BUBBLE_CONFIG.sizes.windowWidth}px`,
+    maxHeight: `${CHAT_BUBBLE_CONFIG.sizes.windowHeight}px`,
+  };
+  
   return (
     <div
-      style={{
-        position: 'fixed',
-        left: `${state.position.x}px`,
-        top: `${state.position.y}px`,
-        zIndex: CHAT_BUBBLE_CONFIG.zIndex,
-        width: `${CHAT_BUBBLE_CONFIG.sizes.windowWidth}px`,
-        maxHeight: `${CHAT_BUBBLE_CONFIG.sizes.windowHeight}px`,
-        touchAction: CHAT_BUBBLE_CONFIG.touchAction
-      }}
+      style={chatWindowStyle}
       className={cn(
         `${CHAT_BUBBLE_CONFIG.colors.background} border-2 ${CHAT_BUBBLE_CONFIG.colors.border} ${CHAT_BUBBLE_CONFIG.effects.roundedLg} ${CHAT_BUBBLE_CONFIG.effects.shadow} flex flex-col`,
         animationState === 'opening' && 'chat-bubble-opening',

@@ -147,6 +147,72 @@ class GeminiProvider implements AIProvider {
 }
 
 // ============================================================================
+// NATURAL LANGUAGE SMOOTHING - Human-like responses for misunderstandings
+// ============================================================================
+
+const SMOOTHING_RESPONSES = {
+  cantUnderstand: [
+    "I'm not quite sure I understand what you mean. Could you try explaining it a different way?",
+    "Hmm, I'm having trouble understanding that. Could you rephrase your question?",
+    "I want to make sure I help you properly - could you give me a bit more detail about what you're trying to do?",
+    "Let me make sure I get this right. Can you tell me more about what you're looking for?",
+    "I'm not 100% sure what you need. Could you describe the problem in different words?",
+  ],
+  technicalError: [
+    "Something went wrong on my end - give me a moment and try again.",
+    "I hit a small snag. Let's try that again in just a second.",
+    "Looks like I ran into a technical hiccup. Mind trying once more?",
+    "Oops! Something didn't work right. Let me try again if you resend that.",
+  ],
+  ambiguous: [
+    "I can help with that, but I want to make sure I understand correctly. Are you asking about {option1} or {option2}?",
+    "Just to clarify - are you looking for help with {option1}, or is this about something else?",
+    "Before I answer, let me check: is this about {option1}?",
+  ],
+  encouragement: [
+    "No worries, let's figure this out together!",
+    "I'm here to help - let's work through this step by step.",
+    "Happy to help! Let me know a bit more about what you need.",
+  ],
+};
+
+// Get a random smoothing response
+function getSmoothingResponse(type: keyof typeof SMOOTHING_RESPONSES): string {
+  const responses = SMOOTHING_RESPONSES[type];
+  return responses[Math.floor(Math.random() * responses.length)];
+}
+
+// Apply natural language smoothing to make responses more human-like
+// IMPROVED: Only smooth when genuinely needed, avoid duplicate apologies
+function applySmoothingIfNeeded(response: string, userMessage: string): string {
+  const lowerResponse = response.toLowerCase();
+  
+  // Don't smooth responses that already have apologies or explanations
+  if (lowerResponse.includes('sorry') || lowerResponse.includes('apologize')) {
+    return response; // Already apologetic, don't add more
+  }
+  
+  // Don't smooth responses that are already helpful and actionable
+  if (response.length > 100 && (lowerResponse.includes('try') || lowerResponse.includes('help'))) {
+    return response; // Already helpful
+  }
+  
+  // Detect guard-rail or safety refusals - don't add generic encouragement
+  if (lowerResponse.includes('cannot') || lowerResponse.includes("can't help") || 
+      lowerResponse.includes('not able') || lowerResponse.includes('not allowed')) {
+    return response; // Safety refusal - don't add false encouragement
+  }
+  
+  // Only smooth very short or clearly error-like responses
+  if (response.length < 30 && /^(error|failed|issue|problem)/i.test(response)) {
+    // Replace with a more helpful error message
+    return getSmoothingResponse('technicalError');
+  }
+  
+  return response;
+}
+
+// ============================================================================
 // KNOWLEDGE BASE
 // ============================================================================
 
@@ -445,7 +511,19 @@ Be helpful, empathetic, and solution-oriented.`;
       { role: 'user', content: userMessage }
     ];
 
-    const { content: aiResponse, tokensUsed } = await this.provider.chat(messages);
+    let aiResponse: string;
+    let tokensUsed: number;
+    
+    try {
+      const result = await this.provider.chat(messages);
+      aiResponse = applySmoothingIfNeeded(result.content, userMessage);
+      tokensUsed = result.tokensUsed;
+    } catch (error) {
+      // Natural language smoothing for technical errors
+      console.error('[HelpAI] Chat error:', error);
+      aiResponse = getSmoothingResponse('technicalError');
+      tokensUsed = 0;
+    }
 
     // Record usage (skip for anonymous users)
     if (tokensUsed > 0 && !isAnonymous) {

@@ -18794,3 +18794,90 @@ export const insertAiBrainActionLogSchema = createInsertSchema(aiBrainActionLogs
 
 export type InsertAiBrainActionLog = z.infer<typeof insertAiBrainActionLogSchema>;
 export type AiBrainActionLog = typeof aiBrainActionLogs.$inferSelect;
+
+// ============================================================================
+// AUTOMATION GOVERNANCE - AI Brain Pattern Learning System
+// ============================================================================
+// Tracks automation patterns, outcomes, and enables Trinity to learn from
+// successful/failed automations to improve decision-making over time.
+
+export const automationGovernanceStatusEnum = pgEnum('automation_governance_status', [
+  'pending',
+  'approved',
+  'rejected',
+  'executed',
+  'failed',
+  'rolled_back',
+]);
+
+export const automationGovernance = pgTable("automation_governance", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Workspace context
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }).notNull(),
+  
+  // Action tracking
+  actionType: varchar("action_type", { length: 100 }).notNull(), // 'schedule_change', 'payroll_run', 'invoice_create', etc.
+  actionCategory: varchar("action_category", { length: 100 }).notNull(), // 'scheduling', 'payroll', 'billing', 'compliance', etc.
+  actionSource: varchar("action_source", { length: 100 }).notNull(), // 'trinity_ai', 'user_request', 'automation_job', 'subagent'
+  
+  // Pattern identification
+  patternHash: varchar("pattern_hash", { length: 64 }), // Hash of similar patterns for grouping
+  patternDescription: text("pattern_description"), // Human-readable pattern description
+  
+  // Input/Output tracking
+  inputData: jsonb("input_data").default('{}'), // What triggered the action
+  outputData: jsonb("output_data").default('{}'), // What the action produced
+  affectedEntities: jsonb("affected_entities").default('[]'), // List of entity IDs affected
+  
+  // Approval workflow
+  status: automationGovernanceStatusEnum("status").notNull().default('pending'),
+  requiresApproval: boolean("requires_approval").default(false),
+  approvedBy: varchar("approved_by").references(() => users.id, { onDelete: 'set null' }),
+  approvedAt: timestamp("approved_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Execution tracking
+  executedAt: timestamp("executed_at"),
+  executionDurationMs: integer("execution_duration_ms"),
+  
+  // Outcome learning
+  outcome: varchar("outcome", { length: 50 }), // 'success', 'failure', 'partial', 'timeout'
+  outcomeScore: integer("outcome_score"), // 0-100 confidence score
+  outcomeNotes: text("outcome_notes"),
+  
+  // Learning data
+  confidenceLevel: integer("confidence_level").default(50), // 0-100, increases with successful patterns
+  learningData: jsonb("learning_data").default('{}'), // AI Brain learning metadata
+  similarPatternCount: integer("similar_pattern_count").default(0), // How many similar patterns exist
+  
+  // Rollback support
+  canRollback: boolean("can_rollback").default(false),
+  rollbackData: jsonb("rollback_data"), // Data needed to undo the action
+  rolledBackAt: timestamp("rolled_back_at"),
+  rolledBackBy: varchar("rolled_back_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  // AI Brain job linkage
+  aiBrainJobId: varchar("ai_brain_job_id").references(() => aiBrainJobs.id, { onDelete: 'set null' }),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("automation_gov_workspace_idx").on(table.workspaceId),
+  index("automation_gov_action_type_idx").on(table.actionType),
+  index("automation_gov_category_idx").on(table.actionCategory),
+  index("automation_gov_status_idx").on(table.status),
+  index("automation_gov_pattern_idx").on(table.patternHash),
+  index("automation_gov_outcome_idx").on(table.outcome),
+  index("automation_gov_created_idx").on(table.createdAt),
+  index("automation_gov_confidence_idx").on(table.confidenceLevel),
+]);
+
+export const insertAutomationGovernanceSchema = createInsertSchema(automationGovernance).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAutomationGovernance = z.infer<typeof insertAutomationGovernanceSchema>;
+export type AutomationGovernance = typeof automationGovernance.$inferSelect;
