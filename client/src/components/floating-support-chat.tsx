@@ -98,54 +98,91 @@ export function FloatingSupportChat() {
   });
   
   // Calculate initial position based on screen size (mobile vs desktop)
+  // Smart positioning: bottom-right corner to avoid blocking content
   const getInitialPosition = () => {
     const isMobileScreen = window.innerWidth < 640;
     const config = CHAT_BUBBLE_CONFIG.positioning;
     
-    if (isMobileScreen) {
-      // Mobile: position at bottom-right, well below header
-      return {
-        x: Math.max(0, window.innerWidth - config.mobileInitialOffsetX - CHAT_BUBBLE_CONFIG.elementWidths.minimizedPill),
-        y: Math.max(config.topBoundary, window.innerHeight - config.mobileInitialOffsetY)
-      };
-    } else {
-      // Desktop: original positioning
-      return {
-        x: Math.max(0, window.innerWidth - config.initialOffsetX),
-        y: Math.max(config.topBoundary, window.innerHeight - config.initialOffsetY)
-      };
+    // SMART POSITIONING: Always position in bottom-right corner to avoid blocking content
+    // This ensures Trinity never interferes with user's work
+    const safeBottomMargin = isMobileScreen ? 90 : 100; // Account for mobile nav bar
+    const safeRightMargin = 20;
+    
+    const elementWidth = CHAT_BUBBLE_CONFIG.elementWidths.minimizedPill;
+    
+    return {
+      x: Math.max(0, window.innerWidth - elementWidth - safeRightMargin),
+      y: Math.max(config.topBoundary, window.innerHeight - safeBottomMargin)
+    };
+  };
+  
+  // Check if position is blocking important UI elements
+  const isPositionBlockingContent = (x: number, y: number): boolean => {
+    // Define "danger zones" where the bubble should NOT be
+    const headerZone = { minY: 0, maxY: 120 }; // Top 120px is header/nav area
+    const leftContentZone = { minX: 0, maxX: 200, minY: 60, maxY: 400 }; // Left content area
+    
+    // Check if in header zone
+    if (y < headerZone.maxY && y >= headerZone.minY) {
+      return true;
     }
+    
+    // Check if blocking left content on mobile
+    if (window.innerWidth < 640) {
+      if (x >= leftContentZone.minX && x <= leftContentZone.maxX &&
+          y >= leftContentZone.minY && y <= leftContentZone.maxY) {
+        return true;
+      }
+    }
+    
+    return false;
   };
 
   // Hydrate from localStorage on mount (browser only)
+  // SMART: Reset to safe position if saved position is blocking content
   useEffect(() => {
     if (typeof window !== 'undefined') {
       const saved = localStorage.getItem('chat-bubble-state');
       const topBoundary = CHAT_BUBBLE_CONFIG.positioning.topBoundary;
       
+      // Clear bad positions saved from before - always start at safe position
+      // This fixes the "Trinity blocking content" issue permanently
+      const safePosition = getInitialPosition();
+      
       if (saved) {
         try {
           const parsed = JSON.parse(saved);
-          // Enforce top boundary to prevent header overlap
-          setState({
-            ...parsed,
-            position: {
-              x: Math.max(0, parsed.position.x),
-              y: Math.max(topBoundary, parsed.position.y)
-            }
-          });
+          const savedX = Math.max(0, parsed.position?.x || 0);
+          const savedY = Math.max(topBoundary, parsed.position?.y || 0);
+          
+          // SMART AVOIDANCE: Check if saved position is blocking content
+          // If so, reset to safe bottom-right corner position
+          if (isPositionBlockingContent(savedX, savedY)) {
+            console.log('[FloatingSupportChat] Saved position was blocking content, resetting to safe position');
+            localStorage.removeItem('chat-bubble-state'); // Clear bad position
+            setState({
+              position: safePosition,
+              isMinimized: true,
+              isOpen: false
+            });
+          } else {
+            setState({
+              ...parsed,
+              position: { x: savedX, y: savedY }
+            });
+          }
         } catch {
           // Fallback: set position based on viewport
           setState({
-            position: getInitialPosition(),
+            position: safePosition,
             isMinimized: true,
             isOpen: false
           });
         }
       } else {
-        // First time: set position based on viewport
+        // First time: set position based on viewport (bottom-right, safe)
         setState({
-          position: getInitialPosition(),
+          position: safePosition,
           isMinimized: true,
           isOpen: false
         });
