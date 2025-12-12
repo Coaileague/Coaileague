@@ -717,6 +717,8 @@ const TrinityRedesign = memo(function TrinityRedesign({
       className={`trinity-container ${className}`}
       data-mascot="trinity"
       data-trinity="true"
+      draggable={false}
+      onDragStart={(e) => e.preventDefault()}
       style={{
         width: displaySize,
         height: displaySize,
@@ -726,15 +728,19 @@ const TrinityRedesign = memo(function TrinityRedesign({
         justifyContent: 'center',
         cursor: 'default',
         userSelect: 'none',
-      }}
+        WebkitUserDrag: 'none',
+      } as React.CSSProperties}
     >
       <canvas
         ref={canvasRef}
         className="trinity-mascot-canvas"
+        draggable={false}
+        onDragStart={(e) => e.preventDefault()}
         style={{
           width: displaySize,
           height: displaySize,
           display: 'block',
+          pointerEvents: 'none',
         }}
         data-testid="trinity-mascot-canvas"
       />

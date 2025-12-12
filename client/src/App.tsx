@@ -712,7 +712,9 @@ function MascotRenderer() {
         <div 
           className="w-full h-full pointer-events-auto" 
           onClick={handleTap}
-          style={{ background: 'transparent', cursor: 'default', userSelect: 'none' }}
+          draggable={false}
+          onDragStart={(e) => e.preventDefault()}
+          style={{ background: 'transparent', cursor: 'default', userSelect: 'none', WebkitUserDrag: 'none' } as React.CSSProperties}
         >
           {/* Polished Trinity Redesign - Smooth mutations and state animations */}
           {/* Auto-cycles through states after 30 seconds of user inactivity */}

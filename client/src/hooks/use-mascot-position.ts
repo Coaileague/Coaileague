@@ -27,6 +27,8 @@ export function useMascotPosition(bubbleSize: number = 80, isMobile: boolean = f
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const dragStart = useRef<{ x: number; y: number; posX: number; posY: number } | null>(null);
+  
+  const isDraggable = MASCOT_CONFIG.draggable;
 
   useEffect(() => {
     try {
@@ -126,21 +128,24 @@ export function useMascotPosition(bubbleSize: number = 80, isMobile: boolean = f
   }, [isExpanded]);
 
   const onPointerDown = useCallback((e: React.PointerEvent) => {
+    if (!isDraggable) return;
     e.preventDefault();
     (e.target as HTMLElement).setPointerCapture(e.pointerId);
     handleDragStart(e.clientX, e.clientY);
-  }, [handleDragStart]);
+  }, [handleDragStart, isDraggable]);
 
   const onPointerMove = useCallback((e: React.PointerEvent) => {
+    if (!isDraggable) return;
     if (isDragging) {
       handleDragMove(e.clientX, e.clientY);
     }
-  }, [isDragging, handleDragMove]);
+  }, [isDragging, handleDragMove, isDraggable]);
 
   const onPointerUp = useCallback((e: React.PointerEvent) => {
+    if (!isDraggable) return;
     (e.target as HTMLElement).releasePointerCapture(e.pointerId);
     handleDragEnd();
-  }, [handleDragEnd]);
+  }, [handleDragEnd, isDraggable]);
 
   const setRoamingPosition = useCallback((pos: Position) => {
     setPosition(pos);

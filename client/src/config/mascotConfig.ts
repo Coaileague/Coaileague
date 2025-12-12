@@ -1411,6 +1411,7 @@ export function getRandomPromoThought(pathname: string): PromoThought | null {
 
 export interface MascotConfig {
   enabled: boolean;
+  draggable: boolean;
   desktop: MascotSizes;
   mobile: MascotSizes;
   defaultPosition: { x: number; y: number };
@@ -1464,6 +1465,7 @@ export interface MascotConfig {
 
 export const MASCOT_CONFIG: MascotConfig = {
   enabled: true,
+  draggable: false,
   
   desktop: {
     bubble: 180,
