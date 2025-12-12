@@ -503,13 +503,21 @@ export function NotificationsPopover() {
   // Cross-tab notification sync - syncs read/cleared state across browser tabs
   const { syncNotificationRead, syncClearAll } = useNotificationSync();
 
-  // Fetch notifications
-  const { data: rawData, isLoading } = useQuery<NotificationsData>({
+  // Fetch notifications - truly live with instant refetch on WebSocket events
+  const { data: rawData, isLoading, refetch } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications/combined"],
     enabled: !!user,
-    staleTime: 10000,
-    refetchInterval: isConnected ? 60000 : 15000,
+    staleTime: 0, // Always fresh - WebSocket triggers immediate refetch
+    refetchInterval: isConnected ? 30000 : 10000, // Faster polling as backup
+    refetchOnWindowFocus: true, // Refetch when user returns to tab
   });
+  
+  // Refetch when popover opens for instant updates
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [open, refetch]);
   
   // Map to UNS format
   const allNotifications = mapToUNS(rawData);
