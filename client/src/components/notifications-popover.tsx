@@ -1032,13 +1032,9 @@ export function NotificationsPopover() {
         </div>
       </div>
       
-      {/* Notification List - Native scrolling for reliability */}
+      {/* Notification List - Native scrolling with min-h-0 flex fix */}
       <div 
-        className="flex-1 overflow-y-auto overscroll-contain"
-        style={{ 
-          maxHeight: 'calc(75vh - 280px)',
-          minHeight: '100px'
-        }}
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
       >
         {isLoading ? (
           <div className="flex items-center justify-center py-12">

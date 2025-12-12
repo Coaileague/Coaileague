@@ -243,9 +243,10 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
               </div>
 
               {/* Mobile Menu */}
-              <div className={`flex md:hidden items-center ${HEADER_SPACING.mobileIconGap} shrink-0`}>
+              <div className={`flex md:hidden items-center gap-1 shrink-0`}>
                 {showNotificationFeatures && (
-                  <div className={`flex items-center ${HEADER_SPACING.mobileIconGap}`}>
+                  <div className="flex items-center gap-1">
+                    <AISearchTrigger />
                     <NotificationsPopover />
                   </div>
                 )}

@@ -5,6 +5,7 @@ import { useState, useEffect, useRef, useCallback, useMemo } from "react";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
+import { TrinityAnnouncementDisplay } from "@/components/trinity-announcement";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { OnboardingTour } from "@/components/onboarding-tour";
 import { GraduationCap, Settings2, Search, Menu, Sparkles, LogOut, User, Bell } from "lucide-react";
@@ -1399,6 +1400,7 @@ export default function App() {
                           <FloatingSupportChat />
                           <ReenableChatButton />
                           <Toaster />
+                          <TrinityAnnouncementDisplay position="bottom-right" />
                           <AuthenticatedOnboardingTour />
                         </ResponsiveAppFrame>
                         {/* Seasonal effects layer - snowfall, ornaments, etc. */}

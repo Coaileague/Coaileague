@@ -2,6 +2,7 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useTrinityAnnouncement } from "@/hooks/use-trinity-announcement";
 import { useClientLookup } from "@/hooks/useClients";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -41,6 +42,7 @@ import { TimelineSkeleton, MetricsCardsSkeleton } from "@/components/loading-ind
 
 export default function TimeTracking() {
   const { toast } = useToast();
+  const trinity = useTrinityAnnouncement();
   const { isAuthenticated, isLoading, user } = useAuth();
   const isMobile = useIsMobile();
   const [view, setView] = useState('clock');
@@ -179,10 +181,7 @@ export default function TimeTracking() {
     }) => apiPost('timeEntries.clockIn', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.all });
-      toast({
-        title: "Clocked In",
-        description: "Time tracking started successfully with GPS verification",
-      });
+      trinity.success("You're now on the clock! Time tracking has started with GPS verification.", "Clocked In");
       setClockInDialogOpen(false);
       // For staff, keep employee selected for next clock-in; managers/owners clear selection
       if (workspaceRole === 'staff' && currentEmployee) {
@@ -199,11 +198,7 @@ export default function TimeTracking() {
       stopCamera();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to clock in",
-        variant: "destructive",
-      });
+      trinity.error(error.message || "Failed to clock in. Please try again.", "Clock In Failed");
     },
   });
 
@@ -217,10 +212,7 @@ export default function TimeTracking() {
     }) => apiPost('timeEntries.clockOut', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.all });
-      toast({
-        title: "Clocked Out",
-        description: "Time entry completed successfully",
-      });
+      trinity.success("Great work! Your time entry has been recorded successfully.", "Clocked Out");
       // Close dialog and clear state AFTER mutation completes
       setClockOutDialogOpen(false);
       setClockingOutEntryId(null);
@@ -230,11 +222,7 @@ export default function TimeTracking() {
       stopCamera();
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to clock out",
-        variant: "destructive",
-      });
+      trinity.error(error.message || "Failed to clock out. Please try again.", "Clock Out Failed");
     },
   });
 
@@ -242,17 +230,10 @@ export default function TimeTracking() {
     mutationFn: (data: { breakType: 'meal' | 'rest' }) => apiPost('timeEntries.startBreak', data),
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.all });
-      toast({
-        title: "Break Started",
-        description: `${variables.breakType === 'meal' ? 'Meal' : 'Rest'} break has been started`,
-      });
+      trinity.info(`Enjoy your ${variables.breakType === 'meal' ? 'meal' : 'rest'} break! Take your time.`, "Break Started");
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to start break",
-        variant: "destructive",
-      });
+      trinity.error(error.message || "Failed to start break. Please try again.", "Break Start Failed");
     },
   });
 
@@ -260,17 +241,10 @@ export default function TimeTracking() {
     mutationFn: () => apiPost('timeEntries.endBreak', {}),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.all });
-      toast({
-        title: "Break Ended",
-        description: "You're back on the clock",
-      });
+      trinity.info("Welcome back! You're now on the clock again.", "Break Ended");
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to end break",
-        variant: "destructive",
-      });
+      trinity.error(error.message || "Failed to end break. Please try again.", "Break End Failed");
     },
   });
 
@@ -278,17 +252,10 @@ export default function TimeTracking() {
     mutationFn: (timeEntryId: string) => apiPost('timeEntries.approve', { timeEntryId }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.all });
-      toast({
-        title: "Entry Approved",
-        description: "Time entry has been approved successfully",
-      });
+      trinity.success("Time entry approved successfully!", "Entry Approved");
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to approve entry",
-        variant: "destructive",
-      });
+      trinity.error(error.message || "Failed to approve entry. Please try again.", "Approval Failed");
     },
   });
 
@@ -296,20 +263,13 @@ export default function TimeTracking() {
     mutationFn: (data: { timeEntryId: string; reason: string }) => apiPost('timeEntries.reject', data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.all });
-      toast({
-        title: "Entry Rejected",
-        description: "Time entry has been rejected",
-      });
+      trinity.warning("Time entry has been rejected.", "Entry Rejected");
       setRejectDialogOpen(false);
       setRejectingEntryId(null);
       setRejectReason("");
     },
     onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to reject entry",
-        variant: "destructive",
-      });
+      trinity.error(error.message || "Failed to reject entry. Please try again.", "Rejection Failed");
     },
   });
 
