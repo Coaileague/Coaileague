@@ -860,8 +860,8 @@ export function NotificationsPopover() {
       <div className="px-4 py-3 border-b bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0">
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="relative w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden">
-              <TrinityRedesign mode="IDLE" size={32} mini={true} />
+            <div className="relative w-10 h-10 rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center">
+              <TrinityRedesign mode="IDLE" size={36} mini={true} className="aspect-square object-contain" />
             </div>
             <div>
               <h2 className="font-bold text-base leading-tight text-white">Universal Notifications</h2>
