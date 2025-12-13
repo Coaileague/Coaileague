@@ -867,8 +867,8 @@ export function NotificationsPopover() {
     }
   };
 
-  const NotificationsContent = () => (
-    <div className="flex flex-col h-full overflow-hidden">
+  const NotificationsContent = ({ simplified = false }: { simplified?: boolean }) => (
+    <div className="flex flex-col h-full">
       {/* UNS Header with Trinity Branding - Violet to Indigo Gradient */}
       <div className="px-4 py-3 border-b bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0">
         <div className="flex items-center justify-between gap-3">
@@ -1058,10 +1058,8 @@ export function NotificationsPopover() {
         </div>
       </div>
       
-      {/* Notification List - Fixed height scrolling container */}
-      <ScrollArea 
-        className="flex-1 min-h-0"
-      >
+      {/* Notification List - Scrollable container with explicit height */}
+      <ScrollArea className="flex-1 min-h-0 overflow-y-auto">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
@@ -1150,12 +1148,12 @@ export function NotificationsPopover() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent 
-            className="w-[calc(100vw-1rem)] max-w-[420px] h-[80vh] p-0 gap-0 flex flex-col rounded-xl overflow-hidden"
+            className="w-[calc(100vw-1rem)] max-w-[420px] h-[85vh] max-h-[700px] p-0 gap-0 flex flex-col rounded-xl"
             showHomeButton={false}
             data-testid="notification-dialog-content"
             data-trinity-avoid="true"
           >
-            <NotificationsContent />
+            <NotificationsContent simplified={true} />
           </DialogContent>
         </Dialog>
       </>
@@ -1173,7 +1171,7 @@ export function NotificationsPopover() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[440px] max-w-[calc(100vw-2rem)] h-[min(75vh,600px)] p-0 overflow-hidden shadow-xl border-muted flex flex-col" 
+        className="w-[440px] max-w-[calc(100vw-2rem)] h-[min(75vh,600px)] p-0 shadow-xl border-muted flex flex-col" 
         align="end"
         sideOffset={8}
         data-testid="notification-popover-content"
