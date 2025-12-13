@@ -823,6 +823,19 @@ function AppContent() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const isMobile = useIsMobile();
 
+  // Query onboarding status for authenticated users
+  const { data: onboardingStatus } = useQuery({
+    queryKey: ['/api/onboarding/status'],
+    enabled: !!user,
+  });
+
+  // Automatically show onboarding wizard for new users with pending status
+  useEffect(() => {
+    if (onboardingStatus?.status === 'pending') {
+      setShowOnboarding(true);
+    }
+  }, [onboardingStatus]);
+
   // Check if on mobile chat, HelpDesk, or desktop live-chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
   const isMobileChat = window.location.pathname === '/mobile-chat';
