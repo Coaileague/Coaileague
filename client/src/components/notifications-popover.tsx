@@ -686,6 +686,8 @@ export function NotificationsPopover() {
   const [subFilter, setSubFilter] = useState<SubFilter>('all');
   const [sortNewest, setSortNewest] = useState(true);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const scrollPositionRef = useRef<number>(0);
   const isMobileBreakpoint = useIsMobile();
   
   // Enhanced mobile detection: consider touch + mobile user agent + viewport
@@ -731,6 +733,13 @@ export function NotificationsPopover() {
       refetch();
     }
   }, [open, refetch]);
+  
+  // Restore scroll position after data updates (prevents scroll reset on refetch)
+  useEffect(() => {
+    if (scrollRef.current && scrollPositionRef.current > 0) {
+      scrollRef.current.scrollTop = scrollPositionRef.current;
+    }
+  }, [rawData]);
   
   // Map to UNS format with user's platform role for action button visibility
   const allNotifications = mapToUNS(rawData, userPlatformRole);
@@ -1076,8 +1085,14 @@ export function NotificationsPopover() {
         </div>
       </div>
       
-      {/* Notification List - Scrollable container with mobile touch support */}
-      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain touch-pan-y">
+      {/* Notification List - Scrollable container with position preservation */}
+      <div 
+        ref={scrollRef}
+        className="flex-1 min-h-0 overflow-y-auto"
+        onScroll={(e) => {
+          scrollPositionRef.current = e.currentTarget.scrollTop;
+        }}
+      >
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
