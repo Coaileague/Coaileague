@@ -1,13 +1,15 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
   HardHat, Stethoscope, Shield, Sparkles, UtensilsCrossed, 
   ShoppingBag, Briefcase, Truck, Factory, GraduationCap, Wrench,
-  CheckCircle2, AlertCircle, Building2
+  CheckCircle2, AlertCircle, Building2, Music, Recycle, Heart, Plus
 } from "lucide-react";
 import industryTaxonomy from "@shared/industry-taxonomy.json";
 
@@ -23,6 +25,10 @@ const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   Factory,
   GraduationCap,
   Wrench,
+  Music,
+  Recycle,
+  Heart,
+  Plus,
 };
 
 export interface IndustrySelection {
@@ -34,6 +40,9 @@ export interface IndustrySelection {
   subIndustryName: string;
   complianceTemplates: string[];
   certifications: string[];
+  isCustom?: boolean;
+  customIndustryName?: string;
+  customIndustryDescription?: string;
 }
 
 interface IndustrySelectorProps {
@@ -52,8 +61,11 @@ export function IndustrySelector({
   const [sectorId, setSectorId] = useState(initialSelection?.sectorId || "");
   const [industryGroupId, setIndustryGroupId] = useState(initialSelection?.industryGroupId || "");
   const [subIndustryId, setSubIndustryId] = useState(initialSelection?.subIndustryId || "");
+  const [customIndustryName, setCustomIndustryName] = useState(initialSelection?.customIndustryName || "");
+  const [customIndustryDescription, setCustomIndustryDescription] = useState(initialSelection?.customIndustryDescription || "");
 
   const sectors = industryTaxonomy.sectors;
+  const isCustomSector = sectorId === "other_custom";
 
   const selectedSector = useMemo(() => {
     return sectors.find(s => s.id === sectorId);
@@ -79,6 +91,8 @@ export function IndustrySelector({
     setSectorId(value);
     setIndustryGroupId("");
     setSubIndustryId("");
+    setCustomIndustryName("");
+    setCustomIndustryDescription("");
     onSelectionChange(null);
   };
 
@@ -103,14 +117,40 @@ export function IndustrySelector({
           subIndustryName: subIndustry.name,
           complianceTemplates: subIndustry.complianceTemplates,
           certifications: subIndustry.certifications,
+          isCustom: false,
         });
       }
     }
   };
 
+  const handleCustomIndustryChange = (name: string, description: string) => {
+    setCustomIndustryName(name);
+    setCustomIndustryDescription(description);
+    
+    if (name.trim().length >= 3) {
+      onSelectionChange({
+        sectorId: "other_custom",
+        industryGroupId: "custom_category",
+        subIndustryId: "custom_business",
+        sectorName: "Other / My Industry Not Listed",
+        industryGroupName: "Custom Category",
+        subIndustryName: name.trim(),
+        complianceTemplates: ["basic_liability", "worker_comp"],
+        certifications: [],
+        isCustom: true,
+        customIndustryName: name.trim(),
+        customIndustryDescription: description.trim(),
+      });
+    } else {
+      onSelectionChange(null);
+    }
+  };
+
   const SectorIcon = selectedSector ? iconMap[selectedSector.icon] || Building2 : Building2;
 
-  const isComplete = sectorId && industryGroupId && subIndustryId;
+  const isComplete = isCustomSector 
+    ? customIndustryName.trim().length >= 3 
+    : (sectorId && industryGroupId && subIndustryId);
 
   if (compact) {
     return (
@@ -140,52 +180,81 @@ export function IndustrySelector({
             </Select>
           </div>
 
-          <div>
-            <Label htmlFor="industryGroup" className="text-sm font-medium">Industry Group</Label>
-            <Select 
-              value={industryGroupId} 
-              onValueChange={handleIndustryGroupChange} 
-              disabled={disabled || !sectorId}
-            >
-              <SelectTrigger id="industryGroup" data-testid="select-industry-group" className="mt-1">
-                <SelectValue placeholder={sectorId ? "Select group" : "Select sector first"} />
-              </SelectTrigger>
-              <SelectContent>
-                <ScrollArea className="h-[200px]">
-                  {industryGroups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      {group.name}
-                    </SelectItem>
-                  ))}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-          </div>
+          {isCustomSector ? (
+            <>
+              <div className="sm:col-span-2">
+                <Label htmlFor="customIndustryName" className="text-sm font-medium">Your Industry Name</Label>
+                <Input
+                  id="customIndustryName"
+                  data-testid="input-custom-industry-name"
+                  className="mt-1"
+                  placeholder="e.g., Pet Grooming, Solar Installation..."
+                  value={customIndustryName}
+                  onChange={(e) => handleCustomIndustryChange(e.target.value, customIndustryDescription)}
+                  disabled={disabled}
+                />
+                <p className="text-xs text-muted-foreground mt-1">Minimum 3 characters</p>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <Label htmlFor="industryGroup" className="text-sm font-medium">Industry Group</Label>
+                <Select 
+                  value={industryGroupId} 
+                  onValueChange={handleIndustryGroupChange} 
+                  disabled={disabled || !sectorId}
+                >
+                  <SelectTrigger id="industryGroup" data-testid="select-industry-group" className="mt-1">
+                    <SelectValue placeholder={sectorId ? "Select group" : "Select sector first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-[200px]">
+                      {industryGroups.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          {group.name}
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <div>
-            <Label htmlFor="subIndustry" className="text-sm font-medium">Sub-Industry</Label>
-            <Select 
-              value={subIndustryId} 
-              onValueChange={handleSubIndustryChange} 
-              disabled={disabled || !industryGroupId}
-            >
-              <SelectTrigger id="subIndustry" data-testid="select-sub-industry" className="mt-1">
-                <SelectValue placeholder={industryGroupId ? "Select type" : "Select group first"} />
-              </SelectTrigger>
-              <SelectContent>
-                <ScrollArea className="h-[200px]">
-                  {subIndustries.map((sub) => (
-                    <SelectItem key={sub.id} value={sub.id}>
-                      {sub.name}
-                    </SelectItem>
-                  ))}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-          </div>
+              <div>
+                <Label htmlFor="subIndustry" className="text-sm font-medium">Sub-Industry</Label>
+                <Select 
+                  value={subIndustryId} 
+                  onValueChange={handleSubIndustryChange} 
+                  disabled={disabled || !industryGroupId}
+                >
+                  <SelectTrigger id="subIndustry" data-testid="select-sub-industry" className="mt-1">
+                    <SelectValue placeholder={industryGroupId ? "Select type" : "Select group first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-[200px]">
+                      {subIndustries.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id}>
+                          {sub.name}
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
         </div>
 
-        {isComplete && selectedSubIndustry && (
+        {isComplete && isCustomSector && (
+          <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
+            <CheckCircle2 className="h-5 w-5 text-green-600" />
+            <span className="text-sm font-medium text-green-700 dark:text-green-400">
+              Custom Industry: {customIndustryName}
+            </span>
+          </div>
+        )}
+
+        {isComplete && !isCustomSector && selectedSubIndustry && (
           <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 dark:bg-green-950/30 border border-green-200 dark:border-green-800">
             <CheckCircle2 className="h-5 w-5 text-green-600" />
             <span className="text-sm font-medium text-green-700 dark:text-green-400">
@@ -248,65 +317,142 @@ export function IndustrySelector({
             )}
           </div>
 
-          <div>
-            <Label htmlFor="industryGroup" className="text-sm font-medium mb-2 block">
-              Industry Group
-              <span className="text-destructive ml-1">*</span>
-            </Label>
-            <Select 
-              value={industryGroupId} 
-              onValueChange={handleIndustryGroupChange} 
-              disabled={disabled || !sectorId}
-            >
-              <SelectTrigger id="industryGroup" data-testid="select-industry-group">
-                <SelectValue placeholder={sectorId ? "Select industry group" : "Select sector first"} />
-              </SelectTrigger>
-              <SelectContent>
-                <ScrollArea className="h-[280px]">
-                  {industryGroups.map((group) => (
-                    <SelectItem key={group.id} value={group.id}>
-                      <div>
-                        <span className="font-medium">{group.name}</span>
-                      </div>
-                    </SelectItem>
-                  ))}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-            {selectedIndustryGroup && (
-              <p className="text-xs text-muted-foreground mt-2">
-                {selectedIndustryGroup.description}
-              </p>
-            )}
-          </div>
+          {isCustomSector ? (
+            <div className="md:col-span-2 space-y-4">
+              <div>
+                <Label htmlFor="customIndustryName" className="text-sm font-medium mb-2 block">
+                  Your Industry Name
+                  <span className="text-destructive ml-1">*</span>
+                </Label>
+                <Input
+                  id="customIndustryName"
+                  data-testid="input-custom-industry-name"
+                  placeholder="e.g., Pet Grooming, Solar Installation, Drone Photography..."
+                  value={customIndustryName}
+                  onChange={(e) => handleCustomIndustryChange(e.target.value, customIndustryDescription)}
+                  disabled={disabled}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Enter the name of your industry (minimum 3 characters)
+                </p>
+              </div>
+              <div>
+                <Label htmlFor="customIndustryDescription" className="text-sm font-medium mb-2 block">
+                  Brief Description (Optional)
+                </Label>
+                <Textarea
+                  id="customIndustryDescription"
+                  data-testid="input-custom-industry-description"
+                  placeholder="Describe what your business does..."
+                  value={customIndustryDescription}
+                  onChange={(e) => handleCustomIndustryChange(customIndustryName, e.target.value)}
+                  disabled={disabled}
+                  className="resize-none"
+                  rows={2}
+                />
+              </div>
+            </div>
+          ) : (
+            <>
+              <div>
+                <Label htmlFor="industryGroup" className="text-sm font-medium mb-2 block">
+                  Industry Group
+                  <span className="text-destructive ml-1">*</span>
+                </Label>
+                <Select 
+                  value={industryGroupId} 
+                  onValueChange={handleIndustryGroupChange} 
+                  disabled={disabled || !sectorId}
+                >
+                  <SelectTrigger id="industryGroup" data-testid="select-industry-group">
+                    <SelectValue placeholder={sectorId ? "Select industry group" : "Select sector first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-[280px]">
+                      {industryGroups.map((group) => (
+                        <SelectItem key={group.id} value={group.id}>
+                          <div>
+                            <span className="font-medium">{group.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+                {selectedIndustryGroup && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    {selectedIndustryGroup.description}
+                  </p>
+                )}
+              </div>
 
-          <div>
-            <Label htmlFor="subIndustry" className="text-sm font-medium mb-2 block">
-              Specific Business Type
-              <span className="text-destructive ml-1">*</span>
-            </Label>
-            <Select 
-              value={subIndustryId} 
-              onValueChange={handleSubIndustryChange} 
-              disabled={disabled || !industryGroupId}
-            >
-              <SelectTrigger id="subIndustry" data-testid="select-sub-industry">
-                <SelectValue placeholder={industryGroupId ? "Select your business type" : "Select group first"} />
-              </SelectTrigger>
-              <SelectContent>
-                <ScrollArea className="h-[280px]">
-                  {subIndustries.map((sub) => (
-                    <SelectItem key={sub.id} value={sub.id}>
-                      {sub.name}
-                    </SelectItem>
-                  ))}
-                </ScrollArea>
-              </SelectContent>
-            </Select>
-          </div>
+              <div>
+                <Label htmlFor="subIndustry" className="text-sm font-medium mb-2 block">
+                  Specific Business Type
+                  <span className="text-destructive ml-1">*</span>
+                </Label>
+                <Select 
+                  value={subIndustryId} 
+                  onValueChange={handleSubIndustryChange} 
+                  disabled={disabled || !industryGroupId}
+                >
+                  <SelectTrigger id="subIndustry" data-testid="select-sub-industry">
+                    <SelectValue placeholder={industryGroupId ? "Select your business type" : "Select group first"} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <ScrollArea className="h-[280px]">
+                      {subIndustries.map((sub) => (
+                        <SelectItem key={sub.id} value={sub.id}>
+                          {sub.name}
+                        </SelectItem>
+                      ))}
+                    </ScrollArea>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
         </div>
 
-        {isComplete && selectedSubIndustry && (
+        {isComplete && isCustomSector && (
+          <div className="space-y-4 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-600" />
+              <span className="font-medium">Custom Industry Defined</span>
+            </div>
+            
+            <div className="p-4 rounded-lg bg-muted/50">
+              <div className="flex items-center gap-2 mb-3">
+                <Plus className="h-5 w-5 text-primary" />
+                <span className="font-semibold">{customIndustryName}</span>
+              </div>
+              {customIndustryDescription && (
+                <p className="text-sm text-muted-foreground">{customIndustryDescription}</p>
+              )}
+              <div className="mt-3">
+                <span className="text-sm text-muted-foreground mb-2 block">Default Compliance Templates:</span>
+                <div className="flex flex-wrap gap-1">
+                  <Badge variant="secondary" className="text-xs">basic liability</Badge>
+                  <Badge variant="secondary" className="text-xs">worker comp</Badge>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800">
+              <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+              <div className="text-sm text-blue-700 dark:text-blue-400">
+                <span className="font-medium">What happens next:</span>
+                <ul className="mt-1 list-disc list-inside space-y-1 text-xs">
+                  <li>Trinity AI will configure your workspace for {customIndustryName}</li>
+                  <li>Basic compliance templates will be activated</li>
+                  <li>You can customize forms and reports later</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {isComplete && !isCustomSector && selectedSubIndustry && (
           <div className="space-y-4 pt-4 border-t">
             <div className="flex items-center gap-2">
               <CheckCircle2 className="h-5 w-5 text-green-600" />
