@@ -957,103 +957,106 @@ export function NotificationsPopover() {
         )}
       </div>
       
-      {/* Sub-filters - Pill Style Matching Design */}
-      <div className="px-3 py-2 border-b bg-muted/10 flex-shrink-0 overflow-x-auto">
-        <div className="flex items-center gap-2">
-          {/* All Sub-filter */}
-          <Button
-            variant={subFilter === 'all' ? 'default' : 'outline'}
-            size="sm"
-            className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
-              subFilter === 'all' ? '' : 'border-muted-foreground/30'
-            }`}
-            onClick={() => setSubFilter('all')}
-            data-testid="subfilter-all"
-          >
-            All
-          </Button>
-          
-          {/* System Alerts Sub-filter */}
-          <Button
-            variant={subFilter === 'system_alerts' ? 'default' : 'outline'}
-            size="sm"
-            className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
-              subFilter === 'system_alerts' ? '' : 'border-muted-foreground/30'
-            }`}
-            onClick={() => setSubFilter('system_alerts')}
-            data-testid="subfilter-system-alerts"
-          >
-            <Shield className="h-3 w-3 mr-1" />
-            System Alerts
-            {systemAlertsSubCount > 0 && (
-              <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-red-500 text-white rounded-full">
-                {systemAlertsSubCount}
-              </Badge>
-            )}
-          </Button>
-          
-          {/* Admin Review Sub-filter */}
-          <Button
-            variant={subFilter === 'admin_review' ? 'default' : 'outline'}
-            size="sm"
-            className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
-              subFilter === 'admin_review' ? '' : 'border-muted-foreground/30'
-            }`}
-            onClick={() => setSubFilter('admin_review')}
-            data-testid="subfilter-admin-review"
-          >
-            <UserCheck className="h-3 w-3 mr-1" />
-            Admin Review
-            {adminReviewCount > 0 && (
-              <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-red-500 text-white rounded-full">
-                {adminReviewCount}
-              </Badge>
-            )}
-          </Button>
-          
-          {/* Updates Sub-filter */}
-          <Button
-            variant={subFilter === 'updates' ? 'default' : 'outline'}
-            size="sm"
-            className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
-              subFilter === 'updates' ? '' : 'border-muted-foreground/30'
-            }`}
-            onClick={() => setSubFilter('updates')}
-            data-testid="subfilter-updates"
-          >
-            Updates
-            {updatesCount > 0 && (
-              <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-primary text-white rounded-full">
-                {updatesCount}
-              </Badge>
-            )}
-          </Button>
+      {/* Sub-filters - Hidden on mobile (simplified mode) */}
+      {!simplified && (
+        <div className="px-3 py-2 border-b bg-muted/10 flex-shrink-0 overflow-x-auto">
+          <div className="flex items-center gap-2">
+            {/* All Sub-filter */}
+            <Button
+              variant={subFilter === 'all' ? 'default' : 'outline'}
+              size="sm"
+              className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
+                subFilter === 'all' ? '' : 'border-muted-foreground/30'
+              }`}
+              onClick={() => setSubFilter('all')}
+              data-testid="subfilter-all"
+            >
+              All
+            </Button>
+            
+            {/* System Alerts Sub-filter */}
+            <Button
+              variant={subFilter === 'system_alerts' ? 'default' : 'outline'}
+              size="sm"
+              className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
+                subFilter === 'system_alerts' ? '' : 'border-muted-foreground/30'
+              }`}
+              onClick={() => setSubFilter('system_alerts')}
+              data-testid="subfilter-system-alerts"
+            >
+              <Shield className="h-3 w-3 mr-1" />
+              System Alerts
+              {systemAlertsSubCount > 0 && (
+                <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-red-500 text-white rounded-full">
+                  {systemAlertsSubCount}
+                </Badge>
+              )}
+            </Button>
+            
+            {/* Admin Review Sub-filter */}
+            <Button
+              variant={subFilter === 'admin_review' ? 'default' : 'outline'}
+              size="sm"
+              className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
+                subFilter === 'admin_review' ? '' : 'border-muted-foreground/30'
+              }`}
+              onClick={() => setSubFilter('admin_review')}
+              data-testid="subfilter-admin-review"
+            >
+              <UserCheck className="h-3 w-3 mr-1" />
+              Admin Review
+              {adminReviewCount > 0 && (
+                <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-red-500 text-white rounded-full">
+                  {adminReviewCount}
+                </Badge>
+              )}
+            </Button>
+            
+            {/* Updates Sub-filter */}
+            <Button
+              variant={subFilter === 'updates' ? 'default' : 'outline'}
+              size="sm"
+              className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
+                subFilter === 'updates' ? '' : 'border-muted-foreground/30'
+              }`}
+              onClick={() => setSubFilter('updates')}
+              data-testid="subfilter-updates"
+            >
+              Updates
+              {updatesCount > 0 && (
+                <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-primary text-white rounded-full">
+                  {updatesCount}
+                </Badge>
+              )}
+            </Button>
+          </div>
         </div>
-      </div>
+      )}
       
-      {/* Sort & Filter Row */}
-      <div className="flex items-center justify-between px-4 py-2 border-b bg-background flex-shrink-0 gap-2">
-        <span className="text-xs text-muted-foreground">
-          {sortedNotifications.filter(n => !n.isRead).length} unread {activeTab === 'system_alerts' ? 'system alerts' : 'notifications'}
+      {/* Sort & Filter Row - Simplified on mobile */}
+      <div className={`flex items-center justify-between px-3 py-2 border-b bg-background flex-shrink-0 ${simplified ? 'gap-1' : 'gap-2 px-4'}`}>
+        <span className="text-xs text-muted-foreground truncate">
+          {sortedNotifications.filter(n => !n.isRead).length} unread
         </span>
-        <div className="flex items-center gap-2 text-xs text-muted-foreground">
-          <span>Sort by:</span>
+        <div className="flex items-center gap-1 shrink-0">
           <Button
             variant="ghost"
             size="sm"
             className="h-6 text-xs px-2"
             onClick={() => setSortNewest(!sortNewest)}
+            data-testid="button-sort-toggle"
           >
-            {sortNewest ? 'Newest' : 'Oldest'}
+            <ArrowUpDown className="h-3 w-3 mr-1" />
+            {sortNewest ? 'New' : 'Old'}
           </Button>
           <Button
             variant={showUnreadOnly ? 'secondary' : 'ghost'}
             size="sm"
             className="h-6 text-xs px-2"
             onClick={() => setShowUnreadOnly(!showUnreadOnly)}
+            data-testid="button-unread-toggle"
           >
-            <Eye className="h-3 w-3 mr-1" />
-            Unread
+            <Eye className="h-3 w-3" />
           </Button>
         </div>
       </div>
