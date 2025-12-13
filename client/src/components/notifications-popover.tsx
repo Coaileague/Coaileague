@@ -24,7 +24,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { AnimatedNotificationBell } from "./animated-notification-bell";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useMobile } from "@/hooks/use-mobile";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
@@ -686,7 +686,7 @@ export function NotificationsPopover() {
   const [subFilter, setSubFilter] = useState<SubFilter>('all');
   const [sortNewest, setSortNewest] = useState(true);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
-  const { isMobile } = useMobile();
+  const isMobile = useIsMobile();
   const { toast } = useToast();
   const { user } = useAuth();
   const userId = (user as any)?.id;
