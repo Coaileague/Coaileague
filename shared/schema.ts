@@ -19197,3 +19197,445 @@ export const insertTrinityOrgStatsSchema = createInsertSchema(trinityOrgStats).o
 });
 export type InsertTrinityOrgStats = z.infer<typeof insertTrinityOrgStatsSchema>;
 export type TrinityOrgStats = typeof trinityOrgStats.$inferSelect;
+
+// ============================================================================
+// UNIFIED TASK CONTRACT SCHEMA - CANONICAL STRUCTURE FOR ALL SUBAGENTS
+// ============================================================================
+
+/**
+ * UNIFIED TASK CONTRACT
+ * ---------------------
+ * This defines the canonical task schema that ALL subagents must share.
+ * Provides consistent structure for:
+ * - Intent: What the task is trying to accomplish
+ * - Plan Steps: The steps to execute
+ * - Tool Calls: Tools to be invoked
+ * - Outputs: Results from execution
+ * - Confidence: Confidence levels and validation
+ * 
+ * CRITICAL GAPS ADDRESSED:
+ * 1. Unified Task Schema - All subagents use the same contract
+ * 2. State Machine Governance - Phases enforce Plan→Act→Validate→Reflect
+ * 3. RBAC During Tool Calls - requiredPermissions enforced per tool
+ */
+
+// Task intent categories
+export const taskIntentEnum = pgEnum('task_intent', [
+  'query',           // Information retrieval
+  'mutation',        // Data modification
+  'analysis',        // Data analysis/insights
+  'automation',      // Scheduled/triggered automation
+  'notification',    // Alert/message dispatch
+  'validation',      // Check/verify state
+  'orchestration',   // Multi-step coordination
+  'escalation',      // Human handoff
+  'rollback',        // Undo previous action
+  'diagnostic'       // System health/debugging
+]);
+
+// Task execution phases (state machine)
+export const taskPhaseEnum = pgEnum('task_phase', [
+  'intake',          // Received, parsing
+  'planning',        // Decomposing into steps
+  'validating',      // Pre-flight checks
+  'executing',       // Running tool calls
+  'reflecting',      // Post-execution analysis
+  'committing',      // Finalizing results
+  'completed',       // Successfully done
+  'failed',          // Execution failed
+  'rolled_back',     // Undone after failure
+  'escalated'        // Handed to human
+]);
+
+// Tool call status
+export const toolCallStatusEnum = pgEnum('tool_call_status', [
+  'pending',
+  'running',
+  'success',
+  'failed',
+  'skipped',
+  'timeout',
+  'retrying'
+]);
+
+// Confidence levels
+export const confidenceLevelEnum = pgEnum('confidence_level', [
+  'none',      // 0.0 - No confidence
+  'low',       // 0.1-0.4 - Uncertain
+  'medium',    // 0.5-0.7 - Reasonable
+  'high',      // 0.8-0.9 - Confident
+  'certain'    // 0.95+ - Near certain
+]);
+
+/**
+ * Unified Task Contract - The canonical task structure for all AI Brain subagents
+ */
+export const unifiedTaskContracts = pgTable("unified_task_contracts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // === CONTEXT ===
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  sessionId: varchar("session_id"),
+  parentTaskId: varchar("parent_task_id"), // For subtasks
+  conversationId: varchar("conversation_id"),
+  
+  // === INTENT ===
+  intent: taskIntentEnum("intent").notNull(),
+  domain: varchar("domain", { length: 50 }).notNull(), // 'scheduling', 'payroll', 'invoice', 'notification', etc.
+  subagentId: varchar("subagent_id", { length: 100 }), // Which subagent owns this task
+  
+  // Natural language description
+  title: varchar("title", { length: 255 }).notNull(),
+  description: text("description"),
+  rawUserRequest: text("raw_user_request"), // Original user input if applicable
+  
+  // === PRIORITY & URGENCY ===
+  priority: varchar("priority", { length: 20 }).default("normal"), // 'low', 'normal', 'high', 'critical'
+  urgency: varchar("urgency", { length: 20 }).default("normal"), // 'background', 'normal', 'immediate'
+  
+  // === STATE MACHINE ===
+  phase: taskPhaseEnum("phase").default("intake").notNull(),
+  phaseHistory: jsonb("phase_history").default('[]'), // Array of {phase, enteredAt, exitedAt, reason}
+  
+  // === PLAN STEPS ===
+  // Structured plan with ordered steps
+  planSteps: jsonb("plan_steps").default('[]'), // Array of PlanStep objects
+  currentStepIndex: integer("current_step_index").default(0),
+  
+  // === TOOL CALLS ===
+  // Executed tool calls with parameters and results
+  toolCalls: jsonb("tool_calls").default('[]'), // Array of ToolCall objects
+  totalToolCalls: integer("total_tool_calls").default(0),
+  successfulToolCalls: integer("successful_tool_calls").default(0),
+  
+  // === OUTPUTS ===
+  intermediateResults: jsonb("intermediate_results").default('[]'), // Step-by-step results
+  finalOutput: jsonb("final_output"), // The final result/response
+  outputSummary: text("output_summary"), // Human-readable summary
+  
+  // === CONFIDENCE & VALIDATION ===
+  confidenceLevel: confidenceLevelEnum("confidence_level").default("none"),
+  confidenceScore: decimal("confidence_score", { precision: 5, scale: 4 }).default("0"),
+  confidenceFactors: jsonb("confidence_factors").default('{}'), // Breakdown of confidence sources
+  
+  preflightChecks: jsonb("preflight_checks").default('[]'), // Pre-execution validations
+  postflightValidations: jsonb("postflight_validations").default('[]'), // Post-execution validations
+  
+  // === RBAC & PERMISSIONS ===
+  requiredPermissions: text("required_permissions").array().default(sql`'{}'`),
+  permissionCheckPassed: boolean("permission_check_passed"),
+  permissionDeniedReason: text("permission_denied_reason"),
+  
+  // === ERROR HANDLING ===
+  hasError: boolean("has_error").default(false),
+  errorType: varchar("error_type", { length: 50 }),
+  errorMessage: text("error_message"),
+  errorStack: text("error_stack"),
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  
+  // === ROLLBACK ===
+  canRollback: boolean("can_rollback").default(false),
+  rollbackSteps: jsonb("rollback_steps").default('[]'), // Steps to undo
+  rolledBackAt: timestamp("rolled_back_at"),
+  rollbackReason: text("rollback_reason"),
+  
+  // === ESCALATION ===
+  requiresEscalation: boolean("requires_escalation").default(false),
+  escalationReason: text("escalation_reason"),
+  escalatedTo: varchar("escalated_to"), // User ID of human handler
+  escalatedAt: timestamp("escalated_at"),
+  
+  // === TIMING ===
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+  timeoutMs: integer("timeout_ms").default(60000), // Default 60s timeout
+  
+  // === AUDIT ===
+  auditTrail: jsonb("audit_trail").default('[]'), // Full audit log
+  
+}, (table) => [
+  index("unified_task_workspace_idx").on(table.workspaceId),
+  index("unified_task_user_idx").on(table.userId),
+  index("unified_task_session_idx").on(table.sessionId),
+  index("unified_task_parent_idx").on(table.parentTaskId),
+  index("unified_task_intent_idx").on(table.intent),
+  index("unified_task_domain_idx").on(table.domain),
+  index("unified_task_subagent_idx").on(table.subagentId),
+  index("unified_task_phase_idx").on(table.phase),
+  index("unified_task_priority_idx").on(table.priority),
+  index("unified_task_confidence_idx").on(table.confidenceLevel),
+  index("unified_task_created_idx").on(table.createdAt),
+  index("unified_task_error_idx").on(table.hasError),
+]);
+
+export const insertUnifiedTaskContractSchema = createInsertSchema(unifiedTaskContracts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertUnifiedTaskContract = z.infer<typeof insertUnifiedTaskContractSchema>;
+export type UnifiedTaskContract = typeof unifiedTaskContracts.$inferSelect;
+
+// ============================================================================
+// ZOD SCHEMAS FOR TASK CONTRACT SUB-STRUCTURES
+// ============================================================================
+
+/**
+ * PlanStep - A single step in the execution plan
+ */
+export const planStepSchema = z.object({
+  id: z.string(),
+  order: z.number().int().min(0),
+  title: z.string(),
+  description: z.string().optional(),
+  
+  // Action to perform
+  actionType: z.enum([
+    'search_code', 'read_file', 'write_file', 'edit_file', 
+    'run_test', 'analyze', 'validate', 'commit',
+    'ask_user', 'call_api', 'database_query', 'think', 'summarize',
+    'notify', 'schedule', 'generate', 'transform'
+  ]),
+  
+  // Dependencies
+  dependsOn: z.array(z.string()).default([]),
+  blocks: z.array(z.string()).default([]),
+  
+  // Parameters for the action
+  parameters: z.record(z.any()).default({}),
+  
+  // Execution state
+  status: z.enum(['pending', 'ready', 'running', 'success', 'failed', 'skipped', 'blocked']).default('pending'),
+  
+  // Results
+  output: z.any().optional(),
+  error: z.string().optional(),
+  durationMs: z.number().optional(),
+  
+  // Metadata
+  estimatedMs: z.number().default(5000),
+  confidence: z.number().min(0).max(1).default(0.5),
+  createdAt: z.string().datetime().optional(),
+  startedAt: z.string().datetime().optional(),
+  completedAt: z.string().datetime().optional(),
+});
+
+export type PlanStep = z.infer<typeof planStepSchema>;
+
+/**
+ * ToolCall - A single tool invocation with parameters and result
+ */
+export const toolCallSchema = z.object({
+  id: z.string(),
+  stepId: z.string().optional(), // Link to plan step
+  
+  // Tool identification
+  toolName: z.string(),
+  toolCategory: z.enum([
+    'file_system', 'database', 'api', 'ai_model', 
+    'notification', 'search', 'validation', 'workflow'
+  ]).optional(),
+  
+  // Invocation
+  parameters: z.record(z.any()),
+  
+  // RBAC
+  requiredPermissions: z.array(z.string()).default([]),
+  permissionGranted: z.boolean().default(false),
+  
+  // Execution
+  status: z.enum(['pending', 'running', 'success', 'failed', 'skipped', 'timeout', 'retrying']),
+  
+  // Results
+  result: z.any().optional(),
+  error: z.string().optional(),
+  
+  // Retry tracking
+  attemptNumber: z.number().int().min(1).default(1),
+  maxAttempts: z.number().int().min(1).default(3),
+  
+  // Timing
+  startedAt: z.string().datetime().optional(),
+  completedAt: z.string().datetime().optional(),
+  durationMs: z.number().optional(),
+  
+  // Cost tracking
+  tokenCost: z.number().optional(),
+  creditCost: z.number().optional(),
+});
+
+export type ToolCall = z.infer<typeof toolCallSchema>;
+
+/**
+ * PreflightCheck - Validation before execution
+ */
+export const preflightCheckSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  checkType: z.enum(['permission', 'resource', 'dependency', 'state', 'quota', 'safety']),
+  
+  // Result
+  passed: z.boolean(),
+  message: z.string().optional(),
+  severity: z.enum(['info', 'warning', 'error', 'blocking']).default('error'),
+  
+  // Timing
+  checkedAt: z.string().datetime().optional(),
+  durationMs: z.number().optional(),
+});
+
+export type PreflightCheck = z.infer<typeof preflightCheckSchema>;
+
+/**
+ * PostflightValidation - Validation after execution
+ */
+export const postflightValidationSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string().optional(),
+  validationType: z.enum(['output', 'state', 'integration', 'consistency', 'quality']),
+  
+  // Result
+  passed: z.boolean(),
+  actualValue: z.any().optional(),
+  expectedValue: z.any().optional(),
+  message: z.string().optional(),
+  
+  // Timing
+  validatedAt: z.string().datetime().optional(),
+  durationMs: z.number().optional(),
+});
+
+export type PostflightValidation = z.infer<typeof postflightValidationSchema>;
+
+/**
+ * PhaseTransition - Record of state machine transition
+ */
+export const phaseTransitionSchema = z.object({
+  fromPhase: z.enum([
+    'intake', 'planning', 'validating', 'executing', 
+    'reflecting', 'committing', 'completed', 'failed', 
+    'rolled_back', 'escalated'
+  ]).nullable(),
+  toPhase: z.enum([
+    'intake', 'planning', 'validating', 'executing', 
+    'reflecting', 'committing', 'completed', 'failed', 
+    'rolled_back', 'escalated'
+  ]),
+  reason: z.string().optional(),
+  triggeredBy: z.enum(['system', 'user', 'subagent', 'timeout', 'error']).default('system'),
+  enteredAt: z.string().datetime(),
+  exitedAt: z.string().datetime().optional(),
+  durationMs: z.number().optional(),
+});
+
+export type PhaseTransition = z.infer<typeof phaseTransitionSchema>;
+
+/**
+ * ConfidenceFactors - Breakdown of what contributes to confidence score
+ */
+export const confidenceFactorsSchema = z.object({
+  // Individual factor scores (0-1)
+  toolCallSuccessRate: z.number().min(0).max(1).optional(),
+  validationPassRate: z.number().min(0).max(1).optional(),
+  historicalSuccessRate: z.number().min(0).max(1).optional(),
+  dataCompleteness: z.number().min(0).max(1).optional(),
+  modelConfidence: z.number().min(0).max(1).optional(),
+  riskAssessment: z.number().min(0).max(1).optional(),
+  
+  // Weights for each factor
+  weights: z.object({
+    toolCallSuccessRate: z.number().default(0.25),
+    validationPassRate: z.number().default(0.25),
+    historicalSuccessRate: z.number().default(0.15),
+    dataCompleteness: z.number().default(0.15),
+    modelConfidence: z.number().default(0.1),
+    riskAssessment: z.number().default(0.1),
+  }).optional(),
+  
+  // Override reasons
+  overrideReason: z.string().optional(),
+  manualOverride: z.boolean().default(false),
+});
+
+export type ConfidenceFactors = z.infer<typeof confidenceFactorsSchema>;
+
+/**
+ * RollbackStep - Step to undo an action
+ */
+export const rollbackStepSchema = z.object({
+  id: z.string(),
+  originalStepId: z.string(),
+  rollbackAction: z.string(),
+  rollbackParams: z.record(z.any()),
+  executed: z.boolean().default(false),
+  executedAt: z.string().datetime().optional(),
+  success: z.boolean().optional(),
+  error: z.string().optional(),
+});
+
+export type RollbackStep = z.infer<typeof rollbackStepSchema>;
+
+/**
+ * AuditEntry - Single audit log entry
+ */
+export const auditEntrySchema = z.object({
+  id: z.string(),
+  timestamp: z.string().datetime(),
+  eventType: z.enum([
+    'task_created', 'phase_changed', 'step_started', 'step_completed',
+    'tool_called', 'validation_run', 'error_occurred', 'retry_attempted',
+    'escalation_triggered', 'rollback_initiated', 'task_completed'
+  ]),
+  details: z.record(z.any()).optional(),
+  actor: z.enum(['system', 'user', 'subagent', 'orchestrator']).default('system'),
+  actorId: z.string().optional(),
+});
+
+export type AuditEntry = z.infer<typeof auditEntrySchema>;
+
+// ============================================================================
+// HELPER FUNCTIONS FOR TASK CONTRACT
+// ============================================================================
+
+/**
+ * Calculate confidence level from numeric score
+ */
+export function getConfidenceLevel(score: number): 'none' | 'low' | 'medium' | 'high' | 'certain' {
+  if (score <= 0) return 'none';
+  if (score < 0.4) return 'low';
+  if (score < 0.7) return 'medium';
+  if (score < 0.95) return 'high';
+  return 'certain';
+}
+
+/**
+ * Validate phase transition according to state machine rules
+ */
+export function isValidPhaseTransition(
+  from: string | null, 
+  to: string
+): boolean {
+  const validTransitions: Record<string, string[]> = {
+    // null = initial state
+    'null': ['intake'],
+    'intake': ['planning', 'failed', 'escalated'],
+    'planning': ['validating', 'failed', 'escalated'],
+    'validating': ['executing', 'failed', 'escalated'],
+    'executing': ['reflecting', 'failed', 'escalated'],
+    'reflecting': ['committing', 'executing', 'failed', 'escalated'], // Can retry
+    'committing': ['completed', 'failed', 'escalated'],
+    'completed': [], // Terminal state
+    'failed': ['rolled_back', 'escalated'], // Can rollback or escalate
+    'rolled_back': [], // Terminal state
+    'escalated': [], // Terminal state (human takes over)
+  };
+  
+  const key = from === null ? 'null' : from;
+  return validTransitions[key]?.includes(to) ?? false;
+}
