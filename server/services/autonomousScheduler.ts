@@ -1556,6 +1556,7 @@ export function startAutonomousScheduler() {
     roomAutoClose: { enabled: true, schedule: '0 5 * * *', description: 'Room auto-close' },
     wsConnectionCleanup: { enabled: true, schedule: '*/5 * * * *', description: 'WebSocket cleanup' },
     creditReset: { enabled: true, schedule: '0 0 1 * *', description: 'Monthly credit reset' },
+    visualQa: { enabled: true, schedule: '0 6 * * *', description: 'Daily visual QA scanning' },
   };
 
   console.log('\n╔════════════════════════════════════════════════╗');
