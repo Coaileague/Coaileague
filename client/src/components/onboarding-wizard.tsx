@@ -321,27 +321,27 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
       <DialogContent className={cn(
         "overflow-y-auto",
         isMobile 
-          ? "max-w-[85vw] w-[85vw] p-3 max-h-[75vh] pb-safe mx-auto" 
+          ? "max-w-[78vw] w-[78vw] p-2 max-h-[65vh] pb-safe mx-auto" 
           : "max-w-4xl max-h-[90vh]"
       )}>
         <DialogHeader className={cn(isMobile && "space-y-1")}>
-          <div className={cn("flex justify-center", isMobile ? "mb-2" : "mb-4 md:mb-6")}>
-            <CoAIleagueLogo width={isMobile ? 120 : 200} height={isMobile ? 30 : 50} showTagline={false} />
+          <div className={cn("flex justify-center", isMobile ? "mb-1" : "mb-4 md:mb-6")}>
+            <CoAIleagueLogo width={isMobile ? 100 : 200} height={isMobile ? 24 : 50} showTagline={false} />
           </div>
           <div className={cn(
             "flex items-start justify-between gap-2",
             isMobile && "flex-col"
           )}>
-            <div className="flex items-center gap-2 md:gap-3">
+            <div className="flex items-center gap-1.5 md:gap-3">
               <div className={cn(
-                "rounded-xl bg-primary/10 border border-primary/20",
-                isMobile ? "p-1.5" : "p-2"
+                "rounded-lg bg-primary/10 border border-primary/20",
+                isMobile ? "p-1" : "p-2"
               )}>
-                <StepIcon className={cn(isMobile ? "h-5 w-5" : "h-6 w-6", "text-primary")} />
+                <StepIcon className={cn(isMobile ? "h-4 w-4" : "h-6 w-6", "text-primary")} />
               </div>
               <div className="flex-1 min-w-0">
-                <DialogTitle className={cn(isMobile ? "text-base leading-tight" : "text-2xl")}>{currentStep.title}</DialogTitle>
-                <DialogDescription className={cn(isMobile ? "text-xs leading-tight" : "text-base", "line-clamp-2")}>
+                <DialogTitle className={cn(isMobile ? "text-sm leading-tight" : "text-2xl")}>{currentStep.title}</DialogTitle>
+                <DialogDescription className={cn(isMobile ? "text-[11px] leading-tight" : "text-base", "line-clamp-2")}>
                   {currentStep.description}
                 </DialogDescription>
               </div>
@@ -371,7 +371,7 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
             transition={{ duration: 0.3, ease: "easeOut" }}
           >
             <Card className={cn(isMobile ? "border" : "border-2")}>
-              <CardContent className={cn("pt-4 space-y-3", isMobile ? "pt-2 space-y-1.5 px-2 pb-2" : "pt-6 space-y-4")}>
+              <CardContent className={cn("pt-4 space-y-3", isMobile ? "pt-1.5 space-y-1 px-1.5 pb-1.5" : "pt-6 space-y-4")}>
                 {/* Screenshot Placeholder */}
                 {currentStep.screenshot && (
                   <motion.div 
@@ -385,13 +385,13 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
                 )}
 
                 {/* Features List - show max 3 on mobile to save space */}
-                <div className={cn("space-y-2", isMobile ? "space-y-1" : "space-y-3")}>
+                <div className={cn("space-y-2", isMobile ? "space-y-0.5" : "space-y-3")}>
                   {(isMobile ? currentStep.features.slice(0, 3) : currentStep.features).map((feature, index) => (
                     <motion.div 
                       key={index} 
                       className={cn(
-                        "flex items-start gap-2 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors",
-                        isMobile ? "p-1.5 gap-1.5" : "p-3 gap-3"
+                        "flex items-start gap-2 rounded-md bg-muted/50 hover:bg-muted/70 transition-colors",
+                        isMobile ? "p-1 gap-1" : "p-3 gap-3"
                       )}
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
@@ -402,14 +402,14 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
                         animate={{ scale: 1 }}
                         transition={{ delay: 0.2 + index * 0.08, type: "spring", stiffness: 400 }}
                       >
-                        <CheckCircle2 className={cn(isMobile ? "h-3.5 w-3.5" : "h-5 w-5", "text-primary shrink-0 mt-0.5")} />
+                        <CheckCircle2 className={cn(isMobile ? "h-3 w-3" : "h-5 w-5", "text-primary shrink-0 mt-0.5")} />
                       </motion.div>
-                      <span className={cn(isMobile ? "text-[11px] leading-tight" : "text-sm", "font-medium")}>{feature}</span>
+                      <span className={cn(isMobile ? "text-[10px] leading-tight" : "text-sm", "font-medium")}>{feature}</span>
                     </motion.div>
                   ))}
                   {isMobile && currentStep.features.length > 3 && (
-                    <div className="text-[10px] text-muted-foreground text-center">
-                      +{currentStep.features.length - 3} more features
+                    <div className="text-[9px] text-muted-foreground text-center">
+                      +{currentStep.features.length - 3} more
                     </div>
                   )}
                 </div>
