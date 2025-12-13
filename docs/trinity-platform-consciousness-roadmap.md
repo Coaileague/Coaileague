@@ -260,6 +260,9 @@ async aggregateOrgLearning(workspaceId: string): Promise<OrgLearningInsights> {
 ## Next Steps
 
 1. ✅ Complete Phase 0 audit (this document)
-2. 🔄 Begin Phase 1B: Create database schema for confidence aggregation
-3. 🔄 Begin Phase 1C: Build floating Trinity Dialogue UI
-4. 📋 Begin Phase 1A: Design codebase awareness indexing
+2. ✅ Phase 1C: Session Confidence Tracking - Created `trinityConfidenceTracker.ts` and database tables
+3. ✅ Phase 1D: Floating Trinity Dialogue UI - Created `trinity-dialogue.tsx`
+4. ✅ Phase 1A: Health-to-Conversation Bridge - Created `trinityHealthContext.ts`
+5. ✅ Phase 1B: Code Awareness Engine - Created `codebaseAwareness.ts`
+6. 📋 Phase 2A: Guru Task Graph Service - `guruTaskGraph.ts`
+7. 📋 Phase 2B: Org Learning Aggregation - Extend `TrinityMemoryService`
