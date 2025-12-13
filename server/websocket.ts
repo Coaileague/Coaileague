@@ -612,6 +612,48 @@ export function broadcastToWorkspace(workspaceId: string, data: any) {
   }
 }
 
+/**
+ * Broadcast platform update to all connected clients
+ * Used by aiNotificationService to push real-time What's New updates
+ */
+export function broadcastPlatformUpdateGlobal(update: {
+  id: string;
+  title: string;
+  description: string;
+  category: string;
+  priority?: number;
+  learnMoreUrl?: string;
+  metadata?: any;
+  workspaceId?: string;
+  visibility?: string;
+}): boolean {
+  if (!globalBroadcaster) {
+    console.warn('[WebSocket] Global broadcaster not initialized for platform update');
+    return false;
+  }
+  
+  try {
+    globalBroadcaster.broadcastPlatformUpdate({
+      type: 'platform_update',
+      category: update.category as any,
+      title: update.title,
+      description: update.description,
+      priority: update.priority || 1,
+      learnMoreUrl: update.learnMoreUrl,
+      metadata: {
+        ...update.metadata,
+        updateId: update.id,
+        workspaceId: update.workspaceId,
+        visibility: update.visibility || 'all',
+      },
+    });
+    return true;
+  } catch (err) {
+    console.warn('[WebSocket] Failed to broadcast platform update:', err);
+    return false;
+  }
+}
+
 // =============================================================================
 // SECURITY: MULTI-DIMENSIONAL RATE LIMITING (User + IP + Session)
 // =============================================================================
