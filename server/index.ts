@@ -309,6 +309,24 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize Gap Intelligence Service:', error);
   }
 
+  // Initialize Workflow Approval Service - approval prompts for autonomous fixes
+  try {
+    const { initializeWorkflowApproval } = await import('./services/ai-brain/workflowApprovalService');
+    await initializeWorkflowApproval();
+    console.log('[Server] Workflow Approval Service initialized - UNS prompts active');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Workflow Approval Service:', error);
+  }
+
+  // Initialize Autonomous Fix Pipeline - self-healing code system
+  try {
+    const { initializeAutonomousFixPipeline } = await import('./services/ai-brain/autonomousFixPipeline');
+    await initializeAutonomousFixPipeline();
+    console.log('[Server] Autonomous Fix Pipeline initialized - self-healing active');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Autonomous Fix Pipeline:', error);
+  }
+
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
