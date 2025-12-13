@@ -321,7 +321,7 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
       <DialogContent className={cn(
         "overflow-y-auto",
         isMobile 
-          ? "max-w-[78vw] w-[78vw] p-2 max-h-[65vh] pb-safe mx-auto" 
+          ? "!max-w-[75vw] !w-[75vw] !p-2 !max-h-[60vh] pb-safe mx-auto" 
           : "max-w-4xl max-h-[90vh]"
       )}>
         <DialogHeader className={cn(isMobile && "space-y-1")}>
