@@ -363,6 +363,11 @@ const SCHEDULER_CONFIG = {
     enabled: true,
     schedule: '0 0 1 * *', // Midnight on 1st of every month
     description: 'Monthly refill of automation credits based on subscription tier'
+  },
+  visualQa: {
+    enabled: true,
+    schedule: '0 6 * * *', // Every day at 6 AM (after other maintenance jobs)
+    description: 'Daily visual QA scan of key platform pages using Trinity Vision'
   }
 };
 
@@ -1946,6 +1951,131 @@ export function startAutonomousScheduler() {
       }
     })();
   });
+
+  // Visual QA Scheduled Scanning - Daily at 6 AM
+  cron.schedule(SCHEDULER_CONFIG.visualQa.schedule, () => {
+    console.log(`👁️ [VQA] Scheduled visual QA scan triggered at ${new Date().toISOString()}`);
+    const startTime = Date.now();
+    (async () => {
+      try {
+        const { visualQaSubagent } = await import('./ai-brain/subagents/visualQaSubagent');
+        
+        // Key platform pages to scan (use first active workspace for VQA records)
+        const pagesToScan = [
+          { url: 'http://localhost:5000/', name: 'Landing Page' },
+          { url: 'http://localhost:5000/dashboard', name: 'Dashboard' },
+          { url: 'http://localhost:5000/schedule', name: 'Schedule' },
+          { url: 'http://localhost:5000/usage-dashboard', name: 'Usage Dashboard' },
+        ];
+        
+        // Get first active workspace for VQA record storage
+        const [firstWorkspace] = await db.select()
+          .from(workspaces)
+          .where(eq(workspaces.isSuspended, false))
+          .limit(1);
+        
+        if (!firstWorkspace) {
+          console.log('👁️ [VQA] No active workspaces found, skipping scan');
+          return;
+        }
+        
+        let totalFindings = 0;
+        let criticalFindings = 0;
+        const scanResults: Array<{ page: string; findings: number; critical: number }> = [];
+        
+        for (const page of pagesToScan) {
+          try {
+            console.log(`👁️ [VQA] Scanning: ${page.name}...`);
+            const result = await visualQaSubagent.runVisualCheck({
+              url: page.url,
+              workspaceId: firstWorkspace.id,
+              triggerSource: 'scheduled',
+              triggeredBy: 'autonomous-scheduler',
+            });
+            
+            const pageFindings = result.findings.length;
+            const pageCritical = result.findings.filter(f => f.severity === 'critical' || f.severity === 'high').length;
+            
+            totalFindings += pageFindings;
+            criticalFindings += pageCritical;
+            scanResults.push({ page: page.name, findings: pageFindings, critical: pageCritical });
+            
+            console.log(`👁️ [VQA] ${page.name}: ${pageFindings} findings (${pageCritical} critical/high)`);
+          } catch (pageError) {
+            console.error(`👁️ [VQA] Error scanning ${page.name}:`, pageError);
+          }
+        }
+        
+        // Notify org owners/admins if critical issues found
+        if (criticalFindings > 0) {
+          console.log(`👁️ [VQA] ⚠️ ${criticalFindings} critical/high findings detected - notifying admins`);
+          
+          // Get org owners and admins from all workspaces
+          const admins = await db.select()
+            .from(employees)
+            .where(
+              and(
+                sql`${employees.workspaceRole} IN ('org_owner', 'org_admin')`,
+                sql`${employees.userId} IS NOT NULL`
+              )
+            );
+          
+          for (const admin of admins) {
+            if (admin.userId) {
+              try {
+                await createNotification({
+                  workspaceId: admin.workspaceId,
+                  userId: admin.userId,
+                  type: 'system',
+                  title: 'Visual QA Alert: Critical Issues Detected',
+                  message: `Trinity Vision detected ${criticalFindings} critical/high visual issues across ${scanResults.filter(r => r.critical > 0).length} page(s). Review VQA findings for details.`,
+                  actionUrl: '/admin/vqa-reports',
+                  priority: 'high',
+                  relatedEntityType: 'visual_qa',
+                  metadata: { 
+                    totalFindings,
+                    criticalFindings,
+                    pagesScanned: pagesToScan.length,
+                    scanResults,
+                  },
+                  createdBy: 'system-coaileague',
+                });
+              } catch (notifError) {
+                console.warn(`👁️ [VQA] Failed to notify admin ${admin.userId}:`, notifError);
+              }
+            }
+          }
+        }
+        
+        console.log(`👁️ [VQA] Scan complete: ${totalFindings} total findings, ${criticalFindings} critical/high`);
+        
+        await emitAutomationEvent({
+          jobName: 'Visual QA Scan',
+          category: 'maintenance',
+          success: true,
+          duration: Date.now() - startTime,
+          recordsProcessed: pagesToScan.length,
+          details: {
+            pagesScanned: pagesToScan.length,
+            totalFindings,
+            criticalFindings,
+            scanResults,
+          },
+        });
+      } catch (error: any) {
+        console.error('👁️ [VQA] ❌ Scheduled scan error:', error);
+        await emitAutomationEvent({
+          jobName: 'Visual QA Scan',
+          category: 'maintenance',
+          success: false,
+          details: { error: error.message },
+        });
+      }
+    })();
+  });
+  console.log('✅ Visual QA Automation:');
+  console.log(`   Schedule: ${SCHEDULER_CONFIG.visualQa.schedule} (daily at 6 AM)`);
+  console.log('   Scans key platform pages for visual anomalies using Trinity Vision\n');
   
   // Initial platform scan on startup
   (async () => {
@@ -2003,6 +2133,31 @@ export const manualTriggers = {
       }
     }
     return { workspacesScanned: Math.min(allWorkspaces.length, 10), insightsGenerated: totalInsights };
+  },
+  visualQaScan: async () => {
+    const { visualQaSubagent } = await import('./ai-brain/subagents/visualQaSubagent');
+    const pagesToScan = [
+      { url: 'http://localhost:5000/', name: 'Landing Page' },
+      { url: 'http://localhost:5000/dashboard', name: 'Dashboard' },
+      { url: 'http://localhost:5000/usage-dashboard', name: 'Usage Dashboard' },
+    ];
+    let totalFindings = 0;
+    const results: Array<{ page: string; findings: number }> = [];
+    for (const page of pagesToScan) {
+      try {
+        const result = await visualQaSubagent.runVisualCheck({
+          url: page.url,
+          workspaceId: 'manual-trigger',
+          triggerSource: 'manual',
+          triggeredBy: 'admin',
+        });
+        totalFindings += result.findings.length;
+        results.push({ page: page.name, findings: result.findings.length });
+      } catch (e) {
+        console.warn(`[VQA] Failed for ${page.name}:`, e);
+      }
+    }
+    return { pagesScanned: pagesToScan.length, totalFindings, results };
   },
   aiOverageBilling: async () => {
     const { usageMeteringService } = await import('./billing/usageMetering');
