@@ -516,6 +516,36 @@ export const workspaces = pgTable("workspaces", {
   rejectedAt: timestamp("rejected_at"), // When they declined
   rejectionReason: text("rejection_reason"),
 
+  // ============================================================================
+  // SUPPORT-ASSISTED ONBOARDING
+  // Enables platform support staff to create and configure orgs on behalf of users
+  // who cannot do so themselves (disability, time constraints, etc.)
+  // ============================================================================
+  
+  // Assisted onboarding metadata
+  assistedOnboardingBy: varchar("assisted_onboarding_by"), // Support staff userId who created this org
+  assistedOnboardingAt: timestamp("assisted_onboarding_at"), // When assisted onboarding started
+  assistedOnboardingNotes: text("assisted_onboarding_notes"), // Internal notes from support
+  
+  // Target user information (who will receive this org)
+  targetUserEmail: varchar("target_user_email"), // Email of user who will receive ownership
+  targetUserName: varchar("target_user_name"), // Name of the target user for personalization
+  targetUserPhone: varchar("target_user_phone"), // Optional contact number
+  
+  // Handoff workflow status
+  handoffStatus: varchar("handoff_status"), // 'pending_setup' | 'ready_for_handoff' | 'handoff_sent' | 'handoff_complete' | 'handoff_expired'
+  handoffToken: varchar("handoff_token"), // Secure token for handoff link
+  handoffTokenExpiry: timestamp("handoff_token_expiry"), // Token expiration (72 hours)
+  handoffSentAt: timestamp("handoff_sent_at"), // When handoff email was sent
+  handoffCompletedAt: timestamp("handoff_completed_at"), // When user accepted ownership
+  handoffCompletedBy: varchar("handoff_completed_by"), // User ID who completed handoff
+  
+  // Document extraction tracking (Trinity AI integration)
+  assistedDocsUploaded: integer("assisted_docs_uploaded").default(0), // Count of docs uploaded
+  assistedDocsProcessed: integer("assisted_docs_processed").default(0), // Count of docs processed by AI
+  assistedDataExtracted: jsonb("assisted_data_extracted"), // AI-extracted business data
+  assistedExtractionStatus: varchar("assisted_extraction_status"), // 'pending' | 'processing' | 'complete' | 'failed'
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

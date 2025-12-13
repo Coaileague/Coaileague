@@ -502,6 +502,92 @@ const emailTemplates = {
       </div>
     `
   }),
+
+  assistedOnboardingHandoff: (data: {
+    recipientName: string;
+    workspaceName: string;
+    handoffUrl: string;
+    expiresAt: string;
+    supportTeamNote?: string;
+  }) => ({
+    subject: `Your ${data.workspaceName} Organization is Ready - CoAIleague`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb;">
+        <!-- Header with gradient -->
+        <div style="text-align: center; padding: 40px 30px; background: linear-gradient(135deg, #16a34a 0%, #2563eb 100%); border-radius: 8px 8px 0 0;">
+          <h1 style="color: white; margin: 0; font-size: 28px; font-weight: 700;">Your Organization is Ready!</h1>
+          <p style="color: #e0e7ff; margin: 15px 0 0 0; font-size: 16px;">Our support team has set everything up for you</p>
+        </div>
+        
+        <!-- Main content -->
+        <div style="padding: 40px 30px; background-color: white;">
+          <p style="font-size: 18px; color: #1f2937;">Hello ${data.recipientName},</p>
+          
+          <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+            Great news! Our support team has finished setting up <strong>${data.workspaceName}</strong> on CoAIleague for you. 
+            Your organization is fully configured and ready for you to take ownership.
+          </p>
+          
+          <!-- What's been done box -->
+          <div style="background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%); padding: 25px; border-radius: 12px; margin: 30px 0; border: 1px solid #86efac;">
+            <h3 style="color: #15803d; margin: 0 0 15px 0; font-size: 18px;">What We've Set Up For You:</h3>
+            <ul style="margin: 0; padding: 0 0 0 20px; color: #166534; font-size: 15px; line-height: 1.8;">
+              <li>Your organization account with all basic settings</li>
+              <li>Industry-specific configuration and templates</li>
+              <li>AI-extracted data from your documents (if provided)</li>
+              <li>Trinity AI assistant ready to help you</li>
+            </ul>
+          </div>
+          
+          ${data.supportTeamNote ? `
+          <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #6b7280;">
+            <p style="margin: 0; font-size: 14px; color: #4b5563;">
+              <strong>Note from Support:</strong> ${data.supportTeamNote}
+            </p>
+          </div>
+          ` : ''}
+          
+          <!-- CTA Button -->
+          <div style="text-align: center; margin: 40px 0;">
+            <a href="${data.handoffUrl}" 
+               style="background: linear-gradient(135deg, #16a34a 0%, #22c55e 100%); color: white; padding: 18px 48px; text-decoration: none; border-radius: 10px; font-weight: 700; display: inline-block; font-size: 18px; box-shadow: 0 4px 14px rgba(22, 163, 74, 0.4);">
+              Claim Your Organization
+            </a>
+          </div>
+          
+          <!-- Security notice -->
+          <div style="background-color: #fef3c7; padding: 15px 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #f59e0b;">
+            <p style="margin: 0; font-size: 14px; color: #92400e;">
+              <strong>Security Notice:</strong> This link expires on <strong>${data.expiresAt}</strong>. 
+              After claiming your organization, you'll become the owner with full administrative access.
+            </p>
+          </div>
+          
+          <!-- What happens next -->
+          <div style="background-color: #f9fafb; padding: 25px; border-radius: 12px; margin: 30px 0;">
+            <h3 style="color: #1f2937; margin: 0 0 15px 0; font-size: 16px;">What Happens Next?</h3>
+            <ol style="margin: 0; padding: 0 0 0 20px; color: #4b5563; font-size: 14px; line-height: 1.8;">
+              <li>Click the button above to claim your organization</li>
+              <li>Sign in or create your CoAIleague account</li>
+              <li>Review your organization settings and make any adjustments</li>
+              <li>Start using CoAIleague to manage your workforce!</li>
+            </ol>
+          </div>
+        </div>
+        
+        <!-- Footer -->
+        <div style="padding: 25px 30px; background-color: #f3f4f6; border-radius: 0 0 8px 8px; text-align: center;">
+          <p style="color: #6b7280; font-size: 14px; margin: 0 0 10px 0;">
+            Questions? Reply to this email or chat with Trinity once you're logged in.
+          </p>
+          <p style="color: #9ca3af; font-size: 12px; margin: 0;">
+            This email was sent by CoAIleague Support Team.<br>
+            If you did not request this organization setup, please contact support immediately.
+          </p>
+        </div>
+      </div>
+    `
+  }),
 };
 
 // ============================================================================
@@ -1154,7 +1240,59 @@ export class EmailService {
       params.workspaceId
     );
   }
+
+  /**
+   * Send assisted onboarding handoff email
+   * Sent when support staff has completed setting up an organization for a user
+   */
+  async sendAssistedOnboardingHandoff(params: {
+    toEmail: string;
+    toName: string;
+    workspaceName: string;
+    handoffToken: string;
+    expiresAt: Date;
+    supportNote?: string;
+  }): Promise<EmailResult> {
+    const handoffUrl = `${getAppBaseUrl()}/accept-handoff?token=${params.handoffToken}`;
+    
+    const template = emailTemplates.assistedOnboardingHandoff({
+      recipientName: params.toName || 'there',
+      workspaceName: params.workspaceName,
+      handoffUrl,
+      expiresAt: params.expiresAt.toLocaleDateString('en-US', { 
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      supportTeamNote: params.supportNote,
+    });
+
+    return this.sendEmail(
+      params.toEmail,
+      template.subject,
+      template.html,
+      'assisted_onboarding_handoff'
+    );
+  }
 }
 
 // Export singleton instance
 export const emailService = new EmailService();
+
+/**
+ * Helper function for sending assisted onboarding handoff emails
+ * Used by AssistedOnboardingService
+ */
+export async function sendAssistedOnboardingHandoff(params: {
+  toEmail: string;
+  toName: string;
+  workspaceName: string;
+  handoffToken: string;
+  expiresAt: Date;
+  supportNote?: string;
+}): Promise<{ success: boolean; error?: string }> {
+  return emailService.sendAssistedOnboardingHandoff(params);
+}
