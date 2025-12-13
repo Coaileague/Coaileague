@@ -15,6 +15,10 @@ import {
   Dialog,
   DialogContent,
 } from "@/components/ui/dialog";
+import {
+  Sheet,
+  SheetContent,
+} from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -1142,24 +1146,22 @@ export function NotificationsPopover() {
 
   if (isMobile) {
     return (
-      <>
+      <Sheet open={open} onOpenChange={setOpen}>
         <div onClick={() => setOpen(true)}>
           <AnimatedNotificationBell
             notificationCount={totalUnread}
             onClick={() => setOpen(true)}
           />
         </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent 
-            className="!fixed !inset-x-2 !top-auto !bottom-16 !translate-x-0 !translate-y-0 !w-[calc(100vw-16px)] !max-w-none !h-[70vh] !max-h-[500px] p-0 gap-0 flex flex-col rounded-2xl overflow-hidden border-slate-700 bg-background"
-            showHomeButton={false}
-            data-testid="notification-dialog-content"
-            data-trinity-avoid="true"
-          >
-            <NotificationsContent simplified={true} />
-          </DialogContent>
-        </Dialog>
-      </>
+        <SheetContent 
+          side="bottom" 
+          className="h-[80vh] max-h-[600px] p-0 rounded-t-2xl overflow-hidden"
+          data-testid="notification-sheet-content"
+          data-trinity-avoid="true"
+        >
+          <NotificationsContent simplified={true} />
+        </SheetContent>
+      </Sheet>
     );
   }
 
