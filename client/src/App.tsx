@@ -971,7 +971,7 @@ function AppContent() {
               <Route path="/ai/command-center" component={AICommandCenter} />
               <Route path="/support/console" component={SupportCommandConsole} />
               <Route path="/support/bugs" component={SupportBugDashboard} />
-              <Route path="/support/end-user-controls" component={EndUserControls} />
+              <Route path="/admin/end-user-controls" component={EndUserControls} />
               <Route path="/support/assisted-onboarding" component={AssistedOnboarding} />
               <Route path="/trinity/command-center" component={TrinityCommandCenter} />
               <Route path="/billing" component={Billing} />

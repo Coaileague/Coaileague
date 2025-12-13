@@ -735,7 +735,7 @@ export const platformSupportModule: SidebarModule = {
     {
       id: 'end-user-controls',
       label: 'End-User Controls',
-      href: '/support/end-user-controls',
+      href: '/admin/end-user-controls',
       icon: Users,
       description: 'Manage organization access, AI Brain, and user permissions',
       capabilities: ['support_dashboard'],
