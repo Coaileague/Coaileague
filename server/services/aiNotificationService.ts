@@ -172,6 +172,7 @@ SUMMARY:`;
     workspaceId: data.workspaceId,
     priority: data.priority || 1,
     isNew: true,
+    visibility: "all",
     learnMoreUrl: data.learnMoreUrl,
     metadata: { ...data.metadata, idempotencyKey, generatedAt: new Date().toISOString() },
     date: new Date(),
