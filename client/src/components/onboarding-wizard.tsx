@@ -60,7 +60,7 @@ const onboardingSteps: OnboardingStep[] = [
     icon: MessageSquare,
     url: "/category/communication",
     features: [
-      "AI Communications - Organization-wide chatrooms",
+      "Chatrooms - Organization-wide team conversations",
       "Private Messages - Secure DMs with purple 'whispered' badges",
       "HelpDesk - Live customer support chat"
     ]
@@ -68,7 +68,7 @@ const onboardingSteps: OnboardingStep[] = [
   {
     id: "communications",
     family: "communication",
-    title: "AI Communications - Team Chatrooms",
+    title: "Chatrooms - Team Conversations",
     description: "Organization-specific chatrooms with access control and real-time messaging",
     icon: MessageSquare,
     url: "/chatrooms",

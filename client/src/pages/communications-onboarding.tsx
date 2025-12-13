@@ -70,7 +70,7 @@ export default function AICommunicationsOnboarding() {
         title: "Setup Complete!",
         description: "Your organization chat room is ready to use",
       });
-      setLocation('/communications');
+      setLocation('/chatrooms');
     },
     onError: (error: any) => {
       toast({
@@ -96,7 +96,7 @@ export default function AICommunicationsOnboarding() {
         <div className="text-center">
           <h1 className="text-3xl font-bold flex items-center justify-center gap-3 mb-2">
             <MessageSquare className="w-8 h-8 text-primary" />
-            AI Communications Setup
+            Chatrooms Setup
           </h1>
           <p className="text-muted-foreground">
             Set up your organization's communication channels in just 4 steps

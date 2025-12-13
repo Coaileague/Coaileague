@@ -32,7 +32,7 @@ export default function PrivacyPolicy() {
               <li><strong>Account Information:</strong> Name, email address, phone number, company details</li>
               <li><strong>Employee Data:</strong> Names, contact information, roles, wages, schedules, time tracking data</li>
               <li><strong>Financial Information:</strong> Payment method details (processed securely via Stripe), billing addresses</li>
-              <li><strong>Communications:</strong> Messages sent through AI Communications, support tickets, feedback</li>
+              <li><strong>Communications:</strong> Messages sent through Chatrooms, support tickets, feedback</li>
               <li><strong>Uploaded Files:</strong> Schedules, documents, compliance records</li>
             </ul>
 

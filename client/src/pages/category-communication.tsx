@@ -7,11 +7,11 @@ import { Badge } from "@/components/ui/badge";
 export default function CommunicationFamilyPage() {
   const modules = [
     {
-      name: "AI Communications",
+      name: "Chatrooms",
       icon: MessageSquare,
       description: "Organization-wide chatrooms with real-time messaging, room management, and access control",
       features: ["Public & Private Rooms", "Member Management", "Real-time Updates", "Room Archives"],
-      url: "/communications",
+      url: "/chatrooms",
       color: "from-blue-500 to-cyan-500"
     },
     {
