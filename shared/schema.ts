@@ -13135,6 +13135,194 @@ export type InsertEmailEvent = z.infer<typeof insertEmailEventSchema>;
 export type EmailEvent = typeof emailEvents.$inferSelect;
 
 // ============================================================================
+// INTERNAL EMAIL SYSTEM - Virtual Mailboxes & Messages
+// ============================================================================
+
+// Enum for email folder types
+export const emailFolderTypeEnum = pgEnum("email_folder_type", [
+  "inbox", "sent", "drafts", "trash", "archive", "spam", "starred", "custom"
+]);
+
+// Enum for email priority
+export const emailPriorityEnum = pgEnum("email_priority", [
+  "low", "normal", "high", "urgent"
+]);
+
+// Enum for email status
+export const internalEmailStatusEnum = pgEnum("internal_email_status", [
+  "draft", "sent", "delivered", "read", "archived", "deleted"
+]);
+
+// Internal Mailboxes - Virtual email addresses for each user
+export const internalMailboxes = pgTable("internal_mailboxes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Virtual email address (e.g., john.doe@coaileague.internal)
+  emailAddress: varchar("email_address").notNull().unique(),
+  displayName: varchar("display_name"), // "John Doe" or "Support Team"
+  
+  // Mailbox type
+  mailboxType: varchar("mailbox_type").notNull().default('personal'), // personal, shared, system, department
+  
+  // Settings
+  autoReply: boolean("auto_reply").default(false),
+  autoReplyMessage: text("auto_reply_message"),
+  signature: text("signature"),
+  
+  // Statistics
+  unreadCount: integer("unread_count").default(0),
+  totalMessages: integer("total_messages").default(0),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("internal_mailboxes_user_idx").on(table.userId),
+  index("internal_mailboxes_workspace_idx").on(table.workspaceId),
+  index("internal_mailboxes_email_idx").on(table.emailAddress),
+]);
+
+export const insertInternalMailboxSchema = createInsertSchema(internalMailboxes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  unreadCount: true,
+  totalMessages: true,
+});
+
+export type InsertInternalMailbox = z.infer<typeof insertInternalMailboxSchema>;
+export type InternalMailbox = typeof internalMailboxes.$inferSelect;
+
+// Email Folders - Custom folders for organizing emails
+export const internalEmailFolders = pgTable("internal_email_folders", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  mailboxId: varchar("mailbox_id").notNull().references(() => internalMailboxes.id, { onDelete: 'cascade' }),
+  
+  name: varchar("name").notNull(),
+  folderType: emailFolderTypeEnum("folder_type").notNull().default('custom'),
+  color: varchar("color"), // Hex color for UI
+  icon: varchar("icon"), // Icon name for UI
+  
+  // Hierarchy
+  parentFolderId: varchar("parent_folder_id"),
+  sortOrder: integer("sort_order").default(0),
+  
+  // Statistics
+  messageCount: integer("message_count").default(0),
+  unreadCount: integer("unread_count").default(0),
+  
+  isSystem: boolean("is_system").default(false), // System folders can't be deleted
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("internal_email_folders_mailbox_idx").on(table.mailboxId),
+  index("internal_email_folders_type_idx").on(table.folderType),
+]);
+
+export const insertInternalEmailFolderSchema = createInsertSchema(internalEmailFolders).omit({
+  id: true,
+  createdAt: true,
+  messageCount: true,
+  unreadCount: true,
+});
+
+export type InsertInternalEmailFolder = z.infer<typeof insertInternalEmailFolderSchema>;
+export type InternalEmailFolder = typeof internalEmailFolders.$inferSelect;
+
+// Internal Emails - The actual email messages
+export const internalEmails = pgTable("internal_emails", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Sender
+  fromMailboxId: varchar("from_mailbox_id").references(() => internalMailboxes.id, { onDelete: 'set null' }),
+  fromAddress: varchar("from_address").notNull(), // Can be internal or external
+  fromName: varchar("from_name"),
+  
+  // Recipients (stored as JSON arrays for multiple recipients)
+  toAddresses: text("to_addresses").notNull(), // JSON array of email addresses
+  ccAddresses: text("cc_addresses"), // JSON array
+  bccAddresses: text("bcc_addresses"), // JSON array
+  
+  // Email content
+  subject: varchar("subject", { length: 500 }),
+  bodyText: text("body_text"), // Plain text version
+  bodyHtml: text("body_html"), // HTML version
+  
+  // Threading
+  threadId: varchar("thread_id"), // For conversation threading
+  inReplyTo: varchar("in_reply_to"), // Reference to parent email ID (self-ref handled at app level)
+  
+  // Metadata
+  priority: emailPriorityEnum("priority").default('normal'),
+  isInternal: boolean("is_internal").default(true), // true = internal, false = external via Resend
+  
+  // External email tracking (when sent via Resend)
+  externalId: varchar("external_id"), // Resend message ID
+  externalStatus: varchar("external_status"), // Resend delivery status
+  
+  // Attachments (stored as JSON array of file references)
+  attachments: text("attachments"), // JSON array of {fileName, fileUrl, fileSize, mimeType}
+  
+  // Timestamps
+  sentAt: timestamp("sent_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("internal_emails_from_idx").on(table.fromMailboxId),
+  index("internal_emails_thread_idx").on(table.threadId),
+  index("internal_emails_sent_idx").on(table.sentAt),
+  index("internal_emails_created_idx").on(table.createdAt),
+]);
+
+export const insertInternalEmailSchema = createInsertSchema(internalEmails).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertInternalEmail = z.infer<typeof insertInternalEmailSchema>;
+export type InternalEmail = typeof internalEmails.$inferSelect;
+
+// Email Recipients - Junction table for mailbox-email relationship with read status
+export const internalEmailRecipients = pgTable("internal_email_recipients", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  emailId: varchar("email_id").notNull().references(() => internalEmails.id, { onDelete: 'cascade' }),
+  mailboxId: varchar("mailbox_id").notNull().references(() => internalMailboxes.id, { onDelete: 'cascade' }),
+  
+  // Recipient type
+  recipientType: varchar("recipient_type").notNull().default('to'), // to, cc, bcc
+  
+  // Folder location
+  folderId: varchar("folder_id").references(() => internalEmailFolders.id, { onDelete: 'set null' }),
+  
+  // Status
+  status: internalEmailStatusEnum("status").notNull().default('delivered'),
+  isRead: boolean("is_read").default(false),
+  isStarred: boolean("is_starred").default(false),
+  isImportant: boolean("is_important").default(false),
+  
+  // Timestamps
+  readAt: timestamp("read_at"),
+  archivedAt: timestamp("archived_at"),
+  deletedAt: timestamp("deleted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("internal_email_recipients_email_idx").on(table.emailId),
+  index("internal_email_recipients_mailbox_idx").on(table.mailboxId),
+  index("internal_email_recipients_folder_idx").on(table.folderId),
+  index("internal_email_recipients_status_idx").on(table.status),
+  index("internal_email_recipients_unread_idx").on(table.isRead),
+]);
+
+export const insertInternalEmailRecipientSchema = createInsertSchema(internalEmailRecipients).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertInternalEmailRecipient = z.infer<typeof insertInternalEmailRecipientSchema>;
+export type InternalEmailRecipient = typeof internalEmailRecipients.$inferSelect;
+
+// ============================================================================
 // SUPPORT TICKET ESCALATION TRACKING (NEW - Tier 1 Critical Fix #5)
 // ============================================================================
 
