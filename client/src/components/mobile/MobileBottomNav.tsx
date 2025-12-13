@@ -10,7 +10,7 @@
  * - Keyboard-aware hiding
  */
 
-import { Home, Calendar, Clock, MessageSquare, Menu, DollarSign, Users, LogOut, ArrowLeft, ClipboardCheck, Settings, User } from "lucide-react";
+import { Calendar, Clock, MessageSquare, Menu, LogOut, ArrowLeft, Settings, User, HelpCircle, Mail, type LucideIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -23,7 +23,7 @@ import { useUniversalAnimation } from "@/contexts/universal-animation-context";
 import { useQuery } from "@tanstack/react-query";
 
 interface NavItemProps {
-  icon: typeof Home;
+  icon: LucideIcon;
   label: string;
   href: string;
   isActive: boolean;
@@ -118,11 +118,13 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
     return null;
   }
   
+  // Essential field worker tools - streamlined for mobile (5 core tools)
   const navItems = [
-    { icon: Home, label: "Home", href: "/dashboard" },
+    { icon: Clock, label: "Clock", href: "/time-tracking" },
     { icon: Calendar, label: "Schedule", href: "/schedule" },
-    { icon: Clock, label: "Time", href: "/time-tracking" },
     { icon: MessageSquare, label: "Chat", href: "/chat" },
+    { icon: HelpCircle, label: "Help", href: "/helpdesk" },
+    { icon: Mail, label: "Inbox", href: "/inbox" },
   ];
   
   const isActive = (href: string) => {
@@ -204,85 +206,37 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
             </button>
           </SheetTrigger>
           <SheetContent side="bottom" className="rounded-t-3xl max-h-[70vh] overflow-y-auto bg-slate-900 border-slate-700">
-            <SheetTitle className="sr-only">Quick Access Menu</SheetTitle>
-            <div className="p-5 space-y-4">
-              <h3 className="font-bold text-lg text-white mb-4">Quick Access</h3>
+            <SheetTitle className="sr-only">Menu</SheetTitle>
+            <div className="p-5 space-y-3">
+              {/* Minimal menu - only essential options */}
+              <Button 
+                variant="ghost"
+                className="w-full h-14 justify-start gap-4 text-slate-300 hover:text-white hover:bg-slate-800 text-base"
+                onClick={() => { setLocation('/profile'); setMenuOpen(false); }}
+                data-testid="nav-profile"
+              >
+                <User className="w-6 h-6 text-cyan-400" />
+                My Profile
+              </Button>
               
-              {/* Workforce-focused quick actions */}
-              <div className="grid grid-cols-3 gap-3">
-                <QuickNavButton 
-                  icon={DollarSign} 
-                  label="My Pay" 
-                  href="/payroll" 
-                  onNavigate={() => { setLocation('/payroll'); setMenuOpen(false); }}
-                />
-                <QuickNavButton 
-                  icon={ClipboardCheck} 
-                  label="Time Off" 
-                  href="/pto" 
-                  onNavigate={() => { setLocation('/pto'); setMenuOpen(false); }}
-                />
-                <QuickNavButton 
-                  icon={Calendar} 
-                  label="Availability" 
-                  href="/availability" 
-                  onNavigate={() => { setLocation('/availability'); setMenuOpen(false); }}
-                />
-              </div>
-              
-              {/* Supervisor-only tools */}
-              {isSupervisor && (
-                <div className="pt-4 border-t border-slate-700">
-                  <p className="text-xs text-slate-500 uppercase tracking-wide mb-3">Supervisor Tools</p>
-                  <div className="grid grid-cols-3 gap-3">
-                    <QuickNavButton 
-                      icon={Users} 
-                      label="Team" 
-                      href="/employees" 
-                      onNavigate={() => { setLocation('/employees'); setMenuOpen(false); }}
-                    />
-                    <QuickNavButton 
-                      icon={ClipboardCheck} 
-                      label="Approvals" 
-                      href="/workflow-approvals" 
-                      onNavigate={() => { setLocation('/workflow-approvals'); setMenuOpen(false); }}
-                    />
-                  </div>
-                </div>
-              )}
-              
-              <div className="pt-4 border-t border-slate-700">
-                <Button 
-                  variant="ghost"
-                  className="w-full h-12 justify-start gap-3 text-slate-300 hover:text-white hover:bg-slate-800"
-                  onClick={() => { setLocation('/profile'); setMenuOpen(false); }}
-                  data-testid="nav-profile"
-                >
-                  <User className="w-5 h-5 text-cyan-400" />
-                  My Profile
-                </Button>
-              </div>
-              
-              <div className="pt-1">
-                <Button 
-                  variant="ghost"
-                  className="w-full h-12 justify-start gap-3 text-slate-300 hover:text-white hover:bg-slate-800"
-                  onClick={() => { setLocation('/settings'); setMenuOpen(false); }}
-                  data-testid="nav-settings"
-                >
-                  <Settings className="w-5 h-5 text-cyan-400" />
-                  Settings
-                </Button>
-              </div>
+              <Button 
+                variant="ghost"
+                className="w-full h-14 justify-start gap-4 text-slate-300 hover:text-white hover:bg-slate-800 text-base"
+                onClick={() => { setLocation('/settings'); setMenuOpen(false); }}
+                data-testid="nav-settings"
+              >
+                <Settings className="w-6 h-6 text-cyan-400" />
+                Settings
+              </Button>
 
-              <div className="pt-4 border-t border-slate-700">
+              <div className="pt-3 border-t border-slate-700">
                 <Button 
                   variant="ghost"
-                  className="w-full h-12 justify-start gap-3 text-red-400 hover:text-red-300 hover:bg-red-950/20"
+                  className="w-full h-14 justify-start gap-4 text-red-400 hover:text-red-300 hover:bg-red-950/20 text-base"
                   onClick={() => performLogout()}
                   data-testid="nav-logout"
                 >
-                  <LogOut className="w-5 h-5" />
+                  <LogOut className="w-6 h-6" />
                   Log Out
                 </Button>
               </div>
@@ -291,29 +245,5 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
         </Sheet>
       </div>
     </nav>
-  );
-}
-
-interface QuickNavButtonProps {
-  icon: typeof Home;
-  label: string;
-  href: string;
-  onNavigate: () => void;
-}
-
-function QuickNavButton({ icon: Icon, label, onNavigate }: QuickNavButtonProps) {
-  return (
-    <button
-      onClick={onNavigate}
-      className={cn(
-        "flex flex-col items-center justify-center p-3 rounded-xl",
-        "bg-slate-800 hover:bg-slate-700 transition-colors",
-        "min-h-[72px] border border-slate-700/50"
-      )}
-      style={{ WebkitTapHighlightColor: 'transparent' }}
-    >
-      <Icon className="w-6 h-6 text-cyan-400 mb-1.5" />
-      <span className="text-xs font-medium text-center text-slate-300">{label}</span>
-    </button>
   );
 }
