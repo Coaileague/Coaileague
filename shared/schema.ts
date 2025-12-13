@@ -327,6 +327,26 @@ export const workspaces = pgTable("workspaces", {
   industry: varchar("industry"), // For benchmark comparisons
   companySize: varchar("company_size"), // 'small', 'medium', 'large', 'enterprise'
 
+  // ============================================================================
+  // HIERARCHICAL INDUSTRY TAXONOMY (3-Level Classification)
+  // Used for Trinity onboarding orchestration, compliance templates, and ABAC policies
+  // ============================================================================
+  
+  sectorId: varchar("sector_id"), // Level 1: e.g., 'construction', 'healthcare', 'security'
+  industryGroupId: varchar("industry_group_id"), // Level 2: e.g., 'specialty_contractors', 'guard_services'
+  subIndustryId: varchar("sub_industry_id"), // Level 3: e.g., 'electrician', 'plumber', 'armed_guard'
+  
+  industryTaxonomyVersion: varchar("industry_taxonomy_version"), // Version of taxonomy used for selection
+  industrySelectedAt: timestamp("industry_selected_at"), // When industry was selected
+  industrySelectedBy: varchar("industry_selected_by"), // User who selected the industry
+  
+  industryComplianceTemplates: text("industry_compliance_templates").array().default(sql`ARRAY[]::text[]`), // Active compliance templates
+  industryCertifications: text("industry_certifications").array().default(sql`ARRAY[]::text[]`), // Required certifications for this industry
+  
+  industryOnboardingComplete: boolean("industry_onboarding_complete").default(false), // Industry-specific onboarding complete
+  industryVerifiedBy: varchar("industry_verified_by"), // User/AI that verified industry classification
+  industryVerifiedAt: timestamp("industry_verified_at"),
+
   // Manual Adjustments & Notes
   admin_notes: text("admin_notes"), // ROOT private notes about this org
   admin_flags: text("admin_flags").array().default(sql`ARRAY[]::text[]`), // Tags: 'vip', 'watchlist', 'partner', 'delinquent'

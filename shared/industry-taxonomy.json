@@ -1,0 +1,433 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2025-12-13",
+  "sectors": [
+    {
+      "id": "construction",
+      "name": "Construction & Trades",
+      "description": "Building, renovation, and skilled trades services",
+      "icon": "HardHat",
+      "industryGroups": [
+        {
+          "id": "general_trades",
+          "name": "General Trades",
+          "description": "Multi-discipline construction and general contracting",
+          "subIndustries": [
+            { "id": "general_contractor", "name": "General Contractor", "complianceTemplates": ["osha_safety", "worker_comp", "liability"], "certifications": ["GC_LICENSE", "OSHA_30"] },
+            { "id": "construction_manager", "name": "Construction Manager", "complianceTemplates": ["osha_safety", "project_management"], "certifications": ["CCM", "PMP"] },
+            { "id": "handyman", "name": "Handyman Services", "complianceTemplates": ["basic_liability", "worker_comp"], "certifications": [] }
+          ]
+        },
+        {
+          "id": "specialty_contractors",
+          "name": "Specialty Contractors",
+          "description": "Licensed specialty trade contractors",
+          "subIndustries": [
+            { "id": "electrician", "name": "Electrician", "complianceTemplates": ["electrical_safety", "nec_compliance", "osha_safety"], "certifications": ["JOURNEYMAN_ELECTRICIAN", "MASTER_ELECTRICIAN", "OSHA_10"] },
+            { "id": "plumber", "name": "Plumber", "complianceTemplates": ["plumbing_code", "backflow_prevention", "osha_safety"], "certifications": ["JOURNEYMAN_PLUMBER", "MASTER_PLUMBER"] },
+            { "id": "hvac", "name": "HVAC Technician", "complianceTemplates": ["epa_608", "refrigerant_handling", "osha_safety"], "certifications": ["EPA_608", "NATE", "HVAC_LICENSE"] },
+            { "id": "roofer", "name": "Roofing Contractor", "complianceTemplates": ["fall_protection", "osha_safety", "worker_comp"], "certifications": ["ROOFING_LICENSE", "OSHA_30"] },
+            { "id": "painter", "name": "Painter", "complianceTemplates": ["lead_paint_safety", "voc_compliance"], "certifications": ["EPA_LEAD_SAFE"] },
+            { "id": "flooring", "name": "Flooring Installer", "complianceTemplates": ["osha_safety", "material_safety"], "certifications": ["CFI_CERTIFIED"] },
+            { "id": "drywall", "name": "Drywall/Plastering", "complianceTemplates": ["osha_safety", "dust_control"], "certifications": [] },
+            { "id": "masonry", "name": "Masonry Contractor", "complianceTemplates": ["osha_safety", "structural_safety"], "certifications": ["MASON_LICENSE"] },
+            { "id": "concrete", "name": "Concrete Contractor", "complianceTemplates": ["osha_safety", "structural_safety"], "certifications": ["ACI_CERTIFIED"] },
+            { "id": "framing", "name": "Framing Contractor", "complianceTemplates": ["osha_safety", "fall_protection"], "certifications": [] }
+          ]
+        },
+        {
+          "id": "heavy_construction",
+          "name": "Heavy Construction",
+          "description": "Infrastructure and civil construction",
+          "subIndustries": [
+            { "id": "excavation", "name": "Excavation & Grading", "complianceTemplates": ["osha_safety", "trench_safety", "environmental"], "certifications": ["HEAVY_EQUIPMENT_OP"] },
+            { "id": "paving", "name": "Paving & Asphalt", "complianceTemplates": ["osha_safety", "dot_compliance"], "certifications": [] },
+            { "id": "demolition", "name": "Demolition", "complianceTemplates": ["osha_safety", "asbestos_abatement", "environmental"], "certifications": ["DEMOLITION_LICENSE", "ASBESTOS_CERT"] },
+            { "id": "utilities", "name": "Utility Installation", "complianceTemplates": ["osha_safety", "confined_space", "excavation_safety"], "certifications": [] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "healthcare",
+      "name": "Healthcare & Medical",
+      "description": "Medical services, caregiving, and health-related businesses",
+      "icon": "Stethoscope",
+      "industryGroups": [
+        {
+          "id": "medical_facilities",
+          "name": "Medical Facilities",
+          "description": "Hospitals, clinics, and medical offices",
+          "subIndustries": [
+            { "id": "hospital", "name": "Hospital", "complianceTemplates": ["hipaa", "joint_commission", "osha_healthcare"], "certifications": ["CMS_CERTIFIED"] },
+            { "id": "urgent_care", "name": "Urgent Care Center", "complianceTemplates": ["hipaa", "clia_waiver", "osha_healthcare"], "certifications": ["URGENT_CARE_ACCRED"] },
+            { "id": "medical_office", "name": "Medical Office/Clinic", "complianceTemplates": ["hipaa", "osha_healthcare"], "certifications": [] },
+            { "id": "dental_office", "name": "Dental Office", "complianceTemplates": ["hipaa", "osha_dental", "infection_control"], "certifications": ["ADA_MEMBER"] },
+            { "id": "pharmacy", "name": "Pharmacy", "complianceTemplates": ["hipaa", "dea_controlled", "state_pharmacy"], "certifications": ["PHARMACY_LICENSE"] }
+          ]
+        },
+        {
+          "id": "home_health",
+          "name": "Home Health & Personal Care",
+          "description": "In-home care and personal assistance services",
+          "subIndustries": [
+            { "id": "home_health_agency", "name": "Home Health Agency", "complianceTemplates": ["hipaa", "cms_home_health", "background_check"], "certifications": ["MEDICARE_CERTIFIED"] },
+            { "id": "personal_care_aide", "name": "Personal Care Services", "complianceTemplates": ["hipaa", "background_check", "training_requirements"], "certifications": ["HHA_CERTIFIED"] },
+            { "id": "hospice", "name": "Hospice Care", "complianceTemplates": ["hipaa", "cms_hospice", "background_check"], "certifications": ["HOSPICE_ACCRED"] },
+            { "id": "companion_care", "name": "Companion Care Services", "complianceTemplates": ["background_check", "elder_abuse"], "certifications": [] }
+          ]
+        },
+        {
+          "id": "mental_health",
+          "name": "Mental Health & Counseling",
+          "description": "Behavioral health and counseling services",
+          "subIndustries": [
+            { "id": "mental_health_clinic", "name": "Mental Health Clinic", "complianceTemplates": ["hipaa", "state_mental_health", "crisis_protocols"], "certifications": ["CARF_ACCRED"] },
+            { "id": "counseling_practice", "name": "Counseling Practice", "complianceTemplates": ["hipaa", "licensing_board"], "certifications": ["LPC", "LCSW", "LMFT"] },
+            { "id": "substance_abuse", "name": "Substance Abuse Treatment", "complianceTemplates": ["hipaa", "42_cfr_part_2", "state_substance"], "certifications": ["SAMHSA_CERTIFIED"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "security",
+      "name": "Security & Protective Services",
+      "description": "Guard services, surveillance, and protection",
+      "icon": "Shield",
+      "industryGroups": [
+        {
+          "id": "guard_services",
+          "name": "Security Guard Services",
+          "description": "Uniformed guard and patrol services",
+          "subIndustries": [
+            { "id": "unarmed_guard", "name": "Unarmed Security Guard", "complianceTemplates": ["guard_card", "background_check", "training_40hr"], "certifications": ["STATE_GUARD_LICENSE"] },
+            { "id": "armed_guard", "name": "Armed Security Guard", "complianceTemplates": ["firearms_permit", "guard_card", "background_check", "training_40hr"], "certifications": ["ARMED_GUARD_LICENSE", "FIREARMS_CERT"] },
+            { "id": "patrol_service", "name": "Mobile Patrol Service", "complianceTemplates": ["guard_card", "vehicle_requirements", "background_check"], "certifications": ["STATE_GUARD_LICENSE"] },
+            { "id": "event_security", "name": "Event Security", "complianceTemplates": ["crowd_management", "guard_card", "background_check"], "certifications": ["EVENT_SECURITY_CERT"] }
+          ]
+        },
+        {
+          "id": "specialized_security",
+          "name": "Specialized Security",
+          "description": "Executive protection and specialized services",
+          "subIndustries": [
+            { "id": "executive_protection", "name": "Executive Protection", "complianceTemplates": ["ep_training", "firearms_permit", "background_check"], "certifications": ["CPP", "EP_SPECIALIST"] },
+            { "id": "loss_prevention", "name": "Loss Prevention", "complianceTemplates": ["background_check", "lp_training"], "certifications": ["LPQ", "LPC"] },
+            { "id": "fire_watch", "name": "Fire Watch Services", "complianceTemplates": ["fire_safety_training", "guard_card"], "certifications": ["FIRE_WATCH_CERT"] }
+          ]
+        },
+        {
+          "id": "monitoring",
+          "name": "Monitoring & Surveillance",
+          "description": "Remote monitoring and alarm response",
+          "subIndustries": [
+            { "id": "alarm_monitoring", "name": "Alarm Monitoring Center", "complianceTemplates": ["ul_listed", "five_diamond"], "certifications": ["UL_CENTRAL_STATION"] },
+            { "id": "cctv_monitoring", "name": "CCTV Monitoring", "complianceTemplates": ["privacy_compliance", "data_retention"], "certifications": [] },
+            { "id": "alarm_response", "name": "Alarm Response", "complianceTemplates": ["guard_card", "response_protocols"], "certifications": ["STATE_GUARD_LICENSE"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cleaning",
+      "name": "Cleaning & Janitorial",
+      "description": "Commercial and residential cleaning services",
+      "icon": "Sparkles",
+      "industryGroups": [
+        {
+          "id": "commercial_cleaning",
+          "name": "Commercial Cleaning",
+          "description": "Office and commercial property cleaning",
+          "subIndustries": [
+            { "id": "office_cleaning", "name": "Office Cleaning", "complianceTemplates": ["osha_cleaning", "chemical_safety"], "certifications": ["ISSA_CIMS"] },
+            { "id": "medical_cleaning", "name": "Medical Facility Cleaning", "complianceTemplates": ["bloodborne_pathogens", "hipaa_cleaning", "osha_cleaning"], "certifications": ["MEDICAL_CLEANING_CERT"] },
+            { "id": "industrial_cleaning", "name": "Industrial Cleaning", "complianceTemplates": ["osha_industrial", "hazmat_handling"], "certifications": ["HAZMAT_CERT"] },
+            { "id": "post_construction", "name": "Post-Construction Cleaning", "complianceTemplates": ["osha_cleaning", "dust_control"], "certifications": [] }
+          ]
+        },
+        {
+          "id": "residential_cleaning",
+          "name": "Residential Cleaning",
+          "description": "Home and apartment cleaning services",
+          "subIndustries": [
+            { "id": "house_cleaning", "name": "House Cleaning", "complianceTemplates": ["background_check", "bonded_insured"], "certifications": [] },
+            { "id": "move_in_out", "name": "Move-In/Move-Out Cleaning", "complianceTemplates": ["background_check", "bonded_insured"], "certifications": [] },
+            { "id": "carpet_cleaning", "name": "Carpet & Upholstery Cleaning", "complianceTemplates": ["chemical_safety", "equipment_safety"], "certifications": ["IICRC_CERTIFIED"] }
+          ]
+        },
+        {
+          "id": "specialty_cleaning",
+          "name": "Specialty Cleaning",
+          "description": "Specialized cleaning services",
+          "subIndustries": [
+            { "id": "window_cleaning", "name": "Window Cleaning", "complianceTemplates": ["fall_protection", "osha_safety"], "certifications": ["IWCA_CERTIFIED"] },
+            { "id": "pressure_washing", "name": "Pressure Washing", "complianceTemplates": ["environmental_runoff", "equipment_safety"], "certifications": [] },
+            { "id": "restoration", "name": "Disaster Restoration", "complianceTemplates": ["mold_remediation", "asbestos_awareness", "osha_safety"], "certifications": ["IICRC_WRT", "IICRC_FSRT"] },
+            { "id": "biohazard", "name": "Biohazard Cleanup", "complianceTemplates": ["bloodborne_pathogens", "hazmat_handling", "osha_safety"], "certifications": ["BIOHAZARD_CERT"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "hospitality",
+      "name": "Hospitality & Food Service",
+      "description": "Hotels, restaurants, and food service operations",
+      "icon": "UtensilsCrossed",
+      "industryGroups": [
+        {
+          "id": "lodging",
+          "name": "Lodging & Accommodations",
+          "description": "Hotels, motels, and accommodation services",
+          "subIndustries": [
+            { "id": "hotel", "name": "Hotel/Motel", "complianceTemplates": ["fire_safety", "ada_compliance", "food_safety"], "certifications": ["AAHOA_MEMBER"] },
+            { "id": "resort", "name": "Resort", "complianceTemplates": ["fire_safety", "ada_compliance", "pool_safety", "food_safety"], "certifications": [] },
+            { "id": "vacation_rental", "name": "Vacation Rental Management", "complianceTemplates": ["short_term_rental", "fire_safety"], "certifications": ["VRMA_MEMBER"] },
+            { "id": "bed_breakfast", "name": "Bed & Breakfast", "complianceTemplates": ["fire_safety", "food_safety", "zoning"], "certifications": [] }
+          ]
+        },
+        {
+          "id": "food_service",
+          "name": "Food Service",
+          "description": "Restaurants and food preparation",
+          "subIndustries": [
+            { "id": "restaurant", "name": "Restaurant", "complianceTemplates": ["food_safety", "health_department", "liquor_license"], "certifications": ["SERVSAFE_MANAGER"] },
+            { "id": "fast_food", "name": "Fast Food/Quick Service", "complianceTemplates": ["food_safety", "health_department"], "certifications": ["SERVSAFE"] },
+            { "id": "catering", "name": "Catering", "complianceTemplates": ["food_safety", "mobile_food", "event_permits"], "certifications": ["SERVSAFE_MANAGER"] },
+            { "id": "food_truck", "name": "Food Truck", "complianceTemplates": ["mobile_food", "health_department", "vehicle_permits"], "certifications": ["SERVSAFE"] },
+            { "id": "bakery", "name": "Bakery", "complianceTemplates": ["food_safety", "health_department", "allergen_labeling"], "certifications": ["SERVSAFE"] }
+          ]
+        },
+        {
+          "id": "entertainment_venue",
+          "name": "Entertainment Venues",
+          "description": "Bars, clubs, and entertainment spaces",
+          "subIndustries": [
+            { "id": "bar_club", "name": "Bar/Nightclub", "complianceTemplates": ["liquor_license", "fire_capacity", "security_requirements"], "certifications": ["TIPS_CERTIFIED", "SERVSAFE"] },
+            { "id": "event_venue", "name": "Event Venue", "complianceTemplates": ["fire_capacity", "ada_compliance", "event_permits"], "certifications": [] },
+            { "id": "casino", "name": "Casino/Gaming", "complianceTemplates": ["gaming_license", "anti_money_laundering", "security_requirements"], "certifications": ["GAMING_LICENSE"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "retail",
+      "name": "Retail & Consumer Services",
+      "description": "Retail stores and consumer-facing businesses",
+      "icon": "ShoppingBag",
+      "industryGroups": [
+        {
+          "id": "general_retail",
+          "name": "General Retail",
+          "description": "Consumer goods retail",
+          "subIndustries": [
+            { "id": "retail_store", "name": "Retail Store", "complianceTemplates": ["pos_compliance", "employee_scheduling"], "certifications": [] },
+            { "id": "grocery", "name": "Grocery Store", "complianceTemplates": ["food_safety", "cold_chain", "health_department"], "certifications": ["SERVSAFE"] },
+            { "id": "convenience", "name": "Convenience Store", "complianceTemplates": ["tobacco_license", "lottery_license", "food_safety"], "certifications": [] },
+            { "id": "specialty_retail", "name": "Specialty Retail", "complianceTemplates": ["pos_compliance"], "certifications": [] }
+          ]
+        },
+        {
+          "id": "personal_services",
+          "name": "Personal Services",
+          "description": "Beauty, wellness, and personal care",
+          "subIndustries": [
+            { "id": "salon", "name": "Hair Salon", "complianceTemplates": ["cosmetology_license", "sanitation"], "certifications": ["COSMETOLOGY_LICENSE"] },
+            { "id": "barber", "name": "Barber Shop", "complianceTemplates": ["barber_license", "sanitation"], "certifications": ["BARBER_LICENSE"] },
+            { "id": "spa", "name": "Spa/Massage", "complianceTemplates": ["massage_license", "sanitation", "establishment_license"], "certifications": ["LMT", "ESTHETICIAN"] },
+            { "id": "nail_salon", "name": "Nail Salon", "complianceTemplates": ["nail_tech_license", "sanitation", "ventilation"], "certifications": ["NAIL_TECH_LICENSE"] },
+            { "id": "tattoo", "name": "Tattoo/Piercing", "complianceTemplates": ["tattoo_license", "bloodborne_pathogens", "sanitation"], "certifications": ["TATTOO_LICENSE"] }
+          ]
+        },
+        {
+          "id": "automotive",
+          "name": "Automotive Services",
+          "description": "Vehicle repair and maintenance",
+          "subIndustries": [
+            { "id": "auto_repair", "name": "Auto Repair Shop", "complianceTemplates": ["bar_certification", "environmental_disposal", "osha_auto"], "certifications": ["ASE_CERTIFIED"] },
+            { "id": "auto_body", "name": "Auto Body Shop", "complianceTemplates": ["bar_certification", "environmental_paint", "osha_auto"], "certifications": ["ICAR_CERTIFIED"] },
+            { "id": "car_wash", "name": "Car Wash", "complianceTemplates": ["water_reclamation", "environmental"], "certifications": [] },
+            { "id": "tire_shop", "name": "Tire Shop", "complianceTemplates": ["tire_disposal", "osha_auto"], "certifications": [] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "professional_services",
+      "name": "Professional Services",
+      "description": "Business, legal, and professional consulting",
+      "icon": "Briefcase",
+      "industryGroups": [
+        {
+          "id": "business_services",
+          "name": "Business Services",
+          "description": "Business consulting and support",
+          "subIndustries": [
+            { "id": "consulting", "name": "Business Consulting", "complianceTemplates": ["professional_liability"], "certifications": ["CMC"] },
+            { "id": "accounting", "name": "Accounting/Bookkeeping", "complianceTemplates": ["cpa_ethics", "data_security"], "certifications": ["CPA", "QB_CERTIFIED"] },
+            { "id": "marketing", "name": "Marketing Agency", "complianceTemplates": ["advertising_standards", "data_privacy"], "certifications": [] },
+            { "id": "staffing", "name": "Staffing Agency", "complianceTemplates": ["employment_law", "background_check", "i9_compliance"], "certifications": ["ASA_MEMBER"] }
+          ]
+        },
+        {
+          "id": "legal_services",
+          "name": "Legal Services",
+          "description": "Law firms and legal support",
+          "subIndustries": [
+            { "id": "law_firm", "name": "Law Firm", "complianceTemplates": ["bar_ethics", "client_trust", "conflict_check"], "certifications": ["BAR_ADMISSION"] },
+            { "id": "paralegal", "name": "Paralegal Services", "complianceTemplates": ["unauthorized_practice"], "certifications": ["PARALEGAL_CERT"] },
+            { "id": "process_server", "name": "Process Server", "complianceTemplates": ["state_registration", "service_rules"], "certifications": ["PROCESS_SERVER_CERT"] }
+          ]
+        },
+        {
+          "id": "real_estate",
+          "name": "Real Estate",
+          "description": "Property management and real estate services",
+          "subIndustries": [
+            { "id": "property_management", "name": "Property Management", "complianceTemplates": ["fair_housing", "security_deposit", "tenant_screening"], "certifications": ["CPM", "ARM"] },
+            { "id": "real_estate_agency", "name": "Real Estate Agency", "complianceTemplates": ["broker_license", "fair_housing", "disclosure_requirements"], "certifications": ["REALTOR", "BROKER_LICENSE"] },
+            { "id": "appraisal", "name": "Appraisal Services", "complianceTemplates": ["uspap", "appraiser_license"], "certifications": ["MAI", "SRA"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "transportation",
+      "name": "Transportation & Logistics",
+      "description": "Transportation, delivery, and logistics services",
+      "icon": "Truck",
+      "industryGroups": [
+        {
+          "id": "freight_logistics",
+          "name": "Freight & Logistics",
+          "description": "Commercial transportation and freight",
+          "subIndustries": [
+            { "id": "trucking", "name": "Trucking Company", "complianceTemplates": ["dot_compliance", "hos_regulations", "cdl_requirements"], "certifications": ["DOT_AUTHORITY", "MC_NUMBER"] },
+            { "id": "freight_broker", "name": "Freight Brokerage", "complianceTemplates": ["fmcsa_broker", "bond_requirements"], "certifications": ["BROKER_AUTHORITY"] },
+            { "id": "warehouse", "name": "Warehousing", "complianceTemplates": ["osha_warehouse", "inventory_management"], "certifications": [] },
+            { "id": "moving", "name": "Moving Company", "complianceTemplates": ["dot_movers", "liability_coverage", "inventory_requirements"], "certifications": ["DOT_MOVER_LICENSE"] }
+          ]
+        },
+        {
+          "id": "passenger_transport",
+          "name": "Passenger Transportation",
+          "description": "Passenger transport services",
+          "subIndustries": [
+            { "id": "taxi", "name": "Taxi/Rideshare", "complianceTemplates": ["puc_license", "vehicle_inspection", "background_check"], "certifications": ["TCP_LICENSE"] },
+            { "id": "limo", "name": "Limousine Service", "complianceTemplates": ["tcp_license", "chauffeur_requirements"], "certifications": ["TCP_LICENSE"] },
+            { "id": "shuttle", "name": "Shuttle Service", "complianceTemplates": ["tcp_license", "vehicle_inspection"], "certifications": ["TCP_LICENSE"] },
+            { "id": "medical_transport", "name": "Medical Transportation", "complianceTemplates": ["nemt_requirements", "hipaa", "driver_training"], "certifications": ["NEMT_CERTIFIED"] }
+          ]
+        },
+        {
+          "id": "delivery",
+          "name": "Delivery Services",
+          "description": "Package and courier services",
+          "subIndustries": [
+            { "id": "courier", "name": "Courier Service", "complianceTemplates": ["vehicle_requirements", "insurance"], "certifications": [] },
+            { "id": "last_mile", "name": "Last Mile Delivery", "complianceTemplates": ["vehicle_requirements", "insurance"], "certifications": [] },
+            { "id": "food_delivery", "name": "Food Delivery", "complianceTemplates": ["food_safety_transport", "vehicle_requirements"], "certifications": [] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "manufacturing",
+      "name": "Manufacturing & Production",
+      "description": "Manufacturing, production, and assembly operations",
+      "icon": "Factory",
+      "industryGroups": [
+        {
+          "id": "general_manufacturing",
+          "name": "General Manufacturing",
+          "description": "General manufacturing operations",
+          "subIndustries": [
+            { "id": "assembly", "name": "Assembly/Production", "complianceTemplates": ["osha_manufacturing", "quality_control"], "certifications": ["ISO_9001"] },
+            { "id": "machine_shop", "name": "Machine Shop", "complianceTemplates": ["osha_machining", "equipment_safety"], "certifications": [] },
+            { "id": "fabrication", "name": "Metal Fabrication", "complianceTemplates": ["osha_welding", "equipment_safety"], "certifications": ["AWS_CERTIFIED"] },
+            { "id": "woodworking", "name": "Woodworking", "complianceTemplates": ["osha_woodworking", "dust_control"], "certifications": [] }
+          ]
+        },
+        {
+          "id": "food_manufacturing",
+          "name": "Food Manufacturing",
+          "description": "Food processing and production",
+          "subIndustries": [
+            { "id": "food_processing", "name": "Food Processing", "complianceTemplates": ["fda_food_safety", "haccp", "gmp"], "certifications": ["SQF", "FSSC_22000"] },
+            { "id": "beverage", "name": "Beverage Production", "complianceTemplates": ["fda_beverage", "haccp", "gmp"], "certifications": ["SQF"] },
+            { "id": "packaging", "name": "Food Packaging", "complianceTemplates": ["fda_packaging", "gmp"], "certifications": ["SQF"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "education",
+      "name": "Education & Training",
+      "description": "Educational institutions and training centers",
+      "icon": "GraduationCap",
+      "industryGroups": [
+        {
+          "id": "childcare",
+          "name": "Childcare & Early Education",
+          "description": "Daycare and preschool services",
+          "subIndustries": [
+            { "id": "daycare", "name": "Daycare Center", "complianceTemplates": ["childcare_license", "background_check", "child_ratios", "health_safety"], "certifications": ["CDA", "STATE_CHILDCARE_LICENSE"] },
+            { "id": "preschool", "name": "Preschool", "complianceTemplates": ["childcare_license", "background_check", "curriculum_standards"], "certifications": ["NAEYC_ACCRED"] },
+            { "id": "after_school", "name": "After School Program", "complianceTemplates": ["youth_program_license", "background_check"], "certifications": [] }
+          ]
+        },
+        {
+          "id": "tutoring_training",
+          "name": "Tutoring & Training",
+          "description": "Educational and professional training",
+          "subIndustries": [
+            { "id": "tutoring", "name": "Tutoring Center", "complianceTemplates": ["background_check", "youth_protection"], "certifications": [] },
+            { "id": "driving_school", "name": "Driving School", "complianceTemplates": ["dmv_license", "instructor_certification", "vehicle_requirements"], "certifications": ["DRIVING_INSTRUCTOR"] },
+            { "id": "trade_school", "name": "Trade School", "complianceTemplates": ["accreditation", "state_approval"], "certifications": ["ACCSC", "COE"] },
+            { "id": "fitness_training", "name": "Fitness Training", "complianceTemplates": ["liability_waiver", "cpr_certification"], "certifications": ["ACE", "NASM", "ACSM"] }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "field_services",
+      "name": "Field Services",
+      "description": "Mobile and on-site service businesses",
+      "icon": "Wrench",
+      "industryGroups": [
+        {
+          "id": "home_services",
+          "name": "Home Services",
+          "description": "Residential maintenance and repair",
+          "subIndustries": [
+            { "id": "landscaping", "name": "Landscaping", "complianceTemplates": ["pesticide_license", "equipment_safety"], "certifications": ["LANDSCAPE_LICENSE"] },
+            { "id": "lawn_care", "name": "Lawn Care", "complianceTemplates": ["pesticide_license"], "certifications": [] },
+            { "id": "pest_control", "name": "Pest Control", "complianceTemplates": ["pesticide_license", "state_pest_control"], "certifications": ["PEST_CONTROL_LICENSE"] },
+            { "id": "pool_service", "name": "Pool Service", "complianceTemplates": ["pool_contractor_license", "chemical_handling"], "certifications": ["CPO"] },
+            { "id": "locksmith", "name": "Locksmith", "complianceTemplates": ["locksmith_license", "background_check"], "certifications": ["ALOA_CERTIFIED"] },
+            { "id": "appliance_repair", "name": "Appliance Repair", "complianceTemplates": ["epa_refrigerant", "liability"], "certifications": ["EPA_608"] }
+          ]
+        },
+        {
+          "id": "it_services",
+          "name": "IT & Technology Services",
+          "description": "Technology support and services",
+          "subIndustries": [
+            { "id": "it_support", "name": "IT Support/MSP", "complianceTemplates": ["data_security", "cyber_liability"], "certifications": ["COMPTIA_A", "MICROSOFT_PARTNER"] },
+            { "id": "network_install", "name": "Network Installation", "complianceTemplates": ["low_voltage_license", "data_security"], "certifications": ["BICSI", "CCNA"] },
+            { "id": "av_install", "name": "AV Installation", "complianceTemplates": ["low_voltage_license"], "certifications": ["CTS", "CEDIA"] }
+          ]
+        }
+      ]
+    }
+  ],
+  "complianceTemplates": {
+    "osha_safety": { "name": "OSHA General Safety", "category": "safety", "requirements": ["annual_training", "hazard_communication", "ppe_program"] },
+    "hipaa": { "name": "HIPAA Privacy & Security", "category": "healthcare", "requirements": ["privacy_notice", "security_assessment", "breach_procedures"] },
+    "food_safety": { "name": "Food Safety Standards", "category": "food", "requirements": ["haccp_plan", "temperature_logs", "employee_health"] },
+    "background_check": { "name": "Background Check Requirements", "category": "hr", "requirements": ["criminal_check", "reference_verification"] },
+    "guard_card": { "name": "Security Guard Registration", "category": "security", "requirements": ["state_registration", "training_hours", "renewal"] },
+    "fall_protection": { "name": "Fall Protection Program", "category": "safety", "requirements": ["fall_prevention_plan", "equipment_inspection", "training"] },
+    "electrical_safety": { "name": "Electrical Safety Standards", "category": "trades", "requirements": ["nfpa_70e", "arc_flash_study", "lockout_tagout"] },
+    "fire_safety": { "name": "Fire Safety Compliance", "category": "safety", "requirements": ["fire_extinguishers", "exit_signs", "emergency_plan"] }
+  }
+}

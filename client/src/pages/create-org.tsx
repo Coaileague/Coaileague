@@ -1,7 +1,7 @@
 import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plus } from "lucide-react";
+import { Loader2, Plus, Building2 } from "lucide-react";
 import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,6 +12,7 @@ import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { triggerGlobalEmote } from "@/hooks/use-mascot-emotes";
+import { IndustrySelector, type IndustrySelection } from "@/components/industry-selector";
 
 interface CreateWorkspaceResponse {
   success: boolean;
@@ -26,13 +27,22 @@ interface CreateWorkspaceResponse {
 export default function CreateOrg() {
   const [orgName, setOrgName] = useState("");
   const [orgDescription, setOrgDescription] = useState("");
-  const [industry, setIndustry] = useState("");
+  const [industrySelection, setIndustrySelection] = useState<IndustrySelection | null>(null);
   const [size, setSize] = useState("");
   const { toast } = useToast();
   const [, setLocation] = useLocation();
 
   const createWorkspaceMutation = useMutation({
-    mutationFn: async (formData: { name: string; description: string; industry: string; size: string }) => {
+    mutationFn: async (formData: { 
+      name: string; 
+      description: string; 
+      size: string;
+      sectorId?: string;
+      industryGroupId?: string;
+      subIndustryId?: string;
+      complianceTemplates?: string[];
+      certifications?: string[];
+    }) => {
       const response = await apiRequest('POST', '/api/workspaces', formData);
       const result: CreateWorkspaceResponse = await response.json();
       return result;
@@ -76,8 +86,12 @@ export default function CreateOrg() {
     createWorkspaceMutation.mutate({
       name: orgName.trim(),
       description: orgDescription,
-      industry,
       size,
+      sectorId: industrySelection?.sectorId,
+      industryGroupId: industrySelection?.industryGroupId,
+      subIndustryId: industrySelection?.subIndustryId,
+      complianceTemplates: industrySelection?.complianceTemplates,
+      certifications: industrySelection?.certifications,
     });
   };
 
@@ -94,7 +108,10 @@ export default function CreateOrg() {
           <div className="flex justify-center mb-6">
             <CoAIleagueLogo width={200} height={50} showTagline={false} />
           </div>
-          <CardTitle>Organization Details</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Building2 className="h-5 w-5" />
+            Organization Details
+          </CardTitle>
           <CardDescription>
             Provide information about your new organization
           </CardDescription>
@@ -112,28 +129,6 @@ export default function CreateOrg() {
                 required
                 disabled={createWorkspaceMutation.isPending}
               />
-            </div>
-
-            <div>
-              <Label htmlFor="industry">Industry</Label>
-              <select
-                id="industry"
-                className="w-full mt-1 rounded-md border bg-background px-3 py-2"
-                value={industry}
-                onChange={(e) => setIndustry(e.target.value)}
-                data-testid="select-industry"
-                disabled={createWorkspaceMutation.isPending}
-              >
-                <option value="">Select an industry</option>
-                <option value="technology">Technology</option>
-                <option value="healthcare">Healthcare</option>
-                <option value="finance">Finance</option>
-                <option value="retail">Retail</option>
-                <option value="manufacturing">Manufacturing</option>
-                <option value="construction">Construction</option>
-                <option value="hospitality">Hospitality</option>
-                <option value="other">Other</option>
-              </select>
             </div>
 
             <div>
@@ -162,8 +157,15 @@ export default function CreateOrg() {
                 placeholder="Tell us about your organization..."
                 value={orgDescription}
                 onChange={(e) => setOrgDescription(e.target.value)}
-                rows={4}
+                rows={3}
                 data-testid="input-description"
+                disabled={createWorkspaceMutation.isPending}
+              />
+            </div>
+
+            <div className="pt-2">
+              <IndustrySelector
+                onSelectionChange={setIndustrySelection}
                 disabled={createWorkspaceMutation.isPending}
               />
             </div>
