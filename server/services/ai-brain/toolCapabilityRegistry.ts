@@ -666,6 +666,267 @@ class ToolCapabilityRegistry {
       this.healthCheckInterval = null;
     }
   }
+
+  // ============================================================================
+  // DETERMINISTIC TOOL SELECTION WITH AUTO-FALLBACK
+  // ============================================================================
+
+  /**
+   * Select a healthy tool, with automatic fallback to alternatives in same category
+   * This solves the "Deterministic Tool Selection" gap
+   */
+  selectHealthyTool(
+    toolId: string,
+    options?: {
+      requireHealthy?: boolean;
+      allowDegraded?: boolean;
+      preferredFallbacks?: string[];
+    }
+  ): {
+    selectedToolId: string;
+    originalToolId: string;
+    fallbackUsed: boolean;
+    health: ToolHealth;
+    reason?: string;
+  } | null {
+    const tool = this.tools.get(toolId);
+    if (!tool) {
+      console.warn(`[ToolRegistry] Tool ${toolId} not found`);
+      return null;
+    }
+
+    const health = this.healthStatus.get(toolId);
+    if (!health) {
+      return null;
+    }
+
+    const requireHealthy = options?.requireHealthy ?? true;
+    const allowDegraded = options?.allowDegraded ?? true;
+
+    // Check if primary tool is healthy enough
+    if (health.status === 'healthy') {
+      return {
+        selectedToolId: toolId,
+        originalToolId: toolId,
+        fallbackUsed: false,
+        health,
+      };
+    }
+
+    if (health.status === 'degraded' && allowDegraded) {
+      return {
+        selectedToolId: toolId,
+        originalToolId: toolId,
+        fallbackUsed: false,
+        health,
+        reason: 'Primary tool is degraded but acceptable',
+      };
+    }
+
+    // Primary tool is unhealthy - attempt fallback
+    if (!requireHealthy) {
+      return {
+        selectedToolId: toolId,
+        originalToolId: toolId,
+        fallbackUsed: false,
+        health,
+        reason: 'Primary tool unhealthy, but healthy not required',
+      };
+    }
+
+    // Find healthy alternative in same category
+    const alternative = this.findHealthyAlternative(toolId, options?.preferredFallbacks);
+    if (alternative) {
+      console.log(`[ToolRegistry] Auto-fallback: ${toolId} -> ${alternative.toolId} (${health.status} -> ${alternative.health.status})`);
+      return {
+        selectedToolId: alternative.toolId,
+        originalToolId: toolId,
+        fallbackUsed: true,
+        health: alternative.health,
+        reason: `Fallback from ${toolId} (${health.status}) to ${alternative.toolId}`,
+      };
+    }
+
+    // No healthy alternative found
+    console.warn(`[ToolRegistry] No healthy fallback for ${toolId} (status: ${health.status})`);
+    return {
+      selectedToolId: toolId,
+      originalToolId: toolId,
+      fallbackUsed: false,
+      health,
+      reason: `No healthy alternative found, using unhealthy tool ${toolId}`,
+    };
+  }
+
+  /**
+   * Find a healthy alternative tool in the same category
+   */
+  findHealthyAlternative(
+    toolId: string,
+    preferredFallbacks?: string[]
+  ): { toolId: string; health: ToolHealth } | null {
+    const tool = this.tools.get(toolId);
+    if (!tool) return null;
+
+    const categoryTools = this.getToolsByCategory(tool.category);
+    
+    // Build candidate list: preferred fallbacks first, then category tools
+    const candidates: string[] = [];
+    
+    if (preferredFallbacks) {
+      for (const fb of preferredFallbacks) {
+        if (this.tools.has(fb) && fb !== toolId) {
+          candidates.push(fb);
+        }
+      }
+    }
+    
+    for (const t of categoryTools) {
+      if (t.id !== toolId && !candidates.includes(t.id)) {
+        candidates.push(t.id);
+      }
+    }
+
+    // Find first healthy candidate
+    for (const candidateId of candidates) {
+      const health = this.healthStatus.get(candidateId);
+      if (health && health.status === 'healthy') {
+        return { toolId: candidateId, health };
+      }
+    }
+
+    // If no healthy found, try degraded
+    for (const candidateId of candidates) {
+      const health = this.healthStatus.get(candidateId);
+      if (health && health.status === 'degraded') {
+        return { toolId: candidateId, health };
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Perform active health check on a specific tool
+   * Returns updated health status
+   */
+  async performHealthCheck(toolId: string): Promise<ToolHealth | null> {
+    const tool = this.tools.get(toolId);
+    if (!tool) return null;
+
+    const health = this.healthStatus.get(toolId);
+    if (!health) return null;
+
+    const startTime = Date.now();
+
+    try {
+      // If tool has a health endpoint, check it
+      if (tool.healthEndpoint) {
+        const response = await fetch(tool.healthEndpoint, {
+          method: 'GET',
+          signal: AbortSignal.timeout(5000),
+        });
+
+        const responseTime = Date.now() - startTime;
+        health.lastCheck = new Date();
+        health.responseTime = responseTime;
+
+        if (response.ok) {
+          health.status = 'healthy';
+          health.lastSuccess = new Date();
+          health.consecutiveFailures = 0;
+        } else {
+          health.consecutiveFailures++;
+          health.lastError = { 
+            message: `Health check failed: ${response.status}`, 
+            timestamp: new Date() 
+          };
+          health.status = health.consecutiveFailures >= 3 ? 'offline' : 'degraded';
+        }
+      } else {
+        // No health endpoint - infer from recent usage
+        const metrics = this.usageMetrics.get(toolId);
+        if (metrics && metrics.totalCalls > 0) {
+          const recentSuccessRate = metrics.successfulCalls / metrics.totalCalls;
+          health.lastCheck = new Date();
+          
+          if (recentSuccessRate >= 0.95) {
+            health.status = 'healthy';
+          } else if (recentSuccessRate >= 0.7) {
+            health.status = 'degraded';
+          } else if (recentSuccessRate < 0.5 && metrics.totalCalls >= 5) {
+            health.status = 'offline';
+          }
+        }
+      }
+
+      console.log(`[ToolRegistry] Health check ${toolId}: ${health.status}`);
+      return health;
+    } catch (error: any) {
+      health.lastCheck = new Date();
+      health.consecutiveFailures++;
+      health.lastError = { message: error.message, timestamp: new Date() };
+      health.status = health.consecutiveFailures >= 3 ? 'offline' : 'degraded';
+      
+      console.warn(`[ToolRegistry] Health check failed for ${toolId}: ${error.message}`);
+      return health;
+    }
+  }
+
+  /**
+   * Perform health checks on all tools
+   */
+  async performAllHealthChecks(): Promise<{ healthy: number; degraded: number; offline: number }> {
+    const results = { healthy: 0, degraded: 0, offline: 0 };
+    
+    for (const toolId of this.tools.keys()) {
+      const health = await this.performHealthCheck(toolId);
+      if (health) {
+        if (health.status === 'healthy') results.healthy++;
+        else if (health.status === 'degraded') results.degraded++;
+        else if (health.status === 'offline') results.offline++;
+      }
+    }
+
+    console.log(`[ToolRegistry] Health check complete: ${results.healthy} healthy, ${results.degraded} degraded, ${results.offline} offline`);
+    return results;
+  }
+
+  /**
+   * Reset tool health status (e.g., after fixing an issue)
+   */
+  resetToolHealth(toolId: string): boolean {
+    const health = this.healthStatus.get(toolId);
+    if (!health) return false;
+
+    health.status = 'unknown';
+    health.consecutiveFailures = 0;
+    health.lastError = undefined;
+    health.lastCheck = new Date();
+    
+    console.log(`[ToolRegistry] Reset health for ${toolId}`);
+    return true;
+  }
+
+  /**
+   * Get tools that are currently available (healthy or degraded)
+   */
+  getAvailableTools(): ToolCapability[] {
+    return Array.from(this.tools.values()).filter(tool => {
+      const health = this.healthStatus.get(tool.id);
+      return health && (health.status === 'healthy' || health.status === 'degraded');
+    });
+  }
+
+  /**
+   * Get tools that are currently unavailable (offline)
+   */
+  getUnavailableTools(): ToolCapability[] {
+    return Array.from(this.tools.values()).filter(tool => {
+      const health = this.healthStatus.get(tool.id);
+      return health && health.status === 'offline';
+    });
+  }
 }
 
 export const toolCapabilityRegistry = new ToolCapabilityRegistry();

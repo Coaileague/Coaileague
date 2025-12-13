@@ -44,9 +44,37 @@ export interface ToolExecutionRequest {
   };
   options?: {
     dryRun?: boolean;
+    dryRunWithDiff?: boolean; // Enhanced dry-run with diff preview
     bypassReason?: string;
     timeoutMs?: number;
   };
+}
+
+// Enhanced dry-run result with diff preview (solves "Execution Sandboxing" gap)
+export interface DryRunPreview {
+  wouldExecute: boolean;
+  action: string;
+  toolId: string;
+  toolName: string;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  riskFactors: string[];
+  estimatedChanges: DryRunChange[];
+  sideEffects: string[];
+  rollbackAvailable: boolean;
+  rollbackSteps?: string[];
+  confidenceScore: number;
+  warningsCount: number;
+  warnings: string[];
+}
+
+export interface DryRunChange {
+  entity: string;
+  entityId?: string;
+  changeType: 'create' | 'update' | 'delete' | 'read' | 'invoke';
+  field?: string;
+  currentValue?: any;
+  newValue?: any;
+  diffPreview?: string;
 }
 
 export interface ToolExecutionResult {
@@ -573,6 +601,291 @@ class SecureToolExecutor {
       ...authResult,
       policy: this.getToolPolicy(request.toolId),
     };
+  }
+
+  // ============================================================================
+  // EXECUTION SANDBOXING - Enhanced Dry-Run with Diff Preview
+  // ============================================================================
+
+  /**
+   * Execute in dry-run mode with comprehensive diff preview
+   * This solves the "Execution Sandboxing" gap
+   */
+  async executeDryRunWithDiff(request: ToolExecutionRequest): Promise<{
+    authorized: boolean;
+    preview: DryRunPreview;
+    authorizationDetails: {
+      reason?: string;
+      policy: ToolAuthorizationPolicy;
+    };
+  }> {
+    const policy = this.getToolPolicy(request.toolId);
+    const authResult = await this.authorizeToolCall(request);
+
+    // Analyze risk level based on action and tool
+    const riskAnalysis = this.analyzeActionRisk(request, policy);
+    
+    // Build estimated changes based on action type
+    const estimatedChanges = this.estimateChanges(request);
+    
+    // Determine side effects
+    const sideEffects = this.identifySideEffects(request, policy);
+    
+    // Check if rollback is possible
+    const rollbackInfo = this.analyzeRollbackCapability(request, policy);
+
+    const preview: DryRunPreview = {
+      wouldExecute: authResult.authorized,
+      action: request.action,
+      toolId: request.toolId,
+      toolName: request.toolName,
+      riskLevel: riskAnalysis.level,
+      riskFactors: riskAnalysis.factors,
+      estimatedChanges,
+      sideEffects,
+      rollbackAvailable: rollbackInfo.available,
+      rollbackSteps: rollbackInfo.steps,
+      confidenceScore: this.calculateConfidenceScore(request, estimatedChanges),
+      warningsCount: riskAnalysis.warnings.length,
+      warnings: riskAnalysis.warnings,
+    };
+
+    return {
+      authorized: authResult.authorized,
+      preview,
+      authorizationDetails: {
+        reason: authResult.reason,
+        policy,
+      },
+    };
+  }
+
+  /**
+   * Analyze the risk level of an action
+   */
+  private analyzeActionRisk(
+    request: ToolExecutionRequest,
+    policy: ToolAuthorizationPolicy
+  ): { level: DryRunPreview['riskLevel']; factors: string[]; warnings: string[] } {
+    const factors: string[] = [];
+    const warnings: string[] = [];
+    let riskScore = 0;
+
+    // Sensitive actions are higher risk
+    if (policy.sensitiveActions.includes(request.action)) {
+      factors.push('Action is classified as sensitive');
+      riskScore += 30;
+    }
+
+    // Check action type keywords
+    const action = request.action.toLowerCase();
+    if (action.includes('delete') || action.includes('remove')) {
+      factors.push('Destructive action (delete/remove)');
+      riskScore += 40;
+      warnings.push('This action will permanently delete data');
+    }
+    if (action.includes('bulk') || action.includes('all')) {
+      factors.push('Bulk operation affecting multiple records');
+      riskScore += 20;
+      warnings.push('Bulk operations affect multiple records simultaneously');
+    }
+    if (action.includes('override') || action.includes('force')) {
+      factors.push('Override/force action bypassing safeguards');
+      riskScore += 25;
+    }
+    if (action.includes('approve') || action.includes('submit')) {
+      factors.push('Approval/submission action (may trigger workflows)');
+      riskScore += 15;
+    }
+
+    // Check tool category
+    if (['payroll', 'compliance', 'database'].includes(request.toolId)) {
+      factors.push(`High-sensitivity tool category: ${request.toolId}`);
+      riskScore += 20;
+    }
+
+    // Determine risk level
+    let level: DryRunPreview['riskLevel'] = 'low';
+    if (riskScore >= 60) level = 'critical';
+    else if (riskScore >= 40) level = 'high';
+    else if (riskScore >= 20) level = 'medium';
+
+    return { level, factors, warnings };
+  }
+
+  /**
+   * Estimate the changes that would be made
+   */
+  private estimateChanges(request: ToolExecutionRequest): DryRunChange[] {
+    const changes: DryRunChange[] = [];
+    const action = request.action.toLowerCase();
+    const params = request.parameters;
+
+    // Infer change type from action
+    let changeType: DryRunChange['changeType'] = 'invoke';
+    if (action.includes('create') || action.includes('add') || action.includes('insert')) {
+      changeType = 'create';
+    } else if (action.includes('update') || action.includes('modify') || action.includes('edit')) {
+      changeType = 'update';
+    } else if (action.includes('delete') || action.includes('remove')) {
+      changeType = 'delete';
+    } else if (action.includes('read') || action.includes('get') || action.includes('list') || action.includes('view')) {
+      changeType = 'read';
+    }
+
+    // Build change entry based on parameters
+    const entityId = params.id || params.entityId || params.recordId;
+    const entity = params.entity || params.type || request.toolId;
+
+    changes.push({
+      entity,
+      entityId,
+      changeType,
+      diffPreview: this.generateDiffPreview(changeType, params),
+    });
+
+    // Add field-level changes if updating
+    if (changeType === 'update' && params.updates) {
+      for (const [field, newValue] of Object.entries(params.updates)) {
+        changes.push({
+          entity,
+          entityId,
+          changeType: 'update',
+          field,
+          currentValue: params.currentValues?.[field] ?? '(current value unknown)',
+          newValue,
+          diffPreview: `${field}: ${params.currentValues?.[field] ?? '?'} → ${newValue}`,
+        });
+      }
+    }
+
+    return changes;
+  }
+
+  /**
+   * Generate a human-readable diff preview
+   */
+  private generateDiffPreview(changeType: DryRunChange['changeType'], params: Record<string, any>): string {
+    switch (changeType) {
+      case 'create':
+        return `+ CREATE new record with: ${JSON.stringify(params, null, 2).slice(0, 200)}...`;
+      case 'update':
+        return `~ UPDATE record: ${params.id || 'unknown'} with changes`;
+      case 'delete':
+        return `- DELETE record: ${params.id || params.entityId || 'unknown'}`;
+      case 'read':
+        return `? READ operation (no changes)`;
+      case 'invoke':
+        return `> INVOKE action with parameters`;
+      default:
+        return `Unknown operation`;
+    }
+  }
+
+  /**
+   * Identify potential side effects
+   */
+  private identifySideEffects(
+    request: ToolExecutionRequest,
+    policy: ToolAuthorizationPolicy
+  ): string[] {
+    const sideEffects: string[] = [];
+    const action = request.action.toLowerCase();
+
+    // Common side effects by tool type
+    if (request.toolId === 'payroll' || request.toolId.includes('payroll')) {
+      sideEffects.push('May trigger financial transactions');
+      sideEffects.push('May send payment notifications to employees');
+    }
+    if (request.toolId === 'notification' || action.includes('notify') || action.includes('send')) {
+      sideEffects.push('Will send notifications to users');
+    }
+    if (request.toolId === 'scheduling' || action.includes('schedule')) {
+      sideEffects.push('May send calendar updates to affected employees');
+      sideEffects.push('May trigger overtime calculations');
+    }
+    if (action.includes('approve')) {
+      sideEffects.push('May trigger downstream approval workflows');
+    }
+    if (action.includes('sync')) {
+      sideEffects.push('May update external systems');
+    }
+
+    return sideEffects;
+  }
+
+  /**
+   * Analyze if rollback is possible for this action
+   */
+  private analyzeRollbackCapability(
+    request: ToolExecutionRequest,
+    policy: ToolAuthorizationPolicy
+  ): { available: boolean; steps?: string[] } {
+    const action = request.action.toLowerCase();
+
+    // Some actions cannot be rolled back
+    if (action.includes('send') || action.includes('notify') || action.includes('email')) {
+      return { available: false };
+    }
+    if (request.toolId === 'payroll' && (action.includes('submit') || action.includes('run'))) {
+      return { available: false };
+    }
+
+    // Most CRUD operations can be rolled back
+    if (action.includes('create')) {
+      return {
+        available: true,
+        steps: [`Delete the created ${request.toolId} record`],
+      };
+    }
+    if (action.includes('update')) {
+      return {
+        available: true,
+        steps: [
+          `Restore previous values from audit log`,
+          `Apply inverse update to ${request.toolId}`,
+        ],
+      };
+    }
+    if (action.includes('delete')) {
+      return {
+        available: true,
+        steps: [
+          `Restore from soft-delete (if available)`,
+          `Recreate record from audit log backup`,
+        ],
+      };
+    }
+
+    return { available: true, steps: ['Consult audit logs for rollback steps'] };
+  }
+
+  /**
+   * Calculate confidence score for the dry-run analysis
+   */
+  private calculateConfidenceScore(
+    request: ToolExecutionRequest,
+    changes: DryRunChange[]
+  ): number {
+    let confidence = 0.8; // Base confidence
+
+    // Lower confidence if we don't know current values
+    const unknownValues = changes.filter(c => 
+      c.changeType === 'update' && c.currentValue === '(current value unknown)'
+    ).length;
+    confidence -= unknownValues * 0.1;
+
+    // Lower confidence for complex bulk operations
+    if (request.action.toLowerCase().includes('bulk')) {
+      confidence -= 0.15;
+    }
+
+    // Higher confidence for read-only operations
+    if (changes.every(c => c.changeType === 'read')) {
+      confidence = 0.95;
+    }
+
+    return Math.max(0.3, Math.min(1.0, confidence));
   }
 }
 

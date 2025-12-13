@@ -88,43 +88,31 @@ export interface SelfAssessmentResult {
 // KNOWN GAPS (Architecture-based analysis)
 // ============================================================================
 
+// KNOWN_GAPS - Updated December 13, 2025
+// Phase 1 (CRITICAL) - RESOLVED
+// Phase 2 (HIGH) - RESOLVED
+// Phase 3 (MEDIUM) - PENDING
 const KNOWN_GAPS: GapAnalysis[] = [
-  {
-    category: 'orchestration',
-    gapName: 'Unified Task Schema',
-    severity: 'critical',
-    description: 'Subagents expose heterogeneous interfaces without a canonical task contract',
-    impactOnAutonomy: 'Cannot reliably chain tasks or track progress across domains',
-    recommendedFix: 'Define canonical task schema: intent, plan steps, tool calls, outputs, confidence',
-    estimatedEffort: 'medium',
-  },
-  {
-    category: 'orchestration',
-    gapName: 'State Machine Governance',
-    severity: 'critical',
-    description: 'Status transitions are ad hoc; no enforced Plan→Act→Validate→Reflect pipeline',
-    impactOnAutonomy: 'Tasks can get stuck or skip validation steps',
-    recommendedFix: 'Implement persistent orchestration state machine with stage transitions',
-    estimatedEffort: 'large',
-  },
-  {
-    category: 'execution',
-    gapName: 'Deterministic Tool Selection',
-    severity: 'high',
-    description: 'Tools are not governed by unified registry with health metrics',
-    impactOnAutonomy: 'May select unavailable or unhealthy tools',
-    recommendedFix: 'Wire ToolCapabilityRegistry with health checks and auto-fallback',
-    estimatedEffort: 'medium',
-  },
-  {
-    category: 'execution',
-    gapName: 'Execution Sandboxing',
-    severity: 'high',
-    description: 'No simulation/dry-run capability for high-risk operations',
-    impactOnAutonomy: 'Cannot safely preview dangerous actions before commit',
-    recommendedFix: 'Add dry-run mode to execution fabric with diff preview',
-    estimatedEffort: 'medium',
-  },
+  // ============================================================================
+  // PHASE 1 - CRITICAL GAPS (RESOLVED)
+  // ============================================================================
+  // Gap: Unified Task Schema - RESOLVED via shared/trinityTaskSchema.ts
+  // Gap: State Machine Governance - RESOLVED via server/services/ai-brain/taskStateMachine.ts
+  // Gap: RBAC During Tool Calls - RESOLVED via server/services/ai-brain/secureToolExecutor.ts
+
+  // ============================================================================
+  // PHASE 2 - HIGH GAPS (RESOLVED)
+  // ============================================================================
+  // Gap: Deterministic Tool Selection - RESOLVED via toolCapabilityRegistry.ts
+  //      Added: selectHealthyTool(), findHealthyAlternative(), performHealthCheck(),
+  //             performAllHealthChecks(), resetToolHealth(), getAvailableTools()
+  // Gap: Execution Sandboxing - RESOLVED via secureToolExecutor.ts
+  //      Added: executeDryRunWithDiff() with DryRunPreview including risk analysis,
+  //             estimated changes, side effects, rollback capability, and confidence score
+
+  // ============================================================================
+  // PHASE 3 - MEDIUM GAPS (PENDING)
+  // ============================================================================
   {
     category: 'validation',
     gapName: 'Audit-Grade Replay',
@@ -133,15 +121,6 @@ const KNOWN_GAPS: GapAnalysis[] = [
     impactOnAutonomy: 'Hard to diagnose and fix recurring failures',
     recommendedFix: 'Implement execution recording with replay capability',
     estimatedEffort: 'large',
-  },
-  {
-    category: 'safety',
-    gapName: 'RBAC During Tool Calls',
-    severity: 'critical',
-    description: 'RBAC not consistently enforced during autonomous tool invocations',
-    impactOnAutonomy: 'Security risk - may perform unauthorized actions',
-    recommendedFix: 'Wrap all tool calls with RBAC validation layer',
-    estimatedEffort: 'medium',
   },
   {
     category: 'learning',
