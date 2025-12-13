@@ -732,14 +732,27 @@ export function NotificationsPopover() {
   ).length;
 
   // Filter notifications - 'all' shows everything in the current tab
+  // Sub-filters work across ALL notifications (ignore activeTab when sub-filter is active)
   const filteredNotifications = allNotifications.filter(n => {
-    if (n.category !== activeTab) return false;
     if (showUnreadOnly && n.isRead) return false;
-    // Sub-filters only apply when not 'all'
-    if (subFilter === 'system_alerts' && n.category !== 'system_alerts') return false;
-    if (subFilter === 'admin_review' && !(n.statusTag?.includes('ACTION') || n.priority === 'critical' || n.priority === 'high')) return false;
-    if (subFilter === 'updates' && !(n.subCategory === 'feature_release' || n.subCategory === 'update' || n.priority === 'info')) return false;
-    return true;
+    
+    // When 'all' sub-filter is selected, respect the main tab filter
+    if (subFilter === 'all') {
+      return n.category === activeTab;
+    }
+    
+    // Sub-filters apply across all categories (ignores tab when filtering)
+    if (subFilter === 'system_alerts') {
+      return n.category === 'system_alerts';
+    }
+    if (subFilter === 'admin_review') {
+      return n.statusTag?.includes('ACTION') || n.priority === 'critical' || n.priority === 'high';
+    }
+    if (subFilter === 'updates') {
+      return n.subCategory === 'feature_release' || n.subCategory === 'update' || n.priority === 'info';
+    }
+    
+    return n.category === activeTab;
   });
   
   // Sort
@@ -887,7 +900,7 @@ export function NotificationsPopover() {
       {/* Main Tabs: For You | System Alerts | Clear All Read - Matching Design */}
       <div className="flex items-center border-b bg-muted/30 flex-shrink-0 px-2">
         <button
-          onClick={() => setActiveTab('for_you')}
+          onClick={() => { setActiveTab('for_you'); setSubFilter('all'); }}
           className={`relative py-3 px-4 text-sm font-medium transition-colors ${
             activeTab === 'for_you' 
               ? 'text-foreground' 
@@ -908,7 +921,7 @@ export function NotificationsPopover() {
           )}
         </button>
         <button
-          onClick={() => setActiveTab('system_alerts')}
+          onClick={() => { setActiveTab('system_alerts'); setSubFilter('all'); }}
           className={`relative py-3 px-4 text-sm font-medium transition-colors ${
             activeTab === 'system_alerts' 
               ? 'text-foreground' 
@@ -947,6 +960,19 @@ export function NotificationsPopover() {
       {/* Sub-filters - Pill Style Matching Design */}
       <div className="px-3 py-2 border-b bg-muted/10 flex-shrink-0 overflow-x-auto">
         <div className="flex items-center gap-2">
+          {/* All Sub-filter */}
+          <Button
+            variant={subFilter === 'all' ? 'default' : 'outline'}
+            size="sm"
+            className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
+              subFilter === 'all' ? '' : 'border-muted-foreground/30'
+            }`}
+            onClick={() => setSubFilter('all')}
+            data-testid="subfilter-all"
+          >
+            All
+          </Button>
+          
           {/* System Alerts Sub-filter */}
           <Button
             variant={subFilter === 'system_alerts' ? 'default' : 'outline'}
@@ -1080,7 +1106,8 @@ export function NotificationsPopover() {
             className="w-full justify-start text-sm h-11 font-medium border-muted-foreground/20 hover:bg-muted/50 gap-3 group"
             onClick={() => {
               setOpen(false);
-              window.dispatchEvent(new CustomEvent('trinity_command', { detail: { action: 'open_chat' } }));
+              // Navigate to Trinity Insights page for AI help and interaction
+              window.location.href = '/trinity-insights';
             }}
             data-testid="button-ask-trinity"
           >
@@ -1146,7 +1173,7 @@ export function NotificationsPopover() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[440px] max-w-[calc(100vw-2rem)] max-h-[min(75vh,600px)] p-0 overflow-hidden shadow-xl border-muted flex flex-col" 
+        className="w-[440px] max-w-[calc(100vw-2rem)] h-[min(75vh,600px)] p-0 overflow-hidden shadow-xl border-muted flex flex-col" 
         align="end"
         sideOffset={8}
         data-testid="notification-popover-content"
