@@ -300,6 +300,15 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize Trinity Self-Awareness:', error);
   }
 
+  // Initialize Gap Intelligence Service - periodic scanners for code issues
+  try {
+    const { initializeGapIntelligence } = await import('./services/ai-brain/gapIntelligenceService');
+    await initializeGapIntelligence();
+    console.log('[Server] Gap Intelligence Service initialized - scheduled scans active');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Gap Intelligence Service:', error);
+  }
+
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
