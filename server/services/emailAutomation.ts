@@ -2,12 +2,15 @@
  * Email Automation Service
  * Uses Resend API for autonomous email sending
  * Integrates with billing to charge per email sent
+ * 
+ * Trinity Integration: Connected via trinityPlatformConnector for email tracking and insights
  */
 
 import { Resend } from "resend";
 import { db } from "../db";
 import { emailEvents, creditTransactions, workspaceCredits } from "../../shared/schema";
 import { eq } from "drizzle-orm";
+import { trinityPlatformConnector } from './ai-brain/trinityPlatformConnector';
 
 const resendApiKey = process.env.RESEND_API_KEY;
 
@@ -155,6 +158,21 @@ export async function sendBilledEmail(
       }).catch((err) => console.error("[Email] Failed to log transaction:", err));
     }
 
+    // Emit email campaign results to Trinity for platform awareness
+    trinityPlatformConnector.emitServiceEvent('email', 'campaign_completed', {
+      action: `Email campaign sent: ${sentCount}/${recipientCount} delivered`,
+      workspaceId: options.workspaceId,
+      userId: options.userId,
+      severity: sentCount === recipientCount ? 'info' : 'warning',
+      data: {
+        emailType: options.emailType,
+        sentCount,
+        recipientCount,
+        cost: sentCount * pricePerEmail,
+        successRate: recipientCount > 0 ? ((sentCount / recipientCount) * 100).toFixed(1) : 0,
+      },
+    }).catch(err => console.error('[Email] Failed to emit Trinity event:', err));
+
     return {
       success: true,
       sentCount,
@@ -162,6 +180,16 @@ export async function sendBilledEmail(
     };
   } catch (error) {
     console.error("[Email Campaign] Failed:", error);
+    
+    // Emit failure event to Trinity
+    trinityPlatformConnector.emitServiceEvent('email', 'campaign_failed', {
+      action: `Email campaign failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      workspaceId: options.workspaceId,
+      severity: 'error',
+      requiresAction: true,
+      data: { emailType: options.emailType },
+    }).catch(err => console.error('[Email] Failed to emit Trinity event:', err));
+
     return {
       success: false,
       sentCount: 0,

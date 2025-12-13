@@ -202,6 +202,24 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize orchestration services:', error);
   }
 
+  // Initialize Unified Lifecycle Manager - coordinates lifecycle events across Trinity
+  try {
+    const { unifiedLifecycleManager } = await import('./services/ai-brain/unifiedLifecycleManager');
+    await unifiedLifecycleManager.initialize();
+    console.log('[Server] Unified Lifecycle Manager initialized - lifecycle hooks active');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Unified Lifecycle Manager:', error);
+  }
+
+  // Initialize Trinity Platform Connector - connects all platform services to Trinity AI Brain
+  try {
+    const { trinityPlatformConnector } = await import('./services/ai-brain/trinityPlatformConnector');
+    await trinityPlatformConnector.initialize();
+    console.log('[Server] Trinity Platform Connector initialized - service connections active');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Trinity Platform Connector:', error);
+  }
+
   // Initialize AI Brain Skills System (revenue-critical skills: payroll, invoicing, scheduling)
   try {
     await initializeSkillsSystem();

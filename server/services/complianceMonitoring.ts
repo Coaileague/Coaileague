@@ -2,12 +2,15 @@
  * Compliance Monitoring Service
  * Autonomously tracks regulations and flags issues before they become problems
  * Promised on landing page: "Compliance Monitoring - Track regulations and flag issues"
+ * 
+ * Trinity Integration: Connected via trinityPlatformConnector for real-time compliance awareness
  */
 
 import { db } from '../db';
 import { employees, shifts, clients, workspaces } from '@shared/schema';
 import { eq, and, sql, gte, lte, or } from 'drizzle-orm';
 import { differenceInDays, addDays, format } from 'date-fns';
+import { trinityPlatformConnector } from './ai-brain/trinityPlatformConnector';
 
 export interface ComplianceIssue {
   id: string;
@@ -50,6 +53,29 @@ export class ComplianceMonitoringService {
     issues.push(...documentIssues);
     issues.push(...certificationIssues);
     issues.push(...schedulingIssues);
+
+    // Emit compliance scan results to Trinity for platform awareness
+    if (issues.length > 0) {
+      trinityPlatformConnector.emitComplianceEvent('compliance', 'issues_detected', {
+        action: `Compliance scan completed: ${issues.length} issues found`,
+        workspaceId,
+        complianceType: 'WORKSPACE_SCAN',
+        isViolation: issues.some(i => i.severity === 'CRITICAL'),
+        data: {
+          issueCount: issues.length,
+          criticalCount: issues.filter(i => i.severity === 'CRITICAL').length,
+          highCount: issues.filter(i => i.severity === 'HIGH').length,
+          issueTypes: [...new Set(issues.map(i => i.type))],
+        },
+      }).catch(err => console.error('[ComplianceMonitoring] Failed to emit event:', err));
+    } else {
+      trinityPlatformConnector.emitServiceEvent('compliance', 'scan_completed', {
+        action: 'Compliance scan completed with no issues',
+        workspaceId,
+        severity: 'info',
+        data: { issueCount: 0 },
+      }).catch(err => console.error('[ComplianceMonitoring] Failed to emit event:', err));
+    }
 
     return issues;
   }

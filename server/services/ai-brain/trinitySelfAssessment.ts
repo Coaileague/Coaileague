@@ -92,6 +92,7 @@ export interface SelfAssessmentResult {
 // Phase 1 (CRITICAL) - RESOLVED
 // Phase 2 (HIGH) - RESOLVED
 // Phase 3 (MEDIUM) - RESOLVED
+// Phase 4 (LOW) - SERVICE CONNECTIVITY - IN PROGRESS
 const KNOWN_GAPS: GapAnalysis[] = [
   // ============================================================================
   // PHASE 1 - CRITICAL GAPS (RESOLVED)
@@ -132,8 +133,146 @@ const KNOWN_GAPS: GapAnalysis[] = [
   //      Added: Memory snapshots and checkpoints across session boundaries
 
   // ============================================================================
-  // ALL PHASES COMPLETE - No remaining gaps
+  // PHASE 4 - LOW GAPS (SERVICE CONNECTIVITY)
   // ============================================================================
+  // 15 platform services identified with NO Trinity/AI Brain connections
+  // These services operate independently without platform awareness
+
+  {
+    category: 'orchestration',
+    gapName: 'Payroll Automation Disconnected',
+    severity: 'low',
+    description: 'payrollAutomation.ts has no AI Brain integration - payroll runs occur without Trinity awareness',
+    impactOnAutonomy: 'Cannot proactively identify payroll issues or optimize payment timing',
+    recommendedFix: 'Add platformEventBus events for payroll runs and connect to Trinity for intelligent oversight',
+    estimatedEffort: 'small',
+  },
+  {
+    category: 'orchestration',
+    gapName: 'Email Automation Disconnected',
+    severity: 'low',
+    description: 'emailAutomation.ts has no AI Brain integration - automated emails sent without Trinity awareness',
+    impactOnAutonomy: 'Cannot track email effectiveness or personalize content using AI insights',
+    recommendedFix: 'Add platformEventBus events for email sends and connect to Trinity for content optimization',
+    estimatedEffort: 'small',
+  },
+  {
+    category: 'execution',
+    gapName: 'Dispute Resolution Disconnected',
+    severity: 'low',
+    description: 'disputeAI.ts operates independently without Trinity coordination for time entry disputes',
+    impactOnAutonomy: 'Cannot leverage Trinity context for better dispute resolution recommendations',
+    recommendedFix: 'Integrate disputeAI with Trinity for holistic dispute analysis using workforce patterns',
+    estimatedEffort: 'medium',
+  },
+  {
+    category: 'execution',
+    gapName: 'Compliance Monitoring Disconnected',
+    severity: 'low',
+    description: 'complianceMonitoring.ts has no Trinity connection - compliance checks run in isolation',
+    impactOnAutonomy: 'Cannot proactively predict compliance risks or suggest preventive actions',
+    recommendedFix: 'Connect to platformEventBus for real-time compliance alerts to Trinity',
+    estimatedEffort: 'small',
+  },
+  {
+    category: 'execution',
+    gapName: 'Employee Patterns Disconnected',
+    severity: 'low',
+    description: 'employeePatternService.ts analyzes patterns without sharing insights with Trinity',
+    impactOnAutonomy: 'Lost opportunity for AI to learn from employee behavior patterns',
+    recommendedFix: 'Integrate with trinityMemoryService to share pattern insights for learning',
+    estimatedEffort: 'small',
+  },
+  {
+    category: 'orchestration',
+    gapName: 'Report Workflow Engine Disconnected',
+    severity: 'low',
+    description: 'reportWorkflowEngine.ts generates reports without Trinity awareness or AI enhancement',
+    impactOnAutonomy: 'Cannot add AI-powered insights or summaries to generated reports',
+    recommendedFix: 'Add Trinity integration for AI-enhanced report generation and scheduling',
+    estimatedEffort: 'medium',
+  },
+  {
+    category: 'execution',
+    gapName: 'PTO Accrual Disconnected',
+    severity: 'low',
+    description: 'ptoAccrual.ts calculates PTO without Trinity oversight or pattern analysis',
+    impactOnAutonomy: 'Cannot predict PTO usage patterns or suggest optimal scheduling',
+    recommendedFix: 'Connect to platformEventBus for PTO events and Trinity analysis',
+    estimatedEffort: 'small',
+  },
+  {
+    category: 'execution',
+    gapName: 'Breaks Service Disconnected',
+    severity: 'low',
+    description: 'breaksService.ts manages breaks without compliance awareness from Trinity',
+    impactOnAutonomy: 'Cannot proactively ensure break compliance or suggest optimal break times',
+    recommendedFix: 'Integrate with compliance monitoring and Trinity for intelligent break scheduling',
+    estimatedEffort: 'small',
+  },
+  {
+    category: 'validation',
+    gapName: 'External Monitoring Disconnected',
+    severity: 'low',
+    description: 'externalMonitoring.ts tracks external services without reporting to Trinity',
+    impactOnAutonomy: 'Trinity has no visibility into external service health for decision making',
+    recommendedFix: 'Connect to platformEventBus for external service status updates',
+    estimatedEffort: 'small',
+  },
+  {
+    category: 'execution',
+    gapName: 'Heatmap Service Disconnected',
+    severity: 'low',
+    description: 'heatmapService.ts generates analytics heatmaps without Trinity integration',
+    impactOnAutonomy: 'Cannot use heatmap insights for AI-driven scheduling or resource allocation',
+    recommendedFix: 'Share heatmap data with Trinity for pattern-based recommendations',
+    estimatedEffort: 'small',
+  },
+  {
+    category: 'orchestration',
+    gapName: 'Daily Digest Disconnected',
+    severity: 'low',
+    description: 'dailyDigestService.ts creates digests without AI-powered content personalization',
+    impactOnAutonomy: 'Cannot personalize digest content based on user preferences and AI insights',
+    recommendedFix: 'Integrate with Trinity for personalized, AI-enhanced daily summaries',
+    estimatedEffort: 'medium',
+  },
+  {
+    category: 'validation',
+    gapName: 'Performance Metrics Disconnected',
+    severity: 'low',
+    description: 'performanceMetrics.ts collects metrics without Trinity analysis integration',
+    impactOnAutonomy: 'Cannot leverage performance data for AI-driven optimization suggestions',
+    recommendedFix: 'Connect to trinityMemoryService for performance trend analysis',
+    estimatedEffort: 'small',
+  },
+  {
+    category: 'orchestration',
+    gapName: 'Shift Reminders Disconnected',
+    severity: 'low',
+    description: 'shiftRemindersService.ts sends reminders without Trinity personalization',
+    impactOnAutonomy: 'Cannot optimize reminder timing or content based on employee patterns',
+    recommendedFix: 'Connect to Trinity for intelligent reminder scheduling',
+    estimatedEffort: 'small',
+  },
+  {
+    category: 'execution',
+    gapName: 'Training Rate Disconnected',
+    severity: 'low',
+    description: 'trainingRateService.ts calculates training rates without AI optimization',
+    impactOnAutonomy: 'Cannot suggest optimal training rates based on market data and performance',
+    recommendedFix: 'Integrate with Trinity for data-driven training rate recommendations',
+    estimatedEffort: 'small',
+  },
+  {
+    category: 'safety',
+    gapName: 'WebSocket Cleanup Disconnected',
+    severity: 'low',
+    description: 'wsConnectionCleanup.ts manages connections without Trinity health monitoring',
+    impactOnAutonomy: 'Trinity has no visibility into connection health for diagnostic purposes',
+    recommendedFix: 'Report connection cleanup events to platformEventBus for monitoring',
+    estimatedEffort: 'small',
+  },
 ];
 
 // ============================================================================

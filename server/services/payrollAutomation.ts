@@ -9,6 +9,8 @@
  * - Federal & state tax withholding
  * - Social Security (6.2%) & Medicare (1.45%)
  * - Generate paychecks ready for QC approval
+ * 
+ * Trinity Integration: Connected via trinityPlatformConnector for payroll oversight and insights
  */
 
 import { db } from "../db";
@@ -16,6 +18,7 @@ import { timeEntries, employees, payrollRuns, payrollEntries, workspaces, invoic
 import { eq, and, gte, lte, isNull, sql, notInArray, inArray } from "drizzle-orm";
 import { startOfWeek, endOfWeek, subWeeks, format, startOfMonth, endOfMonth, subMonths, startOfYear, endOfYear } from "date-fns";
 import { aggregatePayrollHours, markEntriesAsPayrolled } from "./automation/payrollHoursAggregator";
+import { trinityPlatformConnector } from './ai-brain/trinityPlatformConnector';
 
 const PRE_TAX_BENEFIT_TYPES = ['401k', 'health_insurance', 'dental_insurance', 'vision_insurance'];
 const POST_TAX_BENEFIT_TYPES = ['life_insurance', 'other'];
@@ -1430,6 +1433,23 @@ export class PayrollAutomationEngine {
       });
     }
     
+    // Emit payroll completion event to Trinity for platform awareness
+    trinityPlatformConnector.emitAutomationEvent('payroll', 'payroll_processed', {
+      action: `Payroll processed: ${calculations.length} employees, $${totalGrossPay.toFixed(2)} gross`,
+      workspaceId,
+      userId,
+      success: true,
+      data: {
+        payrollRunId: payrollRun.id,
+        employeeCount: calculations.length,
+        totalGrossPay: parseFloat(totalGrossPay.toFixed(2)),
+        totalNetPay: parseFloat(totalNetPay.toFixed(2)),
+        periodStart: payPeriod.start.toISOString(),
+        periodEnd: payPeriod.end.toISOString(),
+        warningCount: allWarnings.length,
+      },
+    }).catch(err => console.error('[AI Payroll™] Failed to emit Trinity event:', err));
+
     return {
       payrollRunId: payrollRun.id,
       totalEmployees: calculations.length,
