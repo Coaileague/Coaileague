@@ -9,6 +9,7 @@ import {
 import { eq, and, or, desc, isNull, sql, lt } from "drizzle-orm";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
+import { broadcastPlatformUpdateGlobal } from '../websocket';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -179,6 +180,20 @@ SUMMARY:`;
   }).returning({ id: platformUpdates.id });
   
   console.log(`[AINotification] Created platform update: ${update.id} - ${data.title}`);
+  
+  // Broadcast via WebSocket for real-time UNS updates
+  broadcastPlatformUpdateGlobal({
+    id: update.id,
+    title: data.title,
+    description: enhancedDescription,
+    category: data.category || "announcement",
+    priority: data.priority || 1,
+    learnMoreUrl: data.learnMoreUrl,
+    metadata: data.metadata,
+    workspaceId: data.workspaceId,
+    visibility: "all",
+  });
+  
   return update;
 }
 
