@@ -1058,9 +1058,9 @@ export function NotificationsPopover() {
         </div>
       </div>
       
-      {/* Notification List - Native scrolling with min-h-0 flex fix */}
-      <div 
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+      {/* Notification List - Fixed height scrolling container */}
+      <ScrollArea 
+        className="flex-1 min-h-0"
       >
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
@@ -1096,7 +1096,7 @@ export function NotificationsPopover() {
             </span>
           </div>
         )}
-      </div>
+      </ScrollArea>
       
       {/* Footer: Ask Trinity for Help - Matching Design */}
       <div className="border-t bg-background shrink-0">
