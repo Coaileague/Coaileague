@@ -1190,11 +1190,24 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getEmployeesByWorkspace(workspaceId: string): Promise<Employee[]> {
-    return await db
-      .select()
+    // Join with users table to get actual name when userId is linked
+    const results = await db
+      .select({
+        employee: employees,
+        userFirstName: users.firstName,
+        userLastName: users.lastName,
+      })
       .from(employees)
+      .leftJoin(users, eq(employees.userId, users.id))
       .where(eq(employees.workspaceId, workspaceId))
       .orderBy(desc(employees.createdAt));
+    
+    // Prefer user's actual name over placeholder employee name
+    return results.map(({ employee, userFirstName, userLastName }) => ({
+      ...employee,
+      firstName: userFirstName || employee.firstName,
+      lastName: userLastName || employee.lastName,
+    }));
   }
 
   async updateEmployee(id: string, workspaceId: string, data: Partial<InsertEmployee>): Promise<Employee | undefined> {
