@@ -35198,4 +35198,60 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.status(500).json({ success: false, error: error.message });
     }
   });
+
+  // =========================================================================
+  // ORCHESTRATION DASHBOARD API
+  // =========================================================================
+
+  /**
+   * Get orchestration dashboard data including active overlays, recent history, and tool health
+   */
+  app.get("/api/orchestration/dashboard", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const { orchestrationStateMachine } = await import("./services/ai-brain/orchestrationStateMachine");
+      const { db } = await import("./db");
+      const { orchestrationOverlays } = await import("@shared/schema");
+      const { desc, and, gte, eq, inArray } = await import("drizzle-orm");
+      
+      const workspaceId = req.user?.workspaceId;
+      if (!workspaceId) {
+        return res.status(400).json({ error: "Workspace ID required" });
+      }
+
+      // Get active overlays (non-terminal phases)
+      const activeOverlays = await orchestrationStateMachine.getActiveOverlays(workspaceId);
+
+      // Get recent history (last 24 hours, terminal phases only)
+      const terminalPhases = ['completed', 'failed', 'rolled_back', 'escalated'];
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const recentHistory = await db
+        .select()
+        .from(orchestrationOverlays)
+        .where(
+          and(
+            eq(orchestrationOverlays.workspaceId, workspaceId),
+            gte(orchestrationOverlays.createdAt, twentyFourHoursAgo),
+            inArray(orchestrationOverlays.phase, terminalPhases as any)
+          )
+        )
+        .orderBy(desc(orchestrationOverlays.completedAt))
+        .limit(50);
+
+      // Get tool health from the state machine
+      const toolHealthSummary = orchestrationStateMachine.getToolHealthSummary();
+      const toolHealthStatuses = orchestrationStateMachine.getToolHealthStatuses();
+
+      res.json({
+        activeOverlays,
+        recentHistory,
+        toolHealth: {
+          summary: toolHealthSummary,
+          statuses: toolHealthStatuses,
+        },
+      });
+    } catch (error: any) {
+      console.error("[OrchestrationDashboard] Error fetching data:", error);
+      res.status(500).json({ error: error.message });
+    }
+  });
 }

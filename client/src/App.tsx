@@ -99,6 +99,7 @@ import HelpDesk from "@/pages/HelpDesk";
 import Chatrooms from "@/pages/chatrooms";
 import PayrollDashboard from "@/pages/payroll-dashboard";
 import HelpAIOrchestration from "@/pages/helpai-orchestration";
+import OrchestrationDashboard from "@/pages/orchestration-dashboard";
 import MyPaychecks from "@/pages/my-paychecks";
 import LeadersHub from "@/pages/leaders-hub";
 import EngagementDashboard from "@/pages/engagement-dashboard";
@@ -1049,6 +1050,7 @@ function AppContent() {
               <Route path="/automation/audit-log" component={AutomationAuditLog} />
               <Route path="/automation/settings" component={AutomationSettings} />
               <Route path="/ai/brain" component={AIBrainDashboard} />
+              <Route path="/ai/orchestration" component={OrchestrationDashboard} />
               <Route path="/ai/audit-log-viewer" component={AIAuditLogViewer} />
               <Route path="/ai/workboard" component={WorkboardDashboard} />
               <Route path="/trinity-insights">
@@ -1237,6 +1239,7 @@ function AppContent() {
                 <Route path="/support/console" component={SupportCommandConsole} />
                 <Route path="/trinity/command-center" component={TrinityCommandCenter} />
                 <Route path="/ai/brain" component={AIBrainDashboard} />
+                <Route path="/ai/orchestration" component={OrchestrationDashboard} />
                 <Route path="/ai/workboard" component={WorkboardDashboard} />
                 <Route path="/ai/audit-log-viewer" component={AIAuditLogViewer} />
                 <Route path="/support/ai-console" component={SupportAIConsole} />
