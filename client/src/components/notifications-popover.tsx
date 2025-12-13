@@ -1148,7 +1148,7 @@ export function NotificationsPopover() {
         </div>
         <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent 
-            className="w-[calc(100vw-1rem)] max-w-[420px] h-[85vh] max-h-[700px] p-0 gap-0 flex flex-col rounded-xl"
+            className="!w-[80vw] !max-w-[320px] !h-[60vh] !max-h-[450px] p-0 gap-0 flex flex-col rounded-xl overflow-hidden"
             showHomeButton={false}
             data-testid="notification-dialog-content"
             data-trinity-avoid="true"
