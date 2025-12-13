@@ -1965,7 +1965,7 @@ export function startAutonomousScheduler() {
           { url: 'http://localhost:5000/', name: 'Landing Page' },
           { url: 'http://localhost:5000/dashboard', name: 'Dashboard' },
           { url: 'http://localhost:5000/schedule', name: 'Schedule' },
-          { url: 'http://localhost:5000/usage-dashboard', name: 'Usage Dashboard' },
+          { url: 'http://localhost:5000/usage', name: 'Usage Dashboard' },
         ];
         
         // Get first active workspace for VQA record storage
@@ -2139,7 +2139,7 @@ export const manualTriggers = {
     const pagesToScan = [
       { url: 'http://localhost:5000/', name: 'Landing Page' },
       { url: 'http://localhost:5000/dashboard', name: 'Dashboard' },
-      { url: 'http://localhost:5000/usage-dashboard', name: 'Usage Dashboard' },
+      { url: 'http://localhost:5000/usage', name: 'Usage Dashboard' },
     ];
     let totalFindings = 0;
     const results: Array<{ page: string; findings: number }> = [];
