@@ -1,21 +1,19 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { selectSidebarFamilies, type OSModuleRoute } from "@/lib/osModules";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { 
   Users, Activity, DollarSign, 
   FileText, Calendar, Clock, ArrowRight,
-  Bell, Trash2, CheckCircle, XCircle, AlertCircle, Mail, Lock,
+  Bell, CheckCircle, XCircle, AlertCircle, Mail, Lock,
   Shield, UserCog, Server, Database, MessageCircle, Settings,
   HelpCircle, MessageSquare, LayoutDashboard, AlertTriangle, Building2
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { useTransition } from "@/contexts/transition-context";
-import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
-import { queryClient } from "@/lib/queryClient";
-import { apiGet, apiPost } from "@/lib/apiClient";
+import { apiGet } from "@/lib/apiClient";
 import { queryKeys } from "@/config/queryKeys";
 import { useMessage } from "@/hooks/useConfig";
 import { Button } from "@/components/ui/button";
@@ -36,16 +34,6 @@ import { ResponsiveLoading } from "@/components/loading-indicators";
 import { MetricTile } from "@/components/metric-tile";
 import { CreditBalanceCard } from "@/components/credit-balance";
 import { PendingApprovalsBanner } from "@/components/pending-approvals-banner";
-
-interface Notification {
-  id: string;
-  type: 'shift_assigned' | 'shift_changed' | 'shift_removed' | 'pto_approved' | 'pto_denied' | 'profile_updated' | 'document_assigned' | 'policy_acknowledgment' | 'system';
-  title: string;
-  message: string;
-  isRead: boolean;
-  createdAt: Date;
-  actionUrl?: string;
-}
 
 interface WorkspaceHealth {
   status: 'green' | 'yellow' | 'red';
@@ -189,39 +177,21 @@ export default function Dashboard() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const { workspaceRole, subscriptionTier, isPlatformStaff, platformRole, isLoading: accessLoading } = useWorkspaceAccess();
   const { showTransition, hideTransition } = useTransition();
-  const [notificationFilter, setNotificationFilter] = useState<'all' | 'unread' | 'read'>('all');
   
   // Mobile detection for responsive UI
   const isMobile = useIsMobile();
 
   // Get current user and workspace
-  const { data: currentUser } = useQuery<{ id: string; email?: string }>({ 
-    queryKey: queryKeys.auth.me,
-    queryFn: () => apiGet('auth.current'),
-  });
-  const userId = currentUser?.id;
-  
   const { data: workspace } = useQuery<{ id: string; name?: string; orgCode?: string }>({ 
     queryKey: queryKeys.workspace.current,
     queryFn: () => apiGet('workspace.current'),
   });
-  const workspaceId = workspace?.id;
   const orgCode = workspace?.orgCode || 'N/A';
 
   // Fetch workspace health status
   const { data: workspaceHealth } = useQuery<WorkspaceHealth>({
     queryKey: queryKeys.workspace.health,
     queryFn: () => apiGet('workspace.getHealth'),
-    enabled: isAuthenticated,
-  });
-
-  // Connect to notification WebSocket for real-time updates
-  const { unreadCount: wsUnreadCount, isConnected } = useNotificationWebSocket(userId, workspaceId);
-
-  // Fetch notifications
-  const { data: notifications = [], isLoading: notificationsLoading } = useQuery<Notification[]>({
-    queryKey: queryKeys.notifications.all,
-    queryFn: () => apiGet('notifications.list'),
     enabled: isAuthenticated,
   });
 
@@ -321,30 +291,6 @@ export default function Dashboard() {
   // Show top 2 locked routes as upgrade prompts
   const upgradePrompts = lockedRoutes.slice(0, 2);
 
-  // Mark notification as read
-  const markAsReadMutation = useMutation({
-    mutationFn: (id: string) => apiPost('notifications.markRead', { id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
-    },
-  });
-
-  // Delete notification
-  const deleteNotificationMutation = useMutation({
-    mutationFn: (id: string) => apiPost('notifications.delete', { id }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
-    },
-  });
-
-  // Mark all as read
-  const markAllAsReadMutation = useMutation({
-    mutationFn: () => apiPost('notifications.markAllRead', {}),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.notifications.all });
-    },
-  });
-
   // DISABLED: Loading transition was blocking workspace access
   // The dashboard loads fast enough without a loading overlay
   // useEffect(() => {
@@ -379,58 +325,6 @@ export default function Dashboard() {
   const totalClients = stats?.workspace?.activeClients ?? stats?.summary.totalCustomers ?? 0;
   const totalRevenue = stats?.summary.monthlyRevenue.amount || 0;
   const totalOrganizations = stats?.summary.totalWorkspaces || 0;
-
-  // Use WebSocket unread count if available
-  const unreadCount = isConnected && wsUnreadCount !== undefined 
-    ? wsUnreadCount 
-    : notifications.filter((n) => !n.isRead).length;
-
-  // Filter notifications
-  const filteredNotifications = notifications.filter(n => {
-    if (notificationFilter === 'unread') return !n.isRead;
-    if (notificationFilter === 'read') return n.isRead;
-    return true;
-  });
-
-  const getNotificationIcon = (type: string) => {
-    switch (type) {
-      case 'shift_assigned':
-      case 'shift_changed':
-        return <Calendar className="h-5 w-5 text-accent" />;
-      case 'shift_removed':
-        return <XCircle className="h-5 w-5 text-destructive" />;
-      case 'pto_approved':
-        return <CheckCircle className="h-5 w-5 text-primary" />;
-      case 'pto_denied':
-        return <XCircle className="h-5 w-5 text-destructive" />;
-      case 'profile_updated':
-        return <Users className="h-5 w-5 text-accent" />;
-      case 'document_assigned':
-        return <FileText className="h-5 w-5 text-primary" />;
-      case 'policy_acknowledgment':
-        return <AlertCircle className="h-5 w-5 text-secondary" />;
-      case 'system':
-        return <Bell className="h-5 w-5 text-primary" />;
-      default:
-        return <Mail className="h-5 w-5 text-muted-foreground" />;
-    }
-  };
-
-  const getNotificationTypeBadge = (type: string) => {
-    const badges: Record<string, { label: string; className: string }> = {
-      shift_assigned: { label: 'Shift', className: 'bg-accent/20 text-accent border-accent/30' },
-      shift_changed: { label: 'Schedule', className: 'bg-secondary/20 text-secondary border-secondary/30' },
-      shift_removed: { label: 'Shift', className: 'bg-destructive/20 text-destructive border-destructive/30' },
-      pto_approved: { label: 'PTO', className: 'bg-primary/20 text-primary border-primary/30' },
-      pto_denied: { label: 'PTO', className: 'bg-destructive/20 text-destructive border-destructive/30' },
-      profile_updated: { label: 'Profile', className: 'bg-accent/20 text-accent border-accent/30' },
-      document_assigned: { label: 'Document', className: 'bg-primary/20 text-primary border-primary/30' },
-      policy_acknowledgment: { label: 'Policy', className: 'bg-secondary/20 text-secondary border-secondary/30' },
-      system: { label: 'System', className: 'bg-primary/20 text-primary border-primary/30' },
-    };
-    const badge = badges[type] || { label: 'Info', className: 'bg-muted/20 text-muted-foreground border-muted/30' };
-    return <Badge variant="outline" className={`text-xs ${badge.className}`}>{badge.label}</Badge>;
-  };
 
   // Show loading overlay while dashboard data is loading
   const isLoadingDashboard = isLoading || accessLoading;
@@ -1376,167 +1270,96 @@ export default function Dashboard() {
         )}
         </ResponsiveSection>
 
-        {/* Notification Center Section - Professional Style */}
+        {/* Quick Actions Section - Replaces redundant Notification Center (use UNS popover instead) */}
         <ResponsiveSection>
         <div className="bg-card border border-border rounded-lg p-6 sm:p-8">
-          {/* Notification Center Header */}
           <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
             <div className="flex items-center gap-3">
               <div className="p-3 bg-muted rounded-lg">
-                <Bell className="w-6 h-6 text-primary" />
+                <Activity className="w-6 h-6 text-primary" />
               </div>
               <div>
-                <h3 className="text-2xl font-bold text-foreground flex items-center gap-2">
-                  Notification Center
-                  {isConnected && (
-                    <span className="h-2 w-2 bg-primary rounded-full" title="Live updates active" />
-                  )}
+                <h3 className="text-2xl font-bold text-foreground">
+                  Quick Actions
                 </h3>
                 <p className="text-sm text-muted-foreground">
-                  Stay updated on your shifts, PTO, and important platform changes
+                  Common tasks and shortcuts for your workspace
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Unread:</span>
-              <span className="inline-flex items-center justify-center min-w-[2rem] h-8 px-2 text-sm font-bold text-foreground bg-muted rounded-full">
-                {unreadCount}
-              </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            <Link href="/schedule">
+              <div className="bg-muted/30 hover-elevate border border-border rounded-lg p-4 cursor-pointer transition-all" data-testid="quick-action-schedule">
+                <Calendar className="w-8 h-8 text-blue-500 mb-3" />
+                <p className="font-medium text-foreground">View Schedule</p>
+                <p className="text-xs text-muted-foreground mt-1">Check your upcoming shifts</p>
+              </div>
+            </Link>
+
+            <Link href="/time-tracking">
+              <div className="bg-muted/30 hover-elevate border border-border rounded-lg p-4 cursor-pointer transition-all" data-testid="quick-action-time">
+                <Clock className="w-8 h-8 text-green-500 mb-3" />
+                <p className="font-medium text-foreground">Time Tracking</p>
+                <p className="text-xs text-muted-foreground mt-1">Clock in/out and view hours</p>
+              </div>
+            </Link>
+
+            <Link href="/pto">
+              <div className="bg-muted/30 hover-elevate border border-border rounded-lg p-4 cursor-pointer transition-all" data-testid="quick-action-pto">
+                <FileText className="w-8 h-8 text-purple-500 mb-3" />
+                <p className="font-medium text-foreground">Request Time Off</p>
+                <p className="text-xs text-muted-foreground mt-1">Submit PTO requests</p>
+              </div>
+            </Link>
+
+            <Link href="/inbox">
+              <div className="bg-muted/30 hover-elevate border border-border rounded-lg p-4 cursor-pointer transition-all" data-testid="quick-action-inbox">
+                <Mail className="w-8 h-8 text-orange-500 mb-3" />
+                <p className="font-medium text-foreground">Inbox</p>
+                <p className="text-xs text-muted-foreground mt-1">Check internal messages</p>
+              </div>
+            </Link>
+
+            <Link href="/chatrooms">
+              <div className="bg-muted/30 hover-elevate border border-border rounded-lg p-4 cursor-pointer transition-all" data-testid="quick-action-chat">
+                <MessageSquare className="w-8 h-8 text-cyan-500 mb-3" />
+                <p className="font-medium text-foreground">Chatrooms</p>
+                <p className="text-xs text-muted-foreground mt-1">Team conversations</p>
+              </div>
+            </Link>
+
+            <Link href="/documents">
+              <div className="bg-muted/30 hover-elevate border border-border rounded-lg p-4 cursor-pointer transition-all" data-testid="quick-action-docs">
+                <FileText className="w-8 h-8 text-amber-500 mb-3" />
+                <p className="font-medium text-foreground">Documents</p>
+                <p className="text-xs text-muted-foreground mt-1">View assigned documents</p>
+              </div>
+            </Link>
+
+            <Link href="/profile">
+              <div className="bg-muted/30 hover-elevate border border-border rounded-lg p-4 cursor-pointer transition-all" data-testid="quick-action-profile">
+                <UserCog className="w-8 h-8 text-indigo-500 mb-3" />
+                <p className="font-medium text-foreground">My Profile</p>
+                <p className="text-xs text-muted-foreground mt-1">Update your information</p>
+              </div>
+            </Link>
+
+            <Link href="/help">
+              <div className="bg-muted/30 hover-elevate border border-border rounded-lg p-4 cursor-pointer transition-all" data-testid="quick-action-help">
+                <HelpCircle className="w-8 h-8 text-rose-500 mb-3" />
+                <p className="font-medium text-foreground">Get Help</p>
+                <p className="text-xs text-muted-foreground mt-1">Support and FAQs</p>
+              </div>
+            </Link>
+          </div>
+
+          <div className="mt-6 p-4 bg-muted/20 rounded-lg border border-border">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <Bell className="w-4 h-4" />
+              <span>For notifications, use the bell icon in the top navigation bar</span>
             </div>
-          </div>
-
-          {/* Filter Tabs */}
-          <div className="flex gap-2 mb-6 flex-wrap">
-            <Button
-              variant={notificationFilter === 'all' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setNotificationFilter('all')}
-              data-testid="button-filter-all"
-            >
-              All ({notifications.length})
-            </Button>
-            <Button
-              variant={notificationFilter === 'unread' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setNotificationFilter('unread')}
-              data-testid="button-filter-unread"
-            >
-              Unread ({unreadCount})
-            </Button>
-            <Button
-              variant={notificationFilter === 'read' ? 'default' : 'outline'}
-              size="sm"
-              onClick={() => setNotificationFilter('read')}
-              className={notificationFilter === 'read' ? 'bg-muted/30 ' : ''}
-              data-testid="button-filter-read"
-            >
-              Read ({notifications.length - unreadCount})
-            </Button>
-            {unreadCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => markAllAsReadMutation.mutate()}
-                className="ml-auto text-primary hover:text-primary"
-                data-testid="button-mark-all-read"
-              >
-                Mark all as read
-              </Button>
-            )}
-          </div>
-
-          {/* Notification Table */}
-          <div className="overflow-x-auto">
-            {notificationsLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary/80"></div>
-                <span className="ml-3 text-slate-400">Loading notifications...</span>
-              </div>
-            ) : filteredNotifications.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-slate-400">
-                <Bell className="w-12 h-12 mb-4 opacity-50" />
-                <p className="text-lg font-semibold">All caught up!</p>
-                <p className="text-sm mt-1">
-                  {notificationFilter === 'unread' 
-                    ? 'You have no unread notifications.' 
-                    : notificationFilter === 'read'
-                    ? 'You have no read notifications.'
-                    : 'You have no notifications yet.'}
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {filteredNotifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`backdrop-blur-xl border rounded-2xl p-4 transition-all duration-300 hover:scale-[1.01] ${
-                      notification.isRead
-                        ? 'bg-white/5 border-white/10'
-                        : 'bg-muted/10 border-primary/30 shadow-lg shadow-primary/10'
-                    }`}
-                    data-testid={`notification-${notification.id}`}
-                  >
-                    <div className="flex items-start gap-4">
-                      {/* Icon */}
-                      <div className="mt-1 shrink-0">
-                        {getNotificationIcon(notification.type)}
-                      </div>
-
-                      {/* Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2 mb-2">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <h4 className="font-semibold text-white text-sm">
-                              {notification.title}
-                            </h4>
-                            {getNotificationTypeBadge(notification.type)}
-                          </div>
-                          {!notification.isRead && (
-                            <div className="h-2 w-2 rounded-full bg-primary animate-pulse shrink-0" />
-                          )}
-                        </div>
-                        <p className="text-sm text-slate-300 mb-2 break-words">
-                          {notification.message}
-                        </p>
-                        <p className="text-xs text-slate-500">
-                          {formatDistanceToNow(new Date(notification.createdAt), {
-                            addSuffix: true,
-                          })}
-                        </p>
-                      </div>
-
-                      {/* Actions */}
-                      <div className="flex gap-2 shrink-0">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => markAsReadMutation.mutate(notification.id)}
-                          className={`h-9 w-9 p-0 ${
-                            notification.isRead
-                              ? 'text-slate-400 hover:text-primary'
-                              : 'text-primary hover:text-primary'
-                          }`}
-                          title={notification.isRead ? 'Mark as unread' : 'Mark as read'}
-                          data-testid={`button-toggle-read-${notification.id}`}
-                        >
-                          <CheckCircle className="h-5 w-5" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteNotificationMutation.mutate(notification.id)}
-                          className="h-9 w-9 p-0 text-slate-400 hover:text-red-400"
-                          title="Delete notification"
-                          data-testid={`button-delete-${notification.id}`}
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
         </ResponsiveSection>
