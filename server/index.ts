@@ -282,6 +282,24 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize Trinity Autonomous Operations:', error);
   }
 
+  // Initialize Domain Ops Subagents - Schema, Log, Handler, Hook analysis
+  try {
+    const { initializeDomainOpsSubagents } = await import('./services/ai-brain/subagents/domainOpsSubagents');
+    await initializeDomainOpsSubagents();
+    console.log('[Server] Domain Ops Subagents initialized - SchemaOps, LogOps, HandlerOps, HookOps active');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Domain Ops Subagents:', error);
+  }
+
+  // Initialize Trinity Self-Awareness Service - persona, capabilities, constraints
+  try {
+    const { initializeTrinitySelfAwareness } = await import('./services/ai-brain/trinitySelfAwarenessService');
+    await initializeTrinitySelfAwareness();
+    console.log('[Server] Trinity Self-Awareness Service initialized');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Trinity Self-Awareness:', error);
+  }
+
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
