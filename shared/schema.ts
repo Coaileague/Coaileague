@@ -17,6 +17,7 @@ import {
   boolean,
   pgEnum,
   check,
+  foreignKey,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -13252,7 +13253,7 @@ export const internalEmails = pgTable("internal_emails", {
   
   // Threading
   threadId: varchar("thread_id"), // For conversation threading
-  inReplyTo: varchar("in_reply_to"), // Reference to parent email ID (self-ref handled at app level)
+  inReplyTo: varchar("in_reply_to"), // Reference to parent email ID
   
   // Metadata
   priority: emailPriorityEnum("priority").default('normal'),
@@ -13273,6 +13274,11 @@ export const internalEmails = pgTable("internal_emails", {
   index("internal_emails_thread_idx").on(table.threadId),
   index("internal_emails_sent_idx").on(table.sentAt),
   index("internal_emails_created_idx").on(table.createdAt),
+  foreignKey({
+    columns: [table.inReplyTo],
+    foreignColumns: [table.id],
+    name: "internal_emails_reply_fk",
+  }).onDelete('set null'),
 ]);
 
 export const insertInternalEmailSchema = createInsertSchema(internalEmails).omit({
