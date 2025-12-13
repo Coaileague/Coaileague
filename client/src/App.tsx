@@ -775,6 +775,41 @@ function MascotRenderer() {
   );
 }
 
+// Inbox Header Button with unread count badge
+function InboxHeaderButton({ onClick }: { onClick: () => void }) {
+  const { data: mailboxData } = useQuery({
+    queryKey: ["/api/internal-email/mailbox/auto-create"],
+    staleTime: 30000,
+    refetchInterval: 60000,
+  });
+  
+  const unreadCount = (mailboxData?.mailbox as any)?.unreadCount || 0;
+  
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 rounded-full relative"
+          onClick={onClick}
+          data-testid="button-inbox"
+        >
+          <Mail className="h-4 w-4" />
+          {unreadCount > 0 && (
+            <span className="absolute -top-1 -right-1 h-4 min-w-4 px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold flex items-center justify-center">
+              {unreadCount > 99 ? '99+' : unreadCount}
+            </span>
+          )}
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>Inbox{unreadCount > 0 ? ` (${unreadCount} unread)` : ''}</p>
+      </TooltipContent>
+    </Tooltip>
+  );
+}
+
 // Compact top-right utility cluster - Fortune 500 aesthetic
 function AppUtilityCluster({ setLocation }: any) {
   return (
@@ -901,23 +936,8 @@ function AppContent() {
                 <div className="flex items-center gap-2">
                   {/* Chat Button - Header mounted for easy access */}
                   <HeaderChatButton />
-                  {/* Inbox Button - Internal email system */}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9 rounded-full relative"
-                        onClick={() => window.location.href = '/inbox'}
-                        data-testid="button-inbox"
-                      >
-                        <Mail className="h-4 w-4" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Inbox</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  {/* Inbox Button - Internal email system with unread badge */}
+                  <InboxHeaderButton onClick={() => window.location.href = '/inbox'} />
                   <NotificationsPopover />
                 </div>
               </div>
@@ -1149,23 +1169,8 @@ function AppContent() {
                   <div className="flex items-center gap-2">
                     {/* Chat Button - Header mounted in middle */}
                     <HeaderChatButton />
-                    {/* Inbox Button - Internal email system */}
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-9 w-9 rounded-full relative"
-                          onClick={() => setLocation('/inbox')}
-                          data-testid="button-inbox"
-                        >
-                          <Mail className="h-4 w-4" />
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Inbox</p>
-                      </TooltipContent>
-                    </Tooltip>
+                    {/* Inbox Button - Internal email system with unread badge */}
+                    <InboxHeaderButton onClick={() => setLocation('/inbox')} />
                     {/* Universal Notifications Bell - Shows all updates, alerts, and system messages */}
                     <NotificationsPopover />
                     {/* User Menu Dropdown */}
