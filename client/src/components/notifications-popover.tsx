@@ -900,7 +900,7 @@ export function NotificationsPopover() {
       {/* Main Tabs: For You | System Alerts | Clear All Read - Matching Design */}
       <div className="flex items-center border-b bg-muted/30 flex-shrink-0 px-2">
         <button
-          onClick={() => { setActiveTab('for_you'); setSubFilter('all'); }}
+          onClick={() => setActiveTab('for_you')}
           className={`relative py-3 px-4 text-sm font-medium transition-colors ${
             activeTab === 'for_you' 
               ? 'text-foreground' 
@@ -921,7 +921,7 @@ export function NotificationsPopover() {
           )}
         </button>
         <button
-          onClick={() => { setActiveTab('system_alerts'); setSubFilter('all'); }}
+          onClick={() => setActiveTab('system_alerts')}
           className={`relative py-3 px-4 text-sm font-medium transition-colors ${
             activeTab === 'system_alerts' 
               ? 'text-foreground' 
