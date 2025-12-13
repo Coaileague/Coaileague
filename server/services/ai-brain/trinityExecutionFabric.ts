@@ -181,6 +181,88 @@ export interface ThoughtStep {
 }
 
 // ============================================================================
+// AUDIT-GRADE REPLAY TYPES
+// ============================================================================
+
+export interface ExecutionRecording {
+  recordingId: string;
+  manifestId: string;
+  
+  // Full context snapshot at recording time
+  manifest: ExecutionManifest;
+  context: ExecutionContext;
+  
+  // Execution timeline
+  timeline: ExecutionTimelineEntry[];
+  
+  // Environment state at execution time
+  environmentSnapshot: EnvironmentSnapshot;
+  
+  // Metadata
+  recordedAt: Date;
+  recordedBy: string;
+  reason: 'failure' | 'audit' | 'debug' | 'manual';
+  
+  // Replay tracking
+  replayCount: number;
+  lastReplayedAt?: Date;
+  lastReplayResult?: 'success' | 'failure' | 'partial';
+}
+
+export interface ExecutionTimelineEntry {
+  timestamp: Date;
+  stepId: string;
+  phase: ExecutionPhase;
+  action: string;
+  input: Record<string, any>;
+  output: any;
+  durationMs: number;
+  success: boolean;
+  error?: string;
+  retryAttempt: number;
+  memoryUsageMB?: number;
+}
+
+export interface EnvironmentSnapshot {
+  timestamp: Date;
+  nodeVersion: string;
+  platform: string;
+  activeManifestCount: number;
+  memoryUsageMB: number;
+  configHash: string;
+}
+
+export interface ReplayOptions {
+  dryRun?: boolean;
+  fromStep?: number;
+  stopAtStep?: number;
+  modifiedParameters?: Record<string, Record<string, any>>;
+  skipFailedSteps?: boolean;
+  debugMode?: boolean;
+}
+
+export interface ReplayResult {
+  replayId: string;
+  recordingId: string;
+  success: boolean;
+  stepsExecuted: number;
+  stepsSkipped: number;
+  stepsFailed: number;
+  durationMs: number;
+  timeline: ExecutionTimelineEntry[];
+  divergences: ReplayDivergence[];
+  error?: string;
+}
+
+export interface ReplayDivergence {
+  stepId: string;
+  field: string;
+  originalValue: any;
+  replayValue: any;
+  severity: 'info' | 'warning' | 'error';
+}
+
+// ============================================================================
 // CAPABILITY ADAPTERS
 // ============================================================================
 
@@ -369,11 +451,438 @@ class TrinityExecutionFabric {
   private executionHistory: ExecutionManifest[] = [];
   private thinkingProcesses: Map<string, ThinkingProcess> = new Map();
   
+  // Audit-Grade Replay Storage
+  private executionRecordings: Map<string, ExecutionRecording> = new Map();
+  private activeTimelines: Map<string, ExecutionTimelineEntry[]> = new Map();
+  private readonly MAX_RECORDINGS = 100;
+  private readonly RECORDING_RETENTION_HOURS = 72;
+  
   static getInstance(): TrinityExecutionFabric {
     if (!this.instance) {
       this.instance = new TrinityExecutionFabric();
     }
     return this.instance;
+  }
+
+  // ============================================================================
+  // AUDIT-GRADE REPLAY - Recording & Playback
+  // ============================================================================
+
+  /**
+   * Record execution state for audit and replay capability
+   * Captures full context snapshot including environment state
+   */
+  async recordExecution(
+    manifestId: string,
+    context: ExecutionContext,
+    reason: ExecutionRecording['reason'] = 'audit'
+  ): Promise<ExecutionRecording> {
+    const manifest = this.activeManifests.get(manifestId) || 
+                     this.executionHistory.find(m => m.id === manifestId);
+    
+    if (!manifest) {
+      throw new Error(`Manifest not found for recording: ${manifestId}`);
+    }
+
+    const recordingId = `rec-${crypto.randomUUID()}`;
+    const timeline = this.activeTimelines.get(manifestId) || [];
+    
+    const recording: ExecutionRecording = {
+      recordingId,
+      manifestId,
+      manifest: JSON.parse(JSON.stringify(manifest)),
+      context: JSON.parse(JSON.stringify(context)),
+      timeline: [...timeline],
+      environmentSnapshot: this.captureEnvironmentSnapshot(),
+      recordedAt: new Date(),
+      recordedBy: context.userId,
+      reason,
+      replayCount: 0,
+    };
+
+    this.executionRecordings.set(recordingId, recording);
+    
+    // Enforce retention policy
+    this.cleanupOldRecordings();
+    
+    console.log(`[TrinityFabric] Recorded execution ${manifestId} as ${recordingId} (reason: ${reason})`);
+    
+    // Publish event for observability
+    platformEventBus.publish('ai_brain_action', {
+      action: 'execution_recorded',
+      recordingId,
+      manifestId,
+      reason,
+      stepsRecorded: timeline.length,
+    });
+
+    return recording;
+  }
+
+  /**
+   * Replay a recorded execution with optional modifications
+   * Supports partial replay, parameter overrides, and dry-run mode
+   */
+  async replayExecution(
+    recordingId: string,
+    options: ReplayOptions = {}
+  ): Promise<ReplayResult> {
+    const recording = this.executionRecordings.get(recordingId);
+    
+    if (!recording) {
+      throw new Error(`Recording not found: ${recordingId}`);
+    }
+
+    const replayId = `replay-${crypto.randomUUID()}`;
+    const startTime = Date.now();
+    const timeline: ExecutionTimelineEntry[] = [];
+    const divergences: ReplayDivergence[] = [];
+    
+    console.log(`[TrinityFabric] Starting replay ${replayId} of recording ${recordingId}`);
+
+    let stepsExecuted = 0;
+    let stepsSkipped = 0;
+    let stepsFailed = 0;
+    let replayError: string | undefined;
+
+    try {
+      // Recreate manifest from recording
+      const replayManifest: ExecutionManifest = JSON.parse(JSON.stringify(recording.manifest));
+      replayManifest.id = `replay-${replayManifest.id}`;
+      replayManifest.createdAt = new Date();
+      replayManifest.startedAt = undefined;
+      replayManifest.completedAt = undefined;
+      replayManifest.stepResults = [];
+      replayManifest.phase = 'planning';
+
+      // Reset step states
+      for (const step of replayManifest.steps) {
+        step.status = 'pending';
+        step.retryCount = 0;
+        step.result = undefined;
+        step.error = undefined;
+        step.startedAt = undefined;
+        step.completedAt = undefined;
+        step.durationMs = undefined;
+
+        // Apply parameter modifications if provided
+        if (options.modifiedParameters?.[step.id]) {
+          const originalParams = JSON.stringify(step.parameters);
+          step.parameters = { ...step.parameters, ...options.modifiedParameters[step.id] };
+          
+          divergences.push({
+            stepId: step.id,
+            field: 'parameters',
+            originalValue: JSON.parse(originalParams),
+            replayValue: step.parameters,
+            severity: 'info',
+          });
+        }
+      }
+
+      // Store replay manifest
+      this.activeManifests.set(replayManifest.id, replayManifest);
+      this.activeTimelines.set(replayManifest.id, []);
+
+      // Recreate context
+      const replayContext: ExecutionContext = JSON.parse(JSON.stringify(recording.context));
+
+      if (options.dryRun) {
+        console.log(`[TrinityFabric] Dry-run mode - simulating replay without execution`);
+        
+        for (let i = 0; i < replayManifest.steps.length; i++) {
+          const step = replayManifest.steps[i];
+          
+          if (options.fromStep !== undefined && i < options.fromStep) {
+            stepsSkipped++;
+            continue;
+          }
+          if (options.stopAtStep !== undefined && i > options.stopAtStep) {
+            break;
+          }
+
+          // Simulate step with original outcome
+          const originalEntry = recording.timeline.find(t => t.stepId === step.id);
+          timeline.push({
+            timestamp: new Date(),
+            stepId: step.id,
+            phase: 'executing',
+            action: step.action,
+            input: step.parameters,
+            output: originalEntry?.output ?? null,
+            durationMs: 0,
+            success: true,
+            retryAttempt: 0,
+          });
+          stepsExecuted++;
+        }
+      } else {
+        // Execute replay
+        replayManifest.phase = 'executing';
+        replayManifest.startedAt = new Date();
+
+        for (let i = 0; i < replayManifest.steps.length; i++) {
+          const step = replayManifest.steps[i];
+          
+          if (options.fromStep !== undefined && i < options.fromStep) {
+            step.status = 'skipped';
+            stepsSkipped++;
+            continue;
+          }
+          if (options.stopAtStep !== undefined && i > options.stopAtStep) {
+            break;
+          }
+
+          // Check if original step failed and skip if requested
+          const originalEntry = recording.timeline.find(t => t.stepId === step.id);
+          if (options.skipFailedSteps && originalEntry && !originalEntry.success) {
+            step.status = 'skipped';
+            stepsSkipped++;
+            continue;
+          }
+
+          // Execute step
+          const stepResult = await this.executeStep(step, replayContext, replayManifest);
+          
+          const entry: ExecutionTimelineEntry = {
+            timestamp: new Date(),
+            stepId: step.id,
+            phase: 'executing',
+            action: step.action,
+            input: step.parameters,
+            output: stepResult.output,
+            durationMs: stepResult.durationMs,
+            success: stepResult.success,
+            error: stepResult.error,
+            retryAttempt: stepResult.retryAttempts,
+            memoryUsageMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+          };
+          
+          timeline.push(entry);
+          this.activeTimelines.get(replayManifest.id)?.push(entry);
+
+          if (stepResult.success) {
+            stepsExecuted++;
+          } else {
+            stepsFailed++;
+          }
+
+          // Check for divergences from original execution
+          if (originalEntry) {
+            if (originalEntry.success !== stepResult.success) {
+              divergences.push({
+                stepId: step.id,
+                field: 'success',
+                originalValue: originalEntry.success,
+                replayValue: stepResult.success,
+                severity: 'warning',
+              });
+            }
+            if (originalEntry.error !== stepResult.error) {
+              divergences.push({
+                stepId: step.id,
+                field: 'error',
+                originalValue: originalEntry.error,
+                replayValue: stepResult.error,
+                severity: originalEntry.error || stepResult.error ? 'warning' : 'info',
+              });
+            }
+          }
+
+          if (options.debugMode) {
+            console.log(`[TrinityFabric][Replay Debug] Step ${step.id}: ${stepResult.success ? 'SUCCESS' : 'FAILED'}`);
+          }
+        }
+
+        replayManifest.completedAt = new Date();
+        replayManifest.phase = stepsFailed > 0 ? 'failed' : 'completed';
+      }
+
+      // Update recording metadata
+      recording.replayCount++;
+      recording.lastReplayedAt = new Date();
+      recording.lastReplayResult = stepsFailed > 0 ? 'failure' : (stepsSkipped > 0 ? 'partial' : 'success');
+
+      const result: ReplayResult = {
+        replayId,
+        recordingId,
+        success: stepsFailed === 0,
+        stepsExecuted,
+        stepsSkipped,
+        stepsFailed,
+        durationMs: Date.now() - startTime,
+        timeline,
+        divergences,
+      };
+
+      console.log(`[TrinityFabric] Replay ${replayId} completed: ${stepsExecuted} executed, ${stepsFailed} failed, ${divergences.length} divergences`);
+
+      // Publish event
+      platformEventBus.publish('ai_brain_action', {
+        action: 'execution_replayed',
+        replayId,
+        recordingId,
+        success: result.success,
+        stepsExecuted,
+        stepsFailed,
+        divergenceCount: divergences.length,
+      });
+
+      return result;
+
+    } catch (error) {
+      replayError = error instanceof Error ? error.message : 'Unknown error';
+      console.error(`[TrinityFabric] Replay ${replayId} failed:`, replayError);
+
+      return {
+        replayId,
+        recordingId,
+        success: false,
+        stepsExecuted,
+        stepsSkipped,
+        stepsFailed,
+        durationMs: Date.now() - startTime,
+        timeline,
+        divergences,
+        error: replayError,
+      };
+    }
+  }
+
+  /**
+   * Add a timeline entry during step execution
+   * Called internally to build execution timeline
+   */
+  private recordTimelineEntry(
+    manifestId: string,
+    entry: ExecutionTimelineEntry
+  ): void {
+    if (!this.activeTimelines.has(manifestId)) {
+      this.activeTimelines.set(manifestId, []);
+    }
+    this.activeTimelines.get(manifestId)!.push(entry);
+  }
+
+  /**
+   * Capture current environment state for recording
+   */
+  private captureEnvironmentSnapshot(): EnvironmentSnapshot {
+    const memoryUsage = process.memoryUsage();
+    return {
+      timestamp: new Date(),
+      nodeVersion: process.version,
+      platform: process.platform,
+      activeManifestCount: this.activeManifests.size,
+      memoryUsageMB: Math.round(memoryUsage.heapUsed / 1024 / 1024),
+      configHash: crypto.createHash('md5')
+        .update(JSON.stringify({
+          adapters: Array.from(capabilityAdapters.keys()),
+          manifestCount: this.activeManifests.size,
+        }))
+        .digest('hex').substring(0, 8),
+    };
+  }
+
+  /**
+   * Cleanup old recordings based on retention policy
+   */
+  private cleanupOldRecordings(): void {
+    const now = new Date();
+    const retentionMs = this.RECORDING_RETENTION_HOURS * 60 * 60 * 1000;
+    
+    const recordingsArray = Array.from(this.executionRecordings.entries());
+    
+    // Remove expired recordings
+    for (const [id, recording] of recordingsArray) {
+      const age = now.getTime() - recording.recordedAt.getTime();
+      if (age > retentionMs) {
+        this.executionRecordings.delete(id);
+        console.log(`[TrinityFabric] Cleaned up expired recording ${id}`);
+      }
+    }
+
+    // Enforce max recordings limit
+    if (this.executionRecordings.size > this.MAX_RECORDINGS) {
+      const sorted = recordingsArray.sort((a, b) => 
+        a[1].recordedAt.getTime() - b[1].recordedAt.getTime()
+      );
+      const toRemove = sorted.slice(0, this.executionRecordings.size - this.MAX_RECORDINGS);
+      for (const [id] of toRemove) {
+        this.executionRecordings.delete(id);
+        console.log(`[TrinityFabric] Cleaned up old recording ${id} (max limit)`);
+      }
+    }
+  }
+
+  /**
+   * Get a recording by ID
+   */
+  getRecording(recordingId: string): ExecutionRecording | undefined {
+    return this.executionRecordings.get(recordingId);
+  }
+
+  /**
+   * Get all recordings for a manifest
+   */
+  getRecordingsForManifest(manifestId: string): ExecutionRecording[] {
+    return Array.from(this.executionRecordings.values())
+      .filter(r => r.manifestId === manifestId);
+  }
+
+  /**
+   * Get recent recordings with optional filtering
+   */
+  getRecentRecordings(options?: {
+    limit?: number;
+    reason?: ExecutionRecording['reason'];
+    workspaceId?: string;
+  }): ExecutionRecording[] {
+    let recordings = Array.from(this.executionRecordings.values());
+    
+    if (options?.reason) {
+      recordings = recordings.filter(r => r.reason === options.reason);
+    }
+    if (options?.workspaceId) {
+      recordings = recordings.filter(r => r.manifest.workspaceId === options.workspaceId);
+    }
+    
+    recordings.sort((a, b) => b.recordedAt.getTime() - a.recordedAt.getTime());
+    
+    return recordings.slice(0, options?.limit ?? 20);
+  }
+
+  /**
+   * Get execution timeline for a manifest
+   */
+  getExecutionTimeline(manifestId: string): ExecutionTimelineEntry[] {
+    return this.activeTimelines.get(manifestId) || [];
+  }
+
+  /**
+   * Export recording for external storage/analysis
+   */
+  exportRecording(recordingId: string): string | null {
+    const recording = this.executionRecordings.get(recordingId);
+    if (!recording) return null;
+    
+    return JSON.stringify(recording, null, 2);
+  }
+
+  /**
+   * Import a recording from external source
+   */
+  importRecording(recordingJson: string): ExecutionRecording {
+    const recording: ExecutionRecording = JSON.parse(recordingJson);
+    
+    // Regenerate ID to avoid conflicts
+    recording.recordingId = `rec-imported-${crypto.randomUUID()}`;
+    recording.recordedAt = new Date(recording.recordedAt);
+    
+    this.executionRecordings.set(recording.recordingId, recording);
+    
+    console.log(`[TrinityFabric] Imported recording as ${recording.recordingId}`);
+    
+    return recording;
   }
 
   // ============================================================================
@@ -579,6 +1088,21 @@ class TrinityExecutionFabric {
         const stepResult = await this.executeStep(step, context, manifest);
         results.push(stepResult);
         
+        // Record timeline entry for audit-grade replay
+        this.recordTimelineEntry(manifestId, {
+          timestamp: new Date(),
+          stepId: step.id,
+          phase: manifest.phase,
+          action: step.action,
+          input: step.parameters,
+          output: stepResult.output,
+          durationMs: stepResult.durationMs,
+          success: stepResult.success,
+          error: stepResult.error,
+          retryAttempt: stepResult.retryAttempts,
+          memoryUsageMB: Math.round(process.memoryUsage().heapUsed / 1024 / 1024),
+        });
+        
         // Create rollback step if adapter supports it
         const adapter = capabilityAdapters.get(step.capability);
         if (adapter?.createRollback && stepResult.success) {
@@ -602,6 +1126,13 @@ class TrinityExecutionFabric {
       
       if (success) {
         manifest.phase = 'validating';
+      } else {
+        // Auto-record failed executions for audit and replay
+        try {
+          await this.recordExecution(manifestId, context, 'failure');
+        } catch (recordError) {
+          console.error(`[TrinityFabric] Failed to record execution for replay:`, recordError);
+        }
       }
       
       console.log(`[TrinityFabric] Execution ${success ? 'completed' : 'failed'} in ${durationMs}ms`);

@@ -706,4 +706,373 @@ interface AppliedCorrection {
   timestamp: Date;
 }
 
+// ============================================================================
+// TIGHT REFLECTION LOOPS - Automated Feedback & Learning
+// ============================================================================
+
+export interface LearningMetrics {
+  actionType: string;
+  totalExecutions: number;
+  successfulExecutions: number;
+  failedExecutions: number;
+  successRate: number;
+  averageConfidence: number;
+  confidenceCalibration: number; // How well confidence predicts success
+  lastUpdated: Date;
+}
+
+export interface FeedbackLoopResult {
+  loopId: string;
+  executionId: string;
+  reflectionId: string;
+  learningApplied: boolean;
+  metricsUpdated: string[];
+  confidenceAdjustment: number;
+  recommendations: string[];
+  processingTimeMs: number;
+}
+
+export interface ConfidenceCalibration {
+  actionType: string;
+  predictedConfidence: number;
+  actualOutcome: boolean;
+  calibrationScore: number;
+  adjustment: number;
+}
+
+class ReflectionFeedbackLoop {
+  private static instance: ReflectionFeedbackLoop;
+  private learningMetrics: Map<string, LearningMetrics> = new Map();
+  private calibrationHistory: ConfidenceCalibration[] = [];
+  private readonly MAX_CALIBRATION_HISTORY = 500;
+
+  static getInstance(): ReflectionFeedbackLoop {
+    if (!ReflectionFeedbackLoop.instance) {
+      ReflectionFeedbackLoop.instance = new ReflectionFeedbackLoop();
+    }
+    return ReflectionFeedbackLoop.instance;
+  }
+
+  /**
+   * Process execution completion and apply learning
+   * This is the core of the tight feedback loop
+   */
+  async processFeedback(
+    context: ReflectionContext,
+    reflection: ReflectionResult,
+    executionSuccess: boolean
+  ): Promise<FeedbackLoopResult> {
+    const loopId = `loop-${crypto.randomUUID()}`;
+    const startTime = Date.now();
+    const metricsUpdated: string[] = [];
+    const recommendations: string[] = [];
+
+    console.log(`[ReflectionFeedbackLoop] Processing feedback for execution ${context.executionId}`);
+
+    try {
+      // 1. Update learning metrics for each action type
+      for (const step of context.executedSteps) {
+        const actionType = step.action;
+        const metrics = this.getOrCreateMetrics(actionType);
+        
+        metrics.totalExecutions++;
+        if (executionSuccess) {
+          metrics.successfulExecutions++;
+        } else {
+          metrics.failedExecutions++;
+        }
+        metrics.successRate = metrics.successfulExecutions / metrics.totalExecutions;
+        metrics.lastUpdated = new Date();
+        
+        this.learningMetrics.set(actionType, metrics);
+        metricsUpdated.push(actionType);
+      }
+
+      // 2. Calibrate confidence based on actual outcome
+      const calibration = this.calibrateConfidence(
+        context.executedSteps.map(s => s.action).join(','),
+        reflection.confidenceScore,
+        executionSuccess
+      );
+
+      // 3. Generate recommendations based on learning
+      if (!executionSuccess) {
+        recommendations.push(...this.generateRecommendations(context, reflection));
+      }
+
+      // 4. Apply learning to memory service
+      await this.applyLearningToMemory(context, reflection, executionSuccess);
+
+      // 5. Update confidence model
+      const confidenceAdjustment = this.computeConfidenceAdjustment(
+        reflection.confidenceScore,
+        executionSuccess
+      );
+
+      const result: FeedbackLoopResult = {
+        loopId,
+        executionId: context.executionId,
+        reflectionId: reflection.reflectionId,
+        learningApplied: true,
+        metricsUpdated,
+        confidenceAdjustment,
+        recommendations,
+        processingTimeMs: Date.now() - startTime,
+      };
+
+      console.log(`[ReflectionFeedbackLoop] Feedback processed: ${metricsUpdated.length} metrics updated, ${recommendations.length} recommendations`);
+
+      // Publish learning event
+      platformEventBus.publish('ai_brain_action', {
+        action: 'feedback_loop_completed',
+        loopId,
+        executionId: context.executionId,
+        learningApplied: true,
+        metricsCount: metricsUpdated.length,
+      });
+
+      return result;
+
+    } catch (error) {
+      console.error('[ReflectionFeedbackLoop] Feedback processing failed:', error);
+      return {
+        loopId,
+        executionId: context.executionId,
+        reflectionId: reflection.reflectionId,
+        learningApplied: false,
+        metricsUpdated: [],
+        confidenceAdjustment: 0,
+        recommendations: [],
+        processingTimeMs: Date.now() - startTime,
+      };
+    }
+  }
+
+  /**
+   * Calibrate confidence predictions based on actual outcomes
+   */
+  private calibrateConfidence(
+    actionType: string,
+    predictedConfidence: number,
+    actualOutcome: boolean
+  ): ConfidenceCalibration {
+    const expectedOutcome = predictedConfidence >= 0.5;
+    const wasCorrect = expectedOutcome === actualOutcome;
+    
+    const calibrationScore = wasCorrect ? 1 : 0;
+    const adjustment = actualOutcome 
+      ? Math.max(0, 1 - predictedConfidence) * 0.1  // Under-confident
+      : Math.min(0, -predictedConfidence * 0.1);    // Over-confident
+
+    const calibration: ConfidenceCalibration = {
+      actionType,
+      predictedConfidence,
+      actualOutcome,
+      calibrationScore,
+      adjustment,
+    };
+
+    this.calibrationHistory.push(calibration);
+    
+    // Enforce max history
+    if (this.calibrationHistory.length > this.MAX_CALIBRATION_HISTORY) {
+      this.calibrationHistory = this.calibrationHistory.slice(-this.MAX_CALIBRATION_HISTORY);
+    }
+
+    // Update metrics with calibration info
+    const metrics = this.learningMetrics.get(actionType);
+    if (metrics) {
+      const recentCalibrations = this.calibrationHistory
+        .filter(c => c.actionType === actionType)
+        .slice(-50);
+      
+      if (recentCalibrations.length > 0) {
+        metrics.confidenceCalibration = recentCalibrations.reduce(
+          (sum, c) => sum + c.calibrationScore, 0
+        ) / recentCalibrations.length;
+        metrics.averageConfidence = recentCalibrations.reduce(
+          (sum, c) => sum + c.predictedConfidence, 0
+        ) / recentCalibrations.length;
+      }
+    }
+
+    return calibration;
+  }
+
+  /**
+   * Generate recommendations based on failure patterns
+   */
+  private generateRecommendations(
+    context: ReflectionContext,
+    reflection: ReflectionResult
+  ): string[] {
+    const recommendations: string[] = [];
+
+    // Check for repeated failure patterns
+    for (const issue of reflection.issues) {
+      if (issue.severity === 'critical' || issue.severity === 'error') {
+        if (issue.category === 'schema_mismatch') {
+          recommendations.push('Consider adding schema validation before execution');
+        }
+        if (issue.category === 'logic_error') {
+          recommendations.push('Review step dependencies and execution order');
+        }
+        if (issue.category === 'incomplete_output') {
+          recommendations.push('Increase retry count or add fallback mechanisms');
+        }
+      }
+    }
+
+    // Check metrics for historically problematic actions
+    for (const step of context.executedSteps) {
+      const metrics = this.learningMetrics.get(step.action);
+      if (metrics && metrics.successRate < 0.5 && metrics.totalExecutions >= 5) {
+        recommendations.push(
+          `Action '${step.action}' has low success rate (${(metrics.successRate * 100).toFixed(1)}%). Consider alternative approaches.`
+        );
+      }
+    }
+
+    return recommendations;
+  }
+
+  /**
+   * Compute confidence adjustment based on prediction accuracy
+   */
+  private computeConfidenceAdjustment(
+    predictedConfidence: number,
+    actualOutcome: boolean
+  ): number {
+    if (actualOutcome) {
+      // Success: increase confidence if we were under-confident
+      return predictedConfidence < 0.8 ? 0.05 : 0;
+    } else {
+      // Failure: decrease confidence proportionally to how confident we were
+      return -predictedConfidence * 0.1;
+    }
+  }
+
+  /**
+   * Apply learning insights to Trinity memory for long-term retention
+   */
+  private async applyLearningToMemory(
+    context: ReflectionContext,
+    reflection: ReflectionResult,
+    success: boolean
+  ): Promise<void> {
+    try {
+      const learningEntry = {
+        type: success ? 'success_pattern' : 'failure_pattern',
+        executionId: context.executionId,
+        intent: context.originalIntent,
+        confidenceScore: reflection.confidenceScore,
+        issueCategories: reflection.issues.map(i => i.category),
+        timestamp: new Date().toISOString(),
+      };
+
+      await trinityMemoryService.storeInsight({
+        workspaceId: context.workspaceId,
+        userId: context.userId,
+        insightType: 'learning',
+        content: JSON.stringify(learningEntry),
+        confidenceScore: reflection.confidenceScore,
+      });
+    } catch (error) {
+      console.error('[ReflectionFeedbackLoop] Failed to store learning in memory:', error);
+    }
+  }
+
+  /**
+   * Get or create metrics for an action type
+   */
+  private getOrCreateMetrics(actionType: string): LearningMetrics {
+    if (!this.learningMetrics.has(actionType)) {
+      this.learningMetrics.set(actionType, {
+        actionType,
+        totalExecutions: 0,
+        successfulExecutions: 0,
+        failedExecutions: 0,
+        successRate: 0,
+        averageConfidence: 0,
+        confidenceCalibration: 0,
+        lastUpdated: new Date(),
+      });
+    }
+    return this.learningMetrics.get(actionType)!;
+  }
+
+  /**
+   * Get metrics for an action type
+   */
+  getMetrics(actionType: string): LearningMetrics | undefined {
+    return this.learningMetrics.get(actionType);
+  }
+
+  /**
+   * Get all learning metrics
+   */
+  getAllMetrics(): LearningMetrics[] {
+    return Array.from(this.learningMetrics.values());
+  }
+
+  /**
+   * Get calibration summary
+   */
+  getCalibrationSummary(): {
+    totalCalibrations: number;
+    averageCalibrationScore: number;
+    overconfidentRate: number;
+    underconfidentRate: number;
+  } {
+    if (this.calibrationHistory.length === 0) {
+      return {
+        totalCalibrations: 0,
+        averageCalibrationScore: 0,
+        overconfidentRate: 0,
+        underconfidentRate: 0,
+      };
+    }
+
+    const total = this.calibrationHistory.length;
+    const avgScore = this.calibrationHistory.reduce((sum, c) => sum + c.calibrationScore, 0) / total;
+    const overconfident = this.calibrationHistory.filter(
+      c => c.predictedConfidence > 0.5 && !c.actualOutcome
+    ).length / total;
+    const underconfident = this.calibrationHistory.filter(
+      c => c.predictedConfidence < 0.5 && c.actualOutcome
+    ).length / total;
+
+    return {
+      totalCalibrations: total,
+      averageCalibrationScore: avgScore,
+      overconfidentRate: overconfident,
+      underconfidentRate: underconfident,
+    };
+  }
+
+  /**
+   * Get adjusted confidence for an action based on historical performance
+   */
+  getAdjustedConfidence(actionType: string, baseConfidence: number): number {
+    const metrics = this.learningMetrics.get(actionType);
+    if (!metrics || metrics.totalExecutions < 5) {
+      return baseConfidence; // Not enough data
+    }
+
+    // Blend base confidence with historical success rate
+    const historicalWeight = Math.min(0.3, metrics.totalExecutions / 100);
+    return baseConfidence * (1 - historicalWeight) + metrics.successRate * historicalWeight;
+  }
+
+  /**
+   * Reset learning metrics (for testing)
+   */
+  resetMetrics(): void {
+    this.learningMetrics.clear();
+    this.calibrationHistory = [];
+    console.log('[ReflectionFeedbackLoop] Learning metrics reset');
+  }
+}
+
+export const reflectionFeedbackLoop = ReflectionFeedbackLoop.getInstance();
 export const selfReflectionEngine = SelfReflectionEngine.getInstance();
