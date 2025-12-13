@@ -20,6 +20,7 @@ import { aiBrainFileSystemTools } from '../services/ai-brain/aiBrainFileSystemTo
 import { aiBrainWorkflowExecutor } from '../services/ai-brain/aiBrainWorkflowExecutor';
 import { aiBrainTestRunner } from '../services/ai-brain/aiBrainTestRunner';
 import { aiBrainService } from '../services/ai-brain/aiBrainService';
+import { trinitySelfAssessment } from '../services/ai-brain/trinitySelfAssessment';
 import { db } from '../db';
 import { auditLogs } from '@shared/schema';
 import { broadcastToAllClients } from '../websocket';
@@ -484,6 +485,35 @@ aiBrainConsoleRouter.get('/status', requireSupportRole, async (req: Authenticate
     });
   } catch (error: any) {
     console.error('[AIBrainConsole] Status error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * GET /api/ai-brain/console/self-assessment
+ * Trinity performs comprehensive self-assessment of capabilities and gaps
+ */
+aiBrainConsoleRouter.get('/self-assessment', requireSupportRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.id || 'support';
+    const workspaceId = req.user?.currentWorkspaceId;
+    
+    console.log(`[AIBrainConsole] Self-assessment requested by ${userId}`);
+    
+    const result = await trinitySelfAssessment.performAssessment(workspaceId);
+    
+    await logConsoleAction(userId, 'self_assessment', { 
+      assessmentId: result.assessmentId,
+      readiness: result.overallReadiness,
+      criticalGaps: result.criticalGaps
+    });
+
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error: any) {
+    console.error('[AIBrainConsole] Self-assessment error:', error);
     res.status(500).json({ error: error.message });
   }
 });
