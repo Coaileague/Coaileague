@@ -21,6 +21,7 @@
 import { dataMigrationAgent, type ExtractedData, type MigrationResult } from './dataMigrationAgent';
 import { gamificationActivationAgent, type ActivationResult, AUTOMATION_GATES } from './gamificationActivationAgent';
 import { cognitiveOnboardingService, type IntegrationProvider, type DataSyncType } from '../cognitiveOnboardingService';
+import { industryComplianceTemplates, type IndustryComplianceConfig } from '../industryComplianceTemplates';
 import { db } from '../../../db';
 import { workspaces, notifications } from '@shared/schema';
 import { eq } from 'drizzle-orm';
@@ -156,6 +157,23 @@ class OnboardingOrchestrator {
             result.summary.automationGatesUnlocked = gamificationResult.automationGatesUnlocked;
             if (gamificationResult.errors.length > 0) {
               result.errors.push(...gamificationResult.errors);
+            }
+          })
+        );
+      }
+
+      // Task 3: Industry Compliance Deployment (if workspace has industry selected)
+      if (workspace.subIndustryId) {
+        parallelTasks.push(
+          this.deployIndustryCompliance({
+            workspaceId,
+            subIndustryId: workspace.subIndustryId,
+            userId,
+          }).then(complianceResult => {
+            if (!complianceResult.success) {
+              result.warnings.push(...complianceResult.errors);
+            } else {
+              console.log(`[OnboardingOrchestrator] Industry compliance deployed: ${complianceResult.templatesDeployed.length} templates, ${complianceResult.requirementsCreated} requirements`);
             }
           })
         );
@@ -999,6 +1017,146 @@ class OnboardingOrchestrator {
         dataImported: false,
         errors,
         recommendations: ['Debug the error and try again'],
+      };
+    }
+  }
+
+  /**
+   * Deploy industry-specific compliance templates for a workspace
+   * Called when organization selects their industry during onboarding
+   */
+  async deployIndustryCompliance(params: {
+    workspaceId: string;
+    subIndustryId: string;
+    userId: string;
+  }): Promise<{
+    success: boolean;
+    complianceConfig: IndustryComplianceConfig | null;
+    templatesDeployed: string[];
+    requirementsCreated: number;
+    errors: string[];
+  }> {
+    const { workspaceId, subIndustryId, userId } = params;
+    const errors: string[] = [];
+
+    console.log(`[OnboardingOrchestrator] Deploying industry compliance for workspace ${workspaceId}, sub-industry ${subIndustryId}`);
+
+    try {
+      // Get compliance configuration for the selected sub-industry
+      const complianceConfig = industryComplianceTemplates.getComplianceConfigForSubIndustry(subIndustryId);
+      
+      if (!complianceConfig) {
+        errors.push(`No compliance configuration found for sub-industry: ${subIndustryId}`);
+        return {
+          success: false,
+          complianceConfig: null,
+          templatesDeployed: [],
+          requirementsCreated: 0,
+          errors,
+        };
+      }
+
+      // Deploy the compliance templates to the workspace
+      const deployResult = await industryComplianceTemplates.deployComplianceTemplates({
+        workspaceId,
+        subIndustryId,
+        userId,
+      });
+
+      if (!deployResult.success) {
+        errors.push(...deployResult.errors);
+      }
+
+      console.log(`[OnboardingOrchestrator] Industry compliance deployed:`, {
+        workspaceId,
+        subIndustryId,
+        templatesDeployed: deployResult.templatesDeployed.length,
+        requirementsCreated: deployResult.requirementsCreated,
+      });
+
+      return {
+        success: deployResult.success,
+        complianceConfig,
+        templatesDeployed: deployResult.templatesDeployed,
+        requirementsCreated: deployResult.requirementsCreated,
+        errors,
+      };
+
+    } catch (error: any) {
+      console.error('[OnboardingOrchestrator] Industry compliance deployment failed:', error);
+      errors.push(error.message);
+      return {
+        success: false,
+        complianceConfig: null,
+        templatesDeployed: [],
+        requirementsCreated: 0,
+        errors,
+      };
+    }
+  }
+
+  /**
+   * Get industry compliance status for a workspace
+   */
+  async getIndustryComplianceStatus(workspaceId: string): Promise<{
+    industryConfigured: boolean;
+    subIndustryId: string | null;
+    subIndustryName: string | null;
+    sectorName: string | null;
+    templatesActive: string[];
+    complianceSummary: {
+      totalTemplates: number;
+      totalRequirements: number;
+      byCategory: Record<string, number>;
+      byPriority: Record<string, number>;
+      criticalItems: string[];
+    } | null;
+    requiredCertifications: { id: string; fromTemplate: string }[];
+  }> {
+    try {
+      const [workspace] = await db.select()
+        .from(workspaces)
+        .where(eq(workspaces.id, workspaceId))
+        .limit(1);
+
+      if (!workspace || !workspace.subIndustryId) {
+        return {
+          industryConfigured: false,
+          subIndustryId: null,
+          subIndustryName: null,
+          sectorName: null,
+          templatesActive: [],
+          complianceSummary: null,
+          requiredCertifications: [],
+        };
+      }
+
+      const templates = workspace.industryComplianceTemplates || [];
+      const complianceSummary = industryComplianceTemplates.getComplianceSummaryForWorkspace(workspaceId, templates);
+      const requiredCertifications = industryComplianceTemplates.getRequiredCertifications(templates);
+
+      const taxonomy = industryComplianceTemplates.getSubIndustryFromTaxonomy(workspace.subIndustryId);
+
+      return {
+        industryConfigured: true,
+        subIndustryId: workspace.subIndustryId,
+        subIndustryName: taxonomy?.subIndustry.name || null,
+        sectorName: taxonomy?.sector.name || null,
+        templatesActive: templates,
+        complianceSummary,
+        requiredCertifications,
+      };
+
+    } catch (error: any) {
+      console.error('[OnboardingOrchestrator] Failed to get industry compliance status:', error);
+      return {
+        industryConfigured: false,
+        subIndustryId: null,
+        subIndustryName: null,
+        sectorName: null,
+        templatesActive: [],
+        complianceSummary: null,
+        requiredCertifications: [],
       };
     }
   }
