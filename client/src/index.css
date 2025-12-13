@@ -2058,7 +2058,7 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
     animation: shimmer 4s infinite;
   }
 
-  /* Hide scrollbars while maintaining scroll functionality */
+  /* Hide scrollbars utility class (opt-in only, NOT global) */
   .scrollbar-hide {
     -ms-overflow-style: none;  /* IE and Edge */
     scrollbar-width: none;  /* Firefox */
@@ -2068,14 +2068,50 @@ body[data-public-route="true"] .fixed.inset-0.bg-background {
     display: none;  /* Chrome, Safari, Opera */
   }
 
-  /* Hide ALL scrollbars by default across the entire app */
-  * {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
-  }
-  
-  *::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari, Opera */
+  /* Custom styled scrollbar for desktop - visible and professional */
+  @media (min-width: 768px) {
+    /* Main scrollable areas get a styled scrollbar */
+    main, .scroll-container, [data-scroll="styled"] {
+      scrollbar-width: thin;  /* Firefox */
+      scrollbar-color: hsl(var(--muted-foreground) / 0.3) transparent;  /* Firefox */
+    }
+    
+    main::-webkit-scrollbar,
+    .scroll-container::-webkit-scrollbar,
+    [data-scroll="styled"]::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    
+    main::-webkit-scrollbar-track,
+    .scroll-container::-webkit-scrollbar-track,
+    [data-scroll="styled"]::-webkit-scrollbar-track {
+      background: transparent;
+      border-radius: 4px;
+    }
+    
+    main::-webkit-scrollbar-thumb,
+    .scroll-container::-webkit-scrollbar-thumb,
+    [data-scroll="styled"]::-webkit-scrollbar-thumb {
+      background: hsl(var(--muted-foreground) / 0.3);
+      border-radius: 4px;
+      border: 2px solid transparent;
+      background-clip: padding-box;
+    }
+    
+    main::-webkit-scrollbar-thumb:hover,
+    .scroll-container::-webkit-scrollbar-thumb:hover,
+    [data-scroll="styled"]::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--muted-foreground) / 0.5);
+      background-clip: padding-box;
+    }
+    
+    /* Corner piece when both scrollbars are visible */
+    main::-webkit-scrollbar-corner,
+    .scroll-container::-webkit-scrollbar-corner,
+    [data-scroll="styled"]::-webkit-scrollbar-corner {
+      background: transparent;
+    }
   }
 
   /* ========================================================================

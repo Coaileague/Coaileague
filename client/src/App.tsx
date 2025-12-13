@@ -937,7 +937,7 @@ function AppContent() {
           )}
           
           {/* Main content area - with bottom nav padding */}
-          <main className="flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide min-h-0 w-full max-w-full pb-20">
+          <main className="flex-1 overflow-x-hidden overflow-y-auto min-h-0 w-full max-w-full pb-20">
             <Switch>
               <Route path="/" component={Dashboard} />
               <Route path="/login">
@@ -1234,8 +1234,8 @@ function AppContent() {
               <AppUtilityCluster setLocation={setLocation} />
             )}
 
-              {/* Main content area */}
-              <main className="flex-1 overflow-x-hidden overflow-y-auto scrollbar-hide bg-white min-h-0 w-full max-w-full">
+              {/* Main content area - visible scrollbar for desktop users */}
+              <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background min-h-0 w-full max-w-full" data-scroll="styled">
                 {/* Breadcrumb Navigation - helps users know where they are (desktop only) */}
                 {!isMobileChat && !isHelpDesk && !isMobile && false && <PageBreadcrumb />}
               
