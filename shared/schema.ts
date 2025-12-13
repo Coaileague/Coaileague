@@ -19626,3 +19626,46 @@ export function getConfidenceLevel(score: number): 'none' | 'low' | 'medium' | '
   if (score < 0.95) return 'high';
   return 'certain';
 }
+
+// ============================================================================
+// TRINITY UNIFIED TASK SCHEMA - Re-exports
+// ============================================================================
+
+export {
+  // Enums
+  trinityTaskStatusEnum,
+  trinityTaskPhaseEnum,
+  trinityStepStatusEnum,
+  trinityRiskLevelEnum,
+  
+  // Zod Schemas
+  TrinityIntentSchema,
+  TrinityToolCallSchema,
+  TrinityTaskStepSchema,
+  TrinityReflectionSchema,
+  TrinityTaskOutputSchema,
+  TrinityStateTransitionSchema,
+  TrinityTaskSchema,
+  
+  // Types
+  type TrinityIntent,
+  type TrinityToolCall,
+  type TrinityTaskStep,
+  type TrinityReflection,
+  type TrinityTaskOutput,
+  type TrinityStateTransition,
+  type TrinityTask,
+  
+  // Database table and types
+  aiBrainTasks,
+  insertAiBrainTaskSchema,
+  type InsertAiBrainTask,
+  type AiBrainTask,
+  
+  // Conversion utilities
+  fromSubagentContext,
+  fromAgentExecutionContext,
+  stepsFromExecutionPlan,
+  toSubagentExecutionResult,
+  createTrinityTask,
+} from './trinityTaskSchema';
