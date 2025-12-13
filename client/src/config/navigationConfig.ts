@@ -50,7 +50,7 @@ export const navConfig = {
     create: "/create-org",
     settings: "/workspace",
     billing: "/billing",
-    usage: "/usage-dashboard",
+    usage: "/usage",
     health: "/health-check",
   },
 
