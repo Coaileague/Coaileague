@@ -58,7 +58,13 @@ endUserControlRouter.get('/workspaces', requireSupportRole, async (req: Authenti
 
     const searchPattern = `%${query}%`;
 
-    const results = await db.select({
+    // Find workspace IDs that have a user with matching email
+    const workspaceIdsWithMatchingUser = db
+      .select({ workspaceId: users.currentWorkspaceId })
+      .from(users)
+      .where(ilike(users.email, searchPattern));
+
+    const results = await db.selectDistinct({
       id: workspaces.id,
       name: workspaces.name,
       companyName: workspaces.companyName,
@@ -78,7 +84,8 @@ endUserControlRouter.get('/workspaces', requireSupportRole, async (req: Authenti
       or(
         ilike(workspaces.name, searchPattern),
         ilike(workspaces.companyName, searchPattern),
-        ilike(workspaces.organizationId, searchPattern)
+        ilike(workspaces.organizationId, searchPattern),
+        sql`${workspaces.id} IN (${workspaceIdsWithMatchingUser})`
       )
     )
     .limit(20);
