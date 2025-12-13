@@ -19628,6 +19628,383 @@ export function getConfidenceLevel(score: number): 'none' | 'low' | 'medium' | '
 }
 
 // ============================================================================
+// PLATFORM COMPONENT REGISTRY (PCR) - Trinity Full Platform Awareness
+// ============================================================================
+
+/**
+ * Component domain categories for Trinity awareness
+ */
+export const componentDomainEnum = pgEnum('component_domain', [
+  'schema',        // Database schema definitions
+  'service',       // Backend services
+  'handler',       // Request handlers
+  'hook',          // React hooks
+  'page',          // Frontend pages
+  'component',     // UI components
+  'manager',       // State managers
+  'loader',        // Loading/async components
+  'utility',       // Utility functions
+  'asset',         // Static assets (images, fonts, etc.)
+  'config',        // Configuration files
+  'test',          // Test files
+  'subagent',      // AI Brain subagents
+  'orchestration', // Orchestration services
+]);
+
+/**
+ * Component criticality levels
+ */
+export const componentCriticalityEnum = pgEnum('component_criticality', [
+  'critical',   // System-breaking if fails
+  'core',       // Core functionality
+  'feature',    // Feature-level importance
+  'utility',    // Helper/utility level
+  'cosmetic',   // UI/UX only
+]);
+
+/**
+ * Gap finding severity levels
+ */
+export const gapSeverityEnum = pgEnum('gap_severity', [
+  'critical',   // System-breaking, immediate fix needed
+  'high',       // Major functionality affected
+  'medium',     // Feature affected but workarounds exist
+  'low',        // Minor issues or improvements
+  'info',       // Informational findings
+]);
+
+/**
+ * Gap finding types
+ */
+export const gapTypeEnum = pgEnum('gap_type', [
+  'typescript_error',   // TypeScript compilation errors
+  'schema_mismatch',    // Database schema mismatches
+  'code_quality',       // Code quality issues
+  'missing_handler',    // Missing route/handler
+  'missing_hook',       // Missing or broken hook
+  'missing_component',  // Missing UI component
+  'orphaned_file',      // Unused/orphaned file
+  'security_issue',     // Security vulnerability
+  'performance_issue',  // Performance bottleneck
+  'accessibility',      // A11y violations
+  'visual_anomaly',     // Visual QA findings
+  'log_error',          // Errors detected in logs
+  'integration_gap',    // Missing integration
+  'capability_gap',     // Missing AI capability
+]);
+
+/**
+ * Workflow approval status
+ */
+export const workflowApprovalStatusEnum = pgEnum('workflow_approval_status', [
+  'pending',     // Awaiting approval
+  'approved',    // Approved by authorized user
+  'rejected',    // Rejected by authorized user
+  'expired',     // Approval window expired
+  'executed',    // Fix has been applied
+  'failed',      // Fix execution failed
+  'rolled_back', // Fix was rolled back
+]);
+
+/**
+ * Platform Component Registry - Central registry of all platform components
+ * Trinity uses this to find, understand, and fix any component
+ */
+export const aiComponentRegistry = pgTable("ai_component_registry", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Component identification
+  filePath: varchar("file_path", { length: 500 }).notNull().unique(),
+  componentName: varchar("component_name", { length: 200 }).notNull(),
+  displayName: varchar("display_name", { length: 200 }), // Human-friendly name for UNS
+  
+  // Classification
+  domain: componentDomainEnum("domain").notNull(),
+  criticality: componentCriticalityEnum("criticality").default("utility"),
+  
+  // Ownership and context
+  ownerService: varchar("owner_service", { length: 100 }), // Which service owns this
+  ownerSubagent: varchar("owner_subagent", { length: 100 }), // Which subagent manages this
+  
+  // Content metadata
+  description: text("description"), // AI-generated or manual description
+  exports: text("exports").array().default(sql`ARRAY[]::text[]`), // Exported symbols
+  dependencies: text("dependencies").array().default(sql`ARRAY[]::text[]`), // Import dependencies
+  dependents: text("dependents").array().default(sql`ARRAY[]::text[]`), // Files that depend on this
+  
+  // Version tracking
+  lastCommitHash: varchar("last_commit_hash", { length: 40 }),
+  lastModifiedAt: timestamp("last_modified_at"),
+  lastScannedAt: timestamp("last_scanned_at"),
+  
+  // Trinity awareness metadata
+  trinityNotes: text("trinity_notes"), // Notes for Trinity about this component
+  fixPriority: integer("fix_priority").default(50), // 1-100, higher = more important to fix
+  autoFixAllowed: boolean("auto_fix_allowed").default(false), // Can Trinity auto-fix without approval?
+  
+  // Statistics
+  errorCount: integer("error_count").default(0),
+  warningCount: integer("warning_count").default(0),
+  lastErrorAt: timestamp("last_error_at"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("pcr_file_path_idx").on(table.filePath),
+  index("pcr_domain_idx").on(table.domain),
+  index("pcr_criticality_idx").on(table.criticality),
+  index("pcr_owner_service_idx").on(table.ownerService),
+  index("pcr_owner_subagent_idx").on(table.ownerSubagent),
+]);
+
+export const insertAiComponentRegistrySchema = createInsertSchema(aiComponentRegistry).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiComponentRegistry = z.infer<typeof insertAiComponentRegistrySchema>;
+export type AiComponentRegistry = typeof aiComponentRegistry.$inferSelect;
+
+/**
+ * Component Tags - Flexible tagging for component discovery
+ */
+export const aiComponentTags = pgTable("ai_component_tags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  componentId: varchar("component_id").notNull().references(() => aiComponentRegistry.id, { onDelete: 'cascade' }),
+  tag: varchar("tag", { length: 100 }).notNull(),
+  tagCategory: varchar("tag_category", { length: 50 }), // 'feature', 'tech', 'status', etc.
+  addedBy: varchar("added_by", { length: 50 }).default("scanner"), // 'scanner', 'manual', 'trinity'
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("pct_component_idx").on(table.componentId),
+  index("pct_tag_idx").on(table.tag),
+  uniqueIndex("pct_component_tag_unique").on(table.componentId, table.tag),
+]);
+
+export const insertAiComponentTagSchema = createInsertSchema(aiComponentTags).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAiComponentTag = z.infer<typeof insertAiComponentTagSchema>;
+export type AiComponentTag = typeof aiComponentTags.$inferSelect;
+
+/**
+ * Capability Links - Maps components to AI Brain capabilities they enable
+ */
+export const aiCapabilityLinks = pgTable("ai_capability_links", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  componentId: varchar("component_id").notNull().references(() => aiComponentRegistry.id, { onDelete: 'cascade' }),
+  
+  // Capability reference
+  capabilityAction: varchar("capability_action", { length: 200 }).notNull(), // e.g., 'scheduling.forecast_staffing'
+  capabilityDomain: varchar("capability_domain", { length: 100 }), // e.g., 'scheduling'
+  
+  // Relationship type
+  relationshipType: varchar("relationship_type", { length: 50 }).default("provides"), // 'provides', 'requires', 'extends'
+  
+  // Metadata
+  description: text("description"),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("pcl_component_idx").on(table.componentId),
+  index("pcl_capability_idx").on(table.capabilityAction),
+  index("pcl_domain_idx").on(table.capabilityDomain),
+]);
+
+export const insertAiCapabilityLinkSchema = createInsertSchema(aiCapabilityLinks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAiCapabilityLink = z.infer<typeof insertAiCapabilityLinkSchema>;
+export type AiCapabilityLink = typeof aiCapabilityLinks.$inferSelect;
+
+/**
+ * Gap Findings - Issues detected by Trinity's intelligence systems
+ */
+export const aiGapFindings = pgTable("ai_gap_findings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Location
+  componentId: varchar("component_id").references(() => aiComponentRegistry.id, { onDelete: 'set null' }),
+  filePath: varchar("file_path", { length: 500 }),
+  lineNumber: integer("line_number"),
+  columnNumber: integer("column_number"),
+  
+  // Classification
+  gapType: gapTypeEnum("gap_type").notNull(),
+  severity: gapSeverityEnum("severity").notNull(),
+  domain: componentDomainEnum("domain"),
+  
+  // Details
+  title: varchar("title", { length: 300 }).notNull(),
+  description: text("description").notNull(),
+  technicalDetails: text("technical_details"), // Full error message, stack trace, etc.
+  endUserSummary: text("end_user_summary"), // Human-friendly summary for UNS
+  
+  // Detection metadata
+  detectedBy: varchar("detected_by", { length: 100 }).notNull(), // Which scanner/subagent found this
+  detectionMethod: varchar("detection_method", { length: 100 }), // 'typescript_lsp', 'visual_qa', 'log_scan', etc.
+  detectionConfidence: decimal("detection_confidence", { precision: 5, scale: 4 }).default("1.0"),
+  
+  // Evidence
+  screenshotUrl: varchar("screenshot_url", { length: 500 }), // Visual QA screenshot
+  logExcerpt: text("log_excerpt"), // Relevant log lines
+  codeSnippet: text("code_snippet"), // Relevant code
+  
+  // Suggested fix
+  suggestedFix: text("suggested_fix"), // AI-generated fix suggestion
+  suggestedFixAgent: varchar("suggested_fix_agent", { length: 100 }), // Which subagent should fix this
+  fixComplexity: varchar("fix_complexity", { length: 20 }).default("medium"), // 'trivial', 'simple', 'medium', 'complex', 'major'
+  estimatedFixMinutes: integer("estimated_fix_minutes"),
+  
+  // Status tracking
+  status: varchar("status", { length: 50 }).default("open"), // 'open', 'in_progress', 'fixed', 'wont_fix', 'duplicate'
+  fixedAt: timestamp("fixed_at"),
+  fixedBy: varchar("fixed_by", { length: 100 }), // User ID or subagent ID
+  fixCommitHash: varchar("fix_commit_hash", { length: 40 }),
+  
+  // Approval workflow
+  approvalRequestId: varchar("approval_request_id"),
+  requiresApproval: boolean("requires_approval").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("gf_component_idx").on(table.componentId),
+  index("gf_file_path_idx").on(table.filePath),
+  index("gf_gap_type_idx").on(table.gapType),
+  index("gf_severity_idx").on(table.severity),
+  index("gf_status_idx").on(table.status),
+  index("gf_detected_by_idx").on(table.detectedBy),
+  index("gf_created_idx").on(table.createdAt),
+]);
+
+export const insertAiGapFindingSchema = createInsertSchema(aiGapFindings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiGapFinding = z.infer<typeof insertAiGapFindingSchema>;
+export type AiGapFinding = typeof aiGapFindings.$inferSelect;
+
+/**
+ * Workflow Approvals - Human-in-the-loop approval for autonomous fixes
+ */
+export const aiWorkflowApprovals = pgTable("ai_workflow_approvals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // What needs approval
+  gapFindingId: varchar("gap_finding_id").references(() => aiGapFindings.id, { onDelete: 'cascade' }),
+  workOrderId: varchar("work_order_id"),
+  
+  // Approval details
+  title: varchar("title", { length: 300 }).notNull(),
+  description: text("description").notNull(),
+  endUserSummary: text("end_user_summary"), // Human-friendly for UNS
+  
+  // What will be changed
+  affectedFiles: text("affected_files").array().default(sql`ARRAY[]::text[]`),
+  proposedChanges: jsonb("proposed_changes"), // Diff or change description
+  rollbackPlan: text("rollback_plan"),
+  
+  // Risk assessment
+  riskLevel: varchar("risk_level", { length: 20 }).default("medium"), // 'low', 'medium', 'high', 'critical'
+  impactScope: varchar("impact_scope", { length: 50 }), // 'single_file', 'feature', 'module', 'platform_wide'
+  estimatedDowntime: varchar("estimated_downtime", { length: 50 }),
+  
+  // Approval requirements
+  requiredRole: varchar("required_role", { length: 50 }).default("support_manager"), // Min role to approve
+  requiredApprovers: integer("required_approvers").default(1),
+  expiresAt: timestamp("expires_at"), // Approval expires after this time
+  
+  // Status
+  status: workflowApprovalStatusEnum("status").default("pending"),
+  
+  // Approval tracking
+  approvedBy: varchar("approved_by"),
+  approvedAt: timestamp("approved_at"),
+  approvalNotes: text("approval_notes"),
+  rejectedBy: varchar("rejected_by"),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Execution tracking
+  executedAt: timestamp("executed_at"),
+  executionResult: jsonb("execution_result"),
+  executionError: text("execution_error"),
+  commitHash: varchar("commit_hash", { length: 40 }),
+  workflowRestarted: boolean("workflow_restarted").default(false),
+  
+  // UNS notification
+  unsNotificationId: varchar("uns_notification_id"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("wa_gap_finding_idx").on(table.gapFindingId),
+  index("wa_work_order_idx").on(table.workOrderId),
+  index("wa_status_idx").on(table.status),
+  index("wa_expires_idx").on(table.expiresAt),
+  index("wa_created_idx").on(table.createdAt),
+]);
+
+export const insertAiWorkflowApprovalSchema = createInsertSchema(aiWorkflowApprovals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAiWorkflowApproval = z.infer<typeof insertAiWorkflowApprovalSchema>;
+export type AiWorkflowApproval = typeof aiWorkflowApprovals.$inferSelect;
+
+/**
+ * Trinity Self-Awareness Facts - Trinity's knowledge about herself and the platform
+ */
+export const trinitySelfAwareness = pgTable("trinity_self_awareness", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Fact categorization
+  category: varchar("category", { length: 100 }).notNull(), // 'persona', 'capability', 'constraint', 'platform', 'history'
+  subcategory: varchar("subcategory", { length: 100 }),
+  
+  // Fact content
+  factKey: varchar("fact_key", { length: 200 }).notNull(),
+  factValue: text("fact_value").notNull(),
+  factType: varchar("fact_type", { length: 50 }).default("text"), // 'text', 'json', 'number', 'boolean', 'list'
+  
+  // Metadata
+  source: varchar("source", { length: 100 }).default("system"), // 'system', 'learned', 'configured'
+  confidence: decimal("confidence", { precision: 5, scale: 4 }).default("1.0"),
+  lastVerifiedAt: timestamp("last_verified_at"),
+  
+  // Versioning
+  version: integer("version").default(1),
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("tsa_category_idx").on(table.category),
+  index("tsa_fact_key_idx").on(table.factKey),
+  uniqueIndex("tsa_category_key_unique").on(table.category, table.factKey),
+]);
+
+export const insertTrinitySelfAwarenessSchema = createInsertSchema(trinitySelfAwareness).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTrinitySelfAwareness = z.infer<typeof insertTrinitySelfAwarenessSchema>;
+export type TrinitySelfAwareness = typeof trinitySelfAwareness.$inferSelect;
+
+// ============================================================================
 // TRINITY UNIFIED TASK SCHEMA - Re-exports
 // ============================================================================
 
