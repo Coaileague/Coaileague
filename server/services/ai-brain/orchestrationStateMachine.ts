@@ -31,6 +31,7 @@ import {
 import { trinityWorkOrderIntake, type WorkOrder } from './trinityWorkOrderSystem';
 import { trinityExecutionFabric, type ExecutionManifest } from './trinityExecutionFabric';
 import { aiBrainAuthorizationService } from './aiBrainAuthorizationService';
+import { toolCapabilityRegistry, type ToolValidationResult } from './toolCapabilityRegistry';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -511,6 +512,138 @@ class OrchestrationStateMachine {
   }
 
   // =========================================================================
+  // TOOL CAPABILITY REGISTRY INTEGRATION
+  // =========================================================================
+
+  /**
+   * Validate tools before execution using ToolCapabilityRegistry
+   * Enforces health checks, tier access, and policy compliance
+   */
+  async validateToolsForExecution(
+    overlayId: string,
+    toolIds: string[],
+    subagentId: string,
+    userPermissions: string[],
+    userConsents: string[],
+    modelTier?: string
+  ): Promise<{
+    valid: boolean;
+    toolResults: Map<string, ToolValidationResult>;
+    blockers: string[];
+    warnings: string[];
+  }> {
+    const toolResults = new Map<string, ToolValidationResult>();
+    const blockers: string[] = [];
+    const warnings: string[] = [];
+
+    // Log tool validation start
+    await this.appendAuditEntry(overlayId, {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      eventType: 'tool_validation_started',
+      details: { toolIds, subagentId, modelTier },
+      actor: 'orchestrator',
+    });
+
+    for (const toolId of toolIds) {
+      const result = await toolCapabilityRegistry.validateToolExecution(
+        toolId,
+        subagentId,
+        userPermissions,
+        userConsents,
+        modelTier
+      );
+
+      toolResults.set(toolId, result);
+
+      if (!result.valid) {
+        blockers.push(`Tool '${toolId}': ${result.errors.join(', ')}`);
+      }
+      if (result.warnings.length > 0) {
+        warnings.push(`Tool '${toolId}': ${result.warnings.join(', ')}`);
+      }
+
+      // Check health status for degraded/offline tools
+      if (result.healthStatus === 'offline') {
+        blockers.push(`Tool '${toolId}' is offline`);
+      } else if (result.healthStatus === 'degraded') {
+        warnings.push(`Tool '${toolId}' is experiencing degraded performance`);
+      }
+    }
+
+    const valid = blockers.length === 0;
+
+    // Log tool validation result
+    await this.appendAuditEntry(overlayId, {
+      id: crypto.randomUUID(),
+      timestamp: new Date().toISOString(),
+      eventType: valid ? 'tool_validation_passed' : 'tool_validation_failed',
+      details: {
+        toolIds,
+        blockers,
+        warnings,
+        healthSummary: toolCapabilityRegistry.getHealthySummary(),
+      },
+      actor: 'orchestrator',
+    });
+
+    return { valid, toolResults, blockers, warnings };
+  }
+
+  /**
+   * Record tool execution metrics after a step completes
+   */
+  recordToolExecution(
+    toolId: string,
+    subagentId: string,
+    success: boolean,
+    executionTimeMs: number,
+    error?: string
+  ): void {
+    toolCapabilityRegistry.recordExecution(toolId, subagentId, success, executionTimeMs, error);
+  }
+
+  /**
+   * Get tool health summary for dashboard/monitoring
+   */
+  getToolHealthSummary(): {
+    healthy: number;
+    degraded: number;
+    offline: number;
+    unknown: number;
+  } {
+    return toolCapabilityRegistry.getHealthySummary();
+  }
+
+  /**
+   * Get all tool health statuses for detailed monitoring
+   */
+  getToolHealthStatuses(): Array<{
+    toolId: string;
+    status: string;
+    lastCheck: Date;
+    responseTime: number;
+    uptime: number;
+    errorRate: number;
+  }> {
+    return toolCapabilityRegistry.getAllHealthStatuses().map(h => ({
+      toolId: h.toolId,
+      status: h.status,
+      lastCheck: h.lastCheck,
+      responseTime: h.responseTime,
+      uptime: h.uptime,
+      errorRate: h.errorRate,
+    }));
+  }
+
+  /**
+   * Get tool diagnostics for debugging
+   */
+  getToolDiagnostics(): Record<string, any> {
+    return toolCapabilityRegistry.exportDiagnostics();
+  }
+
+  // =========================================================================
   // ESCALATION HANDLING
   // =========================================================================
 
@@ -741,6 +874,34 @@ class OrchestrationStateMachine {
           manifestId: manifest.id,
           phase: 'escalated',
           error: permResult.reason,
+        };
+      }
+      
+      // Validate tools via ToolCapabilityRegistry (health, tier access, policy)
+      const toolIds = manifest.steps.map(s => s.capability).filter(Boolean);
+      const toolValidation = await this.validateToolsForExecution(
+        overlayId,
+        toolIds,
+        manifest.subagentId || 'orchestrator',
+        permResult.grantedPermissions,
+        [], // User consents - would come from workspace settings
+        'ORCHESTRATOR' // Model tier for orchestration
+      );
+      
+      if (!toolValidation.valid) {
+        await this.transitionPhase({
+          overlayId,
+          targetPhase: 'failed',
+          reason: `Tool validation failed: ${toolValidation.blockers.join(', ')}`,
+          triggeredBy: 'system',
+        });
+        return {
+          success: false,
+          overlayId,
+          workOrderId: workOrder.id,
+          manifestId: manifest.id,
+          phase: 'failed',
+          error: toolValidation.blockers.join(', '),
         };
       }
       
