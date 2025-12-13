@@ -96,6 +96,7 @@ import empireRouter from "./routes/empireRoutes"; // Empire Mode (Trinity CSO up
 import { trinityNotificationRouter } from "./routes/trinityNotificationRoutes"; // Trinity Notification Bridge
 import { supportCommandRouter } from "./routes/support-command-console";
 import { sessionCheckpointRouter } from "./routes/sessionCheckpointRoutes";
+import { assistedOnboardingRouter, acceptHandoffRouter } from "./routes/assisted-onboarding"; // Support-Assisted Onboarding
 import { aiBrainConsoleRouter } from "./routes/ai-brain-console";
 import aiBrainControlRouter from "./routes/aiBrainControlRoutes";
 import subagentRouter from "./routes/subagentRoutes";
@@ -3062,6 +3063,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register Support Command Console routes (Force-push updates for support staff)
   app.use("/api/support/command", supportCommandRouter);
   // Register AI Brain Console routes (Interactive AI chat and control for support staff)
+  // Register Support-Assisted Onboarding routes (platform staff creates orgs for users)
+  app.use("/api/support/assisted-onboarding", assistedOnboardingRouter);
+  app.use("/api/accept-handoff", acceptHandoffRouter);
   app.use("/api/ai-brain/console", aiBrainConsoleRouter);
   // Register AI Brain Control routes (service pause/resume, workflow management, health monitoring)
   app.use("/api/ai-brain/control", aiBrainControlRouter);

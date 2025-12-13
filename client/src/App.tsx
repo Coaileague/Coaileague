@@ -161,6 +161,8 @@ import AutomationSettings from "@/pages/automation-settings";
 import AIBrainDashboard from "@/pages/ai-brain-dashboard";
 import SupportAIConsole from "@/pages/support-ai-console";
 import SystemHealth from "@/pages/system-health";
+import AssistedOnboarding from "@/pages/assisted-onboarding";
+import AcceptHandoff from "@/pages/accept-handoff";
 import WorkboardDashboard from "@/components/workboard/WorkboardDashboard";
 import { HeaderChatButton } from "@/components/header-chat-button";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
@@ -857,6 +859,7 @@ function AppContent() {
         <Route path="/support/chat"><Redirect to="/chat" /></Route>
         <Route path="/onboarding/:token" component={OnboardingPage} />
         <Route path="/pay-invoice/:id" component={PayInvoice} />
+        <Route path="/accept-handoff/:token" component={AcceptHandoff} />
         
         {/* Error pages */}
         <Route path="/error-403" component={Error403} />
@@ -936,6 +939,7 @@ function AppContent() {
               <Route path="/ai/command-center" component={AICommandCenter} />
               <Route path="/support/console" component={SupportCommandConsole} />
               <Route path="/support/bugs" component={SupportBugDashboard} />
+              <Route path="/support/assisted-onboarding" component={AssistedOnboarding} />
               <Route path="/trinity/command-center" component={TrinityCommandCenter} />
               <Route path="/billing" component={Billing} />
               <Route path="/usage" component={UsageDashboard} />
