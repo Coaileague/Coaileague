@@ -1088,7 +1088,11 @@ export function NotificationsPopover() {
       {/* Notification List - Scrollable container with position preservation */}
       <div 
         ref={scrollRef}
-        className="flex-1 min-h-0 overflow-y-auto"
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+        style={{ 
+          touchAction: 'pan-y',
+          WebkitOverflowScrolling: 'touch',
+        }}
         onScroll={(e) => {
           scrollPositionRef.current = e.currentTarget.scrollTop;
         }}

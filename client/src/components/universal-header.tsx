@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, LogOut, LayoutDashboard } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, Mail } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { performLogout } from "@/lib/logoutHandler";
@@ -200,6 +200,15 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                       {showNotificationFeatures && (
                         <div className={`flex items-center ${HEADER_SPACING.mobileIconGap}`}>
                           <AISearchTrigger />
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setLocation("/inbox")}
+                            data-testid="button-inbox"
+                            aria-label="Inbox"
+                          >
+                            <Mail className="h-5 w-5" />
+                          </Button>
                           <NotificationsPopover />
                         </div>
                       )}
@@ -247,6 +256,15 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                 {showNotificationFeatures && (
                   <div className="flex items-center gap-1">
                     <AISearchTrigger />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setLocation("/inbox")}
+                      data-testid="mobile-button-inbox"
+                      aria-label="Inbox"
+                    >
+                      <Mail className="h-5 w-5" />
+                    </Button>
                     <NotificationsPopover />
                   </div>
                 )}
