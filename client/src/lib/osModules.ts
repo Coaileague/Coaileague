@@ -732,6 +732,18 @@ export const platformSupportModule: OSModule = {
       isPrimary: false,
       order: 5,
     },
+    {
+      id: 'end-user-controls',
+      label: 'End-User Controls',
+      href: '/support/end-user-controls',
+      icon: Users,
+      description: 'Manage organization access, AI Brain, and user permissions',
+      capabilities: ['support_dashboard'],
+      familyId: 'platform',
+      badge: 'Admin',
+      isPrimary: false,
+      order: 6,
+    },
   ],
 };
 
