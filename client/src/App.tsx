@@ -8,7 +8,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TrinityAnnouncementDisplay } from "@/components/trinity-announcement";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { OnboardingTour } from "@/components/onboarding-tour";
-import { GraduationCap, Settings2, Search, Menu, Sparkles, LogOut, User, Bell } from "lucide-react";
+import { GraduationCap, Settings2, Search, Menu, Sparkles, LogOut, User, Bell, Mail } from "lucide-react";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
@@ -901,6 +901,23 @@ function AppContent() {
                 <div className="flex items-center gap-2">
                   {/* Chat Button - Header mounted for easy access */}
                   <HeaderChatButton />
+                  {/* Inbox Button - Internal email system */}
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-9 w-9 rounded-full relative"
+                        onClick={() => window.location.href = '/inbox'}
+                        data-testid="button-inbox"
+                      >
+                        <Mail className="h-4 w-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Inbox</p>
+                    </TooltipContent>
+                  </Tooltip>
                   <NotificationsPopover />
                 </div>
               </div>
@@ -1132,6 +1149,23 @@ function AppContent() {
                   <div className="flex items-center gap-2">
                     {/* Chat Button - Header mounted in middle */}
                     <HeaderChatButton />
+                    {/* Inbox Button - Internal email system */}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-9 w-9 rounded-full relative"
+                          onClick={() => setLocation('/inbox')}
+                          data-testid="button-inbox"
+                        >
+                          <Mail className="h-4 w-4" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Inbox</p>
+                      </TooltipContent>
+                    </Tooltip>
                     {/* Universal Notifications Bell - Shows all updates, alerts, and system messages */}
                     <NotificationsPopover />
                     {/* User Menu Dropdown */}
