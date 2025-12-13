@@ -273,6 +273,15 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize Agent Parity Layer:', error);
   }
 
+  // Initialize Trinity Autonomous Operations - fully autonomous platform maintenance
+  try {
+    const { initializeTrinityAutonomousOps } = await import('./services/ai-brain/trinityAutonomousOps');
+    await initializeTrinityAutonomousOps();
+    console.log('[Server] Trinity Autonomous Operations initialized - proactive monitoring active');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Trinity Autonomous Operations:', error);
+  }
+
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
