@@ -981,10 +981,17 @@ export function NotificationsPopover() {
         )}
       </div>
       
-      {/* Sub-filters - Hidden on mobile (simplified mode) */}
+      {/* Sub-filters - Horizontally scrollable chips */}
       {!simplified && (
-        <div className="px-3 py-2 border-b bg-muted/10 flex-shrink-0 overflow-x-auto">
-          <div className="flex items-center gap-2">
+        <div 
+          className="px-3 py-2 border-b bg-muted/10 flex-shrink-0 overflow-x-auto scrollbar-hide"
+          style={{ 
+            WebkitOverflowScrolling: 'touch',
+            scrollbarWidth: 'none',
+            msOverflowStyle: 'none',
+          }}
+        >
+          <div className="flex items-center gap-2 min-w-max">
             {/* All Sub-filter */}
             <Button
               variant={subFilter === 'all' ? 'default' : 'outline'}
@@ -1185,11 +1192,19 @@ export function NotificationsPopover() {
         </div>
         <SheetContent 
           side="bottom" 
-          className="h-[80vh] max-h-[600px] p-0 rounded-t-2xl overflow-hidden"
+          className="h-[90vh] max-h-[700px] p-0 rounded-t-2xl overflow-hidden flex flex-col"
           data-testid="notification-sheet-content"
           data-trinity-avoid="true"
+          style={{ touchAction: 'none' }}
         >
-          <NotificationsContent simplified={true} />
+          {/* Drag Handle for Mobile */}
+          <div className="flex justify-center py-2 bg-background border-b shrink-0">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/30" />
+          </div>
+          {/* Full Feature Parity - No simplified mode */}
+          <div className="flex-1 overflow-hidden">
+            <NotificationsContent simplified={false} />
+          </div>
         </SheetContent>
       </Sheet>
     );
