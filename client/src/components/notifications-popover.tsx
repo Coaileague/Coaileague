@@ -894,7 +894,7 @@ export function NotificationsPopover() {
   };
 
   const NotificationsContent = ({ simplified = false, compact = false }: { simplified?: boolean; compact?: boolean }) => (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full min-h-0 overflow-hidden">
       {/* UNS Header with Trinity Branding - Violet to Indigo Gradient */}
       <div className={`${compact ? 'px-3 py-2' : 'px-4 py-3'} border-b bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0`}>
         <div className={`flex items-center justify-between ${compact ? 'gap-2' : 'gap-3'}`}>
@@ -1203,7 +1203,7 @@ export function NotificationsPopover() {
             <div className="w-8 h-1 rounded-full bg-muted-foreground/30" />
           </div>
           {/* Full Feature Parity with Compact Mode for Mobile */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
             <NotificationsContent simplified={false} compact={true} />
           </div>
         </SheetContent>
