@@ -24,11 +24,14 @@ import {
   Mail,
   TrendingUp,
   Award,
+  UserPlus,
+  HelpCircle,
 } from "lucide-react";
 import type { Employee, Shift, TimeEntry } from "@shared/schema";
 import { ResponsiveSection } from "@/components/dashboard-shell";
 import { WorkspaceLayout } from "@/components/workspace-layout";
 import { MetricsCardsSkeleton, TableSkeleton } from "@/components/loading-indicators/skeletons";
+import { SmartEmptyState } from "@/components/smart-empty-state";
 
 function EmployeePortalSkeleton() {
   return (
@@ -126,13 +129,28 @@ export default function EmployeePortal() {
   if (!currentEmployee) {
     return (
       <WorkspaceLayout maxWidth="7xl">
-        <div className="p-8 text-center">
-          <AlertCircle className="h-12 w-12 text-blue-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Employee Profile Not Found</h2>
-          <p className="text-muted-foreground">
-            You need to be registered as an employee to access the portal.
-          </p>
-        </div>
+        <ResponsiveSection spacing="lg">
+          <SmartEmptyState
+            icon={<UserPlus className="h-full w-full" />}
+            title="Employee Profile Not Found"
+            description="Your account isn't linked to an employee profile yet. Contact your manager or HR to get set up in the system."
+            size="lg"
+            actions={[
+              {
+                label: "Contact HR",
+                onClick: () => window.location.href = "/contact",
+                variant: "default",
+                icon: <Mail className="h-4 w-4" />,
+              },
+              {
+                label: "Learn More",
+                onClick: () => window.location.href = "/help",
+                variant: "outline",
+                icon: <HelpCircle className="h-4 w-4" />,
+              },
+            ]}
+          />
+        </ResponsiveSection>
       </WorkspaceLayout>
     );
   }
