@@ -8,6 +8,7 @@ import { isAuthenticated } from './replitAuth';
 import { db } from './db';
 import { aiBrainService } from './services/ai-brain/aiBrainService';
 import { subagentConfidenceMonitor } from './services/ai-brain/subagentConfidenceMonitor';
+import { getAISystemStatus } from './services/ai-brain/providers/resilientAIGateway';
 import { 
   aiBrainJobs, 
   aiGlobalPatterns, 
@@ -42,6 +43,46 @@ aiBrainRouter.get('/health', isAuthenticated, async (req: Request, res: Response
   } catch (error: any) {
     console.error('Error getting AI Brain health:', error);
     res.status(500).json({ error: 'Failed to get health metrics' });
+  }
+});
+
+/**
+ * GET /api/ai-brain/system-status - Get AI provider gateway status
+ * Returns information about provider health, fallback status, and system mode
+ */
+aiBrainRouter.get('/system-status', isAuthenticated, async (req: Request, res: Response) => {
+  try {
+    const status = getAISystemStatus();
+    
+    res.json({
+      success: true,
+      status: {
+        primaryProvider: status.primaryProvider,
+        activeProvider: status.activeProvider,
+        mode: status.mode,
+        lastHealthCheck: status.lastHealthCheck,
+        isHealthy: status.mode !== 'emergency',
+        isDegraded: status.mode === 'degraded',
+        isEmergency: status.mode === 'emergency',
+        providers: Object.entries(status.providerHealth).map(([provider, health]) => ({
+          provider,
+          isHealthy: health.isHealthy,
+          circuitOpen: health.circuitOpen,
+          consecutiveFailures: health.consecutiveFailures,
+          avgLatencyMs: health.avgLatencyMs,
+          lastCheck: health.lastCheck,
+          lastError: health.lastError,
+        })),
+      },
+      message: status.mode === 'normal' 
+        ? 'All AI systems operational' 
+        : status.mode === 'degraded' 
+          ? 'AI running on backup provider' 
+          : 'AI running in emergency rule-based mode',
+    });
+  } catch (error: any) {
+    console.error('Error getting AI system status:', error);
+    res.status(500).json({ error: 'Failed to get AI system status' });
   }
 });
 
