@@ -41,6 +41,7 @@ import { CommandPalette } from "@/components/command-palette";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile, ResponsiveAppFrame } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
+import { MobileQuickActionsFAB } from "@/components/mobile/MobileQuickActionsFAB";
 import { performLogout } from "@/lib/logoutHandler";
 import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
@@ -1135,6 +1136,8 @@ function AppContent() {
           
           {/* Mobile Bottom Navigation - Fixed at bottom */}
           {!isHelpDesk && <MobileBottomNav />}
+          {/* Mobile Quick Actions FAB - Above bottom nav */}
+          {!isHelpDesk && <MobileQuickActionsFAB />}
         </div>
       {/* Universal Approval Request Tray - Desktop */}
       <ApprovalTray scope="admin" isMobile={false} />
