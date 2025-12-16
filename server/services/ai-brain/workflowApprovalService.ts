@@ -15,7 +15,7 @@ import {
   aiWorkflowApprovals, 
   aiGapFindings,
   users, 
-  workspaceMembers, 
+  employees, 
   notifications,
   InsertAiWorkflowApproval,
   AiWorkflowApproval,
@@ -390,21 +390,21 @@ class WorkflowApprovalService {
           .from(users)
           .where(inArray(users.role, ['root_admin', 'platform_admin']));
       } else {
-        // Workspace-scoped: check workspace membership roles
+        // Workspace-scoped: check employee workspace roles
         supportUsers = await db
           .select({
             id: users.id,
             email: users.email,
             role: users.role,
-            workspaceRole: workspaceMembers.role,
+            workspaceRole: employees.workspaceRole,
           })
           .from(users)
-          .innerJoin(workspaceMembers, eq(workspaceMembers.userId, users.id))
+          .innerJoin(employees, eq(employees.userId, users.id))
           .where(and(
-            eq(workspaceMembers.workspaceId, targetWorkspaceId),
+            eq(employees.workspaceId, targetWorkspaceId),
             or(
               inArray(users.role, SUPPORT_ROLES),
-              inArray(workspaceMembers.role, ['owner', 'admin', 'manager'])
+              inArray(employees.workspaceRole, ['owner', 'admin', 'manager'])
             )
           ));
       }
