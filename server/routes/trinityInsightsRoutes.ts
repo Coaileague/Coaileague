@@ -9,10 +9,13 @@ import { Router, Request, Response, NextFunction } from 'express';
 import { aiAnalyticsEngine } from '../services/ai-brain/aiAnalyticsEngine';
 import { trinityContextService, type TrinityContext } from '../services/trinityContext';
 import { trinitySelfAssessment } from '../services/ai-brain/trinitySelfAssessment';
+import { autonomousFixPipeline } from '../services/ai-brain/autonomousFixPipeline';
+import { workflowApprovalService } from '../services/ai-brain/workflowApprovalService';
+import { subagentSupervisor } from '../services/ai-brain/subagentSupervisor';
 import { canAccessTrinity } from '../rbac';
 import { db } from '../db';
-import { users } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { users, aiWorkflowApprovals, aiGapFindings, subagentTelemetry } from '@shared/schema';
+import { eq, desc, and, gte, sql } from 'drizzle-orm';
 
 const router = Router();
 
@@ -382,6 +385,334 @@ router.post('/ask-what-needed', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('[Trinity Ask API] Error:', error);
     res.status(500).json({ error: 'Failed to get Trinity response' });
+  }
+});
+
+// ============================================================================
+// TRINITY AUTONOMOUS FIX WORKFLOW ROUTES
+// ============================================================================
+
+/**
+ * GET /api/trinity/fixes
+ * List pending fix approvals for Trinity
+ */
+router.get('/fixes', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (!user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const status = (req.query.status as string) || 'pending';
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    
+    const fixes = await workflowApprovalService.getApprovalsByStatus(status, limit);
+    
+    res.json({
+      success: true,
+      fixes: fixes.map(f => ({
+        id: f.id,
+        title: f.title,
+        description: f.description,
+        endUserSummary: f.endUserSummary,
+        affectedFiles: f.affectedFiles,
+        riskLevel: f.riskLevel,
+        status: f.status,
+        requiredRole: f.requiredRole,
+        createdAt: f.createdAt,
+        expiresAt: f.expiresAt,
+      })),
+      count: fixes.length,
+    });
+  } catch (error: any) {
+    console.error('[Trinity Fixes API] Error:', error);
+    res.status(500).json({ error: 'Failed to fetch fixes' });
+  }
+});
+
+/**
+ * POST /api/trinity/fixes/propose
+ * Propose a fix for a gap finding
+ */
+router.post('/fixes/propose', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (!user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const { findingId } = req.body;
+    if (!findingId) {
+      return res.status(400).json({ error: 'findingId is required' });
+    }
+    
+    const spec = await autonomousFixPipeline.generateFixSpecification(parseInt(findingId));
+    
+    if (!spec) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'Could not generate fix specification for this finding' 
+      });
+    }
+    
+    res.json({
+      success: true,
+      specification: {
+        findingId: spec.findingId,
+        title: spec.title,
+        approach: spec.approach,
+        affectedFiles: spec.affectedFiles,
+        patchCount: spec.patches.length,
+        riskLevel: spec.riskLevel,
+        confidence: spec.confidence,
+        requiresApproval: spec.requiresApproval,
+        estimatedImpact: spec.estimatedImpact,
+        rollbackPlan: spec.rollbackPlan,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Trinity Fixes API] Propose error:', error);
+    res.status(500).json({ error: 'Failed to propose fix' });
+  }
+});
+
+/**
+ * GET /api/trinity/fixes/:id/preview
+ * Preview a fix (dry run) before execution
+ */
+router.get('/fixes/:id/preview', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (!user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const approval = await workflowApprovalService.getApprovalById(req.params.id);
+    if (!approval) {
+      return res.status(404).json({ error: 'Fix approval not found' });
+    }
+    
+    res.json({
+      success: true,
+      preview: {
+        id: approval.id,
+        title: approval.title,
+        description: approval.description,
+        endUserSummary: approval.endUserSummary,
+        affectedFiles: approval.affectedFiles,
+        proposedChanges: approval.proposedChanges,
+        rollbackPlan: approval.rollbackPlan,
+        riskLevel: approval.riskLevel,
+        impactScope: approval.impactScope,
+        status: approval.status,
+        requiredRole: approval.requiredRole,
+        createdAt: approval.createdAt,
+        expiresAt: approval.expiresAt,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Trinity Fixes API] Preview error:', error);
+    res.status(500).json({ error: 'Failed to preview fix' });
+  }
+});
+
+/**
+ * POST /api/trinity/fixes/:id/execute
+ * Execute an approved fix
+ */
+router.post('/fixes/:id/execute', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (!user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const allowedRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager'];
+    if (!allowedRoles.includes(user.platformRole || '')) {
+      return res.status(403).json({ error: 'Insufficient permissions to execute fixes' });
+    }
+    
+    const result = await autonomousFixPipeline.executeApprovedFix(req.params.id);
+    
+    res.json({
+      success: result.success,
+      result: {
+        findingId: result.findingId,
+        validationPassed: result.validationPassed,
+        validationErrors: result.validationErrors,
+        commitHash: result.commitHash,
+        rollbackAvailable: result.rollbackAvailable,
+        message: result.message,
+      },
+    });
+  } catch (error: any) {
+    console.error('[Trinity Fixes API] Execute error:', error);
+    res.status(500).json({ error: 'Failed to execute fix' });
+  }
+});
+
+/**
+ * POST /api/trinity/fixes/:id/rollback
+ * Rollback a previously applied fix
+ */
+router.post('/fixes/:id/rollback', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (!user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const allowedRoles = ['root_admin', 'deputy_admin', 'sysop'];
+    if (!allowedRoles.includes(user.platformRole || '')) {
+      return res.status(403).json({ error: 'Insufficient permissions to rollback fixes' });
+    }
+    
+    const approval = await workflowApprovalService.getApprovalById(req.params.id);
+    if (!approval) {
+      return res.status(404).json({ error: 'Fix approval not found' });
+    }
+    
+    if (!approval.commitHash) {
+      return res.status(400).json({ error: 'No commit hash available for rollback' });
+    }
+    
+    // Rollback functionality is not yet implemented in autonomousFixPipeline
+    // This is a placeholder for future implementation
+    res.status(501).json({
+      success: false,
+      error: 'Rollback functionality is not yet implemented',
+      message: 'Manual rollback required using git revert on commit: ' + approval.commitHash,
+    });
+  } catch (error: any) {
+    console.error('[Trinity Fixes API] Rollback error:', error);
+    res.status(500).json({ error: 'Failed to rollback fix' });
+  }
+});
+
+// ============================================================================
+// TRINITY SUBAGENT STATUS BOARD ROUTES
+// ============================================================================
+
+/**
+ * GET /api/trinity/subagents
+ * Get real-time status of all Trinity subagents
+ */
+router.get('/subagents', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (!user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const allSubagents = await subagentSupervisor.getAllSubagents();
+    const healthData = await subagentSupervisor.getSubagentHealth();
+    const healthMap = new Map(healthData.map(h => [h.subagentId, h]));
+    
+    const subagentStatuses = [];
+    
+    for (const subagent of allSubagents) {
+      const health = healthMap.get(subagent.id);
+      const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const [telemetry] = await db
+        .select({
+          totalTasks: sql<number>`COUNT(*)`,
+          successfulTasks: sql<number>`COUNT(*) FILTER (WHERE status = 'completed')`,
+          failedTasks: sql<number>`COUNT(*) FILTER (WHERE status = 'failed')`,
+          avgDuration: sql<number>`AVG(duration_ms)`,
+        })
+        .from(subagentTelemetry)
+        .where(and(
+          eq(subagentTelemetry.subagentId, subagent.id),
+          gte(subagentTelemetry.createdAt, last24h)
+        ));
+      
+      subagentStatuses.push({
+        id: subagent.id,
+        domain: subagent.domain,
+        name: subagent.name,
+        description: subagent.description || '',
+        status: health?.status || 'idle',
+        isAvailable: subagent.isActive !== false,
+        metrics: {
+          totalTasks24h: Number(telemetry?.totalTasks || 0),
+          successRate: telemetry?.totalTasks 
+            ? ((Number(telemetry.successfulTasks) / Number(telemetry.totalTasks)) * 100).toFixed(1) + '%'
+            : 'N/A',
+          failedTasks24h: Number(telemetry?.failedTasks || 0),
+          avgDurationMs: Math.round(Number(telemetry?.avgDuration || 0)),
+        },
+        lastActivity: health?.lastExecution || null,
+      });
+    }
+    
+    res.json({
+      success: true,
+      subagents: subagentStatuses,
+      count: subagentStatuses.length,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error('[Trinity Subagents API] Error:', error);
+    res.status(500).json({ error: 'Failed to fetch subagent status' });
+  }
+});
+
+/**
+ * GET /api/trinity/subagents/:domain
+ * Get detailed status for a specific subagent
+ */
+router.get('/subagents/:domain', async (req: Request, res: Response) => {
+  try {
+    const user = await getAuthenticatedUser(req);
+    if (!user?.id) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+    
+    const { domain } = req.params;
+    const subagent = await subagentSupervisor.getSubagent(domain);
+    
+    if (!subagent) {
+      return res.status(404).json({ error: 'Subagent not found' });
+    }
+    
+    const healthData = await subagentSupervisor.getSubagentHealth();
+    const health = healthData.find(h => h.subagentId === subagent.id);
+    
+    const last7d = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    const recentTasks = await db
+      .select()
+      .from(subagentTelemetry)
+      .where(and(
+        eq(subagentTelemetry.subagentId, subagent.id),
+        gte(subagentTelemetry.createdAt, last7d)
+      ))
+      .orderBy(desc(subagentTelemetry.createdAt))
+      .limit(20);
+    
+    res.json({
+      success: true,
+      subagent: {
+        id: subagent.id,
+        domain: subagent.domain,
+        name: subagent.name,
+        description: subagent.description || '',
+        status: health?.status || 'idle',
+        isAvailable: subagent.isActive !== false,
+        capabilities: subagent.capabilities || [],
+        lastActivity: health?.lastExecution || null,
+      },
+      recentTasks: recentTasks.map(t => ({
+        id: t.id,
+        taskType: t.taskType,
+        status: t.status,
+        durationMs: t.durationMs,
+        createdAt: t.createdAt,
+        errorMessage: t.errorMessage,
+      })),
+    });
+  } catch (error: any) {
+    console.error('[Trinity Subagents API] Error:', error);
+    res.status(500).json({ error: 'Failed to fetch subagent details' });
   }
 });
 

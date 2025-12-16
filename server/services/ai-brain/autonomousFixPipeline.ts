@@ -18,7 +18,7 @@ import * as path from 'path';
 import { db } from '../../db';
 import { aiGapFindings, aiWorkflowApprovals } from '@shared/schema';
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
-import { trinityCodeOpsService, PatchOperation, PatchResult } from './trinityCodeOps';
+import { trinityCodeOps, PatchOperation, PatchResult } from './trinityCodeOps';
 import { workflowApprovalService } from './workflowApprovalService';
 import { gapIntelligenceService } from './gapIntelligenceService';
 import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
@@ -489,7 +489,7 @@ class AutonomousFixPipelineService {
       }
 
       // Apply patches
-      const patchResult = await trinityCodeOpsService.applyPatches({
+      const patchResult = await trinityCodeOps.applyPatches({
         operationId: `autofix_${spec.findingId}_${Date.now()}`,
         workspaceId: 'platform',
         userId: 'trinity',
@@ -519,7 +519,7 @@ class AutonomousFixPipelineService {
       
       if (!validation.passed) {
         // Rollback on validation failure
-        await trinityCodeOpsService.rollbackOperation(patchResult.operationId);
+        await trinityCodeOps.rollbackOperation(patchResult.operationId);
         this.activeFixes.delete(spec.findingId);
         
         return {
@@ -537,7 +537,7 @@ class AutonomousFixPipelineService {
       // Commit if auto-commit enabled
       let commitHash: string | undefined;
       if (autoCommit) {
-        const commitResult = await trinityCodeOpsService.commitChanges({
+        const commitResult = await trinityCodeOps.commitChanges({
           workspaceId: 'platform',
           userId: 'trinity',
           files: spec.affectedFiles,
