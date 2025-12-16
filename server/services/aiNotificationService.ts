@@ -6,7 +6,7 @@ import {
   maintenanceAlerts,
   maintenanceAcknowledgments
 } from "@shared/schema";
-import { eq, and, or, desc, isNull, sql, lt } from "drizzle-orm";
+import { eq, and, or, desc, isNull, sql, lt, gte } from "drizzle-orm";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 import { broadcastPlatformUpdateGlobal } from '../websocket';
@@ -110,35 +110,36 @@ export async function generatePlatformUpdate(data: AIInsightData): Promise<{ id:
   }
   
   // Check for executionId in metadata - if present, use UUID to make idempotency key unique
+  // BUT always check for title duplicates first to prevent repeated system messages
   const executionId = data.metadata?.executionId as string | undefined;
   const hasUniqueMarker = executionId || data.metadata?.sourceAIBrain;
   
-  // For Trinity events, generate a fully unique idempotency key using UUID
-  // This ensures each Trinity operation gets its own entry in UNS
-  const idempotencyKey = hasUniqueMarker
+  // ALWAYS check for title-based duplicates first (within last 24 hours)
+  // This prevents repeated system messages like "Seasonal Theming Disabled"
+  const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const existingByTitle = await db.select({ id: platformUpdates.id })
+    .from(platformUpdates)
+    .where(
+      and(
+        eq(platformUpdates.title, data.title),
+        data.workspaceId 
+          ? eq(platformUpdates.workspaceId, data.workspaceId)
+          : isNull(platformUpdates.workspaceId),
+        gte(platformUpdates.date, oneDayAgo)
+      )
+    )
+    .limit(1);
+  
+  if (existingByTitle.length > 0) {
+    console.log(`[AINotification] Duplicate update detected (title match within 24h), skipping: ${data.title}`);
+    return { id: existingByTitle[0].id };
+  }
+  
+  // For Trinity events with unique executionId, generate unique key
+  // For regular updates, use content-based idempotency
+  const idempotencyKey = hasUniqueMarker && executionId
     ? `ai-update-${data.workspaceId || "global"}-trinity-${crypto.randomUUID()}`
     : generateIdempotencyKey("update", data.workspaceId || null, JSON.stringify(data));
-  
-  // Only check for duplicates if there's no executionId (regular platform updates)
-  // Trinity operations with executionId are always unique
-  if (!hasUniqueMarker) {
-    const existing = await db.select({ id: platformUpdates.id })
-      .from(platformUpdates)
-      .where(
-        and(
-          eq(platformUpdates.title, data.title),
-          data.workspaceId 
-            ? eq(platformUpdates.workspaceId, data.workspaceId)
-            : isNull(platformUpdates.workspaceId)
-        )
-      )
-      .limit(1);
-    
-    if (existing.length > 0) {
-      console.log(`[AINotification] Duplicate update detected, skipping: ${data.title}`);
-      return { id: existing[0].id };
-    }
-  }
   
   let enhancedDescription = data.description;
   

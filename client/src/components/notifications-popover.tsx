@@ -1222,7 +1222,7 @@ export function NotificationsPopover() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[440px] max-w-[calc(100vw-2rem)] h-[min(75vh,600px)] p-0 shadow-xl border-muted flex flex-col" 
+        className="w-[380px] max-w-[calc(100vw-2rem)] h-[min(60vh,500px)] p-0 shadow-xl border-muted flex flex-col overflow-hidden" 
         align="end"
         sideOffset={8}
         data-testid="notification-popover-content"
