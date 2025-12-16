@@ -175,6 +175,30 @@ export const TRINITY_PROTECTED_MODULES: ProtectedModule[] = [
 ];
 
 // ============================================================================
+// GUARD RAIL SIMPLIFICATION NOTES
+// ============================================================================
+// The platform has been audited for redundant validation. Remaining guard rails are:
+//
+// KEPT (Essential):
+// - Auth/session validation → security critical
+// - Payment processing checks → financial protection  
+// - RBAC permission checks → access control
+// - Audit logging → compliance requirement
+// - AI rate limits → cost control (env-configurable)
+//
+// REMOVED/SIMPLIFIED:
+// - Theme/UI restrictions → now fully editable via themeConfig.ts
+// - Layout constraints → now centralized in registry.ts
+// - Component tier restrictions → simplified to single registry
+// - Hardcoded values → replaced with environment variables
+//
+// All non-security configuration is now editable through:
+// - shared/config/themeConfig.ts (colors, spacing, typography)
+// - shared/config/registry.ts (branding, navigation, copy)
+// - shared/config/aiBrainGuardrails.ts (AI limits via env vars)
+// ============================================================================
+
+// ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
