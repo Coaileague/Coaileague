@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   Calendar,
   Clock,
@@ -27,23 +28,51 @@ import {
 import type { Employee, Shift, TimeEntry } from "@shared/schema";
 import { ResponsiveSection } from "@/components/dashboard-shell";
 import { WorkspaceLayout } from "@/components/workspace-layout";
+import { MetricsCardsSkeleton, TableSkeleton } from "@/components/loading-indicators/skeletons";
+
+function EmployeePortalSkeleton() {
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center gap-4 mb-4">
+        <Skeleton className="h-16 w-16 rounded-full" />
+        <div className="flex-1 space-y-2">
+          <Skeleton className="h-8 w-48" />
+          <Skeleton className="h-4 w-32" />
+        </div>
+      </div>
+      <MetricsCardsSkeleton count={4} columns={4} />
+      <div className="grid gap-6 lg:grid-cols-2">
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-32" />
+          <TableSkeleton rows={3} columns={2} showAvatar={false} />
+        </div>
+        <div className="space-y-4">
+          <Skeleton className="h-6 w-32" />
+          <TableSkeleton rows={3} columns={2} showAvatar={false} />
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default function EmployeePortal() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
 
   // Fetch employee data
-  const { data: employees = [] } = useQuery<Employee[]>({
+  const { data: employees = [], isLoading: employeesLoading } = useQuery<Employee[]>({
     queryKey: ["/api/employees"],
   });
 
-  const { data: shifts = [] } = useQuery<Shift[]>({
+  const { data: shifts = [], isLoading: shiftsLoading } = useQuery<Shift[]>({
     queryKey: ["/api/shifts"],
   });
 
-  const { data: timeEntries = [] } = useQuery<TimeEntry[]>({
+  const { data: timeEntries = [], isLoading: entriesLoading } = useQuery<TimeEntry[]>({
     queryKey: ["/api/time-entries"],
   });
+
+  const isLoading = employeesLoading || shiftsLoading || entriesLoading;
 
   // Find current employee
   const currentEmployee = employees.find(emp => emp.email === user?.email);
@@ -83,6 +112,16 @@ export default function EmployeePortal() {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
   };
+
+  if (isLoading) {
+    return (
+      <WorkspaceLayout maxWidth="7xl">
+        <ResponsiveSection spacing="lg">
+          <EmployeePortalSkeleton />
+        </ResponsiveSection>
+      </WorkspaceLayout>
+    );
+  }
 
   if (!currentEmployee) {
     return (
