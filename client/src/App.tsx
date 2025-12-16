@@ -1242,7 +1242,7 @@ function AppContent() {
               {/* Main content area - visible scrollbar for desktop users */}
               <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background min-h-0 w-full max-w-full" data-scroll="styled">
                 {/* Breadcrumb Navigation - helps users know where they are (desktop only) */}
-                {!isMobileChat && !isHelpDesk && !isMobile && false && <PageBreadcrumb />}
+                {!isMobileChat && !isHelpDesk && !isMobile && <PageBreadcrumb />}
               
               <Switch>
                 <Route path="/" component={Dashboard} />
