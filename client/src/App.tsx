@@ -1275,6 +1275,9 @@ function AppContent() {
                 <Route path="/automation-control" component={AutomationControl} />
                 <Route path="/ai/command-center" component={AICommandCenter} />
                 <Route path="/support/console" component={SupportCommandConsole} />
+                <Route path="/support/bugs" component={SupportBugDashboard} />
+                <Route path="/admin/end-user-controls" component={EndUserControls} />
+                <Route path="/support/assisted-onboarding" component={AssistedOnboarding} />
                 <Route path="/trinity/command-center" component={TrinityCommandCenter} />
                 <Route path="/ai/brain" component={AIBrainDashboard} />
                 <Route path="/ai/orchestration" component={OrchestrationDashboard} />
@@ -1293,6 +1296,16 @@ function AppContent() {
                 </Route>
                 <Route path="/billing" component={Billing} />
                 <Route path="/usage" component={UsageDashboard} />
+                <Route path="/owner-analytics">
+                  <OwnerRoute>
+                    <OwnerAnalytics />
+                  </OwnerRoute>
+                </Route>
+                <Route path="/credit-analytics">
+                  <OwnerRoute>
+                    <CreditAnalyticsDashboard />
+                  </OwnerRoute>
+                </Route>
                 <Route path="/integrations" component={IntegrationsPage} />
                 <Route path="/oversight" component={OversightHub} />
                 <Route path="/expenses" component={Expenses} />
@@ -1317,6 +1330,8 @@ function AppContent() {
                 <Route path="/my-audit-record" component={MyAuditRecord} />
                 <Route path="/file-grievance" component={FileGrievance} />
                 <Route path="/review-disputes" component={ReviewDisputes} />
+                <Route path="/payroll/deductions" component={PayrollDeductions} />
+                <Route path="/payroll/garnishments" component={PayrollGarnishments} />
                 <Route path="/communications"><Redirect to="/chatrooms" /></Route>
                 <Route path="/communications/onboarding" component={CommunicationsOnboarding} />
                 <Route path="/chatrooms" component={Chatrooms} />
@@ -1326,6 +1341,9 @@ function AppContent() {
                 <Route path="/training" component={Training} />
                 <Route path="/budgeting" component={Budgeting} />
                 <Route path="/ai-integrations" component={AIIntegrations} />
+                <Route path="/employee-recognition" component={EmployeeRecognition} />
+                <Route path="/alert-configuration" component={AlertConfiguration} />
+                <Route path="/accounting-integrations" component={AccountingIntegrations} />
                 <Route path="/records" component={Records} />
                 <Route path="/insights" component={Insights} />
 
@@ -1380,6 +1398,8 @@ function AppContent() {
                 {/* Platform admin tools (accessible from control center) */}
                 <Route path="/admin/usage" component={AdminUsage} />
                 <Route path="/admin/custom-forms" component={AdminCustomForms} />
+                <Route path="/admin/banners" component={AdminBanners} />
+                <Route path="/admin/ticket-reviews" component={AdminTicketReviews} />
                 <Route path="/owner/hireos/workflow-builder" component={HiringWorkflowBuilder} />
                 <Route path="/employees/:employeeId/file-cabinet" component={EmployeeFileCabinet} />
                 <Route path="/platform/users" component={PlatformUsers} />
