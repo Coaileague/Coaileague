@@ -894,7 +894,7 @@ export function NotificationsPopover() {
   };
 
   const NotificationsContent = ({ simplified = false, compact = false }: { simplified?: boolean; compact?: boolean }) => (
-    <div className="flex flex-col h-full min-h-0 overflow-hidden">
+    <div className="flex flex-col max-h-[500px] overflow-hidden">
       {/* UNS Header with Trinity Branding - Violet to Indigo Gradient */}
       <div className={`${compact ? 'px-3 py-2' : 'px-4 py-3'} border-b bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0`}>
         <div className={`flex items-center justify-between ${compact ? 'gap-2' : 'gap-3'}`}>
@@ -1097,7 +1097,7 @@ export function NotificationsPopover() {
       {/* Notification List - Scrollable container with position preservation */}
       <div 
         ref={scrollRef}
-        className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+        className="flex-1 min-h-0 max-h-[300px] overflow-y-auto overscroll-contain"
         style={{ 
           touchAction: 'pan-y',
           WebkitOverflowScrolling: 'touch',
@@ -1222,9 +1222,10 @@ export function NotificationsPopover() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[380px] max-w-[calc(100vw-2rem)] h-[min(60vh,500px)] p-0 shadow-xl border-muted flex flex-col overflow-hidden" 
+        className="w-[380px] max-w-[calc(100vw-2rem)] p-0 shadow-xl border-muted overflow-hidden" 
         align="end"
         sideOffset={8}
+        style={{ maxHeight: '500px', height: 'auto' }}
         data-testid="notification-popover-content"
         data-trinity-avoid="true"
         onInteractOutside={(e) => {
