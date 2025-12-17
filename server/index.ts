@@ -8,7 +8,7 @@ import { initializeChatServerHub } from "./services/ChatServerHub";
 import { GamificationEventTracker } from "./services/gamification/eventTracker";
 import { AiBrainNotifier } from "./services/gamification/aiBrainNotifier";
 import { WhatsNewGamificationBridge } from "./services/gamification/whatsNewIntegration";
-// Old UNS removed - replaced by Trinity Command Request System
+import { initializeNotifications } from "./services/notificationInit";
 import { aiBrainMasterOrchestrator } from "./services/ai-brain/aiBrainMasterOrchestrator";
 import { platformEventBus } from "./services/platformEventBus";
 import { handlePlatformChangeEvent } from "./services/aiNotificationService";
@@ -153,8 +153,13 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize gamification events:', error);
   }
 
-  // Old UNS initialization removed - Trinity Command Request System handles this now
-  console.log('[Server] Trinity Command Request System will handle notifications');
+  // Initialize AI Notification System - seeds platform updates
+  try {
+    await initializeNotifications();
+    console.log('[Server] AI notification system initialized');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize notifications:', error);
+  }
 
   // Start notification cleanup scheduler (removes old notifications daily)
   try {

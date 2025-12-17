@@ -175,6 +175,7 @@ import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { HeaderBillboard } from "@/components/header-billboard";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
+import { NotificationsPopover } from "@/components/notifications-popover";
 import { WorkspaceTabsNav } from "@/components/workspace-tabs-nav";
 import { SetupGuidePanel } from "@/components/setup-guide-panel";
 import TrinityRedesign from "@/components/trinity-redesign";
@@ -932,6 +933,7 @@ function AppContent() {
                   <HeaderChatButton />
                   {/* Inbox Button - Internal email system with unread badge */}
                   <InboxHeaderButton onClick={() => window.location.href = '/inbox'} />
+                  <NotificationsPopover />
                 </div>
               </div>
             </div>
@@ -988,40 +990,36 @@ function AppContent() {
               </Route>
               <Route path="/integrations" component={IntegrationsPage} />
               <Route path="/oversight" component={OversightHub} />
-              {/* Expenses: Users access via QuickBooks/Gusto */}
-              <Route path="/expenses"><Redirect to="/integrations" /></Route>
-              <Route path="/expense-approvals"><Redirect to="/integrations" /></Route>
+              <Route path="/expenses" component={Expenses} />
+              <Route path="/expense-approvals" component={ExpenseApprovals} />
               <Route path="/pending"><Redirect to="/timesheets/pending" /></Route>
               <Route path="/timesheets/pending" component={PendingTimeEntries} />
               <Route path="/timesheets/approvals" component={TimesheetApprovals} />
               <Route path="/i9-compliance" component={I9Compliance} />
               <Route path="/policies" component={Policies} />
               <Route path="/payroll" component={PayrollDashboard} />
-              {/* Paychecks/HR: Users access via Gusto/external HR software */}
-              <Route path="/my-paychecks"><Redirect to="/integrations" /></Route>
+              <Route path="/my-paychecks" component={MyPaychecks} />
               <Route path="/leaders-hub">
                 <LeaderRoute>
                   <LeadersHub />
                 </LeaderRoute>
               </Route>
-              <Route path="/hr/benefits"><Redirect to="/integrations" /></Route>
-              <Route path="/hr/reviews"><Redirect to="/integrations" /></Route>
-              <Route path="/hr/pto"><Redirect to="/integrations" /></Route>
-              <Route path="/hr/terminations"><Redirect to="/integrations" /></Route>
+              <Route path="/hr/benefits" component={HRBenefits} />
+              <Route path="/hr/reviews" component={HRReviews} />
+              <Route path="/hr/pto" component={HRPTO} />
+              <Route path="/hr/terminations" component={HRTerminations} />
               <Route path="/disputes" component={Disputes} />
               <Route path="/my-audit-record" component={MyAuditRecord} />
               <Route path="/file-grievance" component={FileGrievance} />
               <Route path="/review-disputes" component={ReviewDisputes} />
-              {/* Payroll details: Users access via Gusto */}
-              <Route path="/payroll/deductions"><Redirect to="/integrations" /></Route>
-              <Route path="/payroll/garnishments"><Redirect to="/integrations" /></Route>
+              <Route path="/payroll/deductions" component={PayrollDeductions} />
+              <Route path="/payroll/garnishments" component={PayrollGarnishments} />
               <Route path="/communications"><Redirect to="/chatrooms" /></Route>
               <Route path="/communications/onboarding" component={CommunicationsOnboarding} />
               <Route path="/diagnostics" component={Diagnostics} />
               <Route path="/messages" component={PrivateMessages} />
               <Route path="/training" component={Training} />
-              {/* Budgeting: Users access via QuickBooks */}
-              <Route path="/budgeting"><Redirect to="/integrations" /></Route>
+              <Route path="/budgeting" component={Budgeting} />
               <Route path="/ai-integrations" component={AIIntegrations} />
               <Route path="/employee-recognition" component={EmployeeRecognition} />
               <Route path="/alert-configuration" component={AlertConfiguration} />
@@ -1171,6 +1169,8 @@ function AppContent() {
                     <HeaderChatButton />
                     {/* Inbox Button - Internal email system with unread badge */}
                     <InboxHeaderButton onClick={() => setLocation('/inbox')} />
+                    {/* Universal Notifications Bell - Shows all updates, alerts, and system messages */}
+                    <NotificationsPopover />
                     {/* User Menu Dropdown */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -1311,31 +1311,30 @@ function AppContent() {
                 </Route>
                 <Route path="/integrations" component={IntegrationsPage} />
                 <Route path="/oversight" component={OversightHub} />
-                {/* Expenses/Payroll: Users access via QuickBooks/Gusto */}
-                <Route path="/expenses"><Redirect to="/integrations" /></Route>
-                <Route path="/expense-approvals"><Redirect to="/integrations" /></Route>
+                <Route path="/expenses" component={Expenses} />
+                <Route path="/expense-approvals" component={ExpenseApprovals} />
                 <Route path="/pending"><Redirect to="/timesheets/pending" /></Route>
                 <Route path="/timesheets/pending" component={PendingTimeEntries} />
                 <Route path="/timesheets/approvals" component={TimesheetApprovals} />
                 <Route path="/i9-compliance" component={I9Compliance} />
                 <Route path="/policies" component={Policies} />
                 <Route path="/payroll" component={PayrollDashboard} />
-                <Route path="/my-paychecks"><Redirect to="/integrations" /></Route>
+                <Route path="/my-paychecks" component={MyPaychecks} />
                 <Route path="/leaders-hub">
                   <LeaderRoute>
                     <LeadersHub />
                   </LeaderRoute>
                 </Route>
-                <Route path="/hr/benefits"><Redirect to="/integrations" /></Route>
-                <Route path="/hr/reviews"><Redirect to="/integrations" /></Route>
-                <Route path="/hr/pto"><Redirect to="/integrations" /></Route>
-                <Route path="/hr/terminations"><Redirect to="/integrations" /></Route>
+                <Route path="/hr/benefits" component={HRBenefits} />
+                <Route path="/hr/reviews" component={HRReviews} />
+                <Route path="/hr/pto" component={HRPTO} />
+                <Route path="/hr/terminations" component={HRTerminations} />
                 <Route path="/disputes" component={Disputes} />
                 <Route path="/my-audit-record" component={MyAuditRecord} />
                 <Route path="/file-grievance" component={FileGrievance} />
                 <Route path="/review-disputes" component={ReviewDisputes} />
-                <Route path="/payroll/deductions"><Redirect to="/integrations" /></Route>
-                <Route path="/payroll/garnishments"><Redirect to="/integrations" /></Route>
+                <Route path="/payroll/deductions" component={PayrollDeductions} />
+                <Route path="/payroll/garnishments" component={PayrollGarnishments} />
                 <Route path="/communications"><Redirect to="/chatrooms" /></Route>
                 <Route path="/communications/onboarding" component={CommunicationsOnboarding} />
                 <Route path="/chatrooms" component={Chatrooms} />
@@ -1343,7 +1342,7 @@ function AppContent() {
                 <Route path="/diagnostics" component={Diagnostics} />
                 <Route path="/messages" component={PrivateMessages} />
                 <Route path="/training" component={Training} />
-                <Route path="/budgeting"><Redirect to="/integrations" /></Route>
+                <Route path="/budgeting" component={Budgeting} />
                 <Route path="/ai-integrations" component={AIIntegrations} />
                 <Route path="/employee-recognition" component={EmployeeRecognition} />
                 <Route path="/alert-configuration" component={AlertConfiguration} />

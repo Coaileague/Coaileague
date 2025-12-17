@@ -5,7 +5,7 @@
  */
 
 import aiBrainConfig from "@shared/config/aiBrainGuardrails";
-// universalNotificationEngine removed - replaced by Trinity Command Request System
+import { notificationEngine } from "./universalNotificationEngine";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 
@@ -76,7 +76,22 @@ export class IssueDetectionService {
     // Generate recommended action
     const recommendedAction = this.generateRecommendedAction(issues, overallSeverity);
 
-    // Notification removed - Trinity Command Request System handles this
+    // Notify if issues found
+    if (issues.length > 0 && overallSeverity !== "clear") {
+      await notificationEngine.sendNotification({
+        workspaceId,
+        type: "issue_detected",
+        title: `${overallSeverity.toUpperCase()}: ${issues.length} issues detected`,
+        message: issues.map((i) => `${i.title}: ${i.description}`).join("\n"),
+        metadata: {
+          documentId,
+          documentType,
+          issues,
+          overallSeverity,
+        },
+        severity: overallSeverity === "critical" ? "critical" : "warning",
+      });
+    }
 
     return {
       documentId: documentId || `doc_${Date.now()}`,

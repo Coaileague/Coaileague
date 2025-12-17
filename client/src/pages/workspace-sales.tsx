@@ -259,7 +259,7 @@ export default function WorkspaceSales() {
                           .filter(tier => tier.id !== 'enterprise')
                           .map(tier => (
                             <SelectItem key={tier.id} value={tier.id}>
-                              {tier.name} (14 days)
+                              {tier.name} ({tier.id === 'free' ? '30 days' : '14 days'})
                             </SelectItem>
                           ))
                         }

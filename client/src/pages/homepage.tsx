@@ -34,7 +34,7 @@ export default function Homepage() {
       title: 'Autonomous Payroll',
       subtitle: 'Integrates with Gusto & QuickBooks',
       description: 'Syncs time entries, calculates wages, and processes payroll automatically through your existing Gusto or QuickBooks subscription. Zero manual data entry.',
-      stats: 'Up to 99.9% payroll accuracy*',
+      stats: '100% payroll accuracy',
       color: 'blue',
       savings: 'Cut payroll costs by 60%'
     },
@@ -211,7 +211,7 @@ export default function Homepage() {
                         <Cpu className="w-4 h-4 text-blue-600" />
                         <span className="text-sm font-semibold text-gray-700">AI Generated Schedule</span>
                       </div>
-                      <span className="text-xs font-bold text-blue-600">AI-Automated*</span>
+                      <span className="text-xs font-bold text-blue-600">100% Automated</span>
                     </div>
                   </div>
                   <Link href="/support" className="block w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold text-sm hover:from-blue-600 hover:to-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl" data-testid="button-watch-demo">
@@ -364,20 +364,11 @@ export default function Homepage() {
                   </div>
                 </div>
                 <div className="text-sm text-blue-100 italic">
-                  * Savings estimates based on industry averages for replacing scheduler ($65K), payroll administrator ($58K), and billing specialist ($52K) + 25% benefits. Actual results may vary based on business size and usage.
+                  * Based on replacing scheduler ($65K), payroll administrator ($58K), and billing specialist ($52K) + 25% benefits
                 </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Disclaimer Section */}
-      <section className="py-8 px-6 bg-gray-100 border-t">
-        <div className="max-w-4xl mx-auto">
-          <p className="text-xs text-gray-500 text-center leading-relaxed">
-            <strong>*Disclaimers:</strong> All statistics and savings estimates are based on industry averages and customer-reported data. Individual results may vary based on business size, usage patterns, and implementation. "AI-Automated" features require initial setup and may benefit from periodic human review. Payroll accuracy claims are based on correct data input; CoAIleague is not responsible for errors in source data. The "99% AI, 1% human governance" model means AI handles routine decisions while complex or low-confidence decisions are escalated for human review. AI recommendations do not constitute legal, financial, or professional advice. See our <a href="/terms" className="text-blue-600 hover:underline">Terms of Service</a> for complete details.
-          </p>
         </div>
       </section>
 

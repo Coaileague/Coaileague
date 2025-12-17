@@ -1,6 +1,6 @@
 /**
  * AI Scheduling™ AI Auto-Scheduling Panel
- * Subscriber-Pays-All Model: 14-day free trial → Payment required
+ * Subscriber-Pays-All Model: 7-day free trial → Payment required
  */
 
 import { useState } from "react";
@@ -35,7 +35,7 @@ export function AISchedulingPanel({ weekStartDate, onScheduleGenerated }: AISche
     onSuccess: (data) => {
       toast({
         title: "Trial Started!",
-        description: `AI Scheduling™ 14-day free trial activated. ${data.daysLeft} days remaining.`,
+        description: `AI Scheduling™ 7-day free trial activated. ${data.daysLeft} days remaining.`,
       });
       queryClient.invalidateQueries({ queryKey: ['/api/scheduleos/status'] });
     },
@@ -272,7 +272,7 @@ export function AISchedulingPanel({ weekStartDate, onScheduleGenerated }: AISche
             </Badge>
           </div>
           <CardDescription>
-            Your 14-day free trial has ended. Activate with payment to continue.
+            Your 7-day free trial has ended. Activate with payment to continue.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -322,7 +322,7 @@ export function AISchedulingPanel({ weekStartDate, onScheduleGenerated }: AISche
           </Badge>
         </div>
         <CardDescription>
-          AI generates optimal schedules in 30 seconds. Try it free for 14 days!
+          AI generates optimal schedules in 30 seconds. Try it free for 7 days!
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -349,7 +349,7 @@ export function AISchedulingPanel({ weekStartDate, onScheduleGenerated }: AISche
         <div className="p-3 rounded-md bg-indigo-500/10 border border-indigo-500/30">
           <p className="text-sm text-blue-700 dark:text-blue-400 font-medium">🎉 Start Your Free Trial</p>
           <p className="text-xs text-blue-700 dark:text-blue-400/80 mt-1">
-            14 days free • No credit card required • Activate with payment after trial
+            7 days free • No credit card required • Activate with payment after trial
           </p>
         </div>
 
@@ -367,7 +367,7 @@ export function AISchedulingPanel({ weekStartDate, onScheduleGenerated }: AISche
           ) : (
             <>
               <Sparkles className="mr-2 h-4 w-4" />
-              Start 14-Day Free Trial
+              Start 7-Day Free Trial
             </>
           )}
         </Button>

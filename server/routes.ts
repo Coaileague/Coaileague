@@ -94,7 +94,7 @@ import { calendarRouter } from "./routes/calendarRoutes";
 import { smsRouter } from "./routes/smsRoutes";
 import { whatsNewRouter } from "./routes/whatsNewRoutes";
 import empireRouter from "./routes/empireRoutes"; // Empire Mode (Trinity CSO upgrade)
-// trinityNotificationRouter removed - replaced by Trinity Command Request System // Trinity Notification Bridge
+import { trinityNotificationRouter } from "./routes/trinityNotificationRoutes"; // Trinity Notification Bridge
 import { supportCommandRouter } from "./routes/support-command-console";
 import { endUserControlRouter } from "./routes/endUserControlRoutes";
 import { sessionCheckpointRouter } from "./routes/sessionCheckpointRoutes";
@@ -3110,7 +3110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/trinity/maintenance", trinityMaintenanceRouter); // Trinity Platform Maintenance
   app.use("/api/trinity/control-console", trinityControlConsoleRouter); // Trinity Control Console
   app.use("/api/trinity", empireRouter); // Empire Mode routes
-  // trinityNotificationRouter removed // Trinity Notification Bridge
+  app.use("/api/trinity/notifications", trinityNotificationRouter); // Trinity Notification Bridge
   app.use("/api/quick-fixes", quickFixRouter); // Quick Fix System
   app.use("/api/device", deviceLoaderRouter); // Universal Device Loader
   app.use("/api/vqa", requireAuth, vqaRouter); // Visual QA (AI Brain Eyes)
@@ -3269,9 +3269,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // 5. Create Stripe subscription if paid tier
       if (subscriptionTier === 'free') {
         const trialStart = new Date();
-        const trialEnd = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14-day trial
+        const trialEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
         await db.insert(subscriptions).values({ workspaceId: workspace.id, plan: 'free', status: 'trial', trialStartedAt: trialStart, trialEndsAt: trialEnd, maxEmployees: 5, basePrice: 0, createdAt: new Date() });
-        console.log(`✅ Free trial subscription created: 14 days`);
+        console.log(`✅ Free trial subscription created: 30 days`);
       } else if (subscriptionTier !== 'free') {
         const subscriptionResult = await subscriptionManager.createSubscription({
           workspaceId: workspace.id,
@@ -9373,7 +9373,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if trial already started
       if (workspace.scheduleosTrialStartedAt) {
         const trialStart = new Date(workspace.scheduleosTrialStartedAt);
-        const trialEnd = new Date(trialStart.getTime() + 14 * 24 * 60 * 60 * 1000);
+        const trialEnd = new Date(trialStart.getTime() + 7 * 24 * 60 * 60 * 1000);
         const now = new Date();
         const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
         
@@ -9393,10 +9393,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         success: true,
-        message: "AI Scheduling™ 14-day free trial activated!",
+        message: "AI Scheduling™ 7-day free trial activated!",
         trialStartedAt: new Date(),
-        trialEndsAt: new Date(Date.now() + 14 * 24 * 60 * 60 * 1000),
-        daysLeft: 14,
+        trialEndsAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        daysLeft: 7,
       });
     } catch (error: any) {
       console.error("Error starting AI Scheduling™ trial:", error);
@@ -9742,7 +9742,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
           if (workspace.scheduleosTrialStartedAt && !workspace.scheduleosActivatedAt) {
             const trialStart = new Date(workspace.scheduleosTrialStartedAt);
-            const trialEnd = new Date(trialStart.getTime() + 14 * 24 * 60 * 60 * 1000);
+            const trialEnd = new Date(trialStart.getTime() + 7 * 24 * 60 * 60 * 1000);
             const now = new Date();
             const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
             response.isTrialActive = daysLeft > 0;
@@ -9771,7 +9771,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (workspace.scheduleosTrialStartedAt && !workspace.scheduleosActivatedAt) {
         const trialStart = new Date(workspace.scheduleosTrialStartedAt);
-        const trialEnd = new Date(trialStart.getTime() + 14 * 24 * 60 * 60 * 1000);
+        const trialEnd = new Date(trialStart.getTime() + 7 * 24 * 60 * 60 * 1000);
         const now = new Date();
         const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
         
@@ -9822,7 +9822,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (workspace.scheduleosTrialStartedAt && !isActivated) {
             const trialStart = new Date(workspace.scheduleosTrialStartedAt);
-            const trialEnd = new Date(trialStart.getTime() + 14 * 24 * 60 * 60 * 1000);
+            const trialEnd = new Date(trialStart.getTime() + 7 * 24 * 60 * 60 * 1000);
             const now = new Date();
             const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
             isInTrial = daysLeft > 0;
@@ -12367,7 +12367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Generate unique invite token
       const inviteToken = crypto.randomBytes(32).toString('hex');
-      const expiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 14 days
+      const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
       
       const workspace = await storage.getWorkspace(workspaceId);
       
@@ -12463,7 +12463,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Generate new token and expiry
       const crypto = await import('crypto');
       const newToken = crypto.randomBytes(32).toString('hex');
-      const newExpiresAt = new Date(Date.now() + 14 * 24 * 60 * 60 * 1000); // 7 days
+      const newExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
       
       // Update the invite
       const updatedInvite = await storage.resendInvite(id, newToken, newExpiresAt);

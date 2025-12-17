@@ -215,10 +215,6 @@ router.get('/context', async (req: Request, res: Response) => {
     }
     
     const workspaceId = req.query.workspaceId as string | undefined;
-    // PERFORMANCE FIX: Only include thought generation if explicitly requested via query param
-    // This speeds up initial page loads by 3-5 seconds
-    const includeThought = req.query.includeThought === 'true';
-    
     const context = await trinityContextService.resolve(user.id, workspaceId);
     
     // Check if Trinity dialogue is enabled (default: true)
@@ -226,8 +222,7 @@ router.get('/context', async (req: Request, res: Response) => {
     const dialogueEnabled = process.env.TRINITY_DIALOGUE_ENABLED !== 'false';
     
     let contextualThought: string | null = null;
-    // Only generate thought if explicitly requested - lazy loading for performance
-    if (dialogueEnabled && includeThought) {
+    if (dialogueEnabled) {
       contextualThought = await trinityContextService.generateThought(context);
     }
     

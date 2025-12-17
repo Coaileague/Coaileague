@@ -33,7 +33,7 @@ export const BILLING = {
       yearlyPrice: 0,
       maxEmployees: 5,
       monthlyCredits: 100,
-      trialDays: 14,
+      trialDays: 30,
       adminReplacementValue: 0,
       features: [
         "Up to 5 employees",
