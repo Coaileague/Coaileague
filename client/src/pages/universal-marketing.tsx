@@ -173,7 +173,7 @@ export default function UniversalMarketing() {
           <section className="py-12 md:py-16 px-3 sm:px-4 md:px-6 text-center mobile-compact-p">
             <div className="container mx-auto max-w-2xl">
               <h2 className="text-2xl md:text-3xl font-bold mb-4">Ready to Transform Your Workforce?</h2>
-              <p className="text-muted-foreground mb-6">Start your 30-day free trial today. No credit card required.</p>
+              <p className="text-muted-foreground mb-6">Start your 14-day free trial today. No credit card required.</p>
               <Button size="lg" onClick={() => setLocation('/register?tier=free')}>
                 Get Started <ArrowRight className="ml-2 h-4 w-4" />
               </Button>
