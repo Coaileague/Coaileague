@@ -80,9 +80,9 @@ export default function PrivacyPolicy() {
               <li>Predict staffing needs and optimize labor costs</li>
             </ul>
             <p className="text-foreground/90 mb-4">
-              <strong>Important:</strong> All AI decisions operate under our "99% AI, 1% human governance" model. 
+              <strong>Important:</strong> All AI decisions operate under our "99% AI, 1% human governance" model, meaning AI handles routine decisions autonomously while complex or low-confidence decisions are escalated for human review. 
               You maintain final approval authority for all AI-generated schedules and decisions. We do not use your 
-              data to train AI models for other customers.
+              data to train AI models for other customers. AI recommendations do not constitute legal, financial, or professional advice.
             </p>
           </section>
 
