@@ -175,7 +175,6 @@ import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { HeaderBillboard } from "@/components/header-billboard";
 import { WorkspaceSwitcher } from "@/components/workspace-switcher";
 import { PageBreadcrumb } from "@/components/page-breadcrumb";
-import { NotificationsPopover } from "@/components/notifications-popover";
 import { WorkspaceTabsNav } from "@/components/workspace-tabs-nav";
 import { SetupGuidePanel } from "@/components/setup-guide-panel";
 import TrinityRedesign from "@/components/trinity-redesign";
@@ -933,7 +932,6 @@ function AppContent() {
                   <HeaderChatButton />
                   {/* Inbox Button - Internal email system with unread badge */}
                   <InboxHeaderButton onClick={() => window.location.href = '/inbox'} />
-                  <NotificationsPopover />
                 </div>
               </div>
             </div>
@@ -1173,8 +1171,6 @@ function AppContent() {
                     <HeaderChatButton />
                     {/* Inbox Button - Internal email system with unread badge */}
                     <InboxHeaderButton onClick={() => setLocation('/inbox')} />
-                    {/* Universal Notifications Bell - Shows all updates, alerts, and system messages */}
-                    <NotificationsPopover />
                     {/* User Menu Dropdown */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>

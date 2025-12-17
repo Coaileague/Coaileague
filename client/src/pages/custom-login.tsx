@@ -7,7 +7,6 @@ import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
 import { useTransition } from "@/contexts/transition-context";
-import { UniversalWelcomeNotification } from "@/components/universal-welcome-notification";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
@@ -140,18 +139,6 @@ export default function CustomLogin() {
 
   return (
     <>
-      {showWelcome && loginData && (
-        <UniversalWelcomeNotification
-          firstName={loginData.firstName}
-          lastName={loginData.lastName}
-          email={loginData.email}
-          role={loginData.role}
-          platformRole={loginData.platformRole}
-          loadingDuration={loadingDuration}
-          onComplete={() => setShowWelcome(false)}
-        />
-      )}
-
       <div className="min-h-screen flex flex-col overflow-x-hidden" style={{ background: THEME.pages.login.background }}>
         {/* Header */}
         <div className="border-b" style={{ background: THEME.pages.login.header.bg, borderColor: THEME.pages.login.header.borderColor }}>

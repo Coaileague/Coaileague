@@ -12,7 +12,6 @@ import { Menu, LogOut, LayoutDashboard, Mail } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { performLogout } from "@/lib/logoutHandler";
-import { NotificationsPopover } from "@/components/notifications-popover";
 import { AISearchTrigger } from "@/components/ai-search";
 import {
   DropdownMenu,
@@ -209,7 +208,6 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                           >
                             <Mail className="h-5 w-5" />
                           </Button>
-                          <NotificationsPopover />
                         </div>
                       )}
                       <DropdownMenu>
@@ -265,7 +263,6 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                     >
                       <Mail className="h-5 w-5" />
                     </Button>
-                    <NotificationsPopover />
                   </div>
                 )}
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
