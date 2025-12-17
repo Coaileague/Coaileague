@@ -11,6 +11,7 @@
 import { db } from '../db';
 import { notifications, users, platformUpdates } from '@shared/schema';
 import { eq, and, desc, isNull, inArray, sql } from 'drizzle-orm';
+import { broadcastNotificationToUser } from '../websocket';
 
 interface CreateNotificationParams {
   workspaceId: string;
@@ -49,6 +50,23 @@ export async function createNotification(params: CreateNotificationParams) {
       .returning();
 
     console.log(`[Notifications] Created notification for user ${params.userId}: ${params.title}`);
+
+    // CRITICAL: Broadcast via WebSocket for real-time delivery
+    try {
+      broadcastNotificationToUser(params.workspaceId, params.userId, {
+        id: notification.id,
+        type: params.type,
+        title: params.title,
+        message: params.message,
+        isRead: false,
+        actionUrl: params.actionUrl,
+        createdAt: notification.createdAt,
+        metadata: params.metadata,
+      });
+      console.log(`[Notifications] WebSocket broadcast sent for user ${params.userId}`);
+    } catch (wsError) {
+      console.warn('[Notifications] WebSocket broadcast failed (non-fatal):', wsError);
+    }
 
     // CRITICAL: Send email to user
     try {

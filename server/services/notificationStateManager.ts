@@ -365,11 +365,9 @@ class NotificationStateManager {
     try {
       const newCounts = await this.getUnreadCounts(userId, workspaceId);
       
+      // Only broadcast count update - the caller already broadcasts notification_new
+      // to avoid duplicate WebSocket events
       this.broadcastCountUpdate(userId, workspaceId, newCounts, 'new_notification');
-      
-      if (this.broadcastFn) {
-        this.broadcastFn(workspaceId, userId, 'notification_new', notification);
-      }
       
       console.log(`[NotificationStateManager] New notification for user ${userId}, total: ${newCounts.total}`);
     } catch (error) {
