@@ -1199,18 +1199,19 @@ export function NotificationsPopover() {
           />
         </div>
         <SheetContent 
-          id="notifications-sheet-content"
           side="bottom" 
-          className="p-0 rounded-t-2xl"
+          className="p-0 rounded-t-2xl h-[550px] max-h-[80vh]"
           data-testid="notification-sheet-content"
           data-trinity-avoid="true"
         >
-          {/* Drag Handle for Mobile */}
-          <div className="flex justify-center py-1.5 bg-background border-b shrink-0">
-            <div className="w-8 h-1 rounded-full bg-muted-foreground/30" />
+          <div className="h-full flex flex-col overflow-hidden">
+            {/* Drag Handle for Mobile */}
+            <div className="flex justify-center py-1.5 bg-background border-b shrink-0">
+              <div className="w-8 h-1 rounded-full bg-muted-foreground/30" />
+            </div>
+            {/* Full Feature Parity with Compact Mode for Mobile */}
+            <NotificationsContent simplified={false} compact={true} />
           </div>
-          {/* Full Feature Parity with Compact Mode for Mobile */}
-          <NotificationsContent simplified={false} compact={true} />
         </SheetContent>
       </Sheet>
     );
@@ -1227,8 +1228,7 @@ export function NotificationsPopover() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        id="notifications-popover-content"
-        className="p-0 shadow-xl border-muted" 
+        className="w-[380px] p-0 shadow-xl border-muted" 
         align="end"
         sideOffset={8}
         data-testid="notification-popover-content"
@@ -1243,7 +1243,9 @@ export function NotificationsPopover() {
           }
         }}
       >
-        <NotificationsContent />
+        <div className="h-[500px] max-h-[500px] flex flex-col overflow-hidden">
+          <NotificationsContent />
+        </div>
       </PopoverContent>
     </Popover>
   );
