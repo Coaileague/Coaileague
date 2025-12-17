@@ -32,6 +32,10 @@ import { subagentConfidenceMonitor } from './ai-brain/subagentConfidenceMonitor'
 let diagnosticsCache: { data: PlatformDiagnostics; timestamp: number } | null = null;
 const DIAGNOSTICS_CACHE_TTL = 5 * 60 * 1000; // 5 minutes
 
+// Org intelligence cache with 2-minute TTL (per workspace)
+const orgIntelligenceCache = new Map<string, { data: OrgIntelligence; timestamp: number }>();
+const ORG_INTEL_CACHE_TTL = 2 * 60 * 1000; // 2 minutes
+
 export interface OrgIntelligence {
   automationReadiness: {
     score: number;
@@ -120,6 +124,13 @@ const PLATFORM_STAFF_ROLES: PlatformRole[] = ['root_admin', 'deputy_admin', 'sys
 const MANAGER_ROLES: WorkspaceRole[] = ['org_owner', 'org_admin', 'department_manager', 'supervisor'];
 
 async function gatherOrgIntelligence(workspaceId: string, userId: string): Promise<OrgIntelligence> {
+  // Check cache first
+  const cacheKey = `${workspaceId}:${userId}`;
+  const cached = orgIntelligenceCache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < ORG_INTEL_CACHE_TTL) {
+    return cached.data;
+  }
+  
   const priorityInsights: string[] = [];
   
   let automationReadiness: OrgIntelligence['automationReadiness'] = null;
@@ -276,13 +287,24 @@ async function gatherOrgIntelligence(workspaceId: string, userId: string): Promi
   } catch {
   }
   
-  return {
+  const result: OrgIntelligence = {
     automationReadiness,
     workboardStats,
     notificationSummary,
     businessMetrics,
     priorityInsights: priorityInsights.slice(0, 5),
   };
+  
+  // Cache the result
+  orgIntelligenceCache.set(cacheKey, { data: result, timestamp: Date.now() });
+  
+  // Clean up old cache entries (keep max 50)
+  if (orgIntelligenceCache.size > 50) {
+    const oldestKey = orgIntelligenceCache.keys().next().value;
+    if (oldestKey) orgIntelligenceCache.delete(oldestKey);
+  }
+  
+  return result;
 }
 
 export async function resolveTrinityContext(userId: string, workspaceId?: string): Promise<TrinityContext> {
