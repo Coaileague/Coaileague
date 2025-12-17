@@ -27,12 +27,18 @@ import crypto from 'crypto';
 // TYPES
 // ============================================================================
 
+export interface DependencySpec {
+  name: string;
+  from: string;
+  isDefault?: boolean;
+}
+
 export interface StubFileRequest {
   filePath: string;
   fileType: 'component' | 'service' | 'route' | 'hook' | 'utility' | 'schema' | 'config';
   purpose: string;
   expectedExports?: string[];
-  dependencies?: string[];
+  dependencies?: DependencySpec[];
   temporaryImplementation?: string;
   fullImplementationEta?: string;
   createdBy: string;
@@ -82,7 +88,7 @@ const STUB_TEMPLATES: Record<string, (request: StubFileRequest) => string> = {
  * - Add tests
  */
 
-${req.dependencies?.map(d => `import { ${d} } from '${d}';`).join('\n') || ''}
+${formatDependencyImports(req.dependencies)}
 
 interface ${getComponentName(req.filePath)}Props {
   // TODO: Define props
@@ -118,7 +124,7 @@ export default ${getComponentName(req.filePath)};
  * - Add tests
  */
 
-${req.dependencies?.map(d => `import { ${d} } from '${d}';`).join('\n') || ''}
+${formatDependencyImports(req.dependencies)}
 
 class ${getServiceName(req.filePath)} {
   private static instance: ${getServiceName(req.filePath)};
@@ -162,7 +168,7 @@ export const ${getServiceInstanceName(req.filePath)} = ${getServiceName(req.file
 
 import { useState, useEffect } from 'react';
 
-${req.dependencies?.map(d => `import { ${d} } from '${d}';`).join('\n') || ''}
+${formatDependencyImports(req.dependencies)}
 
 export function ${getHookName(req.filePath)}() {
   const [isLoading, setIsLoading] = useState(false);
@@ -274,6 +280,17 @@ export default stubConfig;
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
+
+function formatDependencyImports(dependencies?: DependencySpec[]): string {
+  if (!dependencies || dependencies.length === 0) return '';
+  
+  return dependencies.map(dep => {
+    if (dep.isDefault) {
+      return `import ${dep.name} from '${dep.from}';`;
+    }
+    return `import { ${dep.name} } from '${dep.from}';`;
+  }).join('\n');
+}
 
 function getComponentName(filePath: string): string {
   const baseName = path.basename(filePath, path.extname(filePath));

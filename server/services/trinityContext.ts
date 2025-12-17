@@ -138,152 +138,91 @@ async function gatherOrgIntelligence(workspaceId: string, userId: string): Promi
   let notificationSummary: OrgIntelligence['notificationSummary'] = null;
   let businessMetrics: OrgIntelligence['businessMetrics'] = null;
   
-  try {
-    const monitoringSummary = await subagentConfidenceMonitor.getTrinityMonitoringSummary(workspaceId);
-    automationReadiness = {
-      score: monitoringSummary.orgScore,
-      level: monitoringSummary.level as 'hand_held' | 'graduated' | 'full_automation',
-      canGraduate: monitoringSummary.canGraduate,
-      topIssues: monitoringSummary.topIssues,
-      recommendations: monitoringSummary.recommendations,
-    };
-    
-    if (monitoringSummary.canGraduate) {
-      priorityInsights.push(`Your org is ready to graduate to ${monitoringSummary.level === 'hand_held' ? 'graduated' : 'full automation'} mode!`);
-    }
-    if (monitoringSummary.topIssues.length > 0) {
-      priorityInsights.push(`Automation alert: ${monitoringSummary.topIssues[0]}`);
-    }
-  } catch {
-  }
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   
   try {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Run ALL queries in parallel for maximum speed
+    const [
+      monitoringSummary,
+      pendingResult,
+      completedTodayResult,
+      failedTodayResult,
+      unreadResult,
+      urgentResult,
+      categoryBreakdown,
+      sentInvoicesResult,
+      overdueInvoicesResult
+    ] = await Promise.all([
+      // Automation readiness (may have internal caching)
+      subagentConfidenceMonitor.getTrinityMonitoringSummary(workspaceId).catch(() => null),
+      // Workboard stats
+      db.select({ count: count() }).from(aiWorkboardTasks)
+        .where(and(eq(aiWorkboardTasks.workspaceId, workspaceId), eq(aiWorkboardTasks.status, 'pending'))),
+      db.select({ count: count() }).from(aiWorkboardTasks)
+        .where(and(eq(aiWorkboardTasks.workspaceId, workspaceId), eq(aiWorkboardTasks.status, 'completed'), gte(aiWorkboardTasks.completedAt, today))),
+      db.select({ count: count() }).from(aiWorkboardTasks)
+        .where(and(eq(aiWorkboardTasks.workspaceId, workspaceId), eq(aiWorkboardTasks.status, 'failed'), gte(aiWorkboardTasks.updatedAt, today))),
+      // Notification counts
+      db.select({ count: count() }).from(notifications)
+        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false))),
+      db.select({ count: count() }).from(notifications)
+        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false), sql`${notifications.priority} IN ('urgent', 'high')`)),
+      db.select({ type: notifications.type, count: count() }).from(notifications)
+        .where(and(eq(notifications.userId, userId), eq(notifications.isRead, false))).groupBy(notifications.type),
+      // Business metrics
+      db.select({ count: count() }).from(invoices)
+        .where(and(eq(invoices.workspaceId, workspaceId), sql`${invoices.status} = 'sent'`)),
+      db.select({ count: count() }).from(invoices)
+        .where(and(eq(invoices.workspaceId, workspaceId), sql`${invoices.status} = 'overdue'`))
+    ]);
     
-    const [pending] = await db
-      .select({ count: count() })
-      .from(aiWorkboardTasks)
-      .where(and(
-        eq(aiWorkboardTasks.workspaceId, workspaceId),
-        eq(aiWorkboardTasks.status, 'pending')
-      ));
+    // Process automation readiness
+    if (monitoringSummary) {
+      automationReadiness = {
+        score: monitoringSummary.orgScore,
+        level: monitoringSummary.level as 'hand_held' | 'graduated' | 'full_automation',
+        canGraduate: monitoringSummary.canGraduate,
+        topIssues: monitoringSummary.topIssues,
+        recommendations: monitoringSummary.recommendations,
+      };
+      if (monitoringSummary.canGraduate) {
+        priorityInsights.push(`Your org is ready to graduate to ${monitoringSummary.level === 'hand_held' ? 'graduated' : 'full automation'} mode!`);
+      }
+      if (monitoringSummary.topIssues.length > 0) {
+        priorityInsights.push(`Automation alert: ${monitoringSummary.topIssues[0]}`);
+      }
+    }
     
-    const [completedToday] = await db
-      .select({ count: count() })
-      .from(aiWorkboardTasks)
-      .where(and(
-        eq(aiWorkboardTasks.workspaceId, workspaceId),
-        eq(aiWorkboardTasks.status, 'completed'),
-        gte(aiWorkboardTasks.completedAt, today)
-      ));
-    
-    const [failedToday] = await db
-      .select({ count: count() })
-      .from(aiWorkboardTasks)
-      .where(and(
-        eq(aiWorkboardTasks.workspaceId, workspaceId),
-        eq(aiWorkboardTasks.status, 'failed'),
-        gte(aiWorkboardTasks.updatedAt, today)
-      ));
-    
+    // Process workboard stats
     workboardStats = {
-      pendingTasks: pending?.count || 0,
-      completedToday: completedToday?.count || 0,
-      failedToday: failedToday?.count || 0,
+      pendingTasks: pendingResult[0]?.count || 0,
+      completedToday: completedTodayResult[0]?.count || 0,
+      failedToday: failedTodayResult[0]?.count || 0,
       avgCompletionTimeMs: 0,
     };
+    if (workboardStats.pendingTasks > 5) priorityInsights.push(`${workboardStats.pendingTasks} AI tasks pending in queue`);
+    if (workboardStats.failedToday > 0) priorityInsights.push(`${workboardStats.failedToday} task(s) failed today - review recommended`);
+    if (workboardStats.completedToday > 0) priorityInsights.push(`${workboardStats.completedToday} AI task(s) completed today`);
     
-    if (workboardStats.pendingTasks > 5) {
-      priorityInsights.push(`${workboardStats.pendingTasks} AI tasks pending in queue`);
-    }
-    if (workboardStats.failedToday > 0) {
-      priorityInsights.push(`${workboardStats.failedToday} task(s) failed today - review recommended`);
-    }
-    if (workboardStats.completedToday > 0) {
-      priorityInsights.push(`${workboardStats.completedToday} AI task(s) completed today`);
-    }
-  } catch {
-  }
-  
-  try {
-    // Get unread notification count
-    const [unread] = await db
-      .select({ count: count() })
-      .from(notifications)
-      .where(and(
-        eq(notifications.userId, userId),
-        eq(notifications.isRead, false)
-      ));
-    
-    // Get urgent/high priority notification count (LIVE data, no cache)
-    const [urgent] = await db
-      .select({ count: count() })
-      .from(notifications)
-      .where(and(
-        eq(notifications.userId, userId),
-        eq(notifications.isRead, false),
-        sql`${notifications.priority} IN ('urgent', 'high')`
-      ));
-    
-    // Get category breakdown for unread notifications
-    const categoryBreakdown = await db
-      .select({
-        type: notifications.type,
-        count: count(),
-      })
-      .from(notifications)
-      .where(and(
-        eq(notifications.userId, userId),
-        eq(notifications.isRead, false)
-      ))
-      .groupBy(notifications.type);
-    
+    // Process notification summary
     notificationSummary = {
-      unreadCount: unread?.count || 0,
-      urgentCount: urgent?.count || 0,
+      unreadCount: unreadResult[0]?.count || 0,
+      urgentCount: urgentResult[0]?.count || 0,
       categories: categoryBreakdown.map(c => ({ type: c.type || 'general', count: c.count })),
     };
+    if (notificationSummary.unreadCount > 0) priorityInsights.push(`${notificationSummary.unreadCount} unread notification${notificationSummary.unreadCount !== 1 ? 's' : ''}`);
+    if (notificationSummary.urgentCount > 0) priorityInsights.unshift(`${notificationSummary.urgentCount} urgent notification${notificationSummary.urgentCount !== 1 ? 's' : ''} need attention`);
     
-    // Lower threshold - show notification summary more often
-    if (notificationSummary.unreadCount > 0) {
-      priorityInsights.push(`${notificationSummary.unreadCount} unread notification${notificationSummary.unreadCount !== 1 ? 's' : ''}`);
-    }
-    if (notificationSummary.urgentCount > 0) {
-      priorityInsights.unshift(`${notificationSummary.urgentCount} urgent notification${notificationSummary.urgentCount !== 1 ? 's' : ''} need attention`);
-    }
-  } catch {
-  }
-  
-  try {
-    const [sentInvoices] = await db
-      .select({ count: count() })
-      .from(invoices)
-      .where(and(
-        eq(invoices.workspaceId, workspaceId),
-        sql`${invoices.status} = 'sent'`
-      ));
-    
-    const [overdueInvoices] = await db
-      .select({ count: count() })
-      .from(invoices)
-      .where(and(
-        eq(invoices.workspaceId, workspaceId),
-        sql`${invoices.status} = 'overdue'`
-      ));
-    
+    // Process business metrics
     businessMetrics = {
-      invoicesPendingCount: sentInvoices?.count || 0,
-      invoicesOverdueCount: overdueInvoices?.count || 0,
+      invoicesPendingCount: sentInvoicesResult[0]?.count || 0,
+      invoicesOverdueCount: overdueInvoicesResult[0]?.count || 0,
       recentActivityScore: 0,
     };
+    if (businessMetrics.invoicesOverdueCount > 0) priorityInsights.unshift(`${businessMetrics.invoicesOverdueCount} overdue invoice(s) need attention`);
+    if (businessMetrics.invoicesPendingCount > 3) priorityInsights.push(`${businessMetrics.invoicesPendingCount} pending invoices to process`);
     
-    if (businessMetrics.invoicesOverdueCount > 0) {
-      priorityInsights.unshift(`${businessMetrics.invoicesOverdueCount} overdue invoice(s) need attention`);
-    }
-    if (businessMetrics.invoicesPendingCount > 3) {
-      priorityInsights.push(`${businessMetrics.invoicesPendingCount} pending invoices to process`);
-    }
   } catch {
   }
   
@@ -536,6 +475,7 @@ function getAnonymousContext(): TrinityContext {
  * Gather platform-wide diagnostics for Guru mode
  * Analyzes platform health, engagement opportunities, and upgrade candidates
  * Uses 5-minute caching to reduce database load
+ * OPTIMIZED: Runs all queries in parallel for faster response times
  */
 async function gatherPlatformDiagnostics(): Promise<PlatformDiagnostics> {
   // Return cached data if still valid
@@ -556,67 +496,87 @@ async function gatherPlatformDiagnostics(): Promise<PlatformDiagnostics> {
   const fastModeStats = { successRate: 0, avgDuration: 0, slaBreeches: 0, totalExecutions: 0 };
   
   try {
-    // Count active workspaces
-    const [wsCount] = await db
-      .select({ count: count() })
-      .from(workspaces)
-      .where(eq(workspaces.subscriptionStatus, 'active'));
-    activeWorkspaces = wsCount?.count || 0;
+    // Date calculations
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const sevenDaysFromNow = new Date();
+    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
     
-    // Count total users
-    const [userCount] = await db
-      .select({ count: count() })
-      .from(users);
-    totalUsers = userCount?.count || 0;
-    
-    // Find upgrade opportunities - free tier with high activity
-    const freeWorkspaces = await db
-      .select({
-        id: workspaces.id,
-        name: workspaces.name,
-      })
-      .from(workspaces)
-      .innerJoin(subscriptions, eq(subscriptions.workspaceId, workspaces.id))
-      .where(and(
-        eq(workspaces.subscriptionStatus, 'active'),
-        eq(subscriptions.plan, 'free')
-      ))
-      .limit(5);
-    
-    for (const ws of freeWorkspaces) {
-      const [taskCount] = await db
-        .select({ count: count() })
+    // Run ALL queries in parallel for maximum speed
+    const [
+      wsCountResult,
+      userCountResult,
+      freeWorkspacesResult,
+      inactiveWorkspacesResult,
+      failedTasksResult,
+      openTicketsResult,
+      urgentTicketsResult,
+      expiringTrialsResult,
+      recentTasksResult
+    ] = await Promise.all([
+      // Count active workspaces
+      db.select({ count: count() }).from(workspaces).where(eq(workspaces.subscriptionStatus, 'active')),
+      // Count total users
+      db.select({ count: count() }).from(users),
+      // Free workspaces for upgrade opportunities
+      db.select({ id: workspaces.id, name: workspaces.name })
+        .from(workspaces)
+        .innerJoin(subscriptions, eq(subscriptions.workspaceId, workspaces.id))
+        .where(and(eq(workspaces.subscriptionStatus, 'active'), eq(subscriptions.plan, 'free')))
+        .limit(5),
+      // Inactive workspaces
+      db.select({ id: workspaces.id, name: workspaces.name })
+        .from(workspaces)
+        .where(and(eq(workspaces.subscriptionStatus, 'active'), sql`${workspaces.updatedAt} < ${thirtyDaysAgo}`))
+        .limit(10),
+      // Failed tasks today
+      db.select({ count: count() }).from(aiWorkboardTasks)
+        .where(and(eq(aiWorkboardTasks.status, 'failed'), gte(aiWorkboardTasks.updatedAt, today))),
+      // Open tickets
+      db.select({ count: count() }).from(supportTickets).where(eq(supportTickets.status, 'open')),
+      // Urgent tickets
+      db.select({ count: count() }).from(supportTickets)
+        .where(and(eq(supportTickets.status, 'open'), eq(supportTickets.priority, 'urgent'))),
+      // Expiring trials
+      db.select({ id: subscriptions.workspaceId, name: workspaces.name, trialEndsAt: subscriptions.trialEndsAt })
+        .from(subscriptions)
+        .innerJoin(workspaces, eq(workspaces.id, subscriptions.workspaceId))
+        .where(and(eq(subscriptions.status, 'trial'), lte(subscriptions.trialEndsAt, sevenDaysFromNow), gte(subscriptions.trialEndsAt, new Date())))
+        .limit(10),
+      // Recent tasks for FAST mode stats
+      db.select({ status: aiWorkboardTasks.status, durationMs: sql<number>`EXTRACT(EPOCH FROM (${aiWorkboardTasks.completedAt} - ${aiWorkboardTasks.createdAt})) * 1000` })
         .from(aiWorkboardTasks)
-        .where(eq(aiWorkboardTasks.workspaceId, ws.id));
-      
-      if ((taskCount?.count || 0) > 10) {
+        .where(and(gte(aiWorkboardTasks.createdAt, sevenDaysAgo), sql`${aiWorkboardTasks.completedAt} IS NOT NULL`))
+        .limit(100)
+    ]);
+    
+    // Process results
+    activeWorkspaces = wsCountResult[0]?.count || 0;
+    totalUsers = userCountResult[0]?.count || 0;
+    
+    // Upgrade opportunities - batch task counts in parallel
+    const taskCountPromises = freeWorkspacesResult.map(ws => 
+      db.select({ count: count() }).from(aiWorkboardTasks).where(eq(aiWorkboardTasks.workspaceId, ws.id))
+    );
+    const taskCounts = await Promise.all(taskCountPromises);
+    freeWorkspacesResult.forEach((ws, idx) => {
+      const taskCount = taskCounts[idx]?.[0]?.count || 0;
+      if (taskCount > 10) {
         upgradeOpportunities.push({
           workspaceId: ws.id,
           workspaceName: ws.name || 'Unknown',
-          reason: `High AI workboard activity (${taskCount?.count} tasks) - good candidate for Business Buddy`,
+          reason: `High AI workboard activity (${taskCount} tasks) - good candidate for Business Buddy`,
         });
       }
-    }
+    });
     
-    // Find engagement alerts - inactive workspaces
-    const thirtyDaysAgo = new Date();
-    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
-    
-    const inactiveWorkspaces = await db
-      .select({
-        id: workspaces.id,
-        name: workspaces.name,
-      })
-      .from(workspaces)
-      .where(and(
-        eq(workspaces.subscriptionStatus, 'active'),
-        sql`${workspaces.updatedAt} < ${thirtyDaysAgo}`
-      ))
-      .limit(10);
-    
-    churnRiskCount = inactiveWorkspaces.length;
-    
-    for (const ws of inactiveWorkspaces) {
+    // Process inactive workspaces
+    churnRiskCount = inactiveWorkspacesResult.length;
+    for (const ws of inactiveWorkspacesResult) {
       engagementAlerts.push({
         type: 'inactive_workspace',
         message: `${ws.name || 'Workspace'} hasn't had activity in 30+ days`,
@@ -624,123 +584,41 @@ async function gatherPlatformDiagnostics(): Promise<PlatformDiagnostics> {
       });
     }
     
-    // Check failed tasks for error alerts
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const [failedTasks] = await db
-      .select({ count: count() })
-      .from(aiWorkboardTasks)
-      .where(and(
-        eq(aiWorkboardTasks.status, 'failed'),
-        gte(aiWorkboardTasks.updatedAt, today)
-      ));
-    
-    recentErrors = failedTasks?.count || 0;
-    
+    // Process failed tasks
+    recentErrors = failedTasksResult[0]?.count || 0;
     if (recentErrors > 10) {
       overallHealth = 'critical';
-      engagementAlerts.push({
-        type: 'high_error_rate',
-        message: `${recentErrors} AI tasks failed today - investigation recommended`,
-        priority: 'high',
-      });
+      engagementAlerts.push({ type: 'high_error_rate', message: `${recentErrors} AI tasks failed today - investigation recommended`, priority: 'high' });
     } else if (recentErrors > 5) {
       overallHealth = 'degraded';
-      engagementAlerts.push({
-        type: 'elevated_errors',
-        message: `${recentErrors} AI tasks failed today - monitoring advised`,
-        priority: 'medium',
-      });
+      engagementAlerts.push({ type: 'elevated_errors', message: `${recentErrors} AI tasks failed today - monitoring advised`, priority: 'medium' });
     }
     
-    // Support ticket backlog
-    const [openTickets] = await db
-      .select({ count: count() })
-      .from(supportTickets)
-      .where(eq(supportTickets.status, 'open'));
-    supportTicketBacklog.open = openTickets?.count || 0;
-    
-    const [urgentTickets] = await db
-      .select({ count: count() })
-      .from(supportTickets)
-      .where(and(
-        eq(supportTickets.status, 'open'),
-        eq(supportTickets.priority, 'urgent')
-      ));
-    supportTicketBacklog.urgent = urgentTickets?.count || 0;
-    
+    // Process support tickets
+    supportTicketBacklog.open = openTicketsResult[0]?.count || 0;
+    supportTicketBacklog.urgent = urgentTicketsResult[0]?.count || 0;
     if (supportTicketBacklog.urgent > 5) {
-      engagementAlerts.push({
-        type: 'urgent_tickets',
-        message: `${supportTicketBacklog.urgent} urgent support tickets awaiting response`,
-        priority: 'high',
-      });
+      engagementAlerts.push({ type: 'urgent_tickets', message: `${supportTicketBacklog.urgent} urgent support tickets awaiting response`, priority: 'high' });
     }
     
-    // Trial expirations in next 7 days
-    const sevenDaysFromNow = new Date();
-    sevenDaysFromNow.setDate(sevenDaysFromNow.getDate() + 7);
-    
-    const expiringTrials = await db
-      .select({
-        id: subscriptions.workspaceId,
-        name: workspaces.name,
-        trialEndsAt: subscriptions.trialEndsAt,
-      })
-      .from(subscriptions)
-      .innerJoin(workspaces, eq(workspaces.id, subscriptions.workspaceId))
-      .where(and(
-        eq(subscriptions.status, 'trial'),
-        lte(subscriptions.trialEndsAt, sevenDaysFromNow),
-        gte(subscriptions.trialEndsAt, new Date())
-      ))
-      .limit(10);
-    
-    for (const trial of expiringTrials) {
+    // Process expiring trials
+    for (const trial of expiringTrialsResult) {
       if (trial.trialEndsAt) {
         const daysLeft = Math.ceil((trial.trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
-        trialExpirations.push({
-          workspaceId: trial.id || '',
-          workspaceName: trial.name || 'Unknown',
-          daysLeft,
-        });
-        
+        trialExpirations.push({ workspaceId: trial.id || '', workspaceName: trial.name || 'Unknown', daysLeft });
         if (daysLeft <= 3) {
-          engagementAlerts.push({
-            type: 'trial_expiring',
-            message: `${trial.name || 'Workspace'} trial expires in ${daysLeft} day(s) - conversion opportunity`,
-            priority: daysLeft <= 1 ? 'high' : 'medium',
-          });
+          engagementAlerts.push({ type: 'trial_expiring', message: `${trial.name || 'Workspace'} trial expires in ${daysLeft} day(s) - conversion opportunity`, priority: daysLeft <= 1 ? 'high' : 'medium' });
         }
       }
     }
     
-    // FAST mode stats from recent AI workboard tasks
-    const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const recentTasks = await db
-      .select({
-        status: aiWorkboardTasks.status,
-        durationMs: sql<number>`EXTRACT(EPOCH FROM (${aiWorkboardTasks.completedAt} - ${aiWorkboardTasks.createdAt})) * 1000`,
-      })
-      .from(aiWorkboardTasks)
-      .where(and(
-        gte(aiWorkboardTasks.createdAt, sevenDaysAgo),
-        sql`${aiWorkboardTasks.completedAt} IS NOT NULL`
-      ))
-      .limit(100);
-    
-    if (recentTasks.length > 0) {
-      const completed = recentTasks.filter(t => t.status === 'completed').length;
-      fastModeStats.totalExecutions = recentTasks.length;
-      fastModeStats.successRate = Math.round((completed / recentTasks.length) * 100);
-      fastModeStats.avgDuration = Math.round(
-        recentTasks.reduce((sum, t) => sum + (t.durationMs || 0), 0) / recentTasks.length
-      );
-      // Count tasks taking > 30s as SLA breaches
-      fastModeStats.slaBreeches = recentTasks.filter(t => (t.durationMs || 0) > 30000).length;
+    // Process FAST mode stats
+    if (recentTasksResult.length > 0) {
+      const completed = recentTasksResult.filter(t => t.status === 'completed').length;
+      fastModeStats.totalExecutions = recentTasksResult.length;
+      fastModeStats.successRate = Math.round((completed / recentTasksResult.length) * 100);
+      fastModeStats.avgDuration = Math.round(recentTasksResult.reduce((sum, t) => sum + (t.durationMs || 0), 0) / recentTasksResult.length);
+      fastModeStats.slaBreeches = recentTasksResult.filter(t => (t.durationMs || 0) > 30000).length;
     }
     
   } catch {
