@@ -1,6 +1,6 @@
 import { IStorage } from './storage';
 import { emailService } from './services/emailService';
-import { notificationStateManager } from './services/notificationStateManager';
+// notificationStateManager removed - replaced by Trinity Command Request System
 
 interface NotificationHelperContext {
   storage: IStorage;
@@ -88,8 +88,7 @@ async function createAndBroadcastNotification(
     broadcastNotification(params.workspaceId, params.userId, 'notification_new', notification, unreadCount);
   }
 
-  // Also notify the NotificationStateManager for unified count tracking
-  await notificationStateManager.onNewNotification(params.userId, params.workspaceId, notification);
+  // NotificationStateManager removed - Trinity Command Request System handles this
 
   return notification;
 }

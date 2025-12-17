@@ -94,7 +94,7 @@ import { calendarRouter } from "./routes/calendarRoutes";
 import { smsRouter } from "./routes/smsRoutes";
 import { whatsNewRouter } from "./routes/whatsNewRoutes";
 import empireRouter from "./routes/empireRoutes"; // Empire Mode (Trinity CSO upgrade)
-import { trinityNotificationRouter } from "./routes/trinityNotificationRoutes"; // Trinity Notification Bridge
+// trinityNotificationRouter removed - replaced by Trinity Command Request System // Trinity Notification Bridge
 import { supportCommandRouter } from "./routes/support-command-console";
 import { endUserControlRouter } from "./routes/endUserControlRoutes";
 import { sessionCheckpointRouter } from "./routes/sessionCheckpointRoutes";
@@ -3110,7 +3110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/trinity/maintenance", trinityMaintenanceRouter); // Trinity Platform Maintenance
   app.use("/api/trinity/control-console", trinityControlConsoleRouter); // Trinity Control Console
   app.use("/api/trinity", empireRouter); // Empire Mode routes
-  app.use("/api/trinity/notifications", trinityNotificationRouter); // Trinity Notification Bridge
+  // trinityNotificationRouter removed // Trinity Notification Bridge
   app.use("/api/quick-fixes", quickFixRouter); // Quick Fix System
   app.use("/api/device", deviceLoaderRouter); // Universal Device Loader
   app.use("/api/vqa", requireAuth, vqaRouter); // Visual QA (AI Brain Eyes)
