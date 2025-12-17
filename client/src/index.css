@@ -7,6 +7,36 @@
 @tailwind utilities;
 
 /* ============================================================================
+   UNS POPOVER - FIXED HEIGHT OVERRIDE
+   Uses data-testid selector to override Radix inline styles
+   ============================================================================ */
+[data-testid="notification-popover-content"] {
+  height: 500px !important;
+  max-height: min(500px, calc(100vh - 80px)) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+[data-testid="notification-popover-content"] > * {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+[data-testid="notification-sheet-content"] {
+  height: 550px !important;
+  max-height: min(550px, 80vh) !important;
+  display: flex !important;
+  flex-direction: column !important;
+}
+
+[data-testid="notification-sheet-content"] > * {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* ============================================================================
    UNIVERSAL MOBILE RESPONSIVENESS FIX
    Prevents ALL text/content from overflowing off-screen on mobile devices
    ============================================================================ */

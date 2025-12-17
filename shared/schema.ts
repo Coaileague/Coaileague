@@ -10347,6 +10347,326 @@ export type InsertNotificationDigest = z.infer<typeof insertNotificationDigestSc
 export type NotificationDigest = typeof notificationDigests.$inferSelect;
 
 // ============================================================================
+// UNS - NOTIFICATION RULES (User-Defined Categorization & Filtering)
+// ============================================================================
+
+// Rule action type enum
+export const notificationRuleActionEnum = pgEnum('notification_rule_action', [
+  'categorize',      // Assign to a specific category
+  'priority_boost',  // Increase priority
+  'priority_lower',  // Decrease priority
+  'auto_read',       // Mark as read automatically
+  'auto_dismiss',    // Dismiss immediately
+  'highlight',       // Highlight for attention
+  'throttle',        // Apply throttling
+  'smart_reply',     // Enable smart reply suggestions
+]);
+
+// User-defined notification rules for categorization and filtering
+export const notificationRules = pgTable("notification_rules", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Rule identity
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  
+  // Matching conditions (evaluated in order)
+  conditions: jsonb("conditions").$type<{
+    type?: string[];           // Notification types to match
+    category?: string[];       // Categories to match
+    titleContains?: string[];  // Title keywords
+    messageContains?: string[];// Message keywords
+    senderContains?: string[]; // Sender name/source keywords
+    priority?: string[];       // Priority levels
+    timeRange?: { start: string; end: string }; // Time-based matching (HH:MM)
+  }>().notNull(),
+  
+  // Actions to take when matched
+  action: notificationRuleActionEnum("action").notNull(),
+  actionConfig: jsonb("action_config").$type<{
+    targetCategory?: string;
+    priorityLevel?: string;
+    throttleMinutes?: number;
+    customLabel?: string;
+  }>(),
+  
+  // Rule ordering and status
+  priority: integer("priority").default(0), // Higher = evaluated first
+  isActive: boolean("is_active").default(true),
+  
+  // Analytics
+  matchCount: integer("match_count").default(0),
+  lastMatchedAt: timestamp("last_matched_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userActiveIdx: index("notification_rules_user_active_idx").on(table.userId, table.isActive),
+  workspaceIdx: index("notification_rules_workspace_idx").on(table.workspaceId),
+  priorityIdx: index("notification_rules_priority_idx").on(table.priority),
+}));
+
+export const insertNotificationRuleSchema = createInsertSchema(notificationRules).omit({
+  id: true,
+  matchCount: true,
+  lastMatchedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertNotificationRule = z.infer<typeof insertNotificationRuleSchema>;
+export type NotificationRule = typeof notificationRules.$inferSelect;
+
+// ============================================================================
+// UNS - NOTIFICATION THROTTLING (Activity-Based Rate Limiting)
+// ============================================================================
+
+// Track user notification activity for throttling decisions
+export const notificationActivity = pgTable("notification_activity", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Activity window
+  windowStart: timestamp("window_start").notNull(),
+  windowEnd: timestamp("window_end").notNull(),
+  
+  // Notification counts by category
+  totalReceived: integer("total_received").default(0),
+  totalRead: integer("total_read").default(0),
+  totalDismissed: integer("total_dismissed").default(0),
+  totalActedOn: integer("total_acted_on").default(0),
+  
+  // Category breakdown
+  countByCategory: jsonb("count_by_category").$type<Record<string, number>>().default(sql`'{}'::jsonb`),
+  countByType: jsonb("count_by_type").$type<Record<string, number>>().default(sql`'{}'::jsonb`),
+  
+  // Engagement metrics
+  avgReadTimeSeconds: doublePrecision("avg_read_time_seconds"),
+  engagementRate: doublePrecision("engagement_rate"), // (read + acted) / received
+  
+  // Throttling state
+  isThrottled: boolean("is_throttled").default(false),
+  throttleReason: varchar("throttle_reason"),
+  throttleUntil: timestamp("throttle_until"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userWindowIdx: index("notification_activity_user_window_idx").on(table.userId, table.windowStart),
+  workspaceIdx: index("notification_activity_workspace_idx").on(table.workspaceId),
+  throttledIdx: index("notification_activity_throttled_idx").on(table.isThrottled),
+}));
+
+export const insertNotificationActivitySchema = createInsertSchema(notificationActivity).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertNotificationActivity = z.infer<typeof insertNotificationActivitySchema>;
+export type NotificationActivity = typeof notificationActivity.$inferSelect;
+
+// ============================================================================
+// UNS - SMART REPLIES (AI-Powered Quick Responses)
+// ============================================================================
+
+// Smart reply templates - AI-generated and user-customizable quick responses
+export const smartReplyTemplates = pgTable("smart_reply_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Template identity
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  
+  // Matching criteria (which notifications this applies to)
+  applicableTypes: jsonb("applicable_types").$type<string[]>().notNull(), // Notification types
+  applicableCategories: jsonb("applicable_categories").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  // Reply options
+  replies: jsonb("replies").$type<Array<{
+    label: string;      // Button label: "Approve", "Deny", "Ask for details"
+    action: string;     // Action code: 'approve', 'deny', 'snooze', 'escalate', 'custom'
+    apiEndpoint?: string;  // Optional API endpoint to call
+    metadata?: Record<string, any>;
+    icon?: string;      // Lucide icon name
+    variant?: 'primary' | 'secondary' | 'destructive' | 'ghost';
+  }>>().notNull(),
+  
+  // AI enhancement
+  enableAiSuggestions: boolean("enable_ai_suggestions").default(true), // Let AI suggest contextual replies
+  aiPromptTemplate: text("ai_prompt_template"), // Custom prompt for AI suggestions
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  isSystem: boolean("is_system").default(false), // System-defined vs user-created
+  
+  // Usage analytics
+  usageCount: integer("usage_count").default(0),
+  successRate: doublePrecision("success_rate"), // Percentage of positive outcomes
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceActiveIdx: index("smart_reply_templates_workspace_active_idx").on(table.workspaceId, table.isActive),
+  systemIdx: index("smart_reply_templates_system_idx").on(table.isSystem),
+}));
+
+export const insertSmartReplyTemplateSchema = createInsertSchema(smartReplyTemplates).omit({
+  id: true,
+  usageCount: true,
+  successRate: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSmartReplyTemplate = z.infer<typeof insertSmartReplyTemplateSchema>;
+export type SmartReplyTemplate = typeof smartReplyTemplates.$inferSelect;
+
+// Smart reply usage log - Track which replies users select and outcomes
+export const smartReplyUsage = pgTable("smart_reply_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  notificationId: varchar("notification_id").notNull().references(() => notifications.id, { onDelete: 'cascade' }),
+  templateId: varchar("template_id").references(() => smartReplyTemplates.id, { onDelete: 'set null' }),
+  
+  // Selected reply
+  replyAction: varchar("reply_action", { length: 100 }).notNull(),
+  replyLabel: varchar("reply_label", { length: 100 }),
+  
+  // AI-generated context
+  aiGenerated: boolean("ai_generated").default(false),
+  aiContext: text("ai_context"), // What context AI used to suggest this
+  
+  // Outcome tracking
+  outcome: varchar("outcome"), // 'success', 'failed', 'cancelled', 'pending'
+  outcomeDetails: text("outcome_details"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userIdx: index("smart_reply_usage_user_idx").on(table.userId),
+  notificationIdx: index("smart_reply_usage_notification_idx").on(table.notificationId),
+  templateIdx: index("smart_reply_usage_template_idx").on(table.templateId),
+  outcomeIdx: index("smart_reply_usage_outcome_idx").on(table.outcome),
+}));
+
+export const insertSmartReplyUsageSchema = createInsertSchema(smartReplyUsage).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertSmartReplyUsage = z.infer<typeof insertSmartReplyUsageSchema>;
+export type SmartReplyUsage = typeof smartReplyUsage.$inferSelect;
+
+// ============================================================================
+// UNS - AI NOTIFICATION SUMMARIES (Daily/Weekly Digests)
+// ============================================================================
+
+// Summary frequency enum
+export const summaryFrequencyEnum = pgEnum('summary_frequency', [
+  'daily',     // Every day at configured time
+  'weekly',    // Once per week
+  'biweekly',  // Every two weeks
+  'monthly',   // Once per month
+]);
+
+// User AI summary preferences
+export const notificationSummaryPreferences = pgTable("notification_summary_preferences", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().unique().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Summary settings
+  isEnabled: boolean("is_enabled").default(true),
+  frequency: summaryFrequencyEnum("frequency").notNull().default('daily'),
+  
+  // Delivery time (in user's timezone)
+  deliveryHour: integer("delivery_hour").default(8), // 0-23, default 8 AM
+  deliveryDayOfWeek: integer("delivery_day_of_week"), // 0-6 (Sunday-Saturday) for weekly
+  timezone: varchar("timezone", { length: 50 }).default('UTC'),
+  
+  // Content preferences
+  includeCategories: jsonb("include_categories").$type<string[]>().default(sql`'[]'::jsonb`), // Empty = all
+  excludeTypes: jsonb("exclude_types").$type<string[]>().default(sql`'[]'::jsonb`),
+  maxItems: integer("max_items").default(20), // Max notifications to summarize
+  
+  // AI settings
+  summaryStyle: varchar("summary_style").default('concise'), // 'concise', 'detailed', 'bullet_points'
+  includeRecommendations: boolean("include_recommendations").default(true),
+  
+  // Delivery method
+  deliverViaEmail: boolean("deliver_via_email").default(true),
+  deliverInApp: boolean("deliver_in_app").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  userIdx: index("notification_summary_preferences_user_idx").on(table.userId),
+  workspaceIdx: index("notification_summary_preferences_workspace_idx").on(table.workspaceId),
+  enabledIdx: index("notification_summary_preferences_enabled_idx").on(table.isEnabled),
+}));
+
+export const insertNotificationSummaryPreferencesSchema = createInsertSchema(notificationSummaryPreferences).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertNotificationSummaryPreferences = z.infer<typeof insertNotificationSummaryPreferencesSchema>;
+export type NotificationSummaryPreferences = typeof notificationSummaryPreferences.$inferSelect;
+
+// Generated AI summaries history
+export const notificationSummaries = pgTable("notification_summaries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Summary content
+  title: varchar("title", { length: 255 }).notNull(),
+  summary: text("summary").notNull(), // AI-generated summary
+  highlights: jsonb("highlights").$type<string[]>().default(sql`'[]'::jsonb`), // Key points
+  recommendations: jsonb("recommendations").$type<string[]>().default(sql`'[]'::jsonb`), // AI suggestions
+  
+  // Source data
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  notificationCount: integer("notification_count").notNull(),
+  sourceNotificationIds: jsonb("source_notification_ids").$type<string[]>().default(sql`'[]'::jsonb`),
+  
+  // Category breakdown
+  categoryBreakdown: jsonb("category_breakdown").$type<Record<string, number>>().default(sql`'{}'::jsonb`),
+  
+  // AI metadata
+  modelUsed: varchar("model_used", { length: 50 }).default('gemini-2.5-pro'),
+  tokensUsed: integer("tokens_used"),
+  generationTimeMs: integer("generation_time_ms"),
+  
+  // Delivery status
+  emailSent: boolean("email_sent").default(false),
+  emailSentAt: timestamp("email_sent_at"),
+  
+  // User interaction
+  isRead: boolean("is_read").default(false),
+  readAt: timestamp("read_at"),
+  feedback: varchar("feedback"), // 'helpful', 'not_helpful', 'too_long', 'too_short'
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  userIdx: index("notification_summaries_user_idx").on(table.userId),
+  periodIdx: index("notification_summaries_period_idx").on(table.periodStart, table.periodEnd),
+  createdIdx: index("notification_summaries_created_idx").on(table.createdAt),
+}));
+
+export const insertNotificationSummarySchema = createInsertSchema(notificationSummaries).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertNotificationSummary = z.infer<typeof insertNotificationSummarySchema>;
+export type NotificationSummary = typeof notificationSummaries.$inferSelect;
+
+// ============================================================================
 // MAINTENANCE ALERTS - Support Staff System Notifications
 // ============================================================================
 
