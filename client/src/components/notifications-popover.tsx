@@ -506,7 +506,7 @@ function NotificationCard({
     >
       {/* Critical/High/Medium Priority Cards */}
       {(isCritical || isHigh || isMedium) ? (
-        <div className={`${cardBg} rounded-lg mx-1.5 my-1.5 overflow-hidden`}>
+        <div className={`${cardBg} rounded-lg mx-2 my-1 overflow-hidden shrink-0`}>
           {/* Critical Banner */}
           {isCritical && (
             <div className={`bg-red-600 dark:bg-red-700 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wide text-white ${compact ? 'text-[8px]' : ''}`}>
@@ -1117,7 +1117,7 @@ export function NotificationsPopover() {
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
           </div>
         ) : sortedNotifications.length > 0 ? (
-          <div className="divide-y">
+          <div className="divide-y min-h-0">
             {sortedNotifications.map((notification) => (
               <NotificationCard
                 key={notification.id}
