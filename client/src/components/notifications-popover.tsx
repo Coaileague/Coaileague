@@ -1199,12 +1199,9 @@ export function NotificationsPopover() {
           />
         </div>
         <SheetContent 
+          id="notifications-sheet-content"
           side="bottom" 
-          className="p-0 rounded-t-2xl overflow-hidden flex flex-col"
-          style={{
-            height: '550px',
-            maxHeight: 'min(550px, calc(100vh - 60px))',
-          }}
+          className="p-0 rounded-t-2xl"
           data-testid="notification-sheet-content"
           data-trinity-avoid="true"
         >
@@ -1230,13 +1227,10 @@ export function NotificationsPopover() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[380px] max-w-[calc(100vw-2rem)] p-0 shadow-xl border-muted overflow-hidden flex flex-col" 
+        id="notifications-popover-content"
+        className="p-0 shadow-xl border-muted" 
         align="end"
         sideOffset={8}
-        style={{
-          height: '500px',
-          maxHeight: 'min(500px, calc(100vh - 80px))',
-        }}
         data-testid="notification-popover-content"
         data-trinity-avoid="true"
         onInteractOutside={(e) => {
