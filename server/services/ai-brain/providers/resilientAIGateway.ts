@@ -217,6 +217,13 @@ class ResilientAIGateway {
           console.log(`🔄 Fallback to ${provider} successful`);
           await this.logProviderSwitch(originalProvider, provider, lastError?.message || 'Primary unavailable', request);
           this.updateSystemMode(provider);
+        } else {
+          // Primary provider succeeded - reset to normal mode if we were in degraded/emergency
+          if (this.systemStatus.mode !== 'normal') {
+            console.log(`✅ Primary provider ${provider} recovered - resetting to normal mode`);
+            this.systemStatus.mode = 'normal';
+            this.systemStatus.activeProvider = provider;
+          }
         }
 
         return {
