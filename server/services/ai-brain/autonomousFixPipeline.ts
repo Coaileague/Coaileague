@@ -940,6 +940,78 @@ export const autonomousFixPipeline = AutonomousFixPipelineService.getInstance();
 export async function initializeAutonomousFixPipeline(): Promise<void> {
   console.log('[AutonomousFix] Initializing Autonomous Fix Pipeline...');
   autonomousFixPipeline.registerActions();
+  
+  // Subscribe to gap scan events to auto-generate fix requests
+  platformEventBus.subscribe('gap_intelligence_scan', async (event) => {
+    try {
+      const metadata = event.metadata || {};
+      const criticalCount = (metadata.criticalCount || 0) as number;
+      const errorCount = (metadata.errorCount || 0) as number;
+      
+      // Only process if there are critical or error severity findings
+      if (criticalCount === 0 && errorCount === 0) {
+        return;
+      }
+      
+      console.log(`[AutonomousFix] Gap scan detected ${criticalCount} critical, ${errorCount} error findings - generating fix requests`);
+      
+      // Get the highest priority open findings that need fixes
+      const findings = await db
+        .select()
+        .from(aiGapFindings)
+        .where(and(
+          eq(aiGapFindings.status, 'open'),
+          sql`${aiGapFindings.severity} IN ('critical', 'blocker', 'error')`
+        ))
+        .orderBy(desc(aiGapFindings.lastDetectedAt))
+        .limit(5); // Process top 5 most urgent
+      
+      for (const finding of findings) {
+        // Check if already has a pending approval
+        const existingApproval = await db
+          .select()
+          .from(aiWorkflowApprovals)
+          .where(and(
+            eq(aiWorkflowApprovals.gapFindingId, finding.id.toString()),
+            eq(aiWorkflowApprovals.status, 'pending')
+          ))
+          .limit(1);
+        
+        if (existingApproval.length > 0) {
+          continue; // Already has pending approval request
+        }
+        
+        // Generate fix spec and create approval request for support roles
+        const spec = await autonomousFixPipeline.generateFixSpecification(finding.id);
+        if (spec && spec.patches.length > 0) {
+          const approval = await workflowApprovalService.createApprovalFromFinding(
+            {
+              id: finding.id,
+              filePath: finding.filePath || spec.affectedFiles[0],
+              gapType: finding.gapType || 'auto_fix',
+              severity: finding.severity as 'critical' | 'error' | 'warning' | 'info',
+              title: finding.title || 'Unknown issue',
+              description: finding.description || spec.approach,
+              confidence: spec.confidence,
+            },
+            {
+              affectedFiles: spec.affectedFiles,
+              changes: spec.patches,
+              rollbackPlan: spec.rollbackPlan,
+            }
+          );
+          
+          if (approval) {
+            console.log(`[AutonomousFix] Created approval request ${approval.id} for finding ${finding.id}: ${finding.title}`);
+          }
+        }
+      }
+    } catch (error) {
+      console.error('[AutonomousFix] Error processing gap scan event:', error);
+    }
+  });
+  
+  console.log('[AutonomousFix] Subscribed to gap_intelligence_scan events - will auto-generate hotpatch requests for support roles');
   console.log('[AutonomousFix] Autonomous Fix Pipeline initialized');
 }
 
