@@ -3,10 +3,13 @@
  * 
  * Manages customizable notification sounds and vibration patterns.
  * Supports both desktop (Web Audio) and mobile (Vibration API) devices.
+ * Uses database persistence with real-time sync via WebSocket.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useIsMobile } from './use-mobile';
+import { apiRequest } from '@/lib/queryClient';
 
 export type NotificationSound = 
   | 'default'
@@ -107,7 +110,16 @@ export interface UseNotificationPreferencesReturn {
 export function useNotificationPreferences(): UseNotificationPreferencesReturn {
   const isMobile = useIsMobile();
   const audioContextRef = useRef<AudioContext | null>(null);
+  const queryClient = useQueryClient();
   
+  // Fetch preferences from API with fallback to localStorage
+  const { data: apiPreferences } = useQuery({
+    queryKey: ['/api/experience/notification-preferences'],
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: false,
+  });
+  
+  // Local state for immediate updates
   const [preferences, setPreferences] = useState<NotificationPreferences>(() => {
     if (typeof window === 'undefined') return DEFAULT_PREFERENCES;
     
@@ -121,6 +133,64 @@ export function useNotificationPreferences(): UseNotificationPreferencesReturn {
     }
     return DEFAULT_PREFERENCES;
   });
+  
+  // Mutation to save preferences to API
+  const saveMutation = useMutation({
+    mutationFn: async (prefs: NotificationPreferences) => {
+      return apiRequest('/api/experience/notification-preferences', {
+        method: 'POST',
+        body: JSON.stringify(prefs),
+        headers: { 'Content-Type': 'application/json' },
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/experience/notification-preferences'] });
+    },
+  });
+  
+  // Sync API preferences when they load
+  useEffect(() => {
+    if (apiPreferences?.preferences) {
+      setPreferences(prev => ({ ...prev, ...apiPreferences.preferences }));
+    }
+  }, [apiPreferences]);
+  
+  // Cross-tab sync via BroadcastChannel with origin tracking to prevent infinite loops
+  const tabIdRef = useRef<string>(Math.random().toString(36).substring(7));
+  const lastReceivedRef = useRef<string | null>(null);
+  
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    
+    const channel = new BroadcastChannel('notification-preferences');
+    
+    channel.onmessage = (event) => {
+      const { preferences: newPrefs, originTabId, timestamp } = event.data || {};
+      // Only apply if from different tab and not our own broadcast
+      if (newPrefs && originTabId && originTabId !== tabIdRef.current) {
+        // Deduplicate by timestamp to prevent re-processing same update
+        if (timestamp && timestamp !== lastReceivedRef.current) {
+          lastReceivedRef.current = timestamp;
+          setPreferences(prev => ({ ...prev, ...newPrefs }));
+        }
+      }
+    };
+    
+    return () => channel.close();
+  }, []);
+  
+  // Broadcast local preference changes to other tabs (only on user-initiated updates)
+  const broadcastPreferences = useCallback((prefs: NotificationPreferences) => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    
+    const channel = new BroadcastChannel('notification-preferences');
+    channel.postMessage({
+      preferences: prefs,
+      originTabId: tabIdRef.current,
+      timestamp: Date.now().toString(),
+    });
+    channel.close();
+  }, []);
 
   const supportsVibration = typeof navigator !== 'undefined' && 'vibrate' in navigator;
 
@@ -130,6 +200,7 @@ export function useNotificationPreferences(): UseNotificationPreferencesReturn {
     }
   }, []);
 
+  // Persist to localStorage for offline access
   useEffect(() => {
     if (typeof window !== 'undefined') {
       localStorage.setItem('notificationPreferences', JSON.stringify(preferences));
@@ -156,8 +227,15 @@ export function useNotificationPreferences(): UseNotificationPreferencesReturn {
   })();
 
   const updatePreferences = useCallback((updates: Partial<NotificationPreferences>) => {
-    setPreferences(prev => ({ ...prev, ...updates }));
-  }, []);
+    setPreferences(prev => {
+      const newPrefs = { ...prev, ...updates };
+      // Save to API
+      saveMutation.mutate(newPrefs);
+      // Broadcast to other tabs for cross-tab sync
+      broadcastPreferences(newPrefs);
+      return newPrefs;
+    });
+  }, [saveMutation, broadcastPreferences]);
 
   const playSound = useCallback((type: NotificationType) => {
     if (!preferences.soundEnabled || isQuietHours) return;
