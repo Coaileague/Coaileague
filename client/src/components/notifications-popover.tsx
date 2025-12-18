@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, 
@@ -757,6 +757,10 @@ export function NotificationsPopover() {
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const isMobileBreakpoint = useIsMobile();
   
+  // Scroll position preservation refs to prevent scroll reset during data refetches
+  const scrollPositionRef = useRef<number>(0);
+  const scrollViewportRef = useRef<HTMLDivElement | null>(null);
+  
   // Enhanced mobile detection: consider touch + mobile user agent + viewport
   // Samsung S24 Ultra and other large phones may have viewport > 768px
   const isMobile = (() => {
@@ -800,6 +804,41 @@ export function NotificationsPopover() {
       refetch();
     }
   }, [open, refetch]);
+  
+  // Preserve scroll position during data refetches
+  // Save scroll position before render and restore after data updates
+  useLayoutEffect(() => {
+    const viewport = scrollViewportRef.current;
+    if (viewport && scrollPositionRef.current > 0 && !isLoading) {
+      viewport.scrollTop = scrollPositionRef.current;
+    }
+  }, [rawData, isLoading]);
+  
+  // Scroll event handler to track position
+  const handleScroll = useCallback((e: Event) => {
+    const target = e.target as HTMLDivElement;
+    if (target) {
+      scrollPositionRef.current = target.scrollTop;
+    }
+  }, []);
+  
+  // Reset scroll position when switching tabs or filters
+  useEffect(() => {
+    scrollPositionRef.current = 0;
+    if (scrollViewportRef.current) {
+      scrollViewportRef.current.scrollTop = 0;
+    }
+  }, [activeTab, subFilter]);
+  
+  // Cleanup scroll listener on unmount
+  useEffect(() => {
+    return () => {
+      const viewport = scrollViewportRef.current;
+      if (viewport) {
+        viewport.removeEventListener('scroll', handleScroll);
+      }
+    };
+  }, [handleScroll]);
   
   // Map to UNS format with user's platform role for action button visibility
   const allNotifications = mapToUNS(rawData, userPlatformRole);
@@ -952,7 +991,10 @@ export function NotificationsPopover() {
     }
   };
 
-  const NotificationsContent = ({ simplified = false, compact = false }: { simplified?: boolean; compact?: boolean }) => (
+  // Memoize content generator to prevent remounting on parent re-renders
+  // This preserves scroll position during data refetches
+  const renderNotificationsContent = useMemo(() => {
+    return ({ simplified = false, compact = false }: { simplified?: boolean; compact?: boolean }) => (
     <div 
       className="flex flex-col h-full min-h-0"
       data-trinity-surface="notifications"
@@ -1156,11 +1198,21 @@ export function NotificationsPopover() {
         </div>
       </div>
       
-      {/* Notification List - Scrollable container */}
+      {/* Notification List - Scrollable container with scroll preservation */}
       <ScrollArea 
         className="flex-1 min-h-0"
         style={{ 
           touchAction: 'pan-y',
+        }}
+        ref={(node) => {
+          // Get the viewport element from ScrollArea for scroll tracking
+          if (node) {
+            const viewport = node.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement;
+            if (viewport && viewport !== scrollViewportRef.current) {
+              scrollViewportRef.current = viewport;
+              viewport.addEventListener('scroll', handleScroll, { passive: true });
+            }
+          }
         }}
       >
         <div>
@@ -1241,6 +1293,12 @@ export function NotificationsPopover() {
       </div>
     </div>
   );
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTab, subFilter, sortNewest, showUnreadOnly, sortedNotifications, isLoading, totalUnread, forYouCount, systemCount, user, allNotifications, systemAlertsSubCount, adminReviewCount, updatesCount, isGuruMode, isMobile]);
+
+  // Create stable component references using the memoized generator
+  const MobileNotificationsContent = renderNotificationsContent({ simplified: false, compact: true });
+  const DesktopNotificationsContent = renderNotificationsContent({ simplified: false, compact: false });
 
   if (isMobile) {
     return (
@@ -1262,7 +1320,7 @@ export function NotificationsPopover() {
             <div className="w-8 h-1 rounded-full bg-muted-foreground/30" />
           </div>
           {/* Full Feature Parity with Compact Mode for Mobile */}
-          <NotificationsContent simplified={false} compact={true} />
+          {MobileNotificationsContent}
         </SheetContent>
       </Sheet>
     );
@@ -1294,7 +1352,7 @@ export function NotificationsPopover() {
           }
         }}
       >
-        <NotificationsContent />
+        {DesktopNotificationsContent}
       </PopoverContent>
     </Popover>
   );
