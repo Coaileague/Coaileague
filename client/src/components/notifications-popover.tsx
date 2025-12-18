@@ -21,7 +21,7 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { AnimatedNotificationBell } from "./animated-notification-bell";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -105,12 +105,13 @@ const PRIORITY_STYLES: Record<Priority, { border: string; bg: string; text: stri
   },
 };
 
-// Roles that can see action buttons on notifications
-const ACTION_BUTTON_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
+// Roles that can see action buttons on notifications - expanded to include common admin roles
+const ACTION_BUTTON_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer', 'admin', 'owner', 'manager', 'hr_admin', 'billing_admin', 'workspace_admin'];
 
 // Check if user has permission to see action buttons
+// Requires a valid platform role that's in the allowed list
 function canSeeActionButtons(platformRole: string | null | undefined): boolean {
-  if (!platformRole) return false;
+  if (!platformRole) return false; // Unauthenticated users cannot see action buttons
   return ACTION_BUTTON_ROLES.includes(platformRole);
 }
 
@@ -790,7 +791,7 @@ export function NotificationsPopover() {
   // Fetch notifications - truly live with instant refetch on WebSocket events
   // UNS is UNIVERSAL - works for both authenticated AND unauthenticated users
   // Unauthenticated users see platform updates only (backend handles this)
-  const { data: rawData, isLoading, refetch } = useQuery<NotificationsData>({
+  const { data: rawData, isLoading, refetch, dataUpdatedAt } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications/combined"],
     enabled: true, // ALWAYS enabled - UNS is universal for all users
     staleTime: 0, // Always fresh - WebSocket triggers immediate refetch
@@ -805,15 +806,6 @@ export function NotificationsPopover() {
     }
   }, [open, refetch]);
   
-  // Preserve scroll position during data refetches
-  // Save scroll position before render and restore after data updates
-  useLayoutEffect(() => {
-    const viewport = scrollViewportRef.current;
-    if (viewport && scrollPositionRef.current > 0 && !isLoading) {
-      viewport.scrollTop = scrollPositionRef.current;
-    }
-  }, [rawData, isLoading]);
-  
   // Scroll event handler to track position
   const handleScroll = useCallback((e: Event) => {
     const target = e.target as HTMLDivElement;
@@ -822,15 +814,25 @@ export function NotificationsPopover() {
     }
   }, []);
   
-  // Reset scroll position when switching tabs or filters
-  useEffect(() => {
-    scrollPositionRef.current = 0;
-    if (scrollViewportRef.current) {
-      scrollViewportRef.current.scrollTop = 0;
+  // Callback ref that immediately attaches scroll listener when viewport is available
+  const setViewportRef = useCallback((node: HTMLDivElement | null) => {
+    // Clean up old listener if viewport changed
+    if (scrollViewportRef.current && scrollViewportRef.current !== node) {
+      scrollViewportRef.current.removeEventListener('scroll', handleScroll);
     }
-  }, [activeTab, subFilter]);
+    
+    scrollViewportRef.current = node;
+    
+    if (node) {
+      node.addEventListener('scroll', handleScroll, { passive: true });
+      // Restore saved scroll position immediately
+      if (scrollPositionRef.current > 0) {
+        node.scrollTop = scrollPositionRef.current;
+      }
+    }
+  }, [handleScroll]);
   
-  // Cleanup scroll listener on unmount
+  // Cleanup on unmount
   useEffect(() => {
     return () => {
       const viewport = scrollViewportRef.current;
@@ -839,6 +841,25 @@ export function NotificationsPopover() {
       }
     };
   }, [handleScroll]);
+  
+  // Preserve scroll position during data refetches using requestAnimationFrame
+  // Key off dataUpdatedAt so the effect only fires after data mutations
+  useLayoutEffect(() => {
+    const viewport = scrollViewportRef.current;
+    if (viewport && scrollPositionRef.current > 0 && !isLoading) {
+      requestAnimationFrame(() => {
+        viewport.scrollTop = scrollPositionRef.current;
+      });
+    }
+  }, [dataUpdatedAt, isLoading]);
+  
+  // Reset scroll position when switching tabs or filters
+  useEffect(() => {
+    scrollPositionRef.current = 0;
+    if (scrollViewportRef.current) {
+      scrollViewportRef.current.scrollTop = 0;
+    }
+  }, [activeTab, subFilter]);
   
   // Map to UNS format with user's platform role for action button visibility
   const allNotifications = mapToUNS(rawData, userPlatformRole);
@@ -1009,12 +1030,12 @@ export function NotificationsPopover() {
             <div>
               <h2 className={`font-bold ${compact ? 'text-sm' : 'text-base'} leading-tight text-white`}>Universal Notifications</h2>
               <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-white/90 font-medium`}>
-                {user ? `${totalUnread} unread` : 'Platform Updates'}
+                {user ? `${allNotifications.length} notification${allNotifications.length === 1 ? '' : 's'}` : 'Platform Updates'}
               </span>
             </div>
           </div>
           <Badge variant="outline" className={`${compact ? 'text-[10px] px-2 py-0.5' : 'text-xs px-3 py-1.5'} font-medium bg-white/20 text-white border-white/30`}>
-            {user ? `${forYouCount + systemCount} new` : `${allNotifications.length}`}
+            {sortedNotifications.length} in view
           </Badge>
         </div>
         {/* Public User Banner */}
@@ -1173,7 +1194,7 @@ export function NotificationsPopover() {
       {/* Sort & Filter Row - Simplified on mobile */}
       <div className={`flex items-center justify-between border-b bg-background flex-shrink-0 ${compact ? 'px-2 py-1 gap-1' : simplified ? 'px-3 py-2 gap-1' : 'px-4 py-2 gap-2'}`}>
         <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-muted-foreground truncate`}>
-          {sortedNotifications.filter(n => !n.isRead).length} unread
+          {sortedNotifications.length} in view
         </span>
         <div className="flex items-center gap-1 shrink-0">
           <Button
@@ -1198,24 +1219,12 @@ export function NotificationsPopover() {
         </div>
       </div>
       
-      {/* Notification List - Scrollable container with scroll preservation */}
+      {/* Notification List - Scrollable container with visible scrollbar */}
       <ScrollArea 
         className="flex-1 min-h-0"
-        style={{ 
-          touchAction: 'pan-y',
-        }}
-        ref={(node) => {
-          // Get the viewport element from ScrollArea for scroll tracking
-          if (node) {
-            const viewport = node.querySelector('[data-radix-scroll-area-viewport]') as HTMLDivElement;
-            if (viewport && viewport !== scrollViewportRef.current) {
-              scrollViewportRef.current = viewport;
-              viewport.addEventListener('scroll', handleScroll, { passive: true });
-            }
-          }
-        }}
+        viewportRef={setViewportRef}
       >
-        <div>
+        <div className="min-h-0">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
@@ -1252,6 +1261,7 @@ export function NotificationsPopover() {
           </div>
         )}
         </div>
+        <ScrollBar orientation="vertical" forceMount className="opacity-100 bg-muted/50" />
       </ScrollArea>
       
       {/* Footer: Ask Trinity for Help - Matching Design */}
@@ -1305,13 +1315,14 @@ export function NotificationsPopover() {
       <Sheet open={open} onOpenChange={setOpen}>
         <div onClick={() => setOpen(true)}>
           <AnimatedNotificationBell
-            notificationCount={totalUnread}
+            notificationCount={allNotifications.length}
             onClick={() => setOpen(true)}
           />
         </div>
         <SheetContent 
           side="bottom" 
-          className="p-0 rounded-t-2xl flex flex-col h-[550px] max-h-[80vh] min-h-0"
+          className="p-0 rounded-t-2xl flex flex-col"
+          style={{ maxHeight: 'min(90vh, 560px)' }}
           data-testid="notification-sheet-content"
           data-trinity-avoid="true"
         >
@@ -1331,13 +1342,14 @@ export function NotificationsPopover() {
       <PopoverTrigger asChild>
         <div>
           <AnimatedNotificationBell
-            notificationCount={totalUnread}
+            notificationCount={allNotifications.length}
             onClick={() => setOpen(!open)}
           />
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[380px] max-w-[380px] h-[480px] max-h-[calc(100vh-6rem)] p-0 shadow-xl border-muted flex flex-col min-h-0" 
+        className="max-w-[min(calc(100vw-1rem),420px)] w-full p-0 shadow-xl border-muted flex flex-col" 
+        style={{ maxHeight: 'min(75vh, 560px)' }}
         align="end"
         sideOffset={8}
         data-testid="notification-popover-content"
