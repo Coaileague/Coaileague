@@ -61,7 +61,6 @@ import PrivacyPolicy from "@/pages/privacy-policy";
 import Dashboard from "@/pages/dashboard";
 import { Redirect } from "wouter";
 import UniversalSchedule from "@/pages/universal-schedule";
-import DailySchedule from "@/pages/daily-schedule";
 import ScheduleMobileFirst from "@/pages/schedule-mobile-first";
 import WorkspaceSales from "@/pages/workspace-sales";
 import TimeTracking from "@/pages/time-tracking";
@@ -953,7 +952,7 @@ function AppContent() {
               <Route path="/dashboard" component={Dashboard} />
               <Route path="/schedule" component={UniversalSchedule} />
               <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
-              <Route path="/daily-schedule" component={DailySchedule} />
+              <Route path="/daily-schedule"><Redirect to="/schedule" /></Route>
               <Route path="/workflow-approvals" component={WorkflowApprovals} />
               <Route path="/sales" component={WorkspaceSales} />
               <Route path="/time-tracking" component={TimeTracking} />
@@ -1259,7 +1258,7 @@ function AppContent() {
                 <Route path="/dashboard" component={Dashboard} />
                 <Route path="/schedule" component={UniversalSchedule} />
                 <Route path="/universal-schedule"><Redirect to="/schedule" /></Route>
-                <Route path="/daily-schedule" component={DailySchedule} />
+                <Route path="/daily-schedule"><Redirect to="/schedule" /></Route>
                 <Route path="/workflow-approvals" component={WorkflowApprovals} />
                 <Route path="/sales" component={WorkspaceSales} />
                 <Route path="/time-tracking" component={TimeTracking} />
