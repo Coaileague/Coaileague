@@ -7,142 +7,46 @@
 @tailwind utilities;
 
 /* ============================================================================
-   UNS POPOVER - COMPACT DESIGN (340px x 420px)
-   Uses data-testid selector to override Radix inline styles
+   BASE RESETS - Minimal necessary defaults
+   Component-level styles take precedence for sizing/layout
    ============================================================================ */
-[data-testid="notification-popover-content"] {
-  width: 340px !important;
-  max-width: 340px !important;
-  height: 420px !important;
-  max-height: min(420px, calc(100vh - 80px)) !important;
-  display: flex !important;
-  flex-direction: column !important;
-  overflow: hidden !important;
-}
-
-[data-testid="notification-popover-content"] > * {
-  min-height: 0;
-  flex: 1;
-  overflow-y: auto;
-  max-width: 100%;
-}
-
-[data-testid="notification-sheet-content"] {
-  height: 550px !important;
-  max-height: min(550px, 80vh) !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
-[data-testid="notification-sheet-content"] > * {
-  min-height: 0;
-  flex: 1;
-  overflow-y: auto;
-}
-
-/* ============================================================================
-   UNIVERSAL MOBILE RESPONSIVENESS FIX
-   Prevents ALL text/content from overflowing off-screen on mobile devices
-   ============================================================================ */
-
-/* Critical: Prevent horizontal scrolling on the entire page */
-html, body {
-  overflow-x: hidden !important;
-  max-width: 100vw !important;
-  width: 100% !important;
-}
-
-/* Force all flex children to shrink properly and not push layout wider */
 @layer base {
   *, *::before, *::after {
     min-width: 0;
     box-sizing: border-box;
   }
   
-  /* Text overflow protection - universal word breaking */
-  p, span, h1, h2, h3, h4, h5, h6, li, td, th, label, a, div, button {
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    hyphens: auto;
-  }
-  
-  /* Prevent fixed-width elements from breaking layout */
-  pre, code {
-    max-width: 100%;
-    overflow-x: auto;
-    white-space: pre-wrap;
-    word-break: break-all;
-  }
-  
-  /* Tables must not exceed container */
-  table {
-    max-width: 100%;
-    table-layout: fixed;
-  }
-  
-  /* Images and media must be responsive */
   img, video, iframe, embed, object {
     max-width: 100%;
     height: auto;
   }
 }
 
-/* Mobile-specific flex container fix (< 768px) */
-@media (max-width: 767px) {
-  /* Force all flex containers to allow wrapping when needed */
-  .flex {
-    flex-wrap: wrap;
-  }
-  
-  /* Prevent sidebar/nav from creating horizontal overflow */
-  [data-sidebar], aside, nav {
-    max-width: 100vw !important;
-  }
-  
-  /* Page containers must respect viewport */
-  main, [role="main"], .main-content {
-    max-width: 100vw !important;
-    overflow-x: hidden !important;
-    padding-left: 0.75rem !important;
-    padding-right: 0.75rem !important;
-  }
-  
-  /* Cards must fit on mobile */
-  .card, [class*="Card"], [data-slot="card"] {
-    max-width: calc(100vw - 1.5rem) !important;
-    overflow-x: hidden !important;
-  }
-  
-  /* Button groups and toolbars should stack on mobile */
-  .button-group, .toolbar, [class*="button-group"], [class*="toolbar"] {
-    flex-wrap: wrap !important;
-    gap: 0.5rem !important;
-  }
-  
-  /* Long IDs, emails, URLs must wrap */
-  [data-testid], code, .monospace, .font-mono {
-    word-break: break-all !important;
-    overflow-wrap: anywhere !important;
-  }
+/* Prevent horizontal scrolling on page (essential for mobile) */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
 }
 
-/* Utility class for forcing no-overflow on any element */
+/* ============================================================================
+   OPT-IN UTILITY CLASSES (use explicitly on elements that need them)
+   ============================================================================ */
 .no-overflow-x {
-  max-width: 100% !important;
-  overflow-x: hidden !important;
+  max-width: 100%;
+  overflow-x: hidden;
 }
 
 .mobile-wrap {
-  flex-wrap: wrap !important;
-  gap: 0.5rem !important;
+  flex-wrap: wrap;
+  gap: 0.5rem;
 }
 
 .mobile-stack {
-  flex-direction: column !important;
-  align-items: stretch !important;
+  flex-direction: column;
+  align-items: stretch;
 }
 
-/* Trinity Mascot - Force default cursor, never grab */
+/* Trinity Mascot - Force default cursor (specific component, not global) */
 .mascot-container,
 .mascot-container *,
 [data-mascot="container"],
@@ -153,7 +57,6 @@ html, body {
 .trinity-mascot-canvas {
   cursor: default !important;
   -webkit-user-drag: none !important;
-  user-drag: none !important;
   touch-action: manipulation !important;
 }
 
