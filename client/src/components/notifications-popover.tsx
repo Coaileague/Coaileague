@@ -287,12 +287,31 @@ function generateTypeBasedActions(
   return actions;
 }
 
+// Generate a correlation key to detect semantic duplicates from different sources
+function generateCorrelationKey(title: string, category: string, createdAt: string): string {
+  // Normalize title: lowercase, remove non-alphanumeric, extract key words
+  const normalizedTitle = title.toLowerCase()
+    .replace(/[^a-z0-9\s]/g, '')
+    .split(/\s+/)
+    .filter(word => word.length > 3) // Only keep significant words
+    .slice(0, 5) // Take first 5 significant words
+    .sort() // Sort for order-independence
+    .join('_');
+  
+  // Group by 15-minute windows to catch near-simultaneous duplicates
+  const timestamp = new Date(createdAt);
+  const timeWindow = Math.floor(timestamp.getTime() / (15 * 60 * 1000));
+  
+  return `${category}_${normalizedTitle}_${timeWindow}`;
+}
+
 // Map existing data to UNS format with human-friendly language
 function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string | null): UNSNotification[] {
   if (!data) return [];
   
   const notifications: UNSNotification[] = [];
   const seenIds = new Set<string>();
+  const seenCorrelationKeys = new Set<string>(); // Prevent semantic duplicates
   
   // Map platform updates
   data.platformUpdates?.forEach(update => {
@@ -304,6 +323,12 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
     seenIds.add(update.id);
     
     const isSystem = ['maintenance', 'security_patch', 'system'].includes(update.category);
+    
+    // Check for semantic duplicates using correlation key
+    const correlationKey = update.metadata?.correlationId || 
+      generateCorrelationKey(update.title, update.category, update.createdAt);
+    if (seenCorrelationKeys.has(correlationKey)) return; // Skip duplicate content
+    seenCorrelationKeys.add(correlationKey);
     
     // Apply human-friendly copy transformation
     const friendlyTitle = humanizeTitle(update.title);
@@ -334,6 +359,11 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
     // Skip duplicates
     if (seenIds.has(alert.id)) return;
     seenIds.add(alert.id);
+    
+    // Check for semantic duplicates
+    const correlationKey = generateCorrelationKey(alert.title, 'maintenance', alert.scheduledStartTime);
+    if (seenCorrelationKeys.has(correlationKey)) return;
+    seenCorrelationKeys.add(correlationKey);
     
     const actions: UNSNotification['actions'] = [];
     if (alert.quickFixCode) {
@@ -378,6 +408,12 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
     // Skip duplicates
     if (seenIds.has(notif.id)) return;
     seenIds.add(notif.id);
+    
+    // Check for semantic duplicates using correlation key
+    const correlationKey = notif.metadata?.correlationId || 
+      generateCorrelationKey(notif.title, notif.type || 'notification', notif.createdAt);
+    if (seenCorrelationKeys.has(correlationKey)) return;
+    seenCorrelationKeys.add(correlationKey);
     
     // Start with type-based actions for authorized users
     const actions: UNSNotification['actions'] = [...(generateTypeBasedActions(notif, userPlatformRole) || [])];
@@ -432,6 +468,12 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
     // Skip duplicates
     if (seenIds.has(finding.id)) return;
     seenIds.add(finding.id);
+    
+    // Check for semantic duplicates
+    const correlationKey = finding.metadata?.correlationId || 
+      generateCorrelationKey(finding.title, finding.category || 'gap', finding.createdAt);
+    if (seenCorrelationKeys.has(correlationKey)) return;
+    seenCorrelationKeys.add(correlationKey);
     
     // Gap findings come pre-formatted from the backend
     notifications.push({
