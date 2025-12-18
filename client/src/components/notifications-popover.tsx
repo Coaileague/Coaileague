@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, createContext, useContext } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, 
@@ -76,6 +76,80 @@ interface NotificationsData {
   unreadAlerts: number;
   unreadGapFindings?: number;
   totalUnread: number;
+}
+
+// Client-side pending cleared IDs - persists across refetches until backend confirms
+// Items in this set are hidden from view until the server confirms they're cleared
+const pendingClearIds = new Set<string>();
+let pendingClearAllIds: Set<string> | null = null;
+const RECONCILE_TIMEOUT = 15000; // 15 seconds max to wait for server confirmation
+
+// Helper to check if an item is pending clear (hidden until server confirms)
+function isPendingClear(id: string): boolean {
+  if (pendingClearIds.has(id)) return true;
+  if (pendingClearAllIds && pendingClearAllIds.has(id)) return true;
+  return false;
+}
+
+// Reconcile pending clears against refetched data - call this after each successful query
+// Items that are confirmed cleared (missing or flagged) are removed from pending sets
+function reconcilePendingClears(data: NotificationsData): void {
+  if (!data) return;
+  
+  // Build set of all IDs currently in the response
+  const responseIds = new Set<string>();
+  const confirmedClearedIds = new Set<string>();
+  
+  // Check platform updates - if isViewed=true, it's confirmed cleared
+  data.platformUpdates?.forEach(u => {
+    responseIds.add(u.id);
+    if (u.isViewed) confirmedClearedIds.add(u.id);
+  });
+  
+  // Check notifications - if clearedAt exists, it's confirmed cleared
+  data.notifications?.forEach(n => {
+    responseIds.add(n.id);
+    if (n.clearedAt) confirmedClearedIds.add(n.id);
+  });
+  
+  // Check alerts - if isAcknowledged=true, it's confirmed cleared
+  data.maintenanceAlerts?.forEach(a => {
+    responseIds.add(a.id);
+    if (a.isAcknowledged) confirmedClearedIds.add(a.id);
+  });
+  
+  // Check gap findings - if clearedAt exists, it's confirmed cleared
+  data.gapFindings?.forEach(f => {
+    responseIds.add(f.id);
+    if (f.clearedAt) confirmedClearedIds.add(f.id);
+  });
+  
+  // Remove confirmed cleared items from pending sets
+  pendingClearIds.forEach(id => {
+    if (confirmedClearedIds.has(id) || !responseIds.has(id)) {
+      pendingClearIds.delete(id);
+    }
+  });
+  
+  // Handle bulk clear - remove confirmed items from pending set
+  if (pendingClearAllIds) {
+    pendingClearAllIds.forEach(id => {
+      if (confirmedClearedIds.has(id) || !responseIds.has(id)) {
+        pendingClearAllIds!.delete(id);
+      }
+    });
+    
+    // If all items are confirmed, clear the bulk pending set
+    if (pendingClearAllIds.size === 0) {
+      pendingClearAllIds = null;
+    }
+  }
+}
+
+// Reset all pending clears (used on error)
+function resetPendingClears(): void {
+  pendingClearIds.clear();
+  pendingClearAllIds = null;
 }
 
 // Priority styling configuration
@@ -335,6 +409,10 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
       || generateEndUserSummary(update.description || '', update.category)
       || humanizeText(update.description || '');
     
+    // Platform updates: isViewed means the user has seen/cleared this update
+    // Also check pending clear tracking for lifecycle guard
+    const isCleared = update.isViewed || update.metadata?.wasCleared || isPendingClear(update.id);
+    
     notifications.push({
       id: update.id,
       title: friendlyTitle,
@@ -345,7 +423,7 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
       serviceSource: update.metadata?.sourceName || 'Platform',
       statusTag: update.isViewed ? undefined : 'NEW',
       isRead: update.isViewed,
-      isCleared: update.isViewed, // Platform updates use isViewed as cleared flag
+      isCleared, // Database flag, optimistic metadata, or pending clear
       createdAt: update.createdAt,
       metadata: update.metadata,
     });
@@ -382,6 +460,10 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
     const friendlyTitle = humanizeTitle(alert.title);
     const friendlyMessage = humanizeText(alert.description || '');
     
+    // Alerts: isAcknowledged means the user has acknowledged/cleared this alert
+    // Also check pending clear tracking for lifecycle guard
+    const isCleared = alert.isAcknowledged || alert.metadata?.wasCleared || isPendingClear(alert.id);
+    
     notifications.push({
       id: alert.id,
       title: friendlyTitle,
@@ -392,7 +474,7 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
       serviceSource: humanizeText(alert.serviceSource || 'System Operations'),
       statusTag: alert.isAcknowledged ? undefined : 'ACTION REQUIRED',
       isRead: alert.isAcknowledged || false,
-      isCleared: alert.isAcknowledged || false, // Alerts use isAcknowledged as cleared flag
+      isCleared, // Database flag, optimistic metadata, or pending clear
       createdAt: alert.scheduledStartTime,
       actions,
       metadata: { workflowId: alert.id },
@@ -444,7 +526,8 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
     const friendlySource = humanizeText(notif.metadata?.sourceName || notif.metadata?.subagent || 'Trinity AI');
     
     // clearedAt indicates user explicitly cleared this notification
-    const isCleared = Boolean(notif.clearedAt);
+    // Also check pending clear tracking for lifecycle guard
+    const isCleared = Boolean(notif.clearedAt) || isPendingClear(notif.id);
     // Notifications are read if explicitly marked as read OR if cleared
     const isRead = notif.isRead || isCleared;
     
@@ -479,8 +562,8 @@ function mapToUNS(data: NotificationsData | undefined, userPlatformRole?: string
     
     // Gap findings come pre-formatted from the backend
     // Normalize category to 'for_you' so they appear in the For You tab with their count
-    // isCleared only from explicit clear action (clearedAt), NOT from being read
-    const isCleared = Boolean(finding.clearedAt);
+    // isCleared from explicit clear action (clearedAt) or pending clear tracking
+    const isCleared = Boolean(finding.clearedAt) || isPendingClear(finding.id);
     notifications.push({
       id: finding.id,
       title: finding.title,
@@ -804,6 +887,13 @@ export function NotificationsPopover() {
     refetchOnWindowFocus: true, // Refetch when user returns to tab
   });
   
+  // Reconcile pending clears when data changes - removes IDs from pending set when server confirms
+  useEffect(() => {
+    if (rawData) {
+      reconcilePendingClears(rawData);
+    }
+  }, [rawData, dataUpdatedAt]);
+  
   // Refetch when popover opens for instant updates
   useEffect(() => {
     if (open) {
@@ -935,10 +1025,72 @@ export function NotificationsPopover() {
       const response = await apiRequest("POST", `/api/notifications/acknowledge/${id}`);
       return response.json();
     },
+    onMutate: async (id: string) => {
+      await queryClient.cancelQueries({ queryKey: ["/api/notifications/combined"] });
+      const previousData = queryClient.getQueryData(["/api/notifications/combined"]);
+      
+      // Add to pending clear tracking for race condition protection
+      pendingClearIds.add(id);
+      
+      // Optimistic cache update for immediate UI feedback
+      const now = new Date().toISOString();
+      queryClient.setQueryData(["/api/notifications/combined"], (old: any) => {
+        if (!old) return old;
+        
+        // Find which type the item belongs to and decrement appropriate counter
+        let unreadNotifications = old.unreadNotifications || 0;
+        let unreadPlatformUpdates = old.unreadPlatformUpdates || 0;
+        let unreadAlerts = old.unreadAlerts || 0;
+        let unreadGapFindings = old.unreadGapFindings || 0;
+        
+        // Check each array and decrement the right counter
+        const inNotifications = old.notifications?.some((n: any) => n.id === id && !n.clearedAt);
+        const inPlatformUpdates = old.platformUpdates?.some((u: any) => u.id === id && !u.isViewed);
+        const inAlerts = old.maintenanceAlerts?.some((a: any) => a.id === id && !a.isAcknowledged);
+        const inGapFindings = old.gapFindings?.some((f: any) => f.id === id && !f.clearedAt);
+        
+        if (inNotifications) unreadNotifications = Math.max(0, unreadNotifications - 1);
+        if (inPlatformUpdates) unreadPlatformUpdates = Math.max(0, unreadPlatformUpdates - 1);
+        if (inAlerts) unreadAlerts = Math.max(0, unreadAlerts - 1);
+        if (inGapFindings) unreadGapFindings = Math.max(0, unreadGapFindings - 1);
+        
+        return {
+          ...old,
+          notifications: old.notifications?.map((n: any) => 
+            n.id === id ? { ...n, clearedAt: now, isRead: true } : n
+          ),
+          platformUpdates: old.platformUpdates?.map((u: any) => 
+            u.id === id ? { ...u, isViewed: true } : u
+          ),
+          maintenanceAlerts: old.maintenanceAlerts?.map((a: any) => 
+            a.id === id ? { ...a, isAcknowledged: true } : a
+          ),
+          gapFindings: old.gapFindings?.map((f: any) => 
+            f.id === id ? { ...f, clearedAt: now, isRead: true } : f
+          ),
+          totalUnread: unreadNotifications + unreadPlatformUpdates + unreadAlerts + unreadGapFindings,
+          unreadNotifications,
+          unreadPlatformUpdates,
+          unreadAlerts,
+          unreadGapFindings,
+        };
+      });
+      
+      return { previousData };
+    },
     onSuccess: (_, id) => {
+      // Invalidate queries - reconciliation will confirm the clear and remove from pending
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       // Sync across tabs
       syncNotificationRead(id);
+    },
+    onError: (_, id, context: any) => {
+      // Remove from pending tracking on error
+      pendingClearIds.delete(id);
+      // Restore previous cache state
+      if (context?.previousData) {
+        queryClient.setQueryData(["/api/notifications/combined"], context.previousData);
+      }
     },
   });
   
@@ -958,26 +1110,56 @@ export function NotificationsPopover() {
     },
     onMutate: async () => {
       await queryClient.cancelQueries({ queryKey: ["/api/notifications/combined"] });
-      const previousData = queryClient.getQueryData(["/api/notifications/combined"]);
+      const previousData = queryClient.getQueryData(["/api/notifications/combined"]) as NotificationsData | undefined;
       const now = new Date().toISOString();
+      
+      // Capture all current IDs in pending clear set for race condition protection
+      const allIds = new Set<string>();
+      previousData?.notifications?.forEach(n => allIds.add(n.id));
+      previousData?.platformUpdates?.forEach(u => allIds.add(u.id));
+      previousData?.maintenanceAlerts?.forEach(a => allIds.add(a.id));
+      previousData?.gapFindings?.forEach(f => allIds.add(f.id));
+      pendingClearAllIds = allIds;
+      
+      // Optimistic cache update for immediate UI feedback + pending set for protection
       queryClient.setQueryData(["/api/notifications/combined"], (old: any) => ({
         ...old,
-        notifications: old?.notifications?.map((n: any) => ({ ...n, clearedAt: now, isRead: true })) || [],
-        platformUpdates: old?.platformUpdates?.map((u: any) => ({ ...u, isViewed: true })) || [],
-        maintenanceAlerts: old?.maintenanceAlerts?.map((a: any) => ({ ...a, isAcknowledged: true })) || [],
+        notifications: old?.notifications?.map((n: any) => ({ 
+          ...n, 
+          clearedAt: now, 
+          isRead: true 
+        })) || [],
+        platformUpdates: old?.platformUpdates?.map((u: any) => ({ 
+          ...u, 
+          isViewed: true,
+        })) || [],
+        maintenanceAlerts: old?.maintenanceAlerts?.map((a: any) => ({ 
+          ...a, 
+          isAcknowledged: true,
+        })) || [],
+        gapFindings: old?.gapFindings?.map((f: any) => ({
+          ...f,
+          isRead: true,
+          clearedAt: now
+        })) || [],
         totalUnread: 0,
         unreadNotifications: 0,
         unreadPlatformUpdates: 0,
         unreadAlerts: 0,
+        unreadGapFindings: 0,
       }));
       return { previousData };
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
       syncClearAll();
       toast({ title: "Done", description: "All notifications cleared." });
+      
+      // Invalidate queries - reconciliation will confirm the clears and remove from pending
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
     },
     onError: (error, _, context) => {
+      // Reset pending clear tracking on error
+      resetPendingClears();
       if (context?.previousData) {
         queryClient.setQueryData(["/api/notifications/combined"], context.previousData);
       }
@@ -1041,7 +1223,7 @@ export function NotificationsPopover() {
   const renderNotificationsContent = useMemo(() => {
     return ({ simplified = false, compact = false }: { simplified?: boolean; compact?: boolean }) => (
     <div 
-      className="flex flex-col h-full min-h-0"
+      className="flex flex-col h-full min-h-0 overflow-hidden"
       data-trinity-surface="notifications"
     >
       {/* UNS Header with Trinity Branding - Violet to Indigo Gradient */}
@@ -1345,7 +1527,7 @@ export function NotificationsPopover() {
         </div>
         <SheetContent 
           side="bottom" 
-          className="p-0 rounded-t-2xl flex flex-col"
+          className="p-0 rounded-t-2xl flex flex-col overflow-hidden"
           style={{ maxHeight: 'min(90vh, 560px)' }}
           data-testid="notification-sheet-content"
           data-trinity-avoid="true"
@@ -1372,7 +1554,7 @@ export function NotificationsPopover() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="max-w-[min(calc(100vw-1rem),420px)] w-full p-0 shadow-xl border-muted flex flex-col" 
+        className="max-w-[min(calc(100vw-1rem),420px)] w-full p-0 shadow-xl border-muted flex flex-col overflow-hidden" 
         style={{ maxHeight: 'min(75vh, 560px)' }}
         align="end"
         sideOffset={8}
