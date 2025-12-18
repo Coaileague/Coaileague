@@ -921,7 +921,7 @@ export function NotificationsPopover() {
 
   const NotificationsContent = ({ simplified = false, compact = false }: { simplified?: boolean; compact?: boolean }) => (
     <div 
-      className="flex flex-col h-full min-h-0 overflow-hidden"
+      className="flex flex-col h-full min-h-0"
       data-trinity-surface="notifications"
     >
       {/* UNS Header with Trinity Branding - Violet to Indigo Gradient */}
@@ -1124,19 +1124,18 @@ export function NotificationsPopover() {
       </div>
       
       {/* Notification List - Scrollable container with position preservation */}
-      <div 
-        ref={scrollRef}
-        className="flex-1 overflow-y-auto overscroll-contain"
+      <ScrollArea 
+        className="flex-1 min-h-0"
         style={{ 
-          minHeight: 0,
-          maxHeight: '100%',
           touchAction: 'pan-y',
-          WebkitOverflowScrolling: 'touch',
-        }}
-        onScroll={(e) => {
-          scrollPositionRef.current = e.currentTarget.scrollTop;
         }}
       >
+        <div 
+          ref={scrollRef}
+          onScroll={(e) => {
+            scrollPositionRef.current = e.currentTarget.scrollTop;
+          }}
+        >
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
@@ -1172,7 +1171,8 @@ export function NotificationsPopover() {
             </span>
           </div>
         )}
-      </div>
+        </div>
+      </ScrollArea>
       
       {/* Footer: Ask Trinity for Help - Matching Design */}
       <div className="border-t bg-background shrink-0">
@@ -1225,7 +1225,7 @@ export function NotificationsPopover() {
         </div>
         <SheetContent 
           side="bottom" 
-          className="p-0 rounded-t-2xl flex flex-col h-[550px] max-h-[80vh] min-h-0 overflow-hidden"
+          className="p-0 rounded-t-2xl flex flex-col h-[550px] max-h-[80vh] min-h-0"
           data-testid="notification-sheet-content"
           data-trinity-avoid="true"
         >
@@ -1251,7 +1251,7 @@ export function NotificationsPopover() {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[380px] max-w-[380px] h-[480px] max-h-[calc(100vh-6rem)] p-0 shadow-xl border-muted flex flex-col min-h-0 overflow-hidden" 
+        className="w-[380px] max-w-[380px] h-[480px] max-h-[calc(100vh-6rem)] p-0 shadow-xl border-muted flex flex-col min-h-0" 
         align="end"
         sideOffset={8}
         data-testid="notification-popover-content"
