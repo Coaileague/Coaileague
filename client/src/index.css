@@ -7,20 +7,24 @@
 @tailwind utilities;
 
 /* ============================================================================
-   UNS POPOVER - FIXED HEIGHT OVERRIDE
+   UNS POPOVER - COMPACT DESIGN (340px x 420px)
    Uses data-testid selector to override Radix inline styles
    ============================================================================ */
 [data-testid="notification-popover-content"] {
-  height: 500px !important;
-  max-height: min(500px, calc(100vh - 80px)) !important;
+  width: 340px !important;
+  max-width: 340px !important;
+  height: 420px !important;
+  max-height: min(420px, calc(100vh - 80px)) !important;
   display: flex !important;
   flex-direction: column !important;
+  overflow: hidden !important;
 }
 
 [data-testid="notification-popover-content"] > * {
   min-height: 0;
   flex: 1;
   overflow-y: auto;
+  max-width: 100%;
 }
 
 [data-testid="notification-sheet-content"] {
