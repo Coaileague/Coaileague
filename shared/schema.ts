@@ -20325,6 +20325,106 @@ export type InsertTrinitySelfAwareness = z.infer<typeof insertTrinitySelfAwarene
 export type TrinitySelfAwareness = typeof trinitySelfAwareness.$inferSelect;
 
 // ============================================================================
+// AI BRAIN ACTOR TYPES - For live event tracking
+// ============================================================================
+
+export const aiBrainActorTypeEnum = pgEnum("ai_brain_actor_type", [
+  "trinity", "end_user", "support", "automation", "system"
+]);
+
+// ============================================================================
+// AI BRAIN LIVE EVENTS - Real-time event broadcasting for all users
+// ============================================================================
+
+export const aiBrainLiveEvents = pgTable("ai_brain_live_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Actor information
+  actorType: aiBrainActorTypeEnum("actor_type").notNull(),
+  actorId: varchar("actor_id"),
+  actorName: varchar("actor_name", { length: 200 }),
+  
+  // Event details
+  actionType: varchar("action_type", { length: 100 }).notNull(),
+  actionCategory: varchar("action_category", { length: 100 }),
+  title: varchar("title", { length: 500 }).notNull(),
+  description: text("description"),
+  
+  // Event payload
+  payload: jsonb("payload"),
+  metadata: jsonb("metadata"),
+  
+  // Visibility and targeting
+  severity: varchar("severity", { length: 20 }).default("info"),
+  isGlobal: boolean("is_global").default(false),
+  targetUserIds: text("target_user_ids").array(),
+  targetRoles: text("target_roles").array(),
+  
+  // Processing status
+  broadcastedAt: timestamp("broadcasted_at"),
+  acknowledgedCount: integer("acknowledged_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("able_workspace_idx").on(table.workspaceId),
+  index("able_actor_type_idx").on(table.actorType),
+  index("able_action_type_idx").on(table.actionType),
+  index("able_created_idx").on(table.createdAt),
+  index("able_global_idx").on(table.isGlobal),
+]);
+
+export const insertAiBrainLiveEventSchema = createInsertSchema(aiBrainLiveEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAiBrainLiveEvent = z.infer<typeof insertAiBrainLiveEventSchema>;
+export type AiBrainLiveEvent = typeof aiBrainLiveEvents.$inferSelect;
+
+// ============================================================================
+// INTERACTIVE ONBOARDING STATE - Per-user onboarding step states with sync
+// ============================================================================
+
+export const interactiveOnboardingState = pgTable("interactive_onboarding_state", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Step tracking
+  stepId: varchar("step_id", { length: 100 }).notNull(),
+  stepTitle: varchar("step_title", { length: 200 }),
+  stepOrder: integer("step_order").default(0),
+  
+  // Status
+  completed: boolean("completed").default(false),
+  skipped: boolean("skipped").default(false),
+  completedAt: timestamp("completed_at"),
+  skippedAt: timestamp("skipped_at"),
+  
+  // AI suggestions
+  aiSuggestion: text("ai_suggestion"),
+  aiSuggestionGeneratedAt: timestamp("ai_suggestion_generated_at"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("ios_user_idx").on(table.userId),
+  index("ios_workspace_idx").on(table.workspaceId),
+  index("ios_step_idx").on(table.stepId),
+  uniqueIndex("ios_user_workspace_step_unique").on(table.userId, table.workspaceId, table.stepId),
+]);
+
+export const insertInteractiveOnboardingStateSchema = createInsertSchema(interactiveOnboardingState).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertInteractiveOnboardingState = z.infer<typeof insertInteractiveOnboardingStateSchema>;
+export type InteractiveOnboardingState = typeof interactiveOnboardingState.$inferSelect;
+
+// ============================================================================
 // TRINITY UNIFIED TASK SCHEMA - Re-exports
 // ============================================================================
 
