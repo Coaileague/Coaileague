@@ -844,7 +844,7 @@ export function NotificationsPopover() {
   
   const orchestrationMutation = useMutation({
     mutationFn: async (params: { actionCode: string; targetId?: string; metadata?: Record<string, any> }) => {
-      const response = await apiRequest("POST", "/api/quick-fix/execute", {
+      const response = await apiRequest("POST", "/api/quick-fixes/execute", {
         actionCode: params.actionCode,
         targetId: params.targetId,
         metadata: params.metadata,
