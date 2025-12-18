@@ -537,19 +537,21 @@ class GapIntelligenceService {
         eq(aiGapFindings.status, 'open'),
         sql`${aiGapFindings.severity} IN ('critical', 'blocker', 'error')`
       ))
-      .orderBy(desc(aiGapFindings.lastDetectedAt));
+      .orderBy(desc(aiGapFindings.createdAt));
   }
 
-  async markFindingResolved(findingId: number, resolvedBy: string): Promise<boolean> {
+  async markFindingResolved(findingId: string, resolvedBy: string): Promise<boolean> {
     try {
       await db
         .update(aiGapFindings)
         .set({
-          status: 'resolved',
-          resolvedAt: new Date(),
-          resolvedBy,
+          status: 'wont_fix',
+          fixedAt: new Date(),
+          fixedBy: resolvedBy,
+          updatedAt: new Date(),
         })
         .where(eq(aiGapFindings.id, findingId));
+      console.log(`[GapIntelligence] Finding ${findingId} dismissed by ${resolvedBy}`);
       return true;
     } catch (error) {
       console.error('[GapIntelligence] Error marking finding resolved:', error);
@@ -557,15 +559,16 @@ class GapIntelligenceService {
     }
   }
 
-  async markFindingInProgress(findingId: number, assignedTo: string): Promise<boolean> {
+  async markFindingInProgress(findingId: string, approvedBy: string): Promise<boolean> {
     try {
       await db
         .update(aiGapFindings)
         .set({
           status: 'in_progress',
-          assignedTo,
+          updatedAt: new Date(),
         })
         .where(eq(aiGapFindings.id, findingId));
+      console.log(`[GapIntelligence] Finding ${findingId} approved by ${approvedBy}`);
       return true;
     } catch (error) {
       console.error('[GapIntelligence] Error marking finding in progress:', error);

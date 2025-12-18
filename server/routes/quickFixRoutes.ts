@@ -389,35 +389,34 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
         break;
         
       case 'gap_intelligence':
-        // Gap Intelligence finding actions
+        // Gap Intelligence finding actions - findingId is a UUID string
         if (action === 'approve_fix') {
-          // Import and call the gap intelligence service
           const { gapIntelligenceService } = await import('../services/ai-brain/gapIntelligenceService');
-          const findingId = parseInt(finalTargetId || '0', 10);
-          if (findingId > 0) {
+          const findingId = finalTargetId || '';
+          if (findingId && findingId.length > 0) {
             const success = await gapIntelligenceService.markFindingInProgress(findingId, context.userId);
             result = success
               ? { 
                   success: true, 
-                  message: `Fix approved for finding #${findingId}. Trinity will apply the suggested fix.`,
+                  message: `Fix approved. Trinity will apply the suggested fix.`,
                   data: { findingId, status: 'in_progress', approvedBy: context.userId }
                 }
-              : { success: false, message: `Failed to approve fix for finding #${findingId}` };
+              : { success: false, message: `Failed to approve fix for finding` };
           } else {
             result = { success: false, message: 'Invalid finding ID' };
           }
         } else if (action === 'dismiss') {
           const { gapIntelligenceService } = await import('../services/ai-brain/gapIntelligenceService');
-          const findingId = parseInt(finalTargetId || '0', 10);
-          if (findingId > 0) {
+          const findingId = finalTargetId || '';
+          if (findingId && findingId.length > 0) {
             const success = await gapIntelligenceService.markFindingResolved(findingId, context.userId);
             result = success
               ? { 
                   success: true, 
-                  message: `Finding #${findingId} has been dismissed.`,
+                  message: `Finding has been dismissed.`,
                   data: { findingId, status: 'resolved', dismissedBy: context.userId }
                 }
-              : { success: false, message: `Failed to dismiss finding #${findingId}` };
+              : { success: false, message: `Failed to dismiss finding` };
           } else {
             result = { success: false, message: 'Invalid finding ID' };
           }

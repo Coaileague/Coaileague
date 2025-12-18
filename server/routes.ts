@@ -33,6 +33,7 @@ import { registerFaqRoutes } from "./faq-routes"; // HelpAI FAQ routes
 import trinityInsightsRouter from "./routes/trinityInsightsRoutes"; // Trinity AI Business Intelligence
 import trinityMaintenanceRouter from "./routes/trinityMaintenanceRoutes"; // Trinity Platform Maintenance
 import quickFixRouter from "./routes/quickFixRoutes"; // Quick Fix System with RBAC audit trail
+import experienceRoutes from "./routes/experienceRoutes"; // Experience Enhancement (Smart Replies, Haptics, Theming)
 import trinityControlConsoleRouter from "./routes/trinityControlConsoleRoutes"; // Trinity Control Console
 import deviceLoaderRouter from "./routes/deviceLoaderRoutes"; // Universal Device Loader
 import controlTowerRouter from "./routes/controlTowerRoutes"; // Control Tower Dashboard API
@@ -3124,6 +3125,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/trinity", empireRouter); // Empire Mode routes
   app.use("/api/trinity/notifications", trinityNotificationRouter); // Trinity Notification Bridge
   app.use("/api/quick-fixes", quickFixRouter); // Quick Fix System
+  app.use("/api/experience", experienceRoutes); // Experience Enhancement Routes
   app.use("/api/device", deviceLoaderRouter); // Universal Device Loader
   app.use("/api/vqa", requireAuth, vqaRouter); // Visual QA (AI Brain Eyes)
   app.use("/api/uacp", requireAuth, uacpRouter); // Universal Access Control Panel (UACP)
