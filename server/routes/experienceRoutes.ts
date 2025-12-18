@@ -3,14 +3,23 @@
  * 
  * API endpoints for:
  * - Smart replies
- * - Notification preferences
+ * - Notification preferences (with database persistence)
  * - Haptic feedback settings
  * - Role-based theming
+ * - Onboarding progress (with live sync)
+ * - AI Brain live events
  */
 
 import { Router } from 'express';
 import type { Request, Response } from 'express';
 import { smartReplyService } from '../services/smartReplyService';
+import { db } from '../db';
+import { 
+  userNotificationPreferences,
+  aiBrainLiveEvents,
+  interactiveOnboardingState
+} from '@shared/schema';
+import { eq, and, desc } from 'drizzle-orm';
 
 interface AuthRequest extends Request {
   user?: {
@@ -18,6 +27,19 @@ interface AuthRequest extends Request {
     platformRole?: string;
     currentWorkspaceId?: string;
   };
+}
+
+// WebSocket broadcaster - will be set by routes.ts
+let wsBroadcaster: ((event: string, data: any, workspaceId?: string) => void) | null = null;
+
+export function setWebSocketBroadcaster(broadcaster: (event: string, data: any, workspaceId?: string) => void) {
+  wsBroadcaster = broadcaster;
+}
+
+function broadcastToClients(event: string, data: any, workspaceId?: string) {
+  if (wsBroadcaster) {
+    wsBroadcaster(event, data, workspaceId);
+  }
 }
 
 const router = Router();
@@ -125,13 +147,40 @@ router.get('/role-theme/:role', async (req: Request, res: Response) => {
   }
 });
 
+// In-memory storage for notification preferences (fallback when DB unavailable)
+const notificationPrefsMemory = new Map<string, any>();
+
 router.get('/notification-preferences', async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?.id;
+    const workspaceId = authReq.user?.currentWorkspaceId || 'global';
+    
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    
+    // Try to get from database with workspace scoping
+    let dbPrefs = null;
+    try {
+      const results = await db.select()
+        .from(userNotificationPreferences)
+        .where(
+          and(
+            eq(userNotificationPreferences.userId, userId),
+            eq(userNotificationPreferences.workspaceId, workspaceId)
+          )
+        )
+        .limit(1);
+      dbPrefs = results[0];
+    } catch (e) {
+      // Table may not exist yet - check in-memory fallback
+      const memKey = `${userId}-${workspaceId}`;
+      dbPrefs = notificationPrefsMemory.get(memKey);
+    }
     
     const defaults = {
-      soundEnabled: true,
+      soundEnabled: dbPrefs?.enablePush ?? true,
       vibrationEnabled: true,
       volume: 0.7,
       sounds: {
@@ -150,9 +199,9 @@ router.get('/notification-preferences', async (req: Request, res: Response) => {
         trinity: 'pulse',
         critical: 'urgent',
       },
-      quietHoursEnabled: false,
-      quietHoursStart: '22:00',
-      quietHoursEnd: '07:00',
+      quietHoursEnabled: dbPrefs?.quietHoursStart != null,
+      quietHoursStart: dbPrefs?.quietHoursStart ? `${dbPrefs.quietHoursStart}:00` : '22:00',
+      quietHoursEnd: dbPrefs?.quietHoursEnd ? `${dbPrefs.quietHoursEnd}:00` : '07:00',
     };
     
     res.json({ success: true, preferences: defaults });
@@ -165,13 +214,51 @@ router.post('/notification-preferences', async (req: Request, res: Response) => 
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?.id;
+    const workspaceId = authReq.user?.currentWorkspaceId || 'global';
     const preferences = req.body;
     
     if (!userId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
-    console.log(`[Preferences] Saved notification preferences for ${userId}`);
+    const memKey = `${userId}-${workspaceId}`;
+    const prefsData = {
+      enablePush: preferences.soundEnabled ?? true,
+      quietHoursStart: preferences.quietHoursEnabled ? parseInt(preferences.quietHoursStart?.split(':')[0] || '22') : null,
+      quietHoursEnd: preferences.quietHoursEnabled ? parseInt(preferences.quietHoursEnd?.split(':')[0] || '7') : null,
+    };
+    
+    // Always update in-memory fallback
+    notificationPrefsMemory.set(memKey, prefsData);
+    
+    // Try to persist to database with composite key
+    try {
+      await db.insert(userNotificationPreferences)
+        .values({
+          userId,
+          workspaceId,
+          ...prefsData,
+        })
+        .onConflictDoUpdate({
+          target: [userNotificationPreferences.userId, userNotificationPreferences.workspaceId],
+          set: {
+            ...prefsData,
+            updatedAt: new Date(),
+          }
+        });
+    } catch (e) {
+      console.log('[Preferences] DB persistence failed, using in-memory fallback');
+    }
+    
+    // Broadcast preference change to all tabs/devices
+    broadcastToClients('preferences:updated', {
+      userId,
+      workspaceId,
+      preferences,
+      timestamp: new Date().toISOString(),
+    }, workspaceId !== 'global' ? workspaceId : undefined);
+    
+    console.log(`[Preferences] Saved notification preferences for ${userId} in workspace ${workspaceId}`);
     
     res.json({ success: true });
   } catch (error: any) {
@@ -199,7 +286,8 @@ const defaultOnboardingSteps = [
   { id: 'enable-notifications', title: 'Enable Notifications', description: 'Stay updated with alerts', icon: 'bell', order: 5 },
 ];
 
-const onboardingProgress = new Map<string, Record<string, { completed: boolean; skipped: boolean }>>();
+// In-memory fallback (used when DB tables not yet created)
+const onboardingProgressMemory = new Map<string, Record<string, { completed: boolean; skipped: boolean }>>();
 
 router.get('/onboarding/progress', async (req: Request, res: Response) => {
   try {
@@ -211,15 +299,35 @@ router.get('/onboarding/progress', async (req: Request, res: Response) => {
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
-    const key = `${userId}-${workspaceId || 'default'}`;
-    const userProgress = onboardingProgress.get(key) || {};
+    // Try to load from database first
+    let dbStates: any[] = [];
+    try {
+      dbStates = await db.select()
+        .from(interactiveOnboardingState)
+        .where(
+          workspaceId 
+            ? and(eq(interactiveOnboardingState.userId, userId), eq(interactiveOnboardingState.workspaceId, workspaceId))
+            : eq(interactiveOnboardingState.userId, userId)
+        );
+    } catch (e) {
+      // Table doesn't exist - use in-memory fallback
+    }
     
-    const steps = defaultOnboardingSteps.map(step => ({
-      ...step,
-      completed: userProgress[step.id]?.completed || false,
-      skipped: userProgress[step.id]?.skipped || false,
-      aiSuggestion: step.id === 'add-employees' ? 'Adding 3+ team members unlocks collaborative scheduling features' : undefined,
-    }));
+    const key = `${userId}-${workspaceId || 'default'}`;
+    const memProgress = onboardingProgressMemory.get(key) || {};
+    
+    // Merge DB states with defaults
+    const steps = defaultOnboardingSteps.map(step => {
+      const dbState = dbStates.find(s => s.stepId === step.id);
+      const memState = memProgress[step.id];
+      
+      return {
+        ...step,
+        completed: dbState?.completed ?? memState?.completed ?? false,
+        skipped: dbState?.skipped ?? memState?.skipped ?? false,
+        aiSuggestion: dbState?.aiSuggestion ?? (step.id === 'add-employees' ? 'Adding 3+ team members unlocks collaborative scheduling features' : undefined),
+      };
+    });
     
     const completedSteps = steps.filter(s => s.completed).length;
     const skippedSteps = steps.filter(s => s.skipped).length;
@@ -252,10 +360,46 @@ router.post('/onboarding/steps/:stepId/complete', async (req: Request, res: Resp
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
+    // Update in-memory fallback
     const key = `${userId}-${workspaceId || 'default'}`;
-    const userProgress = onboardingProgress.get(key) || {};
-    userProgress[stepId] = { completed: true, skipped: false };
-    onboardingProgress.set(key, userProgress);
+    const memProgress = onboardingProgressMemory.get(key) || {};
+    memProgress[stepId] = { completed: true, skipped: false };
+    onboardingProgressMemory.set(key, memProgress);
+    
+    // Try to persist to database
+    try {
+      await db.insert(interactiveOnboardingState)
+        .values({
+          userId,
+          workspaceId: workspaceId || null,
+          stepId,
+          stepTitle: defaultOnboardingSteps.find(s => s.id === stepId)?.title,
+          stepOrder: defaultOnboardingSteps.find(s => s.id === stepId)?.order || 0,
+          completed: true,
+          skipped: false,
+          completedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [interactiveOnboardingState.userId, interactiveOnboardingState.workspaceId, interactiveOnboardingState.stepId],
+          set: {
+            completed: true,
+            skipped: false,
+            completedAt: new Date(),
+            updatedAt: new Date(),
+          }
+        });
+    } catch (e) {
+      console.log('[Onboarding] DB persistence failed, using memory');
+    }
+    
+    // Broadcast to all connected clients for live sync
+    broadcastToClients('onboarding:step_completed', {
+      userId,
+      workspaceId,
+      stepId,
+      status: 'completed',
+      timestamp: new Date().toISOString(),
+    }, workspaceId || undefined);
     
     console.log(`[Onboarding] Step ${stepId} completed by ${userId}`);
     
@@ -276,16 +420,175 @@ router.post('/onboarding/steps/:stepId/skip', async (req: Request, res: Response
       return res.status(401).json({ error: 'Unauthorized' });
     }
     
+    // Update in-memory fallback
     const key = `${userId}-${workspaceId || 'default'}`;
-    const userProgress = onboardingProgress.get(key) || {};
-    userProgress[stepId] = { completed: false, skipped: true };
-    onboardingProgress.set(key, userProgress);
+    const memProgress = onboardingProgressMemory.get(key) || {};
+    memProgress[stepId] = { completed: false, skipped: true };
+    onboardingProgressMemory.set(key, memProgress);
+    
+    // Try to persist to database
+    try {
+      await db.insert(interactiveOnboardingState)
+        .values({
+          userId,
+          workspaceId: workspaceId || null,
+          stepId,
+          stepTitle: defaultOnboardingSteps.find(s => s.id === stepId)?.title,
+          stepOrder: defaultOnboardingSteps.find(s => s.id === stepId)?.order || 0,
+          completed: false,
+          skipped: true,
+          skippedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [interactiveOnboardingState.userId, interactiveOnboardingState.workspaceId, interactiveOnboardingState.stepId],
+          set: {
+            completed: false,
+            skipped: true,
+            skippedAt: new Date(),
+            updatedAt: new Date(),
+          }
+        });
+    } catch (e) {
+      console.log('[Onboarding] DB persistence failed, using memory');
+    }
+    
+    // Broadcast to all connected clients
+    broadcastToClients('onboarding:step_skipped', {
+      userId,
+      workspaceId,
+      stepId,
+      status: 'skipped',
+      timestamp: new Date().toISOString(),
+    }, workspaceId || undefined);
     
     console.log(`[Onboarding] Step ${stepId} skipped by ${userId}`);
     
     res.json({ success: true, stepId, status: 'skipped' });
   } catch (error: any) {
     res.status(500).json({ error: 'Failed to skip step' });
+  }
+});
+
+// ============================================================================
+// AI BRAIN LIVE EVENTS - Real-time publishing for all users
+// ============================================================================
+
+router.post('/ai-brain/events', async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    const workspaceId = authReq.user?.currentWorkspaceId;
+    const { actorType, actionType, actionCategory, title, description, payload, metadata, severity, isGlobal, targetUserIds, targetRoles } = req.body;
+    
+    if (!actionType || !title) {
+      return res.status(400).json({ error: 'actionType and title are required' });
+    }
+    
+    const eventId = `event-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Try to persist to database
+    let dbEventId = eventId;
+    try {
+      const [event] = await db.insert(aiBrainLiveEvents)
+        .values({
+          workspaceId: workspaceId || null,
+          actorType: actorType || 'system',
+          actorId: userId,
+          actorName: authReq.user?.platformRole || 'User',
+          actionType,
+          actionCategory,
+          title,
+          description,
+          payload,
+          metadata,
+          severity: severity || 'info',
+          isGlobal: isGlobal ?? false,
+          targetUserIds,
+          targetRoles,
+          broadcastedAt: new Date(),
+        })
+        .returning({ id: aiBrainLiveEvents.id });
+      
+      dbEventId = event.id;
+    } catch (e) {
+      console.log('[AIBrainEvents] DB persistence failed:', e);
+    }
+    
+    // Broadcast to all connected clients
+    const eventData = {
+      id: dbEventId,
+      actorType: actorType || 'system',
+      actorId: userId,
+      actionType,
+      actionCategory,
+      title,
+      description,
+      payload,
+      metadata,
+      severity: severity || 'info',
+      isGlobal: isGlobal ?? false,
+      timestamp: new Date().toISOString(),
+    };
+    
+    if (isGlobal) {
+      // Broadcast to all workspaces
+      broadcastToClients('ai_brain:live_event', eventData);
+    } else {
+      // Broadcast to specific workspace
+      broadcastToClients('ai_brain:live_event', eventData, workspaceId || undefined);
+    }
+    
+    console.log(`[AIBrainEvents] Published: ${actionType} - ${title}`);
+    
+    res.json({ success: true, eventId: dbEventId });
+  } catch (error: any) {
+    console.error('[AIBrainEvents] Error:', error);
+    res.status(500).json({ error: 'Failed to publish event' });
+  }
+});
+
+router.get('/ai-brain/events', async (req: Request, res: Response) => {
+  try {
+    const authReq = req as AuthRequest;
+    const workspaceId = authReq.user?.currentWorkspaceId;
+    const limit = Math.min(parseInt(req.query.limit as string) || 50, 100);
+    
+    // Try to get from database - return workspace-scoped events OR global events
+    let events: any[] = [];
+    try {
+      // Get global events
+      const globalEvents = await db.select()
+        .from(aiBrainLiveEvents)
+        .where(eq(aiBrainLiveEvents.isGlobal, true))
+        .orderBy(desc(aiBrainLiveEvents.createdAt))
+        .limit(limit);
+      
+      // Get workspace-specific events if workspace is set
+      let workspaceEvents: any[] = [];
+      if (workspaceId) {
+        workspaceEvents = await db.select()
+          .from(aiBrainLiveEvents)
+          .where(
+            and(
+              eq(aiBrainLiveEvents.workspaceId, workspaceId),
+              eq(aiBrainLiveEvents.isGlobal, false)
+            )
+          )
+          .orderBy(desc(aiBrainLiveEvents.createdAt))
+          .limit(limit);
+      }
+      
+      // Merge and sort by createdAt, limit total
+      events = [...globalEvents, ...workspaceEvents]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, limit);
+    } catch (e) {
+      console.log('[AIBrainEvents] DB query failed - returning empty events');
+    }
+    
+    res.json({ success: true, events });
+  } catch (error: any) {
+    res.status(500).json({ error: 'Failed to get events' });
   }
 });
 
