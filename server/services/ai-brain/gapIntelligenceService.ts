@@ -431,7 +431,7 @@ class GapIntelligenceService {
       .select()
       .from(aiGapFindings)
       .where(eq(aiGapFindings.status, 'open'))
-      .orderBy(desc(aiGapFindings.lastDetectedAt))
+      .orderBy(desc(aiGapFindings.createdAt))
       .limit(limit);
   }
 

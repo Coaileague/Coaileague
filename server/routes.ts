@@ -566,18 +566,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get active maintenance alerts
       const maintenanceAlerts = await aiNotificationService.getActiveMaintenanceAlerts(workspaceId, userId);
       const unreadAlerts = maintenanceAlerts.filter((a: any) => !a.isAcknowledged).length;
-
+      
       // Get gap intelligence findings for platform support roles
       let gapFindings: any[] = [];
       if (hasPlatformWideAccess(platformRole)) {
         try {
-          const { gapIntelligenceService } = await import("./services/ai-brain/gapIntelligenceService");
+          const { gapIntelligenceService } = await import('./services/ai-brain/gapIntelligenceService');
           gapFindings = await gapIntelligenceService.getGapFindingsForUNS(15);
         } catch (err) {
-          console.error("[Notifications] Failed to fetch gap findings:", err);
+          console.error('[Notifications] Failed to fetch gap findings:', err);
         }
       }
-      
       
       res.json({
         platformUpdates: platformUpdatesData,
@@ -652,7 +651,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("[Acknowledge All] User " + userId + " acknowledged " + acknowledged + " notifications, " + platformUpdatesMarked + " platform updates, and " + alertsAcknowledged + " maintenance alerts");
       
-      res.json({
+      res.json({ 
         success: true, 
         acknowledged,
         platformUpdatesMarked,
@@ -716,7 +715,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("[Acknowledge All] User " + userId + " cleared " + acknowledged + " notifications, " + platformUpdatesMarked + " platform updates, and " + alertsAcknowledged + " alerts");
       
-      res.json({
+      res.json({ 
         success: true, 
         acknowledged,
         platformUpdatesMarked,
@@ -965,7 +964,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         secondApprovalCode
       );
 
-      res.json({
+      res.json({ success: execution.status === "success", execution });
     } catch (error: any) {
       console.error("Error executing hotpatch:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -982,7 +981,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         description: s.description,
         commonPatterns: s.commonPatterns
       }));
-      res.json({
+      res.json({ success: true, subagents });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -1034,7 +1033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("[Acknowledge] User " + userId + " acknowledged notification " + notificationId);
       
-      res.json({
+      res.json({ 
         success: true, 
         notification,
         counts: { unread: counts.unread, uncleared: counts.uncleared }
@@ -1060,7 +1059,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const success = await aiNotificationService.acknowledgeMaintenanceAlert(alertId, userId);
       
       if (success) {
-        res.json({
+        res.json({ success: true });
       } else {
         res.status(500).json({ message: 'Failed to acknowledge alert' });
       }
@@ -1117,7 +1116,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await notificationStateManager.markNotificationAsRead(notificationId, userId, workspaceId);
       
       if (result.success) {
-        res.json({
+        res.json({ 
           success: true, 
           counts: result.newCounts 
         });
@@ -1149,7 +1148,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       
       if (result.success) {
-        res.json({
+        res.json({ 
           success: true, 
           counts: result.newCounts 
         });
@@ -1174,7 +1173,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const counts = await notificationStateManager.syncCountsForUser(userId, workspaceId, workspaceRole);
       
-      res.json({
+      res.json({ 
         success: true, 
         counts 
       });
@@ -1248,7 +1247,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           broadcastNotification(member.workspaceId, userId, 'notification_count_updated', undefined, unreadCount);
         }
       }
-      res.json({
+      res.json({ success: true, notification });
     } catch (error) {
       console.error('Error toggling notification read status:', error);
       res.status(500).json({ message: 'Failed to toggle notification read status' });
@@ -1287,7 +1286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      res.json({
+      res.json({ success: true });
     } catch (error) {
       console.error('Error deleting notification:', error);
       res.status(500).json({ message: 'Failed to delete notification' });
@@ -1396,7 +1395,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!deleted) {
         return res.status(404).json({ message: 'Failed to delete message' });
       }
-      res.json({
+      res.json({ success: true, message: 'Message deleted' });
     } catch (error) {
       console.error('Error deleting chat message:', error);
       res.status(500).json({ message: 'Failed to delete message' });
@@ -1506,7 +1505,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const preferences = await storage.createOrUpdateNotificationPreferences(userId, workspaceId, {
         enabledTypes,
       });
-      res.json({
+      res.json({ success: true, preferences });
     } catch (error) {
       console.error('Error subscribing to notification type:', error);
       res.status(500).json({ message: 'Failed to subscribe to notification type' });
@@ -1545,7 +1544,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const preferences = await storage.createOrUpdateNotificationPreferences(userId, workspaceId, {
         enabledTypes: updatedTypes,
       });
-      res.json({
+      res.json({ success: true, preferences });
     } catch (error) {
       console.error('Error unsubscribing from notification type:', error);
       res.status(500).json({ message: 'Failed to unsubscribe from notification type' });
@@ -1629,7 +1628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
 
       if (result.success) {
-        res.json({
+        res.json({ success: true, messageId: result.messageId, message: 'Test SMS sent successfully' });
       } else {
         res.status(400).json({ success: false, error: result.error });
       }
@@ -1664,7 +1663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         smsPhoneNumber: phoneNumber,
         smsVerified: true,
       });
-      res.json({
+      res.json({ success: true, preferences });
     } catch (error) {
       console.error('Error verifying phone:', error);
       res.status(500).json({ message: 'Failed to verify phone number' });
@@ -1689,7 +1688,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await sendShiftReminder(shiftId, workspaceId);
 
       if (result) {
-        res.json({
+        res.json({ success: true, result });
       } else {
         res.status(404).json({ message: 'Shift not found or no employee assigned' });
       }
@@ -1727,7 +1726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ))
         .limit(1);
       
-      res.json({
+      res.json({ workspaceRole: employee?.workspaceRole || null });
     } catch (error) {
       console.error('[API] Error fetching workspace role:', error);
       res.status(500).json({ message: 'Failed to fetch workspace role' });
@@ -1754,7 +1753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ))
         .limit(1);
       
-      res.json({
+      res.json({ platformRole: platformRole?.role || 'none' });
     } catch (error) {
       console.error('[API] Error fetching platform role:', error);
       res.status(500).json({ message: 'Failed to fetch platform role' });
@@ -1802,7 +1801,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { getFeaturesForRole } = await import('@shared/workspaceFeatures');
       const features = getFeaturesForRole(platformRole, workspaceRole);
       
-      res.json({
+      res.json({ 
         features,
         platformRole,
         workspaceRole
@@ -1934,7 +1933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      res.json({
+      res.json({ success: true });
     } catch (error) {
       console.error('Error dismissing update:', error);
       res.status(500).json({ message: 'Failed to dismiss update' });
@@ -2148,7 +2147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         priority: 'normal',
         status: 'open',
       });
-      res.json({
+      res.json({ success: true, ticketId: ticket.id });
     } catch (error) {
       console.error('Error submitting feedback:', error);
       res.status(500).json({ message: 'Failed to submit feedback' });
@@ -2378,7 +2377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ticketNumber
       });
 
-      res.json({
+      res.json({ 
         success: true, 
         ticketId: ticket.id,
         ticketNumber: (ticket as any).ticketNumber || ticket.id
@@ -2629,7 +2628,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userContext,
       });
 
-      res.json({
+      res.json({ suggestion });
     } catch (error: any) {
       console.error('HelpAI copilot error:', error);
       res.status(500).json({ message: error.message || 'Failed to generate suggestion' });
@@ -2745,7 +2744,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser(userId, {
         currentWorkspaceId: workspaceId,
       });
-      res.json({
+      res.json({ success: true, workspaceId });
     } catch (error) {
       console.error('Error switching workspace:', error);
       res.status(500).json({ message: 'Failed to switch workspace' });
@@ -3398,7 +3397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         updatedAt: new Date(),
       });
 
-      res.json({
+      res.json({ 
         success: true, 
         message: "Profile updated successfully",
         user: updatedUser 
@@ -4739,7 +4738,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         details: { previousRole: targetEmployee.workspaceRole, newRole },
       });
       
-      res.json({
+      res.json({ success: true, employee: updated });
     } catch (error: any) {
       console.error("Error updating employee role:", error);
       res.status(500).json({ message: error.message || "Failed to update role" });
@@ -4800,7 +4799,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         details: { previousStatus: targetEmployee.status, newStatus },
       });
       
-      res.json({
+      res.json({ success: true, employee: updated });
     } catch (error: any) {
       console.error("Error toggling employee access:", error);
       res.status(500).json({ message: error.message || "Failed to toggle access" });
@@ -5050,7 +5049,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Employee not found" });
       }
       
-      res.json({
+      res.json({ success: true });
     } catch (error) {
       console.error("Error deleting employee:", error);
       res.status(500).json({ message: "Failed to delete employee" });
@@ -5489,7 +5488,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      res.json({
+      res.json({ received: true });
     } catch (error) {
       console.error('[Webhook] Error processing Stripe webhook:', error);
       res.status(400).json({ error: 'Webhook processing failed' });
@@ -6042,7 +6041,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Benefit not found" });
       }
 
-      res.json({
+      res.json({ message: "Benefit deleted successfully" });
     } catch (error) {
       console.error("Error deleting benefit:", error);
       res.status(500).json({ message: "Failed to delete benefit" });
@@ -6258,7 +6257,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspaceId = req.workspaceId!;
       const updatedCount = await runWeeklyPtoAccrual(workspaceId);
       
-      res.json({
+      res.json({ 
         success: true, 
         message: `PTO accrual updated for ${updatedCount} employees`,
         updatedCount 
@@ -6581,7 +6580,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         workspace?.name || 'CoAIleague'
       ).catch(err => console.error(`[PASSWORD RESET] Failed to send email to ${employee.email}:`, err.message));
       
-      res.json({
+      res.json({ 
         success: true, 
         message: "Password reset successfully and sent via email",
         tempPassword // In production, this should be emailed, not returned
@@ -6635,7 +6634,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requiresApproval: false,
       });
       
-      res.json({
+      res.json({ 
         success: true, 
         message: "Account unlocked successfully"
       });
@@ -6698,7 +6697,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requiresApproval: false,
       });
       
-      res.json({
+      res.json({ 
         success: true, 
         message: "Contact information updated successfully",
         employee: updated
@@ -6900,7 +6899,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         requiresApproval: false,
       });
       
-      res.json({
+      res.json({ 
         success: true, 
         message: "Escalation ticket updated successfully",
         ticket: updated
@@ -7140,7 +7139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Client not found" });
       }
       
-      res.json({
+      res.json({ success: true });
     } catch (error) {
       console.error("Error deleting client:", error);
       res.status(500).json({ message: "Failed to delete client" });
@@ -7517,7 +7516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         ).catch(err => console.error('Failed to create shift cancellation notification:', err));
       }
       
-      res.json({
+      res.json({ success: true });
     } catch (error) {
       console.error("Error deleting shift:", error);
       res.status(500).json({ message: "Failed to delete shift" });
@@ -8544,7 +8543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         start.setDate(start.getDate() + 1);
       }
       
-      res.json({
+      res.json({ shifts: createdShifts, count: createdShifts.length });
     } catch (error: any) {
       console.error("Error creating bulk shifts:", error);
       res.status(400).json({ message: error.message || "Failed to create bulk shifts" });
@@ -8607,7 +8606,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       console.log(`🤖 SmartSchedule AI ${enabled ? 'ENABLED' : 'DISABLED'} for workspace: ${workspace.name} by user: ${userId}`);
-      res.json({
+      res.json({ success: true, enabled, message: `SmartSchedule AI ${enabled ? 'enabled' : 'disabled'}`, workspaceId, workspaceName: workspace.name });
     } catch (error: any) {
       console.error("Error toggling SmartSchedule AI:", error);
       res.status(500).json({ message: "Failed to toggle AI" });
@@ -8626,7 +8625,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Read from database - actual persisted state
       const enabled = workspace.feature_scheduleos_enabled ?? false;
       
-      res.json({
+      res.json({ enabled, workspaceId, workspaceName: workspace.name });
     } catch (error: any) {
       res.status(500).json({ message: "Failed to get AI status" });
     }
@@ -9337,7 +9336,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       await db.update(serviceCoverageRequests).set({ aiProcessed: true, aiProcessedAt: new Date(), aiSuggestedEmployees: result.generatedShifts.map((s: any) => ({ employeeId: s.employeeId, employeeName: s.employeeName, confidenceScore: s.aiConfidenceScore })), aiConfidenceScore: "0.85", status: 'matched', aiUsageLogId: log.id }).where(eq(serviceCoverageRequests.id, request.id));
       
-      res.json({
+      res.json({ request: { ...request, requestNumber }, matches: result.generatedShifts, billing: { aiUsageId: log.id, tokensUsed: tokens, costUsd: parseFloat(cost.toFixed(2)) } });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to find coverage" });
     }
@@ -9363,7 +9362,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db.update(shifts).set({ status: 'scheduled' }).where(and(eq(shifts.workspaceId, workspace.id), sql`${shifts.id} = ANY(${shiftIds})`));
       
       console.log(`📅 Schedule published: ${employeesAffected} employees, ${shiftIds.length} shifts`);
-      res.json({
+      res.json({ success: true, published, message: `Schedule published. ${employeesAffected} employees notified.` });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to publish schedule" });
     }
@@ -10200,7 +10199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Template not found" });
       }
       
-      res.json({
+      res.json({ success: true });
     } catch (error) {
       console.error("Error deleting shift template:", error);
       res.status(500).json({ message: "Failed to delete shift template" });
@@ -10444,7 +10443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await db.delete(shiftAcknowledgments)
         .where(eq(shiftAcknowledgments.id, req.params.id));
 
-      res.json({
+      res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting acknowledgment:", error);
       res.status(500).json({ message: "Failed to delete acknowledgment" });
@@ -10678,7 +10677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update invoice status to 'sent' (with workspace scope)
       const updatedInvoice = await storage.updateInvoice(invoice.id, workspace.id, { status: 'sent' });
 
-      res.json({
+      res.json({ 
         success: true, 
         message: "Invoice sent successfully",
         emailId: emailResult.data 
@@ -10936,7 +10935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { processDelinquentInvoices } = await import('./services/billos');
       await processDelinquentInvoices(workspaceId);
       
-      res.json({
+      res.json({ message: "Delinquency reminders processed successfully" });
     } catch (error: any) {
       console.error("Error processing reminders:", error);
       res.status(500).json({ message: error.message || "Failed to process reminders" });
@@ -11043,7 +11042,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      res.json({
+      res.json({ message: `Seeded ${created.length} default categories`, categories: created });
     } catch (error: any) {
       console.error("Error seeding expense categories:", error);
       res.status(500).json({ message: error.message || "Failed to seed expense categories" });
@@ -11148,7 +11147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const receipts = await storage.getExpenseReceiptsByExpense(expense.id);
-      res.json({
+      res.json({ ...expense, receipts });
     } catch (error: any) {
       console.error("Error fetching expense:", error);
       res.status(500).json({ message: "Failed to fetch expense" });
@@ -12178,7 +12177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const messages = await storage.getChatMessagesByConversation(chatroom.id);
       
-      res.json({
+      res.json({ chatroom, messages });
     } catch (error: any) {
       console.error("Error fetching shift chatroom:", error);
       res.status(400).json({ message: error.message || "Failed to fetch shift chatroom" });
@@ -12509,7 +12508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp: new Date().toISOString(),
       });
       
-      res.json({
+      res.json({ 
         success: true, 
         message: 'Invitation resent successfully',
         invite: updatedInvite 
@@ -12547,7 +12546,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(500).json({ message: 'Failed to revoke invite' });
       }
       
-      res.json({
+      res.json({ 
         success: true, 
         message: 'Invitation revoked successfully',
         invite: revokedInvite 
@@ -12573,7 +12572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.markInviteOpened(invite.id);
       }
       
-      res.json({
+      res.json({ success: true });
     } catch (error) {
       console.error('Error marking invite as opened:', error);
       res.status(500).json({ message: 'Failed to mark invite as opened' });
@@ -14001,7 +14000,7 @@ ${application.email}`,
         stripeConnectedAccountId: account.id,
       });
 
-      res.json({
+      res.json({ 
         accountId: account.id,
         chargesEnabled: account.charges_enabled,
         detailsSubmitted: account.details_submitted,
@@ -14033,7 +14032,7 @@ ${application.email}`,
         type: 'account_onboarding',
       });
 
-      res.json({
+      res.json({ url: accountLink.url });
     } catch (error: any) {
       console.error("Error creating onboarding link:", error);
       res.status(500).json({ message: error.message });
@@ -14101,7 +14100,7 @@ ${application.email}`,
         });
       }
 
-      res.json({
+      res.json({ 
         success: true,
         paymentIntentId: paymentIntent.id,
         status: paymentIntent.status,
@@ -14193,7 +14192,7 @@ ${application.email}`,
         platformFeePercentage: platformFeeMap[tier as keyof typeof platformFeeMap] || "5",
       });
 
-      res.json({
+      res.json({ 
         success: true,
         subscriptionId: subscription.id,
         tier: tier,
@@ -14303,7 +14302,7 @@ ${application.email}`,
           break;
       }
 
-      res.json({
+      res.json({ received: true });
     } catch (error: any) {
       console.error('Webhook error:', error.message);
       res.status(400).send(`Webhook Error: ${error.message}`);
@@ -14795,7 +14794,7 @@ ${application.email}`,
         return res.status(404).json({ message: 'Availability slot not found' });
       }
 
-      res.json({
+      res.json({ success: true });
     } catch (error: any) {
       console.error('Error deleting availability:', error);
       res.status(500).json({ message: error.message || 'Failed to delete availability' });
@@ -15878,7 +15877,7 @@ ${application.email}`,
       );
       
       // Return success with ticket number
-      res.json({
+      res.json({ 
         success: true,
         message: "Support ticket created! Save your ticket number to access Live Chat support.",
         ticketNumber,
@@ -16086,7 +16085,7 @@ ${application.email}`,
         status: 'sent_to_customer',
       });
 
-      res.json({
+      res.json({ 
         success: true, 
         submission: updatedSubmission,
         emailSent: true 
@@ -16322,7 +16321,7 @@ ${application.email}`,
         return res.status(404).json({ message: "KPI alert not found" });
       }
 
-      res.json({
+      res.json({ success: true });
     } catch (error) {
       console.error("Error deleting KPI alert:", error);
       res.status(500).json({ message: "Failed to delete KPI alert" });
@@ -16401,7 +16400,7 @@ Keep it professional, actionable, and under 250 words.`;
 
       const summary = completion.choices[0]?.message?.content || 'Unable to generate summary';
 
-      res.json({
+      res.json({ summary });
     } catch (error) {
       console.error("Error generating AI summary:", error);
       res.status(500).json({ message: "Failed to generate AI summary" });
@@ -16518,7 +16517,7 @@ Keep it professional, actionable, and under 250 words.`;
         return res.status(404).json({ message: "Workflow config not found" });
       }
 
-      res.json({
+      res.json({ success: true });
     } catch (error) {
       console.error("Error deleting workflow config:", error);
       res.status(500).json({ message: "Failed to delete workflow config" });
@@ -16918,7 +16917,7 @@ Keep it professional, actionable, and under 250 words.`;
         free: priorityUsers.filter(u => u.tier === 'free').length,
       };
 
-      res.json({
+      res.json({ users: priorityUsers, tierCounts });
     } catch (error) {
       console.error("Error fetching priority queue:", error);
       res.status(500).json({ message: "Failed to fetch priority queue" });
@@ -17118,7 +17117,7 @@ Summary:`;
           .where(eq(supportTickets.id, id))
           .returning();
 
-        res.json({
+        res.json({ 
           success: true, 
           summary,
           ticket: updatedTicket
@@ -17206,7 +17205,7 @@ Summary:`;
         // Don't fail the whole operation if email fails
       }
 
-      res.json({
+      res.json({ 
         success: true, 
         message: 'Ticket closed and summary sent to customer',
         ticket: closedTicket
@@ -17640,7 +17639,7 @@ Summary:`;
         return res.status(404).json({ message: 'AI Brain action log not found' });
       }
 
-      res.json({
+      res.json({ success: true, data: log });
     } catch (error) {
       console.error('Error fetching AI Brain action log:', error);
       res.status(500).json({ message: 'Failed to fetch AI audit log' });
@@ -17667,7 +17666,7 @@ Summary:`;
         return res.status(404).json({ message: 'AI Brain action log not found' });
       }
 
-      res.json({
+      res.json({ success: true, data: updated });
     } catch (error) {
       console.error('Error marking action as reviewed:', error);
       res.status(500).json({ message: 'Failed to mark action as reviewed' });
@@ -17873,7 +17872,7 @@ Summary:`;
         timestamp: new Date().toISOString(),
       });
 
-      res.json({
+      res.json({ 
         success: true, 
         message: `Platform role ${role} assigned successfully`,
         role: newRole 
@@ -18042,7 +18041,7 @@ Summary:`;
       const { supportLookup } = await import('./services/identityService');
       const results = await supportLookup(query);
       
-      res.json({
+      res.json({ results });
     } catch (error) {
       console.error("Error performing support lookup:", error);
       res.status(500).json({ message: "Failed to perform lookup" });
@@ -18082,7 +18081,7 @@ Summary:`;
       const result = await refreshDemoData();
       console.log("🔧 [DEBUG] Refresh completed:", result);
       
-      res.json({
+      res.json({ 
         success: true, 
         message: "Demo workspace refreshed successfully",
         ...result 
@@ -18108,7 +18107,7 @@ Summary:`;
         suspendedBy: adminUserId,
         subscriptionStatus: 'suspended',
       });
-      res.json({
+      res.json({ success: true, message: "Account suspended successfully" });
     } catch (error) {
       console.error("Error suspending account:", error);
       res.status(500).json({ message: "Failed to suspend account" });
@@ -18127,7 +18126,7 @@ Summary:`;
         suspendedBy: null,
         subscriptionStatus: 'active',
       });
-      res.json({
+      res.json({ success: true, message: "Account unsuspended successfully" });
     } catch (error) {
       console.error("Error unsuspending account:", error);
       res.status(500).json({ message: "Failed to unsuspend account" });
@@ -18146,7 +18145,7 @@ Summary:`;
         frozenAt: new Date(),
         frozenBy: adminUserId,
       });
-      res.json({
+      res.json({ success: true, message: "Account frozen successfully" });
     } catch (error) {
       console.error("Error freezing account:", error);
       res.status(500).json({ message: "Failed to freeze account" });
@@ -18164,7 +18163,7 @@ Summary:`;
         frozenAt: null,
         frozenBy: null,
       });
-      res.json({
+      res.json({ success: true, message: "Account unfrozen successfully" });
     } catch (error) {
       console.error("Error unfreezing account:", error);
       res.status(500).json({ message: "Failed to unfreeze account" });
@@ -18183,7 +18182,7 @@ Summary:`;
         lockedAt: new Date(),
         lockedBy: adminUserId,
       });
-      res.json({
+      res.json({ success: true, message: "Account locked successfully" });
     } catch (error) {
       console.error("Error locking account:", error);
       res.status(500).json({ message: "Failed to lock account" });
@@ -18201,7 +18200,7 @@ Summary:`;
         lockedAt: null,
         lockedBy: null,
       });
-      res.json({
+      res.json({ success: true, message: "Account unlocked successfully" });
     } catch (error) {
       console.error("Error unlocking account:", error);
       res.status(500).json({ message: "Failed to unlock account" });
@@ -18225,7 +18224,7 @@ Summary:`;
       
       await storage.deleteEmployee(userId);
       
-      res.json({
+      res.json({ 
         success: true, 
         message: "User deleted successfully",
         deletedBy: adminUserId,
@@ -18250,7 +18249,7 @@ Summary:`;
       
       await storage.updateEmployee(userId, { role: newRole });
       
-      res.json({
+      res.json({ 
         success: true, 
         message: `User role changed to ${newRole}`,
         actionBy: adminUserId 
@@ -18302,7 +18301,7 @@ Summary:`;
         userId: userId || validated.userId || null,
       });
       
-      res.json({
+      res.json({ 
         success: true, 
         client,
         createdBy: adminUserId 
@@ -18326,7 +18325,7 @@ Summary:`;
       
       await storage.deleteClient(clientId);
       
-      res.json({
+      res.json({ 
         success: true, 
         message: "Client deleted successfully",
         deletedBy: adminUserId,
@@ -18358,7 +18357,7 @@ Summary:`;
         paidDate: new Date().toISOString(),
       });
       
-      res.json({
+      res.json({ 
         success: true, 
         message: "Payment processed and invoice cleared",
         processedBy: adminUserId,
@@ -18388,7 +18387,7 @@ Summary:`;
         paidDate: new Date().toISOString(),
       });
       
-      res.json({
+      res.json({ 
         success: true, 
         message: "Invoice force cleared",
         clearedBy: adminUserId,
@@ -18418,7 +18417,7 @@ Summary:`;
         });
       }
       
-      res.json({
+      res.json({ 
         success: true, 
         message: `Chat reset - ${conversations.length} conversations closed`,
         resetBy: adminUserId,
@@ -18436,7 +18435,7 @@ Summary:`;
       const { workspaceId, service, reason } = req.body;
       const adminUserId = req.user.claims.sub;
       
-      res.json({
+      res.json({ 
         success: true, 
         message: `Service ${service} force closed`,
         closedBy: adminUserId,
@@ -19390,7 +19389,7 @@ Summary:`;
         })
         .where(eq(users.id, userId))
         .returning();
-      res.json({
+      res.json({ success: true, user: updated });
     } catch (error: any) {
       console.error("Error updating user:", error);
       res.status(500).json({ error: "Failed to update user" });
@@ -19416,7 +19415,7 @@ Summary:`;
           updatedAt: new Date(),
         })
         .where(eq(users.id, userId));
-      res.json({
+      res.json({ success: true, message: "Password updated successfully" });
     } catch (error: any) {
       console.error("Error setting password:", error);
       res.status(500).json({ error: "Failed to set password" });
@@ -19462,7 +19461,7 @@ Summary:`;
           grantedReason: reason || `Granted ${role} role`,
         })
         .returning();
-      res.json({
+      res.json({ success: true, platformRole: newRole });
     } catch (error: any) {
       console.error("Error granting platform role:", error);
       res.status(500).json({ error: "Failed to grant platform role" });
@@ -19486,7 +19485,7 @@ Summary:`;
           eq(platformRoles.userId, userId),
           isNull(platformRoles.revokedAt)
         ));
-      res.json({
+      res.json({ success: true, message: "Platform role revoked successfully" });
     } catch (error: any) {
       console.error("Error revoking platform role:", error);
       res.status(500).json({ error: "Failed to revoke platform role" });
@@ -19539,7 +19538,7 @@ Summary:`;
           grantedReason: `Created with ${platformRole} role`,
         });
       }
-      res.json({
+      res.json({ success: true, user: newUser });
     } catch (error: any) {
       console.error("Error creating user:", error);
       res.status(500).json({ error: "Failed to create user" });
@@ -19565,7 +19564,7 @@ Summary:`;
           .where(eq(workspaces.id, settings.workspaceId));
       }
       
-      res.json({
+      res.json({ 
         success: true, 
         message: "Platform settings saved successfully",
         settings 
@@ -19612,7 +19611,7 @@ Summary:`;
         };
       });
       
-      res.json({
+      res.json({ staff });
     } catch (error: any) {
       console.error("Error fetching platform staff:", error);
       res.status(500).json({ error: "Failed to fetch platform staff" });
@@ -19658,7 +19657,7 @@ Summary:`;
         })
         .returning();
 
-      res.json({
+      res.json({ success: true, message: `Platform role '${role}' granted to ${email}`, role: newRole });
     } catch (error: any) {
       console.error("Error granting platform role:", error);
       res.status(500).json({ error: "Failed to grant platform role" });
@@ -19678,7 +19677,7 @@ Summary:`;
         })
         .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
 
-      res.json({
+      res.json({ success: true, message: "Platform role revoked successfully" });
     } catch (error: any) {
       console.error("Error revoking platform role:", error);
       res.status(500).json({ error: "Failed to revoke platform role" });
@@ -19704,7 +19703,7 @@ Summary:`;
         })
         .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
 
-      res.json({
+      res.json({ success: true, message: "Staff member suspended for investigation" });
     } catch (error: any) {
       console.error("Error suspending staff:", error);
       res.status(500).json({ error: "Failed to suspend staff member" });
@@ -19725,7 +19724,7 @@ Summary:`;
         })
         .where(and(eq(platformRoles.userId, userId), isNull(platformRoles.revokedAt)));
 
-      res.json({
+      res.json({ success: true, message: "Staff member reinstated" });
     } catch (error: any) {
       console.error("Error unsuspending staff:", error);
       res.status(500).json({ error: "Failed to reinstate staff member" });
@@ -19761,7 +19760,7 @@ Summary:`;
         })
         .returning();
 
-      res.json({
+      res.json({ success: true, message: `Platform role changed to '${newRole}'`, role: newRoleRecord });
     } catch (error: any) {
       console.error("Error changing platform role:", error);
       res.status(500).json({ error: "Failed to change platform role" });
@@ -20248,7 +20247,7 @@ Summary:`;
         userId, // Track which user initiated the request
       });
 
-      res.json({
+      res.json({ 
         response,
         available: true 
       });
@@ -20267,7 +20266,7 @@ Summary:`;
       const { isGeminiAvailable } = await import('./gemini');
       const available = isGeminiAvailable();
       
-      res.json({
+      res.json({ 
         available,
         model: available ? "gemini-2.0-flash-exp" : null,
         message: available ? "Gemini AI is ready" : "Gemini AI is not configured"
@@ -20455,7 +20454,7 @@ Summary:`;
       // Delete the macro
       await db.delete(chatMacros).where(eq(chatMacros.id, id));
       
-      res.json({
+      res.json({ message: "Macro deleted successfully" });
     } catch (error: any) {
       console.error("Error deleting chat macro:", error);
       res.status(500).json({ message: "Failed to delete chat macro" });
@@ -20513,7 +20512,7 @@ Summary:`;
           },
         });
       
-      res.json({
+      res.json({ message: "Typing indicator started" });
     } catch (error: any) {
       console.error("Error starting typing indicator:", error);
       res.status(500).json({ message: "Failed to start typing indicator" });
@@ -20564,7 +20563,7 @@ Summary:`;
           )
         );
       
-      res.json({
+      res.json({ message: "Typing indicator stopped" });
     } catch (error: any) {
       console.error("Error stopping typing indicator:", error);
       res.status(500).json({ message: "Failed to stop typing indicator" });
@@ -20911,7 +20910,7 @@ Summary:`;
       const helposAI = new HelpAIService(workspaceId);
       const newState = helposAI.toggleAI(enabled);
       
-      res.json({
+      res.json({ 
         enabled: newState, 
         message: `HelpAI ${newState ? 'enabled' : 'disabled'} successfully for workspace ${workspace.name}`,
         workspaceId
@@ -20955,7 +20954,7 @@ Summary:`;
       const helposAI = new HelpAIService(workspaceId);
       const isEnabled = helposAI.isEnabled();
       
-      res.json({
+      res.json({ 
         enabled: isEnabled, 
         workspaceId,
         workspaceName: workspace.name
@@ -21179,7 +21178,7 @@ Summary:`;
         });
       }
       
-      res.json({
+      res.json({ 
         access,
         room,
         message: "Access granted to HelpDesk room" 
@@ -21235,7 +21234,7 @@ Summary:`;
         userAgent,
       }).returning();
       
-      res.json({
+      res.json({ 
         success: true,
         message: "Terms accepted and recorded for compliance",
         acknowledgmentId: acknowledgment.id
@@ -21288,7 +21287,7 @@ Summary:`;
         });
       }
       
-      res.json({
+      res.json({ 
         hasAccess: false,
         room 
       });
@@ -21326,7 +21325,7 @@ Summary:`;
         return res.status(404).json({ message: "Access record not found" });
       }
       
-      res.json({
+      res.json({ message: "Access revoked successfully" });
     } catch (error) {
       console.error("Error revoking access:", error);
       res.status(500).json({ message: "Failed to revoke access" });
@@ -21549,7 +21548,7 @@ Return ONLY valid JSON array with this exact structure:
         insertedLeads.push(newLead);
       }
 
-      res.json({
+      res.json({ 
         success: true, 
         count: insertedLeads.length,
         leads: insertedLeads,
@@ -21705,7 +21704,7 @@ Return ONLY valid JSON array with this exact structure:
         bodyHtml,
         status: 'sent',
       });
-      res.json({
+      res.json({ success: true, emailId: data?.id });
     } catch (error) {
       console.error("Error sending email:", error);
       res.status(500).json({ message: "Failed to send email" });
@@ -21891,7 +21890,7 @@ Return ONLY valid JSON array with this exact structure:
       }
 
       await storage.deleteCustomForm(id);
-      res.json({
+      res.json({ success: true });
     } catch (error) {
       console.error("Error deleting custom form:", error);
       res.status(500).json({ message: "Failed to delete custom form" });
@@ -22043,7 +22042,7 @@ Return ONLY valid JSON array with this exact structure:
         feedback: feedback || null,
       });
 
-      res.json({
+      res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
@@ -22234,7 +22233,7 @@ Return ONLY valid JSON array with this exact structure:
           userId,
         });
 
-      res.json({
+      res.json({ success: true });
     } catch (error: any) {
       console.error("Error acknowledging MOTD:", error);
       res.status(500).json({ error: error.message });
@@ -22291,7 +22290,7 @@ Return ONLY valid JSON array with this exact structure:
         })
         .returning();
 
-      res.json({
+      res.json({ 
         success: true, 
         acceptanceId: acceptance.id,
         message: "Agreement accepted and recorded for compliance" 
@@ -22330,7 +22329,7 @@ Return ONLY valid JSON array with this exact structure:
         .orderBy(desc(chatAgreementAcceptances.acceptedAt))
         .limit(1);
 
-      res.json({
+      res.json({ 
         hasAccepted: !!acceptance,
         acceptedAt: acceptance?.acceptedAt || null
       });
@@ -22668,7 +22667,7 @@ Return ONLY valid JSON array with this exact structure:
         return res.status(404).json({ error: "Banner not found" });
       }
 
-      res.json({
+      res.json({ message: "Banner deleted successfully" });
     } catch (error: any) {
       console.error("Error deleting banner:", error);
       res.status(500).json({ error: error.message });
@@ -22777,7 +22776,7 @@ Return ONLY valid JSON array with this exact structure:
         articlesRetrieved: relevantArticles.map(a => a.id),
       });
 
-      res.json({
+      res.json({ response, articles: relevantArticles });
     } catch (error: any) {
       console.error("Error in AI knowledge retrieval:", error);
       res.status(500).json({ error: error.message });
@@ -22949,7 +22948,7 @@ Return ONLY valid JSON array with this exact structure:
         }
       }
 
-      res.json({
+      res.json({ 
         message: `Generated ${alerts.length} capacity alerts`,
         alerts 
       });
@@ -23531,7 +23530,7 @@ Return ONLY valid JSON array with this exact structure:
       }
       
       await db.delete(customRules).where(eq(customRules.id, id));
-      res.json({
+      res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting custom rule:", error);
       res.status(500).json({ message: "Failed to delete rule" });
@@ -24491,7 +24490,7 @@ Return ONLY valid JSON array with this exact structure:
         new Date(periodEnd)
       );
       
-      res.json({
+      res.json({ 
         message: `Calculated ${healthScores.length} health scores`,
         healthScores 
       });
@@ -24687,7 +24686,7 @@ Return ONLY valid JSON array with this exact structure:
         .delete(trainingCourses)
         .where(eq(trainingCourses.id, id));
       
-      res.json({
+      res.json({ message: "Training course deleted successfully" });
     } catch (error: any) {
       console.error("Error deleting training course:", error);
       res.status(500).json({ message: "Failed to delete training course" });
@@ -25160,7 +25159,7 @@ Return ONLY valid JSON array with this exact structure:
         .delete(budgets)
         .where(eq(budgets.id, id));
       
-      res.json({
+      res.json({ message: "Budget deleted successfully" });
     } catch (error: any) {
       console.error("Error deleting budget:", error);
       res.status(500).json({ message: "Failed to delete budget" });
@@ -25331,7 +25330,7 @@ Return ONLY valid JSON array with this exact structure:
         .delete(budgetLineItems)
         .where(eq(budgetLineItems.id, id));
       
-      res.json({
+      res.json({ message: "Budget line item deleted successfully" });
     } catch (error: any) {
       console.error("Error deleting budget line item:", error);
       res.status(500).json({ message: "Failed to delete budget line item" });
@@ -25552,7 +25551,7 @@ Return ONLY valid JSON array with this exact structure:
           eq(integrationConnections.workspaceId, workspaceId)
         ));
       
-      res.json({
+      res.json({ message: "Connection disconnected" });
     } catch (error: any) {
       console.error("Error disconnecting integration:", error);
       res.status(500).json({ message: "Failed to disconnect integration" });
@@ -25634,7 +25633,7 @@ Return ONLY valid JSON array with this exact structure:
         .returning();
       
       // Return full API key ONLY on creation
-      res.json({
+      res.json({ ...apiKey, apiKey: apiKeyValue });
     } catch (error: any) {
       console.error("Error creating API key:", error);
       res.status(500).json({ message: "Failed to create API key" });
@@ -25658,7 +25657,7 @@ Return ONLY valid JSON array with this exact structure:
           eq(integrationApiKeys.workspaceId, workspaceId)
         ));
       
-      res.json({
+      res.json({ message: "API key revoked" });
     } catch (error: any) {
       console.error("Error revoking API key:", error);
       res.status(500).json({ message: "Failed to revoke API key" });
@@ -25770,7 +25769,7 @@ Return ONLY valid JSON array with this exact structure:
           eq(webhookSubscriptions.workspaceId, workspaceId)
         ));
       
-      res.json({
+      res.json({ message: "Webhook deleted" });
     } catch (error: any) {
       console.error("Error deleting webhook:", error);
       res.status(500).json({ message: "Failed to delete webhook" });
@@ -26876,7 +26875,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         }
       }
 
-      res.json({
+      res.json({ 
         success: true, 
         message: "Performance review deleted successfully",
         explanation 
@@ -28350,7 +28349,7 @@ Respond with valid JSON array only.`
       
       // Room join is handled by WebSocket connection
       // This endpoint just validates access
-      res.json({
+      res.json({ 
         success: true,
         message: "You can now connect to this room via WebSocket",
         roomId: room.id,
@@ -28369,7 +28368,7 @@ Respond with valid JSON array only.`
       
       // Room leave is handled by WebSocket disconnection
       // This endpoint just confirms the action
-      res.json({
+      res.json({ 
         success: true,
         message: "Disconnected from room",
         roomId,
@@ -28606,7 +28605,7 @@ Respond with valid JSON array only.`
         userAgent: req.headers['user-agent'] || 'unknown',
       });
 
-      res.json({
+      res.json({ message: "Onboarding completed successfully", room });
     } catch (error: any) {
       console.error("Error completing onboarding:", error);
       res.status(500).json({ message: "Failed to complete onboarding" });
@@ -28682,7 +28681,7 @@ Respond with valid JSON array only.`
         userAgent: req.headers['user-agent'] || 'unknown',
       });
 
-      res.json({
+      res.json({ message: "Successfully joined room" });
     } catch (error: any) {
       console.error("Error joining room:", error);
       res.status(500).json({ message: "Failed to join room" });
@@ -28734,7 +28733,7 @@ Respond with valid JSON array only.`
         userAgent: req.headers['user-agent'] || 'unknown',
       });
 
-      res.json({
+      res.json({ message: "Room suspended successfully" });
     } catch (error: any) {
       console.error("Error suspending room:", error);
       res.status(500).json({ message: "Failed to suspend room" });
@@ -28780,7 +28779,7 @@ Respond with valid JSON array only.`
         userAgent: req.headers['user-agent'] || 'unknown',
       });
 
-      res.json({
+      res.json({ message: "Suspension lifted successfully" });
     } catch (error: any) {
       console.error("Error lifting suspension:", error);
       res.status(500).json({ message: "Failed to lift suspension" });
@@ -28877,7 +28876,7 @@ Respond with valid JSON array only.`
 
       const fileUrl = `/objects/private-messages/${workspaceId}/${fileId}.${fileExt}`;
 
-      res.json({
+      res.json({ 
         fileUrl, 
         fileName: sanitizedName,
         fileSize: buffer.length 
@@ -28955,7 +28954,7 @@ Respond with valid JSON array only.`
 
       const conversation = await storage.getOrCreatePrivateConversation(workspaceId, userId, recipientId);
 
-      res.json({
+      res.json({ conversationId: conversation.id });
     } catch (error: any) {
       console.error("Error starting conversation:", error);
       res.status(500).json({ message: "Failed to start conversation" });
@@ -28976,7 +28975,7 @@ Respond with valid JSON array only.`
 
       await storage.markPrivateMessagesAsRead(conversationId, userId);
 
-      res.json({
+      res.json({ message: "Messages marked as read" });
     } catch (error: any) {
       console.error("Error marking messages as read:", error);
       res.status(500).json({ message: "Failed to mark messages as read" });
@@ -29644,7 +29643,7 @@ Respond with valid JSON array only.`
       console.log('🧪 Manual trigger: Invoice generation requested by', req.user?.email);
       const { manualTriggers } = await import('./services/autonomousScheduler');
       const result = await manualTriggers.invoicing();
-      res.json({
+      res.json({ 
         success: true, 
         message: 'Invoice generation completed',
         result 
@@ -29663,7 +29662,7 @@ Respond with valid JSON array only.`
       console.log('🧪 Manual trigger: Schedule generation requested by', req.user?.email);
       const { manualTriggers } = await import('./services/autonomousScheduler');
       const result = await manualTriggers.scheduling();
-      res.json({
+      res.json({ 
         success: true, 
         message: 'Schedule generation completed',
         result 
@@ -29682,7 +29681,7 @@ Respond with valid JSON array only.`
       console.log('🧪 Manual trigger: Payroll processing requested by', req.user?.email);
       const { manualTriggers } = await import('./services/autonomousScheduler');
       const result = await manualTriggers.payroll();
-      res.json({
+      res.json({ 
         success: true, 
         message: 'Payroll processing completed',
         result 
@@ -30861,11 +30860,11 @@ app.get("/api/chat/unread-count", requireAuth, readLimiter, async (req: Authenti
     if (conversationId) {
       // Get unread for specific conversation
       const count = await unreadMessageService.getUnreadCount(conversationId as string, userId);
-      res.json({
+      res.json({ success: true, data: { conversationId, unreadCount: count } });
     } else {
       // Get total unread across all conversations
       const total = await unreadMessageService.getTotalUnreadCount(userId);
-      res.json({
+      res.json({ success: true, data: { totalUnreadCount: total } });
     }
   } catch (error: any) {
     console.error('Error fetching unread count:', error);
@@ -32953,7 +32952,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
           return { ...fb, userVote: userVote?.voteType || null };
         })
       );
-      res.json({
+      res.json({ success: true, data: feedbackWithUserVotes });
     } catch (error: any) {
       console.error("Error fetching feedback:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to fetch feedback" });
@@ -32980,7 +32979,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const comments = await storage.getFeedbackComments(id);
       const userVote = await storage.getUserFeedbackVote(id, req.userId!);
       
-      res.json({
+      res.json({ 
         success: true, 
         data: { 
           ...feedback, 
@@ -33024,7 +33023,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (category !== undefined) updateData.category = category;
       
       const updated = await storage.updateFeedback(id, updateData);
-      res.json({
+      res.json({ success: true, data: updated });
     } catch (error: any) {
       console.error("Error updating feedback:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to update feedback" });
@@ -33055,7 +33054,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       
       const updated = await storage.updateFeedbackStatus(id, status, req.userId!, note);
-      res.json({
+      res.json({ success: true, data: updated });
     } catch (error: any) {
       console.error("Error updating feedback status:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to update status" });
@@ -33085,7 +33084,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       
       const result = await storage.voteFeedback(id, req.userId!, voteType);
-      res.json({
+      res.json({ success: true, data: result });
     } catch (error: any) {
       console.error("Error voting on feedback:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to vote" });
@@ -33146,7 +33145,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       
       const comments = await storage.getFeedbackComments(id);
-      res.json({
+      res.json({ success: true, data: comments });
     } catch (error: any) {
       console.error("Error fetching comments:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to fetch comments" });
@@ -33171,7 +33170,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       
       await storage.deleteFeedbackComment(commentId);
-      res.json({
+      res.json({ success: true, message: "Comment deleted" });
     } catch (error: any) {
       console.error("Error deleting comment:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to delete comment" });
@@ -33200,7 +33199,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       
       await storage.deleteFeedback(id);
-      res.json({
+      res.json({ success: true, message: "Feedback deleted" });
     } catch (error: any) {
       console.error("Error deleting feedback:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to delete feedback" });
@@ -33220,7 +33219,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     try {
       const { pushNotificationService } = await import("./services/pushNotificationService");
       const publicKey = await pushNotificationService.getVapidPublicKey();
-      res.json({
+      res.json({ success: true, publicKey });
     } catch (error: any) {
       console.error("Error getting VAPID key:", error);
       res.status(500).json({ success: false, error: "Failed to get VAPID key" });
@@ -33247,7 +33246,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       );
       
       if (result.success) {
-        res.json({
+        res.json({ success: true, subscriptionId: result.subscriptionId });
       } else {
         res.status(500).json({ success: false, error: result.error });
       }
@@ -33268,7 +33267,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const { pushNotificationService } = await import("./services/pushNotificationService");
       const result = await pushNotificationService.unregisterPushSubscription(req.userId!, endpoint);
       
-      res.json({
+      res.json({ success: true, unsubscribed: result.unsubscribed });
     } catch (error: any) {
       console.error("Error unsubscribing from push:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to unsubscribe" });
@@ -33283,7 +33282,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     try {
       const { pushNotificationService } = await import("./services/pushNotificationService");
       const subscriptions = await pushNotificationService.getUserSubscriptions(req.userId!);
-      res.json({
+      res.json({ success: true, subscriptions });
     } catch (error: any) {
       console.error("Error getting subscriptions:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to get subscriptions" });
@@ -33304,7 +33303,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         data: { type: "test" }
       });
       
-      res.json({
+      res.json({ 
         success: result.sent > 0, 
         sent: result.sent, 
         failed: result.failed,
@@ -33339,7 +33338,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
           tag: tag as string,
         });
       }
-      res.json({
+      res.json({ success: true, data: results, total: results.length });
     } catch (error: any) {
       console.error("Error fetching suggested changes:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -33357,7 +33356,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (!suggestion) {
         return res.status(404).json({ success: false, error: "Suggested change not found" });
       }
-      res.json({
+      res.json({ success: true, data: suggestion });
     } catch (error: any) {
       console.error("Error fetching suggested change:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -33377,7 +33376,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         req.userId!,
         includeRelated
       );
-      res.json({
+      res.json({ success: result.success, data: result });
     } catch (error: any) {
       console.error("Error staging suggested change:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -33408,7 +33407,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         includeRelated !== false
       );
 
-      res.json({
+      res.json({ success: result.success, data: result });
     } catch (error: any) {
       console.error("Error executing workflow:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -33423,7 +33422,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     try {
       const { autonomousWorkflowService } = await import("./services/ai-brain/autonomousWorkflowService");
       const result = await autonomousWorkflowService.executeHighPriorityFixes(req.userId!);
-      res.json({
+      res.json({ success: true, data: result });
     } catch (error: any) {
       console.error("Error executing high-priority fixes:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -33457,7 +33456,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       };
 
       const decision = await knowledgeOrchestrationService.routeQuery(query, context);
-      res.json({
+      res.json({ success: true, data: decision });
     } catch (error: any) {
       console.error("Error routing query:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -33472,7 +33471,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     try {
       const { knowledgeOrchestrationService } = await import("./services/ai-brain/knowledgeOrchestrationService");
       const diagnostics = knowledgeOrchestrationService.getDiagnostics();
-      res.json({
+      res.json({ success: true, data: diagnostics });
     } catch (error: any) {
       console.error("Error getting knowledge diagnostics:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -33498,7 +33497,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         metadata: { userId: req.userId },
       });
 
-      res.json({
+      res.json({ success: true });
     } catch (error: any) {
       console.error("Error recording learning:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -33522,7 +33521,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         applySelfHealing: true,
       });
       
-      res.json({
+      res.json({ 
         success: true, 
         data: report,
         message: `Diagnostic complete. Health: ${report.overallHealth}. Found ${report.findings.length} issues.`
@@ -33705,7 +33704,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const watchdog = getServiceWatchdog();
       watchdog.recordHeartbeat(serviceId, healthScore);
       
-      res.json({
+      res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -33743,7 +33742,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const { knowledgeOrchestrationService } = await import("./services/ai-brain/knowledgeOrchestrationService");
       const { queryType } = req.params;
       const insights = knowledgeOrchestrationService.getLearningInsights(queryType);
-      res.json({
+      res.json({ success: true, data: insights });
     } catch (error: any) {
       console.error("Error getting insights:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -33770,7 +33769,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       };
 
       const chain = knowledgeOrchestrationService.buildReasoningChain(query, context, observations);
-      res.json({
+      res.json({ success: true, data: chain });
     } catch (error: any) {
       console.error("Error building reasoning chain:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -33861,7 +33860,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       const result = await autonomousWorkflowService.searchAndExecuteForIssue(issueType, req.userId!);
 
-      res.json({
+      res.json({ success: !!result, data: result });
     } catch (error: any) {
       console.error("Error searching and fixing:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -33919,7 +33918,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         result: result.success
       });
 
-      res.json({
+      res.json({ success: result.success, message: result.message, data: result, executedBy: req.userId, authorizedRole: authCheck.role });
     } catch (error: any) {
       console.error('[AI Brain Command]', error);
       res.status(500).json({ success: false, error: error.message });
@@ -33942,7 +33941,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
 
       const workflow = await aiBrainMasterOrchestrator.executeWorkflowChain(name, steps, req.userId!, authCheck.role!);
-      res.json({
+      res.json({ success: workflow.status === 'completed', workflow, executedBy: req.userId, authorizedRole: authCheck.role });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -33956,7 +33955,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.json({ error: authCheck.reason, isSupported: false });
       }
       const summary = aiBrainAuthorizationService.getPermissionSummary(authCheck.role!);
-      res.json({
+      res.json({ success: true, ...summary });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34041,7 +34040,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     try {
       const userId = req.userId!;
       const count = await elevatedSessionService.revokeAllUserElevations(userId, 'manual_logout');
-      res.json({
+      res.json({ success: true, revokedCount: count });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34096,7 +34095,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         ))
         .limit(100);
 
-      res.json({
+      res.json({ success: true, sessions: activeSessions, count: activeSessions.length });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34126,7 +34125,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const access = await checkWorkspaceAccess(userId, workspaceId);
       if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
       const policy = await automationGovernanceService.getOrCreatePolicy(workspaceId);
-      res.json({
+      res.json({ success: true, policy });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34149,7 +34148,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       const policy = await automationGovernanceService.updatePolicy(sanitizedBody);
       if (!policy) return res.status(404).json({ success: false, error: "Policy not found" });
-      res.json({
+      res.json({ success: true, policy });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34166,7 +34165,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
       const consent = await automationGovernanceService.grantUserConsent({ userId, workspaceId, consentType, sourceContext: sourceContext?.substring(0, 500), waiverVersion });
       if (!consent) return res.status(500).json({ success: false, error: "Failed to grant consent" });
-      res.json({
+      res.json({ success: true, consent });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34180,7 +34179,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const access = await checkWorkspaceAccess(userId, workspaceId);
       if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
       const consents = await automationGovernanceService.getUserConsents(userId, workspaceId);
-      res.json({
+      res.json({ success: true, consents });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34202,7 +34201,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         waiverAccepted: true, waiverVersion: waiverVersion || "1.0",
       });
       if (!policy) return res.status(500).json({ success: false, error: "Failed to record org consent" });
-      res.json({
+      res.json({ success: true, policy });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34225,7 +34224,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         status: status as string, approvalState: approvalState as string,
         limit: parsedLimit, offset: parsedOffset,
       });
-      res.json({
+      res.json({ success: true, entries, count: entries.length });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34242,7 +34241,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.status(403).json({ success: false, error: "Insufficient permissions to view pending approvals" });
       }
       const approvals = await automationGovernanceService.getPendingApprovals(workspaceId);
-      res.json({
+      res.json({ success: true, approvals, count: approvals.length });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34264,7 +34263,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.status(403).json({ success: false, error: "Insufficient permissions to approve actions" });
       }
       const success = await automationGovernanceService.approveLedgerEntry(ledgerEntryId, userId, notes?.substring(0, 500));
-      res.json({
+      res.json({ success });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34287,7 +34286,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.status(403).json({ success: false, error: "Insufficient permissions to reject actions" });
       }
       const success = await automationGovernanceService.rejectLedgerEntry(ledgerEntryId, userId, reason.substring(0, 500));
-      res.json({
+      res.json({ success });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34306,7 +34305,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const { daysBack } = req.query;
       const parsedDaysBack = Math.min(Math.max(parseInt(daysBack as string) || 30, 1), 365);
       const metrics = await automationGovernanceService.getGovernanceMetrics(workspaceId, parsedDaysBack);
-      res.json({
+      res.json({ success: true, metrics });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34322,7 +34321,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const userId = req.userId!;
       const workspaceId = req.query.workspaceId as string | undefined;
       const context = await trinityContextManager.getEnrichedSessionContext(userId, workspaceId);
-      res.json({
+      res.json({ success: true, sessionId: context.sessionId, turnCount: context.turns.length, knowledgeGaps: context.knowledgeGaps, pendingClarifications: context.pendingClarifications });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34336,7 +34335,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (!role || !content) return res.status(400).json({ success: false, error: "role and content required" });
       const turn = await trinityContextManager.addTurn(sessionId, role, content, { contentType, toolCalls, toolResults, confidenceScore, confidenceFactors });
       if (!turn) return res.status(500).json({ success: false, error: "Failed to add turn" });
-      res.json({
+      res.json({ success: true, turn });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34353,7 +34352,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const context = await trinityContextManager.getEnrichedSessionContext(userId, workspaceId);
       if (context.sessionId !== sessionId) return res.status(404).json({ success: false, error: "Session not found" });
       const success = await trinityContextManager.escalateToSupport(context, reason, urgency || 'medium');
-      res.json({
+      res.json({ success });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34364,7 +34363,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const { trinityContextManager } = await import("./services/ai-brain/trinityContextManager");
       const { sessionId } = req.params;
       const success = await trinityContextManager.endSession(sessionId);
-      res.json({
+      res.json({ success });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34386,7 +34385,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       const workspaceId = req.query.workspaceId as string | undefined;
       const topology = await swarmCommanderService.getSwarmTopology(workspaceId);
-      res.json({
+      res.json({ success: true, topology });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34404,7 +34403,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       const workspaceId = req.query.workspaceId as string | undefined;
       const summary = await swarmCommanderService.getGuruModeSummary(workspaceId);
-      res.json({
+      res.json({ success: true, summary });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34422,7 +34421,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       const workspaceId = req.query.workspaceId as string | undefined;
       const conflicts = await swarmCommanderService.getPendingConflicts(workspaceId);
-      res.json({
+      res.json({ success: true, conflicts });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34445,7 +34444,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       const resolved = await swarmCommanderService.resolveConflict(conflictId, decision, userId, expiresInHours);
       if (!resolved) return res.status(404).json({ success: false, error: "Conflict not found" });
-      res.json({
+      res.json({ success: true, conflict: resolved });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34459,7 +34458,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.status(400).json({ success: false, error: "taskDescription and complexity required" });
       }
       const estimate = await swarmCommanderService.estimateTaskCost({ taskDescription, complexity, dataSize, domain });
-      res.json({
+      res.json({ success: true, estimate });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34474,7 +34473,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied" });
       const periodDays = Math.min(Math.max(parseInt(req.query.days as string) || 7, 1), 90);
       const roi = await swarmCommanderService.calculateROI(workspaceId, periodDays);
-      res.json({
+      res.json({ success: true, roi });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34493,7 +34492,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const { workflowId } = req.params;
       const question = req.query.question as string | undefined;
       const replay = swarmCommanderService.getForensicReplay(workflowId, question);
-      res.json({
+      res.json({ success: true, replay });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34516,7 +34515,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const summary = await crisisManager.getCrisisSummary();
       const activeCrises = crisisManager.getActiveCrises();
       const blackout = crisisManager.getBlackoutStatus();
-      res.json({
+      res.json({ success: true, summary, activeCrises, blackout });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34537,7 +34536,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.status(400).json({ success: false, error: "targetUserId and reason required" });
       }
       const result = await crisisManager.initiateLockdown(targetUserId, reason, userId, platformRole || "");
-      res.json({
+      res.json({ success: true, ...result });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34558,7 +34557,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.status(400).json({ success: false, error: "targetUserId and verificationCode required" });
       }
       const result = await crisisManager.releaseLockdown(targetUserId, verificationCode, userId, platformRole || "");
-      res.json({
+      res.json({ success: true, ...result });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34579,7 +34578,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.status(400).json({ success: false, error: "level, affectedServices, and etaMinutes required" });
       }
       const result = await crisisManager.initiateBlackout(level, affectedServices, etaMinutes, userId, platformRole || "");
-      res.json({
+      res.json({ success: true, blackout: result });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34597,7 +34596,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       const { resolution } = req.body;
       const result = await crisisManager.resolveBlackout(resolution || "Issue resolved", userId, platformRole || "");
-      res.json({
+      res.json({ success: true, ...result });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34618,7 +34617,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.status(400).json({ success: false, error: "workspaceId and claimedAmount required" });
       }
       const result = await crisisManager.processDispute(workspaceId, incidentDescription || "", claimedAmount, userId, platformRole || "");
-      res.json({
+      res.json({ success: true, ...result });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34639,7 +34638,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.status(400).json({ success: false, error: "targetOrgId and confirmPhrase required" });
       }
       const result = await crisisManager.executePurge(targetOrgId, confirmPhrase, userId, platformRole || "");
-      res.json({
+      res.json({ success: true, ...result });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34662,7 +34661,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.status(400).json({ success: false, error: "Invalid crisis type" });
       }
       const script = crisisManager.getCrisisScript(type as any, context);
-      res.json({
+      res.json({ success: true, script, type });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34680,7 +34679,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
       const limit = parseInt(req.query.limit as string) || 50;
       const auditTrail = crisisManager.getAuditTrail(limit);
-      res.json({
+      res.json({ success: true, auditTrail });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34733,7 +34732,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
 
       const result = await subagentSupervisor.canAutoApprove(workspaceId, domain, actionId);
-      res.json({
+      res.json({ success: true, ...result });
     } catch (error: any) {
       console.error("[API] Auto-approval check failed:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -34830,7 +34829,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
 
       const metrics = await subagentSupervisor.getFastModeMetrics(workspaceId);
-      res.json({
+      res.json({ success: true, metrics });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34876,7 +34875,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         });
       }
 
-      res.json({
+      res.json({ success: true, category, instruction });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -34895,7 +34894,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       }
 
       const validation = validateEmailData(category, data);
-      res.json({
+      res.json({ 
         success: true, 
         category,
         validation,
@@ -35148,7 +35147,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     try {
       const { getChatServerLivePresence } = await import("./services/ai-brain/chatServerSubagent");
       const presence = await getChatServerLivePresence();
-      res.json({
+      res.json({ success: true, presence });
     } catch (error: any) {
       console.error("[ChatServerSubagent] Presence error:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -35162,7 +35161,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     try {
       const { runChatServerDiagnostics } = await import("./services/ai-brain/chatServerSubagent");
       const report = await runChatServerDiagnostics();
-      res.json({
+      res.json({ success: true, report });
     } catch (error: any) {
       console.error("[ChatServerSubagent] Diagnostics error:", error);
       res.status(500).json({ success: false, error: error.message });
@@ -35176,7 +35175,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     try {
       const { getChatServerSelfAwareness } = await import("./services/ai-brain/chatServerSubagent");
       const awareness = getChatServerSelfAwareness();
-      res.json({
+      res.json({ success: true, awareness });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -35189,7 +35188,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     try {
       const { generateChatServerUXSuggestions } = await import("./services/ai-brain/chatServerSubagent");
       const suggestions = await generateChatServerUXSuggestions();
-      res.json({
+      res.json({ success: true, suggestions });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
@@ -35203,7 +35202,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const { runChatServerDiagnostics } = await import("./services/ai-brain/chatServerSubagent");
       const report = await runChatServerDiagnostics();
       
-      res.json({
+      res.json({ 
         success: true, 
         status: report.status,
         issuesFound: report.issues.length,
