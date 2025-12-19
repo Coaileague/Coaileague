@@ -1565,7 +1565,7 @@ export function NotificationsPopover() {
         <button
           onClick={() => {
             setOpen(false);
-            setLocation('/trinity-insights');
+            window.location.href = '/trinity-insights';
           }}
           className={`inline-flex items-center w-full justify-start font-medium rounded-md border border-muted-foreground/20 hover:bg-muted/50 cursor-pointer ${compact ? 'text-xs h-9 px-3 py-2 gap-2' : 'text-sm h-11 px-4 py-3 gap-3'}`}
           data-testid="button-ask-trinity"
@@ -1583,7 +1583,7 @@ export function NotificationsPopover() {
         <button
           onClick={() => {
             setOpen(false);
-            setLocation('/updates');
+            window.location.href = '/updates';
           }}
           className={`w-full justify-center inline-flex font-medium text-primary hover:text-primary hover:bg-primary/5 rounded-md cursor-pointer ${compact ? 'text-[10px] h-6 px-3 py-1' : 'text-xs h-7 px-4 py-2'}`}
           data-testid="button-view-all-updates"
