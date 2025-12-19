@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, createContext, useContext } from "react";
+import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, 
@@ -899,6 +900,7 @@ export function NotificationsPopover() {
   const [sortNewest, setSortNewest] = useState(true);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const isMobileBreakpoint = useIsMobile();
+  const [, setLocation] = useLocation();
   
   // Scroll position preservation refs to prevent scroll reset during data refetches
   const scrollPositionRef = useRef<number>(0);
@@ -1554,7 +1556,7 @@ export function NotificationsPopover() {
             className={`w-full justify-start ${compact ? 'text-xs h-9 gap-2' : 'text-sm h-11 gap-3'} font-medium border-muted-foreground/20 hover:bg-muted/50 group`}
             onClick={() => {
               setOpen(false);
-              window.location.href = '/trinity-insights';
+              setTimeout(() => setLocation('/trinity-insights'), 100);
             }}
             data-testid="button-ask-trinity"
           >
@@ -1575,7 +1577,7 @@ export function NotificationsPopover() {
             className={`w-full justify-center ${compact ? 'text-[10px] h-6' : 'text-xs h-7'} font-medium text-primary hover:text-primary hover:bg-primary/5`}
             onClick={() => {
               setOpen(false);
-              window.location.href = "/updates";
+              setTimeout(() => setLocation('/updates'), 100);
             }}
             data-testid="button-view-all-updates"
           >
