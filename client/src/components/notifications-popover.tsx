@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, useCallback, useMemo, createContext, useContext } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
   Bell, AlertTriangle, Info, Wrench, Check, Clock, X, Sparkles, 
@@ -1552,44 +1552,40 @@ export function NotificationsPopover() {
       {/* Footer: Ask Trinity for Help - Matching Design */}
       <div className="border-t bg-background shrink-0">
         <div className={compact ? "p-2 flex flex-col gap-1.5" : "p-3 flex flex-col gap-2"}>
-          <Button
-            variant="outline"
-            className={`w-full justify-start ${compact ? 'text-xs h-9 gap-2' : 'text-sm h-11 gap-3'} font-medium border-muted-foreground/20 hover:bg-muted/50 group`}
-            onClick={() => {
-              setOpen(false);
-              setTimeout(() => setLocation('/trinity-insights'), 50);
-            }}
-            data-testid="button-ask-trinity"
-          >
-            <div className={`shrink-0 ${compact ? 'p-0.5' : 'p-1'} rounded-lg bg-gradient-to-br from-cyan-500/10 to-purple-500/10 group-hover:from-cyan-500/20 group-hover:to-purple-500/20 transition-colors`}>
-              <TrinityBadge showLabel={false} />
-            </div>
-            <span className="flex items-center gap-1">
-              <span className={`font-semibold bg-gradient-to-r from-cyan-600 to-purple-600 dark:from-cyan-400 dark:to-purple-400 bg-clip-text text-transparent ${compact ? 'text-xs' : ''}`}>
-                Ask Trinity
+          <Link href="/trinity-insights" onClick={() => setOpen(false)}>
+            <Button
+              variant="outline"
+              className={`w-full justify-start ${compact ? 'text-xs h-9 gap-2' : 'text-sm h-11 gap-3'} font-medium border-muted-foreground/20 hover:bg-muted/50 group`}
+              data-testid="button-ask-trinity"
+            >
+              <div className={`shrink-0 ${compact ? 'p-0.5' : 'p-1'} rounded-lg bg-gradient-to-br from-cyan-500/10 to-purple-500/10 group-hover:from-cyan-500/20 group-hover:to-purple-500/20 transition-colors`}>
+                <TrinityBadge showLabel={false} />
+              </div>
+              <span className="flex items-center gap-1">
+                <span className={`font-semibold bg-gradient-to-r from-cyan-600 to-purple-600 dark:from-cyan-400 dark:to-purple-400 bg-clip-text text-transparent ${compact ? 'text-xs' : ''}`}>
+                  Ask Trinity
+                </span>
+                <span className={`text-muted-foreground ${compact ? 'text-[10px]' : ''}`}>for Help</span>
               </span>
-              <span className={`text-muted-foreground ${compact ? 'text-[10px]' : ''}`}>for Help</span>
-            </span>
-          </Button>
+            </Button>
+          </Link>
         </div>
         <div className={compact ? "px-2 pb-2" : "px-3 pb-3"}>
-          <Button
-            variant="ghost"
-            className={`w-full justify-center ${compact ? 'text-[10px] h-6' : 'text-xs h-7'} font-medium text-primary hover:text-primary hover:bg-primary/5`}
-            onClick={() => {
-              setOpen(false);
-              setTimeout(() => setLocation('/updates'), 50);
-            }}
-            data-testid="button-view-all-updates"
-          >
-            View all updates
-          </Button>
+          <Link href="/updates" onClick={() => setOpen(false)}>
+            <Button
+              variant="ghost"
+              className={`w-full justify-center ${compact ? 'text-[10px] h-6' : 'text-xs h-7'} font-medium text-primary hover:text-primary hover:bg-primary/5`}
+              data-testid="button-view-all-updates"
+            >
+              View all updates
+            </Button>
+          </Link>
         </div>
       </div>
     </div>
   );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, subFilter, sortNewest, showUnreadOnly, sortedNotifications, isLoading, totalUnread, forYouCount, systemCount, user, allNotifications, visibleNotifications, systemAlertsSubCount, adminReviewCount, updatesCount, isGuruMode, isMobile, setOpen, setLocation]);
+  }, [activeTab, subFilter, sortNewest, showUnreadOnly, sortedNotifications, isLoading, totalUnread, forYouCount, systemCount, user, allNotifications, visibleNotifications, systemAlertsSubCount, adminReviewCount, updatesCount, isGuruMode, isMobile, setOpen]);
 
   // Create stable component references using the memoized generator
   const MobileNotificationsContent = renderNotificationsContent({ simplified: false, compact: true });
