@@ -1505,7 +1505,7 @@ export function NotificationsPopover() {
       
       {/* Notification List - Scrollable container with visible scrollbar */}
       <ScrollArea 
-        className="flex-1 min-h-0"
+        className="flex-1 min-h-0 max-h-[320px]"
         viewportRef={setViewportRef}
       >
         <div className="min-h-0">
@@ -1588,7 +1588,7 @@ export function NotificationsPopover() {
     </div>
   );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, subFilter, sortNewest, showUnreadOnly, sortedNotifications, isLoading, totalUnread, forYouCount, systemCount, user, allNotifications, visibleNotifications, systemAlertsSubCount, adminReviewCount, updatesCount, isGuruMode, isMobile]);
+  }, [activeTab, subFilter, sortNewest, showUnreadOnly, sortedNotifications, isLoading, totalUnread, forYouCount, systemCount, user, allNotifications, visibleNotifications, systemAlertsSubCount, adminReviewCount, updatesCount, isGuruMode, isMobile, setLocation]);
 
   // Create stable component references using the memoized generator
   const MobileNotificationsContent = renderNotificationsContent({ simplified: false, compact: true });

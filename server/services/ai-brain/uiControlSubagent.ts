@@ -115,19 +115,7 @@ class UIControlSubagent {
         config: { shortcut: 'Ctrl+K', fuzzySearch: true },
         lastUpdated: new Date(),
       },
-      {
-        id: 'universal-transition-overlay',
-        name: 'Universal Transition Overlay',
-        category: 'overlay',
-        isVisible: false,
-        isEnabled: true,
-        config: { 
-          blockedOnPublicRoutes: true, 
-          z_index: 9999,
-          scenarios: ['login', 'logout', 'schedule', 'invoice', 'payroll', 'email', 'analytics', 'upload', 'general']
-        },
-        lastUpdated: new Date(),
-      },
+      // Note: UniversalTransitionOverlay removed from registry - not needed for current phase
     ];
 
     defaultComponents.forEach(comp => this.componentRegistry.set(comp.id, comp));
