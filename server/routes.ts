@@ -587,8 +587,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         unreadPlatformUpdates: trueUnreadPlatformUpdates,
         unreadNotifications: trueUnreadNotifications,
         unreadAlerts,
-        unreadGapFindings: gapFindings.length,
-        totalUnread: trueUnreadPlatformUpdates + trueUnreadNotifications + unreadAlerts + gapFindings.length,
+        unreadGapFindings: 0,
+        totalUnread: trueUnreadPlatformUpdates + trueUnreadNotifications + unreadAlerts,
       });
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch notifications' });

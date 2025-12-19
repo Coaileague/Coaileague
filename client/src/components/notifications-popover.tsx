@@ -1128,11 +1128,11 @@ export function NotificationsPopover() {
           gapFindings: old.gapFindings?.map((f: any) => 
             f.id === id ? { ...f, clearedAt: now, isRead: true, metadata: { ...(f.metadata || {}), wasCleared: true } } : f
           ),
-          totalUnread: unreadNotifications + unreadPlatformUpdates + unreadAlerts + unreadGapFindings,
+          totalUnread: unreadNotifications + unreadPlatformUpdates + unreadAlerts,
           unreadNotifications,
           unreadPlatformUpdates,
           unreadAlerts,
-          unreadGapFindings,
+          unreadGapFindings: 0,
         };
       });
       
