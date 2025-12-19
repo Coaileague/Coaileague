@@ -137,35 +137,37 @@ function usePendingClears() {
   }, [forceRender]);
   
   // Reconcile pending clears against server data
-  // Items are confirmed cleared if: flag is set, metadata.wasCleared exists, or item vanished from response
+  // Items are confirmed cleared if: ACTUAL SERVER FLAGS are set, or item vanished from response
+  // IMPORTANT: Do NOT use metadata.wasCleared - that's client-side optimistic metadata
+  // Only server-side flags (isViewed, clearedAt, isAcknowledged) indicate true DB confirmation
   // This is the ONLY place pending IDs should be removed (not onSuccess)
   const reconcile = useCallback((data: NotificationsData) => {
     if (!data) return;
     
     // Build set of all IDs currently in response
     const responseIds = new Set<string>();
-    // Build set of confirmed cleared IDs
+    // Build set of confirmed cleared IDs - ONLY using actual server flags
     const confirmedClearedIds = new Set<string>();
     
-    // Check platform updates
+    // Check platform updates - isViewed is server flag from userPlatformUpdateViews table
     data.platformUpdates?.forEach(u => {
       responseIds.add(u.id);
-      if (u.isViewed || u.metadata?.wasCleared) confirmedClearedIds.add(u.id);
+      if (u.isViewed) confirmedClearedIds.add(u.id);
     });
-    // Check notifications
+    // Check notifications - clearedAt is server flag from notifications table
     data.notifications?.forEach(n => {
       responseIds.add(n.id);
-      if (n.clearedAt || n.metadata?.wasCleared) confirmedClearedIds.add(n.id);
+      if (n.clearedAt) confirmedClearedIds.add(n.id);
     });
-    // Check maintenance alerts
+    // Check maintenance alerts - isAcknowledged is server flag from maintenance_alerts table
     data.maintenanceAlerts?.forEach(a => {
       responseIds.add(a.id);
-      if (a.isAcknowledged || a.metadata?.wasCleared) confirmedClearedIds.add(a.id);
+      if (a.isAcknowledged) confirmedClearedIds.add(a.id);
     });
-    // Check gap findings
+    // Check gap findings - clearedAt is server flag
     data.gapFindings?.forEach(f => {
       responseIds.add(f.id);
-      if (f.clearedAt || f.metadata?.wasCleared) confirmedClearedIds.add(f.id);
+      if (f.clearedAt) confirmedClearedIds.add(f.id);
     });
     
     // Check pending IDs and confirm those that are cleared or vanished
