@@ -1558,17 +1558,21 @@ export function NotificationsPopover() {
   const MobileNotificationsContent = renderNotificationsContent({ simplified: false, compact: true });
   const DesktopNotificationsContent = renderNotificationsContent({ simplified: false, compact: false });
 
-  // Footer with proper navigation access
+  // Footer with proper navigation access - pointer-events-auto ensures clicks work in Popover
   const Footer = ({ compact }: { compact: boolean }) => (
-    <div className="border-t bg-background shrink-0">
+    <div className="border-t bg-background shrink-0 pointer-events-auto" style={{ position: 'relative', zIndex: 100 }}>
       <div className={compact ? "p-2 flex flex-col gap-1.5" : "p-3 flex flex-col gap-2"}>
         <button
-          onClick={() => {
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            console.log('[UNS] Ask Trinity clicked');
             setOpen(false);
             window.location.href = '/trinity-insights';
           }}
-          className={`inline-flex items-center w-full justify-start font-medium rounded-md border border-muted-foreground/20 hover:bg-muted/50 cursor-pointer ${compact ? 'text-xs h-9 px-3 py-2 gap-2' : 'text-sm h-11 px-4 py-3 gap-3'}`}
+          className={`inline-flex items-center w-full justify-start font-medium rounded-md border border-muted-foreground/20 hover:bg-muted/50 cursor-pointer pointer-events-auto ${compact ? 'text-xs h-9 px-3 py-2 gap-2' : 'text-sm h-11 px-4 py-3 gap-3'}`}
           data-testid="button-ask-trinity"
+          style={{ position: 'relative', zIndex: 101 }}
         >
           <Sparkles className={`${compact ? 'w-4 h-4' : 'w-5 h-5'} flex-shrink-0 text-cyan-500`} />
           <span className="flex items-center gap-1">
@@ -1581,12 +1585,16 @@ export function NotificationsPopover() {
       </div>
       <div className={compact ? "px-2 pb-2" : "px-3 pb-3"}>
         <button
-          onClick={() => {
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            console.log('[UNS] View all updates clicked');
             setOpen(false);
             window.location.href = '/updates';
           }}
-          className={`w-full justify-center inline-flex font-medium text-primary hover:text-primary hover:bg-primary/5 rounded-md cursor-pointer ${compact ? 'text-[10px] h-6 px-3 py-1' : 'text-xs h-7 px-4 py-2'}`}
+          className={`w-full justify-center inline-flex font-medium text-primary hover:text-primary hover:bg-primary/5 rounded-md cursor-pointer pointer-events-auto ${compact ? 'text-[10px] h-6 px-3 py-1' : 'text-xs h-7 px-4 py-2'}`}
           data-testid="button-view-all-updates"
+          style={{ position: 'relative', zIndex: 101 }}
         >
           View all updates
         </button>
