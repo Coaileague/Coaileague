@@ -1549,45 +1549,6 @@ export function NotificationsPopover() {
         <ScrollBar orientation="vertical" forceMount className="opacity-100 bg-muted/50" />
       </ScrollArea>
       
-      {/* Footer: Ask Trinity for Help - Matching Design */}
-      <div className="border-t bg-background shrink-0">
-        <div className={compact ? "p-2 flex flex-col gap-1.5" : "p-3 flex flex-col gap-2"}>
-          <a
-            href="/trinity-insights"
-            onClick={(e) => {
-              e.preventDefault();
-              setOpen(false);
-              window.location.pathname = '/trinity-insights';
-            }}
-            className={`inline-flex items-center w-full justify-start font-medium rounded-md border border-muted-foreground/20 hover:bg-muted/50 group cursor-pointer ${compact ? 'text-xs h-9 px-3 py-2 gap-2' : 'text-sm h-11 px-4 py-3 gap-3'}`}
-            data-testid="button-ask-trinity"
-          >
-            <div className={`shrink-0 ${compact ? 'p-0.5' : 'p-1'} rounded-lg bg-gradient-to-br from-cyan-500/10 to-purple-500/10 group-hover:from-cyan-500/20 group-hover:to-purple-500/20 transition-colors`}>
-              <TrinityBadge showLabel={false} />
-            </div>
-            <span className="flex items-center gap-1">
-              <span className={`font-semibold bg-gradient-to-r from-cyan-600 to-purple-600 dark:from-cyan-400 dark:to-purple-400 bg-clip-text text-transparent ${compact ? 'text-xs' : ''}`}>
-                Ask Trinity
-              </span>
-              <span className={`text-muted-foreground ${compact ? 'text-[10px]' : ''}`}>for Help</span>
-            </span>
-          </a>
-        </div>
-        <div className={compact ? "px-2 pb-2" : "px-3 pb-3"}>
-          <a
-            href="/updates"
-            onClick={(e) => {
-              e.preventDefault();
-              setOpen(false);
-              window.location.pathname = '/updates';
-            }}
-            className={`inline-flex justify-center w-full ${compact ? 'text-[10px] h-6 px-3 py-1' : 'text-xs h-7 px-4 py-2'} font-medium text-primary hover:text-primary hover:bg-primary/5 rounded-md cursor-pointer`}
-            data-testid="button-view-all-updates"
-          >
-            View all updates
-          </a>
-        </div>
-      </div>
     </div>
   );
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -1596,6 +1557,42 @@ export function NotificationsPopover() {
   // Create stable component references using the memoized generator
   const MobileNotificationsContent = renderNotificationsContent({ simplified: false, compact: true });
   const DesktopNotificationsContent = renderNotificationsContent({ simplified: false, compact: false });
+
+  // Footer with proper navigation access
+  const Footer = ({ compact }: { compact: boolean }) => (
+    <div className="border-t bg-background shrink-0">
+      <div className={compact ? "p-2 flex flex-col gap-1.5" : "p-3 flex flex-col gap-2"}>
+        <button
+          onClick={() => {
+            setOpen(false);
+            setLocation('/trinity-insights');
+          }}
+          className={`inline-flex items-center w-full justify-start font-medium rounded-md border border-muted-foreground/20 hover:bg-muted/50 cursor-pointer ${compact ? 'text-xs h-9 px-3 py-2 gap-2' : 'text-sm h-11 px-4 py-3 gap-3'}`}
+          data-testid="button-ask-trinity"
+        >
+          <Sparkles className={`${compact ? 'w-4 h-4' : 'w-5 h-5'} flex-shrink-0 text-cyan-500`} />
+          <span className="flex items-center gap-1">
+            <span className={`font-semibold bg-gradient-to-r from-cyan-600 to-purple-600 dark:from-cyan-400 dark:to-purple-400 bg-clip-text text-transparent ${compact ? 'text-xs' : ''}`}>
+              Ask Trinity
+            </span>
+            <span className={`text-muted-foreground ${compact ? 'text-[10px]' : ''}`}>for Help</span>
+          </span>
+        </button>
+      </div>
+      <div className={compact ? "px-2 pb-2" : "px-3 pb-3"}>
+        <button
+          onClick={() => {
+            setOpen(false);
+            setLocation('/updates');
+          }}
+          className={`w-full justify-center inline-flex font-medium text-primary hover:text-primary hover:bg-primary/5 rounded-md cursor-pointer ${compact ? 'text-[10px] h-6 px-3 py-1' : 'text-xs h-7 px-4 py-2'}`}
+          data-testid="button-view-all-updates"
+        >
+          View all updates
+        </button>
+      </div>
+    </div>
+  );
 
   if (isMobile) {
     return (
@@ -1618,7 +1615,10 @@ export function NotificationsPopover() {
             <div className="w-8 h-1 rounded-full bg-muted-foreground/30" />
           </div>
           {/* Full Feature Parity with Compact Mode for Mobile */}
-          {MobileNotificationsContent}
+          <div className="flex flex-col h-full">
+            {MobileNotificationsContent}
+            <Footer compact={true} />
+          </div>
         </SheetContent>
       </Sheet>
     );
@@ -1651,7 +1651,10 @@ export function NotificationsPopover() {
           }
         }}
       >
-        {DesktopNotificationsContent}
+        <div className="flex flex-col h-full">
+          {DesktopNotificationsContent}
+          <Footer compact={false} />
+        </div>
       </PopoverContent>
     </Popover>
   );
