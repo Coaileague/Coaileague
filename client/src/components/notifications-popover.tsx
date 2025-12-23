@@ -1303,21 +1303,23 @@ export function NotificationsPopover() {
       className="flex flex-col h-full min-h-0 overflow-hidden"
     >
       {/* UNS Header with Trinity Branding - Violet to Indigo Gradient */}
-      <div className={`${compact ? 'px-3 py-2' : 'px-4 py-3'} border-b bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0`}>
-        <div className={`flex items-center justify-between ${compact ? 'gap-2' : 'gap-3'}`}>
-          <div className={`flex items-center ${compact ? 'gap-2' : 'gap-3'}`}>
-            <div className={`relative ${compact ? 'w-8 h-8' : 'w-10 h-10'} rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center`}>
-              <Bell className={`${compact ? 'w-5 h-5' : 'w-6 h-6'} text-white`} />
+      <div className={`${compact ? 'px-3 py-2.5' : 'px-4 py-3'} border-b bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0`}>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0 flex-1">
+            <div className={`relative ${compact ? 'w-7 h-7' : 'w-10 h-10'} rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0`}>
+              <Bell className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} text-white`} />
             </div>
-            <div>
-              <h2 className={`font-bold ${compact ? 'text-sm' : 'text-base'} leading-tight text-white`}>Universal Notifications</h2>
+            <div className="min-w-0 flex-1">
+              <h2 className={`font-bold ${compact ? 'text-xs' : 'text-base'} leading-tight text-white truncate`}>
+                {compact ? 'Notifications' : 'Universal Notifications'}
+              </h2>
               <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-white/90 font-medium`}>
                 {user ? (totalUnread > 0 ? `${totalUnread} unread` : 'All caught up') : 'Platform Updates'}
               </span>
             </div>
           </div>
-          <Badge variant="outline" className={`${compact ? 'text-[10px] px-2 py-0.5' : 'text-xs px-3 py-1.5'} font-medium bg-white/20 text-white border-white/30`}>
-            {sortedNotifications.length} in view
+          <Badge variant="outline" className={`${compact ? 'text-[9px] px-1.5 py-0.5' : 'text-xs px-3 py-1.5'} font-medium bg-white/20 text-white border-white/30 whitespace-nowrap flex-shrink-0`}>
+            {sortedNotifications.length}
           </Badge>
         </div>
         {/* Public User Banner */}
@@ -1331,81 +1333,81 @@ export function NotificationsPopover() {
       </div>
       
       {/* Main Tabs: For You | System Alerts | Clear All Read - Matching Design */}
-      <div className={`flex items-center border-b bg-muted/30 flex-shrink-0 ${compact ? 'px-1' : 'px-2'}`}>
+      <div className={`flex items-center border-b bg-muted/30 flex-shrink-0 ${compact ? 'px-1 gap-0' : 'px-2 gap-1'}`}>
         <button
           onClick={() => setActiveTab('for_you')}
-          className={`relative ${compact ? 'py-2 px-2.5 text-xs' : 'py-3 px-4 text-sm'} font-medium transition-colors ${
+          className={`relative ${compact ? 'py-2 px-2 text-[11px]' : 'py-3 px-4 text-sm'} font-medium transition-colors flex-shrink-0 ${
             activeTab === 'for_you' 
               ? 'text-foreground' 
               : 'text-muted-foreground hover:text-foreground'
           }`}
           data-testid="tab-for-you"
         >
-          <span className={`flex items-center ${compact ? 'gap-1' : 'gap-2'}`}>
+          <span className="flex items-center gap-1">
             For You
             {forYouCount > 0 && (
-              <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-primary text-white rounded-full`}>
+              <Badge className={`${compact ? 'h-4 min-w-4 px-0.5 text-[8px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-primary text-white rounded-full`}>
                 {forYouCount > 9 ? '9+' : forYouCount}
               </Badge>
             )}
           </span>
           {activeTab === 'for_you' && (
-            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
+            <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-primary rounded-full" />
           )}
         </button>
         <button
           onClick={() => setActiveTab('system_alerts')}
-          className={`relative ${compact ? 'py-2 px-2.5 text-xs' : 'py-3 px-4 text-sm'} font-medium transition-colors ${
+          className={`relative ${compact ? 'py-2 px-2 text-[11px]' : 'py-3 px-4 text-sm'} font-medium transition-colors flex-shrink-0 ${
             activeTab === 'system_alerts' 
               ? 'text-foreground' 
               : 'text-muted-foreground hover:text-foreground'
           }`}
           data-testid="tab-system-alerts"
         >
-          <span className={`flex items-center ${compact ? 'gap-1' : 'gap-2'}`}>
+          <span className="flex items-center gap-1">
             System
             {systemCount > 0 && (
-              <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-amber-500 text-white rounded-full`}>
+              <Badge className={`${compact ? 'h-4 min-w-4 px-0.5 text-[8px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-amber-500 text-white rounded-full`}>
                 {systemCount > 9 ? '9+' : systemCount}
               </Badge>
             )}
           </span>
           {activeTab === 'system_alerts' && (
-            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-amber-500 rounded-full" />
+            <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-amber-500 rounded-full" />
           )}
         </button>
-        <div className="flex-1" />
+        <div className="flex-1 min-w-2" />
         {/* Only show Clear All button for authenticated users */}
         {user && (
           <Button
             variant="outline"
             size="sm"
-            className={`${compact ? 'h-6 px-2 text-[10px]' : 'h-8 px-3 text-xs'} font-medium bg-background border-muted-foreground/20`}
+            className={`${compact ? 'h-6 px-1.5 text-[9px]' : 'h-8 px-3 text-xs'} font-medium bg-background border-muted-foreground/20 flex-shrink-0`}
             onClick={() => clearAllMutation.mutate()}
             disabled={clearAllMutation.isPending || totalUnread === 0}
             data-testid="button-clear-all-read"
           >
-            Clear All
+            {compact ? 'Clear' : 'Clear All'}
           </Button>
         )}
       </div>
       
-      {/* Sub-filters - Horizontally scrollable chips */}
-      {!simplified && (
+      {/* Sub-filters - Horizontally scrollable chips - Hide on compact mobile for cleaner look */}
+      {!simplified && !compact && (
         <div 
-          className={`${compact ? 'px-2 py-1.5' : 'px-3 py-2'} border-b bg-muted/10 flex-shrink-0 overflow-x-auto scrollbar-hide`}
+          className="px-3 py-2 border-b bg-muted/10 flex-shrink-0 overflow-x-auto scrollbar-hide"
           style={{ 
             WebkitOverflowScrolling: 'touch',
             scrollbarWidth: 'none',
             msOverflowStyle: 'none',
           }}
         >
-          <div className={`flex items-center ${compact ? 'gap-1.5' : 'gap-2'} min-w-max`}>
+          <div className="flex items-center gap-2 min-w-max">
             {/* All Sub-filter */}
             <Button
               variant={subFilter === 'all' ? 'default' : 'outline'}
               size="sm"
-              className={`${compact ? 'h-6 text-[10px] px-2' : 'h-7 text-xs px-3'} rounded-full whitespace-nowrap ${
+              className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
                 subFilter === 'all' ? '' : 'border-muted-foreground/30'
               }`}
               onClick={() => setSubFilter('all')}
@@ -1418,16 +1420,16 @@ export function NotificationsPopover() {
             <Button
               variant={subFilter === 'system_alerts' ? 'default' : 'outline'}
               size="sm"
-              className={`${compact ? 'h-6 text-[10px] px-2' : 'h-7 text-xs px-3'} rounded-full whitespace-nowrap ${
+              className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
                 subFilter === 'system_alerts' ? '' : 'border-muted-foreground/30'
               }`}
               onClick={() => setSubFilter('system_alerts')}
               data-testid="subfilter-system-alerts"
             >
-              <Shield className={compact ? "h-2.5 w-2.5 mr-0.5" : "h-3 w-3 mr-1"} />
+              <Shield className="h-3 w-3 mr-1" />
               Alerts
               {systemAlertsSubCount > 0 && (
-                <Badge className={`${compact ? 'ml-1 h-3.5 min-w-3.5 px-0.5 text-[8px]' : 'ml-1.5 h-4 min-w-4 px-1 text-[9px]'} bg-red-500 text-white rounded-full`}>
+                <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-red-500 text-white rounded-full">
                   {systemAlertsSubCount}
                 </Badge>
               )}
@@ -1437,16 +1439,16 @@ export function NotificationsPopover() {
             <Button
               variant={subFilter === 'admin_review' ? 'default' : 'outline'}
               size="sm"
-              className={`${compact ? 'h-6 text-[10px] px-2' : 'h-7 text-xs px-3'} rounded-full whitespace-nowrap ${
+              className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
                 subFilter === 'admin_review' ? '' : 'border-muted-foreground/30'
               }`}
               onClick={() => setSubFilter('admin_review')}
               data-testid="subfilter-admin-review"
             >
-              <UserCheck className={compact ? "h-2.5 w-2.5 mr-0.5" : "h-3 w-3 mr-1"} />
+              <UserCheck className="h-3 w-3 mr-1" />
               Admin
               {adminReviewCount > 0 && (
-                <Badge className={`${compact ? 'ml-1 h-3.5 min-w-3.5 px-0.5 text-[8px]' : 'ml-1.5 h-4 min-w-4 px-1 text-[9px]'} bg-red-500 text-white rounded-full`}>
+                <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-red-500 text-white rounded-full">
                   {adminReviewCount}
                 </Badge>
               )}
@@ -1456,7 +1458,7 @@ export function NotificationsPopover() {
             <Button
               variant={subFilter === 'updates' ? 'default' : 'outline'}
               size="sm"
-              className={`${compact ? 'h-6 text-[10px] px-2' : 'h-7 text-xs px-3'} rounded-full whitespace-nowrap ${
+              className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
                 subFilter === 'updates' ? '' : 'border-muted-foreground/30'
               }`}
               onClick={() => setSubFilter('updates')}
@@ -1464,7 +1466,7 @@ export function NotificationsPopover() {
             >
               Updates
               {updatesCount > 0 && (
-                <Badge className={`${compact ? 'ml-1 h-3.5 min-w-3.5 px-0.5 text-[8px]' : 'ml-1.5 h-4 min-w-4 px-1 text-[9px]'} bg-primary text-white rounded-full`}>
+                <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-primary text-white rounded-full">
                   {updatesCount}
                 </Badge>
               )}
@@ -1474,29 +1476,29 @@ export function NotificationsPopover() {
       )}
       
       {/* Sort & Filter Row - Simplified on mobile */}
-      <div className={`flex items-center justify-between border-b bg-background flex-shrink-0 ${compact ? 'px-2 py-1 gap-1' : simplified ? 'px-3 py-2 gap-1' : 'px-4 py-2 gap-2'}`}>
-        <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-muted-foreground truncate`}>
-          {sortedNotifications.length} in view
+      <div className={`flex items-center justify-between border-b bg-background flex-shrink-0 ${compact ? 'px-2 py-1.5 gap-2' : simplified ? 'px-3 py-2 gap-1' : 'px-4 py-2 gap-2'}`}>
+        <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-muted-foreground`}>
+          {sortedNotifications.length} items
         </span>
         <div className="flex items-center gap-1 shrink-0">
           <Button
             variant="ghost"
             size="sm"
-            className={`${compact ? 'h-5 text-[10px] px-1.5' : 'h-6 text-xs px-2'}`}
+            className={`${compact ? 'h-6 text-[10px] px-2' : 'h-6 text-xs px-2'}`}
             onClick={() => setSortNewest(!sortNewest)}
             data-testid="button-sort-toggle"
           >
-            <ArrowUpDown className={compact ? "h-2.5 w-2.5 mr-0.5" : "h-3 w-3 mr-1"} />
-            {sortNewest ? 'New' : 'Old'}
+            <ArrowUpDown className={compact ? "h-3 w-3 mr-1" : "h-3 w-3 mr-1"} />
+            {sortNewest ? 'Newest' : 'Oldest'}
           </Button>
           <Button
             variant={showUnreadOnly ? 'secondary' : 'ghost'}
             size="sm"
-            className={`${compact ? 'h-5 text-[10px] px-1.5' : 'h-6 text-xs px-2'}`}
+            className={`${compact ? 'h-6 text-[10px] px-2' : 'h-6 text-xs px-2'}`}
             onClick={() => setShowUnreadOnly(!showUnreadOnly)}
             data-testid="button-unread-toggle"
           >
-            <Eye className={compact ? "h-2.5 w-2.5" : "h-3 w-3"} />
+            <Eye className="h-3 w-3" />
           </Button>
         </div>
       </div>
@@ -1558,25 +1560,22 @@ export function NotificationsPopover() {
   // Footer with navigation links - using native anchor tags for guaranteed navigation
   const Footer = ({ compact }: { compact: boolean }) => (
     <div className="border-t bg-background shrink-0">
-      <div className={compact ? "p-2 flex flex-col gap-1.5" : "p-3 flex flex-col gap-2"}>
+      <div className={compact ? "p-2" : "p-3"}>
         <a
           href="/trinity-insights"
-          className={`inline-flex items-center w-full justify-start font-medium rounded-md border border-muted-foreground/20 hover:bg-muted/50 cursor-pointer ${compact ? 'text-xs h-9 px-3 py-2 gap-2' : 'text-sm h-11 px-4 py-3 gap-3'}`}
+          className={`inline-flex items-center w-full justify-center font-medium rounded-md border border-muted-foreground/20 hover:bg-muted/50 cursor-pointer ${compact ? 'text-[11px] h-8 px-3 gap-1.5' : 'text-sm h-11 px-4 gap-3'}`}
           data-testid="button-ask-trinity"
         >
-          <Sparkles className={`${compact ? 'w-4 h-4' : 'w-5 h-5'} flex-shrink-0 text-cyan-500`} />
-          <span className="flex items-center gap-1">
-            <span className={`font-semibold bg-gradient-to-r from-cyan-600 to-purple-600 dark:from-cyan-400 dark:to-purple-400 bg-clip-text text-transparent ${compact ? 'text-xs' : ''}`}>
-              Ask Trinity
-            </span>
-            <span className={`text-muted-foreground ${compact ? 'text-[10px]' : ''}`}>for Help</span>
+          <Sparkles className={`${compact ? 'w-3.5 h-3.5' : 'w-5 h-5'} flex-shrink-0 text-cyan-500`} />
+          <span className={`font-semibold bg-gradient-to-r from-cyan-600 to-purple-600 dark:from-cyan-400 dark:to-purple-400 bg-clip-text text-transparent`}>
+            Ask Trinity
           </span>
         </a>
       </div>
       <div className={compact ? "px-2 pb-2" : "px-3 pb-3"}>
         <a
           href="/updates"
-          className={`w-full justify-center inline-flex font-medium text-primary hover:text-primary hover:bg-primary/5 rounded-md cursor-pointer ${compact ? 'text-[10px] h-6 px-3 py-1' : 'text-xs h-7 px-4 py-2'}`}
+          className={`w-full justify-center inline-flex font-medium text-primary hover:text-primary hover:bg-primary/5 rounded-md cursor-pointer ${compact ? 'text-[10px] h-5 px-2' : 'text-xs h-7 px-4 py-2'}`}
           data-testid="button-view-all-updates"
         >
           View all updates
