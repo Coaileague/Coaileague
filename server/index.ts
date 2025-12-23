@@ -19,6 +19,27 @@ import { initializeSkillsSystem } from "./services/ai-brain/skills/skill-loader"
 import "./services/scheduleLiveNotifier";
 
 const app = express();
+
+// Capture raw body for webhook signature verification
+app.use((req, res, next) => {
+  if (req.path === '/api/webhooks/quickbooks') {
+    let data = '';
+    req.setEncoding('utf8');
+    req.on('data', (chunk) => { data += chunk; });
+    req.on('end', () => {
+      (req as any).rawBody = data;
+      try {
+        req.body = data ? JSON.parse(data) : {};
+      } catch (e) {
+        req.body = {};
+      }
+      next();
+    });
+  } else {
+    next();
+  }
+});
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 

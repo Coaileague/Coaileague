@@ -3151,49 +3151,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Webhook handler for QuickBooks real-time updates
+  // Webhook handler for QuickBooks real-time updates with proper HMAC verification
   app.post("/api/webhooks/quickbooks", async (req, res) => {
     try {
       const signature = req.headers['intuit-signature'] as string;
       if (!signature) {
-        console.log("[QBO Webhook] Missing signature header");
+        console.log("[QBO Webhook] Missing intuit-signature header");
         return res.status(401).json({ error: "Missing signature" });
       }
 
-      const payload = JSON.stringify(req.body);
+      // Use raw body captured by middleware for proper HMAC verification
+      const rawPayload = (req as any).rawBody;
+      if (!rawPayload) {
+        console.log("[QBO Webhook] No raw body available for verification");
+        return res.status(400).json({ error: "Missing request body" });
+      }
       
-      // Find the connection and verify signature
+      // Find the connection and verify signature before processing
       const event = req.body;
-      if (event.eventNotifications && event.eventNotifications.length > 0) {
-        const realmId = event.eventNotifications[0]?.realmId;
-        if (realmId) {
-          const [connection] = await db.select()
-            .from(partnerConnections)
-            .where(eq(partnerConnections.realmId, realmId))
-            .limit(1);
+      if (!event.eventNotifications || event.eventNotifications.length === 0) {
+        console.log("[QBO Webhook] No event notifications in payload");
+        return res.status(200).send('OK');
+      }
 
-          if (connection && connection.webhookSecret) {
-            try {
-              const result = await quickbooksSyncService.handleWebhook(
-                signature,
-                payload,
-                connection.webhookSecret
-              );
-              console.log("[QBO Webhook] Processed entities:", result.entities);
-            } catch (verifyError: any) {
-              console.error("[QBO Webhook] Signature verification failed:", verifyError.message);
-              return res.status(401).json({ error: "Invalid signature" });
-            }
-          } else {
-            console.log("[QBO Webhook] No connection or secret found for realm:", realmId);
-          }
-        }
+      const realmId = event.eventNotifications[0]?.realmId;
+      if (!realmId) {
+        console.log("[QBO Webhook] No realmId in event notification");
+        return res.status(200).send('OK');
+      }
+
+      const [connection] = await db.select()
+        .from(partnerConnections)
+        .where(eq(partnerConnections.realmId, realmId))
+        .limit(1);
+
+      if (!connection || !connection.webhookSecret) {
+        console.log("[QBO Webhook] No connection or webhook secret for realm:", realmId);
+        return res.status(401).json({ error: "Unknown realm or missing webhook secret" });
+      }
+
+      // Verify HMAC-SHA256 signature using the raw payload
+      try {
+        const result = await quickbooksSyncService.handleWebhook(
+          signature,
+          rawPayload,
+          connection.webhookSecret
+        );
+        console.log("[QBO Webhook] Successfully processed", result.entities.length, "entities");
+      } catch (verifyError: any) {
+        console.error("[QBO Webhook] HMAC verification failed");
+        return res.status(401).json({ error: "Invalid signature" });
       }
       
       res.status(200).send('OK');
     } catch (error: any) {
-      console.error("[QBO Webhook] Error:", error);
-      res.status(500).json({ error: error.message });
+      console.error("[QBO Webhook] Error:", error.message);
+      res.status(500).json({ error: "Internal server error" });
     }
   });
 
