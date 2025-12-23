@@ -374,6 +374,33 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize Workflow Approval Service:', error);
   }
 
+  // Initialize Trial Conversion Orchestrator - automated trial-to-paid workflows
+  try {
+    const { initializeTrialConversionOrchestrator } = await import('./services/billing/trialConversionOrchestrator');
+    await initializeTrialConversionOrchestrator();
+    console.log('[Server] Trial Conversion Orchestrator initialized');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Trial Conversion Orchestrator:', error);
+  }
+
+  // Initialize Stripe Event Bridge - webhook-to-AI-Brain connection
+  try {
+    const { initializeStripeEventBridge } = await import('./services/billing/stripeEventBridge');
+    await initializeStripeEventBridge();
+    console.log('[Server] Stripe Event Bridge initialized');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Stripe Event Bridge:', error);
+  }
+
+  // Initialize Exception Queue Processor - billing exception triage
+  try {
+    const { initializeExceptionQueueProcessor } = await import('./services/billing/exceptionQueueProcessor');
+    await initializeExceptionQueueProcessor();
+    console.log('[Server] Exception Queue Processor initialized');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Exception Queue Processor:', error);
+  }
+
   // Initialize Autonomous Fix Pipeline - self-healing code system
   try {
     const { initializeAutonomousFixPipeline } = await import('./services/ai-brain/autonomousFixPipeline');

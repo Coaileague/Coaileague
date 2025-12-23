@@ -27,10 +27,21 @@ export interface TrialStatus {
 }
 
 export class TrialManager {
+  private static instance: TrialManager;
   private creditManager: CreditManager;
 
   constructor() {
     this.creditManager = new CreditManager();
+  }
+
+  /**
+   * Get singleton instance
+   */
+  static getInstance(): TrialManager {
+    if (!TrialManager.instance) {
+      TrialManager.instance = new TrialManager();
+    }
+    return TrialManager.instance;
   }
 
   /**

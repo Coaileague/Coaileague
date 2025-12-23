@@ -79,7 +79,18 @@ export interface SubscriptionResult {
 }
 
 export class SubscriptionManager {
+  private static instance: SubscriptionManager;
   private creditManager: CreditManager;
+
+  /**
+   * Get singleton instance
+   */
+  static getInstance(): SubscriptionManager {
+    if (!SubscriptionManager.instance) {
+      SubscriptionManager.instance = new SubscriptionManager();
+    }
+    return SubscriptionManager.instance;
+  }
 
   constructor() {
     this.creditManager = new CreditManager();
