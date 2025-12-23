@@ -419,6 +419,15 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize Autonomous Fix Pipeline:', error);
   }
 
+  // Initialize Workflow Orchestration Services - Fortune 500 pipeline governance
+  try {
+    const { initializeOrchestrationServices: initWorkflowOrchestration } = await import('./services/orchestration/index');
+    initWorkflowOrchestration();
+    console.log('[Server] Workflow Orchestration Services initialized - 33 actions registered');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Workflow Orchestration Services:', error);
+  }
+
   app.use((err: any, req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";

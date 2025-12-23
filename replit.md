@@ -91,6 +91,7 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **TrialConversionOrchestrator:** Automated trial-to-paid conversion with 7-day warning notifications, auto-conversion for workspaces with payment methods, 7-day grace period handling, and workspace suspension for expired trials. Registers 3 AI Brain actions (trial.process_expiring, trial.check_status, trial.extend).
 - **StripeEventBridge:** Webhook-to-AI-Brain connection processing Stripe events (payment_intent.succeeded/failed, invoice.paid/failed, subscription lifecycle, trial_will_end) with automatic workspace status updates, owner notifications, and escalation workflows. Registers 2 AI Brain actions.
 - **ExceptionQueueProcessor:** Billing exception triage with auto-resolution rules (token_expired, new_client, api_error), human escalation workflow, priority-based aging thresholds, and admin notifications. Registers 4 AI Brain actions (exceptions.process_queue, exceptions.get_stats, exceptions.resolve, exceptions.get_pending).
+- **Workflow Orchestration Services:** 5 Fortune 500-grade workflow pipeline services with 33 AI Brain actions: OnboardingStateMachine, ApprovalGateEnforcement, CrossDomainExceptionService, NotificationAcknowledgmentService, and ScheduleLifecycleOrchestrator.
 
 **System Design Choices:**
 - **Modularity:** Extensive backend service modules and frontend routes.

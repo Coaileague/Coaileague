@@ -21067,6 +21067,94 @@ export type InsertWorkspaceGovernancePolicy = z.infer<typeof insertWorkspaceGove
 export type WorkspaceGovernancePolicy = typeof workspaceGovernancePolicies.$inferSelect;
 
 // ============================================================================
+// ORCHESTRATION SERVICES - Workflow Pipeline Tables
+// ============================================================================
+
+/**
+ * Workspace Onboarding States - Tracks onboarding lifecycle per workspace
+ */
+export const workspaceOnboardingStates = pgTable("workspace_onboarding_states", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().unique(),
+  stateData: jsonb("state_data").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("wos_workspace_idx").on(table.workspaceId),
+]);
+
+/**
+ * Approval Gates - High-risk operation approval tracking
+ */
+export const approvalGates = pgTable("approval_gates", {
+  id: varchar("id").primaryKey(),
+  workspaceId: varchar("workspace_id").notNull(),
+  gateData: jsonb("gate_data").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("ag_workspace_idx").on(table.workspaceId),
+  index("ag_id_idx").on(table.id),
+]);
+
+/**
+ * Platform Exceptions - Cross-domain exception tracking
+ */
+export const platformExceptions = pgTable("platform_exceptions", {
+  id: varchar("id").primaryKey(),
+  workspaceId: varchar("workspace_id").notNull(),
+  exceptionData: jsonb("exception_data").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("pe_workspace_idx").on(table.workspaceId),
+  index("pe_id_idx").on(table.id),
+]);
+
+/**
+ * Tracked Notifications - Notification acknowledgment tracking
+ */
+export const trackedNotifications = pgTable("tracked_notifications", {
+  id: varchar("id").primaryKey(),
+  workspaceId: varchar("workspace_id").notNull(),
+  notificationData: jsonb("notification_data").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("tn_workspace_idx").on(table.workspaceId),
+  index("tn_id_idx").on(table.id),
+]);
+
+/**
+ * Schedule Lifecycles - Draft→Published workflow tracking
+ */
+export const scheduleLifecycles = pgTable("schedule_lifecycles", {
+  id: varchar("id").primaryKey(),
+  workspaceId: varchar("workspace_id").notNull(),
+  lifecycleData: jsonb("lifecycle_data").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("sl_workspace_idx").on(table.workspaceId),
+  index("sl_id_idx").on(table.id),
+]);
+
+/**
+ * Orchestrated Swap Requests - Shift swap lifecycle tracking with audit trails
+ * Uses jsonb for full swap workflow state (different from the base shiftSwapRequests table)
+ */
+export const orchestratedSwapRequests = pgTable("orchestrated_swap_requests", {
+  id: varchar("id").primaryKey(),
+  workspaceId: varchar("workspace_id").notNull(),
+  requestData: jsonb("request_data").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("osr_workspace_idx").on(table.workspaceId),
+  index("osr_id_idx").on(table.id),
+]);
+
+// ============================================================================
 // TRINITY UNIFIED TASK SCHEMA - Re-exports
 // ============================================================================
 
