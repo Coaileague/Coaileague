@@ -23,8 +23,11 @@ import { gamificationActivationAgent, type ActivationResult, AUTOMATION_GATES } 
 import { cognitiveOnboardingService, type IntegrationProvider, type DataSyncType } from '../cognitiveOnboardingService';
 import { industryComplianceTemplates, type IndustryComplianceConfig } from '../industryComplianceTemplates';
 import { db } from '../../../db';
-import { workspaces, notifications } from '@shared/schema';
+import { workspaces, notifications, orgInvitations } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import { TrialManager } from '../../billing/trialManager';
+import { onboardingPipelineService } from '../../onboardingPipelineService';
+import { platformEventBus, type PlatformEvent } from '../../platformEventBus';
 
 export interface OnboardingSource {
   type: 'pdf' | 'excel' | 'csv' | 'manual' | 'bulk_text';
@@ -488,14 +491,53 @@ class OnboardingOrchestrator {
       persona: string;
       capabilities: string[];
     };
+    trialInfo?: {
+      trialEndsAt: Date;
+      daysRemaining: number;
+    };
+    billingPipeline?: {
+      pipelineStatus: string;
+      totalTasks: number;
+      completionPercent: number;
+    };
     errors: string[];
   }> {
     const errors: string[] = [];
+    const trialManager = TrialManager.getInstance();
 
     try {
       console.log(`[OnboardingOrchestrator] Processing invitation acceptance for workspace ${params.workspaceId}`);
 
-      // Step 1: Generate Trinity welcome message
+      // Step 1: Start free trial for the workspace (CRITICAL for billing)
+      let trialInfo: { trialEndsAt: Date; daysRemaining: number } | undefined;
+      try {
+        const trialResult = await trialManager.startTrial(params.workspaceId);
+        if (trialResult.success) {
+          const daysRemaining = Math.ceil((trialResult.trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          trialInfo = { trialEndsAt: trialResult.trialEndsAt, daysRemaining };
+          console.log(`[OnboardingOrchestrator] Trial started for workspace ${params.workspaceId}, ends ${trialResult.trialEndsAt.toISOString()}`);
+        } else {
+          console.warn(`[OnboardingOrchestrator] Trial start warning: ${trialResult.error}`);
+        }
+      } catch (trialError: any) {
+        console.warn('[OnboardingOrchestrator] Trial start failed (may already exist):', trialError.message);
+      }
+
+      // Step 2: Initialize billing onboarding pipeline (gamified tasks + discount reward)
+      let billingPipeline: { pipelineStatus: string; totalTasks: number; completionPercent: number } | undefined;
+      try {
+        const pipelineProgress = await onboardingPipelineService.initializeOnboarding(params.workspaceId);
+        billingPipeline = {
+          pipelineStatus: pipelineProgress.pipelineStatus,
+          totalTasks: pipelineProgress.totalTasks,
+          completionPercent: pipelineProgress.completionPercent,
+        };
+        console.log(`[OnboardingOrchestrator] Billing pipeline initialized: ${pipelineProgress.totalTasks} tasks`);
+      } catch (pipelineError: any) {
+        console.warn('[OnboardingOrchestrator] Pipeline init warning:', pipelineError.message);
+      }
+
+      // Step 3: Generate Trinity welcome message
       const trinityWelcome = await this.generateTrinityWelcome({
         workspaceId: params.workspaceId,
         workspaceName: params.workspaceName,
@@ -503,7 +545,7 @@ class OnboardingOrchestrator {
         inviteSource: 'invite',
       });
 
-      // Step 2: Initialize workspace-isolated Trinity AI instance
+      // Step 4: Initialize workspace-isolated Trinity AI instance
       const trinityInit = await this.initializeWorkspaceTrinity({
         workspaceId: params.workspaceId,
         workspaceName: params.workspaceName,
@@ -515,7 +557,7 @@ class OnboardingOrchestrator {
         errors.push(...trinityInit.errors);
       }
 
-      // Step 3: Trigger onboarding (gamification activation, basic automation unlock)
+      // Step 5: Trigger onboarding (gamification activation, basic automation unlock)
       const onboardingResult = await this.triggerForNewOrg({
         workspaceId: params.workspaceId,
         ownerId: params.userId,
@@ -526,10 +568,28 @@ class OnboardingOrchestrator {
         errors.push(...onboardingResult.errors);
       }
 
+      // Step 6: Emit platform event for org onboarding
+      const event: PlatformEvent = {
+        type: 'org_onboarded',
+        category: 'billing',
+        title: 'New Organization Onboarded',
+        description: `${params.workspaceName} has accepted invitation and started trial`,
+        metadata: {
+          workspaceId: params.workspaceId,
+          workspaceName: params.workspaceName,
+          ownerName: params.ownerName,
+          trialEndsAt: trialInfo?.trialEndsAt?.toISOString(),
+          timestamp: new Date().toISOString(),
+        },
+        visibility: 'admin',
+      };
+      await platformEventBus.publish(event);
+
       console.log(`[OnboardingOrchestrator] Invitation acceptance complete:`, {
         workspaceId: params.workspaceId,
         success: onboardingResult.success && trinityInit.success,
         trinityPersona: trinityInit.persona,
+        trialDaysRemaining: trialInfo?.daysRemaining,
         gamificationActive: onboardingResult.gamificationActivation?.success,
         automationGatesUnlocked: onboardingResult.summary.automationGatesUnlocked,
       });
@@ -543,6 +603,8 @@ class OnboardingOrchestrator {
           persona: trinityInit.persona,
           capabilities: trinityInit.capabilities,
         },
+        trialInfo,
+        billingPipeline,
         errors,
       };
 
