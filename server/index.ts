@@ -401,6 +401,15 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize Exception Queue Processor:', error);
   }
 
+  // Initialize Weekly Billing Run Service - automated invoice generation
+  try {
+    const { initializeWeeklyBillingRunService } = await import('./services/billing/weeklyBillingRunService');
+    initializeWeeklyBillingRunService();
+    console.log('[Server] Weekly Billing Run Service initialized - 4 actions registered');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Weekly Billing Run Service:', error);
+  }
+
   // Initialize Autonomous Fix Pipeline - self-healing code system
   try {
     const { initializeAutonomousFixPipeline } = await import('./services/ai-brain/autonomousFixPipeline');
