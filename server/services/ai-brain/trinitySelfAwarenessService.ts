@@ -341,131 +341,104 @@ class TrinitySelfAwarenessService {
    * Register self-awareness actions with AI Brain orchestrator
    */
   private registerActions(): void {
-    // Get self-knowledge
-    helpaiOrchestrator.registerAction('self.get_fact', {
-      handler: async (params) => {
-        const { category, factKey } = params;
-        const fact = await this.getFact(category, factKey);
-        return {
-          success: !!fact,
-          data: fact,
-          message: fact ? `Found fact: ${factKey}` : `Fact not found: ${factKey}`,
-        };
+    const actions = [
+      {
+        id: 'self.get_fact',
+        name: 'Get Self-Awareness Fact',
+        description: 'Get a specific self-awareness fact',
+        handler: async (params: any) => {
+          const { category, factKey } = params;
+          const fact = await this.getFact(category, factKey);
+          return {
+            found: !!fact,
+            fact,
+          };
+        },
       },
-      category: 'self_awareness',
-      description: 'Get a specific self-awareness fact',
-      parameters: { category: 'string', factKey: 'string' },
-      requiredRole: 'employee',
-    });
+      {
+        id: 'self.query_facts',
+        name: 'Query Facts by Category',
+        description: 'Query self-awareness facts by category',
+        handler: async (params: any) => {
+          const { category, subcategory } = params;
+          const facts = await this.getFactsByCategory(category, subcategory);
+          return { facts, count: facts.length };
+        },
+      },
+      {
+        id: 'self.get_platform_context',
+        name: 'Get Platform Context',
+        description: 'Get current platform context and health status',
+        handler: async () => {
+          return this.getPlatformContext();
+        },
+      },
+      {
+        id: 'self.get_capabilities',
+        name: 'Get Capabilities',
+        description: 'Get available capabilities, optionally filtered by domain',
+        handler: async (params: any) => {
+          const { domain } = params;
+          const capabilities = await this.getCapabilities(domain);
+          return { capabilities, count: capabilities.length };
+        },
+      },
+      {
+        id: 'self.learn_fact',
+        name: 'Learn New Fact',
+        description: 'Learn and store a new self-awareness fact',
+        handler: async (params: any) => {
+          const fact = await this.upsertFact({
+            category: params.category,
+            subcategory: params.subcategory,
+            factKey: params.factKey,
+            factValue: params.factValue,
+            factType: params.factType || 'text',
+            source: 'learned',
+            confidence: params.confidence || 0.8,
+          });
+          return { learned: !!fact, fact };
+        },
+      },
+      {
+        id: 'self.get_identity',
+        name: 'Get Identity Summary',
+        description: 'Get Trinity identity summary for prompt injection',
+        handler: async () => {
+          return this.getIdentitySummary();
+        },
+      },
+      {
+        id: 'self.check_constraint',
+        name: 'Check Constraint',
+        description: 'Check if an action is allowed given current constraints',
+        handler: async (params: any) => {
+          const { action, context } = params;
+          return this.checkConstraint(action, context);
+        },
+      },
+    ];
 
-    // Query facts by category
-    helpaiOrchestrator.registerAction('self.query_facts', {
-      handler: async (params) => {
-        const { category, subcategory } = params;
-        const facts = await this.getFactsByCategory(category, subcategory);
-        return {
-          success: true,
-          data: facts,
-          count: facts.length,
-          message: `Found ${facts.length} facts in ${category}`,
-        };
-      },
-      category: 'self_awareness',
-      description: 'Query self-awareness facts by category',
-      parameters: { category: 'string', subcategory: 'string (optional)' },
-      requiredRole: 'employee',
-    });
-
-    // Get platform context
-    helpaiOrchestrator.registerAction('self.get_platform_context', {
-      handler: async () => {
-        const context = await this.getPlatformContext();
-        return {
-          success: true,
-          data: context,
-          message: 'Platform context retrieved',
-        };
-      },
-      category: 'self_awareness',
-      description: 'Get current platform context and health status',
-      parameters: {},
-      requiredRole: 'employee',
-    });
-
-    // Get capability matrix
-    helpaiOrchestrator.registerAction('self.get_capabilities', {
-      handler: async (params) => {
-        const { domain } = params;
-        const capabilities = await this.getCapabilities(domain);
-        return {
-          success: true,
-          data: capabilities,
-          count: capabilities.length,
-          message: `Found ${capabilities.length} capabilities`,
-        };
-      },
-      category: 'self_awareness',
-      description: 'Get available capabilities, optionally filtered by domain',
-      parameters: { domain: 'string (optional)' },
-      requiredRole: 'employee',
-    });
-
-    // Learn new fact
-    helpaiOrchestrator.registerAction('self.learn_fact', {
-      handler: async (params) => {
-        const fact = await this.upsertFact({
-          category: params.category,
-          subcategory: params.subcategory,
-          factKey: params.factKey,
-          factValue: params.factValue,
-          factType: params.factType || 'text',
-          source: 'learned',
-          confidence: params.confidence || 0.8,
-        });
-        return {
-          success: !!fact,
-          data: fact,
-          message: fact ? `Learned new fact: ${params.factKey}` : 'Failed to learn fact',
-        };
-      },
-      category: 'self_awareness',
-      description: 'Learn and store a new self-awareness fact',
-      parameters: { category: 'string', factKey: 'string', factValue: 'string', factType: 'string', confidence: 'number' },
-      requiredRole: 'support_engineer',
-    });
-
-    // Get identity summary
-    helpaiOrchestrator.registerAction('self.get_identity', {
-      handler: async () => {
-        const identity = await this.getIdentitySummary();
-        return {
-          success: true,
-          data: identity,
-          message: 'Identity summary retrieved',
-        };
-      },
-      category: 'self_awareness',
-      description: 'Get Trinity identity summary for prompt injection',
-      parameters: {},
-      requiredRole: 'employee',
-    });
-
-    // Check constraint
-    helpaiOrchestrator.registerAction('self.check_constraint', {
-      handler: async (params) => {
-        const { action, context } = params;
-        const result = await this.checkConstraint(action, context);
-        return {
-          success: true,
-          data: result,
-          message: result.allowed ? 'Action allowed' : `Action blocked: ${result.reason}`,
-        };
-      },
-      category: 'self_awareness',
-      description: 'Check if an action is allowed given current constraints',
-      parameters: { action: 'string', context: 'object' },
-      requiredRole: 'employee',
-    });
+    for (const action of actions) {
+      helpaiOrchestrator.registerAction({
+        actionId: action.id,
+        name: action.name,
+        category: 'self_awareness',
+        description: action.description,
+        requiredRoles: ['support', 'admin', 'super_admin'],
+        handler: async (request) => {
+          const startTime = Date.now();
+          const result = await action.handler(request.payload || {});
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `${action.name} completed`,
+            data: result,
+            executionTimeMs: Date.now() - startTime,
+          };
+        },
+      });
+    }
 
     console.log('[TrinitySelfAwareness] Registered 7 AI Brain actions');
   }

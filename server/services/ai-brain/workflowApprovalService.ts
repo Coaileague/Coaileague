@@ -665,127 +665,38 @@ class WorkflowApprovalService {
   // ==========================================================================
 
   registerActions(): void {
-    helpaiOrchestrator.registerAction('workflow_approval.create', {
-      handler: async (params) => {
-        const approval = await this.createApprovalRequest({
-          title: params.title,
-          description: params.description,
-          affectedFiles: params.affectedFiles || [],
-          proposedChanges: params.proposedChanges || {},
-          rollbackPlan: params.rollbackPlan,
-          riskLevel: params.riskLevel,
-          workOrderId: params.workOrderId,
-        });
-        return {
-          success: !!approval,
-          data: approval,
-          message: approval ? `Approval request created: ${approval.id}` : 'Failed to create approval',
-        };
-      },
-      category: 'workflow_approval',
-      description: 'Create a new workflow approval request',
-      parameters: {
-        title: 'string',
-        description: 'string',
-        affectedFiles: 'string[] (optional)',
-        proposedChanges: 'object (optional)',
-        rollbackPlan: 'string (optional)',
-        riskLevel: 'low|medium|high|critical (optional)',
-        workOrderId: 'string (optional)',
-      },
-      requiredRole: 'support_engineer',
-    });
+    const self = this;
+    const actions = [
+      { id: 'workflow_approval.create', name: 'Create Approval', desc: 'Create a new workflow approval request', 
+        fn: (p: any) => self.createApprovalRequest({ title: p.title, description: p.description, affectedFiles: p.affectedFiles || [], proposedChanges: p.proposedChanges || {}, rollbackPlan: p.rollbackPlan, riskLevel: p.riskLevel, workOrderId: p.workOrderId }) },
+      { id: 'workflow_approval.approve', name: 'Approve Request', desc: 'Approve a pending workflow request', fn: (p: any) => self.approveRequest(p.approvalId, p.userId, p.notes) },
+      { id: 'workflow_approval.reject', name: 'Reject Request', desc: 'Reject a pending workflow request', fn: (p: any) => self.rejectRequest(p.approvalId, p.userId, p.reason) },
+      { id: 'workflow_approval.get_pending', name: 'Get Pending', desc: 'Get pending workflow approval requests', fn: (p: any) => self.getPendingApprovals(p?.limit || 50) },
+      { id: 'workflow_approval.get_by_id', name: 'Get By ID', desc: 'Get a specific approval request by ID', fn: (p: any) => self.getApprovalById(p.approvalId) },
+      { id: 'workflow_approval.process_expired', name: 'Process Expired', desc: 'Process and mark expired approval requests', fn: () => self.processExpiredApprovals() },
+      { id: 'workflow_approval.mark_executed', name: 'Mark Executed', desc: 'Mark an approved request as executed', fn: (p: any) => self.markExecuted(p.approvalId, p.details) },
+    ];
 
-    helpaiOrchestrator.registerAction('workflow_approval.approve', {
-      handler: async (params) => {
-        return this.approveRequest(params.approvalId, params.userId, params.notes);
-      },
-      category: 'workflow_approval',
-      description: 'Approve a pending workflow request',
-      parameters: {
-        approvalId: 'string',
-        userId: 'string',
-        notes: 'string (optional)',
-      },
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('workflow_approval.reject', {
-      handler: async (params) => {
-        return this.rejectRequest(params.approvalId, params.userId, params.reason);
-      },
-      category: 'workflow_approval',
-      description: 'Reject a pending workflow request',
-      parameters: {
-        approvalId: 'string',
-        userId: 'string',
-        reason: 'string',
-      },
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('workflow_approval.get_pending', {
-      handler: async (params) => {
-        const approvals = await this.getPendingApprovals(params?.limit || 50);
-        return {
-          success: true,
-          data: approvals,
-          count: approvals.length,
-          message: `Found ${approvals.length} pending approvals`,
-        };
-      },
-      category: 'workflow_approval',
-      description: 'Get pending workflow approval requests',
-      parameters: { limit: 'number (optional)' },
-      requiredRole: 'employee',
-    });
-
-    helpaiOrchestrator.registerAction('workflow_approval.get_by_id', {
-      handler: async (params) => {
-        const approval = await this.getApprovalById(params.approvalId);
-        return {
-          success: !!approval,
-          data: approval,
-          message: approval ? 'Approval found' : 'Approval not found',
-        };
-      },
-      category: 'workflow_approval',
-      description: 'Get a specific approval request by ID',
-      parameters: { approvalId: 'string' },
-      requiredRole: 'employee',
-    });
-
-    helpaiOrchestrator.registerAction('workflow_approval.process_expired', {
-      handler: async () => {
-        const count = await this.processExpiredApprovals();
-        return {
-          success: true,
-          expiredCount: count,
-          message: `Processed ${count} expired approvals`,
-        };
-      },
-      category: 'workflow_approval',
-      description: 'Process and mark expired approval requests',
-      parameters: {},
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('workflow_approval.mark_executed', {
-      handler: async (params) => {
-        const success = await this.markExecuted(params.approvalId, params.details);
-        return {
-          success,
-          message: success ? 'Marked as executed' : 'Failed to mark as executed',
-        };
-      },
-      category: 'workflow_approval',
-      description: 'Mark an approved request as executed',
-      parameters: {
-        approvalId: 'string',
-        details: 'string (optional)',
-      },
-      requiredRole: 'support_engineer',
-    });
+    for (const action of actions) {
+      helpaiOrchestrator.registerAction({
+        actionId: action.id,
+        name: action.name,
+        category: 'workflow_approval',
+        description: action.desc,
+        requiredRoles: ['support', 'admin', 'super_admin'],
+        handler: async (request) => {
+          const startTime = Date.now();
+          const result = await action.fn(request.payload || {});
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `${action.name} completed`,
+            data: result,
+            executionTimeMs: Date.now() - startTime,
+          };
+        },
+      });
+    }
 
     console.log('[WorkflowApproval] Registered 7 AI Brain actions');
   }

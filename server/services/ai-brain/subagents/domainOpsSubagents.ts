@@ -391,68 +391,30 @@ class SchemaOpsSubagent {
    * Register SchemaOps actions with AI Brain
    */
   registerActions(): void {
-    helpaiOrchestrator.registerAction('schema.scan_definitions', {
-      handler: async (params) => {
-        const components = await this.scanSchemaFile();
-        // Persist to registry if requested
-        if (params?.persist !== false) {
-          await persistComponents(components, 'SchemaOps');
-        }
-        return {
-          success: true,
-          data: components,
-          count: components.length,
-          persisted: params?.persist !== false,
-          message: `Scanned ${components.length} schema components`,
-        };
-      },
-      category: 'schema_ops',
-      description: 'Scan schema file for all table and enum definitions',
-      parameters: { persist: 'boolean (optional, default true)' },
-      requiredRole: 'employee',
-    });
+    const self = this;
+    const actions = [
+      { id: 'schema.scan_definitions', name: 'Scan Schema Definitions', desc: 'Scan schema file for table/enum definitions', 
+        fn: async (p: any) => { const c = await self.scanSchemaFile(); if (p?.persist !== false) await persistComponents(c, 'SchemaOps'); return c; } },
+      { id: 'schema.detect_mismatches', name: 'Detect Schema Mismatches', desc: 'Detect mismatches between schema and database', 
+        fn: async (p: any) => { const f = await self.detectSchemaMismatches(); if (p?.persist !== false && f.length > 0) await persistGapFindings(f, 'SchemaOps'); return f; } },
+      { id: 'schema.analyze_relationships', name: 'Analyze Relationships', desc: 'Analyze table relationships and find issues', 
+        fn: async (p: any) => { const f = await self.analyzeRelationships(); if (p?.persist !== false && f.length > 0) await persistGapFindings(f, 'SchemaOps'); return f; } },
+    ];
 
-    helpaiOrchestrator.registerAction('schema.detect_mismatches', {
-      handler: async (params) => {
-        const findings = await this.detectSchemaMismatches();
-        // Persist to gap findings
-        if (params?.persist !== false && findings.length > 0) {
-          await persistGapFindings(findings, 'SchemaOps');
-        }
-        return {
-          success: true,
-          data: findings,
-          count: findings.length,
-          persisted: params?.persist !== false && findings.length > 0,
-          message: `Found ${findings.length} schema mismatches`,
-        };
-      },
-      category: 'schema_ops',
-      description: 'Detect mismatches between schema definitions and database',
-      parameters: { persist: 'boolean (optional, default true)' },
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('schema.analyze_relationships', {
-      handler: async (params) => {
-        const findings = await this.analyzeRelationships();
-        // Persist to gap findings
-        if (params?.persist !== false && findings.length > 0) {
-          await persistGapFindings(findings, 'SchemaOps');
-        }
-        return {
-          success: true,
-          data: findings,
-          count: findings.length,
-          persisted: params?.persist !== false && findings.length > 0,
-          message: `Analyzed relationships, found ${findings.length} issues`,
-        };
-      },
-      category: 'schema_ops',
-      description: 'Analyze table relationships and find potential issues',
-      parameters: { persist: 'boolean (optional, default true)' },
-      requiredRole: 'support_engineer',
-    });
+    for (const action of actions) {
+      helpaiOrchestrator.registerAction({
+        actionId: action.id,
+        name: action.name,
+        category: 'schema_ops',
+        description: action.desc,
+        requiredRoles: ['support', 'admin', 'super_admin'],
+        handler: async (request) => {
+          const startTime = Date.now();
+          const result = await action.fn(request.payload || {});
+          return { success: true, actionId: request.actionId, message: `${action.name} completed`, data: result, executionTimeMs: Date.now() - startTime };
+        },
+      });
+    }
 
     console.log('[SchemaOps] Registered 3 AI Brain actions');
   }
@@ -610,60 +572,28 @@ Respond in JSON format:
    * Register LogOps actions with AI Brain
    */
   registerActions(): void {
-    helpaiOrchestrator.registerAction('logs.analyze_content', {
-      handler: async (params) => {
-        const { content, source, persist } = params;
-        const findings = await this.analyzeLogContent(content, source);
-        // Persist to gap findings
-        if (persist !== false && findings.length > 0) {
-          await persistGapFindings(findings, 'LogOps');
-        }
-        return {
-          success: true,
-          data: findings,
-          count: findings.length,
-          persisted: persist !== false && findings.length > 0,
-          message: `Analyzed logs, found ${findings.length} issues`,
-        };
-      },
-      category: 'log_ops',
-      description: 'Analyze log content for errors and issues',
-      parameters: { content: 'string', source: 'string', persist: 'boolean (optional, default true)' },
-      requiredRole: 'employee',
-    });
+    const self = this;
+    const actions = [
+      { id: 'logs.analyze_content', name: 'Analyze Log Content', desc: 'Analyze log content for errors and issues', 
+        fn: async (p: any) => { const f = await self.analyzeLogContent(p.content, p.source); if (p.persist !== false && f.length > 0) await persistGapFindings(f, 'LogOps'); return f; } },
+      { id: 'logs.extract_stack_traces', name: 'Extract Stack Traces', desc: 'Extract stack traces from log content', fn: (p: any) => self.extractStackTraces(p.content) },
+      { id: 'logs.ai_analyze', name: 'AI Analyze Logs', desc: 'Use AI to analyze log patterns', fn: (p: any) => self.aiAnalyzeLogs(p.content) },
+    ];
 
-    helpaiOrchestrator.registerAction('logs.extract_stack_traces', {
-      handler: async (params) => {
-        const { content } = params;
-        const traces = this.extractStackTraces(content);
-        return {
-          success: true,
-          data: traces,
-          count: traces.length,
-          message: `Extracted ${traces.length} stack traces`,
-        };
-      },
-      category: 'log_ops',
-      description: 'Extract stack traces from log content',
-      parameters: { content: 'string' },
-      requiredRole: 'employee',
-    });
-
-    helpaiOrchestrator.registerAction('logs.ai_analyze', {
-      handler: async (params) => {
-        const { content } = params;
-        const analysis = await this.aiAnalyzeLogs(content);
-        return {
-          success: true,
-          data: analysis,
-          message: 'AI log analysis complete',
-        };
-      },
-      category: 'log_ops',
-      description: 'Use AI to analyze log patterns and identify issues',
-      parameters: { content: 'string' },
-      requiredRole: 'support_engineer',
-    });
+    for (const action of actions) {
+      helpaiOrchestrator.registerAction({
+        actionId: action.id,
+        name: action.name,
+        category: 'log_ops',
+        description: action.desc,
+        requiredRoles: ['support', 'admin', 'super_admin'],
+        handler: async (request) => {
+          const startTime = Date.now();
+          const result = await action.fn(request.payload || {});
+          return { success: true, actionId: request.actionId, message: `${action.name} completed`, data: result, executionTimeMs: Date.now() - startTime };
+        },
+      });
+    }
 
     console.log('[LogOps] Registered 3 AI Brain actions');
   }
@@ -850,47 +780,28 @@ class HandlerOpsSubagent {
    * Register HandlerOps actions with AI Brain
    */
   registerActions(): void {
-    helpaiOrchestrator.registerAction('handlers.scan_routes', {
-      handler: async (params) => {
-        const components = await this.scanRouteHandlers();
-        // Persist to registry if requested
-        if (params?.persist !== false) {
-          await persistComponents(components, 'HandlerOps');
-        }
-        return {
-          success: true,
-          data: components,
-          count: components.length,
-          persisted: params?.persist !== false,
-          message: `Found ${components.length} route handlers`,
-        };
-      },
-      category: 'handler_ops',
-      description: 'Scan for all API route handlers',
-      parameters: { persist: 'boolean (optional, default true)' },
-      requiredRole: 'employee',
-    });
+    const self = this;
+    const actions = [
+      { id: 'handlers.scan_routes', name: 'Scan Routes', desc: 'Scan for all API route handlers', 
+        fn: async (p: any) => { const c = await self.scanRouteHandlers(); if (p?.persist !== false) await persistComponents(c, 'HandlerOps'); return c; } },
+      { id: 'handlers.detect_missing', name: 'Detect Missing', desc: 'Detect frontend API calls without backend handlers', 
+        fn: async (p: any) => { const f = await self.detectMissingHandlers(); if (p?.persist !== false && f.length > 0) await persistGapFindings(f, 'HandlerOps'); return f; } },
+    ];
 
-    helpaiOrchestrator.registerAction('handlers.detect_missing', {
-      handler: async (params) => {
-        const findings = await this.detectMissingHandlers();
-        // Persist to gap findings
-        if (params?.persist !== false && findings.length > 0) {
-          await persistGapFindings(findings, 'HandlerOps');
-        }
-        return {
-          success: true,
-          data: findings,
-          count: findings.length,
-          persisted: params?.persist !== false && findings.length > 0,
-          message: `Found ${findings.length} missing handlers`,
-        };
-      },
-      category: 'handler_ops',
-      description: 'Detect frontend API calls without backend handlers',
-      parameters: { persist: 'boolean (optional, default true)' },
-      requiredRole: 'support_engineer',
-    });
+    for (const action of actions) {
+      helpaiOrchestrator.registerAction({
+        actionId: action.id,
+        name: action.name,
+        category: 'handler_ops',
+        description: action.desc,
+        requiredRoles: ['support', 'admin', 'super_admin'],
+        handler: async (request) => {
+          const startTime = Date.now();
+          const result = await action.fn(request.payload || {});
+          return { success: true, actionId: request.actionId, message: `${action.name} completed`, data: result, executionTimeMs: Date.now() - startTime };
+        },
+      });
+    }
 
     console.log('[HandlerOps] Registered 2 AI Brain actions');
   }
@@ -1075,47 +986,28 @@ class HookOpsSubagent {
    * Register HookOps actions with AI Brain
    */
   registerActions(): void {
-    helpaiOrchestrator.registerAction('hooks.scan', {
-      handler: async (params) => {
-        const components = await this.scanHooks();
-        // Persist to registry if requested
-        if (params?.persist !== false) {
-          await persistComponents(components, 'HookOps');
-        }
-        return {
-          success: true,
-          data: components,
-          count: components.length,
-          persisted: params?.persist !== false,
-          message: `Found ${components.length} hooks`,
-        };
-      },
-      category: 'hook_ops',
-      description: 'Scan for all React hooks in the codebase',
-      parameters: { persist: 'boolean (optional, default true)' },
-      requiredRole: 'employee',
-    });
+    const self = this;
+    const actions = [
+      { id: 'hooks.scan', name: 'Scan Hooks', desc: 'Scan for all React hooks in the codebase', 
+        fn: async (p: any) => { const c = await self.scanHooks(); if (p?.persist !== false) await persistComponents(c, 'HookOps'); return c; } },
+      { id: 'hooks.detect_issues', name: 'Detect Hook Issues', desc: 'Detect common React hook issues', 
+        fn: async (p: any) => { const f = await self.detectHookIssues(); if (p?.persist !== false && f.length > 0) await persistGapFindings(f, 'HookOps'); return f; } },
+    ];
 
-    helpaiOrchestrator.registerAction('hooks.detect_issues', {
-      handler: async (params) => {
-        const findings = await this.detectHookIssues();
-        // Persist to gap findings
-        if (params?.persist !== false && findings.length > 0) {
-          await persistGapFindings(findings, 'HookOps');
-        }
-        return {
-          success: true,
-          data: findings,
-          count: findings.length,
-          persisted: params?.persist !== false && findings.length > 0,
-          message: `Found ${findings.length} hook issues`,
-        };
-      },
-      category: 'hook_ops',
-      description: 'Detect common React hook issues',
-      parameters: { persist: 'boolean (optional, default true)' },
-      requiredRole: 'employee',
-    });
+    for (const action of actions) {
+      helpaiOrchestrator.registerAction({
+        actionId: action.id,
+        name: action.name,
+        category: 'hook_ops',
+        description: action.desc,
+        requiredRoles: ['support', 'admin', 'super_admin'],
+        handler: async (request) => {
+          const startTime = Date.now();
+          const result = await action.fn(request.payload || {});
+          return { success: true, actionId: request.actionId, message: `${action.name} completed`, data: result, executionTimeMs: Date.now() - startTime };
+        },
+      });
+    }
 
     console.log('[HookOps] Registered 2 AI Brain actions');
   }

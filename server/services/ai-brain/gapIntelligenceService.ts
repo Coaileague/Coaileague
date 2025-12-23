@@ -685,182 +685,41 @@ class GapIntelligenceService {
   // ==========================================================================
 
   registerActions(): void {
-    helpaiOrchestrator.registerAction('gap_intelligence.scan_typescript', {
-      handler: async () => {
-        const findings = await this.scanTypeScriptErrors();
-        return {
-          success: true,
-          data: findings,
-          count: findings.length,
-          message: `Found ${findings.length} TypeScript errors`,
-        };
-      },
-      category: 'gap_intelligence',
-      description: 'Scan for TypeScript/LSP errors in the codebase',
-      parameters: {},
-      requiredRole: 'support_engineer',
-    });
+    const self = this;
+    const actions = [
+      { id: 'gap_intelligence.scan_typescript', name: 'Scan TypeScript', desc: 'Scan for TypeScript/LSP errors', fn: () => self.scanTypeScriptErrors() },
+      { id: 'gap_intelligence.scan_schema', name: 'Scan Schema', desc: 'Scan for schema mismatches', fn: () => self.scanSchemaIssues() },
+      { id: 'gap_intelligence.scan_handlers', name: 'Scan Handlers', desc: 'Scan for handler gaps', fn: () => self.scanHandlerGaps() },
+      { id: 'gap_intelligence.scan_hooks', name: 'Scan Hooks', desc: 'Scan for React hook issues', fn: () => self.scanHookIssues() },
+      { id: 'gap_intelligence.scan_logs', name: 'Scan Logs', desc: 'Scan recent logs for errors', fn: () => self.scanRecentLogs() },
+      { id: 'gap_intelligence.full_scan', name: 'Full Scan', desc: 'Run complete platform gap analysis', fn: () => self.runFullPlatformScan() },
+      { id: 'gap_intelligence.get_findings', name: 'Get Findings', desc: 'Get open gap findings', fn: (p: any) => p?.critical ? self.getCriticalFindings() : self.getOpenFindings(p?.limit || 50) },
+      { id: 'gap_intelligence.resolve_finding', name: 'Resolve Finding', desc: 'Mark a gap finding as resolved', fn: (p: any) => self.markFindingResolved(p.findingId, p.resolvedBy || 'Trinity') },
+      { id: 'gap_intelligence.scheduler_status', name: 'Scheduler Status', desc: 'Get scheduler status', fn: () => self.getSchedulerStatus() },
+      { id: 'gap_intelligence.start_scheduler', name: 'Start Scheduler', desc: 'Start scheduled scans', fn: () => { self.startScheduledScans(); return { started: true }; } },
+      { id: 'gap_intelligence.stop_scheduler', name: 'Stop Scheduler', desc: 'Stop scheduled scans', fn: () => { self.stopScheduledScans(); return { stopped: true }; } },
+    ];
 
-    helpaiOrchestrator.registerAction('gap_intelligence.scan_schema', {
-      handler: async () => {
-        const findings = await this.scanSchemaIssues();
-        return {
-          success: true,
-          data: findings,
-          count: findings.length,
-          message: `Found ${findings.length} schema issues`,
-        };
-      },
-      category: 'gap_intelligence',
-      description: 'Scan for schema mismatches and relationship issues',
-      parameters: {},
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('gap_intelligence.scan_handlers', {
-      handler: async () => {
-        const findings = await this.scanHandlerGaps();
-        return {
-          success: true,
-          data: findings,
-          count: findings.length,
-          message: `Found ${findings.length} handler gaps`,
-        };
-      },
-      category: 'gap_intelligence',
-      description: 'Scan for unmatched routes and handler gaps',
-      parameters: {},
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('gap_intelligence.scan_hooks', {
-      handler: async () => {
-        const findings = await this.scanHookIssues();
-        return {
-          success: true,
-          data: findings,
-          count: findings.length,
-          message: `Found ${findings.length} hook issues`,
-        };
-      },
-      category: 'gap_intelligence',
-      description: 'Scan for React hook issues',
-      parameters: {},
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('gap_intelligence.scan_logs', {
-      handler: async () => {
-        const findings = await this.scanRecentLogs();
-        return {
-          success: true,
-          data: findings,
-          count: findings.length,
-          message: `Found ${findings.length} log issues`,
-        };
-      },
-      category: 'gap_intelligence',
-      description: 'Scan recent logs for errors and issues',
-      parameters: {},
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('gap_intelligence.full_scan', {
-      handler: async () => {
-        const results = await this.runFullPlatformScan();
-        return {
-          success: true,
-          data: results.summary,
-          typescript: results.typescript.length,
-          schema: results.schema.length,
-          handlers: results.handlers.length,
-          hooks: results.hooks.length,
-          logs: results.logs.length,
-          message: `Full scan complete: ${results.summary.totalFindings} findings`,
-        };
-      },
-      category: 'gap_intelligence',
-      description: 'Run a complete platform-wide gap analysis',
-      parameters: {},
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('gap_intelligence.get_findings', {
-      handler: async (params) => {
-        const critical = params?.critical === true;
-        const findings = critical 
-          ? await this.getCriticalFindings()
-          : await this.getOpenFindings(params?.limit || 50);
-        return {
-          success: true,
-          data: findings,
-          count: findings.length,
-          message: `Retrieved ${findings.length} ${critical ? 'critical ' : ''}findings`,
-        };
-      },
-      category: 'gap_intelligence',
-      description: 'Get open gap findings from the database',
-      parameters: { critical: 'boolean (optional)', limit: 'number (optional)' },
-      requiredRole: 'employee',
-    });
-
-    helpaiOrchestrator.registerAction('gap_intelligence.resolve_finding', {
-      handler: async (params) => {
-        const { findingId, resolvedBy } = params;
-        const success = await this.markFindingResolved(findingId, resolvedBy || 'Trinity');
-        return {
-          success,
-          message: success ? 'Finding marked as resolved' : 'Failed to resolve finding',
-        };
-      },
-      category: 'gap_intelligence',
-      description: 'Mark a gap finding as resolved',
-      parameters: { findingId: 'number', resolvedBy: 'string (optional)' },
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('gap_intelligence.scheduler_status', {
-      handler: async () => {
-        const status = this.getSchedulerStatus();
-        return {
-          success: true,
-          data: status,
-          message: status.isRunning ? 'Scheduler is running' : 'Scheduler is stopped',
-        };
-      },
-      category: 'gap_intelligence',
-      description: 'Get the status of the gap intelligence scheduler',
-      parameters: {},
-      requiredRole: 'employee',
-    });
-
-    helpaiOrchestrator.registerAction('gap_intelligence.start_scheduler', {
-      handler: async () => {
-        this.startScheduledScans();
-        return {
-          success: true,
-          message: 'Gap intelligence scheduler started',
-        };
-      },
-      category: 'gap_intelligence',
-      description: 'Start the scheduled gap intelligence scans',
-      parameters: {},
-      requiredRole: 'platform_admin',
-    });
-
-    helpaiOrchestrator.registerAction('gap_intelligence.stop_scheduler', {
-      handler: async () => {
-        this.stopScheduledScans();
-        return {
-          success: true,
-          message: 'Gap intelligence scheduler stopped',
-        };
-      },
-      category: 'gap_intelligence',
-      description: 'Stop the scheduled gap intelligence scans',
-      parameters: {},
-      requiredRole: 'platform_admin',
-    });
+    for (const action of actions) {
+      helpaiOrchestrator.registerAction({
+        actionId: action.id,
+        name: action.name,
+        category: 'gap_intelligence',
+        description: action.desc,
+        requiredRoles: ['support', 'admin', 'super_admin'],
+        handler: async (request) => {
+          const startTime = Date.now();
+          const result = await action.fn(request.payload || {});
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `${action.name} completed`,
+            data: result,
+            executionTimeMs: Date.now() - startTime,
+          };
+        },
+      });
+    }
 
     console.log('[GapIntelligence] Registered 11 AI Brain actions');
   }
