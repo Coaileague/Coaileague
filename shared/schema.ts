@@ -12130,6 +12130,318 @@ export type InsertPartnerManualReviewQueue = z.infer<typeof insertPartnerManualR
 export type PartnerManualReviewQueue = typeof partnerManualReviewQueue.$inferSelect;
 
 // ============================================================================
+// BILLING ORCHESTRATION - Invoice Lifecycle & Policy Rules
+// ============================================================================
+
+// Invoice lifecycle state enum
+export const invoiceLifecycleStateEnum = pgEnum('invoice_lifecycle_state', [
+  'computed',           // Hours + rules applied, payload ready
+  'composed',           // Invoice payload created with deterministic hash
+  'ready_to_execute',   // Idempotency guard passed
+  'draft_created',      // Invoice created in QBO as draft
+  'approval_pending',   // Awaiting human approval
+  'approved',           // Human approved, ready to send
+  'sent',               // Invoice sent to customer
+  'paid',               // Payment received
+  'failed',             // Terminal failure state
+  'cancelled',          // Manually cancelled
+]);
+
+// Invoice Lifecycle States - State machine for invoice approval/send workflow
+export const invoiceLifecycleStates = pgTable("invoice_lifecycle_states", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Cycle identification
+  cycleKey: varchar("cycle_key").notNull(), // e.g., "2025-12-21_week_end"
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  
+  // State tracking
+  currentState: invoiceLifecycleStateEnum("current_state").notNull().default('computed'),
+  previousState: invoiceLifecycleStateEnum("previous_state"),
+  stateChangedAt: timestamp("state_changed_at").defaultNow(),
+  stateChangedBy: varchar("state_changed_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Invoice references
+  qboInvoiceId: varchar("qbo_invoice_id"),
+  qboDocNumber: varchar("qbo_doc_number"),
+  invoiceTotal: decimal("invoice_total", { precision: 15, scale: 2 }),
+  
+  // Dedupe key for regeneration detection
+  dedupeKey: varchar("dedupe_key").notNull(),
+  
+  // Approval workflow
+  approvalMode: varchar("approval_mode").notNull().default('auto_send'), // 'auto_send', 'approve', 'hybrid'
+  approvedBy: varchar("approved_by").references(() => users.id, { onDelete: 'set null' }),
+  approvedAt: timestamp("approved_at"),
+  approvalNotes: text("approval_notes"),
+  
+  // Risk signals that triggered approval requirement
+  riskSignals: jsonb("risk_signals"), // Array of risk signals detected
+  
+  // State history
+  stateHistory: jsonb("state_history"), // Array of { state, timestamp, changedBy, reason }
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceCycleIdx: index("invoice_lifecycle_workspace_cycle_idx").on(table.workspaceId, table.cycleKey),
+  clientIdx: index("invoice_lifecycle_client_idx").on(table.clientId),
+  stateIdx: index("invoice_lifecycle_state_idx").on(table.currentState),
+  dedupeIdx: uniqueIndex("invoice_lifecycle_dedupe_idx").on(table.workspaceId, table.cycleKey, table.clientId, table.dedupeKey),
+}));
+
+export const insertInvoiceLifecycleStateSchema = createInsertSchema(invoiceLifecycleStates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertInvoiceLifecycleState = z.infer<typeof insertInvoiceLifecycleStateSchema>;
+export type InvoiceLifecycleState = typeof invoiceLifecycleStates.$inferSelect;
+
+// Billing Policy Profiles - Rules engine for hours calculation
+export const billingPolicyProfiles = pgTable("billing_policy_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Scoping (nullable = org default, specified = override)
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: 'cascade' }),
+  siteId: varchar("site_id"),
+  roleId: varchar("role_id"),
+  
+  // Profile name
+  name: varchar("name").notNull(),
+  isDefault: boolean("is_default").default(false),
+  
+  // Rounding rules
+  billableRounding: varchar("billable_rounding").notNull().default('15_min'), // '1_min', '5_min', '15_min', '30_min'
+  payrollRounding: varchar("payroll_rounding").notNull().default('1_min'),
+  roundingDirection: varchar("rounding_direction").default('nearest'), // 'up', 'down', 'nearest'
+  
+  // Break rules
+  breakRules: jsonb("break_rules"), // { unpaidBreakMinutes: 30, autoDeductBreaks: true, breakThreshold: 360 }
+  
+  // Overtime rules
+  overtimeRules: jsonb("overtime_rules"), // { weekly_threshold: 40, daily_threshold: null, rate_multiplier: 1.5 }
+  doubleTimeRules: jsonb("double_time_rules"), // { daily_threshold: 12, rate_multiplier: 2.0 }
+  
+  // Holiday rules
+  holidayRules: jsonb("holiday_rules"), // { holidays: [...], rate_multiplier: 1.5 }
+  
+  // Invoice grouping
+  invoiceGrouping: varchar("invoice_grouping").default('by_client'), // 'by_client', 'by_site', 'by_role'
+  
+  // Approval mode
+  approvalMode: varchar("approval_mode").default('auto_send'), // 'auto_send', 'approve', 'hybrid'
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("billing_policy_workspace_idx").on(table.workspaceId),
+  clientIdx: index("billing_policy_client_idx").on(table.clientId),
+  defaultIdx: index("billing_policy_default_idx").on(table.workspaceId, table.isDefault),
+}));
+
+export const insertBillingPolicyProfileSchema = createInsertSchema(billingPolicyProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBillingPolicyProfile = z.infer<typeof insertBillingPolicyProfileSchema>;
+export type BillingPolicyProfile = typeof billingPolicyProfiles.$inferSelect;
+
+// Accounting Dimension Mappings - Maps locations/roles to QBO items/classes/departments
+export const accountingDimensionMappings = pgTable("accounting_dimension_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  partnerConnectionId: varchar("partner_connection_id").notNull().references(() => partnerConnections.id, { onDelete: 'cascade' }),
+  
+  // CoAIleague entity reference
+  internalEntityType: varchar("internal_entity_type").notNull(), // 'site', 'role', 'service_type'
+  internalEntityId: varchar("internal_entity_id").notNull(),
+  internalEntityName: varchar("internal_entity_name"),
+  
+  // QBO dimension mappings
+  qboItemId: varchar("qbo_item_id"), // Service item reference
+  qboItemName: varchar("qbo_item_name"),
+  qboClassId: varchar("qbo_class_id"), // Class reference
+  qboClassName: varchar("qbo_class_name"),
+  qboLocationId: varchar("qbo_location_id"), // Location/Department reference
+  qboLocationName: varchar("qbo_location_name"),
+  qboDepartmentId: varchar("qbo_department_id"),
+  qboDepartmentName: varchar("qbo_department_name"),
+  qboProjectId: varchar("qbo_project_id"), // Project/Job reference
+  qboProjectName: varchar("qbo_project_name"),
+  
+  // Default rate (can be overridden by policy profiles)
+  defaultRate: decimal("default_rate", { precision: 10, scale: 2 }),
+  rateCurrency: varchar("rate_currency").default('USD'),
+  
+  // Status
+  status: varchar("status").notNull().default('active'), // 'active', 'needs_review', 'inactive'
+  lastVerifiedAt: timestamp("last_verified_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("accounting_dim_workspace_idx").on(table.workspaceId),
+  connectionIdx: index("accounting_dim_connection_idx").on(table.partnerConnectionId),
+  entityIdx: uniqueIndex("accounting_dim_entity_idx").on(table.workspaceId, table.partnerConnectionId, table.internalEntityType, table.internalEntityId),
+}));
+
+export const insertAccountingDimensionMappingSchema = createInsertSchema(accountingDimensionMappings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertAccountingDimensionMapping = z.infer<typeof insertAccountingDimensionMappingSchema>;
+export type AccountingDimensionMapping = typeof accountingDimensionMappings.$inferSelect;
+
+// Audit Proof Packs - "Explain this invoice" documentation
+export const auditProofPacks = pgTable("audit_proof_packs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Invoice reference
+  invoiceLifecycleId: varchar("invoice_lifecycle_id").references(() => invoiceLifecycleStates.id, { onDelete: 'cascade' }),
+  cycleKey: varchar("cycle_key").notNull(),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  
+  // Pack metadata
+  packChecksum: varchar("pack_checksum").notNull(), // SHA256 of pack contents
+  generatedAt: timestamp("generated_at").defaultNow(),
+  generatedBy: varchar("generated_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Pack contents summary
+  totalHours: decimal("total_hours", { precision: 10, scale: 2 }),
+  totalAmount: decimal("total_amount", { precision: 15, scale: 2 }),
+  shiftCount: integer("shift_count"),
+  employeeCount: integer("employee_count"),
+  
+  // Detailed breakdown
+  billableFacts: jsonb("billable_facts"), // Array of line items with hours, rates, etc.
+  shiftReferences: jsonb("shift_references"), // Array of { shiftId, date, employee, hours, site }
+  policyApplied: jsonb("policy_applied"), // { rounding, overtime_policy, break_rules }
+  changeHistory: jsonb("change_history"), // Edits/approvals made to underlying data
+  
+  // Export URLs
+  pdfUrl: varchar("pdf_url"),
+  csvUrl: varchar("csv_url"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("audit_pack_workspace_idx").on(table.workspaceId),
+  cycleIdx: index("audit_pack_cycle_idx").on(table.cycleKey, table.clientId),
+  checksumIdx: index("audit_pack_checksum_idx").on(table.packChecksum),
+}));
+
+export const insertAuditProofPackSchema = createInsertSchema(auditProofPacks).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertAuditProofPack = z.infer<typeof insertAuditProofPackSchema>;
+export type AuditProofPack = typeof auditProofPacks.$inferSelect;
+
+// Rate Throttle Logs - Realm-scoped rate limiting tracking
+export const rateThrottleLogs = pgTable("rate_throttle_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  realmId: varchar("realm_id").notNull(), // QBO company/realm ID
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Request tracking
+  operation: varchar("operation").notNull(), // 'create_invoice', 'query_customers', etc.
+  priority: varchar("priority").default('normal'), // 'critical', 'high', 'normal', 'low'
+  
+  // Throttle decision
+  wasThrottled: boolean("was_throttled").default(false),
+  delayMs: integer("delay_ms").default(0),
+  retryCount: integer("retry_count").default(0),
+  
+  // Rate limit status at time of request
+  currentBucketSize: integer("current_bucket_size"),
+  maxBucketSize: integer("max_bucket_size"),
+  windowResetAt: timestamp("window_reset_at"),
+  
+  // Result
+  succeeded: boolean("succeeded"),
+  errorType: varchar("error_type"), // 'rate_limited', 'auth_expired', 'validation', etc.
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  realmIdx: index("throttle_realm_idx").on(table.realmId),
+  workspaceIdx: index("throttle_workspace_idx").on(table.workspaceId),
+  operationIdx: index("throttle_operation_idx").on(table.operation),
+  createdAtIdx: index("throttle_created_idx").on(table.createdAt),
+}));
+
+export const insertRateThrottleLogSchema = createInsertSchema(rateThrottleLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertRateThrottleLog = z.infer<typeof insertRateThrottleLogSchema>;
+export type RateThrottleLog = typeof rateThrottleLogs.$inferSelect;
+
+// Exception Triage Queue - Error classification and auto-remediation tracking
+export const exceptionTriageQueue = pgTable("exception_triage_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  realmId: varchar("realm_id"),
+  
+  // Error classification
+  errorType: varchar("error_type").notNull(), // 'auth_expired', 'rate_limited', 'mapping_missing', 'validation', 'duplicate_risk', 'amount_spike'
+  errorCode: varchar("error_code"),
+  errorMessage: text("error_message"),
+  errorContext: jsonb("error_context"), // Structured context about the error
+  
+  // Source tracking
+  sourceWorkflow: varchar("source_workflow"), // 'weekly_invoice', 'payroll_export', etc.
+  sourceCycleKey: varchar("source_cycle_key"),
+  sourceEntityType: varchar("source_entity_type"), // 'invoice', 'customer', 'employee'
+  sourceEntityId: varchar("source_entity_id"),
+  
+  // Recommended action
+  recommendedAction: varchar("recommended_action").notNull(), // 'refresh_token', 'relink_customer', 'retry', 'manual_review'
+  actionDetails: jsonb("action_details"), // Structured action parameters
+  
+  // Resolution
+  status: varchar("status").notNull().default('open'), // 'open', 'auto_resolved', 'manual_resolved', 'escalated', 'ignored'
+  resolutionMethod: varchar("resolution_method"), // 'auto_retry', 'user_action', 'escalated'
+  resolvedBy: varchar("resolved_by").references(() => users.id, { onDelete: 'set null' }),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+  
+  // Retry tracking
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  nextRetryAt: timestamp("next_retry_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("exception_workspace_idx").on(table.workspaceId),
+  errorTypeIdx: index("exception_error_type_idx").on(table.errorType),
+  statusIdx: index("exception_status_idx").on(table.status),
+  sourceIdx: index("exception_source_idx").on(table.sourceWorkflow, table.sourceCycleKey),
+}));
+
+export const insertExceptionTriageQueueSchema = createInsertSchema(exceptionTriageQueue).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertExceptionTriageQueue = z.infer<typeof insertExceptionTriageQueueSchema>;
+export type ExceptionTriageQueue = typeof exceptionTriageQueue.$inferSelect;
+
+// ============================================================================
 // OVERSIGHT EVENTS - 1% Autonomous Oversight Queue
 // ============================================================================
 

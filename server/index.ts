@@ -285,6 +285,14 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize Cleanup Agent:', error);
   }
 
+  try {
+    const { registerBillingOrchestrationActions } = await import('./services/partners/billingOrchestrationService');
+    registerBillingOrchestrationActions();
+    console.log('[Server] Billing Orchestration Service initialized - 99% automation / 1% oversight active');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Billing Orchestration:', error);
+  }
+
   // Initialize Trinity Agent Parity Layer - Replit Agent-equivalent capabilities
   try {
     const { trinityAgentParityLayer } = await import('./services/ai-brain/trinityAgentParityLayer');
