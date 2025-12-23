@@ -32,6 +32,45 @@ import { checkExpiringCertifications } from './complianceAlertService';
 import { platformChangeMonitor } from './ai-brain/platformChangeMonitor';
 import { runAllMaintenanceJobs, maintenanceConfig } from './databaseMaintenance';
 import { platformEventBus, PlatformEvent, EventCategory, EventVisibility } from './platformEventBus';
+import { trinityOrchestrationGovernance } from './ai-brain/trinityOrchestrationGovernance';
+
+// ============================================================================
+// GOVERNANCE GATE - 99% Automation / 1% Human Approval
+// ============================================================================
+
+/**
+ * Apply governance gate before automation execution
+ * Returns true if automation should proceed, false if paused for approval
+ */
+async function applyGovernanceGate(
+  domain: 'scheduling' | 'payroll' | 'invoicing',
+  workspaceId: string,
+  actionDetails: {
+    type: string;
+    affectedRecords: number;
+    estimatedImpact: string;
+  }
+): Promise<{ proceed: boolean; approvalId?: string; reason: string }> {
+  try {
+    const result = await trinityOrchestrationGovernance.evaluateAutomation(
+      domain,
+      workspaceId,
+      actionDetails
+    );
+
+    if (result.requiresHumanApproval) {
+      console.log(`[GOVERNANCE] Automation paused for ${domain}: ${result.reason}`);
+      console.log(`[GOVERNANCE] Approval ID: ${result.approvalId}`);
+      return { proceed: false, approvalId: result.approvalId, reason: result.reason };
+    }
+
+    console.log(`[GOVERNANCE] Automation approved for ${domain}: ${result.reason}`);
+    return { proceed: true, reason: result.reason };
+  } catch (error: any) {
+    console.error(`[GOVERNANCE] Error evaluating automation: ${error.message}`);
+    return { proceed: true, reason: 'Governance check failed, proceeding with caution' };
+  }
+}
 
 // ============================================================================
 // AI BRAIN INTEGRATION - Automation Event Emission
@@ -508,7 +547,34 @@ async function runNightlyInvoiceGeneration() {
                 };
               }
               
-              console.log(`   ✓ New operation confirmed (key ${idem.idempotencyKeyId}), generating invoices...`);
+              console.log(`   ✓ New operation confirmed (key ${idem.idempotencyKeyId}), checking governance...`);
+              
+              // GOVERNANCE GATE: 99% automation / 1% human approval
+              const governanceResult = await applyGovernanceGate('invoicing', workspace.id, {
+                type: 'nightly_invoice_generation',
+                affectedRecords: 0, // Will be determined after generation
+                estimatedImpact: `Generate invoices for ${workspace.name}`,
+              });
+
+              if (!governanceResult.proceed) {
+                console.log(`   ⏸️  Governance paused: ${governanceResult.reason}`);
+                await updateIdempotencyResult({
+                  idempotencyKeyId: idem.idempotencyKeyId,
+                  status: 'pending_approval',
+                  resultMetadata: {
+                    governanceApprovalId: governanceResult.approvalId,
+                    pausedReason: governanceResult.reason,
+                  },
+                });
+                return {
+                  invoicesGenerated: 0,
+                  isPendingApproval: true,
+                  approvalId: governanceResult.approvalId,
+                  idempotencyKeyId: idem.idempotencyKeyId,
+                };
+              }
+
+              console.log(`   ✓ Governance approved, generating invoices...`);
               
               try {
                 // Generate invoices for yesterday's approved time entries
@@ -781,7 +847,34 @@ async function runWeeklyScheduleGeneration() {
                 };
               }
               
-              console.log(`   ✓ New operation confirmed (key ${idem.idempotencyKeyId}), generating schedules...`);
+              console.log(`   ✓ New operation confirmed (key ${idem.idempotencyKeyId}), checking governance...`);
+              
+              // GOVERNANCE GATE: 99% automation / 1% human approval
+              const governanceResult = await applyGovernanceGate('scheduling', workspace.id, {
+                type: 'weekly_schedule_generation',
+                affectedRecords: 0,
+                estimatedImpact: `Generate schedules for ${workspace.name}`,
+              });
+
+              if (!governanceResult.proceed) {
+                console.log(`   ⏸️  Governance paused: ${governanceResult.reason}`);
+                await updateIdempotencyResult({
+                  idempotencyKeyId: idem.idempotencyKeyId,
+                  status: 'pending_approval',
+                  resultMetadata: {
+                    governanceApprovalId: governanceResult.approvalId,
+                    pausedReason: governanceResult.reason,
+                  },
+                });
+                return {
+                  shiftsGenerated: 0,
+                  isPendingApproval: true,
+                  approvalId: governanceResult.approvalId,
+                  idempotencyKeyId: idem.idempotencyKeyId,
+                };
+              }
+
+              console.log(`   ✓ Governance approved, generating schedules...`);
               
               try {
                 // AUTONOMOUS SCHEDULING: Use AI Brain to generate optimal schedules
@@ -1112,7 +1205,36 @@ async function runAutomaticPayrollProcessing() {
                 };
               }
               
-              console.log(`   ✓ New operation confirmed (key ${idem.idempotencyKeyId}), processing payroll...`);
+              console.log(`   ✓ New operation confirmed (key ${idem.idempotencyKeyId}), checking governance...`);
+              
+              // GOVERNANCE GATE: 99% automation / 1% human approval
+              const governanceResult = await applyGovernanceGate('payroll', workspace.id, {
+                type: 'automatic_payroll_processing',
+                affectedRecords: 0,
+                estimatedImpact: `Process payroll for ${workspace.name}`,
+              });
+
+              if (!governanceResult.proceed) {
+                console.log(`   ⏸️  Governance paused: ${governanceResult.reason}`);
+                await updateIdempotencyResult({
+                  idempotencyKeyId: idem.idempotencyKeyId,
+                  status: 'pending_approval',
+                  resultMetadata: {
+                    governanceApprovalId: governanceResult.approvalId,
+                    pausedReason: governanceResult.reason,
+                  },
+                });
+                return {
+                  employeesProcessed: 0,
+                  grossPay: 0,
+                  netPay: 0,
+                  isPendingApproval: true,
+                  approvalId: governanceResult.approvalId,
+                  idempotencyKeyId: idem.idempotencyKeyId,
+                };
+              }
+
+              console.log(`   ✓ Governance approved, processing payroll...`);
               
               try {
                 // Get workspace owner to attribute payroll run

@@ -1296,3 +1296,101 @@ export async function sendAssistedOnboardingHandoff(params: {
 }): Promise<{ success: boolean; error?: string }> {
   return emailService.sendAssistedOnboardingHandoff(params);
 }
+
+/**
+ * Automation email templates
+ */
+const automationEmailTemplates = {
+  approval_required: (data: {
+    firstName: string;
+    domain: string;
+    actionType: string;
+    affectedRecords: number;
+    approvalUrl: string;
+  }) => ({
+    subject: `Action Required: ${data.domain.charAt(0).toUpperCase() + data.domain.slice(1)} Automation Needs Approval`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: #f59e0b; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h2 style="color: white; margin: 0;">Automation Approval Required</h2>
+        </div>
+        <div style="padding: 25px; background-color: #fffbeb; border-radius: 0 0 8px 8px;">
+          <p>Hello ${data.firstName},</p>
+          <p>A <strong>${data.domain}</strong> automation action requires your approval before it can proceed.</p>
+          
+          <div style="background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #fcd34d;">
+            <h3 style="color: #92400e; margin: 0 0 15px 0;">Action Details:</h3>
+            <p style="margin: 5px 0;"><strong>Type:</strong> ${data.actionType}</p>
+            <p style="margin: 5px 0;"><strong>Affected Records:</strong> ${data.affectedRecords}</p>
+            <p style="margin: 5px 0;"><strong>Domain:</strong> ${data.domain.charAt(0).toUpperCase() + data.domain.slice(1)}</p>
+          </div>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.approvalUrl}" 
+               style="background-color: #16a34a; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: 600; display: inline-block; margin-right: 10px;">
+              Approve Action
+            </a>
+          </div>
+          
+          <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+            This automation was flagged for human review as part of CoAIleague's 99% automation / 1% oversight governance model.<br>
+            This is an automated notification from CoAIleague Platform.
+          </p>
+        </div>
+      </div>
+    `
+  }),
+
+  hotpatch_scheduled: (data: {
+    firstName: string;
+    patchTitle: string;
+    scheduledTime: string;
+    affectedComponents: string[];
+  }) => ({
+    subject: `Scheduled Hotpatch: ${data.patchTitle}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background-color: #7c3aed; padding: 20px; border-radius: 8px 8px 0 0;">
+          <h2 style="color: white; margin: 0;">Hotpatch Scheduled</h2>
+        </div>
+        <div style="padding: 25px; background-color: #faf5ff; border-radius: 0 0 8px 8px;">
+          <p>Hello ${data.firstName},</p>
+          <p>A hotpatch has been scheduled for the CoAIleague platform.</p>
+          
+          <div style="background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border: 1px solid #e9d5ff;">
+            <h3 style="color: #7c3aed; margin: 0 0 15px 0;">Patch Details:</h3>
+            <p style="margin: 5px 0;"><strong>Title:</strong> ${data.patchTitle}</p>
+            <p style="margin: 5px 0;"><strong>Scheduled Time:</strong> ${data.scheduledTime}</p>
+            <p style="margin: 5px 0;"><strong>Affected Components:</strong></p>
+            <ul style="margin: 5px 0; padding-left: 20px;">
+              ${data.affectedComponents.map(c => `<li>${c}</li>`).join('')}
+            </ul>
+          </div>
+          
+          <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+            This patch is scheduled during the maintenance window (2:00 AM - 5:00 AM UTC).<br>
+            This is an automated notification from CoAIleague Platform.
+          </p>
+        </div>
+      </div>
+    `
+  }),
+};
+
+/**
+ * Send automation-related emails
+ * Used by Trinity Orchestration Governance service
+ */
+export async function sendAutomationEmail(params: {
+  to: string;
+  type: 'approval_required' | 'hotpatch_scheduled';
+  data: any;
+}): Promise<{ success: boolean; error?: string }> {
+  const template = automationEmailTemplates[params.type];
+  if (!template) {
+    return { success: false, error: `Unknown automation email type: ${params.type}` };
+  }
+
+  const { subject, html } = template(params.data);
+  return emailService.sendEmail(params.to, subject, html, `automation_${params.type}`);
+}

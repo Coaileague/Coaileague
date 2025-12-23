@@ -293,6 +293,14 @@ process.on('SIGTERM', () => {
     console.error('[Server] Warning: Failed to initialize Billing Orchestration:', error);
   }
 
+  try {
+    const { registerOrchestrationGovernanceActions } = await import('./services/ai-brain/trinityOrchestrationGovernance');
+    registerOrchestrationGovernanceActions();
+    console.log('[Server] Trinity Orchestration Governance initialized - 99/1 pattern + hotpatch cadence active');
+  } catch (error) {
+    console.error('[Server] Warning: Failed to initialize Orchestration Governance:', error);
+  }
+
   // Initialize Trinity Agent Parity Layer - Replit Agent-equivalent capabilities
   try {
     const { trinityAgentParityLayer } = await import('./services/ai-brain/trinityAgentParityLayer');

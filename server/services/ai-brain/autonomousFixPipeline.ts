@@ -24,6 +24,7 @@ import { gapIntelligenceService } from './gapIntelligenceService';
 import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
 import { platformEventBus, PlatformEvent } from '../platformEventBus';
 import { GapFinding } from './subagents/domainOpsSubagents';
+import { trinityOrchestrationGovernance, hotpatchCadenceController } from './trinityOrchestrationGovernance';
 
 const execAsync = promisify(exec);
 
@@ -472,6 +473,24 @@ class AutonomousFixPipelineService {
         }
       }
 
+      // HOTPATCH CADENCE ENFORCEMENT: 1 patch/day during maintenance window
+      const hotpatchWindow = await hotpatchCadenceController.checkWindow();
+      if (!hotpatchWindow.allowed) {
+        console.log(`[AutonomousFix] Hotpatch blocked: ${hotpatchWindow.reason}`);
+        console.log(`[AutonomousFix] Next window: ${hotpatchWindow.nextWindowStart.toISOString()}`);
+        this.activeFixes.delete(spec.findingId);
+
+        return {
+          success: false,
+          findingId: spec.findingId,
+          specificationId: `spec_${spec.findingId}`,
+          validationPassed: false,
+          validationErrors: [hotpatchWindow.reason],
+          rollbackAvailable: false,
+          message: `Hotpatch blocked: ${hotpatchWindow.reason}. Next window: ${hotpatchWindow.nextWindowStart.toISOString()}`,
+        };
+      }
+
       // Apply patches (dry run or real)
       if (dryRun) {
         console.log(`[AutonomousFix] DRY RUN - would apply ${spec.patches.length} patches`);
@@ -487,6 +506,10 @@ class AutonomousFixPipelineService {
           message: `DRY RUN: Would apply ${spec.patches.length} patches to ${spec.affectedFiles.length} files`,
         };
       }
+
+      // Record hotpatch cadence (increment daily counter)
+      await hotpatchCadenceController.recordPatch();
+      console.log(`[AutonomousFix] Hotpatch recorded (${hotpatchWindow.patchesToday + 1}/${hotpatchWindow.dailyLimit} today)`);
 
       // Apply patches
       const patchResult = await trinityCodeOps.applyPatches({
