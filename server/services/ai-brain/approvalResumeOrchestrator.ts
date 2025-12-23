@@ -457,11 +457,22 @@ export function registerApprovalResumeActions() {
 
   for (const action of actions) {
     helpaiOrchestrator.registerAction({
-      id: action.id,
+      actionId: action.id,
       name: action.name,
+      category: 'automation',
       description: action.description,
-      parameters: [],
-      handler: action.handler,
+      requiredRoles: ['support', 'admin', 'super_admin'],
+      handler: async (request) => {
+        const startTime = Date.now();
+        const result = await action.handler(request.payload || {});
+        return {
+          success: true,
+          actionId: request.actionId,
+          message: `${action.name} completed`,
+          data: result,
+          executionTimeMs: Date.now() - startTime,
+        };
+      },
     });
   }
 

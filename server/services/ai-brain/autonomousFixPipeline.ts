@@ -843,112 +843,44 @@ class AutonomousFixPipelineService {
   // ==========================================================================
 
   registerActions(): void {
-    helpaiOrchestrator.registerAction('autofix.generate_spec', {
-      handler: async (params) => {
-        const spec = await this.generateFixSpecification(params.findingId);
-        return {
-          success: !!spec,
-          data: spec,
-          message: spec ? `Generated fix spec with ${spec.patches.length} patches` : 'Could not generate fix specification',
-        };
+    const self = this;
+    const actions = [
+      { id: 'autofix.generate_spec', name: 'Generate Fix Spec', desc: 'Generate a fix specification from a gap finding', fn: (p: any) => self.generateFixSpecification(p.findingId) },
+      { id: 'autofix.execute', name: 'Execute Fix', desc: 'Generate and execute a fix for a gap finding', 
+        fn: async (p: any) => {
+          const spec = await self.generateFixSpecification(p.findingId);
+          if (!spec) return { success: false, message: 'Could not generate fix specification' };
+          return self.executeFix(spec, { dryRun: p.dryRun, skipApproval: p.skipApproval, autoCommit: p.autoCommit });
+        } 
       },
-      category: 'autonomous_fix',
-      description: 'Generate a fix specification from a gap finding',
-      parameters: { findingId: 'number' },
-      requiredRole: 'support_engineer',
-    });
+      { id: 'autofix.execute_approved', name: 'Execute Approved', desc: 'Execute a fix that has been approved', fn: (p: any) => self.executeApprovedFix(p.approvalId) },
+      { id: 'autofix.validate', name: 'Validate Changes', desc: 'Validate changes in specified files', fn: (p: any) => self.validateChanges(p.files || []) },
+      { id: 'autofix.restart_workflows', name: 'Restart Workflows', desc: 'Trigger workflow restart after fixes', fn: () => self.restartWorkflows() },
+      { id: 'autofix.get_active', name: 'Get Active Fixes', desc: 'Get currently active fix operations', 
+        fn: () => Array.from(self.getActiveFixes().entries()).map(([id, info]) => ({ findingId: id, ...info })) 
+      },
+    ];
 
-    helpaiOrchestrator.registerAction('autofix.execute', {
-      handler: async (params) => {
-        const spec = await this.generateFixSpecification(params.findingId);
-        if (!spec) {
-          return { success: false, message: 'Could not generate fix specification' };
-        }
-        const result = await this.executeFix(spec, {
-          dryRun: params.dryRun,
-          skipApproval: params.skipApproval,
-          autoCommit: params.autoCommit,
-        });
-        return {
-          success: result.success,
-          data: result,
-          message: result.message,
-        };
-      },
-      category: 'autonomous_fix',
-      description: 'Generate and execute a fix for a gap finding',
-      parameters: {
-        findingId: 'number',
-        dryRun: 'boolean (optional)',
-        skipApproval: 'boolean (optional)',
-        autoCommit: 'boolean (optional)',
-      },
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('autofix.execute_approved', {
-      handler: async (params) => {
-        const result = await this.executeApprovedFix(params.approvalId);
-        return {
-          success: result.success,
-          data: result,
-          message: result.message,
-        };
-      },
-      category: 'autonomous_fix',
-      description: 'Execute a fix that has been approved',
-      parameters: { approvalId: 'string' },
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('autofix.validate', {
-      handler: async (params) => {
-        const result = await this.validateChanges(params.files || []);
-        return {
-          success: result.passed,
-          errors: result.errors,
-          message: result.passed ? 'Validation passed' : `Validation failed: ${result.errors.join(', ')}`,
-        };
-      },
-      category: 'autonomous_fix',
-      description: 'Validate changes in specified files',
-      parameters: { files: 'string[]' },
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('autofix.restart_workflows', {
-      handler: async () => {
-        const success = await this.restartWorkflows();
-        return {
-          success,
-          message: success ? 'Workflows restart triggered' : 'Failed to restart workflows',
-        };
-      },
-      category: 'autonomous_fix',
-      description: 'Trigger workflow restart after fixes',
-      parameters: {},
-      requiredRole: 'support_engineer',
-    });
-
-    helpaiOrchestrator.registerAction('autofix.get_active', {
-      handler: async () => {
-        const active = this.getActiveFixes();
-        const data = Array.from(active.entries()).map(([id, info]) => ({
-          findingId: id,
-          ...info,
-        }));
-        return {
-          success: true,
-          data,
-          count: data.length,
-          message: `${data.length} active fix(es)`,
-        };
-      },
-      category: 'autonomous_fix',
-      description: 'Get currently active fix operations',
-      parameters: {},
-      requiredRole: 'employee',
-    });
+    for (const action of actions) {
+      helpaiOrchestrator.registerAction({
+        actionId: action.id,
+        name: action.name,
+        category: 'autonomous_fix',
+        description: action.desc,
+        requiredRoles: ['support', 'admin', 'super_admin'],
+        handler: async (request) => {
+          const startTime = Date.now();
+          const result = await action.fn(request.payload || {});
+          return {
+            success: true,
+            actionId: request.actionId,
+            message: `${action.name} completed`,
+            data: result,
+            executionTimeMs: Date.now() - startTime,
+          };
+        },
+      });
+    }
 
     console.log('[AutonomousFix] Registered 6 AI Brain actions');
   }
