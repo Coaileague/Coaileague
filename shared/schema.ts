@@ -11921,6 +11921,12 @@ export const partnerDataMappings = pgTable("partner_data_mappings", {
   syncStatus: varchar("sync_status").notNull().default('synced'), // 'synced', 'pending', 'failed', 'conflict'
   lastSyncAt: timestamp("last_sync_at"),
   lastSyncError: text("last_sync_error"),
+  syncToken: varchar("sync_token"), // QBO optimistic concurrency token
+  
+  // Match keys for auto-matching
+  matchEmail: varchar("match_email"), // Primary email for matching
+  matchDisplayName: varchar("match_display_name"), // Display name for matching
+  matchConfidence: decimal("match_confidence", { precision: 5, scale: 2 }), // Auto-match confidence score (0-100)
   
   // Mapping metadata
   mappingSource: varchar("mapping_source").default('manual'), // 'manual', 'auto', 'import'
@@ -11987,6 +11993,141 @@ export const insertOAuthStateSchema = createInsertSchema(oauthStates).omit({
 
 export type InsertOAuthState = z.infer<typeof insertOAuthStateSchema>;
 export type OAuthState = typeof oauthStates.$inferSelect;
+
+// Partner Invoice Idempotency - Prevent duplicate invoice creation in QBO/partners
+export const partnerInvoiceIdempotency = pgTable("partner_invoice_idempotency", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  partnerConnectionId: varchar("partner_connection_id").notNull().references(() => partnerConnections.id, { onDelete: 'cascade' }),
+  
+  // Idempotency key - deterministic hash for deduplication
+  // Format: invoice:{realmId}:{weekEnding}:{clientQboId}:{linesHash}
+  requestId: varchar("request_id").notNull(),
+  
+  // Invoice details
+  coaileagueInvoiceId: varchar("coaileague_invoice_id"), // Our invoice ID
+  partnerInvoiceId: varchar("partner_invoice_id"), // QBO Invoice ID returned
+  partnerInvoiceNumber: varchar("partner_invoice_number"), // QBO Invoice Number
+  
+  // Request/Response tracking
+  requestPayload: jsonb("request_payload"), // What we sent to QBO
+  responsePayload: jsonb("response_payload"), // What QBO returned
+  
+  // Status
+  status: varchar("status").notNull().default('pending'), // 'pending', 'created', 'failed', 'retry'
+  attempts: integer("attempts").default(0),
+  lastAttemptAt: timestamp("last_attempt_at"),
+  lastError: text("last_error"),
+  
+  // Audit
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: 'set null' }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("partner_idempotency_workspace_idx").on(table.workspaceId),
+  connectionIdx: index("partner_idempotency_connection_idx").on(table.partnerConnectionId),
+  requestIdIdx: uniqueIndex("partner_idempotency_request_idx").on(table.workspaceId, table.partnerConnectionId, table.requestId),
+}));
+
+export const insertPartnerInvoiceIdempotencySchema = createInsertSchema(partnerInvoiceIdempotency).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPartnerInvoiceIdempotency = z.infer<typeof insertPartnerInvoiceIdempotencySchema>;
+export type PartnerInvoiceIdempotency = typeof partnerInvoiceIdempotency.$inferSelect;
+
+// Partner Sync Logs - Audit trail for all sync operations
+export const partnerSyncLogs = pgTable("partner_sync_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  partnerConnectionId: varchar("partner_connection_id").notNull().references(() => partnerConnections.id, { onDelete: 'cascade' }),
+  
+  // Sync job details
+  jobType: varchar("job_type").notNull(), // 'initial_sync', 'webhook', 'cdc_poll', 'manual', 'scheduled'
+  entityType: varchar("entity_type"), // 'customer', 'employee', 'invoice', 'all'
+  
+  // Timing
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  durationMs: integer("duration_ms"),
+  
+  // Results
+  status: varchar("status").notNull().default('running'), // 'running', 'completed', 'failed', 'partial'
+  itemsProcessed: integer("items_processed").default(0),
+  itemsCreated: integer("items_created").default(0),
+  itemsUpdated: integer("items_updated").default(0),
+  itemsFailed: integer("items_failed").default(0),
+  
+  // Error tracking
+  errorMessage: text("error_message"),
+  errorDetails: jsonb("error_details"),
+  
+  // Metadata
+  triggeredBy: varchar("triggered_by").references(() => users.id, { onDelete: 'set null' }),
+  metadata: jsonb("metadata"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("partner_sync_workspace_idx").on(table.workspaceId),
+  connectionIdx: index("partner_sync_connection_idx").on(table.partnerConnectionId),
+  jobTypeIdx: index("partner_sync_job_type_idx").on(table.jobType),
+  statusIdx: index("partner_sync_status_idx").on(table.status),
+  startedAtIdx: index("partner_sync_started_idx").on(table.startedAt),
+}));
+
+export const insertPartnerSyncLogSchema = createInsertSchema(partnerSyncLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPartnerSyncLog = z.infer<typeof insertPartnerSyncLogSchema>;
+export type PartnerSyncLog = typeof partnerSyncLogs.$inferSelect;
+
+// Partner Manual Review Queue - For ambiguous auto-matches requiring human review
+export const partnerManualReviewQueue = pgTable("partner_manual_review_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  partnerConnectionId: varchar("partner_connection_id").notNull().references(() => partnerConnections.id, { onDelete: 'cascade' }),
+  
+  // Entity being matched
+  entityType: varchar("entity_type").notNull(), // 'client', 'employee'
+  coaileagueEntityId: varchar("coaileague_entity_id").notNull(),
+  coaileagueEntityName: varchar("coaileague_entity_name"),
+  coaileagueEntityEmail: varchar("coaileague_entity_email"),
+  
+  // Candidate matches from partner
+  candidateMatches: jsonb("candidate_matches").notNull(), // Array of { partnerEntityId, partnerEntityName, matchScore, matchReason }
+  
+  // Status
+  status: varchar("status").notNull().default('pending'), // 'pending', 'resolved', 'skipped', 'auto_created'
+  resolvedMappingId: varchar("resolved_mapping_id").references(() => partnerDataMappings.id, { onDelete: 'set null' }),
+  resolution: varchar("resolution"), // 'linked_existing', 'created_new', 'skipped'
+  
+  // Review tracking
+  assignedTo: varchar("assigned_to").references(() => users.id, { onDelete: 'set null' }),
+  resolvedBy: varchar("resolved_by").references(() => users.id, { onDelete: 'set null' }),
+  resolvedAt: timestamp("resolved_at"),
+  notes: text("notes"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("partner_review_workspace_idx").on(table.workspaceId),
+  connectionIdx: index("partner_review_connection_idx").on(table.partnerConnectionId),
+  statusIdx: index("partner_review_status_idx").on(table.status),
+  entityIdx: index("partner_review_entity_idx").on(table.entityType, table.coaileagueEntityId),
+}));
+
+export const insertPartnerManualReviewQueueSchema = createInsertSchema(partnerManualReviewQueue).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertPartnerManualReviewQueue = z.infer<typeof insertPartnerManualReviewQueueSchema>;
+export type PartnerManualReviewQueue = typeof partnerManualReviewQueue.$inferSelect;
 
 // ============================================================================
 // OVERSIGHT EVENTS - 1% Autonomous Oversight Queue
@@ -13368,6 +13509,7 @@ export const orgInvitations = pgTable("org_invitations", {
   status: varchar("status").default("pending"),
   invitationToken: varchar("invitation_token").unique(),
   invitationTokenExpiry: timestamp("invitation_token_expiry"),
+  uniqueInviteCode: varchar("unique_invite_code", { length: 20 }).unique(),
   acceptedWorkspaceId: varchar("accepted_workspace_id").references(() => workspaces.id, { onDelete: 'set null' }),
   acceptedAt: timestamp("accepted_at"),
   acceptedBy: varchar("accepted_by").references(() => users.id, { onDelete: 'set null' }),
