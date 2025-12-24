@@ -556,7 +556,31 @@ class TrinityThoughtEngine {
     // Compare predicted confidence vs actual outcome
     // Returns value between -1 (overconfident) and 1 (underconfident)
     // 0 means well-calibrated
-    return 0; // Placeholder - would analyze historical predictions
+    
+    // Analyze recent reflections to calculate calibration score
+    const recentReflections = this.reflectionLog
+      .filter(r => r.targetId === targetId)
+      .slice(-10); // Last 10 reflections for this target
+    
+    if (recentReflections.length === 0) {
+      return 0; // No data - assume well-calibrated
+    }
+    
+    // Calculate average deviation between predicted confidence and outcome
+    let calibrationSum = 0;
+    for (const reflection of recentReflections) {
+      const predictedSuccess = (reflection.confidenceCalibration || 0) > 0.5;
+      const actualSuccess = reflection.outcome === 'success';
+      
+      if (predictedSuccess && !actualSuccess) {
+        calibrationSum -= 0.2; // Overconfident
+      } else if (!predictedSuccess && actualSuccess) {
+        calibrationSum += 0.2; // Underconfident
+      }
+    }
+    
+    // Normalize to -1 to 1 range
+    return Math.max(-1, Math.min(1, calibrationSum / recentReflections.length));
   }
 }
 

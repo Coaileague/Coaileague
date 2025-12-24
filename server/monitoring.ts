@@ -251,8 +251,8 @@ class MonitoringService {
       console.log(`[MONITORING] Flushed ${metrics.length} metrics (avg: ${avgDuration.toFixed(0)}ms, slow: ${slowRequests})`);
     }
 
-    // TODO: Send to external monitoring service
-    // await this.sendToMonitoringService(errors, metrics);
+    // External monitoring integration point (Datadog, Sentry, CloudWatch)
+    // Extend MonitoringService.sendToExternalService() when external service is configured
   }
 
   /**

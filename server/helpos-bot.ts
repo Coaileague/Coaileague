@@ -742,11 +742,14 @@ export function getBotConversation(ticketId: string): BotConversation | undefine
 }
 
 /**
- * Check if bot is enabled (can be controlled by settings)
+ * Check if bot is enabled (controlled by environment and API key availability)
  */
 export function isBotEnabled(): boolean {
-  // TODO: Add database setting to enable/disable bot
-  // For now, bot is enabled if OpenAI key is present
+  // Bot is enabled if OpenAI key is present and not explicitly disabled
+  // Workspace-level control available via HELPOS_BOT_DISABLED env var
+  if (process.env.HELPOS_BOT_DISABLED === 'true') {
+    return false;
+  }
   return !!process.env.OPENAI_API_KEY;
 }
 

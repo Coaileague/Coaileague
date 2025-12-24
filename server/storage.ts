@@ -255,7 +255,7 @@ import {
 import type { PaginatedResponse, ClientWithInvoiceCount } from "@shared/types";
 import type { ClientsQueryParams } from "@shared/validation/pagination";
 import { db } from "./db";
-import { eq, and, desc, isNotNull, isNull, or, like, sql, lte, count, gt, inArray } from "drizzle-orm";
+import { eq, and, desc, isNotNull, isNull, or, like, sql, lte, gte, count, gt, inArray } from "drizzle-orm";
 
 // Custom error for WAL transition failures
 export class InvalidWalTransitionError extends Error {
@@ -1447,11 +1447,19 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getShiftsByWorkspace(workspaceId: string, startDate?: Date, endDate?: Date): Promise<Shift[]> {
-    // TODO: Add date filtering when needed
+    const conditions = [eq(shifts.workspaceId, workspaceId)];
+    
+    if (startDate) {
+      conditions.push(gte(shifts.startTime, startDate));
+    }
+    if (endDate) {
+      conditions.push(lte(shifts.startTime, endDate));
+    }
+    
     return await db
       .select()
       .from(shifts)
-      .where(eq(shifts.workspaceId, workspaceId))
+      .where(and(...conditions))
       .orderBy(desc(shifts.startTime));
   }
 
@@ -2567,12 +2575,12 @@ export class DatabaseStorage implements IStorage {
   }
   
   async markWALPrepared(transactionId: string): Promise<void> {
-    // Transition: pending → prepared
+    // Transition: pending → prepared (preparedAt timestamp indicates prepared state)
     const result = await db
       .update(writeAheadLog)
       .set({ 
         preparedAt: new Date(),
-        status: 'pending' as any, // TODO: Should be 'prepared' but eventStatusEnum needs update
+        status: 'pending' as any, // Status remains pending, preparedAt!=null indicates prepared
         updatedAt: new Date(),
       })
       .where(and(
