@@ -895,6 +895,26 @@ export const autonomousFixPipeline = AutonomousFixPipelineService.getInstance();
 export async function initializeAutonomousFixPipeline(): Promise<void> {
   console.log('[AutonomousFix] Initializing Autonomous Fix Pipeline...');
   autonomousFixPipeline.registerActions();
+  
+  // Subscribe to approval_approved events to automatically execute fixes
+  platformEventBus.subscribe('approval_approved', async (event: PlatformEvent) => {
+    const approvalId = event.metadata?.approvalId;
+    if (approvalId) {
+      console.log(`[AutonomousFix] Received approval_approved for ${approvalId} - auto-executing fix...`);
+      try {
+        const result = await autonomousFixPipeline.executeApprovedFix(approvalId);
+        if (result.success) {
+          console.log(`[AutonomousFix] Successfully executed approved fix: ${result.message}`);
+        } else {
+          console.error(`[AutonomousFix] Failed to execute approved fix: ${result.message}`);
+        }
+      } catch (error) {
+        console.error('[AutonomousFix] Error auto-executing approved fix:', error);
+      }
+    }
+  });
+  console.log('[AutonomousFix] Subscribed to approval_approved events for auto-execution');
+  
   console.log('[AutonomousFix] Autonomous Fix Pipeline initialized');
 }
 
