@@ -422,7 +422,7 @@ process.on('SIGTERM', () => {
   // Initialize Workflow Orchestration Services - Fortune 500 pipeline governance
   try {
     const { initializeOrchestrationServices: initWorkflowOrchestration } = await import('./services/orchestration/index');
-    initWorkflowOrchestration();
+    await initWorkflowOrchestration();
     console.log('[Server] Workflow Orchestration Services initialized - 33 actions registered');
   } catch (error) {
     console.error('[Server] Warning: Failed to initialize Workflow Orchestration Services:', error);

@@ -640,6 +640,145 @@ class PolicyDecisionPoint {
       status,
     };
   }
+
+  /**
+   * Seed default ABAC policies for integrations and data migration
+   */
+  async seedIntegrationPolicies(): Promise<{ created: number; skipped: number }> {
+    let created = 0;
+    let skipped = 0;
+
+    const defaultPolicies = [
+      {
+        name: 'Integration Management - Workspace Admins',
+        description: 'Allow workspace admins and owners to manage integrations',
+        isGlobal: true,
+        effect: 'allow' as const,
+        priority: 50,
+        subjectConditions: { role: ['owner', 'admin'], entityType: 'human' },
+        resourceType: 'domain',
+        resourcePattern: 'integrations:*',
+        contextConditions: { hasWorkspaceContext: true },
+        actions: ['execute', 'read', 'write'],
+        isActive: true,
+      },
+      {
+        name: 'Data Migration - Elevated Roles Only',
+        description: 'Require elevated roles or approval for data migration operations',
+        isGlobal: true,
+        effect: 'allow' as const,
+        priority: 40,
+        subjectConditions: { role: ['support_manager', 'sysop', 'deputy_admin', 'root_admin'], entityType: 'human' },
+        resourceType: 'domain',
+        resourcePattern: 'data_migration:*',
+        contextConditions: { elevatedSession: true },
+        actions: ['execute'],
+        isActive: true,
+      },
+      {
+        name: 'Data Migration - Workspace Context Required',
+        description: 'Data migration requires workspace context and owner/admin role',
+        isGlobal: true,
+        effect: 'require_approval' as const,
+        priority: 45,
+        subjectConditions: { role: ['owner', 'admin'], entityType: 'human' },
+        resourceType: 'domain',
+        resourcePattern: 'data_migration:*',
+        contextConditions: { hasWorkspaceContext: true, transactionRisk: 'medium' },
+        actions: ['execute'],
+        isActive: true,
+      },
+      {
+        name: 'QuickBooks OAuth - Workspace Admins',
+        description: 'Allow workspace admins to initiate QuickBooks OAuth flow',
+        isGlobal: true,
+        effect: 'allow' as const,
+        priority: 50,
+        subjectConditions: { role: ['owner', 'admin'], entityType: 'human' },
+        resourceType: 'action',
+        resourcePattern: 'quickbooks.oauth',
+        contextConditions: { hasWorkspaceContext: true },
+        actions: ['execute'],
+        isActive: true,
+      },
+      {
+        name: 'Automation Trigger Management - Managers and Above',
+        description: 'Allow managers and above to configure automation triggers',
+        isGlobal: true,
+        effect: 'allow' as const,
+        priority: 50,
+        subjectConditions: { role: ['manager', 'owner', 'admin'], entityType: 'human' },
+        resourceType: 'domain',
+        resourcePattern: 'automation:*',
+        contextConditions: { hasWorkspaceContext: true },
+        actions: ['read', 'write', 'execute'],
+        isActive: true,
+      },
+      {
+        name: 'Onboarding Flow Management - Elevated Support',
+        description: 'Support staff with elevated sessions can manage onboarding flows',
+        isGlobal: true,
+        effect: 'allow' as const,
+        priority: 30,
+        subjectConditions: { role: ['support_agent', 'support_manager', 'sysop'], entityType: 'human' },
+        resourceType: 'domain',
+        resourcePattern: 'onboarding:*',
+        contextConditions: { elevatedSession: true },
+        actions: ['read', 'write', 'execute'],
+        isActive: true,
+      },
+      {
+        name: 'Trinity Integration Access',
+        description: 'Trinity AI has full access to integration and automation domains',
+        isGlobal: true,
+        effect: 'allow' as const,
+        priority: 10,
+        subjectConditions: { entityType: 'trinity' },
+        resourceType: 'domain',
+        resourcePattern: '*',
+        contextConditions: {},
+        actions: ['read', 'write', 'execute'],
+        isActive: true,
+      },
+    ];
+
+    for (const policy of defaultPolicies) {
+      try {
+        const existing = await db.select()
+          .from(accessPolicies)
+          .where(and(
+            eq(accessPolicies.name, policy.name),
+            eq(accessPolicies.isGlobal, true)
+          ))
+          .limit(1);
+
+        if (existing.length > 0) {
+          skipped++;
+          continue;
+        }
+
+        await db.insert(accessPolicies).values({
+          name: policy.name,
+          description: policy.description,
+          isGlobal: policy.isGlobal,
+          effect: policy.effect,
+          priority: policy.priority,
+          subjectConditions: policy.subjectConditions,
+          resourceType: policy.resourceType,
+          resourcePattern: policy.resourcePattern,
+          contextConditions: policy.contextConditions,
+          actions: policy.actions,
+          isActive: policy.isActive,
+        });
+        created++;
+      } catch (error) {
+        console.warn(`[PDP] Failed to seed policy ${policy.name}:`, error);
+      }
+    }
+
+    console.log(`[PDP] Seeded ${created} policies, skipped ${skipped} existing`);
+    return { created, skipped };
+  }
 }
 
 export const policyDecisionPoint = PolicyDecisionPoint.getInstance();
