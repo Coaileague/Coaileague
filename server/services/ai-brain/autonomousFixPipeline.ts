@@ -747,31 +747,86 @@ class AutonomousFixPipelineService {
     let validatedSpec: FixSpecification | null = null;
     let lastOperationId: string | undefined;
     
-    // Run iterative fix loop with reflection
+    // Helper to read file contents for reflection
+    const readFileContents = async (): Promise<Map<string, string>> => {
+      const contents = new Map<string, string>();
+      const filePath = finding.filePath;
+      if (filePath) {
+        try {
+          const fullPath = path.resolve(this.projectRoot, filePath);
+          if (fs.existsSync(fullPath)) {
+            contents.set(filePath, fs.readFileSync(fullPath, 'utf-8'));
+          }
+        } catch (e) {
+          console.warn(`[AutonomousFix] Could not read ${filePath} for reflection`);
+        }
+      }
+      return contents;
+    };
+
+    // Run iterative fix loop with reflection (now with revisedPatches support)
     const iterationResult = await trinityReflectionEngine.runIterativeFixLoop(
       findingId,
       finding.description,
       finding.filePath ? [finding.filePath] : [],
-      async (attempt, suggestedApproach) => {
+      async (attempt, suggestedApproach, revisedPatches) => {
         // Rollback previous attempt if it exists
         if (lastOperationId) {
           await trinityCodeOps.rollbackOperation(lastOperationId);
           lastOperationId = undefined;
         }
         
-        // Generate spec - on retry, incorporate the reflection feedback
-        const baseSpec = await this.generateFixSpecification(findingId);
-        if (!baseSpec) {
-          return { success: false, patches: [] };
-        }
+        let patchesToApply: PatchOperation[];
+        let approach: string;
         
-        // For retries, the suggestedApproach contains specific guidance from reflection
-        // In a full implementation, this would modify the actual patches
-        // For now, we document the adjustment in the approach
-        if (suggestedApproach && attempt > 1) {
-          baseSpec.approach = `[Attempt ${attempt} - Reflection-guided]: ${suggestedApproach}\n\nOriginal: ${baseSpec.approach}`;
-          // Note: A production implementation would regenerate patches based on reflection
-          console.log(`[AutonomousFix] Attempt ${attempt} using reflection guidance: ${suggestedApproach.substring(0, 100)}...`);
+        // Use AI-generated revised patches if available (from reflection)
+        if (revisedPatches && revisedPatches.length > 0 && attempt > 1) {
+          console.log(`[AutonomousFix] Using ${revisedPatches.length} AI-revised patches for attempt ${attempt}`);
+          
+          // Convert reflection patches to valid PatchOperation format
+          // Reflection format: {operation, file, search, replace, line}
+          // PatchOperation format: {type, file, startLine, endLine, oldContent, newContent, description}
+          patchesToApply = revisedPatches.map((p: any): PatchOperation => ({
+            type: (p.operation || 'replace') as 'insert' | 'delete' | 'replace',
+            file: p.file,
+            startLine: p.line,
+            endLine: p.line,
+            oldContent: p.search || undefined,
+            newContent: p.replace || undefined,
+            description: `AI-generated fix: ${p.operation || 'replace'} in ${p.file}`,
+          }));
+          approach = `[Attempt ${attempt} - AI-Revised]: ${suggestedApproach || 'Reflection-generated patches'}`;
+          
+          // Create a spec from the revised patches
+          const affectedFiles = [...new Set(patchesToApply.map(p => p.file))];
+          validatedSpec = {
+            findingId,
+            title: `Fix: ${finding.title?.substring(0, 100) || 'Unknown issue'}`,
+            approach,
+            patches: patchesToApply,
+            affectedFiles,
+            rollbackPlan: 'Git revert to previous commit',
+            riskLevel: 'medium',
+            confidence: 0.75,
+            requiresApproval: false,
+            estimatedImpact: `AI-revised fix modifies ${affectedFiles.length} file(s)`,
+          };
+        } else {
+          // First attempt or no revised patches - generate fresh spec
+          const baseSpec = await this.generateFixSpecification(findingId);
+          if (!baseSpec) {
+            return { success: false, patches: [] };
+          }
+          
+          // For retries without revised patches, incorporate approach guidance
+          if (suggestedApproach && attempt > 1) {
+            baseSpec.approach = `[Attempt ${attempt} - Reflection-guided]: ${suggestedApproach}\n\nOriginal: ${baseSpec.approach}`;
+            console.log(`[AutonomousFix] Attempt ${attempt} using reflection guidance: ${suggestedApproach.substring(0, 100)}...`);
+          }
+          
+          patchesToApply = baseSpec.patches;
+          approach = baseSpec.approach;
+          validatedSpec = baseSpec;
         }
         
         // Apply patches (without commit)
@@ -782,17 +837,14 @@ class AutonomousFixPipelineService {
           operationId,
           workspaceId: 'platform',
           userId: 'trinity',
-          patches: baseSpec.patches,
+          patches: patchesToApply,
           autoCommit: false,
-          reasoning: baseSpec.approach,
+          reasoning: approach,
         });
         
-        if (patchResult.success) {
-          validatedSpec = baseSpec;
-        }
-        
-        return { success: patchResult.success, patches: baseSpec.patches };
-      }
+        return { success: patchResult.success, patches: patchesToApply };
+      },
+      readFileContents
     );
     
     if (!iterationResult.success) {
