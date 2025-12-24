@@ -3,8 +3,8 @@
  * Provides offline support and caching for PWA functionality
  */
 
-const CACHE_NAME = 'autoforce-v1.0.1';
-const RUNTIME_CACHE = 'autoforce-runtime-v1.0.1';
+const CACHE_NAME = 'autoforce-v1.0.2';
+const RUNTIME_CACHE = 'autoforce-runtime-v1.0.2';
 
 // Assets to precache on install (app shell)
 const STATIC_ASSETS = [
