@@ -172,6 +172,14 @@ self.addEventListener('push', (event) => {
   );
 });
 
+// Handle skip waiting message from client
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[AutoForce™ SW] Skip waiting triggered');
+    self.skipWaiting();
+  }
+});
+
 // Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
