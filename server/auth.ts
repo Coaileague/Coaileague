@@ -184,6 +184,16 @@ export function getSession() {
 // ============================================================================
 
 export const requireAuth: RequestHandler = async (req, res, next) => {
+  // Debug: Log session state for workspace/access endpoint
+  if (req.path.includes('workspace/access')) {
+    console.log('[Auth Debug] /api/workspace/access request:', {
+      path: req.path,
+      sessionId: req.session?.id,
+      userId: req.session?.userId,
+      hasCookie: !!req.headers.cookie,
+    });
+  }
+  
   if (!req.session?.userId) {
     return res.status(401).json({ message: "Unauthorized - Please login" });
   }
