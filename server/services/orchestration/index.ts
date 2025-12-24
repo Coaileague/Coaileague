@@ -18,6 +18,7 @@ import { notificationAcknowledgmentService, registerNotificationAckActions } fro
 import { scheduleLifecycleOrchestrator, registerScheduleLifecycleActions } from './scheduleLifecycleOrchestrator';
 import { onboardingQuickBooksFlow } from './onboardingQuickBooksFlow';
 import { automationTriggerService } from './automationTriggerService';
+import { policyDecisionPoint } from '../uacp/policyDecisionPoint';
 
 export {
   onboardingStateMachine,
@@ -29,7 +30,7 @@ export {
   automationTriggerService,
 };
 
-export function initializeOrchestrationServices(): void {
+export async function initializeOrchestrationServices(): Promise<void> {
   console.log('[Orchestration] Initializing workflow orchestration services...');
 
   registerOnboardingActions(helpaiOrchestrator);
@@ -41,8 +42,10 @@ export function initializeOrchestrationServices(): void {
   onboardingQuickBooksFlow.loadFlows();
   automationTriggerService.loadTriggers();
   
+  await policyDecisionPoint.seedIntegrationPolicies();
+  
   console.log('[Orchestration] All orchestration services initialized');
-  console.log('[Orchestration] Services: Onboarding, Approval Gates, Exceptions, Notifications, Schedule Lifecycle, QuickBooks Flow, Automation Triggers');
+  console.log('[Orchestration] Services: Onboarding, Approval Gates, Exceptions, Notifications, Schedule Lifecycle, QuickBooks Flow, Automation Triggers, ABAC Policies');
 }
 
 export function getOrchestrationStats(): {
