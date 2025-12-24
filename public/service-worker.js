@@ -3,8 +3,8 @@
  * Provides offline support and caching for PWA functionality
  */
 
-const CACHE_NAME = 'autoforce-v1.0.2';
-const RUNTIME_CACHE = 'autoforce-runtime-v1.0.2';
+const CACHE_NAME = 'autoforce-v1.0.3';
+const RUNTIME_CACHE = 'autoforce-runtime-v1.0.3';
 
 // Assets to precache on install (app shell)
 const STATIC_ASSETS = [
@@ -82,7 +82,8 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // App shell (HTML, JS, CSS) - cache first, update in background
+  // App shell (HTML, JS, CSS) - NETWORK FIRST to ensure latest code
+  // Changed from cache-first to prevent stale JavaScript bundles
   if (
     url.pathname.endsWith('.html') ||
     url.pathname.endsWith('.js') ||
@@ -90,23 +91,26 @@ self.addEventListener('fetch', (event) => {
     url.pathname === '/'
   ) {
     event.respondWith(
-      caches.match(request).then(cached => {
-        const fetchPromise = fetch(request).then(response => {
+      fetch(request)
+        .then(response => {
           if (response.ok) {
             caches.open(CACHE_NAME).then(cache => {
               cache.put(request, response.clone());
             });
           }
           return response;
-        });
-        return cached || fetchPromise;
-      }).catch(() => {
-        // Fallback to index.html for navigation requests
-        if (request.destination === 'document') {
-          return caches.match('/index.html');
-        }
-        return new Response('Offline', { status: 503 });
-      })
+        })
+        .catch(() => {
+          // Fallback to cache only when offline
+          return caches.match(request).then(cached => {
+            if (cached) return cached;
+            // Final fallback to index.html for navigation requests
+            if (request.destination === 'document') {
+              return caches.match('/index.html');
+            }
+            return new Response('Offline', { status: 503 });
+          });
+        })
     );
     return;
   }
