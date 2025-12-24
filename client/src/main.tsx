@@ -33,23 +33,54 @@ if (import.meta.env.DEV) {
 
 createRoot(document.getElementById("root")!).render(<App />);
 
-// Register service worker for PWA support and push notifications
+// Force clear old service workers and caches on version mismatch
+const APP_VERSION = 'v1.0.3';
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/service-worker.js')
-      .then((registration) => {
-        console.log('[CoAIleague] Service Worker registered', registration.scope);
+  window.addEventListener('load', async () => {
+    try {
+      // First, unregister any existing service workers to force fresh registration
+      const registrations = await navigator.serviceWorker.getRegistrations();
+      for (const registration of registrations) {
+        // Check if this is an outdated service worker by forcing update check
+        await registration.update();
         
-        // Check for updates periodically in production
-        if (import.meta.env.PROD) {
-          setInterval(() => {
-            registration.update();
-          }, 60000); // Check every minute
+        // If there's a waiting worker, activate it immediately
+        if (registration.waiting) {
+          registration.waiting.postMessage({ type: 'SKIP_WAITING' });
         }
-      })
-      .catch((error) => {
-        console.error('[CoAIleague] Service Worker registration failed', error);
+      }
+      
+      // Clear all caches to ensure fresh content
+      if ('caches' in window) {
+        const cacheNames = await caches.keys();
+        const oldCaches = cacheNames.filter(name => !name.includes(APP_VERSION.replace('v', '')));
+        await Promise.all(oldCaches.map(name => {
+          console.log('[CoAIleague] Clearing old cache:', name);
+          return caches.delete(name);
+        }));
+      }
+      
+      // Register the service worker with cache-busting query param
+      const registration = await navigator.serviceWorker.register(`/service-worker.js?v=${APP_VERSION}`);
+      console.log('[CoAIleague] Service Worker registered', registration.scope);
+      
+      // Listen for updates
+      registration.addEventListener('updatefound', () => {
+        const newWorker = registration.installing;
+        if (newWorker) {
+          newWorker.addEventListener('statechange', () => {
+            if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+              console.log('[CoAIleague] New version available, reloading...');
+              window.location.reload();
+            }
+          });
+        }
       });
+      
+      // Check for updates periodically
+      setInterval(() => registration.update(), 60000);
+    } catch (error) {
+      console.error('[CoAIleague] Service Worker setup failed', error);
+    }
   });
 }
