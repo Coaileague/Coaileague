@@ -33,8 +33,8 @@ const onboardingSteps: OnboardingStep[] = [
     icon: Sparkles,
     features: [
       "4 Feature Families with 20+ integrated modules",
-      "Replace 5+ legacy HR systems with one unified platform",
-      "Save $255k annually with automation",
+      "Consolidate multiple HR workflows into one unified platform",
+      "Potential savings up to $255K annually with automation*",
       "Enterprise-grade security (SOC 2, GDPR, ISO 27001)"
     ]
   },
@@ -410,6 +410,15 @@ export function OnboardingWizard({ isOpen, onClose }: OnboardingWizardProps) {
                   {isMobile && currentStep.features.length > 3 && (
                     <div className="text-[9px] text-muted-foreground text-center">
                       +{currentStep.features.length - 3} more
+                    </div>
+                  )}
+                  {/* FTC Disclaimer for savings claims */}
+                  {currentStep.id === "welcome" && (
+                    <div className={cn(
+                      "text-muted-foreground text-center border-t pt-2 mt-2",
+                      isMobile ? "text-[8px]" : "text-[10px]"
+                    )}>
+                      *Savings estimates based on U.S. Bureau of Labor Statistics median wages. Actual results vary by organization.
                     </div>
                   )}
                 </div>

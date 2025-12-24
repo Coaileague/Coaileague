@@ -111,7 +111,7 @@ export default function CommunicationFamilyPage() {
               <div className="space-y-2">
                 <h3 className="font-bold text-lg">⚡ Unified Platform</h3>
                 <p className="text-sm text-muted-foreground">
-                  One platform for chatrooms, DMs, and support - eliminating the need for multiple tools
+                  One platform for chatrooms, DMs, and support - reducing the need for multiple tools
                 </p>
               </div>
               <div className="space-y-2">

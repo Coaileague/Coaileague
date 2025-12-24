@@ -1,9 +1,10 @@
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Lock, CheckCircle2, Clock, TrendingUp, Crown } from "lucide-react";
+import { Lock, CheckCircle2, Clock, TrendingUp, Crown, Info } from "lucide-react";
 import type { PremiumFeature } from "@/data/premiumFeatures";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface FeatureCardProps {
   feature: PremiumFeature;
@@ -83,12 +84,20 @@ export function FeatureCard({ feature, isLocked, onUnlock, className }: FeatureC
           "bg-[hsl(var(--cad-green))]/10 border border-[hsl(var(--cad-green))]/20"
         )}>
           <TrendingUp className="h-4 w-4 text-[hsl(var(--cad-green))]" />
-          <div>
-            <div className="text-xs font-semibold text-[hsl(var(--cad-green))]">
+          <div className="flex-1">
+            <div className="text-xs font-semibold text-[hsl(var(--cad-green))] flex items-center gap-1">
               {feature.savings.label}
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-3 w-3 cursor-help opacity-70" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p className="text-xs">Estimates based on BLS median wages. Actual results vary by organization.</p>
+                </TooltipContent>
+              </Tooltip>
             </div>
             <div className="text-xs cad-text-tertiary">
-              ${feature.savings.value.toLocaleString()}/year saved
+              Up to ${feature.savings.value.toLocaleString()}/year potential savings
             </div>
           </div>
         </div>

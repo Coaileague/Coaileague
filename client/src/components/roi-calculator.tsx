@@ -185,13 +185,18 @@ export function ROICalculator({ feature }: ROICalculatorProps) {
           </div>
           <div className="h-px bg-[hsl(var(--cad-border))]" />
           <div className="flex justify-between text-xs font-semibold">
-            <span className="text-[hsl(var(--cad-green))]">Net Annual Savings</span>
+            <span className="text-[hsl(var(--cad-green))]">Potential Net Annual Savings</span>
             <span className="font-mono text-[hsl(var(--cad-green))]">
-              ${roi.netAnnualSavings.toLocaleString()}/yr
+              Up to ${roi.netAnnualSavings.toLocaleString()}/yr
             </span>
           </div>
         </CardContent>
       </Card>
+
+      {/* FTC Disclaimer */}
+      <p className="text-[10px] cad-text-tertiary text-center mt-2">
+        *Savings estimates based on U.S. Bureau of Labor Statistics median wages. Actual results vary by organization size, industry, and implementation.
+      </p>
     </div>
   );
 }

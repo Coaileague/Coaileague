@@ -24,12 +24,12 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
   {
     id: 'smart-schedule-ai',
     name: 'Smart Schedule AI',
-    description: 'AI-powered scheduling that eliminates conflicts and optimizes coverage automatically',
+    description: 'AI-powered scheduling that reduces conflicts and optimizes coverage automatically',
     icon: Zap,
     tier: 'professional',
     price: 0, // Included in Starter+ plans
     savings: {
-      label: 'Replaces Workforce Scheduler ($77.5K/year)',
+      label: 'Automates scheduling coordinator tasks (up to $77.5K potential savings)*',
       value: 77500,
     },
     benefits: [
@@ -48,12 +48,12 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
   {
     id: 'auto-payroll',
     name: 'Auto-Payroll',
-    description: 'Automatic payroll processing with tax calculations and direct deposit',
+    description: 'Automatic payroll processing with tax calculations and direct deposit integration',
     icon: DollarSign,
     tier: 'professional',
     price: 0, // Included in Starter+ plans
     savings: {
-      label: 'Replaces Senior Payroll Specialist ($90K/year)',
+      label: 'Automates payroll processing tasks (up to $90K potential savings)*',
       value: 90000,
     },
     benefits: [
@@ -100,7 +100,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'professional',
     price: 0, // Included in Starter+ plans
     savings: {
-      label: 'Replaces Senior Billing Specialist ($85K/year)',
+      label: 'Automates billing tasks (up to $85K potential savings)*',
       value: 85000,
     },
     benefits: [
@@ -124,7 +124,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'professional',
     price: 0, // Included in Professional+ plans
     savings: {
-      label: 'Part of HR Operations ($82.5K/year position)',
+      label: 'Streamlines HR recruiting workflows (up to $30K potential savings)*',
       value: 30000, // Partial value attribution
     },
     benefits: [
@@ -147,7 +147,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'professional',
     price: 0, // Included in Professional+ plans
     savings: {
-      label: 'Part of Admin Operations Manager role ($97.5K/year)',
+      label: 'Automates reporting tasks (up to $40K potential savings)*',
       value: 40000, // Partial value attribution
     },
     benefits: [
@@ -170,7 +170,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'professional',
     price: 0, // Included in Professional+ plans
     savings: {
-      label: 'Part of HR Operations Analyst role ($82.5K/year)',
+      label: 'Streamlines benefits management (up to $30K potential savings)*',
       value: 30000, // Partial value attribution
     },
     benefits: [
@@ -194,7 +194,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'enterprise',
     price: 0, // Included in Enterprise plan
     savings: {
-      label: 'Eliminates regional admin overhead (3+ positions)',
+      label: 'Reduces regional admin overhead (up to $250K potential savings)*',
       value: 250000, // Typical enterprise efficiency gains
     },
     benefits: [
@@ -217,7 +217,7 @@ export const PREMIUM_FEATURES: PremiumFeature[] = [
     tier: 'professional',
     price: 0, // Included in Professional+ plans
     savings: {
-      label: 'Part of HR Operations Analyst role ($82.5K/year)',
+      label: 'Streamlines training management (up to $22K potential savings)*',
       value: 22000, // Partial value attribution
     },
     benefits: [

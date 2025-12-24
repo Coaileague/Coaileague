@@ -162,7 +162,7 @@ export default function AccountingIntegrations() {
             <div>
               <h3 className="font-semibold mb-1">Streamline Your Payroll Operations</h3>
               <p className="text-sm text-muted-foreground">
-                Connecting your accounting software eliminates manual data entry, reduces errors, and ensures your financial records are always in sync with your workforce management system.
+                Connecting your accounting software significantly reduces manual data entry, minimizes errors, and helps keep your financial records in sync with your workforce management system.
               </p>
             </div>
           </div>

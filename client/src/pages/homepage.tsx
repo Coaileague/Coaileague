@@ -6,6 +6,7 @@ import {
 import { Link } from 'wouter';
 import { UniversalHeader } from '@/components/universal-header';
 import { Footer } from '@/components/footer';
+import { FTCDisclaimer } from '@/components/ftc-disclaimer';
 
 export default function Homepage() {
   // Hide the pre-React loading screen on public pages
@@ -24,28 +25,28 @@ export default function Homepage() {
       icon: Calendar,
       title: 'Autonomous Scheduling',
       subtitle: 'AI-Powered Staffing',
-      description: 'Automatically schedules your entire workforce based on availability, skills, labor laws, and demand patterns. Eliminates manual scheduling completely.',
-      stats: '75% reduction in scheduling time',
+      description: 'Automates workforce scheduling based on availability, skills, labor laws, and demand patterns. Reduces manual scheduling effort significantly.',
+      stats: 'Up to 75% reduction in scheduling time',
       color: 'blue',
-      savings: 'Save 20+ hours per week'
+      savings: 'Save up to 20+ hours per week'
     },
     {
       icon: DollarSign,
       title: 'Autonomous Payroll',
       subtitle: 'Integrates with Gusto & QuickBooks',
-      description: 'Syncs time entries, calculates wages, and processes payroll automatically through your existing Gusto or QuickBooks subscription. Zero manual data entry.',
-      stats: '100% payroll accuracy',
+      description: 'Syncs time entries, calculates wages, and processes payroll automatically through your existing Gusto or QuickBooks subscription. Minimizes manual data entry.',
+      stats: 'High-accuracy payroll sync',
       color: 'blue',
-      savings: 'Cut payroll costs by 60%'
+      savings: 'Reduce payroll processing time'
     },
     {
       icon: FileText,
       title: 'Autonomous Invoicing',
       subtitle: 'Smart Client Billing',
       description: 'Automatically generates and sends invoices to your end clients based on completed shifts and services. Tracks payments and sends reminders.',
-      stats: '3x faster payment collection',
+      stats: 'Faster payment collection',
       color: 'purple',
-      savings: 'Eliminate billing delays'
+      savings: 'Reduce billing delays'
     }
   ];
 
@@ -72,15 +73,15 @@ export default function Homepage() {
                 <span className="sm:hidden">CoAIleague AI</span>
               </div>
               <h1 className="text-xl sm:text-2xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 leading-tight break-words">
-                Replace $100K+ in
+                Automate Up to $100K+ in
                 <br />
                 <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600">
-                  Admin Costs
+                  Admin Workloads
                 </span>
               </h1>
               <p className="text-xs sm:text-sm md:text-lg lg:text-xl text-gray-700 mb-4 sm:mb-6 leading-relaxed">
                 Let <strong className="text-gray-900">CoAIleague AI Brain</strong> autonomously handle your scheduling, payroll processing, and client invoicing. 
-                <strong className="text-blue-600"> Save hundreds of thousands annually</strong> on HR and admin staff.
+                <strong className="text-blue-600"> Reduce administrative overhead significantly.</strong>
               </p>
               
               {/* ROI Calculator Style Box */}
@@ -91,13 +92,13 @@ export default function Homepage() {
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <div className="min-w-0">
-                    <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1 break-words">$140K+</div>
-                    <div className="text-xs sm:text-sm text-gray-600 break-words">Eliminated salary costs</div>
-                    <div className="text-xs text-gray-500 mt-1 break-words">2-3 admin roles at $60K avg</div>
+                    <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1 break-words">Up to $140K</div>
+                    <div className="text-xs sm:text-sm text-gray-600 break-words">Potential labor cost reduction*</div>
+                    <div className="text-xs text-gray-500 mt-1 break-words">Varies by organization size</div>
                   </div>
                   <div className="min-w-0">
-                    <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1 break-words">$50K+</div>
-                    <div className="text-xs sm:text-sm text-gray-600 break-words">Reduced overtime waste</div>
+                    <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1 break-words">Up to $50K</div>
+                    <div className="text-xs sm:text-sm text-gray-600 break-words">Reduced overtime costs*</div>
                     <div className="text-xs text-gray-500 mt-1 break-words">Smarter scheduling & allocation</div>
                   </div>
                 </div>
@@ -228,8 +229,8 @@ export default function Homepage() {
                     <DollarSign className="w-6 h-6 text-white" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-blue-600">$190K+</div>
-                    <div className="text-xs text-gray-500">Avg. Annual Savings</div>
+                    <div className="text-2xl font-bold text-blue-600">Up to $190K</div>
+                    <div className="text-xs text-gray-500">Potential Annual Savings*</div>
                   </div>
                 </div>
               </div>
@@ -247,13 +248,13 @@ export default function Homepage() {
               Powered by CoAIleague AI Brain — Neural Workforce Engine
             </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
-              AI Replaces Your Most Expensive Staff
+              AI Automates Your Most Time-Consuming Tasks
             </h2>
             <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-4">
-              <strong className="text-gray-900">Fire-and-forget AI systems</strong> that work 24/7 without sick days, vacations, or raises.
+              <strong className="text-gray-900">Always-on automation</strong> that works 24/7, handling repetitive administrative work so your team can focus on higher-value activities.
             </p>
             <p className="text-lg text-blue-600 font-bold">
-              Stop paying $40K-$70K salaries for tasks AI does better
+              Reduce time spent on manual scheduling, payroll, and billing tasks
             </p>
           </div>
 
@@ -286,21 +287,21 @@ export default function Homepage() {
                 
                 <p className="text-gray-600 mb-6 leading-relaxed">{feature.description}</p>
                 
-                {/* Cost Replacement Highlight */}
+                {/* Cost Reduction Highlight */}
                 <div className="bg-gradient-to-r from-blue-50 to-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
                   <div className="flex items-center gap-2 mb-2">
                     <DollarSign className="w-5 h-5 text-blue-600" />
-                    <span className="text-sm font-bold text-gray-900">Replaces Human Staff</span>
+                    <span className="text-sm font-bold text-gray-900">Automates Administrative Work</span>
                   </div>
                   <div className="text-xs text-gray-600 mb-1">
-                    {idx === 0 && "Eliminates 1-2 scheduling coordinators"}
-                    {idx === 1 && "Replaces payroll administrator role"}
-                    {idx === 2 && "Removes billing clerk position"}
+                    {idx === 0 && "Automates tasks handled by scheduling coordinators"}
+                    {idx === 1 && "Automates payroll processing workflows"}
+                    {idx === 2 && "Automates invoice generation and tracking"}
                   </div>
                   <div className="text-lg font-bold text-blue-600">
-                    {idx === 0 && "$50K-$80K saved annually"}
-                    {idx === 1 && "$45K-$65K saved annually"}
-                    {idx === 2 && "$40K-$60K saved annually"}
+                    {idx === 0 && "Up to $50K-$80K potential savings*"}
+                    {idx === 1 && "Up to $45K-$65K potential savings*"}
+                    {idx === 2 && "Up to $40K-$60K potential savings*"}
                   </div>
                 </div>
 
@@ -343,34 +344,37 @@ export default function Homepage() {
           <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-600 rounded-2xl p-12 text-white text-center shadow-2xl">
             <div className="max-w-3xl mx-auto">
               <h3 className="text-3xl md:text-4xl font-bold mb-4">
-                Total Administrative Replacement Value
+                Potential Administrative Cost Reduction
               </h3>
               <p className="text-xl text-blue-100 mb-8">
-                These three AI systems replace 3-5 full-time employees
+                Automate work equivalent to 3-5 full-time administrative roles*
               </p>
               <div className="bg-white/20 backdrop-blur-sm rounded-xl p-8 border-2 border-white/30">
                 <div className="grid md:grid-cols-3 gap-6 mb-6 mobile-cols-1 mobile-gap-3">
                   <div>
-                    <div className="text-5xl font-bold mb-2">$155K+</div>
-                    <div className="text-blue-100">Eliminated Salaries</div>
+                    <div className="text-5xl font-bold mb-2">Up to $155K</div>
+                    <div className="text-blue-100">Potential Labor Savings</div>
                   </div>
                   <div>
-                    <div className="text-5xl font-bold mb-2">$35K+</div>
-                    <div className="text-blue-100">Benefits Saved</div>
+                    <div className="text-5xl font-bold mb-2">Up to $35K</div>
+                    <div className="text-blue-100">Overhead Reduction</div>
                   </div>
                   <div>
-                    <div className="text-5xl font-bold mb-2">$190K+</div>
-                    <div className="text-blue-100">Total Annual Savings</div>
+                    <div className="text-5xl font-bold mb-2">Up to $190K</div>
+                    <div className="text-blue-100">Total Potential Savings</div>
                   </div>
                 </div>
                 <div className="text-sm text-blue-100 italic">
-                  * Based on replacing scheduler ($65K), payroll administrator ($58K), and billing specialist ($52K) + 25% benefits
+                  * Estimates based on U.S. Bureau of Labor Statistics median wages: scheduler ($65K), payroll administrator ($58K), billing specialist ($52K) + 25% benefits. Actual results vary by organization size, industry, and implementation.
                 </div>
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      {/* FTC Disclaimer */}
+      <FTCDisclaimer />
 
       {/* Footer */}
       <Footer variant="dark" />
