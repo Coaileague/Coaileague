@@ -135,9 +135,8 @@ class WorkflowApprovalService {
           .update(aiGapFindings)
           .set({ 
             status: 'in_progress',
-            assignedTo: 'Trinity:WorkflowApproval',
           })
-          .where(eq(aiGapFindings.id, finding.id));
+          .where(eq(aiGapFindings.id, String(finding.id)));
       }
 
       // Send notifications
@@ -305,8 +304,8 @@ class WorkflowApprovalService {
       if (existing.gapFindingId) {
         await db
           .update(aiGapFindings)
-          .set({ status: 'open', assignedTo: null })
-          .where(eq(aiGapFindings.id, parseInt(existing.gapFindingId)));
+          .set({ status: 'open' })
+          .where(eq(aiGapFindings.id, existing.gapFindingId));
       }
 
       console.log(`[WorkflowApproval] Request ${approvalId} rejected by ${rejectedBy}`);
@@ -639,8 +638,18 @@ class WorkflowApprovalService {
   }
 
   private async emitApprovalEvent(eventType: string, data: any): Promise<void> {
+    // Map internal event types to valid PlatformEventType
+    const eventTypeMap: Record<string, string> = {
+      'approval_created': 'trinity_fix_proposed',
+      'approval_approved': 'approval_approved',
+      'approval_rejected': 'approval_rejected',
+      'no_approvers_available': 'trinity_escalation_required',
+    };
+    
+    const mappedType = eventTypeMap[eventType] || 'automation_completed';
+    
     const event: PlatformEvent = {
-      type: eventType,
+      type: mappedType as PlatformEvent['type'],
       category: 'automation',
       title: `Workflow Approval: ${eventType.replace('approval_', '')}`,
       description: data.title || `Approval ${data.id}`,
@@ -681,7 +690,7 @@ class WorkflowApprovalService {
       helpaiOrchestrator.registerAction({
         actionId: action.id,
         name: action.name,
-        category: 'workflow_approval',
+        category: 'automation',
         description: action.desc,
         requiredRoles: ['support', 'admin', 'super_admin'],
         handler: async (request) => {

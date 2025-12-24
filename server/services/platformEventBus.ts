@@ -59,9 +59,16 @@ export type PlatformEventType =
   | 'trinity_diagnostic_started'
   | 'trinity_diagnostic_completed'
   | 'trinity_escalation_required'
-  | 'trinity_self_healing';
+  | 'trinity_self_healing'
+  // Autonomous fix pipeline events
+  | 'approval_approved'
+  | 'approval_rejected'
+  | 'fix_applied'
+  | 'fix_validated'
+  | 'fix_escalated'
+  | 'fix_exhausted';
 
-export type EventCategory = 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement' | 'maintenance' | 'diagnostic' | 'support' | 'ai_brain' | 'error' | 'schedule' | 'trinity';
+export type EventCategory = 'feature' | 'improvement' | 'bugfix' | 'security' | 'announcement' | 'maintenance' | 'diagnostic' | 'support' | 'ai_brain' | 'error' | 'schedule' | 'trinity' | 'automation';
 
 // Event visibility levels - must match update_visibility enum in database
 // Available: 'all', 'staff', 'supervisor', 'manager', 'admin'
