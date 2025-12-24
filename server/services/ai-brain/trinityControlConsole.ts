@@ -59,9 +59,19 @@ export interface ActionLogPayload {
   timestamp: string;
 }
 
+export interface TaskProgressPayload {
+  current: number;
+  total: number;
+  taskName?: string;
+  sessionId?: string;
+  workspaceId?: string;
+  timestamp: string;
+}
+
 export interface ConsoleStreamPayload {
-  type: 'thought' | 'action' | 'awareness';
-  data: ThoughtSignaturePayload | ActionLogPayload | PlatformAwarenessEvent;
+  type: 'thought' | 'action' | 'awareness' | 'task_progress';
+  data: ThoughtSignaturePayload | ActionLogPayload | PlatformAwarenessEvent | TaskProgressPayload;
+  timestamp?: string;
 }
 
 export interface PlatformAwarenessEvent {
@@ -368,6 +378,68 @@ class TrinityControlConsoleService {
 
       throw error;
     }
+  }
+
+  // ============================================================================
+  // TASK PROGRESS - Track and broadcast task progress like Replit Agent
+  // ============================================================================
+
+  /**
+   * Broadcast task progress update (like Agent's "In progress tasks 6/6")
+   */
+  broadcastTaskProgress(
+    sessionId: string,
+    current: number,
+    total: number,
+    options?: {
+      workspaceId?: string;
+      taskName?: string;
+    }
+  ): void {
+    const payload: TaskProgressPayload = {
+      current,
+      total,
+      taskName: options?.taskName,
+      sessionId,
+      workspaceId: options?.workspaceId,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.broadcastToSession(sessionId, {
+      type: 'task_progress',
+      data: payload,
+      timestamp: payload.timestamp,
+    });
+
+    console.log(`[TrinityConsole] Task progress: ${current}/${total}${options?.taskName ? ` - ${options.taskName}` : ''}`);
+  }
+
+  /**
+   * Quick helper to broadcast an action similar to agent logs
+   * (e.g., "Edited client/src/...", "Analyzed file...", "Restarted workflow...")
+   */
+  async logQuickAction(
+    sessionId: string,
+    actionName: string,
+    actionType: ActionType = 'tool_call',
+    status: ActionStatus = 'completed',
+    options?: {
+      workspaceId?: string;
+      durationMs?: number;
+    }
+  ): Promise<void> {
+    const payload: ActionLogPayload = {
+      id: `quick-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      sessionId,
+      actionType,
+      actionName,
+      status,
+      durationMs: options?.durationMs,
+      workspaceId: options?.workspaceId,
+      timestamp: new Date().toISOString(),
+    };
+
+    this.broadcastToSession(sessionId, { type: 'action', data: payload });
   }
 
   // ============================================================================

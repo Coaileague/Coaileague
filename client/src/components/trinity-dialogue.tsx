@@ -30,15 +30,39 @@ import {
   User,
   Bot,
   Zap,
+  FileEdit,
+  Play,
+  RefreshCw,
+  Search,
+  CheckCircle,
+  AlertTriangle,
+  Terminal,
+  ListChecks,
 } from 'lucide-react';
 
 interface Message {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'action';
   content: string;
   timestamp: Date;
   confidenceScore?: number;
   mode?: 'demo' | 'pro' | 'guru';
+  actionType?: 'edit' | 'analyze' | 'execute' | 'decide' | 'restart';
+  actionStatus?: 'started' | 'completed' | 'failed';
+}
+
+interface TrustLevelResponse {
+  trustLevel?: string;
+  level?: number;
+}
+
+interface ActionEntry {
+  id: string;
+  actionType: string;
+  actionName: string;
+  status: 'started' | 'completed' | 'failed';
+  durationMs?: number;
+  timestamp: string;
 }
 
 interface TrinityDialogueProps {
@@ -47,6 +71,39 @@ interface TrinityDialogueProps {
   defaultOpen?: boolean;
   position?: 'bottom-right' | 'bottom-left';
 }
+
+// Helper to get action icon based on type
+const getActionIcon = (actionType: string) => {
+  switch (actionType) {
+    case 'file_operation':
+    case 'edit':
+      return FileEdit;
+    case 'api_request':
+    case 'execute':
+      return Terminal;
+    case 'workflow_step':
+    case 'restart':
+      return RefreshCw;
+    case 'ai_generation':
+    case 'analyze':
+      return Search;
+    case 'database_query':
+      return ListChecks;
+    default:
+      return Play;
+  }
+};
+
+// Helper to format action name for display
+const formatActionName = (action: ActionEntry): string => {
+  const name = action.actionName || '';
+  // Make it more readable like "Edited client/src/..." or "Analyzed file..."
+  if (name.includes('/')) {
+    const parts = name.split('/');
+    return parts.slice(-2).join('/');
+  }
+  return name.length > 30 ? name.substring(0, 27) + '...' : name;
+};
 
 export function TrinityDialogue({
   workspaceId,
@@ -60,27 +117,79 @@ export function TrinityDialogue({
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
   const [mode, setMode] = useState<'demo' | 'pro' | 'guru'>('pro');
+  const [actionLogs, setActionLogs] = useState<ActionEntry[]>([]);
+  const [taskProgress, setTaskProgress] = useState<{ current: number; total: number } | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
   const { toast } = useToast();
 
-  const { data: userTrustLevel } = useQuery({
+  // SSE connection for real-time action streaming from Control Console
+  useEffect(() => {
+    if (!isOpen || typeof EventSource === 'undefined') return;
+
+    const sessionId = workspaceId || 'default';
+    const url = `/api/trinity/control-console/stream?sessionId=${sessionId}${workspaceId ? `&workspaceId=${workspaceId}` : ''}`;
+    
+    try {
+      const eventSource = new EventSource(url);
+      eventSourceRef.current = eventSource;
+
+      eventSource.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.type === 'connected') return;
+          
+          if (payload.type === 'action' && payload.data) {
+            const action: ActionEntry = {
+              id: payload.data.id || `action-${Date.now()}`,
+              actionType: payload.data.actionType || 'execute',
+              actionName: payload.data.actionName || 'Processing...',
+              status: payload.data.status || 'started',
+              durationMs: payload.data.durationMs,
+              timestamp: payload.data.timestamp || new Date().toISOString(),
+            };
+            setActionLogs(prev => [action, ...prev].slice(0, 20)); // Keep last 20
+          }
+          
+          // Handle task progress updates
+          if (payload.type === 'task_progress' && payload.data) {
+            setTaskProgress({
+              current: payload.data.current || 0,
+              total: payload.data.total || 0,
+            });
+          }
+        } catch (err) {
+          console.warn('[TrinityDialogue] Failed to parse SSE:', err);
+        }
+      };
+
+      eventSource.onerror = () => {
+        // Silently handle errors - SSE will auto-reconnect or we fall back to polling
+      };
+
+      return () => {
+        eventSource.close();
+      };
+    } catch (err) {
+      console.warn('[TrinityDialogue] SSE not available:', err);
+    }
+  }, [isOpen, workspaceId]);
+
+  const { data: userTrustLevel } = useQuery<TrustLevelResponse>({
     queryKey: ['/api/trinity/trust-level', userId, workspaceId],
     enabled: !!userId,
   });
 
   const sendMessageMutation = useMutation({
     mutationFn: async (message: string) => {
-      const response = await apiRequest('/api/helpai/chat', {
-        method: 'POST',
-        body: JSON.stringify({
-          message,
-          workspaceId,
-          source: 'trinity-dialogue',
-          mode,
-        }),
+      const response = await apiRequest('POST', '/api/helpai/chat', {
+        message,
+        workspaceId,
+        source: 'trinity-dialogue',
+        mode,
       });
-      return response;
+      return response.json();
     },
     onMutate: () => {
       setIsTyping(true);
@@ -244,8 +353,60 @@ export function TrinityDialogue({
         </div>
       </CardHeader>
 
+      {/* Task Progress Indicator - like Agent's "In progress tasks 6/6" */}
+      {taskProgress && taskProgress.total > 0 && (
+        <div className="px-3 py-2 border-b bg-muted/30">
+          <div className="flex items-center gap-2 text-xs">
+            <ListChecks className="h-3 w-3 text-primary" />
+            <span className="text-muted-foreground">In progress tasks</span>
+            <Badge variant="secondary" className="text-xs px-1.5 py-0">
+              {taskProgress.current} / {taskProgress.total}
+            </Badge>
+          </div>
+        </div>
+      )}
+
+      {/* Action Logs Section - like Agent's action list */}
+      {actionLogs.length > 0 && (
+        <div className="px-3 py-2 border-b bg-muted/20 max-h-32 overflow-y-auto">
+          <div className="space-y-1">
+            {actionLogs.slice(0, 5).map((action) => {
+              const ActionIcon = getActionIcon(action.actionType);
+              const statusColor = action.status === 'completed' 
+                ? 'text-green-500' 
+                : action.status === 'failed' 
+                  ? 'text-destructive' 
+                  : 'text-muted-foreground';
+              return (
+                <div 
+                  key={action.id} 
+                  className="flex items-center gap-2 text-xs"
+                  data-testid={`action-log-${action.id}`}
+                >
+                  {action.status === 'completed' ? (
+                    <CheckCircle className="h-3 w-3 text-green-500 shrink-0" />
+                  ) : action.status === 'failed' ? (
+                    <AlertTriangle className="h-3 w-3 text-destructive shrink-0" />
+                  ) : (
+                    <ActionIcon className="h-3 w-3 text-primary shrink-0 animate-pulse" />
+                  )}
+                  <span className={`truncate ${statusColor}`}>
+                    {formatActionName(action)}
+                  </span>
+                  {action.durationMs && (
+                    <span className="text-muted-foreground/60 shrink-0">
+                      {action.durationMs}ms
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       <ScrollArea className="flex-1 p-3" ref={scrollRef}>
-        {messages.length === 0 ? (
+        {messages.length === 0 && actionLogs.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-center p-4">
             <Brain className="h-12 w-12 text-muted-foreground/50 mb-3" />
             <p className="text-sm text-muted-foreground mb-2">
