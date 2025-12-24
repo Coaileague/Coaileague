@@ -96,7 +96,7 @@ export default function Support() {
   const faqs = [
     {
       question: "What is Trinity and how does it automate my business?",
-      answer: "Trinity is your Fortune 500-grade AI orchestrator powered by Google's Gemini technology. It coordinates over 277 automated actions through specialized subagents for scheduling, payroll, compliance, invoicing, security, and analytics. Trinity operates in three modes: Demo (guided tutorials), Business Pro (daily operations), and Guru (strategic insights). The system learns from your patterns, detects anomalies, and handles 99% of operations autonomously with only 1% human oversight for critical decisions. All actions are logged, auditable, and can be approved or overridden by authorized managers.",
+      answer: "Trinity is your Fortune 500-grade AI orchestrator built to handle your entire workforce operations. It coordinates over 277 automated actions through specialized subagents for scheduling, payroll, compliance, invoicing, security, and analytics. Trinity operates in three modes: Demo (guided tutorials), Business Pro (daily operations), and Guru (strategic insights). The system learns from your patterns, detects anomalies, and handles 99% of operations autonomously with only 1% human oversight for critical decisions. All actions are logged, auditable, and can be approved or overridden by authorized managers.",
     },
     {
       question: "What is HelpAI and how do I use it?",
