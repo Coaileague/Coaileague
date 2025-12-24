@@ -28,6 +28,9 @@ import {
   BarChart3,
   Grid3x3,
   CheckCircle,
+  Database,
+  RefreshCw,
+  Link2,
 } from 'lucide-react';
 
 export type PlatformRole = 'root_admin' | 'root' | 'sysop' | 'deputy_admin' | 'deputy_assistant' | 'bot' | 'guest' | 'support_manager' | 'support_agent' | 'none';
@@ -452,6 +455,43 @@ export const quickActionsRegistry: QuickAction[] = [
     requiresAuth: true,
     testId: 'quick-integration-health',
     description: 'Monitor connected integration status and health'
+  },
+  {
+    id: 'connect-quickbooks',
+    label: 'Connect QuickBooks',
+    icon: Link2,
+    color: 'text-green-500',
+    category: 'core',
+    desktopPath: '/accounting-integrations',
+    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresAuth: true,
+    testId: 'quick-connect-quickbooks',
+    description: 'Connect QuickBooks for automated billing and payroll sync'
+  },
+  {
+    id: 'run-data-sync',
+    label: 'Run Data Sync',
+    icon: RefreshCw,
+    color: 'text-blue-500',
+    category: 'core',
+    desktopPath: '/accounting-integrations#sync',
+    isHashAnchor: true,
+    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresAuth: true,
+    testId: 'quick-run-data-sync',
+    description: 'Manually trigger data synchronization with connected integrations'
+  },
+  {
+    id: 'migration-status',
+    label: 'Migration Status',
+    icon: Database,
+    color: 'text-purple-500',
+    category: 'core',
+    desktopPath: '/workspace-onboarding',
+    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresAuth: true,
+    testId: 'quick-migration-status',
+    description: 'View data migration progress and automation setup status'
   },
 ];
 

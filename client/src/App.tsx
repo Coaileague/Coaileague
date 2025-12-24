@@ -162,6 +162,7 @@ import AutomationSettings from "@/pages/automation-settings";
 import AIBrainDashboard from "@/pages/ai-brain-dashboard";
 import SupportAIConsole from "@/pages/support-ai-console";
 import AssistedOnboarding from "@/pages/assisted-onboarding";
+import WorkspaceOnboarding from "@/pages/workspace-onboarding";
 import AcceptHandoff from "@/pages/accept-handoff";
 import WorkboardDashboard from "@/components/workboard/WorkboardDashboard";
 import InboxPage from "@/pages/inbox";
@@ -972,6 +973,7 @@ function AppContent() {
               <Route path="/support/bugs" component={SupportBugDashboard} />
               <Route path="/admin/end-user-controls" component={EndUserControls} />
               <Route path="/support/assisted-onboarding" component={AssistedOnboarding} />
+              <Route path="/workspace-onboarding" component={WorkspaceOnboarding} />
               <Route path="/trinity/command-center" component={TrinityCommandCenter} />
               <Route path="/billing" component={Billing} />
               <Route path="/usage" component={UsageDashboard} />
@@ -1278,6 +1280,7 @@ function AppContent() {
                 <Route path="/support/bugs" component={SupportBugDashboard} />
                 <Route path="/admin/end-user-controls" component={EndUserControls} />
                 <Route path="/support/assisted-onboarding" component={AssistedOnboarding} />
+                <Route path="/workspace-onboarding" component={WorkspaceOnboarding} />
                 <Route path="/trinity/command-center" component={TrinityCommandCenter} />
                 <Route path="/ai/brain" component={AIBrainDashboard} />
                 <Route path="/ai/orchestration" component={OrchestrationDashboard} />
