@@ -1517,11 +1517,15 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         </div>
       </div>
       
-      {/* Notification List - Scrollable container with touch-friendly scrolling */}
-      <ScrollArea 
-        className="flex-1 min-h-0"
-        style={{ maxHeight: compact ? 'calc(85vh - 180px)' : 'calc(75vh - 200px)', WebkitOverflowScrolling: 'touch' }}
-        viewportRef={setViewportRef}
+      {/* Notification List - Native scrolling for mobile touch support */}
+      <div 
+        className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
+        style={{ 
+          maxHeight: compact ? 'calc(85vh - 200px)' : 'calc(75vh - 200px)',
+          WebkitOverflowScrolling: 'touch',
+          touchAction: 'pan-y',
+        }}
+        ref={(el) => setViewportRef(el)}
       >
         <div className="min-h-0">
         {isLoading ? (
@@ -1560,8 +1564,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
           </div>
         )}
         </div>
-        <ScrollBar orientation="vertical" forceMount className="opacity-100 bg-muted/50" />
-      </ScrollArea>
+      </div>
       
     </div>
   );
