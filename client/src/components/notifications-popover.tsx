@@ -1314,22 +1314,22 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       className="flex flex-col h-full min-h-0 overflow-hidden"
     >
       {/* UNS Header with Trinity Branding - Violet to Indigo Gradient */}
-      <div className={`${compact ? 'px-3 py-2.5' : 'px-4 py-3'} border-b bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0`}>
+      <div className={`${compact ? 'px-3 py-2' : 'px-4 py-3'} border-b bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0`}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className={`relative ${compact ? 'w-7 h-7' : 'w-10 h-10'} rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0`}>
               <Bell className={`${compact ? 'w-4 h-4' : 'w-6 h-6'} text-white`} />
             </div>
             <div className="min-w-0 flex-1">
-              <h2 className={`font-bold ${compact ? 'text-xs' : 'text-base'} leading-tight text-white truncate`}>
-                {compact ? 'Notifications' : 'Universal Notifications'}
+              <h2 className={`font-bold ${compact ? 'text-sm' : 'text-base'} leading-tight text-white truncate`}>
+                Notifications
               </h2>
-              <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-white/90 font-medium`}>
+              <span className={`${compact ? 'text-[10px]' : 'text-xs'} text-white/90 font-medium truncate block max-w-full`}>
                 {user ? (totalUnread > 0 ? `${totalUnread} unread` : 'All caught up') : 'Platform Updates'}
               </span>
             </div>
           </div>
-          <Badge variant="outline" className={`${compact ? 'text-[9px] px-1.5 py-0.5' : 'text-xs px-3 py-1.5'} font-medium bg-white/20 text-white border-white/30 whitespace-nowrap flex-shrink-0`}>
+          <Badge variant="outline" className={`${compact ? 'text-[10px] px-2 py-0.5' : 'text-xs px-3 py-1.5'} font-medium bg-white/20 text-white border-white/30 whitespace-nowrap flex-shrink-0`}>
             {sortedNotifications.length}
           </Badge>
         </div>
@@ -1344,47 +1344,50 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       </div>
       
       {/* Main Tabs: For You | System Alerts | Clear All Read - Matching Design */}
-      <div className={`flex items-center border-b bg-muted/30 flex-shrink-0 ${compact ? 'px-1 gap-0' : 'px-2 gap-1'}`}>
+      <div 
+        className={`flex items-center border-b bg-muted/30 flex-shrink-0 overflow-x-auto ${compact ? 'px-2 gap-1' : 'px-2 gap-1'}`}
+        style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
         <button
           onClick={() => setActiveTab('for_you')}
-          className={`relative ${compact ? 'py-2 px-2 text-[11px]' : 'py-3 px-4 text-sm'} font-medium transition-colors flex-shrink-0 ${
+          className={`relative ${compact ? 'py-2.5 px-3 text-xs min-w-[70px]' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
             activeTab === 'for_you' 
               ? 'text-foreground' 
               : 'text-muted-foreground hover:text-foreground'
           }`}
           data-testid="tab-for-you"
         >
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1.5">
             For You
             {forYouCount > 0 && (
-              <Badge className={`${compact ? 'h-4 min-w-4 px-0.5 text-[8px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-primary text-white rounded-full`}>
+              <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-primary text-white rounded-full`}>
                 {forYouCount > 9 ? '9+' : forYouCount}
               </Badge>
             )}
           </span>
           {activeTab === 'for_you' && (
-            <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-primary rounded-full" />
+            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
           )}
         </button>
         <button
           onClick={() => setActiveTab('system_alerts')}
-          className={`relative ${compact ? 'py-2 px-2 text-[11px]' : 'py-3 px-4 text-sm'} font-medium transition-colors flex-shrink-0 ${
+          className={`relative ${compact ? 'py-2.5 px-3 text-xs min-w-[60px]' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
             activeTab === 'system_alerts' 
               ? 'text-foreground' 
               : 'text-muted-foreground hover:text-foreground'
           }`}
           data-testid="tab-system-alerts"
         >
-          <span className="flex items-center gap-1">
+          <span className="flex items-center gap-1.5">
             System
             {systemCount > 0 && (
-              <Badge className={`${compact ? 'h-4 min-w-4 px-0.5 text-[8px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-amber-500 text-white rounded-full`}>
+              <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-amber-500 text-white rounded-full`}>
                 {systemCount > 9 ? '9+' : systemCount}
               </Badge>
             )}
           </span>
           {activeTab === 'system_alerts' && (
-            <div className="absolute bottom-0 left-1 right-1 h-0.5 bg-amber-500 rounded-full" />
+            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-amber-500 rounded-full" />
           )}
         </button>
         <div className="flex-1 min-w-2" />
@@ -1393,7 +1396,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
           <Button
             variant="outline"
             size="sm"
-            className={`${compact ? 'h-6 px-1.5 text-[9px]' : 'h-8 px-3 text-xs'} font-medium bg-background border-muted-foreground/20 flex-shrink-0`}
+            className={`${compact ? 'h-7 px-2 text-[10px]' : 'h-8 px-3 text-xs'} font-medium bg-background border-muted-foreground/20 flex-shrink-0`}
             onClick={() => clearAllMutation.mutate()}
             disabled={clearAllMutation.isPending || totalUnread === 0}
             data-testid="button-clear-all-read"
@@ -1517,7 +1520,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       {/* Notification List - Scrollable container with touch-friendly scrolling */}
       <ScrollArea 
         className="flex-1 min-h-0"
-        style={{ maxHeight: 'min(50vh, 280px)', WebkitOverflowScrolling: 'touch' }}
+        style={{ maxHeight: compact ? 'calc(85vh - 180px)' : 'calc(75vh - 200px)', WebkitOverflowScrolling: 'touch' }}
         viewportRef={setViewportRef}
       >
         <div className="min-h-0">
@@ -1607,17 +1610,16 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         </div>
         <SheetContent 
           side="bottom" 
-          className="p-0 rounded-t-2xl flex flex-col"
-          style={{ maxHeight: 'min(70vh, 480px)' }}
+          className="p-0 rounded-t-2xl flex flex-col max-h-[85vh]"
           data-testid="notification-sheet-content"
           data-trinity-avoid="true"
         >
           {/* Drag Handle for Mobile */}
-          <div className="flex justify-center py-1.5 bg-background border-b shrink-0">
-            <div className="w-8 h-1 rounded-full bg-muted-foreground/30" />
+          <div className="flex justify-center py-2 bg-background border-b shrink-0">
+            <div className="w-10 h-1 rounded-full bg-muted-foreground/40" />
           </div>
           {/* Full Feature Parity with Compact Mode for Mobile */}
-          <div className="flex flex-col h-full">
+          <div className="flex flex-col flex-1 min-h-0 overflow-hidden">
             {MobileNotificationsContent}
             <Footer compact={true} />
           </div>
