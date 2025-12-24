@@ -735,6 +735,7 @@ const WinterBackgroundScene = memo(function WinterBackgroundScene() {
 });
 
 // Inline accent scene - subtle decorative accents for inline content
+// Uses relative positioning to stay within container bounds
 const InlineAccentScene = memo(function InlineAccentScene() {
   const { seasonId, effectsEnabled, forceDarkMode } = useSeasonalTheme();
   
@@ -745,20 +746,20 @@ const InlineAccentScene = memo(function InlineAccentScene() {
     : (forceDarkMode ? 'rgba(168, 85, 247, 0.15)' : 'rgba(124, 58, 237, 0.1)');
   
   return (
-    <div
-      className="pointer-events-none absolute inset-0 overflow-hidden"
-      style={{ zIndex: 0 }}
+    <span
+      className="pointer-events-none relative inline-block"
+      style={{ zIndex: -1 }}
       data-testid="inline-accent"
     >
-      <div 
-        className="absolute top-0 left-0 w-32 h-32 rounded-full blur-3xl"
+      <span 
+        className="absolute -top-4 -left-4 w-16 h-16 rounded-full blur-2xl opacity-60"
         style={{ background: accentColor }}
       />
-      <div 
-        className="absolute bottom-0 right-0 w-24 h-24 rounded-full blur-2xl"
+      <span 
+        className="absolute -bottom-2 -right-2 w-12 h-12 rounded-full blur-xl opacity-60"
         style={{ background: accentColor }}
       />
-    </div>
+    </span>
   );
 });
 
