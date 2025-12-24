@@ -34,6 +34,7 @@ export interface ReflectionContext {
   previousPatches: any[];
   lspErrors: LspError[];
   tsErrors: string[];
+  fileContents?: Map<string, string>;
 }
 
 export interface LspError {
@@ -222,9 +223,22 @@ class TrinityReflectionEngineService {
 
   /**
    * Build the reflection prompt for Gemini 3 Pro (Architect mode)
+   * Now generates actual revised patches, not just approach descriptions
    */
   private buildReflectionPrompt(context: ReflectionContext): string {
+    // Build file contents section if available
+    let fileContentsSection = '';
+    if (context.fileContents && context.fileContents.size > 0) {
+      fileContentsSection = '\n## Current File Contents (After Failed Patch)\n';
+      for (const [file, content] of context.fileContents) {
+        const lines = content.split('\n');
+        const numberedLines = lines.map((line, i) => `${i + 1}: ${line}`).join('\n');
+        fileContentsSection += `\n### ${file}\n\`\`\`\n${numberedLines.substring(0, 3000)}${lines.length > 50 ? '\n... (truncated)' : ''}\n\`\`\`\n`;
+      }
+    }
+
     return `You are Trinity's Architect - a senior engineer analyzing a failed code fix attempt.
+Your role is to generate ACTUAL REVISED PATCHES that will fix the errors, not just suggestions.
 
 ## Context
 - Finding ID: ${context.findingId}
@@ -235,48 +249,89 @@ class TrinityReflectionEngineService {
 ${context.originalError}
 
 ## LSP/TypeScript Errors After Fix Attempt
-${context.lspErrors.map(e => `${e.file}:${e.line} - ${e.message}`).join('\n') || context.tsErrors.join('\n')}
+${context.lspErrors.map(e => `${e.file}:${e.line}:${e.column} - ${e.message}`).join('\n') || context.tsErrors.join('\n')}
 
-## Previous Patches Applied
+## Previous Patches Applied (THESE CAUSED THE ERRORS)
 ${JSON.stringify(context.previousPatches, null, 2)}
-
+${fileContentsSection}
 ## Your Task
-Analyze why the fix failed and provide:
-1. Root cause diagnosis
-2. Whether to retry with a different approach
-3. Specific suggestions for the revised fix
-4. Confidence level (0-1) that retry will succeed
-5. Whether to escalate to human if confidence is low
+1. Analyze why the previous patches failed
+2. Generate REVISED PATCHES that will actually fix the errors
+3. Each patch should be a complete replacement/insertion operation
 
-Respond in this JSON format:
+## Patch Format
+Each patch in revisedPatches array must have:
+- file: string (relative path)
+- operation: "replace" | "insert" | "delete"
+- search: string (for replace/delete - exact text to find)
+- replace: string (for replace/insert - new text)
+- line: number (for insert - line number to insert at)
+
+Respond ONLY with this JSON (no markdown, no explanation):
 {
-  "diagnosis": "Why the fix failed",
-  "shouldRetry": true/false,
+  "diagnosis": "Root cause of failure",
+  "shouldRetry": true,
   "confidence": 0.0-1.0,
-  "suggestedApproach": "Specific revised approach",
-  "escalateToHuman": true/false,
-  "reasoningTrace": ["Step 1...", "Step 2..."]
+  "suggestedApproach": "Brief description of fix strategy",
+  "revisedPatches": [
+    {
+      "file": "path/to/file.ts",
+      "operation": "replace",
+      "search": "exact text to find",
+      "replace": "replacement text"
+    }
+  ],
+  "escalateToHuman": false,
+  "reasoningTrace": ["Step 1: Identified issue...", "Step 2: Generated fix..."]
 }`;
   }
 
   /**
    * Parse the Gemini reflection response
+   * Now extracts revisedPatches for actual patch regeneration
    */
   private parseReflectionResponse(response: string, context: ReflectionContext): ReflectionResult {
     try {
-      // Extract JSON from response
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      // Extract JSON from response (handle potential markdown wrapping)
+      let jsonStr = response;
+      
+      // Strip markdown code blocks if present
+      const codeBlockMatch = response.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (codeBlockMatch) {
+        jsonStr = codeBlockMatch[1];
+      }
+      
+      // Find the JSON object
+      const jsonMatch = jsonStr.match(/\{[\s\S]*\}/);
       if (!jsonMatch) {
         throw new Error('No JSON found in response');
       }
       
       const parsed = JSON.parse(jsonMatch[0]);
       
+      // Validate and normalize revisedPatches
+      let revisedPatches: any[] | undefined;
+      if (Array.isArray(parsed.revisedPatches) && parsed.revisedPatches.length > 0) {
+        const normalized = parsed.revisedPatches.map((patch: any) => ({
+          file: patch.file || '',
+          operation: patch.operation || 'replace',
+          search: patch.search || '',
+          replace: patch.replace || '',
+          line: patch.line,
+        })).filter((p: any) => p.file && (p.search || p.line));
+        
+        if (normalized.length > 0) {
+          revisedPatches = normalized;
+          console.log(`[TrinityReflection] Parsed ${normalized.length} revised patches from AI response`);
+        }
+      }
+      
       return {
         shouldRetry: parsed.shouldRetry && context.attemptNumber < context.maxAttempts,
         confidence: Math.min(1, Math.max(0, parsed.confidence || 0.5)),
         diagnosis: parsed.diagnosis || 'Unknown failure',
         suggestedApproach: parsed.suggestedApproach || '',
+        revisedPatches,
         escalateToHuman: parsed.escalateToHuman || parsed.confidence < REFLECTION_CONFIG.escalationThreshold,
         reasoningTrace: parsed.reasoningTrace || [],
       };
@@ -300,12 +355,15 @@ Respond in this JSON format:
   /**
    * Run the iterative fix loop with self-correction
    * This is the main entry point for autonomous fixes
+   * 
+   * Now supports revisedPatches from reflection for actual patch regeneration
    */
   async runIterativeFixLoop(
     findingId: string,
     originalError: string,
     affectedFiles: string[],
-    executeFix: (attempt: number, suggestedApproach?: string) => Promise<{ success: boolean; patches: any[] }>,
+    executeFix: (attempt: number, suggestedApproach?: string, revisedPatches?: any[]) => Promise<{ success: boolean; patches: any[] }>,
+    readFileContents?: () => Promise<Map<string, string>>,
   ): Promise<{ success: boolean; attempts: IterationResult[]; finalResult?: ReflectionResult }> {
     const attempts: IterationResult[] = [];
     let lastPatches: any[] = [];
@@ -315,12 +373,19 @@ Respond in this JSON format:
     for (let attempt = 1; attempt <= REFLECTION_CONFIG.maxRetries; attempt++) {
       console.log(`[TrinityReflection] === Attempt ${attempt}/${REFLECTION_CONFIG.maxRetries} ===`);
       
-      // Execute the fix
-      const suggestedApproach = attempts.length > 0 
-        ? attempts[attempts.length - 1].reflectionResult?.suggestedApproach 
+      // Get reflection data from previous attempt
+      const prevReflection = attempts.length > 0 
+        ? attempts[attempts.length - 1].reflectionResult 
         : undefined;
+      const suggestedApproach = prevReflection?.suggestedApproach;
+      const revisedPatches = prevReflection?.revisedPatches;
       
-      const fixResult = await executeFix(attempt, suggestedApproach);
+      // Log if using revised patches
+      if (revisedPatches && revisedPatches.length > 0) {
+        console.log(`[TrinityReflection] Using ${revisedPatches.length} AI-generated revised patches for attempt ${attempt}`);
+      }
+      
+      const fixResult = await executeFix(attempt, suggestedApproach, revisedPatches);
       lastPatches = fixResult.patches || [];
       
       if (!fixResult.success) {
@@ -361,6 +426,16 @@ Respond in this JSON format:
       // Fix failed validation - reflect and potentially retry
       console.log(`[TrinityReflection] Attempt ${attempt} has ${tsErrors.length} TypeScript errors`);
       
+      // Read file contents for better reflection if available
+      let fileContents: Map<string, string> | undefined;
+      if (readFileContents) {
+        try {
+          fileContents = await readFileContents();
+        } catch (e) {
+          console.warn('[TrinityReflection] Could not read file contents for reflection');
+        }
+      }
+      
       const reflectionResult = await this.reflectOnFailure({
         findingId,
         originalError,
@@ -370,7 +445,13 @@ Respond in this JSON format:
         previousPatches: lastPatches,
         lspErrors,
         tsErrors,
+        fileContents,
       });
+      
+      // Log if reflection generated revised patches
+      if (reflectionResult.revisedPatches && reflectionResult.revisedPatches.length > 0) {
+        console.log(`[TrinityReflection] Reflection generated ${reflectionResult.revisedPatches.length} revised patches`);
+      }
       
       attempts.push({
         success: false,
@@ -395,7 +476,7 @@ Respond in this JSON format:
         return { success: false, attempts, finalResult: reflectionResult };
       }
       
-      console.log(`[TrinityReflection] Will retry with suggested approach: ${reflectionResult.suggestedApproach}`);
+      console.log(`[TrinityReflection] Will retry with${reflectionResult.revisedPatches ? ' revised patches and' : ''} suggested approach: ${reflectionResult.suggestedApproach}`);
     }
     
     // All attempts exhausted
