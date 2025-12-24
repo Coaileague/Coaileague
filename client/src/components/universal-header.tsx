@@ -288,6 +288,18 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                     <NotificationsPopover />
                   </div>
                 )}
+                {/* Visible Login button for unauthenticated mobile users */}
+                {!user && (
+                  <Button
+                    variant="default"
+                    size="sm"
+                    className="h-8 px-3 text-xs font-semibold"
+                    onClick={() => setLocation("/login")}
+                    data-testid="mobile-button-login-visible"
+                  >
+                    Login
+                  </Button>
+                )}
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
                     <Button

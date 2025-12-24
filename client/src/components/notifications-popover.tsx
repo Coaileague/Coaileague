@@ -1575,32 +1575,48 @@ function NotificationsPopoverInner({ user }: { user: any }) {
   const MobileNotificationsContent = renderNotificationsContent({ simplified: false, compact: true });
   const DesktopNotificationsContent = renderNotificationsContent({ simplified: false, compact: false });
 
-  // Footer with navigation links - using native anchor tags for guaranteed navigation
-  const Footer = ({ compact }: { compact: boolean }) => (
-    <div className="border-t bg-background shrink-0">
-      <div className={compact ? "p-2" : "p-3"}>
-        <a
-          href="/trinity-insights"
-          className={`inline-flex items-center w-full justify-center font-medium rounded-md border border-muted-foreground/20 hover:bg-muted/50 cursor-pointer ${compact ? 'text-[11px] h-8 px-3 gap-1.5' : 'text-sm h-11 px-4 gap-3'}`}
-          data-testid="button-ask-trinity"
-        >
-          <Sparkles className={`${compact ? 'w-3.5 h-3.5' : 'w-5 h-5'} flex-shrink-0 text-cyan-500`} />
-          <span className={`font-semibold bg-gradient-to-r from-cyan-600 to-purple-600 dark:from-cyan-400 dark:to-purple-400 bg-clip-text text-transparent`}>
-            Ask Trinity
-          </span>
-        </a>
+  // Footer with navigation links - close sheet and navigate
+  const Footer = ({ compact }: { compact: boolean }) => {
+    const handleAskTrinity = () => {
+      setOpen(false);
+      setTimeout(() => {
+        window.location.href = "/trinity-insights";
+      }, 100);
+    };
+    
+    const handleViewAll = () => {
+      setOpen(false);
+      setTimeout(() => {
+        window.location.href = "/updates";
+      }, 100);
+    };
+    
+    return (
+      <div className="border-t bg-background shrink-0">
+        <div className={compact ? "p-2" : "p-3"}>
+          <button
+            onClick={handleAskTrinity}
+            className={`inline-flex items-center w-full justify-center font-medium rounded-md border border-muted-foreground/20 hover:bg-muted/50 cursor-pointer ${compact ? 'text-[11px] h-8 px-3 gap-1.5' : 'text-sm h-11 px-4 gap-3'}`}
+            data-testid="button-ask-trinity"
+          >
+            <Sparkles className={`${compact ? 'w-3.5 h-3.5' : 'w-5 h-5'} flex-shrink-0 text-cyan-500`} />
+            <span className={`font-semibold bg-gradient-to-r from-cyan-600 to-purple-600 dark:from-cyan-400 dark:to-purple-400 bg-clip-text text-transparent`}>
+              Ask Trinity
+            </span>
+          </button>
+        </div>
+        <div className={compact ? "px-2 pb-2" : "px-3 pb-3"}>
+          <button
+            onClick={handleViewAll}
+            className={`w-full justify-center inline-flex font-medium text-primary hover:text-primary hover:bg-primary/5 rounded-md cursor-pointer ${compact ? 'text-[10px] h-5 px-2' : 'text-xs h-7 px-4 py-2'}`}
+            data-testid="button-view-all-updates"
+          >
+            View all updates
+          </button>
+        </div>
       </div>
-      <div className={compact ? "px-2 pb-2" : "px-3 pb-3"}>
-        <a
-          href="/updates"
-          className={`w-full justify-center inline-flex font-medium text-primary hover:text-primary hover:bg-primary/5 rounded-md cursor-pointer ${compact ? 'text-[10px] h-5 px-2' : 'text-xs h-7 px-4 py-2'}`}
-          data-testid="button-view-all-updates"
-        >
-          View all updates
-        </a>
-      </div>
-    </div>
-  );
+    );
+  };
 
   if (isMobile) {
     return (
