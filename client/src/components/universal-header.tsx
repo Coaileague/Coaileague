@@ -147,35 +147,34 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                 showWordmark={true}
               />
             </div>
-            {/* Mobile: Icon with text for visibility + Christmas lights */}
-            <div className="flex sm:hidden items-center gap-2">
+            {/* Mobile: Icon only for space efficiency - text hidden on small screens */}
+            <div className="flex sm:hidden items-center gap-1.5">
               <CoAIleagueLogo 
-                width={36} 
-                height={36} 
+                width={32} 
+                height={32} 
                 onlyIcon={true}
                 className="flex-shrink-0"
               />
-              {isChristmas ? (
-                <span className="font-bold text-base relative">
-                  {/* Christmas lights version - each letter has its own color */}
-                  {'CoAIleague'.split('').map((char, i) => (
-                    <span
-                      key={i}
-                      style={{
-                        color: mobileChristmasColors[i % mobileChristmasColors.length],
-                        textShadow: `0 0 8px ${mobileChristmasColors[i % mobileChristmasColors.length]}80, 0 0 16px ${mobileChristmasColors[i % mobileChristmasColors.length]}40`,
-                        transition: 'color 0.3s ease, text-shadow 0.3s ease',
-                      }}
-                    >
-                      {char}
-                    </span>
-                  ))}
-                </span>
-              ) : (
-                <span className="font-bold text-base bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent">
-                  CoAIleague
-                </span>
-              )}
+              {/* Abbreviated text for mobile - just "CoAI" to save space */}
+              <span className={`font-bold text-sm ${isChristmas ? '' : 'bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent'}`}>
+                {isChristmas ? (
+                  <>
+                    {['C','o','A','I'].map((char, i) => (
+                      <span
+                        key={i}
+                        style={{
+                          color: mobileChristmasColors[i % mobileChristmasColors.length],
+                          textShadow: `0 0 6px ${mobileChristmasColors[i % mobileChristmasColors.length]}60`,
+                        }}
+                      >
+                        {char}
+                      </span>
+                    ))}
+                  </>
+                ) : (
+                  'CoAI'
+                )}
+              </span>
             </div>
           </button>
 
