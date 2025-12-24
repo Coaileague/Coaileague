@@ -763,7 +763,7 @@ function InboxHeaderButton({ onClick }: { onClick: () => void }) {
     refetchInterval: 60000,
   });
   
-  const unreadCount = (mailboxData?.mailbox as any)?.unreadCount || 0;
+  const unreadCount = ((mailboxData as any)?.mailbox as any)?.unreadCount || 0;
   
   return (
     <Tooltip>
@@ -832,7 +832,7 @@ function AppContent() {
 
   // Automatically show onboarding wizard for new users with pending status
   useEffect(() => {
-    if (onboardingStatus?.status === 'pending') {
+    if ((onboardingStatus as any)?.status === 'pending') {
       setShowOnboarding(true);
     }
   }, [onboardingStatus]);
