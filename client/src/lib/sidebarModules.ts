@@ -65,7 +65,11 @@ export type Capability =
   | 'view_audit_logs'
   | 'manage_workspace'
   | 'view_messages'
-  | 'support_dashboard';
+  | 'support_dashboard'
+  | 'manage_integrations'
+  | 'data_migration'
+  | 'onboarding_orchestration'
+  | 'view_onboarding_status';
 
 export type FamilyId = 'executive' | 'operations' | 'people' | 'intelligence' | 'platform';
 
@@ -151,6 +155,7 @@ export const roleCapabilities: Record<WorkspaceRole, Capability[]> = {
     'manage_employees', 'manage_clients',
     'view_audit_logs', 'manage_workspace',
     'view_messages',
+    'manage_integrations', 'data_migration', 'onboarding_orchestration', 'view_onboarding_status',
   ],
   org_admin: [
     'view_schedules', 'manage_schedules',
@@ -161,6 +166,7 @@ export const roleCapabilities: Record<WorkspaceRole, Capability[]> = {
     'manage_employees', 'manage_clients',
     'view_audit_logs', 'manage_workspace',
     'view_messages',
+    'manage_integrations', 'data_migration', 'view_onboarding_status',
   ],
   department_manager: [
     'view_schedules', 'manage_schedules',

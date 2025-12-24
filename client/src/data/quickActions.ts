@@ -26,7 +26,8 @@ import {
   UserPlus,
   GraduationCap,
   BarChart3,
-  Grid3x3
+  Grid3x3,
+  CheckCircle,
 } from 'lucide-react';
 
 export type PlatformRole = 'root_admin' | 'root' | 'sysop' | 'deputy_admin' | 'deputy_assistant' | 'bot' | 'guest' | 'support_manager' | 'support_agent' | 'none';
@@ -387,6 +388,70 @@ export const quickActionsRegistry: QuickAction[] = [
     requiresAuth: true,
     testId: 'quick-all',
     description: 'View all CoAIleague features'
+  },
+
+  // ========================================
+  // Integrations & Onboarding
+  // ========================================
+  {
+    id: 'connect-quickbooks',
+    label: 'Connect QuickBooks',
+    icon: DollarSign,
+    color: 'text-green-500',
+    category: 'operations',
+    desktopPath: '/integrations',
+    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresAuth: true,
+    testId: 'quick-connect-quickbooks',
+    description: 'Connect your QuickBooks account for automated billing and payroll'
+  },
+  {
+    id: 'run-data-sync',
+    label: 'Sync Data',
+    icon: Users,
+    color: 'text-blue-500',
+    category: 'operations',
+    desktopPath: '/integrations',
+    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresAuth: true,
+    testId: 'quick-run-sync',
+    description: 'Run initial data sync from connected integrations'
+  },
+  {
+    id: 'onboarding-progress',
+    label: 'Setup Progress',
+    icon: CheckCircle,
+    color: 'text-primary',
+    category: 'core',
+    desktopPath: '/onboarding',
+    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresAuth: true,
+    testId: 'quick-onboarding-progress',
+    description: 'View your workspace setup checklist and progress'
+  },
+  {
+    id: 'import-employees',
+    label: 'Import Team',
+    icon: UserPlus,
+    color: 'text-primary',
+    category: 'core',
+    desktopPath: '/employees',
+    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresAuth: true,
+    testId: 'quick-import-employees',
+    description: 'Import employees from QuickBooks or spreadsheet'
+  },
+  {
+    id: 'integration-health',
+    label: 'Integration Health',
+    icon: Activity,
+    color: 'text-green-400',
+    category: 'operations',
+    desktopPath: '/integrations',
+    requiresWorkspaceRoles: ['owner', 'admin'],
+    requiresAuth: true,
+    testId: 'quick-integration-health',
+    description: 'Monitor connected integration status and health'
   },
 ];
 

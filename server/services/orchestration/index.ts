@@ -16,6 +16,8 @@ import { approvalGateEnforcementService, registerApprovalGateActions } from './a
 import { crossDomainExceptionService, registerExceptionActions } from './crossDomainExceptionService';
 import { notificationAcknowledgmentService, registerNotificationAckActions } from './notificationAcknowledgmentService';
 import { scheduleLifecycleOrchestrator, registerScheduleLifecycleActions } from './scheduleLifecycleOrchestrator';
+import { onboardingQuickBooksFlow } from './onboardingQuickBooksFlow';
+import { automationTriggerService } from './automationTriggerService';
 
 export {
   onboardingStateMachine,
@@ -23,6 +25,8 @@ export {
   crossDomainExceptionService,
   notificationAcknowledgmentService,
   scheduleLifecycleOrchestrator,
+  onboardingQuickBooksFlow,
+  automationTriggerService,
 };
 
 export function initializeOrchestrationServices(): void {
@@ -34,8 +38,11 @@ export function initializeOrchestrationServices(): void {
   registerNotificationAckActions(helpaiOrchestrator);
   registerScheduleLifecycleActions(helpaiOrchestrator);
 
+  onboardingQuickBooksFlow.loadFlows();
+  automationTriggerService.loadTriggers();
+  
   console.log('[Orchestration] All orchestration services initialized');
-  console.log('[Orchestration] Services: Onboarding, Approval Gates, Exceptions, Notifications, Schedule Lifecycle');
+  console.log('[Orchestration] Services: Onboarding, Approval Gates, Exceptions, Notifications, Schedule Lifecycle, QuickBooks Flow, Automation Triggers');
 }
 
 export function getOrchestrationStats(): {
@@ -62,6 +69,7 @@ export function shutdownOrchestrationServices(): void {
   crossDomainExceptionService.shutdown();
   notificationAcknowledgmentService.shutdown();
   scheduleLifecycleOrchestrator.shutdown();
+  automationTriggerService.shutdown();
   
   console.log('[Orchestration] All orchestration services shut down');
 }
