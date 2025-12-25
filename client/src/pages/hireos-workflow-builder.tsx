@@ -274,7 +274,7 @@ function StepEditorDialog({ open, onOpenChange, step, onSave, reportTemplates }:
                   <CardDescription>Show this step only when conditions are met</CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-3">
-                  <div className="grid grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div>
                       <Label className="text-xs">Field</Label>
                       <Select

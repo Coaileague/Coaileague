@@ -327,7 +327,7 @@ export default function HRReviews() {
 
                     <div className="border rounded-lg p-4 space-y-3">
                       <h4 className="font-semibold">Performance Ratings (1-5)</h4>
-                      <div className="grid grid-cols-3 gap-4">
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                         {['communication', 'teamwork', 'quality', 'productivity', 'attendance', 'overall'].map((field) => (
                           <FormField
                             key={field}

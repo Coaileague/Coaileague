@@ -343,7 +343,7 @@ export default function LeadersHub() {
 
       {/* Tabbed Interface */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-5" data-testid="tabs-leaders-hub">
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5" data-testid="tabs-leaders-hub">
           <TabsTrigger value="dashboard" data-testid="tab-dashboard">
             <Home className="h-4 w-4 mr-2" />
             Dashboard

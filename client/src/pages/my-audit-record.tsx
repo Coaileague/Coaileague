@@ -81,7 +81,7 @@ export default function MyAuditRecord() {
 
       {/* Tabs for different record types */}
       <Tabs defaultValue="shifts" className="w-full">
-        <TabsList className="grid w-full grid-cols-5 gap-1">
+        <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 gap-1">
           <TabsTrigger value="shifts" data-testid="tab-shifts">
             <Clock className="w-4 h-4 mr-1" />
             Work History
