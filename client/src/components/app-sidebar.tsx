@@ -28,13 +28,10 @@ import { CoAIleagueLogo } from "@/components/coailleague-logo";
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
-  const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading, platformRole } = useWorkspaceAccess();
+  const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
   const transition = useTransition();
   const { state } = useSidebar();
   const isMobile = useIsMobile();
-  
-  // Debug: Log workspace access values
-  console.log('[Sidebar] Workspace access:', { workspaceRole, subscriptionTier, isPlatformStaff, platformRole, isLoading });
   
   if (isMobile) {
     return null;
@@ -43,9 +40,6 @@ export function AppSidebar() {
   const families = isLoading 
     ? [] 
     : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
-  
-  // Debug: Log families
-  console.log('[Sidebar] Families:', families.map(f => ({ id: f.id, routeCount: f.routes.length, routes: f.routes.map(r => r.id) })));
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};
