@@ -584,12 +584,22 @@ function mapToUNS(
     // Notifications are read if explicitly marked as read OR if cleared
     const isRead = notif.isRead || isCleared;
     
+    // Determine category based on notification's category field and type
+    // System-related categories and types go to system_alerts tab
+    const systemCategories = ['system', 'alerts'];
+    const systemTypes = [
+      'platform_maintenance', 'known_issue', 'service_down', 'service_restored',
+      'platform_update', 'feature_release', 'system', 'support_escalation'
+    ];
+    const isSystemNotification = systemCategories.includes(notif.category) || 
+                                  systemTypes.includes(notif.type);
+    
     notifications.push({
       id: notif.id,
       title: friendlyTitle,
       message: friendlyMessage,
       priority: notif.type === 'error' ? 'critical' : notif.type === 'warning' ? 'high' : 'info',
-      category: 'for_you',
+      category: isSystemNotification ? 'system_alerts' : 'for_you',
       subCategory: notif.type,
       serviceSource: friendlySource,
       statusTag: isRead ? undefined : 'NEW', // Remove NEW tag when read
