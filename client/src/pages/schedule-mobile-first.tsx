@@ -402,31 +402,31 @@ export default function ScheduleMobileFirst() {
         </div>
 
         {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-2 text-center">
-          <div className="bg-card rounded-lg p-2 shadow-sm">
-            <div className="text-lg sm:text-xl font-bold text-primary">
+        <div className="grid grid-cols-3 gap-3 text-center">
+          <div className="bg-card rounded-xl p-3 shadow-sm">
+            <div className="text-2xl sm:text-3xl font-bold text-primary">
               {stats?.totalShifts || 0}
             </div>
-            <div className="text-[10px] sm:text-xs text-muted-foreground">Shifts</div>
+            <div className="text-xs sm:text-sm text-muted-foreground font-medium">Shifts</div>
           </div>
-          <div className="bg-card rounded-lg p-2 shadow-sm">
-            <div className="text-lg sm:text-xl font-bold text-green-600">
+          <div className="bg-card rounded-xl p-3 shadow-sm">
+            <div className="text-2xl sm:text-3xl font-bold text-green-600">
               {stats?.totalHours?.toFixed(0) || 0}
             </div>
-            <div className="text-[10px] sm:text-xs text-muted-foreground">Hours</div>
+            <div className="text-xs sm:text-sm text-muted-foreground font-medium">Hours</div>
           </div>
-          <div className="bg-card rounded-lg p-2 shadow-sm">
-            <div className="text-lg sm:text-xl font-bold text-amber-600">
+          <div className="bg-card rounded-xl p-3 shadow-sm">
+            <div className="text-2xl sm:text-3xl font-bold text-amber-600">
               {pendingShifts.length}
             </div>
-            <div className="text-[10px] sm:text-xs text-muted-foreground">Pending</div>
+            <div className="text-xs sm:text-sm text-muted-foreground font-medium">Pending</div>
           </div>
         </div>
       </div>
 
-      {/* Day Selector */}
-      <div className="bg-card border-b overflow-x-auto px-2 py-2">
-        <div className="flex gap-1 min-w-max">
+      {/* Day Selector - Optimized for mobile touch */}
+      <div className="bg-card border-b overflow-x-auto px-2 py-3">
+        <div className="flex gap-2 min-w-max justify-between px-1">
           {weekDays.map((day) => {
             const isSelected = format(day, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
             const dayIsToday = isToday(day);
@@ -438,21 +438,21 @@ export default function ScheduleMobileFirst() {
               <button
                 key={day.toISOString()}
                 onClick={() => setSelectedDate(day)}
-                className={`flex flex-col items-center p-2 rounded-xl min-w-[52px] transition-all ${
+                className={`flex flex-col items-center py-2 px-3 rounded-xl min-w-[48px] min-h-[64px] transition-all ${
                   isSelected
                     ? 'bg-primary text-primary-foreground shadow-lg scale-105'
                     : dayIsToday
                     ? 'bg-primary/20 text-primary'
-                    : 'hover:bg-muted'
+                    : 'hover:bg-muted active:bg-muted/80'
                 }`}
                 data-testid={`day-tab-${format(day, 'yyyy-MM-dd')}`}
               >
-                <span className="text-[10px] font-medium uppercase">
+                <span className="text-xs font-semibold uppercase tracking-wide">
                   {format(day, 'EEE')}
                 </span>
-                <span className="text-lg font-bold">{format(day, 'd')}</span>
+                <span className="text-xl font-bold">{format(day, 'd')}</span>
                 {dayShiftCount > 0 && (
-                  <div className={`w-1.5 h-1.5 rounded-full mt-0.5 ${
+                  <div className={`w-2 h-2 rounded-full mt-1 ${
                     isSelected ? 'bg-primary-foreground' : 'bg-primary'
                   }`} />
                 )}
@@ -463,24 +463,24 @@ export default function ScheduleMobileFirst() {
       </div>
 
       {/* View Toggle - My Schedule / Full Schedule */}
-      <div className="bg-card border-b px-3 py-2">
+      <div className="bg-card border-b px-3 py-3">
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'my' | 'full')}>
-          <TabsList className="w-full grid grid-cols-2">
-            <TabsTrigger value="my" className="text-sm" data-testid="tab-my-schedule">
-              <CalendarDays className="w-4 h-4 mr-1.5" />
-              My Schedule
+          <TabsList className="w-full grid grid-cols-2 h-11">
+            <TabsTrigger value="my" className="text-sm gap-2 min-h-[40px]" data-testid="tab-my-schedule">
+              <CalendarDays className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">My Schedule</span>
             </TabsTrigger>
-            <TabsTrigger value="full" className="text-sm" data-testid="tab-full-schedule">
-              <Users className="w-4 h-4 mr-1.5" />
-              Full Schedule
+            <TabsTrigger value="full" className="text-sm gap-2 min-h-[40px]" data-testid="tab-full-schedule">
+              <Users className="w-4 h-4 flex-shrink-0" />
+              <span className="truncate">Full Schedule</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-muted/50 border-b px-3 py-2">
-        <div className="flex gap-2 overflow-x-auto">
+      <div className="bg-muted/50 border-b px-3 py-3">
+        <div className="flex gap-2 overflow-x-auto pb-1">
           {isManagerOrSupervisor && (
             <>
               <Button
