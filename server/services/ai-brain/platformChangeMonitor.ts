@@ -385,7 +385,7 @@ IMPACT DESCRIPTION:
 CATEGORIZATION:
 - detailedCategory: One of: feature, service, bot_automation, bugfix, security, improvement, deprecation, hotpatch, integration, ui_update, backend_update, performance, documentation
 - sourceType: One of: system, ai_brain, support_staff, developer, automated_job, user_request, external_service
-- sourceName: Specific name like "Billing Automation", "HelpAI Orchestrator", "Security Team", etc.
+- sourceName: Specific name like "Billing Automation", "Platform Action Hub", "Security Team", etc.
 
 TECHNICAL DETAILS REQUIREMENTS:
 - For support staff and developers

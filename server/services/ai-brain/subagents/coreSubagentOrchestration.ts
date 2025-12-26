@@ -18,7 +18,7 @@ export interface CoreSubagentActionContext {
 }
 
 /**
- * Register Core Subagent actions with HelpAI Orchestrator
+ * Register Core Subagent actions with Platform Action Hub
  */
 export function registerCoreSubagentActions(orchestrator: any): void {
   // ============================================================================

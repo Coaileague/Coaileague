@@ -2,12 +2,12 @@
  * GEMINI TOOL SCHEMA GENERATOR
  * ============================
  * 
- * Bridges the gap between HelpAI Orchestrator actions and Gemini Function Calling.
+ * Bridges the gap between Platform Action Hub actions and Gemini Function Calling.
  * Automatically generates FunctionDeclaration schemas from registered actions,
  * enabling Gemini to orchestrate the ENTIRE platform.
  * 
  * This is the missing link that connects:
- * - 61+ HelpAI Orchestrator actions
+ * - 61+ Platform Action Hub actions
  * - Gemini's function calling capability
  * - End-user natural language requests
  */

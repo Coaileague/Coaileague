@@ -19,7 +19,7 @@ export interface UACPActionContext {
 }
 
 /**
- * Register UACP actions with HelpAI Orchestrator
+ * Register UACP actions with Platform Action Hub
  */
 export function registerUACPActions(orchestrator: any): void {
   // ============================================================================

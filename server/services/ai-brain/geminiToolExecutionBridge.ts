@@ -2,11 +2,11 @@
  * GEMINI TOOL EXECUTION BRIDGE
  * ============================
  * 
- * Routes Gemini function calls to HelpAI Orchestrator actions.
+ * Routes Gemini function calls to Platform Action Hub actions.
  * This completes the 8-step function calling loop:
  * 
  * Steps 1-3: User prompt → Gemini → Function calls (handled by geminiClient.ts)
- * Step 4: THIS BRIDGE - Execute actions through HelpAI Orchestrator
+ * Step 4: THIS BRIDGE - Execute actions through Platform Action Hub
  * Steps 5-8: Results back to Gemini → Final response (handled by geminiClient.ts)
  */
 

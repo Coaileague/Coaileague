@@ -1,12 +1,15 @@
 /**
- * HelpAI Action Orchestrator - Universal Action Handler
+ * Platform Action Hub - Universal Action Handler
  * 
- * Central hub that brokers ALL user-triggered actions through the AI Brain.
+ * Central infrastructure that brokers ALL user-triggered actions through the AI Brain (Trinity).
  * Uses an event-driven command bus tied to ChatServerHub and WebSocket layers.
+ * 
+ * NOTE: This is platform infrastructure, not HelpAI itself. HelpAI is a support bot that
+ * uses this action hub. Trinity/AI Brain is the true orchestrator.
  * 
  * Responsibilities:
  * - Intercept and validate all user actions
- * - Route actions to appropriate service handlers
+ * - Route actions to appropriate service handlers (via Trinity orchestration)
  * - Monitor health of services, features, and tools
  * - Send notifications to support/end users
  * - Push updates to What's New for platform announcements
@@ -119,7 +122,7 @@ class HelpaiActionOrchestrator {
   private initialized = false;
 
   constructor() {
-    console.log('[HelpAI Orchestrator] Initializing universal action handler...');
+    console.log('[Platform Action Hub] Initializing universal action handler...');
     this.registerBuiltinActions();
     this.subscribeToEventBus();
   }
@@ -137,7 +140,7 @@ class HelpaiActionOrchestrator {
     // Start health monitoring
     this.startHealthMonitoring();
     this.initialized = true;
-    console.log('[HelpAI Orchestrator] Initialized with WebSocket broadcaster');
+    console.log('[Platform Action Hub] Initialized with WebSocket broadcaster');
   }
 
   /**
@@ -147,7 +150,7 @@ class HelpaiActionOrchestrator {
     platformEventBus.subscribe('ai_brain_action', {
       name: 'HelpAI Orchestrator',
       handler: async (event) => {
-        console.log(`[HelpAI Orchestrator] Received event: ${event.type}`);
+        console.log(`[Platform Action Hub] Received event: ${event.type}`);
         // Process AI brain events
         if (event.metadata?.actionId) {
           await this.handleAIEvent(event);
@@ -938,7 +941,7 @@ class HelpaiActionOrchestrator {
     // Register idempotency management actions
     registerIdempotencyActions(this);
 
-    console.log(`[HelpAI Orchestrator] Registered ${ACTION_REGISTRY.size} built-in actions`);
+    console.log(`[Platform Action Hub] Registered ${ACTION_REGISTRY.size} built-in actions`);
   }
 
   /**
@@ -946,7 +949,7 @@ class HelpaiActionOrchestrator {
    */
   registerAction(handler: ActionHandler): void {
     ACTION_REGISTRY.set(handler.actionId, handler);
-    console.log(`[HelpAI Orchestrator] Registered action: ${handler.actionId}`);
+    console.log(`[Platform Action Hub] Registered action: ${handler.actionId}`);
   }
 
   /**
@@ -986,7 +989,7 @@ class HelpaiActionOrchestrator {
     const startTime = Date.now();
     
     // Log the action request
-    console.log(`[HelpAI Orchestrator] Executing action: ${request.actionId} by user ${request.userId}`);
+    console.log(`[Platform Action Hub] Executing action: ${request.actionId} by user ${request.userId}`);
 
     // Get the action handler
     const handler = ACTION_REGISTRY.get(request.actionId);
@@ -1001,7 +1004,7 @@ class HelpaiActionOrchestrator {
 
     // Check authorization
     if (!this.isAuthorized(request.userRole, handler.requiredRoles)) {
-      console.warn(`[HelpAI Orchestrator] Unauthorized: ${request.userId} with role ${request.userRole} tried to execute ${request.actionId}`);
+      console.warn(`[Platform Action Hub] Unauthorized: ${request.userId} with role ${request.userRole} tried to execute ${request.actionId}`);
       return {
         success: false,
         actionId: request.actionId,
@@ -1052,7 +1055,7 @@ class HelpaiActionOrchestrator {
         ledgerEntry = await automationGovernanceService.createLedgerEntry(actionContext, governanceDecision);
         
         if (!governanceDecision.canExecute) {
-          console.log(`[HelpAI Orchestrator] Governance blocked action: ${handler.name} - ${governanceDecision.blockingReason}`);
+          console.log(`[Platform Action Hub] Governance blocked action: ${handler.name} - ${governanceDecision.blockingReason}`);
           
           if (ledgerEntry) {
             await automationGovernanceService.updateLedgerEntry(ledgerEntry.id, {
@@ -1075,7 +1078,7 @@ class HelpaiActionOrchestrator {
         }
         
         if (governanceDecision.requiresApproval && !request.payload?.approvalGranted) {
-          console.log(`[HelpAI Orchestrator] Action requires approval: ${handler.name} (confidence: ${governanceDecision.confidenceScore}%)`);
+          console.log(`[Platform Action Hub] Action requires approval: ${handler.name} (confidence: ${governanceDecision.confidenceScore}%)`);
           
           if (ledgerEntry) {
             await automationGovernanceService.updateLedgerEntry(ledgerEntry.id, {
@@ -1096,10 +1099,10 @@ class HelpaiActionOrchestrator {
           };
         }
         
-        console.log(`[HelpAI Orchestrator] Governance approved: ${handler.name} (confidence: ${governanceDecision.confidenceScore}%, level: ${governanceDecision.computedLevel})`);
+        console.log(`[Platform Action Hub] Governance approved: ${handler.name} (confidence: ${governanceDecision.confidenceScore}%, level: ${governanceDecision.computedLevel})`);
       }
     } catch (govError) {
-      console.warn('[HelpAI Orchestrator] Governance check failed (continuing with caution):', govError);
+      console.warn('[Platform Action Hub] Governance check failed (continuing with caution):', govError);
     }
 
     // ============================================================================
@@ -1124,7 +1127,7 @@ class HelpaiActionOrchestrator {
       });
       
       if (!idempotencyCheck.isNew) {
-        console.log(`[HelpAI Orchestrator] Duplicate action detected: ${request.actionId} (key: ${idempotencyKey})`);
+        console.log(`[Platform Action Hub] Duplicate action detected: ${request.actionId} (key: ${idempotencyKey})`);
         
         if (idempotencyCheck.cachedResult) {
           return {
@@ -1166,7 +1169,7 @@ class HelpaiActionOrchestrator {
           preActionDecision = await aiAnalyticsEngine.evaluatePreAction(actionContext);
           
           if (preActionDecision && !preActionDecision.shouldProceed) {
-            console.log(`[HelpAI Orchestrator] Trinity blocked action: ${handler.name} - ${preActionDecision.rationale}`);
+            console.log(`[Platform Action Hub] Trinity blocked action: ${handler.name} - ${preActionDecision.rationale}`);
             
             // Mark idempotency as failed so it can be retried
             if (idempotencyKey) {
@@ -1183,12 +1186,12 @@ class HelpaiActionOrchestrator {
           }
           
           if (preActionDecision) {
-            console.log(`[HelpAI Orchestrator] Trinity approved: ${handler.name} (confidence: ${preActionDecision.confidence})`);
+            console.log(`[Platform Action Hub] Trinity approved: ${handler.name} (confidence: ${preActionDecision.confidence})`);
           }
         }
       }
     } catch (aiError) {
-      console.warn('[HelpAI Orchestrator] Trinity pre-action check failed (continuing):', aiError);
+      console.warn('[Platform Action Hub] Trinity pre-action check failed (continuing):', aiError);
     }
 
     // Execute the action
@@ -1224,11 +1227,11 @@ class HelpaiActionOrchestrator {
               success: result.success,
               data: result.data,
               error: result.success ? undefined : result.message,
-            }).catch(err => console.warn('[HelpAI Orchestrator] Trinity post-action analysis failed:', err));
+            }).catch(err => console.warn('[Platform Action Hub] Trinity post-action analysis failed:', err));
           }
         }
       } catch (postAiError) {
-        console.warn('[HelpAI Orchestrator] Trinity post-action check failed:', postAiError);
+        console.warn('[Platform Action Hub] Trinity post-action check failed:', postAiError);
       }
 
       // ============================================================================
@@ -1254,7 +1257,7 @@ class HelpaiActionOrchestrator {
           });
         }
       } catch (learningError) {
-        console.warn('[HelpAI Orchestrator] Knowledge learning failed:', learningError);
+        console.warn('[Platform Action Hub] Knowledge learning failed:', learningError);
       }
 
       // Enhance result with Trinity decision if available
@@ -1383,7 +1386,7 @@ class HelpaiActionOrchestrator {
   private validateWorkspaceAccess(request: ActionRequest, handler: ActionHandler): boolean {
     // Test tools and support actions require workspace context for multi-tenant isolation
     if (handler.isTestTool && !request.workspaceId) {
-      console.warn(`[HelpAI Orchestrator] Test tool ${request.actionId} requires workspace context`);
+      console.warn(`[Platform Action Hub] Test tool ${request.actionId} requires workspace context`);
       return false;
     }
     return true;
@@ -1411,7 +1414,7 @@ class HelpaiActionOrchestrator {
         }
       });
     } catch (error) {
-      console.error('[HelpAI Orchestrator] Failed to log action:', error);
+      console.error('[Platform Action Hub] Failed to log action:', error);
     }
   }
 
@@ -1470,7 +1473,7 @@ class HelpaiActionOrchestrator {
     // Check for duplicate events within dedup window
     const dedupKey = this.getEventDedupKey(request);
     if (this.isDuplicateEvent(dedupKey)) {
-      console.log(`[HelpAI Orchestrator] Skipping duplicate event: ${dedupKey}`);
+      console.log(`[Platform Action Hub] Skipping duplicate event: ${dedupKey}`);
       return;
     }
 
@@ -1536,14 +1539,14 @@ class HelpaiActionOrchestrator {
     // Mark event as published for dedup tracking
     this.markEventPublished(dedupKey);
     
-    console.log(`[HelpAI Orchestrator] Published What's New: "${friendlyTitle}" (visibility: ${policy.visibility})`);
+    console.log(`[Platform Action Hub] Published What's New: "${friendlyTitle}" (visibility: ${policy.visibility})`);
   }
 
   /**
    * Handle AI-related events from event bus
    */
   private async handleAIEvent(event: PlatformEvent): Promise<void> {
-    console.log(`[HelpAI Orchestrator] Processing AI event: ${event.title}`);
+    console.log(`[Platform Action Hub] Processing AI event: ${event.title}`);
     // Process AI brain events - could trigger follow-up actions
   }
 
@@ -1551,7 +1554,7 @@ class HelpaiActionOrchestrator {
    * Handle service errors and notify support
    */
   private async handleServiceError(event: PlatformEvent): Promise<void> {
-    console.log(`[HelpAI Orchestrator] Service error detected: ${event.title}`);
+    console.log(`[Platform Action Hub] Service error detected: ${event.title}`);
     
     // Update service health status
     const serviceName = event.metadata?.serviceName || 'unknown';
@@ -1578,7 +1581,7 @@ class HelpaiActionOrchestrator {
   private async notifySupportOfFailure(request: ActionRequest, error: Error): Promise<void> {
     // Create notification for support users
     // In a full implementation, this would query for support users and notify them
-    console.log(`[HelpAI Orchestrator] ALERT: Action ${request.actionId} failed: ${error.message}`);
+    console.log(`[Platform Action Hub] ALERT: Action ${request.actionId} failed: ${error.message}`);
   }
 
   /**
@@ -1593,7 +1596,7 @@ class HelpaiActionOrchestrator {
       this.runHealthChecks();
     }, 60000);
 
-    console.log('[HelpAI Orchestrator] Health monitoring started');
+    console.log('[Platform Action Hub] Health monitoring started');
   }
 
   /**
@@ -1643,7 +1646,7 @@ class HelpaiActionOrchestrator {
     if (this.healthCheckInterval) {
       clearInterval(this.healthCheckInterval);
     }
-    console.log('[HelpAI Orchestrator] Shutdown complete');
+    console.log('[Platform Action Hub] Shutdown complete');
   }
 }
 

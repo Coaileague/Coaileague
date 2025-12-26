@@ -1,7 +1,7 @@
 /**
  * Schedule Live Notifier Actions for AI Brain Orchestration
  * 
- * Registers schedule notification actions with the HelpAI Orchestrator
+ * Registers schedule notification actions with the Platform Action Hub
  * enabling Trinity and automation to trigger real-time schedule notifications.
  */
 
