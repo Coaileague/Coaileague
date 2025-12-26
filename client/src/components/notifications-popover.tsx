@@ -720,9 +720,25 @@ function NotificationCard({
   
   return (
     <div 
-      className={`relative ${notification.isRead ? 'opacity-60' : ''}`}
+      className={`relative group ${notification.isRead ? 'opacity-60' : ''}`}
       data-testid={`uns-card-${notification.id}`}
     >
+      {/* Individual Dismiss Button - appears on hover */}
+      {canInteract && (
+        <Button
+          variant="ghost"
+          size="icon"
+          className={`absolute ${compact ? 'top-1 right-1 h-5 w-5' : 'top-2 right-2 h-6 w-6'} opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-background/80 hover:bg-destructive/10 text-muted-foreground hover:text-destructive`}
+          onClick={(e) => {
+            e.stopPropagation();
+            onDismiss(notification.id);
+          }}
+          data-testid={`button-dismiss-${notification.id}`}
+        >
+          <X className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
+        </Button>
+      )}
+      
       {/* Critical/High/Medium Priority Cards */}
       {(isCritical || isHigh || isMedium) ? (
         <div className={`${cardBg} rounded-md overflow-hidden`}>
