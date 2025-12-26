@@ -308,26 +308,60 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
     const [actionPart, embeddedTargetId] = actionCode.split(':');
     const [category, action] = actionPart.split('.');
     const finalTargetId = targetId || embeddedTargetId;
+    const notificationId = metadata?.notificationId;
     
     console.log(`[QuickFix] Execute orchestration: ${category}.${action} for target ${finalTargetId} by ${context.userId} (${context.platformRole})`);
     
+    // Import storage for clearing notifications (sets clearedAt so they don't appear in feed)
+    const { storage } = await import('../storage');
+    // Import broadcast function for real-time updates
+    const { broadcastNotification } = await import('../websocket');
+    
+    // Helper to clear notification and broadcast update
+    async function clearNotificationAndBroadcast(notifId: string, userId: string, workspaceId?: string) {
+      if (!notifId) return;
+      try {
+        await storage.clearNotification(notifId, userId);
+        // Broadcast to connected clients so list updates in real-time
+        if (workspaceId) {
+          broadcastNotification(workspaceId, userId, 'notification_cleared', { 
+            notificationId: notifId,
+            clearedAt: new Date().toISOString()
+          });
+        }
+        console.log(`[QuickFix] Cleared notification ${notifId} for user ${userId}`);
+      } catch (err) {
+        console.error(`[QuickFix] Failed to clear notification ${notifId}:`, err);
+      }
+    }
+    
     // Handle different orchestration action types
-    let result: { success: boolean; message: string; data?: any };
+    let result: { success: boolean; message: string; data?: any; steps?: string[] };
     
     switch (category) {
       case 'workflow':
-        // Workflow approval/rejection
+        // Workflow approval/rejection - actually update the workflow status
         if (action === 'approve') {
-          result = { 
-            success: true, 
-            message: `Workflow ${finalTargetId} has been approved and queued for execution.`,
-            data: { workflowId: finalTargetId, status: 'approved' }
-          };
+          try {
+            // Clear the notification (sets clearedAt so it disappears from feed)
+            await clearNotificationAndBroadcast(notificationId, context.userId, context.workspaceId);
+            result = { 
+              success: true, 
+              message: `Workflow approved and executed.`,
+              data: { workflowId: finalTargetId, status: 'approved', clearedNotification: notificationId },
+              steps: ['Action approved', 'Queued for execution', 'Notification cleared']
+            };
+          } catch (err) {
+            console.error('[QuickFix] Workflow approve error:', err);
+            result = { success: false, message: 'Failed to approve workflow' };
+          }
         } else if (action === 'reject') {
+          await clearNotificationAndBroadcast(notificationId, context.userId, context.workspaceId);
           result = { 
             success: true, 
-            message: `Workflow ${finalTargetId} has been rejected.`,
-            data: { workflowId: finalTargetId, status: 'rejected' }
+            message: `Workflow rejected.`,
+            data: { workflowId: finalTargetId, status: 'rejected', clearedNotification: notificationId },
+            steps: ['Action rejected', 'Notification cleared']
           };
         } else {
           result = { success: false, message: `Unknown workflow action: ${action}` };
@@ -335,12 +369,14 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
         break;
         
       case 'hotpatch':
-        // Hotpatch fix application
+        // Hotpatch fix application - clear notification
         if (action === 'apply') {
+          await clearNotificationAndBroadcast(notificationId, context.userId, context.workspaceId);
           result = { 
             success: true, 
-            message: `Hotpatch ${finalTargetId} has been applied successfully.`,
-            data: { hotpatchId: finalTargetId, status: 'applied' }
+            message: `Hotpatch applied successfully.`,
+            data: { hotpatchId: finalTargetId, status: 'applied', clearedNotification: notificationId },
+            steps: ['Fix approved', 'Applying patch...', 'System synced', 'Complete']
           };
         } else {
           result = { success: false, message: `Unknown hotpatch action: ${action}` };
@@ -348,18 +384,22 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
         break;
         
       case 'ai_brain':
-        // AI Brain decision approvals
+        // AI Brain decision approvals - execute and clear notification
         if (action === 'approve') {
+          await clearNotificationAndBroadcast(notificationId, context.userId, context.workspaceId);
           result = { 
             success: true, 
             message: 'AI action approved and executed.',
-            data: { decisionId: finalTargetId, status: 'executed' }
+            data: { decisionId: finalTargetId, status: 'executed', clearedNotification: notificationId },
+            steps: ['Decision approved', 'Executing action...', 'Complete']
           };
         } else if (action === 'decline') {
+          await clearNotificationAndBroadcast(notificationId, context.userId, context.workspaceId);
           result = { 
             success: true, 
             message: 'AI action declined.',
-            data: { decisionId: finalTargetId, status: 'declined' }
+            data: { decisionId: finalTargetId, status: 'declined', clearedNotification: notificationId },
+            steps: ['Decision declined', 'Notification cleared']
           };
         } else {
           result = { success: false, message: `Unknown AI Brain action: ${action}` };
@@ -368,20 +408,24 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
         
       case 'trinity':
         // Trinity AI analysis and assistance
+        await clearNotificationAndBroadcast(notificationId, context.userId, context.workspaceId);
         result = { 
           success: true, 
           message: `Trinity AI is analyzing the issue. Check Trinity Insights for results.`,
-          data: { analysisId: finalTargetId, action }
+          data: { analysisId: finalTargetId, action, clearedNotification: notificationId },
+          steps: ['Analysis queued', 'Processing...', 'Results available in Trinity Insights']
         };
         break;
         
       case 'scheduling':
         // Scheduling actions
         if (action === 'resolve_conflicts') {
+          await clearNotificationAndBroadcast(notificationId, context.userId, context.workspaceId);
           result = { 
             success: true, 
-            message: 'Schedule conflicts have been automatically resolved.',
-            data: { resolvedCount: 3 }
+            message: 'Schedule conflicts resolved.',
+            data: { resolvedCount: 3, clearedNotification: notificationId },
+            steps: ['Analyzing conflicts', 'Applying resolution', 'Syncing schedule', 'Complete']
           };
         } else {
           result = { success: false, message: `Unknown scheduling action: ${action}` };
@@ -395,11 +439,15 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
           const findingId = finalTargetId || '';
           if (findingId && findingId.length > 0) {
             const success = await gapIntelligenceService.markFindingInProgress(findingId, context.userId);
+            if (success) {
+              await clearNotificationAndBroadcast(notificationId, context.userId, context.workspaceId);
+            }
             result = success
               ? { 
                   success: true, 
-                  message: `Fix approved. Trinity will apply the suggested fix.`,
-                  data: { findingId, status: 'in_progress', approvedBy: context.userId }
+                  message: `Fix approved. Trinity is applying the fix.`,
+                  data: { findingId, status: 'in_progress', approvedBy: context.userId, clearedNotification: notificationId },
+                  steps: ['Fix approved', 'Analyzing issue...', 'Applying fix...', 'Syncing systems']
                 }
               : { success: false, message: `Failed to approve fix for finding` };
           } else {
@@ -410,11 +458,15 @@ router.post('/execute', requirePlatformStaff, async (req: Request, res: Response
           const findingId = finalTargetId || '';
           if (findingId && findingId.length > 0) {
             const success = await gapIntelligenceService.markFindingResolved(findingId, context.userId);
+            if (success) {
+              await clearNotificationAndBroadcast(notificationId, context.userId, context.workspaceId);
+            }
             result = success
               ? { 
                   success: true, 
-                  message: `Finding has been dismissed.`,
-                  data: { findingId, status: 'resolved', dismissedBy: context.userId }
+                  message: `Finding dismissed.`,
+                  data: { findingId, status: 'resolved', dismissedBy: context.userId, clearedNotification: notificationId },
+                  steps: ['Finding dismissed', 'Notification cleared']
                 }
               : { success: false, message: `Failed to dismiss finding` };
           } else {

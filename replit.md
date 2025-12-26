@@ -105,6 +105,8 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Mobile Detection Stability:** Always use `useMemo` for mobile detection logic that determines layout mode (Sheet vs Popover, etc.) to prevent layout flicker between renders. IIFEs that run on every render cause inconsistent UI.
 - **Notification Popover Sizing:** The notifications popover should maintain consistent 420px max width across all tabs (For You, System). Layout-affecting logic must be memoized.
 - **Individual Dismiss Buttons:** Each notification card has an individual X button (appears on hover) for single-item dismissal, using the existing `dismissMutation` infrastructure.
+- **Notification Clearing Pattern:** Use `storage.clearNotification()` (sets `clearedAt` field) to remove items from the UNS feed - NOT just `markNotificationAsRead()` which only sets `isRead`. Queries filter where `clearedAt IS NULL`, so only `clearNotification` actually removes items from the feed.
+- **Quick-Fix Approval Flow:** When users approve actions in notifications, the backend clears the notification via `storage.clearNotification()`, broadcasts `notification_cleared` via WebSocket, and frontend optimistically removes the item from cache. Progress steps are returned from backend and displayed in toast.
 
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.

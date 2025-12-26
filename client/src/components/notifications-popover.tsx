@@ -1292,10 +1292,29 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       });
       return response.json();
     },
+    onMutate: () => {
+      // Show immediate feedback that action is being processed
+      toast({ 
+        title: "Processing...", 
+        description: "Trinity is executing your request.",
+      });
+    },
     onSuccess: (data) => {
       if (data.success) {
+        // Invalidate to refresh the notification list (item will be marked as read)
         queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
-        toast({ title: "Action Executed", description: data.message || "Trinity processed your request." });
+        
+        // Show success with steps if available
+        const steps = data.steps as string[] | undefined;
+        const stepsText = steps?.length 
+          ? steps.map((s, i) => `${i === steps.length - 1 ? '✓' : '✓'} ${s}`).join(' → ')
+          : data.message;
+        
+        toast({ 
+          title: "Complete", 
+          description: stepsText || "Action executed successfully.",
+          variant: "success" as any,
+        });
       } else {
         toast({ title: "Action Failed", description: data.error || "Unable to complete action.", variant: "destructive" });
       }
