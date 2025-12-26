@@ -1,7 +1,7 @@
 # CoAIleague - AI-Powered Workforce Intelligence Platform
 
 ## Overview
-CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management platform. It centralizes dynamic configuration, eliminates hardcoded values, and integrates financial management with real Stripe payments. The platform leverages AI for advanced automation across various workforce management functions, including scheduling, sentiment analysis, onboarding, health monitoring, and dispute resolution, all orchestrated through a multi-tenant AI system called HelpAI. CoAIleague aims to deliver an efficient, comprehensive, and AI-driven workforce management solution with significant market potential.
+CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management platform. Its purpose is to centralize dynamic configuration, eliminate hardcoded values, and integrate financial management with real Stripe payments. The platform leverages AI for advanced automation across various workforce management functions, including scheduling, sentiment analysis, onboarding, health monitoring, and dispute resolution, all orchestrated through a multi-tenant AI system called HelpAI. CoAIleague aims to deliver an efficient, comprehensive, and AI-driven workforce management solution with significant market potential.
 
 ## User Preferences
 - I prefer simple language
@@ -33,59 +33,8 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Advanced Scheduling:** Recurring shifts, swapping, and one-click duplication.
 - **Analytics Dashboard:** Metrics endpoints with AI insights and heat map visualizations.
 - **Break Compliance:** 50-state labor law configuration, auto-scheduling, and compliance checking.
-- **AI Brain Master Orchestrator:** Central hub coordinating actions across categories, connecting Gemini AI to platform services.
-- **AI Expense Categorization:** Receipt OCR via Gemini Vision, intelligent categorization, and spending pattern analysis.
-- **AI Dynamic Pricing:** Client-specific pricing analysis and bulk rate adjustment simulations.
-- **AI Brain Authorization Service:** Role-based permission model with a 9-level hierarchy.
-- **TrinityContextManager:** Multi-turn conversation memory with context building and human escalation.
-- **TrinityMemoryService:** Long-term memory persistence for AI learning and user/workspace profiles.
-- **SessionSyncService:** Real-time multi-device synchronization using WebSocket and TanStack Query.
-- **Trinity Org Intelligence:** Real-time organizational awareness system.
-- **Trinity 3-Mode System:** Explicit operational modes: Demo, Business Pro, and Guru.
-- **Swarm Commander Service:** "God Mode" control center for AI agent orchestration.
-- **Crisis Management Protocol:** Fortune 500-grade incident response system.
-- **Empire Mode (Trinity Pro CSO Upgrade):** Transforms Trinity to Chief Strategy Officer.
-- **Cross-Bot Knowledge Sharing:** Shared insights system enabling AI components to learn from each other.
-- **Experience Feedback Loop:** Automation outcomes feed back into confidence models and agent learning.
-- **AI Brain Workboard:** Central job queue system for AI orchestration, routing user requests, and managing Trinity credits.
-- **AI Brain Knowledge Orchestration Service:** Advanced knowledge management and intelligent routing using Gemini 3 Pro.
-- **AICreditGateway:** Centralized billing enforcement for all AI operations.
-- **SeasonalSubagent:** Autonomous AI-powered holiday theming orchestrator.
-- **ServiceOrchestrationWatchdog:** Platform service orchestration monitor detecting unmanaged and stopped services.
-- **TrinityExecutionFabric:** Architect-grade execution engine for autonomous platform operations.
-- **PlatformIntentRouter:** Intelligent routing system directing all platform operations through AI Brain orchestration.
-- **TrinitySentinel:** Continuous self-healing monitoring service.
-- **Self-Reflection Engine:** Trinity self-critique system enabling LLM introspection on execution results.
-- **LLM-as-Judge Evaluator:** Internal evaluation subagent system for quality assessment.
-- **Planning Framework Service:** Structured reasoning frameworks for autonomous planning (Chain-of-Thought, ReAct, Tree-of-Thought).
-- **Adaptive Supervision Router:** Smart routing based on task complexity and risk assessment.
-- **Behavioral Monitoring Service:** Model drift detection and anomaly tracking system.
-- **Trinity Command Center (TCC):** Universal cognitive command center with RBAC-gated quick actions, natural language & voice command interface, real-time AI output panels, and full orchestration hierarchy integration.
-- **Visual QA Subagent (Trinity's Eyes):** AI-powered visual inspection system using Puppeteer for screenshots and Gemini Vision for anomaly detection.
-- **Universal Access Control Panel (UACP):** Dynamic Attribute-Based Access Control (ABAC) system layered on RBAC.
-- **Fortune 500-Grade Core Subagents:** Enterprise-grade business operation subagents with circuit breaker patterns, distributed tracing, and idempotency protection (Scheduling, Payroll, Invoice, Notification).
-- **Trinity Work Order System:** Full parity with autonomous AI agents for understanding and executing user requests, including Intake, Task Decomposition, Solution Discovery, Confident Commit, Clarification, and Work Summary Engines.
-- **Schedule Live Notifier:** Real-time push notifications for all schedule changes via AI Brain orchestration.
-- **Cognitive Onboarding Service:** Third-party API integrations (QuickBooks, Gusto, ADP, Paychex, Zenefits, Rippling, BambooHR, Workday) for automatic data extraction during organization setup, with OAuth2 and AI-powered field mapping.
-- **Shared Knowledge Graph:** Persistent agent-to-agent learning system with semantic knowledge nodes, entity relationships, business rule encoding, and cross-domain reasoning.
-- **Agent-to-Agent (A2A) Communication Protocol:** Direct subagent messaging, collaboration team formation, trust frameworks, and negotiation protocols.
-- **Reinforcement Learning Loop:** Continuous self-improvement system tracking success/failure, confidence calibration, strategy adaptation, and reward-based learning to reduce human escalations.
-- **Domain Lead Supervisors:** Specialized supervisors with escalation policies for RevenueOps, SecurityOps, OnboardingOps, DataOps, and CommunicationOps.
-- **Cognitive Database Persistence:** Write-through cache pattern for all cognitive services with dedicated tables and automatic state restoration.
-- **Integration Management System:** Workspace-level API key management with encrypted credential storage, Trinity AI-powered outage analysis, and platform support role partner catalog management.
-- **Trinity Root Access System:** Trinity AI has root-level platform control equivalent to root_admin user, implemented via dual-layer authorization with Trinity bypass logic and an emergency kill-switch.
-- **Trinity Control Console:** Real-time streaming of Trinity's cognitive process including thought signatures (reasoning between tool calls), action logs (structured tool execution records), and platform awareness events.
-- **Platform Awareness Helper:** Fire-and-forget database event posting system (postDatabaseEventToAIBrain) that ensures Trinity has visibility into all CRUD operations without blocking the main request flow.
-- **UIControlSubagent:** Trinity's control layer for frontend UI components including layers, effects, managers, and handlers.
-- **InviteCodeOnboardingFlow:** Enhanced invitation acceptance workflow that triggers trial start, billing pipeline initialization, Trinity AI welcome, gamification activation, and platform event emission for new organizations.
-- **TrialConversionOrchestrator:** Automated trial-to-paid conversion with warning notifications, auto-conversion, grace period handling, and workspace suspension for expired trials.
-- **StripeEventBridge:** Webhook-to-AI-Brain connection processing Stripe events with automatic workspace status updates, owner notifications, and escalation workflows.
-- **ExceptionQueueProcessor:** Billing exception triage with auto-resolution rules, human escalation workflow, priority-based aging thresholds, and admin notifications.
-- **Workflow Orchestration Services:** 7 Fortune 500-grade workflow pipeline services: OnboardingStateMachine, ApprovalGateEnforcement, CrossDomainExceptionService, NotificationAcknowledgmentService, ScheduleLifecycleOrchestrator, OnboardingQuickBooksFlow, and AutomationTriggerService.
-- **OnboardingQuickBooksFlow:** Automated QuickBooks OAuth → data sync → employee import → schedule generation pipeline.
-- **AutomationTriggerService:** Event-driven automation linking integration connections to scheduling, invoicing, and payroll workflows.
-- **HRIS Integration Service:** Unified 8-provider HRIS integration (QuickBooks, Gusto, ADP, Paychex, Zenefits, Rippling, BambooHR, Workday) with OAuth2 authentication, bidirectional data sync, AI-powered field mapping with confidence scoring, conflict resolution, and 5 AI Brain actions registered for Trinity orchestration.
-- **Trinity Orchestration Adapter:** Unified event emission library providing complete platform visibility to Trinity AI. Uses fire-and-forget pattern with setImmediate for non-blocking telemetry. Dual-channel routing to both platformEventBus and aiBrainEvents. Domain-specific helpers for HRIS (sync lifecycle, OAuth events), RBAC/ABAC (access decisions), Auth (session creation, authentication), Workflow (approval/rejection tracking), and Webhook events. Follows Trinity Event Contract v1 with standardized payload schemas, correlation tracking for long-running operations, and metrics collection.
+- **Cognitive Onboarding Service:** Third-party API integrations for automatic data extraction during organization setup, with OAuth2 and AI-powered field mapping.
+- **HRIS Integration Service:** Unified 8-provider HRIS integration with OAuth2, bidirectional data sync, AI-powered field mapping, conflict resolution, and AI Brain orchestration.
 
 **System Design Choices:**
 - **Modularity:** Extensive backend service modules and frontend routes.
@@ -96,17 +45,9 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Unified Config Registry:** Single source of truth with Zod validation.
 - **AI/Automation Bypass Pattern:** Elevated session bypass for AI features and automation services using HMAC-signed elevation tokens.
 - **ChatServerHub Architecture:** Unified gateway connecting chat rooms to AI Brain, notifications, tickets, and analytics.
-- **Spec-Driven Development:** Component registry with tier-based AI editing rules (Critical, Core, Feature, Utility).
-- **Cleanup Agent Subagent (CAS):** Autonomous code cleanup with LLM-as-Judge integration, unused file discovery, and human-approved deletion proposals.
-- **Trinity Agent Parity Layer:** Replit Agent-equivalent autonomous coding capabilities (Plan-Execute-Reflect, Verification Loops, Confidence Scoring, Context Integration, Self-Correction) with a comprehensive workflow including planning, pre-flight verification, execution, post-validation, self-reflection, and auto-correction.
-- **Trinity Humanized Persona System:** Human-like AI communication patterns with senior engineer persona, conversational transitions, cognitive pauses, empathy expressions, and natural uncertainty acknowledgment.
-
-## Known UI Patterns & Pitfalls (Trinity Self-Healing Reference)
-- **Mobile Detection Stability:** Always use `useMemo` for mobile detection logic that determines layout mode (Sheet vs Popover, etc.) to prevent layout flicker between renders. IIFEs that run on every render cause inconsistent UI.
-- **Notification Popover Sizing:** The notifications popover should maintain consistent 420px max width across all tabs (For You, System). Layout-affecting logic must be memoized.
-- **Individual Dismiss Buttons:** Each notification card has an individual X button (appears on hover) for single-item dismissal, using the existing `dismissMutation` infrastructure.
-- **Notification Clearing Pattern:** Use `storage.clearNotification()` (sets `clearedAt` field) to remove items from the UNS feed - NOT just `markNotificationAsRead()` which only sets `isRead`. Queries filter where `clearedAt IS NULL`, so only `clearNotification` actually removes items from the feed.
-- **Quick-Fix Approval Flow:** When users approve actions in notifications, the backend clears the notification via `storage.clearNotification()`, broadcasts `notification_cleared` via WebSocket, and frontend optimistically removes the item from cache. Progress steps are returned from backend and displayed in toast.
+- **Spec-Driven Development:** Component registry with tier-based AI editing rules.
+- **Trinity Agent Parity Layer:** Replit Agent-equivalent autonomous coding capabilities (Plan-Execute-Reflect, Verification Loops, Confidence Scoring, Context Integration, Self-Correction).
+- **Trinity Humanized Persona System:** Human-like AI communication patterns with a senior engineer persona.
 
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
@@ -118,4 +59,4 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Google Cloud Storage (GCS)**: File management.
 - **PostgreSQL**: Primary relational database.
 - **Twilio**: SMS notifications.
-- **QuickBooks, Gusto, ADP, Paychex, Zenefits, Rippling, BambooHR, Workday**: Third-party API integrations for Cognitive Onboarding Service.
+- **QuickBooks, Gusto, ADP, Paychex, Zenefits, Rippling, BambooHR, Workday**: Third-party API integrations for HRIS and onboarding.
