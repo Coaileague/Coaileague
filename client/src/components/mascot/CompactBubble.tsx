@@ -143,10 +143,20 @@ export const CompactBubble = memo(function CompactBubble({
                 onDismiss();
               }, 300);
             }}
-            className={`p-0.5 rounded hover:bg-black/10 dark:hover:bg-white/10 transition-colors ${colors.text}`}
+            onTouchEnd={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsVisible(false);
+              setTimeout(() => {
+                setShouldRender(false);
+                onDismiss();
+              }, 300);
+            }}
+            className={`p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 active:bg-black/20 transition-colors ${colors.text}`}
+            style={{ touchAction: 'manipulation', minWidth: '28px', minHeight: '28px' }}
             data-testid="button-close-bubble"
           >
-            <X size={14} />
+            <X size={16} />
           </button>
         </div>
 
