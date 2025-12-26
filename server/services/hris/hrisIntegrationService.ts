@@ -38,6 +38,7 @@ import {
 import { eq, and, desc, isNull, or, ilike } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 import { aiBrainService } from '../ai-brain/aiBrainService';
+import { trinityOrchestration } from '../trinity/trinityOrchestrationAdapter';
 import crypto from 'crypto';
 
 // ============================================================================
@@ -459,12 +460,15 @@ class HRISIntegrationService {
         },
       });
 
+      trinityOrchestration.hris.oauthSuccess(workspaceId, provider, connection.id);
+
       console.log(`[HRISIntegration] ${provider} connected for workspace ${workspaceId}`);
 
       return { success: true, connectionId: connection.id };
 
     } catch (error: any) {
       console.error(`[HRISIntegration] OAuth callback failed:`, error);
+      trinityOrchestration.hris.oauthFailed('unknown', provider, error.message);
       return { success: false, error: error.message };
     }
   }
@@ -534,6 +538,9 @@ class HRISIntegrationService {
     }
 
     this.syncInProgress.set(syncKey, true);
+
+    const correlationId = trinityOrchestration.hris.syncRequested(workspaceId, provider, userId);
+    trinityOrchestration.hris.syncStarted(workspaceId, provider, correlationId);
 
     const result: SyncResult = {
       success: false,
@@ -652,9 +659,16 @@ class HRISIntegrationService {
         },
       });
 
+      trinityOrchestration.hris.syncCompleted(workspaceId, provider, correlationId, {
+        imported: result.recordsCreated,
+        updated: result.recordsUpdated,
+        skipped: result.recordsSkipped,
+      });
+
     } catch (error: any) {
       result.errors.push(error.message);
       console.error(`[HRISIntegration] Sync failed:`, error);
+      trinityOrchestration.hris.syncFailed(workspaceId, provider, correlationId, error.message);
     } finally {
       this.syncInProgress.set(syncKey, false);
       result.durationMs = Date.now() - startTime;
