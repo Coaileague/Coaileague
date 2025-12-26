@@ -21155,6 +21155,92 @@ export const orchestratedSwapRequests = pgTable("orchestrated_swap_requests", {
 ]);
 
 // ============================================================================
+// COMPLIANCE REPORTS - Automated Regulatory Report Generation
+// ============================================================================
+
+export const complianceReportTypeEnum = pgEnum('compliance_report_type', [
+  'labor_law_violations',      // FLSA, DOL violations
+  'tax_remittance',            // IRS/State tax withholding proof
+  'time_entry_audit',          // 7-year retention audit log
+  'osha_safety',               // OSHA workplace safety incidents
+  'eeo_demographics',          // Equal Employment Opportunity
+  'aca_healthcare',            // Affordable Care Act compliance
+  'i9_verification',           // I-9 work authorization
+  'break_compliance',          // State-specific meal/rest break laws
+  'overtime_summary',          // Weekly overtime tracking
+  'certification_expiry',      // Expiring licenses/certifications
+  'payroll_summary',           // Pay period summaries
+  'contractor_1099',           // 1099 contractor payments
+]);
+
+export const complianceReportStatusEnum = pgEnum('compliance_report_status', [
+  'generating',                // Report generation in progress
+  'completed',                 // Successfully generated
+  'failed',                    // Generation failed
+  'archived',                  // Archived for long-term storage
+]);
+
+export const complianceReports = pgTable("compliance_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Report identification
+  reportType: complianceReportTypeEnum("report_type").notNull(),
+  reportTitle: varchar("report_title", { length: 300 }).notNull(),
+  description: text("description"),
+  
+  // Time period covered
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // Generation details
+  status: complianceReportStatusEnum("status").default("generating"),
+  generatedBy: varchar("generated_by").references(() => users.id, { onDelete: 'set null' }),
+  generatedAt: timestamp("generated_at"),
+  automatedGeneration: boolean("automated_generation").default(false),
+  
+  // Report data
+  reportData: jsonb("report_data"), // Full report JSON data
+  summaryStats: jsonb("summary_stats"), // Quick summary for listing
+  
+  // Regulatory references
+  regulations: text("regulations").array().default(sql`ARRAY[]::text[]`), // ['FLSA §207', 'OSHA 29 CFR 1910']
+  jurisdiction: varchar("jurisdiction", { length: 50 }), // 'US-FEDERAL', 'CA', 'NY', etc.
+  
+  // Export/download
+  pdfUrl: varchar("pdf_url", { length: 500 }), // Object storage URL for PDF
+  excelUrl: varchar("excel_url", { length: 500 }), // Optional Excel export
+  
+  // Compliance status
+  hasViolations: boolean("has_violations").default(false),
+  violationCount: integer("violation_count").default(0),
+  criticalViolationCount: integer("critical_violation_count").default(0),
+  potentialFinesUsd: decimal("potential_fines_usd", { precision: 12, scale: 2 }),
+  
+  // Retention
+  retentionYears: integer("retention_years").default(7), // Legal retention requirement
+  expiresAt: timestamp("expires_at"), // Auto-delete after retention period
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("cr_workspace_idx").on(table.workspaceId),
+  index("cr_type_idx").on(table.reportType),
+  index("cr_status_idx").on(table.status),
+  index("cr_period_idx").on(table.periodStart, table.periodEnd),
+  index("cr_generated_idx").on(table.generatedAt),
+]);
+
+export const insertComplianceReportSchema = createInsertSchema(complianceReports).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertComplianceReport = z.infer<typeof insertComplianceReportSchema>;
+export type ComplianceReport = typeof complianceReports.$inferSelect;
+
+// ============================================================================
 // TRINITY UNIFIED TASK SCHEMA - Re-exports
 // ============================================================================
 
