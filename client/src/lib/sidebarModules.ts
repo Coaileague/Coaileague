@@ -75,6 +75,16 @@ export type Capability =
 
 export type FamilyId = 'executive' | 'operations' | 'people' | 'intelligence' | 'platform';
 
+export type RouteGroupId = 'core' | 'ai_automation' | 'administration' | 'support_qa' | 'settings';
+
+export const ROUTE_GROUPS: Record<RouteGroupId, { label: string; order: number }> = {
+  core: { label: 'Core Operations', order: 0 },
+  ai_automation: { label: 'AI & Automation', order: 1 },
+  administration: { label: 'Administration', order: 2 },
+  support_qa: { label: 'Support & QA', order: 3 },
+  settings: { label: 'Settings', order: 4 },
+};
+
 export interface ModuleRoute {
   id: string;
   label: string;
@@ -88,6 +98,7 @@ export interface ModuleRoute {
   isPrimary?: boolean;
   order?: number;
   excludeForCapabilities?: Capability[]; // Hide route if user has any of these capabilities
+  groupId?: RouteGroupId; // For organizing Platform routes into categories
 }
 
 export interface SidebarModule {
@@ -670,13 +681,15 @@ export const platformSupportModule: SidebarModule = {
   color: 'hsl(var(--destructive))',
   capabilities: ['support_dashboard'],
   routes: [
+    // Core Operations Group
     {
       id: 'root-admin-dashboard',
       label: 'Control Center',
-      href: '/dashboard', // Universal dashboard for all roles
+      href: '/dashboard',
       icon: Shield,
       description: 'Unified Control Center & Dashboard',
       familyId: 'platform',
+      groupId: 'core',
       badge: 'Root',
       isPrimary: true,
       order: 0,
@@ -688,10 +701,12 @@ export const platformSupportModule: SidebarModule = {
       icon: Activity,
       description: 'Monitor platform services and performance',
       familyId: 'platform',
+      groupId: 'core',
       badge: 'Admin',
       isPrimary: false,
       order: 1,
     },
+    // AI & Automation Group
     {
       id: 'support-ai-console',
       label: 'Trinity AI Console',
@@ -700,57 +715,10 @@ export const platformSupportModule: SidebarModule = {
       description: 'Trinity AI control interface for platform operations',
       capabilities: ['support_dashboard'],
       familyId: 'platform',
+      groupId: 'ai_automation',
       badge: 'Root',
       isPrimary: false,
       order: 2,
-    },
-    {
-      id: 'admin-command-center',
-      label: 'Admin Command Center',
-      href: '/admin-command-center',
-      icon: Settings,
-      description: 'Platform administration controls',
-      capabilities: ['support_dashboard'],
-      familyId: 'platform',
-      badge: 'Admin',
-      isPrimary: false,
-      order: 3,
-    },
-    {
-      id: 'support-console',
-      label: 'Support Console',
-      href: '/support/console',
-      icon: Headphones,
-      description: 'Customer support command center',
-      capabilities: ['support_dashboard'],
-      familyId: 'platform',
-      badge: 'Support',
-      isPrimary: false,
-      order: 4,
-    },
-    {
-      id: 'support-bugs',
-      label: 'Bug Dashboard',
-      href: '/support/bugs',
-      icon: AlertCircle,
-      description: 'Track and manage platform bugs',
-      capabilities: ['support_dashboard'],
-      familyId: 'platform',
-      badge: 'QA',
-      isPrimary: false,
-      order: 5,
-    },
-    {
-      id: 'end-user-controls',
-      label: 'End-User Controls',
-      href: '/admin/end-user-controls',
-      icon: Users,
-      description: 'Manage organization access, Trinity™, and user permissions',
-      capabilities: ['support_dashboard'],
-      familyId: 'platform',
-      badge: 'Admin',
-      isPrimary: false,
-      order: 6,
     },
     {
       id: 'trinity-command-center',
@@ -760,9 +728,37 @@ export const platformSupportModule: SidebarModule = {
       description: 'Full Trinity AI orchestration with quick actions and real-time output',
       capabilities: ['support_dashboard'],
       familyId: 'platform',
+      groupId: 'ai_automation',
       badge: 'Root',
       isPrimary: false,
-      order: 7,
+      order: 3,
+    },
+    // Administration Group
+    {
+      id: 'admin-command-center',
+      label: 'Admin Command Center',
+      href: '/admin-command-center',
+      icon: Settings,
+      description: 'Platform administration controls',
+      capabilities: ['support_dashboard'],
+      familyId: 'platform',
+      groupId: 'administration',
+      badge: 'Admin',
+      isPrimary: false,
+      order: 4,
+    },
+    {
+      id: 'end-user-controls',
+      label: 'End-User Controls',
+      href: '/admin/end-user-controls',
+      icon: Users,
+      description: 'Manage organization access, Trinity, and user permissions',
+      capabilities: ['support_dashboard'],
+      familyId: 'platform',
+      groupId: 'administration',
+      badge: 'Admin',
+      isPrimary: false,
+      order: 5,
     },
     {
       id: 'org-management',
@@ -772,9 +768,10 @@ export const platformSupportModule: SidebarModule = {
       description: 'Manage organizations and their members',
       capabilities: ['support_dashboard'],
       familyId: 'platform',
+      groupId: 'administration',
       badge: 'Admin',
       isPrimary: false,
-      order: 9,
+      order: 6,
     },
     {
       id: 'platform-users',
@@ -784,9 +781,37 @@ export const platformSupportModule: SidebarModule = {
       description: 'Manage all platform users and roles',
       capabilities: ['support_dashboard'],
       familyId: 'platform',
+      groupId: 'administration',
       badge: 'Root',
       isPrimary: false,
-      order: 10,
+      order: 7,
+    },
+    // Support & QA Group
+    {
+      id: 'support-console',
+      label: 'Support Console',
+      href: '/support/console',
+      icon: Headphones,
+      description: 'Customer support command center',
+      capabilities: ['support_dashboard'],
+      familyId: 'platform',
+      groupId: 'support_qa',
+      badge: 'Support',
+      isPrimary: false,
+      order: 8,
+    },
+    {
+      id: 'support-bugs',
+      label: 'Bug Dashboard',
+      href: '/support/bugs',
+      icon: AlertCircle,
+      description: 'Track and manage platform bugs',
+      capabilities: ['support_dashboard'],
+      familyId: 'platform',
+      groupId: 'support_qa',
+      badge: 'QA',
+      isPrimary: false,
+      order: 9,
     },
   ],
 };
