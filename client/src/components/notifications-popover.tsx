@@ -723,12 +723,12 @@ function NotificationCard({
       className={`relative group ${notification.isRead ? 'opacity-60' : ''}`}
       data-testid={`uns-card-${notification.id}`}
     >
-      {/* Individual Dismiss Button - appears on hover */}
+      {/* Individual Dismiss Button - appears on hover, inset from edge for better UX */}
       {canInteract && (
         <Button
           variant="ghost"
           size="icon"
-          className={`absolute ${compact ? 'top-1 right-1 h-5 w-5' : 'top-2 right-2 h-6 w-6'} opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-background/80 hover:bg-destructive/10 text-muted-foreground hover:text-destructive`}
+          className={`absolute ${compact ? 'top-2 right-3 h-5 w-5' : 'top-3 right-4 h-6 w-6'} opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-background/80 hover:bg-destructive/10 text-muted-foreground hover:text-destructive rounded-full`}
           onClick={(e) => {
             e.stopPropagation();
             onDismiss(notification.id);
@@ -1704,8 +1704,8 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="max-w-[min(calc(100vw-1rem),420px)] w-full p-0 shadow-xl border-muted flex flex-col overflow-hidden" 
-        style={{ maxHeight: 'min(75vh, 560px)' }}
+        className="w-[420px] max-w-[min(calc(100vw-1rem),420px)] p-0 shadow-xl border-muted flex flex-col overflow-hidden" 
+        style={{ maxHeight: 'min(75vh, 560px)', minWidth: '380px' }}
         align="end"
         sideOffset={8}
         data-testid="notification-popover-content"

@@ -110,7 +110,7 @@ export const onboardingConfig = {
       steps: ['profile_completion', 'team_channels', 'security_setup'],
     },
     operations: {
-      name: 'Operations OS',
+      name: 'Platform Operations',
       steps: ['profile_completion', 'policy_review', 'security_setup'],
     },
     growth: {

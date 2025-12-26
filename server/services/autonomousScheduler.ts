@@ -1721,7 +1721,7 @@ export function startAutonomousScheduler() {
       runWeeklyScheduleGeneration()
         .then(() => {
           emitAutomationEvent({
-            jobName: 'AI Schedule Generation (OperationsOS)',
+            jobName: 'AI Schedule Generation',
             category: 'scheduling',
             success: true,
             duration: Date.now() - startTime,
@@ -1729,7 +1729,7 @@ export function startAutonomousScheduler() {
         })
         .catch((err) => {
           emitAutomationEvent({
-            jobName: 'AI Schedule Generation (OperationsOS)',
+            jobName: 'AI Schedule Generation',
             category: 'scheduling',
             success: false,
             details: { error: err.message },

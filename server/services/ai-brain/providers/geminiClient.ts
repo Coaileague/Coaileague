@@ -773,7 +773,7 @@ async function executeRecommendPlatformFeature(
   
   if (needLower.includes('schedule') || needLower.includes('shift') || needLower.includes('calendar')) {
     recommendations.push({
-      feature: 'OperationsOS™ Smart Scheduling',
+      feature: 'Trinity AI Smart Scheduling',
       description: 'AI-powered scheduling with conflict detection, employee preferences, and one-click optimization',
       tier: 'Professional',
       benefit: 'Save 6+ hours per week on scheduling'

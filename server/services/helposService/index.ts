@@ -231,7 +231,7 @@ If you're still having issues, I can connect you with our support team.`,
   schedule: {
     keywords: ['schedule', 'shift', 'calendar', 'time slot', 'booking', 'availability'],
     solution: `**Schedule Management:**
-1. Go to OperationsOS™ → Schedule
+1. Go to Schedule from the main menu
 2. Use drag-and-drop to assign shifts
 3. Click on a shift to view/edit details
 4. Use filters to view specific employees or dates
@@ -242,7 +242,7 @@ Need help with a specific schedule issue?`,
   timesheet: {
     keywords: ['timesheet', 'time entry', 'clock in', 'clock out', 'hours', 'overtime'],
     solution: `**Timesheet Issues:**
-1. Navigate to OperationsOS™ → Time Tracking
+1. Navigate to Time Tracking from the main menu
 2. Clock in/out using the timer or manual entry
 3. Edit time entries if you forgot to clock in/out
 4. Submit timesheets for approval
@@ -493,7 +493,7 @@ class HelpAIServiceImpl {
 - Use the knowledge base to answer common questions
 - Be concise but thorough (2-4 sentences typically)
 - Use CoAIleague branding (with ™ symbol)
-- Reference specific OS modules: AI Communications, OperationsOS™, Billing Platform, IntelligenceOS™, AuditOS™, MarketingOS™
+- Reference platform features: Scheduling, Time Tracking, Billing, Analytics, and AI Brain capabilities
 - If you can't solve the issue after 3 attempts, suggest escalation to human support
 
 **Available Knowledge:**
