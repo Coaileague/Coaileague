@@ -66,10 +66,12 @@ interface GraduationMilestone {
 }
 
 interface NotificationWebSocketMessage {
-  type: 'notification_new' | 'notification_read' | 'notification_read_bulk' | 'notification_count_updated' | 'notifications_subscribed' | 'platform_update' | 'notification_cleared_all' | 'all_notifications_cleared' | 'whats_new_cleared' | 'whats_new_viewed' | 'automation_event' | 'fast_mode_result' | 'graduation_milestone' | 'error';
+  type: 'notification_new' | 'notification_read' | 'notification_read_bulk' | 'notification_count_updated' | 'notifications_subscribed' | 'platform_update' | 'notification_cleared_all' | 'all_notifications_cleared' | 'notification_cleared' | 'whats_new_cleared' | 'whats_new_viewed' | 'automation_event' | 'fast_mode_result' | 'graduation_milestone' | 'error';
   notification?: EnhancedNotification & { counts?: { notifications: number; platformUpdates: number; total: number; lastUpdated: string } };
   update?: PlatformUpdate;
   updateId?: string;
+  notificationId?: string;
+  clearedAt?: string;
   unreadCount?: number;
   timestamp?: string;
   workspaceId?: string;
@@ -335,6 +337,39 @@ export function useNotificationWebSocket(userId: string | undefined, workspaceId
               queryClient.invalidateQueries({ queryKey: ["/api/trinity/context"] });
               // Dispatch event for WhatsNewBadge component
               window.dispatchEvent(new CustomEvent('whats_new_cleared', { detail: data }));
+              break;
+
+            case 'notification_cleared':
+              // Single notification cleared (e.g., after user approves an action)
+              console.log('🗑️ Single notification cleared:', data.notificationId);
+              if (data.notificationId) {
+                // Optimistically remove the notification from cache
+                queryClient.setQueryData(["/api/notifications/combined"], (oldData: any) => {
+                  if (!oldData) return oldData;
+                  return {
+                    ...oldData,
+                    notifications: oldData.notifications?.filter((n: any) => n.id !== data.notificationId) || [],
+                    unreadNotifications: Math.max(0, (oldData.unreadNotifications || 0) - 1),
+                    totalUnread: Math.max(0, (oldData.totalUnread || 0) - 1),
+                  };
+                });
+                // Also update regular notifications query
+                queryClient.setQueryData(["/api/notifications"], (oldData: any) => {
+                  if (!oldData) return oldData;
+                  if (Array.isArray(oldData)) {
+                    return oldData.filter((n: any) => n.id !== data.notificationId);
+                  }
+                  return oldData;
+                });
+                // Dispatch event for components that need to know
+                window.dispatchEvent(new CustomEvent('notification_cleared', { 
+                  detail: { notificationId: data.notificationId, clearedAt: data.clearedAt } 
+                }));
+              }
+              // Refetch to ensure server state is correct
+              queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/notifications"] });
+              queryClient.invalidateQueries({ queryKey: ["/api/trinity/context"] });
               break;
 
             case 'whats_new_cleared':
