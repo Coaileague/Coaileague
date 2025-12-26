@@ -472,11 +472,29 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
       data-testid="festive-dialogue-bubble"
     >
       {/* Close button wrapper - needs pointer-events-auto to be clickable */}
-      <div className="pointer-events-auto absolute -top-2 -right-2 z-10">
+      {/* Mobile: larger 44x44 touch target, higher z-index to stay above seasonal effects */}
+      <div 
+        className="pointer-events-auto absolute -top-3 -right-3"
+        style={{ zIndex: 10001 }}
+      >
         <button
           onClick={handleDismiss}
-          className="w-6 h-6 rounded-full bg-white border-2 border-red-500 flex items-center justify-center shadow-md hover:bg-red-50 transition-colors"
-          style={{ fontSize: '14px', fontWeight: 'bold', color: '#c41e3a' }}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            handleDismiss();
+          }}
+          className={`
+            rounded-full bg-white border-2 border-red-500 flex items-center justify-center 
+            shadow-lg hover:bg-red-50 active:bg-red-100 transition-colors
+            ${isMobile ? 'w-11 h-11' : 'w-7 h-7'}
+          `}
+          style={{ 
+            fontSize: isMobile ? '20px' : '16px', 
+            fontWeight: 'bold', 
+            color: '#c41e3a',
+            touchAction: 'manipulation',
+          }}
           aria-label="Dismiss thought bubble"
           data-testid="button-close-festive-bubble"
         >
