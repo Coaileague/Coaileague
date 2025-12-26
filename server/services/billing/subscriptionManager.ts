@@ -21,43 +21,50 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 // Subscription tier pricing (monthly base prices)
-// VALUE-BASED PRICING: Captures 40-50% of $250K-$430K administrative salary replacement
+// MIDDLEWARE PRICING: Fair value for automation layer connecting to HRIS/accounting
+// Users already pay for QuickBooks, Gusto, etc. - we provide the AI automation
+import { BILLING } from '@shared/billingConfig';
+
 export const TIER_PRICING = {
   free: {
-    monthlyPrice: 0,
-    yearlyPrice: 0,
+    monthlyPrice: BILLING.tiers.free.monthlyPrice,
+    yearlyPrice: BILLING.tiers.free.yearlyPrice,
     stripePriceId: null,
     stripeYearlyPriceId: null,
     credits: TIER_CREDIT_ALLOCATIONS.free,
-    maxEmployees: 5,
-    adminReplacementValue: 0, // Annual value of positions replaced
+    maxEmployees: BILLING.tiers.free.maxEmployees,
+    maxManagers: BILLING.tiers.free.maxManagers,
+    adminReplacementValue: BILLING.tiers.free.adminReplacementValue,
   },
   starter: {
-    monthlyPrice: 499900, // $4,999/month
-    yearlyPrice: 5998800, // $59,988/year ($4,999/month × 12 months)
+    monthlyPrice: BILLING.tiers.starter.monthlyPrice, // $349/month
+    yearlyPrice: BILLING.tiers.starter.yearlyPrice, // $3,490/year (2 months free)
     stripePriceId: process.env.STRIPE_STARTER_MONTHLY_PRICE_ID,
     stripeYearlyPriceId: process.env.STRIPE_STARTER_YEARLY_PRICE_ID,
     credits: TIER_CREDIT_ALLOCATIONS.starter,
-    maxEmployees: 50,
-    adminReplacementValue: 252500, // Replaces 2-3 high-end admin positions (~$170K-$255K/year)
+    maxEmployees: BILLING.tiers.starter.maxEmployees, // 10 included
+    maxManagers: BILLING.tiers.starter.maxManagers, // 2 included
+    adminReplacementValue: BILLING.tiers.starter.adminReplacementValue,
   },
   professional: {
-    monthlyPrice: 999900, // $9,999/month
-    yearlyPrice: 11998800, // $119,988/year ($9,999/month - saves $1,200/year on annual)
+    monthlyPrice: BILLING.tiers.professional.monthlyPrice, // $999/month
+    yearlyPrice: BILLING.tiers.professional.yearlyPrice, // $9,990/year (2 months free)
     stripePriceId: process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID,
     stripeYearlyPriceId: process.env.STRIPE_PROFESSIONAL_YEARLY_PRICE_ID,
     credits: TIER_CREDIT_ALLOCATIONS.professional,
-    maxEmployees: 150,
-    adminReplacementValue: 335000, // Replaces 3-4 high-end admin positions (~$255K-$335K/year)
+    maxEmployees: BILLING.tiers.professional.maxEmployees, // 25 included
+    maxManagers: BILLING.tiers.professional.maxManagers, // 5 included
+    adminReplacementValue: BILLING.tiers.professional.adminReplacementValue,
   },
   enterprise: {
-    monthlyPrice: 1799900, // $17,999/month
-    yearlyPrice: 21598800, // $215,988/year ($17,999/month - saves $2,400/year on annual)
+    monthlyPrice: BILLING.tiers.enterprise.monthlyPrice, // Contact sales
+    yearlyPrice: BILLING.tiers.enterprise.yearlyPrice,
     stripePriceId: process.env.STRIPE_ENTERPRISE_MONTHLY_PRICE_ID,
     stripeYearlyPriceId: process.env.STRIPE_ENTERPRISE_YEARLY_PRICE_ID,
     credits: TIER_CREDIT_ALLOCATIONS.enterprise,
-    maxEmployees: 999999, // Unlimited
-    adminReplacementValue: 432500, // Replaces 4-5 high-end admin positions (~$335K-$432K/year)
+    maxEmployees: BILLING.tiers.enterprise.maxEmployees, // Unlimited
+    maxManagers: BILLING.tiers.enterprise.maxManagers, // Unlimited
+    adminReplacementValue: BILLING.tiers.enterprise.adminReplacementValue,
   },
 } as const;
 

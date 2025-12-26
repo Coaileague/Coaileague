@@ -23,29 +23,32 @@ export const BILLING = {
 
   // ==========================================================================
   // SUBSCRIPTION TIERS
+  // Middleware pricing: Fair value for automation layer connecting to HRIS/accounting
+  // Users already pay for QuickBooks, Gusto, etc. - we provide the AI automation
   // ==========================================================================
   tiers: {
     free: {
       id: "free",
       name: "Free Trial",
-      description: "Perfect for trying out CoAIleague",
+      description: "14-day trial to experience Trinity AI automation",
       monthlyPrice: 0,
       yearlyPrice: 0,
       maxEmployees: 5,
-      monthlyCredits: 100,
-      trialDays: 30,
+      maxManagers: 1,
+      monthlyCredits: 500,
+      trialDays: 14,
       adminReplacementValue: 0,
       features: [
-        "Up to 5 employees",
-        "Basic scheduling",
+        "Up to 5 employees, 1 manager",
+        "Basic scheduling automation",
         "Time tracking",
-        "100 AI credits/month",
+        "500 AI credits for trial",
         "Email support",
       ],
       limitations: [
         "Limited to 5 employees",
         "No payroll automation",
-        "No client portal",
+        "No client billing",
         "No advanced analytics",
       ],
     },
@@ -53,22 +56,21 @@ export const BILLING = {
     starter: {
       id: "starter",
       name: "Starter",
-      description: "For small teams ready to automate",
-      monthlyPrice: 499900, // $4,999/month in cents
-      yearlyPrice: 5998800, // $59,988/year in cents ($4,999 × 12)
-      maxEmployees: 50,
-      monthlyCredits: 500,
-      adminReplacementValue: 252500, // Replaces 2-3 high-end admin positions
+      description: "Perfect for small teams automating workforce management",
+      monthlyPrice: 34900, // $349/month in cents
+      yearlyPrice: 349000, // $3,490/year (2 months free)
+      maxEmployees: 10,
+      maxManagers: 2,
+      monthlyCredits: 5000,
+      adminReplacementValue: 50000, // Saves ~$50K/year in admin time
       features: [
-        "Up to 50 employees",
-        "AI Scheduling - Smart scheduling",
-        "Time Platform - Full time tracking",
-        "Billing Platform - Automated invoicing",
-        "Basic payroll processing",
-        "Client portal access",
-        "Mobile app access",
-        "500 AI credits/month",
-        "Priority email support",
+        "10 employees, 2 managers included",
+        "Trinity AI Scheduling",
+        "Time tracking & approvals",
+        "Basic compliance alerts",
+        "Integration with 1 HRIS/accounting system",
+        "5,000 AI credits/month",
+        "Email support (48hr response)",
       ],
       popular: false,
     },
@@ -76,22 +78,21 @@ export const BILLING = {
     professional: {
       id: "professional",
       name: "Professional",
-      description: "For growing businesses needing full automation",
-      monthlyPrice: 999900, // $9,999/month in cents
-      yearlyPrice: 11998800, // $119,988/year in cents
-      maxEmployees: 150,
-      monthlyCredits: 2000,
-      adminReplacementValue: 335000, // Replaces 3-4 high-end admin positions
+      description: "Full automation suite for growing businesses",
+      monthlyPrice: 99900, // $999/month in cents
+      yearlyPrice: 999000, // $9,990/year (2 months free)
+      maxEmployees: 25,
+      maxManagers: 5,
+      monthlyCredits: 25000,
+      adminReplacementValue: 120000, // Saves ~$120K/year in admin time
       features: [
-        "Up to 150 employees",
+        "25 employees, 5 managers included",
         "Everything in Starter",
-        "AI Payroll - Full automation",
-        "AI Training - LMS & certifications",
-        "Performance reviews & PTO",
-        "Benefits management",
-        "Custom forms & reports",
-        "Advanced AI integrations",
-        "2,000 AI credits/month",
+        "AI Payroll automation",
+        "Client billing & invoicing",
+        "50-state compliance engine",
+        "Unlimited HRIS/accounting integrations",
+        "25,000 AI credits/month",
         "Priority support (24hr response)",
         "Advanced analytics dashboard",
       ],
@@ -101,75 +102,107 @@ export const BILLING = {
     enterprise: {
       id: "enterprise",
       name: "Enterprise",
-      description: "For large organizations with complex needs",
-      monthlyPrice: 1799900, // $17,999/month in cents
-      yearlyPrice: 21598800, // $215,988/year in cents
+      description: "Custom solutions for large organizations",
+      monthlyPrice: 0, // Contact sales
+      yearlyPrice: 0, // Contact sales
       maxEmployees: 999999, // Unlimited
-      monthlyCredits: 10000,
-      adminReplacementValue: 432500, // Replaces 4-5 high-end admin positions
+      maxManagers: 999999, // Unlimited
+      monthlyCredits: 100000,
+      adminReplacementValue: 250000, // Saves ~$250K+/year in admin time
+      isContactSales: true,
       features: [
-        "Unlimited employees",
+        "Unlimited employees & managers",
         "Everything in Professional",
-        "Advanced analytics dashboards",
-        "API access & webhooks",
-        "Custom reporting & exports",
         "Dedicated account manager",
+        "Custom integrations",
+        "SSO & advanced security",
+        "SLA guarantees",
+        "100,000+ AI credits/month",
         "Priority support (4hr response)",
-        "Custom integration assistance",
-        "Flexible billing & payment terms",
-        "10,000 AI credits/month",
-        "Credit rollover (up to 25%)",
         "White-label options",
+        "On-premise deployment option",
       ],
       popular: false,
     },
   },
 
   // ==========================================================================
-  // OVERAGE PRICING
+  // PER-SEAT ADD-ON PRICING (Beyond included users)
+  // ==========================================================================
+  seatPricing: {
+    employee: {
+      id: "seat_employee",
+      name: "Additional Employee",
+      pricePerMonth: 1800, // $18/employee/month in cents
+      description: "Each employee uses scheduling, time tracking, compliance",
+    },
+    manager: {
+      id: "seat_manager", 
+      name: "Additional Manager",
+      pricePerMonth: 3900, // $39/manager/month in cents
+      description: "Managers use approvals, reports, advanced automation",
+    },
+  },
+
+  // ==========================================================================
+  // LEGACY OVERAGE PRICING (Deprecated - use seatPricing)
   // ==========================================================================
   overages: {
-    perEmployee: 5000, // $50/employee/month in cents
+    perEmployee: 1800, // $18/employee/month in cents (aligned with seatPricing)
     description: "Additional employees beyond plan limit",
     billingCycle: "monthly",
   },
 
   // ==========================================================================
-  // AI CREDIT PACKS (For purchasing additional credits)
+  // TRINITY AI CREDIT BUNDLES (Metered billing for AI usage)
+  // Credits cover: scheduling optimization, invoice generation, payroll processing, etc.
   // ==========================================================================
   creditPacks: {
     starter: {
-      id: "credits_500",
-      name: "500 Credits",
-      credits: 500,
-      price: 4900, // $49 in cents
-      pricePerCredit: 9.8, // cents per credit
-      popular: false,
-    },
-    standard: {
-      id: "credits_1500",
-      name: "1,500 Credits",
-      credits: 1500,
-      price: 12900, // $129 in cents
-      pricePerCredit: 8.6,
-      popular: true,
-    },
-    professional: {
       id: "credits_5000",
       name: "5,000 Credits",
       credits: 5000,
-      price: 39900, // $399 in cents
-      pricePerCredit: 7.98,
+      price: 4900, // $49 in cents
+      pricePerCredit: 0.98, // cents per credit
       popular: false,
+      description: "Light automation use",
+    },
+    standard: {
+      id: "credits_25000",
+      name: "25,000 Credits",
+      credits: 25000,
+      price: 19900, // $199 in cents
+      pricePerCredit: 0.80,
+      popular: true,
+      description: "Standard business operations",
+    },
+    professional: {
+      id: "credits_100000",
+      name: "100,000 Credits",
+      credits: 100000,
+      price: 64900, // $649 in cents
+      pricePerCredit: 0.65,
+      popular: false,
+      description: "Heavy AI usage for larger teams",
     },
     enterprise: {
-      id: "credits_15000",
-      name: "15,000 Credits",
-      credits: 15000,
-      price: 99900, // $999 in cents
-      pricePerCredit: 6.66,
+      id: "credits_500000",
+      name: "500,000 Credits",
+      credits: 500000,
+      price: 249900, // $2,499 in cents
+      pricePerCredit: 0.50,
       popular: false,
+      description: "Enterprise-scale automation",
     },
+  },
+
+  // ==========================================================================
+  // AUTO TOP-UP SETTINGS (Prevents service interruption)
+  // ==========================================================================
+  autoTopUp: {
+    thresholdPercent: 20, // Trigger when 20% credits remaining
+    defaultPackId: "credits_25000",
+    enabled: true,
   },
 
   // ==========================================================================
