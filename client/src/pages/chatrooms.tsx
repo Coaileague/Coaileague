@@ -429,11 +429,11 @@ function RoomCard({
   const ownershipIcon = OWNERSHIP_INDICATORS[ownership];
   const isMobile = useIsMobile();
   
-  // Mobile list item view
+  // Mobile list item view - optimized for touch with 44px+ touch targets
   if (isMobile) {
     return (
       <div
-        className={`flex items-center gap-3 px-4 py-3 border-b border-border/50 cursor-pointer transition-colors hover:bg-muted/50 ${
+        className={`flex items-center gap-3 px-4 py-4 border-b border-border/50 cursor-pointer transition-colors active:bg-muted/80 ${
           room.isParticipant ? 'opacity-60' : ''
         }`}
         onClick={() => {
@@ -443,25 +443,25 @@ function RoomCard({
         }}
         data-testid={`item-room-${room.id || room.roomId}`}
       >
-        {/* Avatar with Status Indicator */}
+        {/* Avatar with Status Indicator - 52px touch target */}
         <div className="relative shrink-0">
-          <div className={`h-12 w-12 rounded-full flex items-center justify-center ${typeConfig.bgColor}`}>
-            <Icon className={`h-5 w-5 ${typeConfig.color}`} />
+          <div className={`h-[52px] w-[52px] rounded-full flex items-center justify-center ${typeConfig.bgColor}`}>
+            <Icon className={`h-6 w-6 ${typeConfig.color}`} />
           </div>
           {isPlatformRoom && (
-            <div className="absolute -bottom-1 -right-1 h-4 w-4 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center">
-              <Bot className="h-2.5 w-2.5 text-white" />
+            <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center">
+              <Bot className="h-3 w-3 text-white" />
             </div>
           )}
           {room.status === 'open' && (
-            <div className="absolute bottom-0 right-0 h-3 w-3 rounded-full bg-green-500 border border-background"></div>
+            <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-background"></div>
           )}
         </div>
 
-        {/* Room Info */}
+        {/* Room Info - larger text for mobile readability */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-baseline justify-between gap-2 mb-0.5">
-            <h3 className="font-medium text-sm truncate" data-testid={`text-room-name-${room.id}`}>
+          <div className="flex items-baseline justify-between gap-2 mb-1">
+            <h3 className="font-semibold text-base truncate" data-testid={`text-room-name-${room.id}`}>
               {room.name || room.subject}
             </h3>
             <span className="text-xs text-muted-foreground shrink-0">
@@ -473,28 +473,30 @@ function RoomCard({
               }
             </span>
           </div>
-          <p className="text-xs text-muted-foreground truncate">
+          <p className="text-sm text-muted-foreground truncate">
             {room.participantsCount !== undefined ? `${room.participantsCount} participant${room.participantsCount !== 1 ? 's' : ''}` : typeConfig.label}
           </p>
         </div>
 
-        {/* Action Button */}
+        {/* Action Button - uses default size for proper 44px+ touch compliance */}
         {!room.isParticipant && (
           <Button
-            size="sm"
-            variant={isSelected ? "default" : "ghost"}
+            variant={isSelected ? "default" : "outline"}
             onClick={(e) => {
               e.stopPropagation();
               onSelect();
             }}
             data-testid={`button-select-room-${room.id || room.roomId}`}
-            className="shrink-0 h-8 px-3 text-xs"
+            className="shrink-0 px-4"
           >
-            {isSelected ? '✓' : '+'}
+            {isSelected ? <><Check className="h-4 w-4 mr-1" />Added</> : <><Plus className="h-4 w-4 mr-1" />Add</>}
           </Button>
         )}
         {room.isParticipant && (
-          <Check className="h-4 w-4 text-emerald-500 shrink-0" data-testid={`icon-joined-${room.id}`} />
+          <Badge variant="secondary" className="shrink-0 bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+            <Check className="h-3 w-3 mr-1" data-testid={`icon-joined-${room.id}`} />
+            Joined
+          </Badge>
         )}
       </div>
     );
@@ -863,12 +865,12 @@ export default function Chatrooms() {
 
           <ScrollArea className="w-full">
             <Tabs value={activeFilter} onValueChange={setActiveFilter} className="w-full">
-              <TabsList className="inline-flex h-9 sm:h-10 w-auto min-w-full sm:min-w-0 gap-1 bg-muted/50 p-1">
+              <TabsList className="inline-flex h-11 sm:h-10 w-auto min-w-full sm:min-w-0 gap-1 bg-muted/50 p-1">
                 {ROOM_FILTERS.slice(0, 4).map((filter) => (
                   <TabsTrigger 
                     key={filter.id} 
                     value={filter.id}
-                    className="text-xs sm:text-sm px-3 sm:px-4 whitespace-nowrap"
+                    className="text-sm sm:text-sm px-4 sm:px-4 whitespace-nowrap min-h-[40px] sm:min-h-0"
                     data-testid={`button-filter-${filter.id}`}
                   >
                     {filter.label}
