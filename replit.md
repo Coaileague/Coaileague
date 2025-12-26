@@ -101,6 +101,11 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Trinity Agent Parity Layer:** Replit Agent-equivalent autonomous coding capabilities (Plan-Execute-Reflect, Verification Loops, Confidence Scoring, Context Integration, Self-Correction) with a comprehensive workflow including planning, pre-flight verification, execution, post-validation, self-reflection, and auto-correction.
 - **Trinity Humanized Persona System:** Human-like AI communication patterns with senior engineer persona, conversational transitions, cognitive pauses, empathy expressions, and natural uncertainty acknowledgment.
 
+## Known UI Patterns & Pitfalls (Trinity Self-Healing Reference)
+- **Mobile Detection Stability:** Always use `useMemo` for mobile detection logic that determines layout mode (Sheet vs Popover, etc.) to prevent layout flicker between renders. IIFEs that run on every render cause inconsistent UI.
+- **Notification Popover Sizing:** The notifications popover should maintain consistent 420px max width across all tabs (For You, System). Layout-affecting logic must be memoized.
+- **Individual Dismiss Buttons:** Each notification card has an individual X button (appears on hover) for single-item dismissal, using the existing `dismissMutation` infrastructure.
+
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
 - **Resend**: Email delivery and notification workflows.

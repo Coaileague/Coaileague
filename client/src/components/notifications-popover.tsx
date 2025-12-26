@@ -943,14 +943,15 @@ function NotificationsPopoverInner({ user }: { user: any }) {
   
   // Enhanced mobile detection: consider touch + mobile user agent + viewport
   // Samsung S24 Ultra and other large phones may have viewport > 768px
-  const isMobile = (() => {
+  // STABLE: Use useMemo to prevent re-computation on every render causing layout flicker
+  const isMobile = useMemo(() => {
     if (typeof window === 'undefined') return isMobileBreakpoint;
     const hasTouch = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     const hasMobileUA = /Android|iPhone|iPad|iPod|webOS|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
     const hasCoarsePointer = window.matchMedia('(pointer: coarse)').matches;
     // Mobile if: small viewport OR (touch device with mobile UA)
     return isMobileBreakpoint || (hasTouch && hasMobileUA && hasCoarsePointer);
-  })();
+  }, [isMobileBreakpoint]);
   const { toast } = useToast();
   // user is now passed as a prop from NotificationsPopover wrapper
   const userId = (user as any)?.id;
