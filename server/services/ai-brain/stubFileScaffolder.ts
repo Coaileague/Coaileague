@@ -531,8 +531,10 @@ class StubFileScaffolder {
         action: 'stub_file_created',
         entityType: 'file',
         entityId: stub.filePath,
-        oldValue: stub.originalContent ? { content: stub.originalContent.substring(0, 500) } : null,
-        newValue: { stubId: stub.id, purpose: stub.purpose, exports: stub.exports },
+        changes: {
+          before: stub.originalContent ? { content: stub.originalContent.substring(0, 500) } : null,
+          after: { stubId: stub.id, purpose: stub.purpose, exports: stub.exports },
+        },
         ipAddress: 'system',
         userAgent: 'Trinity AI',
       });
@@ -552,8 +554,10 @@ class StubFileScaffolder {
         action: 'stub_file_replaced',
         entityType: 'file',
         entityId: stub.filePath,
-        oldValue: { stubId: stub.id, status: 'stub' },
-        newValue: { stubId: stub.id, status: 'complete' },
+        changes: {
+          before: { stubId: stub.id, status: 'stub' },
+          after: { stubId: stub.id, status: 'complete' },
+        },
         ipAddress: 'system',
         userAgent: 'Trinity AI',
       });
@@ -573,8 +577,10 @@ class StubFileScaffolder {
         action: 'stub_file_rollback',
         entityType: 'file',
         entityId: stub.filePath,
-        oldValue: { stubId: stub.id, status: stub.status },
-        newValue: stub.originalContent ? { restored: true } : { deleted: true },
+        changes: {
+          before: { stubId: stub.id, status: stub.status },
+          after: stub.originalContent ? { restored: true } : { deleted: true },
+        },
         ipAddress: 'system',
         userAgent: 'Trinity AI',
       });
