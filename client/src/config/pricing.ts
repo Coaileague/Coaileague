@@ -23,10 +23,19 @@ interface PricingTier {
   };
 }
 
+/**
+ * COPILOT AUTOMATION PRICING
+ * ==========================
+ * CoAIleague is middleware automation - users already pay for QuickBooks, Gusto, etc.
+ * We provide the AI-powered automation layer with 99% automation / 1% human approval.
+ * 
+ * IMPORTANT: AI makes errors. All automation requires designated approver sign-off.
+ * This is "copilot automation" NOT "fully automated" - keeping orgs legally safe.
+ */
 export const PRICING_TIERS: Record<SubscriptionTier, PricingTier> = {
   free: {
-    name: "Free",
-    description: "Perfect to get started",
+    name: "Free Trial",
+    description: "14-day trial to experience Trinity AI automation",
     price: 0,
     currency: "USD",
     billingPeriod: "month",
@@ -35,21 +44,22 @@ export const PRICING_TIERS: Record<SubscriptionTier, PricingTier> = {
       "core.scheduling",
       "core.employees",
       "analytics.basicReports",
+      "ai.trinityAssistant",
     ],
     limits: {
       employees: 5,
       shifts: 20,
       monthlyInvoices: 0,
       storageGB: 1,
-      apiCalls: 1000,
+      apiCalls: 500,
     },
   },
 
   starter: {
     name: "Starter",
-    description: "For growing teams",
-    price: 4999,
-    annualPrice: 49990,
+    description: "Perfect for small teams automating workforce management",
+    price: 349,
+    annualPrice: 3490,
     currency: "USD",
     billingPeriod: "month",
     features: [
@@ -59,21 +69,24 @@ export const PRICING_TIERS: Record<SubscriptionTier, PricingTier> = {
       "core.invoicing",
       "communications.emailNotifications",
       "analytics.basicReports",
+      "ai.trinityAssistant",
+      "ai.autoScheduling",
+      "integrations.oneHRIS",
     ],
     limits: {
-      employees: 25,
+      employees: 10,
       shifts: 100,
-      monthlyInvoices: 100,
-      storageGB: 10,
-      apiCalls: 10000,
+      monthlyInvoices: 50,
+      storageGB: 5,
+      apiCalls: 5000,
     },
   },
 
   professional: {
     name: "Professional",
-    description: "For scaling businesses",
-    price: 9999,
-    annualPrice: 99990,
+    description: "Full automation suite for growing businesses",
+    price: 999,
+    annualPrice: 9990,
     currency: "USD",
     billingPeriod: "month",
     features: [
@@ -86,15 +99,19 @@ export const PRICING_TIERS: Record<SubscriptionTier, PricingTier> = {
       "communications.chatSupport",
       "analytics.basicReports",
       "analytics.advancedAnalytics",
+      "ai.trinityAssistant",
       "ai.autoScheduling",
       "ai.smartMatching",
+      "ai.payrollAutomation",
+      "integrations.unlimitedHRIS",
+      "compliance.fiftyState",
     ],
     limits: {
-      employees: 100,
+      employees: 25,
       shifts: 500,
-      monthlyInvoices: 500,
-      storageGB: 50,
-      apiCalls: 50000,
+      monthlyInvoices: 250,
+      storageGB: 25,
+      apiCalls: 25000,
     },
   },
 

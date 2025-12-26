@@ -213,6 +213,16 @@ export const workspaces = pgTable("workspaces", {
   maxEmployees: integer("max_employees").default(5),
   maxClients: integer("max_clients").default(10),
 
+  // ============================================================================
+  // COPILOT AUTOMATION GOVERNANCE (99% Automation / 1% Human Approval)
+  // AI makes errors - every org must designate an approver for automated actions
+  // ============================================================================
+  designatedApproverId: varchar("designated_approver_id").references(() => users.id), // User who approves automated actions
+  automationApprovalMode: varchar("automation_approval_mode").default("designated"), // 'designated' | 'owner_only' | 'any_manager'
+  automationConsentAccepted: boolean("automation_consent_accepted").default(false), // Org accepted AI copilot terms
+  automationConsentAcceptedAt: timestamp("automation_consent_accepted_at"),
+  automationConsentAcceptedBy: varchar("automation_consent_accepted_by"), // User ID who accepted
+
   // Stripe Connect for payment processing
   stripeAccountId: varchar("stripe_account_id"), // Connected account ID
   stripeCustomerId: varchar("stripe_customer_id"),
