@@ -264,20 +264,34 @@ You are a Visual QA expert analyzing a web application screenshot.
 Analyze this screenshot for visual anomalies and UI issues. Look for:
 1. Broken or missing icons (placeholder boxes, missing images)
 2. Layout shifts or misaligned elements
-3. Text overlapping or truncated
-4. Inconsistent spacing or margins
+3. Text overlapping or truncated - especially in navigation menus, tabs, and horizontal layouts
+4. Inconsistent spacing or margins between elements
 5. Color/contrast issues affecting readability
 6. Font rendering problems
 7. Responsive design failures
 8. Z-index/layering issues
 9. Any visual regression from expected design
+10. Navigation/tab bar issues:
+    - Crowded or jumbled menu items
+    - Tab buttons touching or overlapping each other
+    - Text cutoff or ellipsis in navigation labels
+    - Lack of horizontal scroll indicators when content overflows
+11. Touch target accessibility:
+    - Buttons or clickable elements that appear too small (should be at least 44x44 pixels visually)
+    - Interactive elements too close together
 
 For each issue found, provide:
 - category: One of [broken_icon, layout_shift, text_overlap, missing_element, color_mismatch, font_issue, alignment_error, responsive_issue, z_index_problem, spacing_issue, visual_regression]
 - severity: One of [critical, high, medium, low, info]
+  - critical: App is unusable (overlapping buttons, unreadable text)
+  - high: Major usability impact (navigation issues, touch target problems)
+  - medium: Visual issues that affect user experience
+  - low: Minor cosmetic issues
+  - info: Observations or suggestions
 - description: Clear description of the issue
 - boundingBox: Approximate location as {y_min, x_min, y_max, x_max} (0-1 normalized coordinates)
-- suggestedCss: CSS fix if applicable
+- elementSelector: CSS selector to target the element if identifiable (e.g., "nav button", ".tab-list")
+- suggestedCss: CSS fix if applicable (e.g., "gap: 0.5rem; flex-shrink: 0;")
 - confidence: 0.0-1.0 confidence score
 
 Respond with JSON:
