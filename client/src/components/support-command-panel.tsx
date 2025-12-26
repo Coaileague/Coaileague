@@ -188,7 +188,7 @@ export function SupportCommandPanel() {
               <Label htmlFor="whats-new-title">Title</Label>
               <Input
                 id="whats-new-title"
-                placeholder="New Feature: AI Brain Improvements"
+                placeholder="New Feature: Trinity™ Improvements"
                 value={whatsNewTitle}
                 onChange={(e) => setWhatsNewTitle(e.target.value)}
                 data-testid="input-whats-new-title"

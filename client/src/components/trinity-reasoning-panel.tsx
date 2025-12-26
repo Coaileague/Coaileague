@@ -134,7 +134,7 @@ export function TrinityReasoningPanel({
             </div>
             <div>
               <span className="font-semibold">Trinity</span>
-              <span className="text-muted-foreground font-normal ml-1">AI Brain</span>
+              <span className="text-muted-foreground font-normal ml-1">Intelligence</span>
             </div>
           </CardTitle>
           <div className="flex items-center gap-3">

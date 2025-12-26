@@ -64,7 +64,7 @@ export function GuardrailsDashboard() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5" />
-            AI Brain Guardrails
+            Trinity™ Guardrails
           </CardTitle>
           <CardDescription>Current automation limits and thresholds</CardDescription>
         </CardHeader>

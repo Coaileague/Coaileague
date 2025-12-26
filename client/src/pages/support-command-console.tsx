@@ -201,7 +201,7 @@ export default function SupportCommandConsole() {
     refetchInterval: 30000,
   });
 
-  // AI Brain Orchestration services
+  // Trinity™ Orchestration services
   const { data: orchestrationHealth, refetch: refetchOrchestration } = useQuery<{
     overall: 'healthy' | 'degraded' | 'unhealthy';
     services: Array<{

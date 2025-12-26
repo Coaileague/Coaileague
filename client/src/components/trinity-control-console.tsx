@@ -1,7 +1,7 @@
 /**
  * Trinity Control Console
  * ========================
- * Real-time streaming view of Trinity AI Brain's cognitive process
+ * Real-time streaming view of Trinity's cognitive process
  * Shows thought signatures, action logs, and platform awareness events
  */
 

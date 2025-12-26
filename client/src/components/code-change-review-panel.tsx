@@ -1,7 +1,7 @@
 /**
- * Code Change Review Panel - AI Brain Code Editor UI
+ * Code Change Review Panel - Trinity™ Code Editor UI
  * Allows support staff to review, approve, reject, apply, and rollback code changes
- * staged by the AI Brain or HelpAI.
+ * staged by Trinity™ or HelpAI.
  */
 
 import { useState } from "react";
@@ -436,7 +436,7 @@ export function CodeChangeReviewPanel() {
           <CardHeader className="py-2 px-4 cursor-pointer hover-elevate">
             <div className="flex items-center gap-2">
               <Code2 className="h-4 w-4 text-primary" />
-              <CardTitle className="text-sm font-medium">AI Brain Code Editor</CardTitle>
+              <CardTitle className="text-sm font-medium">Trinity™ Code Editor</CardTitle>
               <Badge variant="outline" className="ml-auto border-primary/50 text-primary text-xs py-0 h-5">
                 <FileText className="h-2.5 w-2.5 mr-1" />
                 {changes.length} Changes
