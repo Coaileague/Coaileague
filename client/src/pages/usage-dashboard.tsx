@@ -282,7 +282,7 @@ export default function UsageDashboard() {
                   <div>
                     <CardTitle className="flex items-center gap-2">
                       <Cpu className="h-5 w-5 text-primary" />
-                      AI Brain Usage
+                      Trinity™ Usage
                     </CardTitle>
                     <CardDescription>Trinity AI processing usage</CardDescription>
                   </div>

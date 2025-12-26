@@ -617,7 +617,7 @@ export default function Employees() {
                         </SelectContent>
                       </Select>
                       <p className="text-xs text-muted-foreground">
-                        Controls access to features within your organization. AI Brain handles 99% autonomously.
+                        Controls access to features within your organization. Trinity™ handles 99% autonomously.
                       </p>
                     </div>
                   </div>

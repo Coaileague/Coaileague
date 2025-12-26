@@ -144,7 +144,7 @@ export function ControlTower() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/ai-brain/control/health'] });
-      toast({ title: "Service paused", description: "AI Brain service has been paused" });
+      toast({ title: "Service paused", description: "Trinity™ service has been paused" });
     },
     onError: (error) => {
       toast({ title: "Failed to pause service", description: String(error), variant: "destructive" });
@@ -158,7 +158,7 @@ export function ControlTower() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/ai-brain/control/health'] });
-      toast({ title: "Service resumed", description: "AI Brain service has been resumed" });
+      toast({ title: "Service resumed", description: "Trinity™ service has been resumed" });
     },
     onError: (error) => {
       toast({ title: "Failed to resume service", description: String(error), variant: "destructive" });
@@ -385,12 +385,12 @@ export function ControlTower() {
           </CardContent>
         </Card>
 
-        {/* AI Brain Orchestration Card */}
+        {/* Trinity™ Orchestration Card */}
         <Card className="bg-white/90 dark:bg-slate-800/90 backdrop-blur-sm border-2 hover-elevate transition-all">
           <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-sm font-medium flex items-center gap-2">
               <Brain className="h-4 w-4 text-indigo-500" />
-              AI Brain
+              Trinity™
             </CardTitle>
             {aiBrainData?.overall === 'healthy' ? (
               <Badge className="bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">Healthy</Badge>

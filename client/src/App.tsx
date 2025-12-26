@@ -24,7 +24,7 @@ import { UniversalLoadingGateProvider } from "@/contexts/universal-loading-gate"
 import { TransitionProvider } from "@/contexts/transition-context";
 import { LoadingProvider } from "@/contexts/loading-context";
 import { UniversalAnimationProvider } from "@/contexts/universal-animation-context";
-import { SeasonalThemeProvider } from "@/context/SeasonalThemeContext";
+import { SeasonalThemeProvider, useSeasonalTheme } from "@/context/SeasonalThemeContext";
 import SeasonalEffectsLayer from "@/components/effects/SeasonalEffectsLayer";
 import { Button } from "@/components/ui/button";
 import { ProtectedRoute } from "@/components/protected-route";
@@ -190,7 +190,6 @@ import { useOverlayAwareness } from "@/hooks/use-overlay-awareness";
 import MASCOT_CONFIG, { 
   shouldHideMascot, 
   getDeviceSizes, 
-  getCurrentHoliday, 
   EMOTE_CONFIGS,
   canAccessTrinity 
 } from "@/config/mascotConfig";
@@ -240,19 +239,23 @@ function MascotRenderer() {
     userId: user?.id,
   });
   
-  // Apply HOLIDAY mode during Christmas season when mascot is idle
-  const holiday = getCurrentHoliday();
+  // Use SeasonalThemeContext for AI-orchestrated seasonal state (respects SeasonalSubagent)
+  const { seasonId, isHoliday } = useSeasonalTheme();
+  
+  // Determine if we should apply holiday mode (only when SeasonalSubagent says so)
+  const isChristmasSeason = seasonId === 'christmas';
+  
   const currentMode = useMemo(() => {
     // AI activity takes priority over local mode when active
     if (isAIActive && aiActivityMode !== 'IDLE') {
       return aiActivityMode;
     }
-    // Apply seasonal mode override during holidays
-    if (localMode === 'IDLE' && holiday?.key === 'christmas') {
+    // Apply seasonal mode override during holidays (controlled by SeasonalSubagent)
+    if (localMode === 'IDLE' && isChristmasSeason) {
       return 'HOLIDAY';
     }
     return localMode;
-  }, [localMode, aiActivityMode, isAIActive, holiday]);
+  }, [localMode, aiActivityMode, isAIActive, isChristmasSeason]);
   
   const [location] = useLocation();
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -407,16 +410,19 @@ function MascotRenderer() {
     });
     thoughtManager.startRotation();
     
-    const holiday = getCurrentHoliday();
-    if (holiday) {
-      setTimeout(() => thoughtManager.triggerHolidayGreeting(), 2000);
-    }
-    
     return () => {
       unsubscribe();
       thoughtManager.stopRotation();
     };
   }, []);
+  
+  // Holiday greeting - only trigger when SeasonalSubagent indicates active holiday
+  useEffect(() => {
+    if (isHoliday && seasonId !== 'default') {
+      const timer = setTimeout(() => thoughtManager.triggerHolidayGreeting(), 2000);
+      return () => clearTimeout(timer);
+    }
+  }, [isHoliday, seasonId]);
   
   // Track page changes for promotional thoughts on public pages
   useEffect(() => {
@@ -727,8 +733,8 @@ function MascotRenderer() {
         </div>
       </div>
       
-      {/* Dialogue bubble - uses festive version during any holiday season */}
-      {currentThought && holiday && holiday.key !== 'default' ? (
+      {/* Dialogue bubble - uses festive version during holiday season (controlled by SeasonalSubagent) */}
+      {currentThought && isHoliday ? (
         <FestiveDialogueBubble
           thought={currentThought}
           mascotPosition={{ x: effectiveX, y: effectiveY }}

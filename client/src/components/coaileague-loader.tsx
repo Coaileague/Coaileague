@@ -33,15 +33,15 @@ interface CoAIleagueLoaderProps {
 const scenarioMessages: Record<LoadingScenario, { title: string; description: string }> = {
   workspace: {
     title: "Loading your workspace...",
-    description: "Initializing CoAIleague AI Brain"
+    description: "Powered by Trinity™"
   },
   onboarding: {
     title: "Setting up your workspace...",
-    description: "Configuring CoAIleague AI Brain for your organization"
+    description: "Powered by Trinity™ for your organization"
   },
   schedule: {
     title: "Optimizing schedule...",
-    description: "AI Brain analyzing availability and workload distribution"
+    description: "Trinity™ analyzing availability and workload distribution"
   },
   invoice: {
     title: "Generating invoices...",
@@ -57,7 +57,7 @@ const scenarioMessages: Record<LoadingScenario, { title: string; description: st
   },
   analytics: {
     title: "Generating analytics...",
-    description: "AI Brain analyzing trends and insights"
+    description: "Trinity™ analyzing trends and insights"
   },
   general: {
     title: "Loading...",
@@ -138,7 +138,7 @@ export function CoAIleagueLoader({
 
             {/* CoAIleague branding */}
             <p className="text-xs text-muted-foreground mt-2">
-              Powered by CoAIleague AI Brain
+              Powered by Trinity™
             </p>
           </div>
         </motion.div>

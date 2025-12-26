@@ -11,6 +11,7 @@
 import { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { SEASONAL_EFFECTS_CONFIG } from '@/config/seasonalThemes';
+import { setGlobalSeasonalState, type HolidayKey } from '@/config/mascotConfig';
 
 export type SeasonId = 
   | 'winter' | 'christmas' | 'newYear' | 'valentines' 
@@ -191,6 +192,24 @@ export function SeasonalThemeProvider({ children }: { children: React.ReactNode 
     root.style.setProperty('--seasonal-accent', profile.theme.accentColor);
     root.style.setProperty('--seasonal-glow', profile.theme.glowColor);
   }, [profile?.theme]);
+  
+  // Synchronize global seasonal state for non-React components (e.g., getCurrentHoliday())
+  // This ensures all components respect SeasonalSubagent's orchestration decisions
+  useEffect(() => {
+    if (!profile) return;
+    
+    // Map SeasonId to HolidayKey (they're compatible types)
+    const holidayKey = profile.seasonId as HolidayKey;
+    const isEnabled = profile.isHoliday && profile.seasonId !== 'default';
+    
+    setGlobalSeasonalState(isEnabled, holidayKey);
+    console.log('[SeasonalTheme] Global state synced:', { enabled: isEnabled, seasonId: holidayKey });
+    
+    // Cleanup: reset to default on unmount
+    return () => {
+      setGlobalSeasonalState(false, 'default');
+    };
+  }, [profile?.seasonId, profile?.isHoliday]);
   
   const contextValue: SeasonalThemeContextValue = {
     profile,

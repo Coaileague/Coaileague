@@ -54,7 +54,7 @@ const routeLabels: Record<string, string> = {
   "/automation-settings": "Automation Settings",
   "/automation-control": "Automation Control",
   "/automation-audit-log": "Automation Audit Log",
-  "/ai-brain-dashboard": "AI Brain",
+  "/ai-brain-dashboard": "Trinity™",
   "/ai-command-center": "AI Command Center",
   "/ai-audit-log-viewer": "AI Audit Log",
   "/ai-integrations": "AI Integrations",

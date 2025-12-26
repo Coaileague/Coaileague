@@ -1,7 +1,7 @@
 /**
  * TRINITY COMMAND CENTER (TCC) - Universal Cognitive Command Center
  * 
- * Fortune 500-grade AI Brain orchestration interface with:
+ * Fortune 500-grade Trinity™ orchestration interface with:
  * - Natural language & voice command interface with Trinity
  * - RBAC-based Quick Actions (role-gated tools)
  * - Real-time AI output panels with dynamic reports
@@ -270,7 +270,7 @@ export default function TrinityCommandCenter() {
     {
       id: '1',
       role: 'trinity',
-      content: "Welcome to Trinity Command Center. I'm your AI Brain assistant with access to the full orchestration hierarchy. I can help you run diagnostics, deploy hotfixes, test subagents, generate reports, and execute platform operations. How can I assist you today?",
+      content: "Welcome to Trinity Command Center. I'm your Trinity™ assistant with access to the full orchestration hierarchy. I can help you run diagnostics, deploy hotfixes, test subagents, generate reports, and execute platform operations. How can I assist you today?",
       timestamp: new Date(),
       outputType: 'text'
     }
@@ -497,7 +497,7 @@ export default function TrinityCommandCenter() {
               </div>
               <div>
                 <h1 className="text-lg font-bold text-white">Trinity Command Center</h1>
-                <p className="text-xs text-slate-400 hidden sm:block">AI Brain Orchestration</p>
+                <p className="text-xs text-slate-400 hidden sm:block">Trinity™ Orchestration</p>
               </div>
             </div>
           </div>

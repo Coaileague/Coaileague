@@ -37,7 +37,7 @@ export default function AIBrainDashboard() {
       <div className="space-y-2">
         <div className="flex items-center gap-2">
           <Brain className="w-8 h-8 text-blue-600" />
-          <h1 className="text-3xl font-bold">AI Brain Automation</h1>
+          <h1 className="text-3xl font-bold">Trinity™ Automation</h1>
           <Badge variant="outline" className="ml-auto">
             Production Ready
           </Badge>
@@ -162,7 +162,7 @@ export default function AIBrainDashboard() {
         <TabsContent value="guardrails" className="space-y-4">
           <Card>
             <CardHeader>
-              <CardTitle>AI Brain Guardrails Configuration</CardTitle>
+              <CardTitle>Trinity™ Guardrails Configuration</CardTitle>
               <CardDescription>
                 View and manage automation limits, thresholds, and safety controls
               </CardDescription>

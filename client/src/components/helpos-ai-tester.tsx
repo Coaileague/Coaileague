@@ -103,7 +103,7 @@ export function CoAIleagueAiTester() {
     },
     onError: (error: any) => {
       toast({
-        title: "❌ AI Brain Error",
+        title: "❌ Trinity™ Error",
         description: error.message || "Failed to get AI response",
         variant: "destructive",
       });
@@ -136,10 +136,10 @@ export function CoAIleagueAiTester() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Bot className="h-5 w-5" style={{ color: "#3b82f6" }} />
-              AI Brain Intelligence Tester
+              Trinity™ Intelligence Tester
             </DialogTitle>
             <DialogDescription>
-              Test the AI Brain's intelligent support automation system
+              Test Trinity's intelligent support automation system
             </DialogDescription>
           </DialogHeader>
 
@@ -241,7 +241,7 @@ export function CoAIleagueAiTester() {
               ) : (
                 <>
                   <Bot className="mr-2 h-4 w-4" />
-                  Test AI Brain
+                  Test Trinity™
                 </>
               )}
             </Button>

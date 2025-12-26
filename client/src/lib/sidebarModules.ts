@@ -745,7 +745,7 @@ export const platformSupportModule: SidebarModule = {
       label: 'End-User Controls',
       href: '/admin/end-user-controls',
       icon: Users,
-      description: 'Manage organization access, AI Brain, and user permissions',
+      description: 'Manage organization access, Trinity™, and user permissions',
       capabilities: ['support_dashboard'],
       familyId: 'platform',
       badge: 'Admin',
@@ -971,7 +971,7 @@ export function selectSidebarFamilies(
 /**
  * CONDENSED MOBILE MENU
  * Returns only mobile-friendly routes for limited mobile capabilities
- * Forces users to desktop for major operations (AI Brain automations, bulk data, analytics)
+ * Forces users to desktop for major operations (Trinity™ automations, bulk data, analytics)
  */
 export function selectCondensedMobileFamilies(
   role: WorkspaceRole,

@@ -1,5 +1,5 @@
 /**
- * Automation Settings - Configure AI Brain automation thresholds and preferences
+ * Automation Settings - Configure Trinity™ automation thresholds and preferences
  */
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -33,7 +33,7 @@ export default function AutomationSettings() {
         <Settings className="h-8 w-8 text-primary" />
         <div>
           <h1 className="text-3xl font-bold">Automation Settings</h1>
-          <p className="text-muted-foreground">Configure AI Brain automation thresholds and auto-approval preferences</p>
+          <p className="text-muted-foreground">Configure Trinity™ automation thresholds and auto-approval preferences</p>
         </div>
       </div>
 

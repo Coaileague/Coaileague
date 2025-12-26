@@ -105,7 +105,7 @@ function ComplianceAlerts() {
                 Compliance Alerts
               </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                AI Brain detected {compliance.summary.total} issue{compliance.summary.total === 1 ? '' : 's'} requiring attention
+                Trinity™ detected {compliance.summary.total} issue{compliance.summary.total === 1 ? '' : 's'} requiring attention
               </p>
             </div>
           </div>
@@ -620,7 +620,7 @@ export default function Dashboard() {
             <div className="bg-gradient-to-br from-blue-600 to-indigo-600 from-blue-600 to-indigo-600 rounded-xl p-6 sm:p-8 mobile-compact-p text-white shadow-lg border-2 border-blue-500 border-blue-500">
               <div className="flex items-start justify-between mb-6">
                 <div>
-                  <h3 className="text-2xl font-bold mb-2" data-testid="text-automation-title">AI Brain Automation Value</h3>
+                  <h3 className="text-2xl font-bold mb-2" data-testid="text-automation-title">Trinity™ Automation Value</h3>
                   <p className="text-blue-100 text-sm max-w-2xl">
                     Autonomous AI managing scheduling, billing, and payroll—saving your organization time and money 24/7
                   </p>

@@ -140,7 +140,7 @@ export default function Support() {
     },
     {
       question: "How can administrators monitor AI operations?",
-      answer: "Platform administrators have access to comprehensive AI monitoring tools including real-time activity feeds, orchestration dashboards, and audit logs. Root admins can view all automated operations, approve or reject high-risk actions, and intervene when needed. The system provides full visibility into the AI Brain hierarchy with RBAC-gated access controls.",
+      answer: "Platform administrators have access to comprehensive AI monitoring tools including real-time activity feeds, orchestration dashboards, and audit logs. Root admins can view all automated operations, approve or reject high-risk actions, and intervene when needed. The system provides full visibility into the Trinity™ orchestration hierarchy with RBAC-gated access controls.",
     },
     {
       question: "How can I contact support?",
@@ -152,7 +152,7 @@ export default function Support() {
     { label: "Automation Service Live", value: "Operational", status: "success" },
     { label: "HelpDesk Live", value: "Operational", status: "success" },
     { label: "Mobile App Live", value: "Operational", status: "success" },
-    { label: "AI Brain Live", value: "Operational", status: "success" },
+    { label: "Trinity™ Live", value: "Operational", status: "success" },
   ];
 
   return (

@@ -1,6 +1,6 @@
 /**
  * CheckpointAlert Component
- * Displays alert when AI Brain automation is paused due to insufficient credits
+ * Displays alert when Trinity™ automation is paused due to insufficient credits
  * Shows resume point, credits needed, and purchase/resume options
  */
 
@@ -59,7 +59,7 @@ export function CheckpointAlert({ workspaceId, variant = 'detailed' }: Checkpoin
     onSuccess: () => {
       toast({
         title: "Automation Resumed",
-        description: "The AI Brain is continuing from where it left off.",
+        description: "Trinity™ is continuing from where it left off.",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/ai-brain/checkpoints'] });
     },
@@ -129,7 +129,7 @@ export function CheckpointAlert({ workspaceId, variant = 'detailed' }: Checkpoin
                     {getAutomationLabel(checkpoint.automationType)} Paused
                   </h3>
                   <p className="text-sm text-amber-800 dark:text-amber-200 mt-1">
-                    The AI Brain saved your progress when credits ran low. Resume to continue.
+                    Trinity™ saved your progress when credits ran low. Resume to continue.
                   </p>
                 </div>
               </div>

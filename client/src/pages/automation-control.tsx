@@ -177,7 +177,7 @@ export default function AutomationControl() {
   return (
     <div className="min-h-screen bg-background">
       <PageHeader
-        title="AI Brain Automation Control"
+        title="Trinity™ Automation Control"
         description="Manually trigger and monitor autonomous AI operations"
         align="left"
       >

@@ -32,7 +32,7 @@ export function useLoginValidation() {
     const validationSteps: LoginValidationStep[] = [
       { id: "auth", message: "Authenticating credentials...", progress: 0, status: "pending" },
       { id: "subscription", message: "Verifying organization subscription...", progress: 25, status: "pending" },
-      { id: "security", message: "Running AI Brain security scan...", progress: 50, status: "pending" },
+      { id: "security", message: "Running Trinity™ security scan...", progress: 50, status: "pending" },
       { id: "workspace", message: "Loading workspace data...", progress: 75, status: "pending" },
       { id: "ready", message: "Finalizing setup...", progress: 90, status: "pending" }
     ];
@@ -99,14 +99,14 @@ export function useLoginValidation() {
       validationSteps[1].status = "complete";
       onProgress?.(validationSteps[1], 50);
 
-      // Step 3: AI Brain security scan
+      // Step 3: Trinity™ security scan
       setCurrentStep(2);
       validationSteps[2].status = "in-progress";
       onProgress?.(validationSteps[2], 50);
       
       await new Promise(resolve => setTimeout(resolve, 600));
       
-      // AI Brain security scan
+      // Trinity™ security scan
       // In real implementation, this would call backend APIs to check for:
       // - Unusual login patterns (failed attempts, location changes)
       // - Multiple concurrent sessions

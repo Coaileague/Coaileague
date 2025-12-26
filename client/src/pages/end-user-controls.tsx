@@ -145,17 +145,17 @@ export default function EndUserControls() {
       apiRequest("POST", "/api/admin/end-users/toggle-ai-brain", data),
     onSuccess: (_, variables) => {
       toast({ 
-        title: variables.enabled ? "AI Brain Enabled" : "AI Brain Suspended",
+        title: variables.enabled ? "Trinity™ Enabled" : "Trinity™ Suspended",
         description: variables.enabled 
-          ? "Organization now has access to AI Brain features"
-          : "AI Brain access has been suspended for this organization"
+          ? "Organization now has access to Trinity™ features"
+          : "Trinity™ access has been suspended for this organization"
       });
       queryClient.invalidateQueries({ queryKey: ["/api/admin/end-users/workspace", selectedWorkspace] });
       setActionDialog(null);
       setActionReason("");
     },
     onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Failed to toggle AI Brain", variant: "destructive" });
+      toast({ title: "Error", description: error.message || "Failed to toggle Trinity™", variant: "destructive" });
     },
   });
 
@@ -189,7 +189,7 @@ export default function EndUserControls() {
             <div>
               <h1 className="text-3xl font-bold" data-testid="text-page-title">End-User Controls</h1>
               <p className="text-sm text-muted-foreground">
-                Manage organization access, AI Brain features, and user permissions
+                Manage organization access, Trinity™ features, and user permissions
               </p>
             </div>
           </div>
@@ -407,15 +407,15 @@ export default function EndUserControls() {
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2 text-lg">
                         <Brain className="h-5 w-5" />
-                        AI Brain Access
+                        Trinity™ Access
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="flex items-center justify-between">
                         <div>
-                          <p className="font-medium">AI Brain Features</p>
+                          <p className="font-medium">Trinity™ Features</p>
                           <p className="text-sm text-muted-foreground">
-                            Enable or disable all AI Brain functionality for this organization
+                            Enable or disable all Trinity™ functionality for this organization
                           </p>
                         </div>
                         <Switch
@@ -437,7 +437,7 @@ export default function EndUserControls() {
                       {workspaceDetail.workspace.aiBrainSuspended && (
                         <div className="p-3 rounded-lg bg-orange-500/10 border border-orange-500/30">
                           <p className="text-sm font-medium text-orange-700 dark:text-orange-400">
-                            AI Brain is suspended
+                            Trinity™ is suspended
                           </p>
                           <p className="text-sm text-muted-foreground mt-1">
                             {workspaceDetail.workspace.aiBrainSuspendedReason || 'No reason provided'}
@@ -543,7 +543,7 @@ export default function EndUserControls() {
                         data-testid="button-suspend-ai"
                       >
                         <Brain className="h-4 w-4 mr-2" />
-                        Suspend AI Brain
+                        Suspend Trinity™
                       </Button>
                     ) : (
                       <Button
@@ -554,7 +554,7 @@ export default function EndUserControls() {
                         data-testid="button-enable-ai"
                       >
                         <Zap className="h-4 w-4 mr-2" />
-                        Enable AI Brain
+                        Enable Trinity™
                       </Button>
                     )}
                   </div>
@@ -626,9 +626,9 @@ export default function EndUserControls() {
       <Dialog open={actionDialog === 'suspend-ai'} onOpenChange={(open) => !open && setActionDialog(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Suspend AI Brain Access</DialogTitle>
+            <DialogTitle>Suspend Trinity™ Access</DialogTitle>
             <DialogDescription>
-              This will disable all AI Brain features for this organization, including Trinity, subagents, and automated workflows.
+              This will disable all Trinity™ features for this organization, including subagents and automated workflows.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
@@ -660,7 +660,7 @@ export default function EndUserControls() {
               disabled={!actionReason || toggleAiBrainMutation.isPending}
               data-testid="button-confirm-ai-suspend"
             >
-              Suspend AI Brain
+              Suspend Trinity™
             </Button>
           </DialogFooter>
         </DialogContent>

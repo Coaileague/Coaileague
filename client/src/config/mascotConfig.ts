@@ -63,6 +63,23 @@ export type HolidayKey =
   | 'christmas' 
   | 'default';
 
+/**
+ * Global seasonal state managed by SeasonalThemeContext
+ * This is set by the context provider to synchronize calendar-based detection
+ * with AI Brain orchestration (SeasonalSubagent control)
+ */
+let globalSeasonalEnabled = false;
+let globalSeasonId: HolidayKey = 'default';
+
+export function setGlobalSeasonalState(enabled: boolean, seasonId: HolidayKey) {
+  globalSeasonalEnabled = enabled;
+  globalSeasonId = seasonId;
+}
+
+export function getGlobalSeasonalState(): { enabled: boolean; seasonId: HolidayKey } {
+  return { enabled: globalSeasonalEnabled, seasonId: globalSeasonId };
+}
+
 export interface MascotSizes {
   bubble: number;
   defaultSize: number;
@@ -1895,7 +1912,32 @@ export function getMascotMode(pathname: string, aiState?: string): MascotMode {
   return MASCOT_CONFIG.defaultMode;
 }
 
+/**
+ * Get current holiday based on SeasonalSubagent orchestration
+ * 
+ * IMPORTANT: This function now respects the global seasonal state set by
+ * SeasonalThemeContext. When seasonal theming is disabled by the SeasonalSubagent,
+ * this returns null regardless of the calendar date.
+ * 
+ * For components inside React, prefer using useSeasonalTheme() from
+ * '@/context/SeasonalThemeContext' directly for reactive updates.
+ */
 export function getCurrentHoliday(): HolidayConfig | null {
+  // Check global seasonal state first - if disabled by SeasonalSubagent, return null
+  const { enabled, seasonId } = getGlobalSeasonalState();
+  
+  // If seasonal theming is disabled or explicitly set to 'default', no holiday
+  if (!enabled || seasonId === 'default') {
+    return null;
+  }
+  
+  // Find the holiday config matching the orchestrated seasonId
+  const matchingHoliday = MASCOT_CONFIG.holidays.find(h => h.key === seasonId);
+  if (matchingHoliday) {
+    return matchingHoliday;
+  }
+  
+  // Fallback to calendar-based detection only if enabled
   const now = new Date();
   const month = now.getMonth() + 1;
   const day = now.getDate();

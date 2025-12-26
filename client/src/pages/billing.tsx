@@ -306,7 +306,7 @@ export default function Billing() {
         </Card>
       )}
 
-      {/* AI Brain Checkpoint Alert */}
+      {/* Trinity™ Checkpoint Alert */}
       <CheckpointAlert workspaceId={workspace?.id || null} variant="detailed" />
 
       {/* Upgrade CTA Section */}

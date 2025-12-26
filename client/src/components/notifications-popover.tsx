@@ -251,7 +251,7 @@ function generateTypeBasedActions(
   const type = notif.type || notif.category || '';
   const metadata = notif.metadata || {};
   
-  // AI Brain Workflow Order Approvals - requires human decision
+  // Trinity™ Workflow Order Approvals - requires human decision
   if (metadata.workflowOrderId || title.includes('workflow order') || title.includes('work order') || type === 'workflow_order') {
     actions.push({
       label: 'Approve',
@@ -291,7 +291,7 @@ function generateTypeBasedActions(
     return actions; // Don't add more actions for hotpatch fixes
   }
   
-  // Trinity AI Brain Decisions requiring approval
+  // Trinity™ Decisions requiring approval
   if (metadata.aiBrainDecisionId || title.includes('ai decision') || title.includes('trinity suggests') || type === 'ai_decision') {
     actions.push({
       label: 'Approve AI Action',

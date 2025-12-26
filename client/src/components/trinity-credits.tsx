@@ -59,7 +59,7 @@ const CATEGORY_LABELS: Record<FeatureCategory, string> = {
   'automation_action': 'Automation Actions',
   'automation_cycle': 'Automation Cycles',
   'staged_publish': 'Staged Publishing',
-  'ai_brain': 'AI Brain Features',
+  'ai_brain': 'Trinity™ Features',
 };
 
 export function TrinityCreditsCard() {

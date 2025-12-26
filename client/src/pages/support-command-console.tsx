@@ -1,7 +1,7 @@
 /**
- * SUPPORT COMMAND CONSOLE - Interactive AI Brain Chat Interface
+ * SUPPORT COMMAND CONSOLE - Interactive Trinity™ Chat Interface
  * 
- * Real-time chat interface for support staff to interact with HelpAI/AI Brain.
+ * Real-time chat interface for support staff to interact with Trinity™.
  * Features:
  * - Natural language commands
  * - Slash command palette
@@ -138,7 +138,7 @@ export default function SupportCommandConsole() {
     {
       id: '1',
       role: 'assistant',
-      content: 'Welcome to the Support Command Console. I\'m HelpAI, your AI Brain assistant. You can type commands or ask questions naturally. Try /health to check system status.',
+      content: 'Welcome to the Support Command Console. I\'m Trinity™, your intelligent workforce assistant. You can type commands or ask questions naturally. Try /health to check system status.',
       timestamp: new Date()
     }
   ]);
@@ -228,7 +228,7 @@ export default function SupportCommandConsole() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/ai-brain/control/health'] });
-      toast({ title: "Service paused", description: "AI Brain service has been paused" });
+      toast({ title: "Service paused", description: "Trinity™ service has been paused" });
     },
     onError: (error) => {
       toast({ title: "Failed to pause service", description: String(error), variant: "destructive" });
@@ -242,7 +242,7 @@ export default function SupportCommandConsole() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/ai-brain/control/health'] });
-      toast({ title: "Service resumed", description: "AI Brain service has been resumed" });
+      toast({ title: "Service resumed", description: "Trinity™ service has been resumed" });
     },
     onError: (error) => {
       toast({ title: "Failed to resume service", description: String(error), variant: "destructive" });
@@ -397,7 +397,7 @@ export default function SupportCommandConsole() {
         'searching',
         'Gathering Context',
         'Looking up relevant system state and service health...',
-        'Querying AI Brain orchestration services for current status'
+        'Querying Trinity™ orchestration services for current status'
       ));
 
       const response = await apiRequest('POST', '/api/helpai/orchestrator/command', {
@@ -532,7 +532,7 @@ export default function SupportCommandConsole() {
               <div className="min-w-0">
                 <h1 className="text-base lg:text-2xl font-bold truncate" data-testid="text-page-title">Support Console</h1>
                 <p className="text-slate-400 text-xs lg:text-sm hidden sm:block">
-                  Trinity AI Brain - Interactive Command Interface
+                  Powered by Trinity™ — Interactive Command Interface
                 </p>
               </div>
             </div>

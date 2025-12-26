@@ -202,7 +202,7 @@ export default function TermsOfService() {
 
           <div className="mt-12 pt-8 border-t border-border">
             <p className="text-sm text-muted-foreground">
-              CoAIleague™ and its AI Brain technology are registered trademarks of CoAIleague.
+              CoAIleague™ and Trinity™ are registered trademarks of CoAIleague.
             </p>
           </div>
         </div>

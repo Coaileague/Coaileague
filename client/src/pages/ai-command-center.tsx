@@ -1,7 +1,7 @@
 /**
- * AI COMMAND CENTER - Universal AI Brain Dashboard
+ * AI COMMAND CENTER - Universal Trinity™ Dashboard
  * 
- * Mobile-first responsive page showing the unified AI Brain's:
+ * Mobile-first responsive page showing Trinity's unified intelligence:
  * - Global health and status
  * - Cross-organizational learnings  
  * - Pending approvals across all features
@@ -32,7 +32,7 @@ import {
 import { format } from "date-fns";
 
 export default function AICommandCenter() {
-  // Fetch AI Brain health metrics
+  // Fetch Trinity™ health metrics
   const { data: healthData, isLoading: healthLoading } = useQuery({
     queryKey: ['/api/ai-brain/health'],
   });
@@ -64,7 +64,7 @@ export default function AICommandCenter() {
             <div>
               <h1 className="text-2xl lg:text-3xl font-bold">AI Command Center</h1>
               <p className="text-blue-100 text-sm lg:text-base">
-                Unified AI Brain - Learning from all organizations
+                Powered by Trinity™ - Learning from all organizations
               </p>
             </div>
           </div>
@@ -127,14 +127,14 @@ export default function AICommandCenter() {
 
             {/* Overview Tab */}
             <TabsContent value="overview" className="space-y-4">
-              {/* AI Brain Health */}
+              {/* Trinity™ Health */}
               <Card data-testid="card-brain-health">
                 <CardHeader>
                   <div className="flex items-center justify-between">
                     <div>
                       <CardTitle className="flex items-center space-x-2">
                         <Shield className="w-5 h-5 text-blue-600" />
-                        <span>AI Brain Health</span>
+                        <span>Trinity™ Health</span>
                       </CardTitle>
                       <CardDescription>
                         System status and performance metrics
@@ -269,7 +269,7 @@ export default function AICommandCenter() {
                     <div className="text-center py-12">
                       <TrendingUp className="w-12 h-12 text-gray-400 mx-auto mb-3" />
                       <p className="text-gray-600">No patterns discovered yet</p>
-                      <p className="text-sm text-gray-500">The AI Brain is learning...</p>
+                      <p className="text-sm text-gray-500">Trinity™ is learning...</p>
                     </div>
                   )}
                 </CardContent>

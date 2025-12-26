@@ -25,7 +25,7 @@ export function EnhancedLoadingExamples() {
     // Simulate progress through stages
     const stages = [
       { progress: 20, message: "Validating shift assignments...", submessage: "Checking for conflicts and availability" },
-      { progress: 40, message: "Optimizing schedule...", submessage: "AI Brain balancing workload distribution" },
+      { progress: 40, message: "Optimizing schedule...", submessage: "Trinity™ balancing workload distribution" },
       { progress: 60, message: "Generating notifications...", submessage: "Preparing employee alerts" },
       { progress: 80, message: "Publishing to workspace...", submessage: "Syncing across all devices" },
       { progress: 95, message: "Finalizing...", submessage: "Almost done!" },
@@ -110,7 +110,7 @@ export function EnhancedLoadingExamples() {
 
     const stages = [
       { progress: 15, message: "Collecting data...", submessage: "Aggregating from all sources" },
-      { progress: 35, message: "AI Brain analyzing trends...", submessage: "Identifying patterns and insights" },
+      { progress: 35, message: "Trinity™ analyzing trends...", submessage: "Identifying patterns and insights" },
       { progress: 60, message: "Generating visualizations...", submessage: "Creating charts and graphs" },
       { progress: 85, message: "Compiling report...", submessage: "Formatting executive summary" },
     ];
@@ -163,7 +163,7 @@ export function EnhancedLoadingExamples() {
     loading.updateProgress(25, "Verifying subscription...", "Checking organization status");
 
     await new Promise(resolve => setTimeout(resolve, 1500));
-    loading.updateProgress(50, "Running security scan...", "AI Brain analyzing login patterns");
+    loading.updateProgress(50, "Running security scan...", "Trinity™ analyzing login patterns");
 
     await new Promise(resolve => setTimeout(resolve, 1500));
     
@@ -307,7 +307,7 @@ export function EnhancedLoadingExamples() {
                 Security Denial Demo
               </CardTitle>
               <CardDescription>
-                Simulates AI Brain detecting unusual activity and denying access
+                Simulates Trinity™ detecting unusual activity and denying access
               </CardDescription>
             </CardHeader>
             <CardContent>

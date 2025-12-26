@@ -2,7 +2,7 @@
  * SUPPORT AI CONTROL CONSOLE
  * 
  * Comprehensive control interface for support staff to:
- * - Chat with AI Brain using natural language
+ * - Chat with Trinity™ using natural language
  * - Browse and edit platform files
  * - Execute and monitor workflows
  * - Run diagnostic tests
@@ -322,7 +322,7 @@ export default function SupportAIConsole() {
                 Support AI Control Console
               </h1>
               <p className="text-violet-100 text-sm lg:text-base">
-                Direct interface to AI Brain - File access, workflows, testing, and chat
+                Direct interface to Trinity™ - File access, workflows, testing, and chat
               </p>
             </div>
           </div>
@@ -398,7 +398,7 @@ export default function SupportAIConsole() {
               <CardHeader className="pb-2">
                 <CardTitle className="flex items-center gap-2">
                   <Sparkles className="w-5 h-5 text-violet-500" />
-                  AI Brain Chat
+                  Trinity™ Chat
                 </CardTitle>
                 <CardDescription>
                   Ask questions, execute actions, or get help with platform management
@@ -410,7 +410,7 @@ export default function SupportAIConsole() {
                     {messages.length === 0 && (
                       <div className="text-center text-muted-foreground py-8">
                         <Brain className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>Start a conversation with AI Brain</p>
+                        <p>Start a conversation with Trinity™</p>
                         <p className="text-sm mt-2">
                           Try: "Show me the platform health status" or "List recent audit logs"
                         </p>
@@ -455,7 +455,7 @@ export default function SupportAIConsole() {
                   <Input
                     value={message}
                     onChange={(e) => setMessage(e.target.value)}
-                    placeholder="Ask AI Brain anything..."
+                    placeholder="Ask Trinity™ anything..."
                     onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSendMessage()}
                     disabled={sendMessageMutation.isPending}
                     data-testid="input-chat-message"
@@ -654,7 +654,7 @@ export default function SupportAIConsole() {
                   Workflow Execution
                 </CardTitle>
                 <CardDescription>
-                  Define and execute step-based workflows with AI Brain
+                  Define and execute step-based workflows with Trinity™
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -688,7 +688,7 @@ export default function SupportAIConsole() {
                   <div>
                     <h4 className="font-medium mb-2">Recent Workflows</h4>
                     <p className="text-muted-foreground text-sm">
-                      No recent workflow executions. Start by selecting an action above or asking AI Brain in Chat.
+                      No recent workflow executions. Start by selecting an action above or asking Trinity™ in Chat.
                     </p>
                   </div>
                 </div>
@@ -807,7 +807,7 @@ export default function SupportAIConsole() {
                       Action History
                     </CardTitle>
                     <CardDescription>
-                      Recent AI Brain actions and console interactions
+                      Recent Trinity™ actions and console interactions
                     </CardDescription>
                   </div>
                   <Button

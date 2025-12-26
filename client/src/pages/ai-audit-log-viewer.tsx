@@ -361,7 +361,7 @@ export default function AIAuditLogViewer() {
             AI Audit Log Viewer
           </h1>
           <p className="text-muted-foreground text-sm">
-            Monitor Trinity AI Brain actions, review decisions, and investigate workflows
+            Monitor Trinity™ actions, review decisions, and investigate workflows
           </p>
         </div>
         <Button variant="outline" onClick={() => refetch()} data-testid="button-refresh-logs">
@@ -427,7 +427,7 @@ export default function AIAuditLogViewer() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Actors</SelectItem>
-                <SelectItem value="AI_BRAIN">AI Brain</SelectItem>
+                <SelectItem value="AI_BRAIN">Trinity™</SelectItem>
                 <SelectItem value="RevenueOps Lead">RevenueOps Lead</SelectItem>
                 <SelectItem value="SecurityOps Lead">SecurityOps Lead</SelectItem>
                 <SelectItem value="Scheduling Subagent">Scheduling</SelectItem>
@@ -496,11 +496,11 @@ export default function AIAuditLogViewer() {
           <Card>
             <CardContent className="py-12 text-center">
               <Brain className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="font-medium">No AI Brain actions found</h3>
+              <h3 className="font-medium">No Trinity™ actions found</h3>
               <p className="text-sm text-muted-foreground mt-1">
                 {searchQuery || actorTypeFilter !== 'all' || statusFilter !== 'all' 
                   ? 'Try adjusting your filters'
-                  : 'AI Brain actions will appear here as they occur'
+                  : 'Trinity™ actions will appear here as they occur'
                 }
               </p>
             </CardContent>

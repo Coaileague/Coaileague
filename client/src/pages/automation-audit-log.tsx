@@ -1,5 +1,5 @@
 /**
- * Automation Audit Log - View history of all AI Brain automation runs
+ * Automation Audit Log - View history of all Trinity™ automation runs
  * Connected to real-time automation events API
  */
 
@@ -158,7 +158,7 @@ export default function AutomationAuditLog() {
           <Zap className="h-8 w-8 text-primary" />
           <div>
             <h1 className="text-3xl font-bold" data-testid="heading-automation-audit">Automation Audit Log</h1>
-            <p className="text-muted-foreground">Real-time visibility into all AI Brain automation runs</p>
+            <p className="text-muted-foreground">Real-time visibility into all Trinity™ automation runs</p>
           </div>
         </div>
         <Button 

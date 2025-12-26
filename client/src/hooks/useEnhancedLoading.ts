@@ -106,7 +106,7 @@ export function useEnhancedLoading() {
       scenario: "schedule",
       animationType: "orbit",
       initialMessage: "Processing Schedule...",
-      initialSubmessage: "AI Brain analyzing shifts and availability"
+      initialSubmessage: "Trinity™ analyzing shifts and availability"
     });
   }, [showLoading]);
 
@@ -142,7 +142,7 @@ export function useEnhancedLoading() {
       scenario: "analytics",
       animationType: "gradient",
       initialMessage: "Generating Analytics...",
-      initialSubmessage: "AI Brain processing data insights"
+      initialSubmessage: "Trinity™ processing data insights"
     });
   }, [showLoading]);
 

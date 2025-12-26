@@ -316,7 +316,7 @@ export function WhatsNewBadge() {
       case 'maintenance': return 'Maintenance';
       case 'diagnostic': return 'Diagnostic';
       case 'support': return 'Support';
-      case 'ai_brain': return 'AI Brain';
+      case 'ai_brain': return 'Trinity™';
       case 'error': return 'Error';
       default: return category;
     }
