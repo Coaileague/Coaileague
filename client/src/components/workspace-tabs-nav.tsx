@@ -4,16 +4,130 @@
  * Works seamlessly on desktop and mobile with horizontal scrolling
  */
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { selectSidebarFamilies } from "@/lib/sidebarModules";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+
+interface RouteItem {
+  id: string;
+  label: string;
+  href: string;
+  icon: React.ComponentType<{ className?: string }>;
+  badge?: string;
+  description?: string;
+}
+
+function DesktopRouteScroller({ 
+  routes, 
+  location, 
+  setLocation 
+}: { 
+  routes: RouteItem[]; 
+  location: string; 
+  setLocation: (path: string) => void;
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+
+  const checkScroll = () => {
+    if (scrollRef.current) {
+      const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+      setCanScrollLeft(scrollLeft > 0);
+      setCanScrollRight(scrollLeft + clientWidth < scrollWidth - 1);
+    }
+  };
+
+  useEffect(() => {
+    checkScroll();
+    const el = scrollRef.current;
+    if (el) {
+      el.addEventListener('scroll', checkScroll);
+      window.addEventListener('resize', checkScroll);
+      return () => {
+        el.removeEventListener('scroll', checkScroll);
+        window.removeEventListener('resize', checkScroll);
+      };
+    }
+  }, [routes]);
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollRef.current) {
+      const scrollAmount = 200;
+      scrollRef.current.scrollBy({
+        left: direction === 'left' ? -scrollAmount : scrollAmount,
+        behavior: 'smooth'
+      });
+    }
+  };
+
+  return (
+    <div className="relative flex items-center bg-muted/30 border-t">
+      {canScrollLeft && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => scroll('left')}
+          className="absolute left-0 z-10 h-full rounded-none bg-gradient-to-r from-background via-background to-transparent px-2"
+          data-testid="button-scroll-left"
+        >
+          <ChevronLeft className="h-4 w-4" />
+        </Button>
+      )}
+      
+      <div 
+        ref={scrollRef}
+        className="flex items-center gap-2 px-4 py-2 overflow-x-auto scrollbar-hide"
+        onScroll={checkScroll}
+      >
+        {routes.map((route) => {
+          const isActive = location === route.href;
+          const Icon = route.icon;
+          return (
+            <Button
+              key={route.id}
+              variant={isActive ? "default" : "ghost"}
+              size="sm"
+              onClick={() => setLocation(route.href)}
+              className={cn(
+                "gap-1.5 whitespace-nowrap shrink-0 px-3",
+                isActive && "bg-primary text-primary-foreground"
+              )}
+              data-testid={`route-${route.id}`}
+            >
+              <Icon className="h-4 w-4 shrink-0" />
+              <span className="text-sm">{route.label}</span>
+              {route.badge && (
+                <span className="ml-1 px-1.5 py-0.5 text-xs bg-accent rounded-full shrink-0">
+                  {route.badge}
+                </span>
+              )}
+            </Button>
+          );
+        })}
+      </div>
+
+      {canScrollRight && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => scroll('right')}
+          className="absolute right-0 z-10 h-full rounded-none bg-gradient-to-l from-background via-background to-transparent px-2"
+          data-testid="button-scroll-right"
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      )}
+    </div>
+  );
+}
 
 export function WorkspaceTabsNav() {
   const [location, setLocation] = useLocation();
@@ -131,35 +245,13 @@ export function WorkspaceTabsNav() {
         {/* Sub-Routes for Each Family */}
         {families.map((family) => (
           <TabsContent key={`content-${family.id}`} value={family.id} className="p-0 border-0">
-            {/* Desktop: Show route buttons inline */}
+            {/* Desktop: Show route buttons inline with scroll indicators */}
             {!isMobile && (
-              <div className="flex items-center gap-1 px-4 py-2 overflow-x-auto scrollbar-hide">
-                {family.routes.map((route) => {
-                  const isActive = location === route.href;
-                  const Icon = route.icon;
-                  return (
-                    <Button
-                      key={route.id}
-                      variant={isActive ? "default" : "ghost"}
-                      size="sm"
-                      onClick={() => setLocation(route.href)}
-                      className={cn(
-                        "gap-2 whitespace-nowrap",
-                        isActive && "bg-primary text-primary-foreground"
-                      )}
-                      data-testid={`route-${route.id}`}
-                    >
-                      <Icon className="h-4 w-4" />
-                      <span className="text-xs sm:text-sm">{route.label}</span>
-                      {route.badge && (
-                        <span className="ml-1 px-1.5 py-0.5 text-xs bg-accent rounded-full">
-                          {route.badge}
-                        </span>
-                      )}
-                    </Button>
-                  );
-                })}
-              </div>
+              <DesktopRouteScroller 
+                routes={family.routes}
+                location={location}
+                setLocation={setLocation}
+              />
             )}
 
             {/* Mobile: Show route dropdown menu */}
