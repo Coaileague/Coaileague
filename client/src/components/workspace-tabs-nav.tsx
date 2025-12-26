@@ -9,10 +9,11 @@ import { useLocation } from "wouter";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
-import { selectSidebarFamilies } from "@/lib/sidebarModules";
+import { selectSidebarFamilies, ROUTE_GROUPS, type RouteGroupId } from "@/lib/sidebarModules";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ChevronDown, ChevronLeft, ChevronRight } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
 interface RouteItem {
@@ -22,6 +23,7 @@ interface RouteItem {
   icon: React.ComponentType<{ className?: string }>;
   badge?: string;
   description?: string;
+  groupId?: RouteGroupId;
 }
 
 function DesktopRouteScroller({ 
@@ -129,6 +131,156 @@ function DesktopRouteScroller({
   );
 }
 
+/**
+ * Platform Grouped Navigation - Desktop
+ * Displays routes organized by category in a clean vertical stack layout
+ */
+function PlatformGroupedDesktop({
+  routes,
+  location,
+  setLocation,
+}: {
+  routes: RouteItem[];
+  location: string;
+  setLocation: (path: string) => void;
+}) {
+  // Group routes by groupId
+  const groupedRoutes = routes.reduce((acc, route) => {
+    const groupId = route.groupId || 'core';
+    if (!acc[groupId]) acc[groupId] = [];
+    acc[groupId].push(route);
+    return acc;
+  }, {} as Record<RouteGroupId, RouteItem[]>);
+
+  // Sort groups by order
+  const sortedGroups = Object.entries(groupedRoutes)
+    .sort(([a], [b]) => (ROUTE_GROUPS[a as RouteGroupId]?.order || 0) - (ROUTE_GROUPS[b as RouteGroupId]?.order || 0));
+
+  return (
+    <div className="bg-muted/30 border-t p-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {sortedGroups.map(([groupId, groupRoutes]) => {
+          const group = ROUTE_GROUPS[groupId as RouteGroupId];
+          return (
+            <div key={groupId} className="space-y-1">
+              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-2">
+                {group?.label || groupId}
+              </h4>
+              <div className="space-y-1">
+                {groupRoutes.map((route) => {
+                  const isActive = location === route.href;
+                  const Icon = route.icon;
+                  return (
+                    <Button
+                      key={route.id}
+                      variant={isActive ? "default" : "ghost"}
+                      size="sm"
+                      onClick={() => setLocation(route.href)}
+                      className={cn(
+                        "w-full justify-start gap-2",
+                        isActive && "bg-primary text-primary-foreground"
+                      )}
+                      data-testid={`route-${route.id}`}
+                    >
+                      <Icon className="h-4 w-4 shrink-0" />
+                      <span className="text-sm truncate">{route.label}</span>
+                      {route.badge && (
+                        <span className="ml-auto px-1.5 py-0.5 text-xs bg-accent/80 rounded shrink-0">
+                          {route.badge}
+                        </span>
+                      )}
+                    </Button>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Platform Grouped Navigation - Mobile
+ * Displays routes organized by category in collapsible accordion sections
+ */
+function PlatformGroupedMobile({
+  routes,
+  location,
+  setLocation,
+  onClose,
+}: {
+  routes: RouteItem[];
+  location: string;
+  setLocation: (path: string) => void;
+  onClose: () => void;
+}) {
+  // Group routes by groupId
+  const groupedRoutes = routes.reduce((acc, route) => {
+    const groupId = route.groupId || 'core';
+    if (!acc[groupId]) acc[groupId] = [];
+    acc[groupId].push(route);
+    return acc;
+  }, {} as Record<RouteGroupId, RouteItem[]>);
+
+  // Sort groups by order
+  const sortedGroups = Object.entries(groupedRoutes)
+    .sort(([a], [b]) => (ROUTE_GROUPS[a as RouteGroupId]?.order || 0) - (ROUTE_GROUPS[b as RouteGroupId]?.order || 0));
+
+  // Find which group the current route belongs to
+  const activeGroupId = routes.find(r => r.href === location)?.groupId || 'core';
+
+  return (
+    <div className="space-y-3 mt-4">
+      {sortedGroups.map(([groupId, groupRoutes]) => {
+        const group = ROUTE_GROUPS[groupId as RouteGroupId];
+        const isActiveGroup = groupId === activeGroupId;
+        
+        return (
+          <Collapsible key={groupId} defaultOpen={isActiveGroup}>
+            <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 rounded-md bg-muted/50 hover-elevate">
+              <span className="text-sm font-semibold">{group?.label || groupId}</span>
+              <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+            </CollapsibleTrigger>
+            <CollapsibleContent className="pt-2 space-y-1">
+              {groupRoutes.map((route) => {
+                const isActive = location === route.href;
+                const Icon = route.icon;
+                return (
+                  <Button
+                    key={route.id}
+                    variant={isActive ? "default" : "ghost"}
+                    className="w-full justify-start gap-3 h-auto py-3"
+                    onClick={() => {
+                      setLocation(route.href);
+                      onClose();
+                    }}
+                    data-testid={`mobile-route-${route.id}`}
+                  >
+                    <Icon className="h-5 w-5" />
+                    <div className="flex flex-col items-start gap-0.5">
+                      <span className="font-medium">{route.label}</span>
+                      {route.description && (
+                        <span className="text-xs text-muted-foreground">{route.description}</span>
+                      )}
+                    </div>
+                    {route.badge && (
+                      <span className="ml-auto px-2 py-1 text-xs bg-primary text-primary-foreground rounded-full">
+                        {route.badge}
+                      </span>
+                    )}
+                  </Button>
+                );
+              })}
+            </CollapsibleContent>
+          </Collapsible>
+        );
+      })}
+    </div>
+  );
+}
+
 export function WorkspaceTabsNav() {
   const [location, setLocation] = useLocation();
   const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading } = useWorkspaceAccess();
@@ -201,9 +353,6 @@ export function WorkspaceTabsNav() {
     );
   }
 
-  const currentFamily = families.find(f => f.id === activeFamily);
-  const currentRoutes = currentFamily?.routes || [];
-
   // Handle family tab change - navigate to first route in selected family
   const handleFamilyChange = (familyId: string) => {
     setActiveFamily(familyId);
@@ -243,75 +392,97 @@ export function WorkspaceTabsNav() {
         </TabsList>
 
         {/* Sub-Routes for Each Family */}
-        {families.map((family) => (
-          <TabsContent key={`content-${family.id}`} value={family.id} className="p-0 border-0">
-            {/* Desktop: Show route buttons inline with scroll indicators */}
-            {!isMobile && (
-              <DesktopRouteScroller 
-                routes={family.routes}
-                location={location}
-                setLocation={setLocation}
-              />
-            )}
+        {families.map((family) => {
+          // Use grouped layout for Platform family
+          const isPlatformFamily = family.id === 'platform';
+          
+          return (
+            <TabsContent key={`content-${family.id}`} value={family.id} className="p-0 border-0">
+              {/* Desktop: Show grouped layout for Platform, scrollable row for others */}
+              {!isMobile && (
+                isPlatformFamily ? (
+                  <PlatformGroupedDesktop 
+                    routes={family.routes}
+                    location={location}
+                    setLocation={setLocation}
+                  />
+                ) : (
+                  <DesktopRouteScroller 
+                    routes={family.routes}
+                    location={location}
+                    setLocation={setLocation}
+                  />
+                )
+              )}
 
-            {/* Mobile: Show route dropdown menu */}
-            {isMobile && (
-              <div className="px-4 py-2 border-t bg-muted/30">
-                <Sheet open={expandedTab} onOpenChange={setExpandedTab}>
-                  <SheetTrigger asChild>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="w-full justify-between gap-2"
-                      data-testid="button-mobile-routes"
-                    >
-                      <span className="text-sm font-medium">
-                        {currentRoutes.find(r => location === r.href)?.label || "Select Feature"}
-                      </span>
-                      <ChevronDown className={cn(
-                        "h-4 w-4 transition-transform",
-                        expandedTab && "rotate-180"
-                      )} />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="bottom" className="h-[60vh]">
-                    <div className="space-y-2 mt-4">
-                      {currentRoutes.map((route) => {
-                        const isActive = location === route.href;
-                        const Icon = route.icon;
-                        return (
-                          <Button
-                            key={route.id}
-                            variant={isActive ? "default" : "ghost"}
-                            className="w-full justify-start gap-3 h-auto py-3"
-                            onClick={() => {
-                              setLocation(route.href);
-                              setExpandedTab(false);
-                            }}
-                            data-testid={`mobile-route-${route.id}`}
-                          >
-                            <Icon className="h-5 w-5" />
-                            <div className="flex flex-col items-start gap-0.5">
-                              <span className="font-medium">{route.label}</span>
-                              {route.description && (
-                                <span className="text-xs text-muted-foreground">{route.description}</span>
-                              )}
-                            </div>
-                            {route.badge && (
-                              <span className="ml-auto px-2 py-1 text-xs bg-primary text-primary-foreground rounded-full">
-                                {route.badge}
-                              </span>
-                            )}
-                          </Button>
-                        );
-                      })}
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              </div>
-            )}
-          </TabsContent>
-        ))}
+              {/* Mobile: Show grouped accordion for Platform, sheet for others */}
+              {isMobile && (
+                <div className="px-4 py-2 border-t bg-muted/30">
+                  <Sheet open={expandedTab} onOpenChange={setExpandedTab}>
+                    <SheetTrigger asChild>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="w-full justify-between gap-2"
+                        data-testid="button-mobile-routes"
+                      >
+                        <span className="text-sm font-medium">
+                          {family.routes.find(r => location === r.href)?.label || "Select Feature"}
+                        </span>
+                        <ChevronDown className={cn(
+                          "h-4 w-4 transition-transform",
+                          expandedTab && "rotate-180"
+                        )} />
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent side="bottom" className="h-[70vh] overflow-y-auto">
+                      {isPlatformFamily ? (
+                        <PlatformGroupedMobile
+                          routes={family.routes}
+                          location={location}
+                          setLocation={setLocation}
+                          onClose={() => setExpandedTab(false)}
+                        />
+                      ) : (
+                        <div className="space-y-2 mt-4">
+                          {family.routes.map((route) => {
+                            const isActive = location === route.href;
+                            const Icon = route.icon;
+                            return (
+                              <Button
+                                key={route.id}
+                                variant={isActive ? "default" : "ghost"}
+                                className="w-full justify-start gap-3 h-auto py-3"
+                                onClick={() => {
+                                  setLocation(route.href);
+                                  setExpandedTab(false);
+                                }}
+                                data-testid={`mobile-route-${route.id}`}
+                              >
+                                <Icon className="h-5 w-5" />
+                                <div className="flex flex-col items-start gap-0.5">
+                                  <span className="font-medium">{route.label}</span>
+                                  {route.description && (
+                                    <span className="text-xs text-muted-foreground">{route.description}</span>
+                                  )}
+                                </div>
+                                {route.badge && (
+                                  <span className="ml-auto px-2 py-1 text-xs bg-primary text-primary-foreground rounded-full">
+                                    {route.badge}
+                                  </span>
+                                )}
+                              </Button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </SheetContent>
+                  </Sheet>
+                </div>
+              )}
+            </TabsContent>
+          );
+        })}
       </Tabs>
 
       {/* Custom scrollbar styling */}
