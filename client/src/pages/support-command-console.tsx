@@ -560,15 +560,15 @@ export default function SupportCommandConsole() {
                 <RefreshCw className="w-4 h-4" />
               </Button>
               <Button 
-                size="icon" 
-                variant="ghost" 
-                className="text-slate-400 hover:text-white h-8 w-8"
+                variant="outline" 
+                className="text-cyan-400 border-cyan-500/50 gap-1.5"
                 onClick={() => setIsFullscreenChat(true)}
                 data-testid="button-fullscreen-chat"
-                aria-label="Expand Trinity chat"
-                title="Expand Trinity chat"
+                aria-label="Expand Trinity chat to fullscreen"
+                title="Expand Trinity chat to fullscreen"
               >
                 <Maximize2 className="w-4 h-4" />
+                <span className="hidden sm:inline text-xs font-medium">Expand</span>
               </Button>
               <Sheet open={mobileToolsOpen} onOpenChange={setMobileToolsOpen}>
                 <SheetTrigger asChild>
@@ -1078,7 +1078,7 @@ export default function SupportCommandConsole() {
 
       {/* Quick Fix Confirmation Dialog */}
       <Dialog open={showQuickFixDialog} onOpenChange={setShowQuickFixDialog}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md" showHomeButton={false}>
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Wrench className="w-5 h-5 text-orange-500" />
@@ -1168,7 +1168,7 @@ export default function SupportCommandConsole() {
       </Dialog>
 
       <Dialog open={isFullscreenChat} onOpenChange={setIsFullscreenChat}>
-        <DialogContent className="max-w-[95vw] w-full h-[90vh] max-h-[90vh] flex flex-col p-0 gap-0">
+        <DialogContent className="max-w-[95vw] w-full h-[90vh] max-h-[90vh] flex flex-col p-0 gap-0" showHomeButton={false}>
           <DialogHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-4 shrink-0 rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
