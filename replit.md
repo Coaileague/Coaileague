@@ -46,6 +46,7 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **AI/Automation Bypass Pattern:** Elevated session bypass for AI features and automation services using HMAC-signed elevation tokens.
 - **ChatServerHub Architecture:** Unified gateway connecting chat rooms to AI Brain, notifications, tickets, and analytics.
 - **Trinity Command Center RBAC:** Chat interface is restricted to support staff roles only (root_admin, deputy_admin, sysop, support_manager, support_agent, compliance_officer). Org owners see Quick Actions based on their business category without chat access.
+- **Trinity Command Center Frontier UI:** Diagnostic/Strategic Guru mode toggle, System Issues panel with auto-refresh diagnostics, real-time frontier capability metadata display (Digital Twin simulations, collaborator badges, compliance verification, evolution logs).
 - **Spec-Driven Development:** Component registry with tier-based AI editing rules.
 - **Trinity Agent Parity Layer:** Replit Agent-equivalent autonomous coding capabilities (Plan-Execute-Reflect, Verification Loops, Confidence Scoring, Context Integration, Self-Correction).
 - **Trinity Humanized Persona System:** Human-like AI communication patterns with a senior engineer persona.

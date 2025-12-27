@@ -341,6 +341,27 @@ export default function TrinityCommandCenter() {
   // userRole already has the fallback: platformRole || role || 'employee'
   const canUseChat = isSupportStaff(userRole);
 
+  // Frontier diagnostics query - must be after canUseChat is defined
+  const { data: frontierDiagnostics, refetch: refetchDiagnostics } = useQuery<{
+    success: boolean;
+    data: {
+      capabilities: { id: string; name: string; enabled: boolean; }[];
+      checks: { name: string; status: string; error?: string; result?: string; bottlenecksFound?: number; }[];
+    };
+    message: string;
+  }>({
+    queryKey: ['/api/helpai/orchestrator/execute', 'frontier.run_diagnostics'],
+    queryFn: async () => {
+      const res = await apiRequest('POST', '/api/helpai/orchestrator/execute', {
+        actionId: 'frontier.run_diagnostics',
+        payload: { source: 'command_center' }
+      });
+      return res.json();
+    },
+    refetchInterval: 60000,
+    enabled: canUseChat,
+  });
+
   // Auto-scroll chat
   useEffect(() => {
     if (scrollRef.current) {
@@ -355,7 +376,8 @@ export default function TrinityCommandCenter() {
         message,
         context: {
           role: userRole,
-          source: 'command_center'
+          source: 'command_center',
+          mode: trinityMode
         }
       });
       return res.json();
@@ -370,7 +392,12 @@ export default function TrinityCommandCenter() {
         executionTimeMs: data.executionTimeMs,
         success: data.success !== false,
         data: data.data,
-        outputType: data.outputType || 'text'
+        outputType: data.outputType || 'text',
+        frontierCapability: data.frontierCapability,
+        collaboratorJoined: data.collaboratorJoined,
+        complianceVerified: data.complianceVerified,
+        evolutionLog: data.evolutionLog,
+        simulationResults: data.simulationResults
       };
       setMessages(prev => [...prev, trinityResponse]);
       setIsProcessing(false);
@@ -791,6 +818,76 @@ export default function TrinityCommandCenter() {
                     onClick={() => setInput('/activity recent')}
                   />
                 </div>
+              </div>
+            )}
+
+            {/* Trinity System Issues - Support Staff Only */}
+            {canUseChat && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-slate-300 text-xs flex items-center gap-1">
+                    <AlertTriangle className="w-3 h-3 text-amber-400" />
+                    System Issues
+                  </Label>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-5 px-1.5 text-[10px] text-cyan-400 hover:text-white"
+                    onClick={() => refetchDiagnostics()}
+                    data-testid="button-refresh-diagnostics"
+                  >
+                    <RefreshCw className="w-3 h-3 mr-1" />
+                    Scan
+                  </Button>
+                </div>
+                <Card className="bg-slate-800/50 border-slate-700">
+                  <CardContent className="p-2 space-y-1.5">
+                    {frontierDiagnostics?.data?.checks ? (
+                      frontierDiagnostics.data.checks
+                        .filter(c => c.status !== 'operational' || c.bottlenecksFound)
+                        .map((check, idx) => (
+                          <div 
+                            key={idx}
+                            className={`flex items-center justify-between p-1.5 rounded text-xs ${
+                              check.status !== 'operational' 
+                                ? 'bg-red-500/10 border border-red-500/30' 
+                                : 'bg-amber-500/10 border border-amber-500/30'
+                            }`}
+                          >
+                            <div className="flex items-center gap-1.5">
+                              {check.status !== 'operational' ? (
+                                <XCircle className="w-3 h-3 text-red-400" />
+                              ) : (
+                                <AlertTriangle className="w-3 h-3 text-amber-400" />
+                              )}
+                              <span className={check.status !== 'operational' ? 'text-red-300' : 'text-amber-300'}>
+                                {check.name}
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 px-1.5 text-[10px] text-cyan-400 hover:text-white"
+                              onClick={() => {
+                                setInput(`Trinity, fix the ${check.name} issue: ${check.error || 'bottleneck detected'}`);
+                                inputRef.current?.focus();
+                              }}
+                              data-testid={`button-fix-issue-${idx}`}
+                            >
+                              Fix
+                            </Button>
+                          </div>
+                        ))
+                    ) : null}
+                    {(!frontierDiagnostics?.data?.checks || 
+                      frontierDiagnostics.data.checks.every(c => c.status === 'operational' && !c.bottlenecksFound)) && (
+                      <div className="flex items-center gap-1.5 p-1.5 text-xs text-emerald-400">
+                        <CheckCircle className="w-3 h-3" />
+                        All systems operational
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
               </div>
             )}
             
