@@ -5,6 +5,7 @@
 
 import express, { Router, Request, Response } from 'express';
 import { isAuthenticated } from './replitAuth';
+import { requireAuth } from './auth';
 import { db } from './db';
 import { aiBrainService } from './services/ai-brain/aiBrainService';
 import { subagentConfidenceMonitor } from './services/ai-brain/subagentConfidenceMonitor';
@@ -33,8 +34,9 @@ export const aiBrainRouter: Router = express.Router();
 
 /**
  * GET /api/ai-brain/health - Get AI Brain health metrics
+ * Uses requireAuth to support both session-based and Replit OAuth auth
  */
-aiBrainRouter.get('/health', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/health', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.user?.currentWorkspaceId;
@@ -50,8 +52,9 @@ aiBrainRouter.get('/health', isAuthenticated, async (req: Request, res: Response
 /**
  * GET /api/ai-brain/system-status - Get AI provider gateway status
  * Returns information about provider health, fallback status, and system mode
+ * Uses requireAuth to support both session-based and Replit OAuth auth
  */
-aiBrainRouter.get('/system-status', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/system-status', requireAuth, async (req: Request, res: Response) => {
   try {
     const status = getAISystemStatus();
     
