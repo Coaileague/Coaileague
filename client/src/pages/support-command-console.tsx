@@ -56,7 +56,9 @@ import {
   Database,
   Lock,
   Loader2,
-  PanelRight
+  PanelRight,
+  Maximize2,
+  Minimize2
 } from "lucide-react";
 import { format } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -160,6 +162,9 @@ export default function SupportCommandConsole() {
   
   // Mobile tools sheet state
   const [mobileToolsOpen, setMobileToolsOpen] = useState(false);
+  
+  // Fullscreen chat mode for better visibility
+  const [isFullscreenChat, setIsFullscreenChat] = useState(false);
 
   // Helper to add reasoning steps
   const addReasoningStep = (step: ReasoningStep) => {
@@ -553,6 +558,17 @@ export default function SupportCommandConsole() {
                 data-testid="button-refresh-health"
               >
                 <RefreshCw className="w-4 h-4" />
+              </Button>
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className="text-slate-400 hover:text-white h-8 w-8"
+                onClick={() => setIsFullscreenChat(true)}
+                data-testid="button-fullscreen-chat"
+                aria-label="Expand Trinity chat"
+                title="Expand Trinity chat"
+              >
+                <Maximize2 className="w-4 h-4" />
               </Button>
               <Sheet open={mobileToolsOpen} onOpenChange={setMobileToolsOpen}>
                 <SheetTrigger asChild>
@@ -1148,6 +1164,153 @@ export default function SupportCommandConsole() {
                 : 'Execute Fix'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isFullscreenChat} onOpenChange={setIsFullscreenChat}>
+        <DialogContent className="max-w-[95vw] w-full h-[90vh] max-h-[90vh] flex flex-col p-0 gap-0">
+          <DialogHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-4 shrink-0 rounded-t-lg">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-lg flex items-center justify-center shadow-lg shadow-cyan-500/20">
+                  <Terminal className="w-5 h-5" />
+                </div>
+                <div>
+                  <DialogTitle className="text-lg font-bold text-white">Trinity Chat</DialogTitle>
+                  <DialogDescription className="text-slate-400 text-sm">
+                    Full-screen mode for better visibility
+                  </DialogDescription>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Badge 
+                  variant={healthStatus?.status === 'healthy' ? 'default' : 'destructive'}
+                  className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                  data-testid="badge-fullscreen-health"
+                >
+                  <Activity className="w-3 h-3 mr-1" />
+                  {healthyCount}/{totalServices}
+                </Badge>
+                <Button 
+                  size="icon" 
+                  variant="ghost" 
+                  className="text-slate-400 hover:text-white h-8 w-8"
+                  onClick={() => setIsFullscreenChat(false)}
+                  data-testid="button-minimize-chat"
+                >
+                  <Minimize2 className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="flex-1 flex flex-col overflow-hidden bg-background p-4">
+            <ScrollArea className="flex-1 pr-4 min-h-0" data-testid="scroll-fullscreen-messages">
+              <div className="space-y-4 pb-4">
+                {messages.map((message) => (
+                  <MessageBubble key={message.id} message={message} />
+                ))}
+                {sendCommandMutation.isPending && (
+                  <div className="flex items-center space-x-2 text-muted-foreground">
+                    <div className="animate-pulse flex space-x-1">
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                      <div className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                    </div>
+                    <span className="text-sm">Trinity is thinking...</span>
+                  </div>
+                )}
+              </div>
+            </ScrollArea>
+
+            {showReasoningPanel && reasoningSession && (
+              <div className="mt-4 mb-2">
+                <TrinityReasoningPanel
+                  session={reasoningSession}
+                  isActive={sendCommandMutation.isPending}
+                  fastMode={fastMode}
+                  onFastModeChange={setFastMode}
+                />
+              </div>
+            )}
+
+            <div className="mt-4 shrink-0">
+              <div className="flex gap-2 mb-3 flex-wrap">
+                {QUICK_COMMANDS.map((cmd) => (
+                  <Button
+                    key={cmd.command}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs h-8 px-3"
+                    onClick={() => handleQuickCommand(cmd.command)}
+                    data-testid={`button-fullscreen-quick-${cmd.command.replace('/', '').split(' ')[0]}`}
+                  >
+                    <cmd.icon className="w-3 h-3 mr-1" />
+                    {cmd.description}
+                  </Button>
+                ))}
+              </div>
+
+              <div className="flex space-x-2">
+                <div className="flex-1 relative">
+                  <Input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Ask Trinity anything..."
+                    className="pr-10 h-11 text-base"
+                    data-testid="input-fullscreen-command"
+                  />
+                  <Popover open={isCommandPaletteOpen} onOpenChange={setIsCommandPaletteOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                        data-testid="button-fullscreen-command-palette"
+                      >
+                        <Command className="w-4 h-4" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-80" align="end">
+                      <div className="space-y-2">
+                        <h4 className="font-medium text-sm">Available Commands</h4>
+                        <Separator />
+                        <div className="space-y-1 max-h-60 overflow-auto">
+                          {QUICK_COMMANDS.map((cmd) => (
+                            <Button
+                              key={cmd.command}
+                              variant="ghost"
+                              className="w-full justify-start text-left h-auto py-2"
+                              onClick={() => {
+                                handleQuickCommand(cmd.command);
+                                setIsCommandPaletteOpen(false);
+                              }}
+                            >
+                              <cmd.icon className="w-4 h-4 mr-2 text-muted-foreground" />
+                              <div>
+                                <div className="font-mono text-sm">{cmd.command}</div>
+                                <div className="text-xs text-muted-foreground">{cmd.description}</div>
+                              </div>
+                            </Button>
+                          ))}
+                        </div>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                </div>
+                <Button 
+                  onClick={handleSend} 
+                  disabled={!input.trim() || sendCommandMutation.isPending}
+                  className="h-11 px-6"
+                  data-testid="button-fullscreen-send"
+                >
+                  <Send className="w-4 h-4 mr-2" />
+                  Send
+                </Button>
+              </div>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
