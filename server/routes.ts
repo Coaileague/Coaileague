@@ -97,6 +97,7 @@ import { whatsNewRouter } from "./routes/whatsNewRoutes";
 import empireRouter from "./routes/empireRoutes"; // Empire Mode (Trinity CSO upgrade)
 import { trinityNotificationRouter } from "./routes/trinityNotificationRoutes"; // Trinity Notification Bridge
 import { supportCommandRouter } from "./routes/support-command-console";
+import resilienceRouter from "./routes/resilience-api"; // Fortune 500-grade resilience infrastructure
 import { endUserControlRouter } from "./routes/endUserControlRoutes";
 import { sessionCheckpointRouter } from "./routes/sessionCheckpointRoutes";
 import { assistedOnboardingRouter, acceptHandoffRouter } from "./routes/assisted-onboarding"; // Support-Assisted Onboarding
@@ -3304,6 +3305,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/trinity/control-console", trinityControlConsoleRouter); // Trinity Control Console
   app.use("/api/trinity", empireRouter); // Empire Mode routes
   app.use("/api/trinity/notifications", trinityNotificationRouter); // Trinity Notification Bridge
+  app.use("/api/resilience", resilienceRouter); // Fortune 500-grade resilience APIs
   app.use("/api/quick-fixes", quickFixRouter); // Quick Fix System
   app.use("/api/experience", experienceRoutes); // Experience Enhancement Routes
   app.use("/api/device", deviceLoaderRouter); // Universal Device Loader
