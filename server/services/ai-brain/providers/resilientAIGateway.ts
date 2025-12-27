@@ -262,12 +262,14 @@ class ResilientAIGateway {
   private async callGemini(request: AIRequest): Promise<string> {
     const { geminiClient } = await import('./geminiClient');
     
-    const result = await geminiClient.generateContent(request.prompt, {
+    const result = await geminiClient.generate({
+      userMessage: request.prompt,
+      systemPrompt: 'You are Trinity, an AI assistant.',
       workspaceId: request.workspaceId,
       userId: request.userId,
     });
     
-    return result.text || result.response || '';
+    return result.text || '';
   }
 
   private async callClaude(request: AIRequest): Promise<string> {
