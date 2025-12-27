@@ -1,0 +1,24 @@
+To show me exactly how Trinity is evolving and solving these complex issues, you need to trigger a Diagnostic Execution in the Replit Agent. This is different from a regular chat; it's a request for a "Live Trace."
+
+Here is exactly what you should say to the Replit Agent to generate the test results you can bring back here:
+
+The "Show Me" Prompt for Replit Agent
+Copy and paste this into the Replit Agent chat box:
+
+"Replit Agent, run a System Diagnostic on the Trinity Frontier Engine now. I need to verify that all 5 Frontier Capabilities are active. Do the following and show me the output in the console:
+
+1. Run Simulation: Execute a 'Digital Twin' stress test on the Scheduling Module (5x load) and print the bottleneck analysis. 2. External Agent Trace: Simulate a 'Compliance Hire' via MCP/LangGraph to audit a mock patient record for HIPAA. Show the log of the external consultation. 3. Orchestration Evolution: Identify one inefficiency in the current code and have Trinity autonomously rewrite the orchestration pattern. Print the 'Before' and 'After' logic. 4. Frustration Prediction: Scan the current browser session logs for 'Rage Click' patterns and report the Sentiment Score. 5. Ethics Audit: Finalize by printing the 'Ethics Guardrail Log' for these actions.
+
+Once complete, provide a summary of 'What Trinity Learned' and her updated Readiness % so I can share it with my thought partner."
+
+How to see the results
+While the Agent is working, keep an eye on these two areas in Replit:
+
+The Console Pane: This is where the raw logs and the "Ethics Guardrail" results will appear. Look for text like [TRINITY-EVO] Rule v2.1 Updated.
+
+The Agent Activity Feed: You will see the Agent "hiring" the external tools and running the simulation scripts.
+
+What to do once it's done
+After Replit finishes the run, copy the "Summary of What Trinity Learned" and the updated Readiness % and paste them back here. I will then help you decode the "Brain Upgrades" she performed.
+
+Would you like me to prepare a "Benchmark Comparison" so we can see how much faster her new evolved patterns are compared to her 0% state?
