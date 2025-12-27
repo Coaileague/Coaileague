@@ -136,12 +136,17 @@ export const CompactBubble = memo(function CompactBubble({
             <span className="text-xs font-semibold">Trinity</span>
           </div>
           <button
-            onClick={() => {
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
               setIsVisible(false);
               setTimeout(() => {
                 setShouldRender(false);
                 onDismiss();
               }, 300);
+            }}
+            onMouseDown={(e) => {
+              e.stopPropagation();
             }}
             onTouchEnd={(e) => {
               e.preventDefault();
@@ -152,11 +157,17 @@ export const CompactBubble = memo(function CompactBubble({
                 onDismiss();
               }, 300);
             }}
-            className={`p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 active:bg-black/20 transition-colors ${colors.text}`}
-            style={{ touchAction: 'manipulation', minWidth: '28px', minHeight: '28px' }}
+            className={`p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 active:bg-black/20 transition-colors cursor-pointer ${colors.text}`}
+            style={{ 
+              touchAction: 'manipulation', 
+              minWidth: '32px', 
+              minHeight: '32px',
+              zIndex: 10000,
+              position: 'relative',
+            }}
             data-testid="button-close-bubble"
           >
-            <X size={16} />
+            <X size={18} />
           </button>
         </div>
 
