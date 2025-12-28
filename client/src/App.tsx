@@ -169,6 +169,7 @@ import WorkboardDashboard from "@/components/workboard/WorkboardDashboard";
 import InboxPage from "@/pages/inbox";
 import { HeaderChatButton } from "@/components/header-chat-button";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
+import { FloatingSupportChat } from "@/components/floating-support-chat";
 import { ChatroomNotificationListener } from "@/components/chatroom-notification-listener";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { HeaderBillboard } from "@/components/header-billboard";
@@ -1496,6 +1497,9 @@ export default function App() {
                         </div>
                         {/* Trinity AI Mascot - UNIVERSAL visibility on ALL pages including public/guest routes */}
                         <MascotRenderer />
+                        {/* Mini HelpAI Chat Bubble - ONLY for guests (not logged in) */}
+                        {/* Authenticated users access HelpDesk directly via main navigation */}
+                        <FloatingSupportChat />
                       </SeasonalThemeProvider>
                     </UniversalAnimationProvider>
                   </TooltipProvider>
