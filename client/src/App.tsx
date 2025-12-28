@@ -1130,6 +1130,7 @@ function AppContent() {
               <Route path="/chat" component={HelpAIOrchestration} /> {/* HelpAI Orchestration - Universal chat and AI brain */}
               <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
               <Route path="/chatrooms" component={Chatrooms} /> {/* Organization chatroom discovery and bulk join */}
+              <Route path="/chatroom"><Redirect to="/chatrooms" /></Route> {/* Redirect singular to plural */}
               <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route> {/* Redirect support chatrooms to unified page */}
               <Route path="/inbox" component={InboxPage} /> {/* Internal email system */}
               <Route path="/helpai-orchestration" component={HelpAIOrchestration} /> {/* HelpAI Orchestration System */}
@@ -1354,6 +1355,7 @@ function AppContent() {
                 <Route path="/communications"><Redirect to="/chatrooms" /></Route>
                 <Route path="/communications/onboarding" component={CommunicationsOnboarding} />
                 <Route path="/chatrooms" component={Chatrooms} />
+                <Route path="/chatroom"><Redirect to="/chatrooms" /></Route>
                 <Route path="/inbox" component={InboxPage} />
                 <Route path="/diagnostics" component={Diagnostics} />
                 <Route path="/messages" component={PrivateMessages} />
