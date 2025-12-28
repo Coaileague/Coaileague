@@ -24,6 +24,7 @@ import { db } from '../../db';
 import { eq, and, desc, gte, lte, sql, count } from 'drizzle-orm';
 import { systemAuditLogs, automationActionLedger, InsertAutomationActionLedger } from '@shared/schema';
 import { platformEventBus } from '../platformEventBus';
+import { durableJobQueue } from '../infrastructure/durableJobQueue';
 import { exec, spawn } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
@@ -812,20 +813,10 @@ class TrinitySelfEditGovernanceService {
         },
       });
       
-      // Schedule automatic re-apply for recovered proposals
-      console.log(`[Trinity Self-Edit] Scheduling automatic re-apply for recovered proposal ${proposal.id}`);
-      setTimeout(async () => {
-        try {
-          const result = await this.applyApprovedChanges(proposal.id);
-          if (result.success) {
-            console.log(`[Trinity Self-Edit] Auto re-applied recovered proposal ${proposal.id}`);
-          } else {
-            console.error(`[Trinity Self-Edit] Auto re-apply failed for ${proposal.id}:`, result.error);
-          }
-        } catch (err) {
-          console.error(`[Trinity Self-Edit] Auto re-apply threw error for ${proposal.id}:`, err);
-        }
-      }, 5000); // 5 second delay to allow system to stabilize after restart
+      // Use durable job queue for recovery instead of setTimeout
+      // This ensures recovery survives additional restarts
+      console.log(`[Trinity Self-Edit] Enqueueing recovery job for proposal ${proposal.id}`);
+      await durableJobQueue.enqueueTrinityRecovery(proposal.id, 0);
       
       console.log(`[Trinity Self-Edit] Successfully recovered proposal ${proposal.id}, scheduled for retry`);
     } catch (error) {
@@ -847,6 +838,75 @@ class TrinitySelfEditGovernanceService {
    */
   private computeFileHash(content: string): string {
     return crypto.createHash('sha256').update(content).digest('hex').substring(0, 16);
+  }
+
+  /**
+   * PREFLIGHT VALIDATION: Validate all files BEFORE transitioning to 'applying' status
+   * This prevents orphaned 'applying' entries if files have unexpectedly diverged
+   */
+  private async performPreflightValidation(proposal: ChangeProposal): Promise<{ valid: boolean; errors: string[] }> {
+    const errors: string[] = [];
+    
+    for (const change of proposal.proposedChanges) {
+      try {
+        if (change.operation === 'modify') {
+          // For modifications, verify the file exists and content matches expected state
+          if (!fs.existsSync(change.file)) {
+            errors.push(`File ${change.file} does not exist for modification`);
+            continue;
+          }
+          
+          const currentContent = fs.readFileSync(change.file, 'utf-8');
+          const currentHash = this.computeFileHash(currentContent);
+          
+          // If newContent matches current content, it's already applied (idempotent)
+          if (change.newContent) {
+            const targetHash = this.computeFileHash(change.newContent);
+            if (currentHash === targetHash) {
+              // File already has target content - this is fine, skip
+              continue;
+            }
+          }
+          
+          // Check if oldContent was provided and matches current state
+          if (change.oldContent) {
+            const expectedHash = this.computeFileHash(change.oldContent);
+            if (currentHash !== expectedHash) {
+              errors.push(
+                `File ${change.file} has diverged from expected state. ` +
+                `Current hash: ${currentHash}, Expected: ${expectedHash}. ` +
+                `The file may have been modified externally.`
+              );
+            }
+          }
+        } else if (change.operation === 'create') {
+          // For creates, verify the file doesn't already exist (unless it matches target)
+          if (fs.existsSync(change.file) && change.newContent) {
+            const currentContent = fs.readFileSync(change.file, 'utf-8');
+            const currentHash = this.computeFileHash(currentContent);
+            const targetHash = this.computeFileHash(change.newContent);
+            
+            if (currentHash !== targetHash) {
+              errors.push(`File ${change.file} already exists with different content than proposed`);
+            }
+            // If hashes match, it's already created (idempotent) - ok to proceed
+          }
+        } else if (change.operation === 'delete') {
+          // For deletes, file not existing is fine (idempotent)
+          // No validation needed
+        }
+      } catch (err: any) {
+        errors.push(`Preflight check failed for ${change.file}: ${err.message}`);
+      }
+    }
+    
+    if (errors.length > 0) {
+      console.warn(`[Trinity Self-Edit] Preflight validation failed for proposal ${proposal.id}:`, errors);
+    } else {
+      console.log(`[Trinity Self-Edit] Preflight validation passed for proposal ${proposal.id}`);
+    }
+    
+    return { valid: errors.length === 0, errors };
   }
 
   // ============================================================================
@@ -1175,11 +1235,29 @@ class TrinitySelfEditGovernanceService {
       const preCommitHash = await this.getCurrentCommitHash();
       proposal.rollbackHash = preCommitHash;
       
-      // Mark as 'applying' BEFORE file operations for crash recovery
-      // If process crashes during file writes, restart will detect 'applying' status
+      // PREFLIGHT VALIDATION: Check file states BEFORE transitioning to 'applying'
+      // This prevents orphaned 'applying' entries if files have diverged
+      const preflightResult = await this.performPreflightValidation(proposal);
+      if (!preflightResult.valid) {
+        // Log preflight failure
+        await db.insert(systemAuditLogs).values({
+          userId: proposal.userId || null,
+          action: 'trinity_self_edit_preflight_failed',
+          resource: 'code',
+          details: {
+            proposalId,
+            tier: proposal.permissionTier,
+            errors: preflightResult.errors,
+          },
+        });
+        return { success: false, error: `Preflight validation failed: ${preflightResult.errors.join('; ')}` };
+      }
+      
+      // Mark as 'applying' AFTER preflight passes - if process crashes, restart will detect 'applying' status
       await this.updateProposalStatus(proposalId, 'applying', {
         applyStartedAt: new Date().toISOString(),
         rollbackHash: preCommitHash,
+        preflightPassed: true,
       });
 
       for (const change of proposal.proposedChanges) {

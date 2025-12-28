@@ -284,6 +284,12 @@ async function initializeBackgroundServices(): Promise<void> {
       console.log('[Server] Cleanup Agent Subagent initialized - spec-index.json active');
     }),
     
+    timedInit('Q1 2026 Infrastructure Services', async () => {
+      const { initializeInfrastructureServices } = await import('./services/infrastructure/index');
+      await initializeInfrastructureServices();
+      console.log('[Server] Q1 2026 Infrastructure Services initialized - job queue, backups, error tracking, key rotation');
+    }),
+    
     timedInit('Billing Orchestration', async () => {
       const { registerBillingOrchestrationActions } = await import('./services/partners/billingOrchestrationService');
       registerBillingOrchestrationActions();

@@ -121,6 +121,7 @@ import trinitySelfEditRouter from "./routes/trinitySelfEditRoutes"; // Trinity S
 import dashboardRoutes from "./routes/dashboardRoutes";
 import gamificationEnhancedRoutes from "./routes/gamificationRoutes";
 import aiSchedulingRoutes from "./routes/aiSchedulingRoutes";
+import infrastructureRoutes from "./routes/infrastructureRoutes"; // Q1 2026 Infrastructure
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
 import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
@@ -3223,6 +3224,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/dashboard', requireAuth, dashboardRoutes);
   app.use('/api/gamification/enhanced', requireAuth, gamificationEnhancedRoutes);
   app.use('/api/ai/scheduling', requireAuth, aiSchedulingRoutes);
+
+  // Q1 2026 Infrastructure Services (backups, error tracking, key rotation)
+  app.use('/api/infrastructure', requireAuth, infrastructureRoutes);
 
 
   // Register CoAIleague Autonomous Scheduler API
