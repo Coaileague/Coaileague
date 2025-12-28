@@ -385,6 +385,24 @@ export function registerExtendedHealthChecks(): void {
 }
 
 /**
+ * Run infrastructure regression tests
+ */
+async function runInfrastructureRegressionTests(): Promise<void> {
+  try {
+    const { runAllInfrastructureTests } = await import('../../tests/infrastructure');
+    const results = await runAllInfrastructureTests();
+    
+    if (results.totalFailed > 0) {
+      console.error(`[ProductionSeeding] ⚠️ ${results.totalFailed} regression tests failed!`);
+    } else {
+      console.log(`[ProductionSeeding] ✅ All ${results.totalPassed} regression tests passed`);
+    }
+  } catch (error) {
+    console.error('[ProductionSeeding] Failed to run regression tests:', error);
+  }
+}
+
+/**
  * Initialize all production seeding
  */
 export async function initializeProductionSeeding(): Promise<void> {
@@ -393,6 +411,9 @@ export async function initializeProductionSeeding(): Promise<void> {
   seedProductionAlertRules();
   seedProductionDashboards();
   registerExtendedHealthChecks();
+  
+  // Run regression tests after seeding
+  await runInfrastructureRegressionTests();
   
   console.log('[ProductionSeeding] Production seeding complete');
 }
