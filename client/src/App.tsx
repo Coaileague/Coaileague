@@ -146,6 +146,7 @@ import Error403 from "@/pages/error-403";
 import Error404 from "@/pages/error-404";
 import Error500 from "@/pages/error-500";
 import IntegrationsPage from "@/pages/integrations-page";
+import TrinitySelfEditGovernancePage from "@/pages/trinity-self-edit-governance";
 import OversightHub from "@/pages/oversight-hub";
 import WorkflowApprovals from "@/pages/workflow-approvals";
 import AICommandCenter from "@/pages/ai-command-center";
@@ -990,6 +991,7 @@ function AppContent() {
               <Route path="/support/assisted-onboarding" component={AssistedOnboarding} />
               <Route path="/workspace-onboarding" component={WorkspaceOnboarding} />
               <Route path="/trinity/command-center" component={TrinityCommandCenter} />
+              <Route path="/trinity/self-edit" component={TrinitySelfEditGovernancePage} />
               <Route path="/billing" component={Billing} />
               <Route path="/usage" component={UsageDashboard} />
               <Route path="/owner-analytics">
@@ -1299,6 +1301,7 @@ function AppContent() {
                 <Route path="/support/assisted-onboarding" component={AssistedOnboarding} />
                 <Route path="/workspace-onboarding" component={WorkspaceOnboarding} />
                 <Route path="/trinity/command-center" component={TrinityCommandCenter} />
+              <Route path="/trinity/self-edit" component={TrinitySelfEditGovernancePage} />
                 <Route path="/ai/brain" component={AIBrainDashboard} />
                 <Route path="/ai/orchestration" component={OrchestrationDashboard} />
                 <Route path="/ai/workboard" component={WorkboardDashboard} />

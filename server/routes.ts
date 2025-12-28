@@ -117,6 +117,7 @@ import { advancedSchedulingRouter } from "./routes/advancedSchedulingRoutes";
 import { ownerAnalyticsRouter } from "./routes/ownerAnalytics";
 import serviceControlRouter from "./routes/service-control";
 import hrisRouter from "./routes/hrisRoutes"; // HRIS Integration Routes
+import trinitySelfEditRouter from "./routes/trinitySelfEditRoutes"; // Trinity Self-Edit Governance
 import dashboardRoutes from "./routes/dashboardRoutes";
 import gamificationEnhancedRoutes from "./routes/gamificationRoutes";
 import aiSchedulingRoutes from "./routes/aiSchedulingRoutes";
@@ -3315,6 +3316,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/workspace/integrations", requireAuth, integrationRoutes); // Workspace Integration Management
   app.use("/api/admin/partners", requirePlatformStaff, partnerRoutes); // Partner Catalog Management (Support Roles)
   app.use("/api/hris", hrisRouter); // HRIS Integration Routes - per-route auth, callback must be public for OAuth
+  app.use("/api/trinity/self-edit", trinitySelfEditRouter); // Trinity Self-Edit Governance
   
   // ============================================================================
   // ROUTE HEALTH MONITORING (Trinity Platform Awareness)
