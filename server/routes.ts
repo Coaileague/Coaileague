@@ -315,6 +315,7 @@ import {
   insertExpenseReceiptSchema,
   // HelpAI - Support Queue Management
   helpOsQueue,
+  supportRooms,
   // Feature Updates System
   featureUpdates,
   featureUpdateReceipts,
@@ -28459,6 +28460,7 @@ Respond with valid JSON array only.`
   });
   
   // GET /api/comm-os/rooms/live - Get live room data with WebSocket connections
+  // ALWAYS includes platform-wide HelpDesk room for ALL authenticated users (concierge/liaison)
   app.get('/api/comm-os/rooms/live', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -28473,15 +28475,41 @@ Respond with valid JSON array only.`
       const platformRole = (req.user as any)?.platformRole;
       const isSupportStaff = userRole === 'platform_admin' || userRole === 'support_staff' || platformRole === 'root_admin' || platformRole === 'platform_admin' || platformRole === 'support_staff';
 
-      // Get base room data
-      let rooms;
+      // Get organization chat rooms based on user role
+      let orgRooms: any[] = [];
       if (isSupportStaff) {
-        rooms = await storage.getAllOrganizationChatRooms();
+        orgRooms = await storage.getAllOrganizationChatRooms();
       } else if (workspaceId) {
-        rooms = await storage.getOrganizationChatRoomsByWorkspace(workspaceId);
-      } else {
-        return res.status(400).json({ message: "No workspace found" });
+        orgRooms = await storage.getOrganizationChatRoomsByWorkspace(workspaceId);
       }
+      // Note: Users without workspace still get platform rooms below
+      
+      // ALWAYS include platform-wide support rooms (HelpDesk concierge) for ALL authenticated users
+      const platformSupportRoomsList = await db
+        .select()
+        .from(supportRooms)
+        .where(and(
+          isNull(supportRooms.workspaceId),
+          eq(supportRooms.status, 'open')
+        ));
+      
+      // Combine org rooms with platform support rooms (formatted consistently)
+      const rooms = [
+        ...orgRooms,
+        ...platformSupportRoomsList.map(sr => ({
+          id: sr.id,
+          roomName: sr.name,
+          slug: sr.slug,
+          workspaceId: null,
+          status: sr.status || 'active',
+          maxMembers: 1000, // Platform rooms have high capacity
+          createdAt: sr.createdAt,
+          updatedAt: sr.updatedAt,
+          isPlatformRoom: true,
+          conversationId: sr.conversationId,
+          description: sr.description,
+        }))
+      ];
 
       // Import getLiveRoomConnections from websocket module
       const { getLiveRoomConnections } = await import('./websocket');
