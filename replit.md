@@ -64,6 +64,20 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
   4. **Preemptive "What-If" Scenario Modeling:** Digital Twin simulations to predict bottlenecks and provision resources.
   5. **Multi-Tenant Contextual Ethics:** Cross-tenant learning guardrails for HIPAA, PCI-DSS, and industry-specific regulations.
 
+## Deployment Instructions
+**Important: Before publishing to production, you MUST build the frontend:**
+```bash
+npm run build  # Builds client and server, copies output to server/public
+```
+This command:
+1. Builds the React frontend with Vite → outputs to `dist/public`
+2. Copies build to `server/public` (where production expects it)
+3. Bundles the server code for production
+
+Then click the **Publish** button to deploy.
+
+**Development:** Use `npm run dev` to run locally with hot reload.
+
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
 - **Resend**: Email delivery and notification workflows.
