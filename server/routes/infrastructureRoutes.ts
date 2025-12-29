@@ -18,6 +18,11 @@ import { metricsDashboard } from '../services/infrastructure/metricsDashboard';
 import { circuitBreaker } from '../services/infrastructure/circuitBreaker';
 import { slaMonitoring } from '../services/infrastructure/slaMonitoring';
 import { getInfrastructureHealth } from '../services/infrastructure/index';
+import { launchReadinessService } from '../services/infrastructure/launchReadinessService';
+import { chaosTestingService } from '../services/infrastructure/chaosTestingService';
+import { operationsRunbookService } from '../services/infrastructure/operationsRunbookService';
+import { complianceSignoffService } from '../services/infrastructure/complianceSignoffService';
+import { launchRehearsalService } from '../services/infrastructure/launchRehearsalService';
 
 const router = Router();
 
@@ -601,6 +606,335 @@ router.post('/metrics/export', async (req: Request, res: Response) => {
   try {
     await metricsDashboard.exportMetricsToAudit();
     res.json({ success: true });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// LAUNCH READINESS (Launch Hardening)
+// ============================================================================
+
+router.get('/launch/readiness', async (req: Request, res: Response) => {
+  try {
+    const report = launchReadinessService.generateReport();
+    res.json({ success: true, data: report });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/readiness/stats', (req: Request, res: Response) => {
+  try {
+    const stats = launchReadinessService.getStats();
+    res.json({ success: true, data: stats });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/readiness/checks', (req: Request, res: Response) => {
+  try {
+    const category = req.query.category as string | undefined;
+    const checks = launchReadinessService.getChecks(category as any);
+    res.json({ success: true, data: checks });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.patch('/launch/readiness/checks/:checkId', async (req: Request, res: Response) => {
+  try {
+    const check = await launchReadinessService.updateCheck(req.params.checkId, req.body);
+    if (!check) {
+      return res.status(404).json({ success: false, error: 'Check not found' });
+    }
+    res.json({ success: true, data: check });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/readiness/gates', (req: Request, res: Response) => {
+  try {
+    const gates = launchReadinessService.getGates();
+    res.json({ success: true, data: gates });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/launch/readiness/gates/:gateId/approve', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || 'system';
+    const gate = await launchReadinessService.approveGate(req.params.gateId, userId);
+    if (!gate) {
+      return res.status(404).json({ success: false, error: 'Gate not found' });
+    }
+    res.json({ success: true, data: gate });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// CHAOS TESTING (Launch Hardening)
+// ============================================================================
+
+router.get('/launch/chaos/experiments', (req: Request, res: Response) => {
+  try {
+    const experiments = chaosTestingService.listExperiments();
+    res.json({ success: true, data: experiments });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/chaos/stats', (req: Request, res: Response) => {
+  try {
+    const stats = chaosTestingService.getStats();
+    res.json({ success: true, data: stats });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/launch/chaos/experiments/:experimentId/run', async (req: Request, res: Response) => {
+  try {
+    const result = await chaosTestingService.runExperiment(req.params.experimentId);
+    if (!result) {
+      return res.status(404).json({ success: false, error: 'Experiment not found' });
+    }
+    res.json({ success: true, data: result });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/chaos/results', (req: Request, res: Response) => {
+  try {
+    const limit = parseInt(req.query.limit as string) || 20;
+    const experiments = chaosTestingService.listExperiments();
+    const results = experiments.filter(e => e.results).slice(0, limit).map(e => e.results);
+    res.json({ success: true, data: results });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/chaos/schedules', (req: Request, res: Response) => {
+  try {
+    const schedules = chaosTestingService.listSchedules();
+    res.json({ success: true, data: schedules });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// OPERATIONS RUNBOOK (Launch Hardening)
+// ============================================================================
+
+router.get('/launch/runbooks', (req: Request, res: Response) => {
+  try {
+    const runbooks = operationsRunbookService.listRunbooks();
+    res.json({ success: true, data: runbooks });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/runbooks/:runbookId', (req: Request, res: Response) => {
+  try {
+    const runbook = operationsRunbookService.getRunbook(req.params.runbookId);
+    if (!runbook) {
+      return res.status(404).json({ success: false, error: 'Runbook not found' });
+    }
+    res.json({ success: true, data: runbook });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/runbooks/stats', (req: Request, res: Response) => {
+  try {
+    const stats = operationsRunbookService.getStats();
+    res.json({ success: true, data: stats });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/launch/runbooks/:runbookId/start', async (req: Request, res: Response) => {
+  try {
+    const { incidentId, responders } = req.body;
+    const response = await operationsRunbookService.startResponse(req.params.runbookId, incidentId, responders);
+    if (!response) {
+      return res.status(404).json({ success: false, error: 'Runbook not found' });
+    }
+    res.json({ success: true, data: response });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/responses', (req: Request, res: Response) => {
+  try {
+    const responses = operationsRunbookService.listResponses('in_progress');
+    res.json({ success: true, data: responses });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// COMPLIANCE SIGN-OFF (Launch Hardening)
+// ============================================================================
+
+router.get('/launch/compliance/requirements', (req: Request, res: Response) => {
+  try {
+    const framework = req.query.framework as string | undefined;
+    const requirements = complianceSignoffService.listRequirements(framework);
+    res.json({ success: true, data: requirements });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/compliance/stats', (req: Request, res: Response) => {
+  try {
+    const stats = complianceSignoffService.getStats();
+    res.json({ success: true, data: stats });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.patch('/launch/compliance/requirements/:reqId', async (req: Request, res: Response) => {
+  try {
+    const requirement = await complianceSignoffService.updateRequirement(req.params.reqId, req.body);
+    if (!requirement) {
+      return res.status(404).json({ success: false, error: 'Requirement not found' });
+    }
+    res.json({ success: true, data: requirement });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/compliance/signoffs', (req: Request, res: Response) => {
+  try {
+    const signoffs = complianceSignoffService.listSignoffs();
+    res.json({ success: true, data: signoffs });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/launch/compliance/signoffs/:signoffId/approve', async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).user?.id || 'system';
+    const signoff = await complianceSignoffService.approveSignoff(req.params.signoffId, userId, req.body.comments);
+    if (!signoff) {
+      return res.status(404).json({ success: false, error: 'Sign-off not found' });
+    }
+    res.json({ success: true, data: signoff });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// LAUNCH REHEARSAL (Launch Hardening)
+// ============================================================================
+
+router.get('/launch/rehearsals', (req: Request, res: Response) => {
+  try {
+    const rehearsals = launchRehearsalService.listRehearsals();
+    res.json({ success: true, data: rehearsals });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/rehearsals/stats', (req: Request, res: Response) => {
+  try {
+    const stats = launchRehearsalService.getStats();
+    res.json({ success: true, data: stats });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.get('/launch/rehearsals/:rehearsalId', (req: Request, res: Response) => {
+  try {
+    const rehearsal = launchRehearsalService.getRehearsal(req.params.rehearsalId);
+    if (!rehearsal) {
+      return res.status(404).json({ success: false, error: 'Rehearsal not found' });
+    }
+    res.json({ success: true, data: rehearsal });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/launch/rehearsals', async (req: Request, res: Response) => {
+  try {
+    const { type, name, description } = req.body;
+    const rehearsal = await launchRehearsalService.createRehearsal({ type, name, description });
+    res.json({ success: true, data: rehearsal });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/launch/rehearsals/:rehearsalId/start', async (req: Request, res: Response) => {
+  try {
+    const rehearsal = await launchRehearsalService.startRehearsal(req.params.rehearsalId);
+    if (!rehearsal) {
+      return res.status(404).json({ success: false, error: 'Rehearsal not found' });
+    }
+    res.json({ success: true, data: rehearsal });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+router.post('/launch/rehearsals/:rehearsalId/complete', async (req: Request, res: Response) => {
+  try {
+    const rehearsal = await launchRehearsalService.completeRehearsal(req.params.rehearsalId);
+    if (!rehearsal) {
+      return res.status(404).json({ success: false, error: 'Rehearsal not found' });
+    }
+    res.json({ success: true, data: rehearsal });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// ============================================================================
+// COMBINED LAUNCH DASHBOARD (Launch Hardening)
+// ============================================================================
+
+router.get('/launch/dashboard', async (req: Request, res: Response) => {
+  try {
+    const readinessStats = launchReadinessService.getStats();
+    const chaosStats = chaosTestingService.getStats();
+    const runbookStats = operationsRunbookService.getStats();
+    const complianceStats = complianceSignoffService.getStats();
+    const rehearsalStats = launchRehearsalService.getStats();
+    
+    res.json({
+      success: true,
+      data: {
+        readiness: readinessStats,
+        chaos: chaosStats,
+        runbooks: runbookStats,
+        compliance: complianceStats,
+        rehearsals: rehearsalStats,
+        timestamp: new Date().toISOString()
+      }
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
