@@ -123,6 +123,7 @@ import dashboardRoutes from "./routes/dashboardRoutes";
 import gamificationEnhancedRoutes from "./routes/gamificationRoutes";
 import aiSchedulingRoutes from "./routes/aiSchedulingRoutes";
 import infrastructureRoutes from "./routes/infrastructureRoutes"; // Q1 2026 Infrastructure
+import resendWebhooksRouter from "./routes/resendWebhooks"; // Resend email webhooks
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
 import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
@@ -482,6 +483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Audit logging middleware (captures request context for all authenticated requests)
   app.use(auditContextMiddleware);
   registerHealthRoutes(app, requireAuth);
+  app.use(resendWebhooksRouter); // Resend email event webhooks
   registerSearchRoutes(app, requireAuth); // AI-Powered Search
 
   registerWorkboardRoutes(app, requireAuth); // AI Brain Workboard Job Queue
