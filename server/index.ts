@@ -22,6 +22,18 @@ import { rateLimitMiddleware } from "./services/infrastructure/rateLimiting";
 
 const app = express();
 
+// CRITICAL: Register lightweight health endpoints FIRST, before ANY middleware
+// This ensures they respond immediately without being slowed by middleware chains
+app.get('/', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  return res.status(200).send(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
+});
+
+app.get('/health', (req, res) => {
+  res.setHeader('Content-Type', 'application/json');
+  return res.status(200).send(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
+});
+
 // Capture raw body for webhook signature verification
 app.use((req, res, next) => {
   if (req.path === '/api/webhooks/quickbooks') {
@@ -48,25 +60,16 @@ app.use(express.urlencoded({ extended: false }));
 // Trust proxy for accurate IP detection behind load balancers
 app.set('trust proxy', 1);
 
-// Distributed tracing middleware - adds trace IDs to all requests
-app.use(tracingMiddleware);
+// Distributed tracing middleware - adds trace IDs to all requests (skip health endpoints)
+app.use((req, res, next) => {
+  if (req.path === '/' || req.path === '/health') {
+    return next();
+  }
+  tracingMiddleware(req, res, next);
+});
 
 // Rate limiting middleware - applies per-tenant quotas on API routes
 app.use('/api', rateLimitMiddleware);
-
-// LIGHTWEIGHT ROOT ENDPOINT - responds immediately for health checks
-app.get('/', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// Production health check endpoint - lightweight, non-blocking
-app.get('/health', (req, res) => {
-  // Return immediately without waiting for monitoring service
-  res.status(200).json({ 
-    status: 'ok', 
-    timestamp: new Date().toISOString()
-  });
-});
 
 // Performance monitoring middleware - tracks all requests
 app.use((req, res, next) => {
