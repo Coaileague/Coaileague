@@ -52,6 +52,7 @@ import NotFound from "@/pages/not-found";
 import OwnerAnalytics from "@/pages/owner-analytics";
 import RootAdminDashboard from "@/pages/root-admin-dashboard";
 import SystemHealth from "@/pages/system-health";
+import Infrastructure from "@/pages/infrastructure";
 import CreditAnalyticsDashboard from "@/pages/credit-analytics-dashboard";
 import LeadersHub from "@/pages/leaders-hub";
 import TrinityInsights from "@/pages/trinity-insights";
@@ -1112,6 +1113,11 @@ function AppContent() {
               <Route path="/system-health">
                 <PlatformAdminRoute>
                   <SystemHealth />
+                </PlatformAdminRoute>
+              </Route>
+              <Route path="/infrastructure">
+                <PlatformAdminRoute>
+                  <Infrastructure />
                 </PlatformAdminRoute>
               </Route>
               <Route path="/owner/hireos/workflow-builder" component={HiringWorkflowBuilder} />

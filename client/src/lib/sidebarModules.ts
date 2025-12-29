@@ -32,6 +32,7 @@ import {
   Activity,
   Brain,
   UserCog,
+  Server,
   type LucideIcon,
 } from "lucide-react";
 
@@ -705,6 +706,19 @@ export const platformSupportModule: SidebarModule = {
       badge: 'Admin',
       isPrimary: false,
       order: 1,
+    },
+    {
+      id: 'infrastructure-monitoring',
+      label: 'Infrastructure',
+      href: '/infrastructure',
+      icon: Server,
+      description: 'Circuit breakers, SLA monitoring, and service telemetry',
+      capabilities: ['support_dashboard'],
+      familyId: 'platform',
+      groupId: 'core',
+      badge: 'SRE',
+      isPrimary: false,
+      order: 2,
     },
     // AI & Automation Group
     {

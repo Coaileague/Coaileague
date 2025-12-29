@@ -15,6 +15,8 @@ import { connectionPooling } from '../services/infrastructure/connectionPooling'
 import { rateLimiting } from '../services/infrastructure/rateLimiting';
 import { healthCheckAggregation } from '../services/infrastructure/healthCheckAggregation';
 import { metricsDashboard } from '../services/infrastructure/metricsDashboard';
+import { circuitBreaker } from '../services/infrastructure/circuitBreaker';
+import { slaMonitoring } from '../services/infrastructure/slaMonitoring';
 import { getInfrastructureHealth } from '../services/infrastructure/index';
 
 const router = Router();
@@ -26,9 +28,56 @@ const router = Router();
 router.get('/health', async (req: Request, res: Response) => {
   try {
     const health = await getInfrastructureHealth();
+    
+    // Get circuit breaker and SLA data for the dashboard
+    const circuitHealth = circuitBreaker.getHealth();
+    const circuitStats = circuitBreaker.getAggregateStats();
+    const slaCompliance = slaMonitoring.getComplianceSummary();
+    
+    // Format circuits for frontend
+    const circuits = circuitHealth.circuits.map(c => ({
+      name: c.name,
+      displayName: c.displayName,
+      state: c.state,
+      failureCount: c.stats.failureCount,
+      successCount: c.stats.successCount,
+      lastFailure: c.stats.lastFailureTime,
+      lastSuccess: c.stats.lastSuccessTime,
+      errorRate: c.stats.totalCalls > 0 
+        ? (c.stats.failureCount / c.stats.totalCalls) * 100 
+        : 0,
+    }));
+    
+    // Format SLA services for frontend
+    const slaServices = slaCompliance.services.map(s => ({
+      serviceId: s.serviceId,
+      displayName: s.displayName,
+      tier: s.tier,
+      targetUptime: s.targetUptime,
+      currentUptime: s.currentUptime,
+      isMeetingSLA: s.isMeetingSLA,
+      latencyP50: s.latency?.p50 || 0,
+      latencyP95: s.latency?.p95 || 0,
+      latencyP99: s.latency?.p99 || 0,
+      breachCount: s.breachCount || 0,
+    }));
+    
+    // Calculate aggregate stats
+    const aggregateStats = {
+      totalCircuits: circuits.length,
+      closedCircuits: circuits.filter(c => c.state === 'CLOSED').length,
+      openCircuits: circuits.filter(c => c.state === 'OPEN').length,
+      halfOpenCircuits: circuits.filter(c => c.state === 'HALF_OPEN').length,
+      overallHealth: circuitHealth.healthy ? 'healthy' : 'degraded',
+      slaCompliance: slaCompliance.overallCompliance,
+    };
+    
     res.json({
       success: true,
-      data: health,
+      circuits,
+      slaServices,
+      aggregateStats,
+      q1q2Health: health,
       timestamp: new Date().toISOString(),
     });
   } catch (error: any) {
