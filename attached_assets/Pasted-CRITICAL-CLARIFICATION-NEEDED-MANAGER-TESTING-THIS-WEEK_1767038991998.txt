@@ -1,0 +1,73 @@
+CRITICAL CLARIFICATION NEEDED - MANAGER TESTING THIS WEEK
+Thanks for building the mobile worker UI - it looks great. Before I test with my security company manager, I need to understand what's actually functional vs stubbed.
+Context:
+My security company is my first customer. I need to test with my operations manager THIS WEEK to validate the platform before rolling out to guards. They can't test with empty stubs - they need real data flow.
+Please clarify the current state:
+1. SCHEDULING SYSTEM:
+
+✅ When desktop manager creates a shift → Does it save to database?
+✅ When mobile guard opens app → Do they see their actual assigned shifts from the scheduling system?
+❓ Is this connected to CoAIleague's existing scheduling infrastructure or returning empty arrays?
+❓ Can I create a real schedule right now and have it show up on mobile?
+
+2. TIME TRACKING (CLOCK IN/OUT):
+
+✅ When guard clocks in via mobile → Does it save to time_entries table with geolocation?
+✅ Can manager see clock-in records on desktop?
+❓ Is this using the existing /api/time-entries endpoints or is it stubbed?
+
+3. INCIDENT REPORTING:
+
+✅ When guard reports incident → Does it persist to database?
+✅ Can manager view/search reported incidents?
+❓ Is there an incidents table or is this just console.log for now?
+❓ What table/schema is being used?
+
+4. CHATROOMS:
+
+✅ Is the mobile chat tab connected to ChatServerHub?
+✅ Can guards send/receive messages in real-time?
+✅ Can manager see the same chatrooms on desktop?
+❓ Or is chat functionality not wired yet?
+
+5. PWA / OFFLINE:
+
+✅ Does offline clock-in queue to sync later?
+✅ Is service worker actually caching data?
+❓ Or is this placeholder for future implementation?
+
+6. DATABASE SCHEMA FIXES:
+
+❓ Did you fix the 3 schema errors from the logs?
+
+knowledge_entities missing type column
+a2a_agents missing domain column
+RL tables syntax errors
+
+
+❓ Are those errors still happening or resolved?
+
+
+WHAT I NEED FOR MANAGER TESTING:
+MUST WORK (non-negotiable for testing):
+
+Manager creates schedule on desktop → Guard sees it on mobile
+Guard clocks in on mobile → Manager sees time entry on desktop
+Guard reports incident on mobile → Manager sees incident report
+Basic chatroom communication works (if implemented)
+
+CAN BE STUBBED (we'll connect later):
+
+Advanced analytics
+Payroll integration
+Client invoicing
+Complex reporting
+
+
+REQUEST:
+If items #1-3 above are currently stubbed and returning empty data, please connect them to the actual database/existing CoAIleague systems BEFORE I invite my manager to test.
+If they're already connected and working, just confirm that so I know I'm good to proceed with real user testing.
+Timeline: Need to test with manager by end of this week (Jan 3rd).
+Thanks for all the work on this - just need to know what's production-ready vs what needs wiring before I bring in real users.
+
+What's the status?
