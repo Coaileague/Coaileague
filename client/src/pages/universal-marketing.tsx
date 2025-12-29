@@ -18,8 +18,14 @@ export default function UniversalMarketing() {
   const [, setLocation] = useLocation();
   const [section, setSection] = useState<Section['id']>('landing');
 
-  // Read section from URL params
+  // Read section from URL path or params
   useEffect(() => {
+    // Check if the URL path is /pricing
+    if (window.location.pathname === '/pricing') {
+      setSection('pricing');
+      return;
+    }
+    // Check URL params as fallback
     const params = new URLSearchParams(window.location.search);
     const s = params.get('section') as Section['id'];
     if (s && ['landing', 'pricing', 'sales'].includes(s)) {
