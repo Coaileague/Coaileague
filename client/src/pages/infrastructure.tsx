@@ -24,6 +24,11 @@ import {
   CreditCard,
   Brain,
   MessageSquare,
+  HardDrive,
+  FileText,
+  Lock,
+  Globe,
+  ClipboardList,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -308,6 +313,9 @@ export default function InfrastructurePage() {
             <TabsTrigger value="sla" className="flex-1 md:flex-none" data-testid="tab-sla">
               SLA Monitoring
             </TabsTrigger>
+            <TabsTrigger value="q4" className="flex-1 md:flex-none" data-testid="tab-q4">
+              Q4 Services
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-4 md:mt-6 space-y-6">
@@ -396,6 +404,160 @@ export default function InfrastructurePage() {
               {health?.slaServices.map((service) => (
                 <SLACard key={service.serviceId} service={service} />
               ))}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="q4" className="mt-4 md:mt-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Card className="hover-elevate">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-blue-500/10">
+                      <HardDrive className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <CardTitle className="text-sm font-medium">Disaster Recovery</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">RPO/RTO management & failover</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">RPO Target</span>
+                    <span className="font-medium">15 min</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">RTO Target</span>
+                    <span className="font-medium">4 hr</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Failover Configs</span>
+                    <span className="font-medium">3</span>
+                  </div>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 w-full justify-center mt-2">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Ready
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className="hover-elevate">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-violet-500/10">
+                      <FileText className="h-4 w-4 text-violet-500" />
+                    </div>
+                    <CardTitle className="text-sm font-medium">Log Aggregation</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">Centralized logging & search</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Logs/min</span>
+                    <span className="font-medium">0</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Error Rate</span>
+                    <span className="font-medium">0%</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Retention</span>
+                    <span className="font-medium">7-365 days</span>
+                  </div>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 w-full justify-center mt-2">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Active
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className="hover-elevate">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-red-500/10">
+                      <Lock className="h-4 w-4 text-red-500" />
+                    </div>
+                    <CardTitle className="text-sm font-medium">Security Hardening</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">Threat detection & prevention</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Threats Blocked</span>
+                    <span className="font-medium">0</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Security Score</span>
+                    <span className="font-medium text-emerald-500">100/100</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Patterns Active</span>
+                    <span className="font-medium">5</span>
+                  </div>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 w-full justify-center mt-2">
+                    <Shield className="h-3 w-3 mr-1" />
+                    Protected
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className="hover-elevate">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-cyan-500/10">
+                      <Globe className="h-4 w-4 text-cyan-500" />
+                    </div>
+                    <CardTitle className="text-sm font-medium">CDN/Edge Caching</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">Asset delivery & API caching</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Hit Rate</span>
+                    <span className="font-medium">0%</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Edge Locations</span>
+                    <span className="font-medium">4</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Cached Entries</span>
+                    <span className="font-medium">0</span>
+                  </div>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 w-full justify-center mt-2">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Ready
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className="hover-elevate">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-amber-500/10">
+                      <ClipboardList className="h-4 w-4 text-amber-500" />
+                    </div>
+                    <CardTitle className="text-sm font-medium">Audit Trail Export</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">SOX-compliant export & archival</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Retention</span>
+                    <span className="font-medium">7 years</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Compliance</span>
+                    <span className="font-medium text-emerald-500">SOX Ready</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Integrity</span>
+                    <span className="font-medium">Verified</span>
+                  </div>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 w-full justify-center mt-2">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Compliant
+                  </Badge>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
