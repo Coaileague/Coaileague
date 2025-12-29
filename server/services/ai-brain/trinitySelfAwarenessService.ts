@@ -265,6 +265,110 @@ const CORE_CONSTRAINT_FACTS: SelfAwarenessFact[] = [
   },
 ];
 
+// MVP-Specific Platform Facts for Security Guard Industry
+const MVP_PLATFORM_FACTS: SelfAwarenessFact[] = [
+  {
+    category: 'platform',
+    subcategory: 'mvp',
+    factKey: 'target_customer',
+    factValue: 'Security guard companies with 10-500 employees. Guards work at distributed client sites (malls, offices, warehouses). Mobile-first workforce with 24/7 coverage requirements.',
+    factType: 'text',
+    source: 'system',
+    confidence: 1.0,
+  },
+  {
+    category: 'platform',
+    subcategory: 'mvp',
+    factKey: 'available_features',
+    factValue: JSON.stringify([
+      'Employee management',
+      'Shift scheduling',
+      'Mobile clock-in/out with geolocation',
+      'Timesheet approval',
+      'Basic payroll calculations',
+      'Client invoicing',
+      'Site-based chatrooms',
+      'Incident reporting (7 types, 4 severity levels)',
+      'Trinity AI assistance',
+      'Stripe payment processing',
+    ]),
+    factType: 'list',
+    source: 'system',
+    confidence: 1.0,
+  },
+  {
+    category: 'platform',
+    subcategory: 'mvp',
+    factKey: 'enterprise_features_disabled',
+    factValue: JSON.stringify([
+      'Advanced analytics',
+      'Multi-location disaster recovery',
+      'SOX/GDPR compliance modules',
+      'Complex HRIS integrations',
+      'White-label options',
+    ]),
+    factType: 'list',
+    source: 'system',
+    confidence: 1.0,
+  },
+  {
+    category: 'platform',
+    subcategory: 'industry',
+    factKey: 'security_site_types',
+    factValue: JSON.stringify(['Retail/malls', 'Office buildings', 'Warehouses', 'Construction', 'Residential', 'Events']),
+    factType: 'list',
+    source: 'system',
+    confidence: 1.0,
+  },
+  {
+    category: 'platform',
+    subcategory: 'industry',
+    factKey: 'shift_patterns',
+    factValue: JSON.stringify(['Day 6am-2pm', 'Swing 2pm-10pm', 'Night 10pm-6am', '12-hour shifts 6am-6pm or 6pm-6am']),
+    factType: 'list',
+    source: 'system',
+    confidence: 1.0,
+  },
+  {
+    category: 'platform',
+    subcategory: 'industry',
+    factKey: 'incident_types',
+    factValue: JSON.stringify({
+      critical: ['Medical emergencies', 'Active threats/violence', 'Fire/evacuation', 'Police required'],
+      high: ['Suspicious persons/vehicles', 'Property damage', 'Theft attempts', 'Safety hazards'],
+      low: ['Minor policy violations', 'Parking issues', 'Lost and found', 'General inquiries'],
+    }),
+    factType: 'json',
+    source: 'system',
+    confidence: 1.0,
+  },
+  {
+    category: 'platform',
+    subcategory: 'automation',
+    factKey: 'automation_ratio',
+    factValue: '99% automation, 1% human approval. Payroll, schedules, and incident triage happen automatically. Humans approve key decisions.',
+    factType: 'text',
+    source: 'system',
+    confidence: 1.0,
+  },
+  {
+    category: 'platform',
+    subcategory: 'onboarding',
+    factKey: 'onboarding_steps',
+    factValue: JSON.stringify([
+      '1. Company Profile (name, contact, employee count)',
+      '2. Add Client Sites (location, contacts, instructions)',
+      '3. Add Employees (name, role, assigned sites)',
+      '4. Create First Schedule (shifts, assignments, publish)',
+      '5. Mobile App Setup (Add to Home Screen)',
+      '6. Payment Setup (Stripe, pricing tier)',
+    ]),
+    factType: 'list',
+    source: 'system',
+    confidence: 1.0,
+  },
+];
+
 const CORE_PLATFORM_FACTS: SelfAwarenessFact[] = [
   {
     category: 'platform',
@@ -363,6 +467,7 @@ class TrinitySelfAwarenessService {
         ...CORE_CAPABILITY_FACTS,
         ...CORE_CONSTRAINT_FACTS,
         ...CORE_PLATFORM_FACTS,
+        ...MVP_PLATFORM_FACTS,
       ];
 
       for (const fact of allCoreFacts) {
