@@ -22,13 +22,8 @@ import { rateLimitMiddleware } from "./services/infrastructure/rateLimiting";
 
 const app = express();
 
-// CRITICAL: Register lightweight health endpoints FIRST, before ANY middleware
-// This ensures they respond immediately without being slowed by middleware chains
-app.get('/', (req, res) => {
-  res.setHeader('Content-Type', 'application/json');
-  return res.status(200).send(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
-});
-
+// CRITICAL: Register lightweight health endpoint FIRST, before ANY middleware
+// This ensures it responds immediately for Cloud Run health checks
 app.get('/health', (req, res) => {
   res.setHeader('Content-Type', 'application/json');
   return res.status(200).send(JSON.stringify({ status: 'ok', timestamp: new Date().toISOString() }));
