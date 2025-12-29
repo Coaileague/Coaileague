@@ -182,6 +182,18 @@ class LaunchReadinessService {
     console.log(`[LaunchReadiness] Seeded ${gates.length} launch gates`);
   }
 
+  getChecks(category?: 'infrastructure' | 'security' | 'compliance' | 'operations' | 'performance'): ReadinessCheck[] {
+    const checks = Array.from(this.checks.values());
+    if (category) {
+      return checks.filter(c => c.category === category);
+    }
+    return checks;
+  }
+
+  getGates(): LaunchGate[] {
+    return Array.from(this.gates.values());
+  }
+
   async updateCheck(id: string, updates: Partial<ReadinessCheck>): Promise<ReadinessCheck | null> {
     const check = this.checks.get(id);
     if (!check) return null;

@@ -209,11 +209,61 @@ function SLACard({ service }: { service: SLAStatus }) {
   );
 }
 
+interface LaunchDashboardData {
+  readiness: {
+    totalChecks: number;
+    passed: number;
+    failed: number;
+    inProgress: number;
+    score: number;
+    overallStatus: string;
+    gatesApproved: number;
+    totalGates: number;
+  };
+  chaos: {
+    totalExperiments: number;
+    completed: number;
+    pending: number;
+    running: number;
+    successRate: number;
+    scheduledDrills: number;
+  };
+  runbooks: {
+    totalRunbooks: number;
+    byCategory: Record<string, number>;
+    bySeverity: Record<string, number>;
+    recentExecutions: number;
+    averageResolutionTime: number;
+  };
+  compliance: {
+    totalRequirements: number;
+    compliant: number;
+    nonCompliant: number;
+    inProgress: number;
+    pendingSignoffs: number;
+    frameworkCoverage: Record<string, number>;
+  };
+  rehearsals: {
+    totalRehearsals: number;
+    completed: number;
+    scheduled: number;
+    inProgress: number;
+    averageScore: number;
+    lastRehearsalDate: string | null;
+  };
+  timestamp: string;
+}
+
 export default function InfrastructurePage() {
   const [activeTab, setActiveTab] = useState("overview");
 
   const { data: health, isLoading, refetch, isFetching } = useQuery<InfrastructureHealth>({
     queryKey: ["/api/infrastructure/health"],
+    refetchInterval: 30000,
+  });
+
+  const { data: launchData } = useQuery<{ success: boolean; data: LaunchDashboardData }>({
+    queryKey: ["/api/infrastructure/launch/dashboard"],
     refetchInterval: 30000,
   });
 
@@ -571,7 +621,7 @@ export default function InfrastructurePage() {
 
           <TabsContent value="launch" className="mt-4 md:mt-6">
             <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              <Card className="hover-elevate">
+              <Card className="hover-elevate" data-testid="card-launch-readiness">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
                     <div className="p-2 rounded-lg bg-emerald-500/10">
@@ -584,25 +634,31 @@ export default function InfrastructurePage() {
                 <CardContent className="space-y-2">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Checks Passed</span>
-                    <span className="font-medium">28/36</span>
+                    <span className="font-medium">{launchData?.data?.readiness?.passed || 0}/{launchData?.data?.readiness?.totalChecks || 0}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Launch Gates</span>
-                    <span className="font-medium">4/6 Approved</span>
+                    <span className="font-medium">{launchData?.data?.readiness?.gatesApproved || 0}/{launchData?.data?.readiness?.totalGates || 0} Approved</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Readiness Score</span>
-                    <span className="font-medium text-amber-500">78%</span>
+                    <span className={cn("font-medium", (launchData?.data?.readiness?.score || 0) >= 90 ? "text-emerald-500" : "text-amber-500")}>{launchData?.data?.readiness?.score || 0}%</span>
                   </div>
-                  <Progress value={78} className="h-1.5 mt-2" />
-                  <Badge variant="outline" className="text-amber-500 border-amber-500/50 w-full justify-center mt-2">
-                    <Clock className="h-3 w-3 mr-1" />
-                    In Progress
+                  <Progress value={launchData?.data?.readiness?.score || 0} className="h-1.5 mt-2" />
+                  <Badge variant="outline" className={cn(
+                    "w-full justify-center mt-2",
+                    launchData?.data?.readiness?.overallStatus === 'go' ? "text-emerald-500 border-emerald-500/50" : "text-amber-500 border-amber-500/50"
+                  )}>
+                    {launchData?.data?.readiness?.overallStatus === 'go' ? (
+                      <><CheckCircle className="h-3 w-3 mr-1" />Ready</>
+                    ) : (
+                      <><Clock className="h-3 w-3 mr-1" />In Progress</>
+                    )}
                   </Badge>
                 </CardContent>
               </Card>
 
-              <Card className="hover-elevate">
+              <Card className="hover-elevate" data-testid="card-chaos-testing">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
                     <div className="p-2 rounded-lg bg-purple-500/10">
@@ -615,24 +671,30 @@ export default function InfrastructurePage() {
                 <CardContent className="space-y-2">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Experiments Run</span>
-                    <span className="font-medium">3/6</span>
+                    <span className="font-medium">{launchData?.data?.chaos?.completed || 0}/{launchData?.data?.chaos?.totalExperiments || 0}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Success Rate</span>
-                    <span className="font-medium text-emerald-500">100%</span>
+                    <span className={cn("font-medium", (launchData?.data?.chaos?.successRate || 0) >= 90 ? "text-emerald-500" : "text-amber-500")}>{launchData?.data?.chaos?.successRate || 0}%</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Scheduled Drills</span>
-                    <span className="font-medium">3</span>
+                    <span className="font-medium">{launchData?.data?.chaos?.scheduledDrills || 0}</span>
                   </div>
-                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 w-full justify-center mt-2">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    Passed
+                  <Badge variant="outline" className={cn(
+                    "w-full justify-center mt-2",
+                    (launchData?.data?.chaos?.successRate || 0) >= 90 ? "text-emerald-500 border-emerald-500/50" : "text-amber-500 border-amber-500/50"
+                  )}>
+                    {(launchData?.data?.chaos?.successRate || 0) >= 90 ? (
+                      <><CheckCircle className="h-3 w-3 mr-1" />Passed</>
+                    ) : (
+                      <><Clock className="h-3 w-3 mr-1" />In Progress</>
+                    )}
                   </Badge>
                 </CardContent>
               </Card>
 
-              <Card className="hover-elevate">
+              <Card className="hover-elevate" data-testid="card-operations-runbook">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
                     <div className="p-2 rounded-lg bg-blue-500/10">
@@ -645,15 +707,15 @@ export default function InfrastructurePage() {
                 <CardContent className="space-y-2">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Runbooks</span>
-                    <span className="font-medium">6</span>
+                    <span className="font-medium">{launchData?.data?.runbooks?.totalRunbooks || 0}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Categories</span>
-                    <span className="font-medium">5</span>
+                    <span className="font-medium">{Object.keys(launchData?.data?.runbooks?.byCategory || {}).length}</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Active Responses</span>
-                    <span className="font-medium">0</span>
+                    <span className="text-muted-foreground">Recent Executions</span>
+                    <span className="font-medium">{launchData?.data?.runbooks?.recentExecutions || 0}</span>
                   </div>
                   <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 w-full justify-center mt-2">
                     <CheckCircle className="h-3 w-3 mr-1" />
@@ -662,7 +724,7 @@ export default function InfrastructurePage() {
                 </CardContent>
               </Card>
 
-              <Card className="hover-elevate">
+              <Card className="hover-elevate" data-testid="card-compliance-signoff">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
                     <div className="p-2 rounded-lg bg-orange-500/10">
@@ -675,24 +737,30 @@ export default function InfrastructurePage() {
                 <CardContent className="space-y-2">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Requirements</span>
-                    <span className="font-medium">15/18 Compliant</span>
+                    <span className="font-medium">{launchData?.data?.compliance?.compliant || 0}/{launchData?.data?.compliance?.totalRequirements || 0} Compliant</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Pending Sign-offs</span>
-                    <span className="font-medium text-amber-500">3</span>
+                    <span className={cn("font-medium", (launchData?.data?.compliance?.pendingSignoffs || 0) > 0 ? "text-amber-500" : "")}>{launchData?.data?.compliance?.pendingSignoffs || 0}</span>
                   </div>
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Frameworks</span>
-                    <span className="font-medium">SOX, GDPR, PCI</span>
+                    <span className="font-medium">{Object.keys(launchData?.data?.compliance?.frameworkCoverage || {}).join(', ') || 'N/A'}</span>
                   </div>
-                  <Badge variant="outline" className="text-amber-500 border-amber-500/50 w-full justify-center mt-2">
-                    <Clock className="h-3 w-3 mr-1" />
-                    Awaiting Approval
+                  <Badge variant="outline" className={cn(
+                    "w-full justify-center mt-2",
+                    (launchData?.data?.compliance?.pendingSignoffs || 0) === 0 ? "text-emerald-500 border-emerald-500/50" : "text-amber-500 border-amber-500/50"
+                  )}>
+                    {(launchData?.data?.compliance?.pendingSignoffs || 0) === 0 ? (
+                      <><CheckCircle className="h-3 w-3 mr-1" />Approved</>
+                    ) : (
+                      <><Clock className="h-3 w-3 mr-1" />Awaiting Approval</>
+                    )}
                   </Badge>
                 </CardContent>
               </Card>
 
-              <Card className="hover-elevate">
+              <Card className="hover-elevate" data-testid="card-launch-rehearsal">
                 <CardHeader className="pb-2">
                   <div className="flex items-center gap-2">
                     <div className="p-2 rounded-lg bg-teal-500/10">
@@ -705,19 +773,25 @@ export default function InfrastructurePage() {
                 <CardContent className="space-y-2">
                   <div className="flex justify-between text-xs">
                     <span className="text-muted-foreground">Rehearsals</span>
-                    <span className="font-medium">2 Completed</span>
+                    <span className="font-medium">{launchData?.data?.rehearsals?.completed || 0} Completed</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Last Score</span>
-                    <span className="font-medium text-emerald-500">92%</span>
+                    <span className="text-muted-foreground">Average Score</span>
+                    <span className={cn("font-medium", (launchData?.data?.rehearsals?.averageScore || 0) >= 80 ? "text-emerald-500" : "text-amber-500")}>{launchData?.data?.rehearsals?.averageScore || 0}%</span>
                   </div>
                   <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Next Rehearsal</span>
-                    <span className="font-medium">In 3 days</span>
+                    <span className="text-muted-foreground">Scheduled</span>
+                    <span className="font-medium">{launchData?.data?.rehearsals?.scheduled || 0}</span>
                   </div>
-                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 w-full justify-center mt-2">
-                    <CheckCircle className="h-3 w-3 mr-1" />
-                    On Track
+                  <Badge variant="outline" className={cn(
+                    "w-full justify-center mt-2",
+                    (launchData?.data?.rehearsals?.averageScore || 0) >= 80 ? "text-emerald-500 border-emerald-500/50" : "text-amber-500 border-amber-500/50"
+                  )}>
+                    {(launchData?.data?.rehearsals?.averageScore || 0) >= 80 ? (
+                      <><CheckCircle className="h-3 w-3 mr-1" />On Track</>
+                    ) : (
+                      <><Clock className="h-3 w-3 mr-1" />In Progress</>
+                    )}
                   </Badge>
                 </CardContent>
               </Card>
