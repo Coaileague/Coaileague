@@ -1,7 +1,7 @@
 /**
  * INFRASTRUCTURE SERVICES INDEX
  * ==============================
- * Central initialization and export for all Q1/Q2/Q3/Q4 2026 infrastructure services.
+ * Central initialization and export for all 2026 infrastructure services + Launch Hardening.
  * 
  * Q1 Services:
  * - Durable Job Queue: Database-backed reliable task execution
@@ -26,6 +26,13 @@
  * - Security Hardening: Threat detection and vulnerability scanning
  * - CDN/Edge Caching: Static asset and API response caching
  * - Audit Trail Export: SOX-compliant export and compliance reporting
+ * 
+ * Launch Hardening Services:
+ * - Launch Readiness: Production go-live validation and checklists
+ * - Chaos Testing: Automated failover drills and resilience testing
+ * - Operations Runbook: Incident response procedures and playbooks
+ * - Compliance Sign-off: Pre-launch approval workflows
+ * - Launch Rehearsal: End-to-end production simulation
  */
 
 import { durableJobQueue } from './durableJobQueue';
@@ -47,6 +54,13 @@ import { logAggregationService } from './logAggregationService';
 import { securityHardeningService } from './securityHardeningService';
 import { cdnCachingService } from './cdnCachingService';
 import { auditTrailExportService } from './auditTrailExportService';
+
+// Launch Hardening imports
+import { launchReadinessService } from './launchReadinessService';
+import { chaosTestingService } from './chaosTestingService';
+import { operationsRunbookService } from './operationsRunbookService';
+import { complianceSignoffService } from './complianceSignoffService';
+import { launchRehearsalService } from './launchRehearsalService';
 
 // Q1 exports
 export { durableJobQueue } from './durableJobQueue';
@@ -72,6 +86,13 @@ export { securityHardeningService } from './securityHardeningService';
 export { cdnCachingService } from './cdnCachingService';
 export { auditTrailExportService } from './auditTrailExportService';
 
+// Launch Hardening exports
+export { launchReadinessService } from './launchReadinessService';
+export { chaosTestingService } from './chaosTestingService';
+export { operationsRunbookService } from './operationsRunbookService';
+export { complianceSignoffService } from './complianceSignoffService';
+export { launchRehearsalService } from './launchRehearsalService';
+
 // Production seeding exports
 export { initializeProductionSeeding, seedProductionAlertRules, seedProductionDashboards, registerExtendedHealthChecks } from './productionSeeding';
 
@@ -80,7 +101,7 @@ export { initializeProductionSeeding, seedProductionAlertRules, seedProductionDa
  * Should be called during server startup
  */
 export async function initializeInfrastructureServices(): Promise<void> {
-  console.log('[Infrastructure] Initializing Q1/Q2/Q3/Q4 2026 infrastructure services...');
+  console.log('[Infrastructure] Initializing 2026 infrastructure services + Launch Hardening...');
   
   // Initialize Q1 services
   const q1Results = await Promise.allSettled([
@@ -114,7 +135,16 @@ export async function initializeInfrastructureServices(): Promise<void> {
     auditTrailExportService.initialize(),
   ]);
   
-  const allResults = [...q1Results, ...q2Results, ...q3Results, ...q4Results];
+  // Initialize Launch Hardening services
+  const launchResults = await Promise.allSettled([
+    launchReadinessService.initialize(),
+    chaosTestingService.initialize(),
+    operationsRunbookService.initialize(),
+    complianceSignoffService.initialize(),
+    launchRehearsalService.initialize(),
+  ]);
+  
+  const allResults = [...q1Results, ...q2Results, ...q3Results, ...q4Results, ...launchResults];
   const successes = allResults.filter(r => r.status === 'fulfilled').length;
   const failures = allResults.filter(r => r.status === 'rejected');
   
@@ -141,6 +171,7 @@ export async function initializeInfrastructureServices(): Promise<void> {
   console.log('[Infrastructure] Q2: Distributed Tracing, Connection Pooling, Rate Limiting, Health Checks, Metrics Dashboard');
   console.log('[Infrastructure] Q3: Circuit Breaker, SLA Monitoring');
   console.log('[Infrastructure] Q4: Disaster Recovery, Log Aggregation, Security Hardening, CDN Caching, Audit Trail Export');
+  console.log('[Infrastructure] Launch Hardening: Readiness, Chaos Testing, Runbooks, Compliance Sign-off, Rehearsal');
   console.log('[Infrastructure] Production: SRE alerts, dashboards, extended health checks');
 }
 

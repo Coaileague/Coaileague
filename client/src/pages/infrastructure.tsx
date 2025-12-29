@@ -29,6 +29,11 @@ import {
   Lock,
   Globe,
   ClipboardList,
+  Rocket,
+  FlaskConical,
+  BookOpen,
+  FileCheck,
+  PlayCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -316,6 +321,9 @@ export default function InfrastructurePage() {
             <TabsTrigger value="q4" className="flex-1 md:flex-none" data-testid="tab-q4">
               Q4 Services
             </TabsTrigger>
+            <TabsTrigger value="launch" className="flex-1 md:flex-none" data-testid="tab-launch">
+              Launch Readiness
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-4 md:mt-6 space-y-6">
@@ -555,6 +563,161 @@ export default function InfrastructurePage() {
                   <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 w-full justify-center mt-2">
                     <CheckCircle className="h-3 w-3 mr-1" />
                     Compliant
+                  </Badge>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="launch" className="mt-4 md:mt-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <Card className="hover-elevate">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-emerald-500/10">
+                      <Rocket className="h-4 w-4 text-emerald-500" />
+                    </div>
+                    <CardTitle className="text-sm font-medium">Launch Readiness</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">Production go-live validation</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Checks Passed</span>
+                    <span className="font-medium">28/36</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Launch Gates</span>
+                    <span className="font-medium">4/6 Approved</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Readiness Score</span>
+                    <span className="font-medium text-amber-500">78%</span>
+                  </div>
+                  <Progress value={78} className="h-1.5 mt-2" />
+                  <Badge variant="outline" className="text-amber-500 border-amber-500/50 w-full justify-center mt-2">
+                    <Clock className="h-3 w-3 mr-1" />
+                    In Progress
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className="hover-elevate">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-purple-500/10">
+                      <FlaskConical className="h-4 w-4 text-purple-500" />
+                    </div>
+                    <CardTitle className="text-sm font-medium">Chaos Testing</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">Failover drills & resilience</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Experiments Run</span>
+                    <span className="font-medium">3/6</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Success Rate</span>
+                    <span className="font-medium text-emerald-500">100%</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Scheduled Drills</span>
+                    <span className="font-medium">3</span>
+                  </div>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 w-full justify-center mt-2">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Passed
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className="hover-elevate">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-blue-500/10">
+                      <BookOpen className="h-4 w-4 text-blue-500" />
+                    </div>
+                    <CardTitle className="text-sm font-medium">Operations Runbook</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">Incident response procedures</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Runbooks</span>
+                    <span className="font-medium">6</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Categories</span>
+                    <span className="font-medium">5</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Active Responses</span>
+                    <span className="font-medium">0</span>
+                  </div>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 w-full justify-center mt-2">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    Documented
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className="hover-elevate">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-orange-500/10">
+                      <FileCheck className="h-4 w-4 text-orange-500" />
+                    </div>
+                    <CardTitle className="text-sm font-medium">Compliance Sign-off</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">Regulatory approval workflows</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Requirements</span>
+                    <span className="font-medium">15/18 Compliant</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Pending Sign-offs</span>
+                    <span className="font-medium text-amber-500">3</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Frameworks</span>
+                    <span className="font-medium">SOX, GDPR, PCI</span>
+                  </div>
+                  <Badge variant="outline" className="text-amber-500 border-amber-500/50 w-full justify-center mt-2">
+                    <Clock className="h-3 w-3 mr-1" />
+                    Awaiting Approval
+                  </Badge>
+                </CardContent>
+              </Card>
+
+              <Card className="hover-elevate">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <div className="p-2 rounded-lg bg-teal-500/10">
+                      <PlayCircle className="h-4 w-4 text-teal-500" />
+                    </div>
+                    <CardTitle className="text-sm font-medium">Launch Rehearsal</CardTitle>
+                  </div>
+                  <CardDescription className="text-xs">Production simulation</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Rehearsals</span>
+                    <span className="font-medium">2 Completed</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Last Score</span>
+                    <span className="font-medium text-emerald-500">92%</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-muted-foreground">Next Rehearsal</span>
+                    <span className="font-medium">In 3 days</span>
+                  </div>
+                  <Badge variant="outline" className="text-emerald-500 border-emerald-500/50 w-full justify-center mt-2">
+                    <CheckCircle className="h-3 w-3 mr-1" />
+                    On Track
                   </Badge>
                 </CardContent>
               </Card>
