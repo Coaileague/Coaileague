@@ -2281,6 +2281,77 @@ export const insertTimeEntrySchema = createInsertSchema(timeEntries).omit({
 export type InsertTimeEntry = z.infer<typeof insertTimeEntrySchema>;
 export type TimeEntry = typeof timeEntries.$inferSelect;
 
+// ============================================================================
+// SECURITY INCIDENTS - Mobile Worker Incident Reporting
+// ============================================================================
+
+export const securityIncidentTypeEnum = pgEnum('security_incident_type', [
+  'suspicious_person',
+  'suspicious_vehicle',
+  'property_damage',
+  'medical_emergency',
+  'fire_safety',
+  'theft',
+  'other'
+]);
+
+export const securityIncidentSeverityEnum = pgEnum('security_incident_severity', [
+  'low',
+  'medium',
+  'high',
+  'critical'
+]);
+
+export const securityIncidentStatusEnum = pgEnum('security_incident_status', [
+  'open',
+  'investigating',
+  'resolved',
+  'escalated',
+  'closed'
+]);
+
+export const securityIncidents = pgTable("security_incidents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  
+  type: securityIncidentTypeEnum("type").notNull(),
+  severity: securityIncidentSeverityEnum("severity").notNull(),
+  status: securityIncidentStatusEnum("status").default('open'),
+  
+  description: text("description").notNull(),
+  location: text("location"),
+  
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
+  
+  reportedAt: timestamp("reported_at").notNull().defaultNow(),
+  resolvedAt: timestamp("resolved_at"),
+  resolvedBy: varchar("resolved_by").references(() => users.id, { onDelete: 'set null' }),
+  resolutionNotes: text("resolution_notes"),
+  
+  shiftId: varchar("shift_id").references(() => shifts.id, { onDelete: 'set null' }),
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: 'set null' }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("security_incidents_workspace_idx").on(table.workspaceId),
+  index("security_incidents_employee_idx").on(table.employeeId),
+  index("security_incidents_status_idx").on(table.status),
+  index("security_incidents_severity_idx").on(table.severity),
+  index("security_incidents_reported_at_idx").on(table.reportedAt),
+]);
+
+export const insertSecurityIncidentSchema = createInsertSchema(securityIncidents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSecurityIncident = z.infer<typeof insertSecurityIncidentSchema>;
+export type SecurityIncident = typeof securityIncidents.$inferSelect;
+
 // Break type enum
 export const breakTypeEnum = pgEnum('break_type', [
   'meal', // Meal break (typically 30-60 minutes)

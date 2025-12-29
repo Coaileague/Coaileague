@@ -744,6 +744,15 @@ export interface IStorage {
   getHiringComplianceReport(workspaceId: string): Promise<any>;
   
   // ========================================================================
+  // SECURITY INCIDENTS - Mobile Worker Incident Reporting
+  // ========================================================================
+  createSecurityIncident(incident: any): Promise<any>;
+  getSecurityIncident(id: string): Promise<any | undefined>;
+  getSecurityIncidentsByWorkspace(workspaceId: string): Promise<any[]>;
+  getSecurityIncidentsByEmployee(workspaceId: string, employeeId: string): Promise<any[]>;
+  updateSecurityIncident(id: string, workspaceId: string, data: any): Promise<any | undefined>;
+  
+  // ========================================================================
   // HELPER METHODS FOR UNIFIED DATA NEXUS
   // ========================================================================
   getShiftsByEmployeeAndDateRange(workspaceId: string, employeeId: string, startDate: Date, endDate: Date): Promise<any[]>;
@@ -5117,6 +5126,59 @@ export class DatabaseStorage implements IStorage {
       .update(assetUsageLogs)
       .set(data)
       .where(and(eq(assetUsageLogs.id, id), eq(assetUsageLogs.workspaceId, workspaceId)))
+      .returning();
+    return updated;
+  }
+  
+  // ============================================================================
+  // SECURITY INCIDENTS - Mobile Worker Incident Reporting
+  // ============================================================================
+  
+  async createSecurityIncident(incident: any): Promise<any> {
+    const { securityIncidents } = await import("@shared/schema");
+    const [created] = await db
+      .insert(securityIncidents)
+      .values(incident)
+      .returning();
+    return created;
+  }
+  
+  async getSecurityIncident(id: string): Promise<any | undefined> {
+    const { securityIncidents } = await import("@shared/schema");
+    const [incident] = await db
+      .select()
+      .from(securityIncidents)
+      .where(eq(securityIncidents.id, id));
+    return incident;
+  }
+  
+  async getSecurityIncidentsByWorkspace(workspaceId: string): Promise<any[]> {
+    const { securityIncidents } = await import("@shared/schema");
+    return await db
+      .select()
+      .from(securityIncidents)
+      .where(eq(securityIncidents.workspaceId, workspaceId))
+      .orderBy(desc(securityIncidents.reportedAt));
+  }
+  
+  async getSecurityIncidentsByEmployee(workspaceId: string, employeeId: string): Promise<any[]> {
+    const { securityIncidents } = await import("@shared/schema");
+    return await db
+      .select()
+      .from(securityIncidents)
+      .where(and(
+        eq(securityIncidents.workspaceId, workspaceId),
+        eq(securityIncidents.employeeId, employeeId)
+      ))
+      .orderBy(desc(securityIncidents.reportedAt));
+  }
+  
+  async updateSecurityIncident(id: string, workspaceId: string, data: any): Promise<any | undefined> {
+    const { securityIncidents } = await import("@shared/schema");
+    const [updated] = await db
+      .update(securityIncidents)
+      .set({ ...data, updatedAt: new Date() })
+      .where(and(eq(securityIncidents.id, id), eq(securityIncidents.workspaceId, workspaceId)))
       .returning();
     return updated;
   }
