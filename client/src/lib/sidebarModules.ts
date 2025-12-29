@@ -35,6 +35,7 @@ import {
   Server,
   type LucideIcon,
 } from "lucide-react";
+import { isRouteVisibleInMVP } from "@/config/mvpFeatures";
 
 export type WorkspaceRole = 
   // Platform roles (for platform staff)
@@ -929,9 +930,15 @@ export function selectSidebarFamilies(
     });
   }
 
-  // Add regular module routes (with exclusion filtering)
+  // Add regular module routes (with exclusion filtering and MVP filtering)
   sidebarModules.forEach(module => {
     module.routes.forEach(route => {
+      // MVP Filter: Hide enterprise routes for non-platform staff
+      // ENTERPRISE FEATURE - These routes are disabled for MVP, reactivate for enterprise tier
+      if (!isPlatformStaff && !isRouteVisibleInMVP(route.id)) {
+        return; // Skip enterprise routes for MVP users
+      }
+
       // Check exclusion filter FIRST - before adding to allRoutes
       if (route.excludeForCapabilities && route.excludeForCapabilities.length > 0) {
         const shouldExclude = route.excludeForCapabilities.some(cap => {
