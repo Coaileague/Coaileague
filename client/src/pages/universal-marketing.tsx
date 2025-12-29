@@ -79,25 +79,9 @@ export default function UniversalMarketing() {
                 </div>
               </div>
 
-              {/* Logo Hero - Polished for Mobile */}
-              <div className="relative max-w-2xl mx-auto">
-                <div className="aspect-square md:aspect-video rounded-lg md:rounded-xl border-2 bg-gradient-to-br from-blue-50 to-blue-100 dark:from-blue-900/30 dark:to-blue-800/30 backdrop-blur-sm overflow-hidden shadow-2xl flex items-center justify-center p-8 md:p-12">
-                  <div className="text-center space-y-6">
-                    <div className="flex justify-center">
-                      <div className="w-32 h-32 md:w-40 md:h-40 rounded-2xl bg-gradient-to-br from-blue-600 to-blue-400 flex items-center justify-center text-white text-5xl md:text-6xl font-bold shadow-lg">
-                        CA
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <h3 className="text-xl md:text-2xl font-bold text-primary">CoAlleague</h3>
-                      <p className="text-sm md:text-base text-muted-foreground">AI-Powered Workforce Intelligence</p>
-                    </div>
-                  </div>
-                </div>
-                <Badge className="absolute -bottom-3 md:-bottom-4 left-1/2 -translate-x-1/2 px-3 md:px-4 py-1.5 md:py-2 shadow-lg">
-                  <Sparkles className="h-3 md:h-4 w-3 md:w-4 mr-1" />
-                  Mobile Optimized
-                </Badge>
+              {/* Schedule Preview - Show real product value */}
+              <div className="relative max-w-4xl mx-auto">
+                <SchedulePreview />
               </div>
             </div>
           </section>
@@ -207,8 +191,13 @@ export default function UniversalMarketing() {
                   <CardHeader>
                     <CardTitle>{tier.name}</CardTitle>
                     <CardDescription>{tier.description}</CardDescription>
-                    <div className="text-3xl font-bold mt-4">{tier.price}</div>
-                    <p className="text-xs text-muted-foreground mt-2">{tier.savings}</p>
+                    <div className="mt-4">
+                      <span className="text-3xl font-bold">{tier.price}</span>
+                      {tier.priceSubtext && (
+                        <span className="text-sm text-muted-foreground ml-1">{tier.priceSubtext}</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-primary font-medium mt-2">{tier.savings}</p>
                   </CardHeader>
 
                   <CardContent className="space-y-4">

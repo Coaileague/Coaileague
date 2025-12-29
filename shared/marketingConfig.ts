@@ -134,13 +134,14 @@ export const MARKETING = {
     subheadline: 'Pay once per month. Save $192K-$216K annually. CoAIleague replaces 3-5 high-end administrative positions with AI automation.',
     badge: 'Enterprise-Grade ROI',
     
-    // Pricing tiers imported from BILLING config
+    // Pricing tiers imported from BILLING config - using real prices
     getTiers: () => [
       {
         name: BILLING.tiers.free.name,
         id: BILLING.tiers.free.id,
         price: '$0',
-        savings: 'Try before you buy',
+        priceSubtext: '14-day free trial',
+        savings: 'No credit card required',
         roi: 'Risk-free trial',
         description: BILLING.tiers.free.description,
         cta: 'Start Free Trial',
@@ -150,9 +151,10 @@ export const MARKETING = {
       {
         name: BILLING.tiers.starter.name,
         id: BILLING.tiers.starter.id,
-        price: '$4,999',
-        savings: 'Net savings: $192K/year',
-        roi: '3.2x return',
+        price: `$${(BILLING.tiers.starter.monthlyPrice / 100).toLocaleString()}`,
+        priceSubtext: '/month',
+        savings: `Saves ~$${(BILLING.tiers.starter.adminReplacementValue / 1000).toFixed(0)}K/year in admin time`,
+        roi: 'Best for small teams',
         description: BILLING.tiers.starter.description,
         cta: 'Start Free Trial',
         monthlyPrice: BILLING.tiers.starter.monthlyPrice,
@@ -162,9 +164,10 @@ export const MARKETING = {
       {
         name: BILLING.tiers.professional.name,
         id: BILLING.tiers.professional.id,
-        price: '$9,999',
-        savings: 'Net savings: $215K/year',
-        roi: '1.8x return',
+        price: `$${(BILLING.tiers.professional.monthlyPrice / 100).toLocaleString()}`,
+        priceSubtext: '/month',
+        savings: `Saves ~$${(BILLING.tiers.professional.adminReplacementValue / 1000).toFixed(0)}K/year in admin time`,
+        roi: 'Most popular choice',
         description: BILLING.tiers.professional.description,
         cta: 'Start Free Trial',
         monthlyPrice: BILLING.tiers.professional.monthlyPrice,
@@ -174,9 +177,10 @@ export const MARKETING = {
       {
         name: BILLING.tiers.enterprise.name,
         id: BILLING.tiers.enterprise.id,
-        price: '$17,999',
-        savings: 'Net savings: $216K/year',
-        roi: '1.0x return',
+        price: 'Custom',
+        priceSubtext: 'Contact for pricing',
+        savings: `Saves ~$${(BILLING.tiers.enterprise.adminReplacementValue / 1000).toFixed(0)}K+/year in admin time`,
+        roi: 'For large organizations',
         description: BILLING.tiers.enterprise.description,
         cta: 'Contact Sales',
         monthlyPrice: BILLING.tiers.enterprise.monthlyPrice,
