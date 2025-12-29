@@ -1,7 +1,7 @@
 /**
  * INFRASTRUCTURE SERVICES INDEX
  * ==============================
- * Central initialization and export for all Q1/Q2/Q3 2026 infrastructure services.
+ * Central initialization and export for all Q1/Q2/Q3/Q4 2026 infrastructure services.
  * 
  * Q1 Services:
  * - Durable Job Queue: Database-backed reliable task execution
@@ -19,6 +19,13 @@
  * Q3 Services (Phase 3b):
  * - Circuit Breaker: Cascade failure prevention for external services
  * - SLA Monitoring: Uptime tracking and compliance reporting
+ * 
+ * Q4 Services (Phase 4):
+ * - Disaster Recovery: RPO/RTO management, automated failover
+ * - Log Aggregation: Centralized logging with search and retention
+ * - Security Hardening: Threat detection and vulnerability scanning
+ * - CDN/Edge Caching: Static asset and API response caching
+ * - Audit Trail Export: SOX-compliant export and compliance reporting
  */
 
 import { durableJobQueue } from './durableJobQueue';
@@ -33,6 +40,13 @@ import { metricsDashboard } from './metricsDashboard';
 import { circuitBreaker } from './circuitBreaker';
 import { slaMonitoring } from './slaMonitoring';
 import { initializeProductionSeeding } from './productionSeeding';
+
+// Q4 imports
+import { disasterRecoveryService } from './disasterRecoveryService';
+import { logAggregationService } from './logAggregationService';
+import { securityHardeningService } from './securityHardeningService';
+import { cdnCachingService } from './cdnCachingService';
+import { auditTrailExportService } from './auditTrailExportService';
 
 // Q1 exports
 export { durableJobQueue } from './durableJobQueue';
@@ -51,6 +65,13 @@ export { metricsDashboard } from './metricsDashboard';
 export { circuitBreaker } from './circuitBreaker';
 export { slaMonitoring } from './slaMonitoring';
 
+// Q4 exports (Phase 4)
+export { disasterRecoveryService } from './disasterRecoveryService';
+export { logAggregationService } from './logAggregationService';
+export { securityHardeningService } from './securityHardeningService';
+export { cdnCachingService } from './cdnCachingService';
+export { auditTrailExportService } from './auditTrailExportService';
+
 // Production seeding exports
 export { initializeProductionSeeding, seedProductionAlertRules, seedProductionDashboards, registerExtendedHealthChecks } from './productionSeeding';
 
@@ -59,7 +80,7 @@ export { initializeProductionSeeding, seedProductionAlertRules, seedProductionDa
  * Should be called during server startup
  */
 export async function initializeInfrastructureServices(): Promise<void> {
-  console.log('[Infrastructure] Initializing Q1/Q2/Q3 2026 infrastructure services...');
+  console.log('[Infrastructure] Initializing Q1/Q2/Q3/Q4 2026 infrastructure services...');
   
   // Initialize Q1 services
   const q1Results = await Promise.allSettled([
@@ -84,7 +105,16 @@ export async function initializeInfrastructureServices(): Promise<void> {
     slaMonitoring.initialize(),
   ]);
   
-  const allResults = [...q1Results, ...q2Results, ...q3Results];
+  // Initialize Q4 services (Phase 4)
+  const q4Results = await Promise.allSettled([
+    disasterRecoveryService.initialize(),
+    logAggregationService.initialize(),
+    securityHardeningService.initialize(),
+    cdnCachingService.initialize(),
+    auditTrailExportService.initialize(),
+  ]);
+  
+  const allResults = [...q1Results, ...q2Results, ...q3Results, ...q4Results];
   const successes = allResults.filter(r => r.status === 'fulfilled').length;
   const failures = allResults.filter(r => r.status === 'rejected');
   
@@ -110,6 +140,7 @@ export async function initializeInfrastructureServices(): Promise<void> {
   console.log('[Infrastructure] Q1: Job Queue, Backups, Error Tracking, API Key Rotation');
   console.log('[Infrastructure] Q2: Distributed Tracing, Connection Pooling, Rate Limiting, Health Checks, Metrics Dashboard');
   console.log('[Infrastructure] Q3: Circuit Breaker, SLA Monitoring');
+  console.log('[Infrastructure] Q4: Disaster Recovery, Log Aggregation, Security Hardening, CDN Caching, Audit Trail Export');
   console.log('[Infrastructure] Production: SRE alerts, dashboards, extended health checks');
 }
 
@@ -209,6 +240,13 @@ export function shutdownInfrastructureServices(): void {
   circuitBreaker.shutdown();
   slaMonitoring.shutdown();
   
+  // Q4 services
+  disasterRecoveryService.shutdown();
+  logAggregationService.shutdown();
+  securityHardeningService.shutdown();
+  cdnCachingService.shutdown();
+  auditTrailExportService.shutdown();
+  
   console.log('[Infrastructure] All infrastructure services shut down');
 }
 
@@ -233,6 +271,13 @@ export async function getInfrastructureHealth(): Promise<{
     circuitBreaker: { status: string; stats: any };
     slaMonitoring: { status: string; compliance: any };
   };
+  q4: {
+    disasterRecovery: { status: string; stats: any };
+    logAggregation: { status: string; stats: any };
+    securityHardening: { status: string; stats: any };
+    cdnCaching: { status: string; stats: any };
+    auditTrailExport: { status: string; stats: any };
+  };
 }> {
   const [jobQueueStats, backupStats, errorStats, keys] = await Promise.all([
     durableJobQueue.getStats(),
@@ -252,6 +297,18 @@ export async function getInfrastructureHealth(): Promise<{
   const circuitStats = circuitBreaker.getAggregateStats();
   const slaHealth = slaMonitoring.getHealth();
   const slaCompliance = slaMonitoring.getComplianceSummary();
+  
+  // Q4 stats
+  const drHealth = disasterRecoveryService.getHealth();
+  const drStats = disasterRecoveryService.getStats();
+  const logHealth = logAggregationService.getHealth();
+  const logStats = logAggregationService.getStats();
+  const secHealth = securityHardeningService.getHealth();
+  const secStats = securityHardeningService.getStats();
+  const cdnHealth = cdnCachingService.getHealth();
+  const cdnStats = cdnCachingService.getStats();
+  const auditHealth = auditTrailExportService.getHealth();
+  const auditStats = auditTrailExportService.getStats();
   
   return {
     q1: {
@@ -305,6 +362,28 @@ export async function getInfrastructureHealth(): Promise<{
       slaMonitoring: {
         status: slaCompliance.overallHealth,
         compliance: slaCompliance,
+      },
+    },
+    q4: {
+      disasterRecovery: {
+        status: drHealth.healthy ? 'healthy' : 'degraded',
+        stats: drStats,
+      },
+      logAggregation: {
+        status: logHealth.healthy ? 'healthy' : 'degraded',
+        stats: logStats,
+      },
+      securityHardening: {
+        status: secHealth.healthy ? 'healthy' : 'degraded',
+        stats: secStats,
+      },
+      cdnCaching: {
+        status: cdnHealth.healthy ? 'healthy' : 'degraded',
+        stats: cdnStats,
+      },
+      auditTrailExport: {
+        status: auditHealth.healthy ? 'healthy' : 'degraded',
+        stats: auditStats,
       },
     },
   };
