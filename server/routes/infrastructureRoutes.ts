@@ -3,6 +3,10 @@
  * ==========================
  * API endpoints for Q1/Q2 2026 infrastructure services.
  * Provides management interfaces for all infrastructure capabilities.
+ * 
+ * NOTE: Most infrastructure routes are ENTERPRISE FEATURES.
+ * For MVP, these routes return success but indicate features are disabled.
+ * Platform staff can still access full functionality.
  */
 
 import { Router, Request, Response } from 'express';
@@ -23,8 +27,67 @@ import { chaosTestingService } from '../services/infrastructure/chaosTestingServ
 import { operationsRunbookService } from '../services/infrastructure/operationsRunbookService';
 import { complianceSignoffService } from '../services/infrastructure/complianceSignoffService';
 import { launchRehearsalService } from '../services/infrastructure/launchRehearsalService';
+import { FEATURE_FLAGS, isFeatureEnabled } from '../config/features';
 
 const router = Router();
+
+/**
+ * Middleware to check if enterprise infrastructure features are enabled
+ * For MVP, these are disabled for regular users but platform staff can still access
+ */
+function requireEnterpriseFeature(featureName: keyof typeof FEATURE_FLAGS) {
+  return (req: Request, res: Response, next: Function) => {
+    // Check if user is platform staff (always allowed)
+    const user = (req as any).user;
+    const isPlatformStaff = user?.platformRole && ['root_admin', 'sysop', 'support_agent'].includes(user.platformRole);
+    
+    if (isPlatformStaff || isFeatureEnabled(featureName)) {
+      return next();
+    }
+    
+    // ENTERPRISE FEATURE - Return graceful response for MVP
+    return res.json({
+      success: true,
+      data: null,
+      enterprise: true,
+      message: `This feature is available in the Enterprise tier. Current tier does not include ${featureName.replace(/_/g, ' ').toLowerCase()}.`,
+      upgradeRequired: true
+    });
+  };
+}
+
+// ============================================================================
+// ENTERPRISE FEATURE GATING
+// Apply feature flag middleware to all infrastructure routes except /health
+// Platform staff bypass this check and always have full access
+// ============================================================================
+router.use((req: Request, res: Response, next: Function) => {
+  // Allow health endpoint for all users (basic monitoring)
+  if (req.path === '/health' || req.path === '/') {
+    return next();
+  }
+  
+  // Check if user is platform staff (always allowed)
+  const user = (req as any).user;
+  const isPlatformStaff = user?.platformRole && ['root_admin', 'sysop', 'support_agent'].includes(user.platformRole);
+  
+  if (isPlatformStaff) {
+    return next();
+  }
+  
+  // ENTERPRISE FEATURE - Check if infrastructure dashboard is enabled
+  if (!isFeatureEnabled('INFRASTRUCTURE_DASHBOARD')) {
+    return res.json({
+      success: true,
+      data: null,
+      enterprise: true,
+      message: 'Infrastructure monitoring is available in the Enterprise tier. Upgrade your plan for access to circuit breakers, SLA monitoring, and advanced infrastructure tools.',
+      upgradeRequired: true
+    });
+  }
+  
+  next();
+});
 
 // ============================================================================
 // HEALTH & STATUS
