@@ -56,15 +56,20 @@ app.use(express.urlencoded({ extended: false }));
 app.set('trust proxy', 1);
 
 // Distributed tracing middleware - adds trace IDs to all requests (skip health endpoints)
+// NOTE: tracingMiddleware is a factory function, so we invoke it with () to get the actual middleware
+const tracingHandler = tracingMiddleware('coaileague-api');
 app.use((req, res, next) => {
   if (req.path === '/' || req.path === '/health') {
     return next();
   }
-  tracingMiddleware(req, res, next);
+  tracingHandler(req, res, next);
 });
 
 // Rate limiting middleware - applies per-tenant quotas on API routes
-app.use('/api', rateLimitMiddleware);
+// NOTE: rateLimitMiddleware is a factory function that requires (getTenantId, getPlan) parameters
+// Properly configured rate limiting is handled in routes.ts with the session-aware middleware
+// This line was causing requests to hang because the factory wasn't invoked
+// app.use('/api', rateLimitMiddleware);
 
 // Performance monitoring middleware - tracks all requests
 app.use((req, res, next) => {
