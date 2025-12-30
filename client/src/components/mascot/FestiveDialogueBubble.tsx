@@ -10,6 +10,7 @@
  */
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, memo } from 'react';
+import { useDrag } from '@use-gesture/react';
 import type { Thought } from '@/lib/mascot/ThoughtManager';
 
 interface FestiveDialogueBubbleProps {
@@ -98,6 +99,8 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
   const [isActive, setIsActive] = useState(false);
   const animFrameRef = useRef<number | null>(null);
   const lastThoughtIdRef = useRef<string | null>(null);
+  const [swipeOffset, setSwipeOffset] = useState({ x: 0, y: 0 });
+  const [isDismissing, setIsDismissing] = useState(false);
   
   const lettersRef = useRef<LetterData[]>([]);
   const phaseRef = useRef<AnimPhase>('done');
@@ -107,6 +110,9 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
   const bubbleDimensionsRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
   const [bubbleDimensionsReady, setBubbleDimensionsReady] = useState(0); // Increment to trigger position update
   const dprRef = useRef<number>(2);
+  
+  // Swipe threshold for dismissal (in pixels)
+  const SWIPE_THRESHOLD = 80;
   
   const fontSize = isMobile ? 11 : 13;
   const lineHeight = fontSize * 1.3;
@@ -448,26 +454,58 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
   
   // Handle manual dismiss
   const handleDismiss = useCallback(() => {
+    if (isDismissing) return;
+    setIsDismissing(true);
     setIsActive(false);
     lastThoughtIdRef.current = null;
     if (animFrameRef.current) {
       cancelAnimationFrame(animFrameRef.current);
     }
     onDismiss?.();
-  }, [onDismiss]);
+  }, [onDismiss, isDismissing]);
+  
+  // Swipe gesture handler - swipe in any direction to dismiss
+  const bind = useDrag(
+    ({ down, movement: [mx, my], velocity: [vx, vy], direction: [dx, dy] }) => {
+      if (isDismissing) return;
+      
+      if (down) {
+        setSwipeOffset({ x: mx, y: my });
+      } else {
+        const totalMovement = Math.abs(mx) + Math.abs(my);
+        const totalVelocity = Math.abs(vx) + Math.abs(vy);
+        
+        if (totalMovement > SWIPE_THRESHOLD || totalVelocity > 0.5) {
+          const finalX = dx * 300;
+          const finalY = dy * 300;
+          setSwipeOffset({ x: finalX, y: finalY });
+          handleDismiss();
+        } else {
+          setSwipeOffset({ x: 0, y: 0 });
+        }
+      }
+    },
+    { filterTaps: true, threshold: 10 }
+  );
 
   if (!isActive || !thought) return null;
   
   return (
     <div
       ref={containerRef}
-      className="pointer-events-none trinity-bubble"
+      {...bind()}
+      className="pointer-events-auto trinity-bubble"
       data-mascot="festive-dialogue"
       data-trinity="true"
       style={{
         position: 'fixed',
         zIndex: 9990,
-        transition: 'top 0.1s ease-out, left 0.1s ease-out',
+        transform: `translate(${swipeOffset.x}px, ${swipeOffset.y}px)`,
+        transition: isDismissing ? 'all 0.3s ease-out' : (swipeOffset.x === 0 && swipeOffset.y === 0 ? 'top 0.1s ease-out, left 0.1s ease-out, opacity 0.3s ease-out' : 'none'),
+        opacity: isDismissing ? 0 : 1,
+        cursor: 'grab',
+        userSelect: 'none',
+        touchAction: 'none',
       }}
       data-testid="festive-dialogue-bubble"
     >

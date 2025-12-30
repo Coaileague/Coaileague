@@ -10,9 +10,10 @@
  * - Doesn't block content
  */
 
-import { useState, useEffect, memo } from 'react';
+import { useState, useEffect, memo, useRef, useCallback } from 'react';
 import { Link } from 'wouter';
 import { X, Sparkles } from 'lucide-react';
+import { useDrag } from '@use-gesture/react';
 import type { Thought } from '@/lib/mascot/ThoughtManager';
 import type { MascotMode } from '@/config/mascotConfig';
 
@@ -62,8 +63,56 @@ export const CompactBubble = memo(function CompactBubble({
 }: CompactBubbleProps) {
   const [isVisible, setIsVisible] = useState(false);
   const [shouldRender, setShouldRender] = useState(false);
+  const [swipeOffset, setSwipeOffset] = useState({ x: 0, y: 0 });
+  const [isDismissing, setIsDismissing] = useState(false);
 
   const colors = MODE_COLORS[mode];
+  
+  // Swipe threshold for dismissal (in pixels)
+  const SWIPE_THRESHOLD = 80;
+  
+  // Handle swipe dismiss
+  const handleSwipeDismiss = useCallback(() => {
+    if (isDismissing) return;
+    setIsDismissing(true);
+    setIsVisible(false);
+    setTimeout(() => {
+      setShouldRender(false);
+      onDismiss();
+    }, 300);
+  }, [isDismissing, onDismiss]);
+  
+  // Swipe gesture handler - swipe left, right, or down to dismiss
+  const bind = useDrag(
+    ({ down, movement: [mx, my], velocity: [vx, vy], direction: [dx, dy] }) => {
+      if (isDismissing) return;
+      
+      if (down) {
+        // While dragging, show the offset
+        setSwipeOffset({ x: mx, y: my });
+      } else {
+        // On release, check if swipe was strong enough
+        const totalMovement = Math.abs(mx) + Math.abs(my);
+        const totalVelocity = Math.abs(vx) + Math.abs(vy);
+        
+        // Dismiss if: moved far enough OR fast swipe in any direction
+        if (totalMovement > SWIPE_THRESHOLD || totalVelocity > 0.5) {
+          // Animate off in swipe direction
+          const finalX = dx * 300;
+          const finalY = dy * 300;
+          setSwipeOffset({ x: finalX, y: finalY });
+          handleSwipeDismiss();
+        } else {
+          // Snap back
+          setSwipeOffset({ x: 0, y: 0 });
+        }
+      }
+    },
+    { 
+      filterTaps: true,
+      threshold: 10,
+    }
+  );
 
   // Auto-dismiss with comfortable reading time based on text length
   useEffect(() => {
@@ -113,8 +162,9 @@ export const CompactBubble = memo(function CompactBubble({
 
   return (
     <div
-      className={`fixed pointer-events-auto transition-all duration-300 trinity-bubble ${
-        isVisible ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
+      {...bind()}
+      className={`fixed pointer-events-auto trinity-bubble touch-pan-y ${
+        isVisible && !isDismissing ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       }`}
       data-mascot="compact-bubble"
       data-trinity="true"
@@ -123,6 +173,11 @@ export const CompactBubble = memo(function CompactBubble({
         top: `${bubbleTop}px`,
         zIndex: 9989,
         maxWidth: '280px',
+        transform: `translate(${swipeOffset.x}px, ${swipeOffset.y}px)`,
+        transition: isDismissing ? 'all 0.3s ease-out' : (swipeOffset.x === 0 && swipeOffset.y === 0 ? 'all 0.3s ease-out' : 'none'),
+        cursor: 'grab',
+        userSelect: 'none',
+        touchAction: 'none',
       }}
       data-testid="compact-bubble"
     >
