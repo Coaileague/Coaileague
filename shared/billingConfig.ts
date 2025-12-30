@@ -56,19 +56,21 @@ export const BILLING = {
     starter: {
       id: "starter",
       name: "Starter",
-      description: "Perfect for small teams automating workforce management",
-      monthlyPrice: 34900, // $349/month in cents
-      yearlyPrice: 349000, // $3,490/year (2 months free)
-      maxEmployees: 10,
+      description: "Perfect for small security teams (25-50 guards)",
+      monthlyPrice: 29900, // $299/month in cents
+      yearlyPrice: 299000, // $2,990/year (2 months free)
+      maxEmployees: 25,
       maxManagers: 2,
       monthlyCredits: 5000,
-      adminReplacementValue: 50000, // Saves ~$50K/year in admin time
+      adminReplacementValue: 35000, // Saves ~$35K/year in admin time
+      overagePerEmployee: 800, // $8/employee after 25
       features: [
-        "10 employees, 2 managers included",
+        "Up to 25 employees included",
+        "+$8/employee after 25",
+        "2 managers included",
         "Trinity AI Scheduling",
         "Time tracking & approvals",
         "Basic compliance alerts",
-        "Integration with 1 HRIS/accounting system",
         "5,000 AI credits/month",
         "Email support (48hr response)",
       ],
@@ -78,15 +80,18 @@ export const BILLING = {
     professional: {
       id: "professional",
       name: "Professional",
-      description: "Full automation suite for growing businesses",
-      monthlyPrice: 99900, // $999/month in cents
-      yearlyPrice: 999000, // $9,990/year (2 months free)
-      maxEmployees: 25,
+      description: "Full automation for growing security companies (50-150 guards)",
+      monthlyPrice: 79900, // $799/month in cents
+      yearlyPrice: 799000, // $7,990/year (2 months free)
+      maxEmployees: 50,
       maxManagers: 5,
       monthlyCredits: 25000,
-      adminReplacementValue: 120000, // Saves ~$120K/year in admin time
+      adminReplacementValue: 90000, // Saves ~$90K/year in admin time
+      overagePerEmployee: 600, // $6/employee after 50
       features: [
-        "25 employees, 5 managers included",
+        "Up to 50 employees included",
+        "+$6/employee after 50",
+        "5 managers included",
         "Everything in Starter",
         "AI Payroll automation",
         "Client billing & invoicing",
@@ -102,7 +107,7 @@ export const BILLING = {
     enterprise: {
       id: "enterprise",
       name: "Enterprise",
-      description: "Custom solutions for large organizations",
+      description: "Custom solutions for large security companies (150+ guards)",
       monthlyPrice: 0, // Contact sales
       yearlyPrice: 0, // Contact sales
       maxEmployees: 999999, // Unlimited
@@ -110,8 +115,11 @@ export const BILLING = {
       monthlyCredits: 100000,
       adminReplacementValue: 250000, // Saves ~$250K+/year in admin time
       isContactSales: true,
+      overagePerEmployee: 400, // $4/employee at scale
       features: [
-        "Unlimited employees & managers",
+        "100+ employees at scale pricing",
+        "+$4/employee (volume discount)",
+        "Unlimited managers",
         "Everything in Professional",
         "Dedicated account manager",
         "Custom integrations",
@@ -119,8 +127,6 @@ export const BILLING = {
         "SLA guarantees",
         "100,000+ AI credits/month",
         "Priority support (4hr response)",
-        "White-label options",
-        "On-premise deployment option",
       ],
       popular: false,
     },

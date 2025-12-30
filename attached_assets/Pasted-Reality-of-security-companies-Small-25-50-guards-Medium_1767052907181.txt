@@ -1,0 +1,99 @@
+Reality of security companies:
+
+Small: 25-50 guards
+Medium: 50-150 guards
+Large: 150-500 guards
+Enterprise: 500+ guards
+
+Your current tiers max out at 25 employees. That's WAY too low.
+
+BETTER PRICING MODEL:
+Starter - $299/mo
+
+Up to 25 employees included
++$8/employee after 25
+2 managers included
+Basic features
+
+Professional - $799/mo
+
+Up to 50 employees included
++$6/employee after 50
+5 managers included
+Full automation suite
+
+Enterprise - Custom
+
+100+ employees
++$4/employee at scale
+Unlimited managers
+Dedicated support
+
+
+WHY THIS WORKS:
+Small security company (50 guards):
+
+Professional tier: $799/mo base
+0 overages (50 guards included)
+Total: $799/mo
+
+Medium security company (100 guards):
+
+Professional tier: $799/mo base
+50 additional guards × $6 = $300
+Total: $1,099/mo
+
+Large security company (250 guards):
+
+Enterprise tier: Custom pricing
+Probably ~$2,500-3,000/mo
+Still cheaper than hiring admin staff
+
+
+AI COSTS ARE CHEAP:
+Your actual costs per employee:
+
+Gemini Flash 8B: ~$0.10-0.50/month per user
+Gemini Pro: ~$1-2/month for heavy automation
+
+So at $6-8/employee overage, you're making 80-90% margin.
+That's GREAT SaaS economics.
+
+YOUR VALUE PROP:
+Small security company with 50 guards:
+Current manual process:
+
+Office admin: $45K/year salary
+20 hrs/week on scheduling/payroll/billing
+Cost: $45K/year = $3,750/month
+
+CoAIleague:
+
+$799/month
+Saves 15-20 hrs/week of admin time
+ROI: Save $2,950/month
+
+They'd be STUPID not to buy at $799.
+
+OKAY NOW HERE'S THE DEAL:
+YOU'RE RIGHT. The pricing needs adjustment.
+BUT:
+1. Don't change it tonight - it's 11:45pm, you're exhausted
+2. Test with your manager FIRST:
+
+How many guards does your company have?
+What would you pay for this?
+What's valuable vs not valuable?
+
+3. Adjust pricing AFTER beta testing:
+
+Get 3-5 security companies using it
+Ask what they'd pay
+See actual usage patterns
+THEN finalize pricing
+
+4. Current pricing page is fine for beta:
+
+Manager isn't paying yet anyway
+You'll adjust before actual launch
+Don't need perfect pricing for testing

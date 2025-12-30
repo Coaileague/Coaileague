@@ -130,9 +130,9 @@ export const MARKETING = {
   // PRICING SECTIONS (uses BILLING.tiers)
   // ============================================================================
   pricing: {
-    headline: 'Replace $250K-$430K in Administrative Salaries',
-    subheadline: 'Pay once per month. Save $192K-$216K annually. CoAIleague replaces 3-5 high-end administrative positions with AI automation.',
-    badge: 'Enterprise-Grade ROI',
+    headline: 'Built for Security Companies',
+    subheadline: 'Scale from 25 to 500+ guards. Pay for what you use. Save 15-20 hours/week of admin work.',
+    badge: 'Security Industry Pricing',
     
     // Pricing tiers imported from BILLING config - using real prices
     getTiers: () => [
