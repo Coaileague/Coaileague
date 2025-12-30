@@ -779,56 +779,106 @@ export default function Employees() {
                       {getOnboardingStatusBadge(employee.onboardingStatus ?? undefined)}
                     </div>
                   </div>
-                  {/* Edit/Delete Dropdown Menu */}
-                  {!isMobile && (
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          className="h-8 w-8 shrink-0"
-                          data-testid={`button-employee-menu-${employee.id}`}
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
+                  {/* 3-Dot Action Menu - Available on BOTH mobile and desktop */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className={isMobile ? "h-10 w-10 min-h-[44px] min-w-[44px] shrink-0" : "h-8 w-8 shrink-0"}
+                        style={isMobile ? { touchAction: 'manipulation' } : undefined}
+                        data-testid={`button-employee-menu-${employee.id}`}
+                      >
+                        <MoreVertical className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className={isMobile ? "min-w-[200px]" : ""}>
+                      <DropdownMenuItem 
+                        onClick={() => handleEditEmployee(employee)}
+                        className={isMobile ? "py-3 text-base" : ""}
+                        data-testid={`button-edit-employee-${employee.id}`}
+                      >
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit Details
+                      </DropdownMenuItem>
+                      {employee.onboardingStatus !== 'completed' && employee.onboardingStatus !== 'pending_review' && (
                         <DropdownMenuItem 
-                          onClick={() => handleEditEmployee(employee)}
-                          data-testid={`button-edit-employee-${employee.id}`}
+                          onClick={() => {
+                            setSelectedEmployee(employee);
+                            setIsInviteDialogOpen(true);
+                          }}
+                          className={isMobile ? "py-3 text-base" : ""}
+                          data-testid={`menu-invite-${employee.id}`}
                         >
-                          <Edit className="h-4 w-4 mr-2" />
-                          Edit Employee
+                          <Send className="h-4 w-4 mr-2" />
+                          Send Invite
                         </DropdownMenuItem>
-                        <DropdownMenuSeparator />
+                      )}
+                      {employee.onboardingStatus === 'pending_review' && (
                         <DropdownMenuItem 
-                          onClick={() => handleDeleteEmployee(employee)}
-                          className="text-destructive focus:text-destructive"
-                          data-testid={`button-delete-employee-${employee.id}`}
+                          onClick={() => {
+                            setSelectedEmployee(employee);
+                            setApprovalPayRate(employee.hourlyRate || "");
+                            setIsApprovalDialogOpen(true);
+                          }}
+                          className={isMobile ? "py-3 text-base text-orange-600" : "text-orange-600"}
+                          data-testid={`menu-approve-${employee.id}`}
                         >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Remove Employee
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                          Approve Employee
                         </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  )}
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => handleDeleteEmployee(employee)}
+                        className={`text-destructive focus:text-destructive ${isMobile ? "py-3 text-base" : ""}`}
+                        data-testid={`button-delete-employee-${employee.id}`}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Deactivate
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </CardHeader>
-                <CardContent className="space-y-3">
-                  <div className="flex items-center gap-2 text-sm">
-                    <Mail className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground truncate">{employee.email || "No email"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">{employee.phone || "No phone"}</span>
-                  </div>
-                  <div className="flex items-center gap-2 text-sm">
-                    <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-muted-foreground">
-                      ${employee.hourlyRate || "0"}/hr
-                    </span>
-                  </div>
-                  {employee.onboardingStatus === 'pending_review' && (
+                <CardContent className={isMobile ? "space-y-2 pt-0" : "space-y-3"}>
+                  {/* Mobile: Compact horizontal layout */}
+                  {isMobile ? (
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-1">
+                        <Mail className="h-3 w-3" />
+                        <span className="truncate max-w-[140px]">{employee.email || "No email"}</span>
+                      </span>
+                      <span className="flex items-center gap-1">
+                        <DollarSign className="h-3 w-3" />
+                        ${employee.hourlyRate || "0"}/hr
+                      </span>
+                      {employee.phone && (
+                        <span className="flex items-center gap-1">
+                          <Phone className="h-3 w-3" />
+                          {employee.phone}
+                        </span>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Mail className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground truncate">{employee.email || "No email"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">{employee.phone || "No phone"}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <DollarSign className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-muted-foreground">
+                          ${employee.hourlyRate || "0"}/hr
+                        </span>
+                      </div>
+                    </>
+                  )}
+                  {/* Desktop only: Show action buttons (mobile uses 3-dot menu) */}
+                  {!isMobile && employee.onboardingStatus === 'pending_review' && (
                     <Button
                       className="w-full mt-2 bg-orange-600 hover:bg-orange-700"
                       size="sm"
@@ -843,7 +893,7 @@ export default function Employees() {
                       Approve & Set Pay Rate
                     </Button>
                   )}
-                  {employee.onboardingStatus !== 'completed' && employee.onboardingStatus !== 'pending_review' && (
+                  {!isMobile && employee.onboardingStatus !== 'completed' && employee.onboardingStatus !== 'pending_review' && (
                     <Button
                       variant="outline"
                       size="sm"
