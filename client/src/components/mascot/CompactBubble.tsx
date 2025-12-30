@@ -226,6 +226,9 @@ export const CompactBubble = memo(function CompactBubble({
             onMouseDown={(e) => {
               e.stopPropagation();
             }}
+            onTouchStart={(e) => {
+              e.stopPropagation();
+            }}
             onTouchEnd={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -235,6 +238,9 @@ export const CompactBubble = memo(function CompactBubble({
                 onDismiss();
               }, 300);
             }}
+            onPointerDown={(e) => {
+              e.stopPropagation();
+            }}
             className={`p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 active:bg-black/20 transition-colors cursor-pointer ${colors.text}`}
             style={{ 
               touchAction: 'manipulation', 
@@ -242,6 +248,7 @@ export const CompactBubble = memo(function CompactBubble({
               minHeight: '32px',
               zIndex: 10000,
               position: 'relative',
+              pointerEvents: 'auto',
             }}
             data-testid="button-close-bubble"
           >

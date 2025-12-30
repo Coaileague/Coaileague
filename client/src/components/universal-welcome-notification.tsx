@@ -86,15 +86,27 @@ export function UniversalWelcomeNotification({
         support_agent: { label: "Support Agent", icon: Zap },
         compliance_officer: { label: "Compliance Officer", icon: Shield },
       };
-      return platformRoleMap[platformRole] || { label: role || "User", icon: LogIn };
+      return platformRoleMap[platformRole] || { label: role || "Team Member", icon: LogIn };
     }
 
     const roleMap: Record<string, { label: string; icon: any }> = {
       admin: { label: "Administrator", icon: Shield },
+      owner: { label: "Organization Owner", icon: Crown },
       manager: { label: "Manager", icon: Zap },
-      user: { label: "User", icon: LogIn },
+      supervisor: { label: "Supervisor", icon: Shield },
+      hr_manager: { label: "HR Manager", icon: Shield },
+      employee: { label: "Employee", icon: LogIn },
+      user: { label: "Team Member", icon: LogIn },
     };
-    return roleMap[role || "user"] || { label: role || "User", icon: LogIn };
+    
+    // Format role name if not in map - capitalize and humanize
+    const formatRoleName = (r: string) => {
+      return r.split('_').map(word => 
+        word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+      ).join(' ');
+    };
+    
+    return roleMap[role || "user"] || { label: formatRoleName(role || "Team Member"), icon: LogIn };
   };
 
   const roleInfo = getRoleInfo();
