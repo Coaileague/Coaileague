@@ -42,7 +42,7 @@ export const CHAT_SERVER_CONFIG = {
     main: {
       id: 'helpdesk',
       slug: 'helpdesk',
-      name: 'HelpAI Support',
+      name: 'Help Desk',
       description: 'Live support chat powered by HelpAI',
       status: 'open' as const,
       visibility: 'public' as const,

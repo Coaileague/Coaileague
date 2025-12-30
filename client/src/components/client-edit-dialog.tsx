@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -49,6 +49,34 @@ export function ClientEditDialog({
   );
   const { toast } = useToast();
 
+  // Track unsaved changes
+  const hasUnsavedChanges = useMemo(() => {
+    if (!client) return false;
+    return (
+      formData.name !== client.name ||
+      formData.email !== client.email ||
+      formData.phone !== client.phone ||
+      formData.address !== client.address ||
+      formData.notes !== client.notes
+    );
+  }, [formData, client]);
+
+  // Warn before closing with unsaved changes
+  const handleOpenChange = (newOpen: boolean) => {
+    if (!newOpen && hasUnsavedChanges) {
+      const confirmed = window.confirm("You have unsaved changes. Discard them?");
+      if (!confirmed) return;
+    }
+    onOpenChange(newOpen);
+  };
+
+  // Reset form when dialog opens with new client
+  useEffect(() => {
+    if (open && client) {
+      setFormData(client);
+    }
+  }, [open, client]);
+
   const mutation = useMutation({
     mutationFn: async () => {
       return apiRequest(`/api/clients/${formData.id}`, {
@@ -74,7 +102,7 @@ export function ClientEditDialog({
   });
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex justify-center mb-6">
@@ -149,11 +177,12 @@ export function ClientEditDialog({
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="gap-2">
           <Button
             variant="outline"
-            onClick={() => onOpenChange(false)}
+            onClick={() => handleOpenChange(false)}
             disabled={mutation.isPending}
+            className="min-h-11 flex-1 sm:flex-none"
             data-testid="button-cancel"
           >
             Cancel
@@ -161,6 +190,7 @@ export function ClientEditDialog({
           <Button
             onClick={() => mutation.mutate()}
             disabled={mutation.isPending || !formData.name}
+            className="min-h-11 flex-1 sm:flex-none"
             data-testid="button-save-client"
           >
             {mutation.isPending ? (

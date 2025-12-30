@@ -619,8 +619,8 @@ function RoomCard({
 const DEFAULT_HELPDESK_ROOM: ChatRoom = {
   roomId: 'helpdesk',
   id: 'helpdesk',
-  name: 'HelpDesk',
-  subject: 'CoAIleague HelpDesk',
+  name: 'Help Desk',
+  subject: 'Help Desk',
   slug: 'helpdesk',
   type: 'support',
   conversationType: 'dm_support',

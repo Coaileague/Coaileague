@@ -4,7 +4,7 @@
  * Enhanced with recurring shift pattern support
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -16,7 +16,10 @@ import {
   DrawerFooter,
   DrawerHeader,
   DrawerTitle,
+  DrawerDescription,
 } from '@/components/ui/drawer';
+import { ModalGuard, useModalGuard, MobileSheetHandle } from '@/components/ui/modal-guard';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import {
   Form,
   FormControl,
@@ -102,6 +105,10 @@ export function ShiftBottomSheet({
   
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurrenceOpen, setRecurrenceOpen] = useState(false);
+
+  const handleGuardedOpenChange = useCallback((newOpen: boolean) => {
+    onOpenChange(newOpen);
+  }, [onOpenChange]);
   
   const form = useForm<ShiftFormData>({
     resolver: zodResolver(shiftFormSchema),
@@ -229,36 +236,49 @@ export function ShiftBottomSheet({
     }
   };
 
-  return (
-    <Drawer open={open} onOpenChange={onOpenChange}>
-      <DrawerContent 
-        className="max-h-[85vh] focus:outline-none"
-        data-testid="shift-bottom-sheet"
-      >
-        <div className="mx-auto w-full max-w-md">
-          <DrawerHeader className="pb-2 pt-4 px-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <LogoMark size="sm" />
-                <div>
-                  <DrawerTitle className="text-base font-semibold">
-                    {editingShift ? 'Edit Shift' : 'New Shift'}
-                  </DrawerTitle>
-                  <p className="text-xs text-muted-foreground">
-                    {format(selectedDate, 'EEE, MMM d')}
-                  </p>
-                </div>
-              </div>
-              <DrawerClose asChild>
-                <Button variant="ghost" size="icon" className="h-8 w-8">
-                  <X className="h-4 w-4" />
-                </Button>
-              </DrawerClose>
-            </div>
-          </DrawerHeader>
+  const { isDirty } = form.formState;
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="px-4 pb-4 space-y-3">
+  return (
+    <ModalGuard
+      open={open}
+      onOpenChange={handleGuardedOpenChange}
+      discardWarningTitle="Discard shift changes?"
+      discardWarningDescription="You have unsaved shift details that will be lost."
+    >
+      <ModalGuardContent isDirty={isDirty}>
+        <Drawer open={open} onOpenChange={handleGuardedOpenChange}>
+          <DrawerContent 
+            className="max-h-[85vh] focus:outline-none"
+            data-testid="shift-bottom-sheet"
+          >
+            <MobileSheetHandle />
+            <div className="mx-auto w-full max-w-md">
+              <DrawerHeader className="pb-2 pt-4 px-4">
+                <VisuallyHidden>
+                  <DrawerDescription>Form to create or edit work shifts</DrawerDescription>
+                </VisuallyHidden>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <LogoMark size="sm" />
+                    <div>
+                      <DrawerTitle className="text-base font-semibold">
+                        {editingShift ? 'Edit Shift' : 'New Shift'}
+                      </DrawerTitle>
+                      <p className="text-xs text-muted-foreground">
+                        {format(selectedDate, 'EEE, MMM d')}
+                      </p>
+                    </div>
+                  </div>
+                  <DrawerClose asChild>
+                    <Button variant="ghost" size="icon" className="min-h-11 min-w-11">
+                      <X className="h-5 w-5" />
+                    </Button>
+                  </DrawerClose>
+                </div>
+              </DrawerHeader>
+
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="px-4 pb-4 space-y-3">
               
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
                 <div className="flex items-center gap-2">
@@ -593,7 +613,7 @@ export function ShiftBottomSheet({
                   <DrawerClose asChild>
                     <Button 
                       variant="outline" 
-                      className="flex-1 h-10" 
+                      className="flex-1 min-h-11" 
                       type="button" 
                       data-testid="button-cancel-shift"
                     >
@@ -602,7 +622,7 @@ export function ShiftBottomSheet({
                   </DrawerClose>
                   <Button
                     type="submit"
-                    className="flex-1 h-10"
+                    className="flex-1 min-h-11"
                     disabled={isSubmitting}
                     data-testid="button-save-shift"
                   >
@@ -616,11 +636,13 @@ export function ShiftBottomSheet({
                     )}
                   </Button>
                 </div>
-              </DrawerFooter>
-            </form>
-          </Form>
-        </div>
-      </DrawerContent>
-    </Drawer>
+                </DrawerFooter>
+              </form>
+            </Form>
+          </div>
+        </DrawerContent>
+      </Drawer>
+    </ModalGuardContent>
+  </ModalGuard>
   );
 }

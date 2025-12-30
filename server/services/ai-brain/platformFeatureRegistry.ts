@@ -756,7 +756,7 @@ export const PLATFORM_FEATURES: PlatformFeature[] = [
         relatedFeatures: ['scheduling', 'availability']
       },
       {
-        name: 'HelpAI Support',
+        name: 'Help Desk',
         description: 'AI-powered customer support assistant that learns from interactions',
         howTo: 'Click the chat icon for instant AI assistance. HelpAI can answer questions, troubleshoot issues, and escalate when needed.'
       },

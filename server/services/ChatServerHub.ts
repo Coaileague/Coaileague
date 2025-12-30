@@ -226,7 +226,7 @@ class ChatServerHubClass {
           // Create conversation for existing room
           const [conversation] = await db.insert(chatConversations).values({
             workspaceId: PLATFORM_WORKSPACE_ID,
-            subject: 'HelpAI Support',
+            subject: 'Help Desk',
             conversationType: 'dm_support',
             visibility: 'public',
             status: 'active',
@@ -245,7 +245,7 @@ class ChatServerHubClass {
         // Create the conversation first
         const [conversation] = await db.insert(chatConversations).values({
           workspaceId: PLATFORM_WORKSPACE_ID,
-          subject: 'HelpAI Support',
+          subject: 'Help Desk',
           conversationType: 'dm_support',
           visibility: 'public',
           status: 'active',
@@ -256,7 +256,7 @@ class ChatServerHubClass {
         // Create the HelpDesk support room
         await db.insert(supportRooms).values({
           slug: HELPDESK_SLUG,
-          name: 'HelpAI Support',
+          name: 'Help Desk',
           description: 'Live support chat powered by HelpAI - always here to assist you',
           status: 'open',
           workspaceId: null, // Platform-wide room
