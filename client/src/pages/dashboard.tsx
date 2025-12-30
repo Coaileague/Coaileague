@@ -482,6 +482,13 @@ export default function Dashboard() {
                   Welcome back, {firstName}
                 </h2>
                 
+                {/* Organization Name */}
+                {workspace?.name && (
+                  <p className="text-lg sm:text-xl font-semibold text-primary mb-2" data-testid="text-org-name">
+                    {workspace.name}
+                  </p>
+                )}
+                
                 {/* User Identity Badges */}
                 <div className="flex items-center justify-center gap-2 flex-wrap mb-3">
                   {displayExternalId && (
