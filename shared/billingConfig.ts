@@ -139,23 +139,25 @@ export const BILLING = {
     employee: {
       id: "seat_employee",
       name: "Additional Employee",
-      pricePerMonth: 1800, // $18/employee/month in cents
-      description: "Each employee uses scheduling, time tracking, compliance",
+      pricePerMonth: 800, // $8/employee/month in cents (Starter tier overage)
+      description: "Additional employees beyond plan limit",
     },
     manager: {
       id: "seat_manager", 
       name: "Additional Manager",
-      pricePerMonth: 3900, // $39/manager/month in cents
+      pricePerMonth: 1500, // $15/manager/month in cents
       description: "Managers use approvals, reports, advanced automation",
     },
   },
 
   // ==========================================================================
-  // LEGACY OVERAGE PRICING (Deprecated - use seatPricing)
+  // TIERED OVERAGE PRICING (Per-tier employee overage rates)
   // ==========================================================================
   overages: {
-    perEmployee: 1800, // $18/employee/month in cents (aligned with seatPricing)
-    description: "Additional employees beyond plan limit",
+    starter: 800, // $8/employee after 25 (Starter tier)
+    professional: 600, // $6/employee after 50 (Professional tier)
+    enterprise: 400, // $4/employee at scale (Enterprise tier)
+    description: "Additional employees beyond plan limit - rate based on tier",
     billingCycle: "monthly",
   },
 
