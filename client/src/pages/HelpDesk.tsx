@@ -4,7 +4,7 @@ import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { useNavigationProtection } from "@/hooks/use-navigation-protection";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useLocation } from "wouter";
+import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -146,6 +146,10 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   // Generate or get session ID for tracking (using config helper)
   const [sessionId] = useState(() => generateSessionId());
 
+  // Read route params for /chat/:roomId pattern
+  const [, routeParams] = useRoute("/chat/:roomId");
+  const routeRoomId = routeParams?.roomId;
+
   // Read URL parameters for direct conversation links (from escalation)
   const urlParams = new URLSearchParams(window.location.search);
   const urlConversationId = urlParams.get('conversationId');
@@ -201,10 +205,11 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     return stored !== null ? stored === 'true' : true; // Default enabled
   });
   
-  // Determine the conversation ID to join (mobile selection > URL > escalation > default)
-  const conversationToJoin = mobileSelectedRoom?.id || urlConversationId || parsedEscalation?.conversationId || MAIN_ROOM_ID;
+  // Determine the conversation ID to join (route param > mobile selection > URL param > escalation > default)
+  const conversationToJoin = routeRoomId || mobileSelectedRoom?.id || urlConversationId || parsedEscalation?.conversationId || MAIN_ROOM_ID;
   
   console.log('[HelpDesk] Conversation join logic:', {
+    routeRoomId,
     urlConversationId,
     urlGuestToken,
     parsedEscalation,

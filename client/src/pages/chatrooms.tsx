@@ -4,15 +4,20 @@ import { useAuth } from "@/hooks/useAuth";
 import { useEmployee } from "@/hooks/useEmployee";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { MessageCircle, Plus, Search, Loader2, ArrowLeft, Headphones } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { 
+  MessageCircle, Plus, Search, Loader2, ArrowLeft, Headphones,
+  Users, Clock, Image, Camera, FileText, LogIn, LogOut
+} from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { isSupportRole } from "@/config/chatroomsConfig";
@@ -35,6 +40,7 @@ interface ChatRoom {
   lastMessage?: string;
   unreadCount?: number;
   workspaceName?: string;
+  isShiftRoom?: boolean;
 }
 
 const normalizeRoom = (room: any): ChatRoom => {
@@ -56,6 +62,7 @@ const normalizeRoom = (room: any): ChatRoom => {
     lastMessage: room.lastMessage,
     unreadCount: room.unreadCount || 0,
     workspaceName: room.workspaceName,
+    isShiftRoom: room.conversationType === 'shift_chat',
   };
 };
 
@@ -116,18 +123,18 @@ function CreateRoomDialog({ open, onOpenChange, onSuccess }: { open: boolean; on
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5 text-primary" />
-            New Chat
+            New Chat Room
           </DialogTitle>
           <DialogDescription>
-            Create a new group chat for your team
+            Create a team or shift chat for your organization
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="room-name">Chat Name</Label>
+            <Label htmlFor="room-name">Room Name</Label>
             <Input
               id="room-name"
-              placeholder="e.g., Morning Team, Project Alpha"
+              placeholder="e.g., Morning Team, Site Alpha"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
               className="min-h-[44px]"
@@ -135,16 +142,21 @@ function CreateRoomDialog({ open, onOpenChange, onSuccess }: { open: boolean; on
             />
           </div>
           <div className="space-y-2">
-            <Label>Chat Type</Label>
+            <Label>Room Type</Label>
             <Select value={roomType} onValueChange={setRoomType}>
               <SelectTrigger className="min-h-[44px]" data-testid="select-room-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="work">Team Chat</SelectItem>
-                <SelectItem value="shift">Shift Chat</SelectItem>
+                <SelectItem value="work">Team Chat - Always available</SelectItem>
+                <SelectItem value="shift">Shift Chat - Auto-closes when shift ends</SelectItem>
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">
+              {roomType === 'shift' 
+                ? 'Shift rooms save all media and reports for audits before auto-closing'
+                : 'Team rooms stay open for ongoing communication'}
+            </p>
           </div>
         </div>
         <DialogFooter>
@@ -152,7 +164,7 @@ function CreateRoomDialog({ open, onOpenChange, onSuccess }: { open: boolean; on
             Cancel
           </Button>
           <Button onClick={handleCreate} disabled={createRoomMutation.isPending} className="min-h-[44px]" data-testid="button-create-room">
-            {createRoomMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
+            {createRoomMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create Room"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -160,15 +172,23 @@ function CreateRoomDialog({ open, onOpenChange, onSuccess }: { open: boolean; on
   );
 }
 
-function ConversationItem({ room, onClick }: { room: ChatRoom; onClick: () => void }) {
+function ConversationItem({ room, onClick, showDetails = false }: { room: ChatRoom; onClick: () => void; showDetails?: boolean }) {
   const isHelpDesk = room.slug === 'helpdesk';
   const hasUnread = (room.unreadCount || 0) > 0;
+  const isShiftRoom = room.isShiftRoom || room.conversationType === 'shift_chat';
   
   const getAvatar = () => {
     if (isHelpDesk) {
       return (
         <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shrink-0">
           <Headphones className="h-6 w-6 text-primary-foreground" />
+        </div>
+      );
+    }
+    if (isShiftRoom) {
+      return (
+        <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center shrink-0">
+          <Clock className="h-6 w-6 text-white" />
         </div>
       );
     }
@@ -200,9 +220,16 @@ function ConversationItem({ room, onClick }: { room: ChatRoom; onClick: () => vo
       
       <div className="flex-1 min-w-0 overflow-hidden">
         <div className="flex items-center justify-between gap-2">
-          <span className={`font-semibold truncate ${hasUnread ? 'text-foreground' : 'text-foreground/90'}`}>
-            {room.name || 'Chat'}
-          </span>
+          <div className="flex items-center gap-2 min-w-0">
+            <span className={`font-semibold truncate ${hasUnread ? 'text-foreground' : 'text-foreground/90'}`}>
+              {room.name || 'Chat'}
+            </span>
+            {isShiftRoom && (
+              <Badge variant="outline" className="text-xs shrink-0 bg-amber-500/10 text-amber-600 border-amber-500/30">
+                Shift
+              </Badge>
+            )}
+          </div>
           <span className="text-xs text-muted-foreground shrink-0">
             {getTimeDisplay()}
           </span>
@@ -211,14 +238,64 @@ function ConversationItem({ room, onClick }: { room: ChatRoom; onClick: () => vo
           <p className={`text-sm truncate ${hasUnread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
             {room.lastMessage || (isHelpDesk ? 'Tap to chat with Trinity AI' : 'No messages yet')}
           </p>
-          {hasUnread && (
-            <Badge className="bg-primary text-primary-foreground min-w-[20px] h-5 text-xs px-1.5 shrink-0">
-              {room.unreadCount}
-            </Badge>
-          )}
+          <div className="flex items-center gap-2 shrink-0">
+            {showDetails && room.participantsCount && (
+              <span className="text-xs text-muted-foreground flex items-center gap-1">
+                <Users className="h-3 w-3" />
+                {room.participantsCount}
+              </span>
+            )}
+            {hasUnread && (
+              <Badge className="bg-primary text-primary-foreground min-w-[20px] h-5 text-xs px-1.5">
+                {room.unreadCount}
+              </Badge>
+            )}
+          </div>
         </div>
       </div>
     </button>
+  );
+}
+
+function DesktopRoomCard({ room, onClick, isActive }: { room: ChatRoom; onClick: () => void; isActive?: boolean }) {
+  const isHelpDesk = room.slug === 'helpdesk';
+  const isShiftRoom = room.isShiftRoom || room.conversationType === 'shift_chat';
+  const hasUnread = (room.unreadCount || 0) > 0;
+
+  return (
+    <Card 
+      className={`cursor-pointer hover-elevate transition-all ${isActive ? 'ring-2 ring-primary' : ''}`}
+      onClick={onClick}
+      data-testid={`card-room-${room.id}`}
+    >
+      <CardHeader className="pb-2">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            {isHelpDesk && <Headphones className="h-4 w-4 text-primary" />}
+            {isShiftRoom && <Clock className="h-4 w-4 text-amber-500" />}
+            {!isHelpDesk && !isShiftRoom && <Users className="h-4 w-4 text-muted-foreground" />}
+            <CardTitle className="text-sm">{room.name}</CardTitle>
+          </div>
+          {hasUnread && (
+            <Badge className="bg-primary text-primary-foreground">{room.unreadCount}</Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent className="pt-0">
+        <p className="text-xs text-muted-foreground truncate">
+          {room.lastMessage || (isHelpDesk ? 'Chat with Trinity AI' : 'No messages')}
+        </p>
+        <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1">
+            <Users className="h-3 w-3" />
+            {room.participantsCount || 0}
+          </span>
+          {isShiftRoom && (
+            <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-600">Shift</Badge>
+          )}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -227,11 +304,15 @@ export default function Chatrooms() {
   const { employee } = useEmployee();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   
   const hasSupportRole = isSupportRole(user?.platformRole);
-  const userWorkspaceId = employee?.workspaceId;
+  const workspaceRole = employee?.workspaceRole;
+  
+  // Only org owners and admins can create rooms
+  const canCreateRooms = hasSupportRole || workspaceRole === 'org_owner' || workspaceRole === 'org_admin';
 
   const { data: roomsData, isLoading, error, refetch } = useQuery<{ rooms: ChatRoom[] }>({
     queryKey: ['/api/chat/rooms'],
@@ -247,8 +328,7 @@ export default function Chatrooms() {
       normalized = [DEFAULT_HELPDESK_ROOM, ...normalized];
     }
     
-    // For non-support roles, show rooms they're participants of or their workspace rooms
-    // Support roles see all rooms
+    // For non-support roles, show rooms they're participants of or open rooms
     if (!hasSupportRole) {
       normalized = normalized.filter((r: ChatRoom) => 
         r.slug === 'helpdesk' || r.isParticipant || r.status === 'open'
@@ -263,6 +343,7 @@ export default function Chatrooms() {
       });
     }
 
+    // Sort: Help Desk first, then by last message time
     normalized.sort((a, b) => {
       if (a.slug === 'helpdesk') return -1;
       if (b.slug === 'helpdesk') return 1;
@@ -272,86 +353,177 @@ export default function Chatrooms() {
     });
 
     return normalized;
-  }, [roomsData?.rooms, searchQuery, hasSupportRole, userWorkspaceId]);
+  }, [roomsData?.rooms, searchQuery, hasSupportRole]);
 
   const handleOpenChat = (room: ChatRoom) => {
-    if (room.slug === 'helpdesk') {
+    const roomId = room.id || room.roomId;
+    if (room.slug === 'helpdesk' || roomId === 'helpdesk') {
       setLocation('/helpdesk');
     } else {
-      setLocation(`/chat/${room.id || room.roomId}`);
+      // Navigate to individual chat room by ID
+      setLocation(`/chat/${roomId}`);
     }
   };
 
+  // Mobile WhatsApp-style layout
+  if (isMobile) {
+    return (
+      <div className="h-screen flex flex-col bg-background">
+        <header className="flex items-center gap-2 px-2 py-2 border-b bg-card shrink-0">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setLocation("/dashboard")}
+            data-testid="button-back"
+            className="h-11 w-11 shrink-0"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          
+          <h1 className="text-lg font-semibold flex-1">Chats</h1>
+          
+          {canCreateRooms && (
+            <Button
+              size="icon"
+              variant="ghost"
+              onClick={() => setCreateDialogOpen(true)}
+              data-testid="button-new-chat"
+              className="h-11 w-11"
+            >
+              <Plus className="h-5 w-5" />
+            </Button>
+          )}
+        </header>
+
+        <div className="px-3 py-2 border-b bg-card">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search chats..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9 min-h-[44px] bg-muted/50 border-0"
+              data-testid="input-search"
+            />
+          </div>
+        </div>
+
+        <ScrollArea className="flex-1">
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : error ? (
+            <div className="text-center py-12 px-4">
+              <p className="text-muted-foreground">Unable to load chats</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-3 min-h-[44px]">
+                Try Again
+              </Button>
+            </div>
+          ) : filteredRooms.length === 0 ? (
+            <div className="text-center py-12 px-4">
+              <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+              <p className="text-muted-foreground">No chats available</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {canCreateRooms ? 'Create a new chat to get started' : 'Ask your manager to add you to a chat room'}
+              </p>
+            </div>
+          ) : (
+            <div className="divide-y divide-border/30">
+              {filteredRooms.map((room) => (
+                <ConversationItem
+                  key={room.id || room.roomId}
+                  room={room}
+                  onClick={() => handleOpenChat(room)}
+                />
+              ))}
+            </div>
+          )}
+        </ScrollArea>
+
+        {canCreateRooms && (
+          <CreateRoomDialog
+            open={createDialogOpen}
+            onOpenChange={setCreateDialogOpen}
+            onSuccess={() => refetch()}
+          />
+        )}
+      </div>
+    );
+  }
+
+  // Desktop full-featured layout
   return (
     <div className="h-screen flex flex-col bg-background">
-      <header className="flex items-center gap-2 px-2 py-2 border-b bg-card shrink-0">
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={() => setLocation("/dashboard")}
-          data-testid="button-back"
-          className="h-11 w-11 shrink-0"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </Button>
+      <header className="flex items-center justify-between gap-4 px-6 py-4 border-b bg-card shrink-0">
+        <div className="flex items-center gap-3">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => setLocation("/dashboard")}
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-xl font-semibold">Chat Rooms</h1>
+            <p className="text-sm text-muted-foreground">
+              {filteredRooms.length} room{filteredRooms.length !== 1 ? 's' : ''} available
+            </p>
+          </div>
+        </div>
         
-        <h1 className="text-lg font-semibold flex-1">Chats</h1>
-        
-        <Button
-          size="icon"
-          variant="ghost"
-          onClick={() => setCreateDialogOpen(true)}
-          data-testid="button-new-chat"
-          className="h-11 w-11"
-        >
-          <Plus className="h-5 w-5" />
-        </Button>
+        <div className="flex items-center gap-3">
+          <div className="relative w-64">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search rooms..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+              data-testid="input-search-desktop"
+            />
+          </div>
+          
+          {canCreateRooms && (
+            <Button onClick={() => setCreateDialogOpen(true)} data-testid="button-new-chat-desktop">
+              <Plus className="h-4 w-4 mr-2" />
+              New Room
+            </Button>
+          )}
+        </div>
       </header>
 
-      <div className="px-3 py-2 border-b bg-card">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search chats..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 min-h-[44px] bg-muted/50 border-0"
-            data-testid="input-search"
-          />
-        </div>
-      </div>
-
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-auto p-6">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : error ? (
-          <div className="text-center py-12 px-4">
-            <p className="text-muted-foreground">Unable to load chats</p>
-            <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-3 min-h-[44px]">
+          <div className="text-center py-12">
+            <p className="text-muted-foreground">Unable to load chat rooms</p>
+            <Button variant="outline" onClick={() => refetch()} className="mt-3">
               Try Again
             </Button>
           </div>
         ) : filteredRooms.length === 0 ? (
-          <div className="text-center py-12 px-4">
-            <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
-            <p className="text-muted-foreground">No chats found</p>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={() => setCreateDialogOpen(true)} 
-              className="mt-3 min-h-[44px]"
-              data-testid="button-start-chat"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Start a new chat
-            </Button>
+          <div className="text-center py-12">
+            <MessageCircle className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
+            <h3 className="text-lg font-medium">No chat rooms found</h3>
+            <p className="text-muted-foreground mt-1">
+              {canCreateRooms ? 'Create a new room to start chatting with your team' : 'Ask your manager to add you to a chat room'}
+            </p>
+            {canCreateRooms && (
+              <Button onClick={() => setCreateDialogOpen(true)} className="mt-4">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Room
+              </Button>
+            )}
           </div>
         ) : (
-          <div className="divide-y divide-border/30">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredRooms.map((room) => (
-              <ConversationItem
+              <DesktopRoomCard
                 key={room.id || room.roomId}
                 room={room}
                 onClick={() => handleOpenChat(room)}
@@ -359,13 +531,15 @@ export default function Chatrooms() {
             ))}
           </div>
         )}
-      </ScrollArea>
+      </div>
 
-      <CreateRoomDialog
-        open={createDialogOpen}
-        onOpenChange={setCreateDialogOpen}
-        onSuccess={() => refetch()}
-      />
+      {canCreateRooms && (
+        <CreateRoomDialog
+          open={createDialogOpen}
+          onOpenChange={setCreateDialogOpen}
+          onSuccess={() => refetch()}
+        />
+      )}
     </div>
   );
 }
