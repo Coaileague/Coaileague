@@ -1,44 +1,21 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useEmployee } from "@/hooks/useEmployee";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { 
-  MessageCircle, Users, Lock, Globe, Plus, Search, Loader2, Check, ArrowLeft, 
-  RefreshCw, Crown, Building2, Wifi, Calendar, Briefcase, Video, MoreHorizontal,
-  Pause, XCircle, Play, Archive, AlertTriangle, Eye, Filter, LayoutGrid, List, Bot
-} from "lucide-react";
-import { formatDistanceToNow, format } from "date-fns";
+import { MessageCircle, Plus, Search, Loader2, ArrowLeft, Headphones } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
-import { SupportCommandPanel } from "@/components/support-command-panel";
-import { CodeChangeReviewPanel } from "@/components/code-change-review-panel";
-import { 
-  ROOM_TYPES, 
-  CHATROOM_UI, 
-  ROOM_FILTERS, 
-  OWNERSHIP_INDICATORS,
-  LIVE_UPDATE_CONFIG,
-  getRoomTypeConfig,
-  getRoomOwnership,
-  isSupportRole,
-  type RoomOwnership
-} from "@/config/chatroomsConfig";
+import { isSupportRole } from "@/config/chatroomsConfig";
 
 interface ChatRoom {
   roomId?: string;
@@ -46,27 +23,18 @@ interface ChatRoom {
   slug?: string;
   type?: string;
   participantsCount?: number;
-  roomType?: string;
-  workspaceId?: string;
   id?: string;
   subject?: string;
   conversationType?: string;
   visibility?: string;
   status: string;
   isParticipant?: boolean;
-  participantRole?: string;
   lastMessageAt?: string;
   createdAt?: string;
-  autoCloseAt?: string;
   isPlatformOwned?: boolean;
-  createdBy?: string;
-  workspaceLogo?: string;
+  lastMessage?: string;
+  unreadCount?: number;
   workspaceName?: string;
-}
-
-interface ChatRoomsResponse {
-  rooms: ChatRoom[];
-  [key: string]: any;
 }
 
 const normalizeRoom = (room: any): ChatRoom => {
@@ -76,39 +44,46 @@ const normalizeRoom = (room: any): ChatRoom => {
     name: room.name || room.subject,
     subject: room.name || room.subject,
     slug: room.slug,
-    type: room.type || (room.conversationType === 'shift_chat' ? 'shift' : room.conversationType),
+    type: room.type || room.conversationType,
     conversationType: room.conversationType,
     participantsCount: room.participantsCount,
     status: room.status,
     isParticipant: room.isParticipant,
-    participantRole: room.participantRole,
     lastMessageAt: room.lastMessageAt,
     createdAt: room.createdAt,
-    autoCloseAt: room.autoCloseAt,
     visibility: room.visibility,
-    workspaceId: room.workspaceId,
     isPlatformOwned: room.isPlatformOwned,
-    createdBy: room.createdBy,
-    workspaceLogo: room.workspaceLogo,
+    lastMessage: room.lastMessage,
+    unreadCount: room.unreadCount || 0,
     workspaceName: room.workspaceName,
   };
 };
 
-interface CreateRoomDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
-}
+const DEFAULT_HELPDESK_ROOM: ChatRoom = {
+  roomId: 'helpdesk',
+  id: 'helpdesk',
+  name: 'Help Desk',
+  subject: 'Help Desk',
+  slug: 'helpdesk',
+  type: 'support',
+  conversationType: 'dm_support',
+  participantsCount: 2,
+  status: 'open',
+  isParticipant: false,
+  visibility: 'public',
+  isPlatformOwned: true,
+  lastMessageAt: new Date().toISOString(),
+  lastMessage: 'Tap to chat with Trinity AI',
+  unreadCount: 0,
+};
 
-function CreateRoomDialog({ open, onOpenChange, onSuccess }: CreateRoomDialogProps) {
+function CreateRoomDialog({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (o: boolean) => void; onSuccess: () => void }) {
   const { toast } = useToast();
   const [subject, setSubject] = useState("");
-  const [roomType, setRoomType] = useState<string>("work");
-  const [visibility, setVisibility] = useState<string>("workspace");
-  const [duration, setDuration] = useState<string>("permanent");
+  const [roomType, setRoomType] = useState("work");
 
   const createRoomMutation = useMutation({
-    mutationFn: async (data: { subject: string; conversationType: string; visibility: string; autoCloseAt?: string }) => {
+    mutationFn: async (data: { subject: string; conversationType: string; visibility: string }) => {
       return await apiRequest('POST', '/api/chat/rooms', data);
     },
     onSuccess: () => {
@@ -117,9 +92,6 @@ function CreateRoomDialog({ open, onOpenChange, onSuccess }: CreateRoomDialogPro
       onSuccess();
       onOpenChange(false);
       setSubject("");
-      setRoomType("work");
-      setVisibility("workspace");
-      setDuration("permanent");
     },
     onError: (error: any) => {
       toast({ title: "Error", description: error.message || "Failed to create room", variant: "destructive" });
@@ -131,26 +103,10 @@ function CreateRoomDialog({ open, onOpenChange, onSuccess }: CreateRoomDialogPro
       toast({ title: "Required", description: "Please enter a room name", variant: "destructive" });
       return;
     }
-
-    const typeMap: Record<string, string> = {
-      'work': 'open_chat',
-      'shift': 'shift_chat',
-      'meeting': 'open_chat',
-    };
-
-    let autoCloseAt: string | undefined;
-    if (duration !== 'permanent') {
-      const hours = parseInt(duration);
-      const closeDate = new Date();
-      closeDate.setHours(closeDate.getHours() + hours);
-      autoCloseAt = closeDate.toISOString();
-    }
-
     createRoomMutation.mutate({
       subject: subject.trim(),
-      conversationType: typeMap[roomType] || 'open_chat',
-      visibility,
-      autoCloseAt,
+      conversationType: roomType === 'shift' ? 'shift_chat' : 'open_chat',
+      visibility: 'workspace',
     });
   };
 
@@ -160,108 +116,43 @@ function CreateRoomDialog({ open, onOpenChange, onSuccess }: CreateRoomDialogPro
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5 text-primary" />
-            Create New Chatroom
+            New Chat
           </DialogTitle>
           <DialogDescription>
-            Start a conversation for your team, shift, or meeting
+            Create a new group chat for your team
           </DialogDescription>
         </DialogHeader>
         <div className="space-y-4 py-4">
           <div className="space-y-2">
-            <Label htmlFor="room-name">Room Name</Label>
+            <Label htmlFor="room-name">Chat Name</Label>
             <Input
               id="room-name"
-              placeholder="e.g., Morning Shift Chat, Team Standup"
+              placeholder="e.g., Morning Team, Project Alpha"
               value={subject}
               onChange={(e) => setSubject(e.target.value)}
+              className="min-h-[44px]"
               data-testid="input-room-name"
             />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <Label>Room Type</Label>
-              <Select value={roomType} onValueChange={setRoomType}>
-                <SelectTrigger data-testid="select-room-type">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="work">
-                    <div className="flex items-center gap-2">
-                      <Briefcase className="h-4 w-4 text-blue-500" />
-                      Work
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="shift">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="h-4 w-4 text-amber-500" />
-                      Shift
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="meeting">
-                    <div className="flex items-center gap-2">
-                      <Video className="h-4 w-4 text-purple-500" />
-                      Meeting
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-2">
-              <Label>Visibility</Label>
-              <Select value={visibility} onValueChange={setVisibility}>
-                <SelectTrigger data-testid="select-visibility">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="workspace">
-                    <div className="flex items-center gap-2">
-                      <Building2 className="h-4 w-4" />
-                      Organization
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="private">
-                    <div className="flex items-center gap-2">
-                      <Lock className="h-4 w-4" />
-                      Private
-                    </div>
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
           <div className="space-y-2">
-            <Label>Duration</Label>
-            <Select value={duration} onValueChange={setDuration}>
-              <SelectTrigger data-testid="select-duration">
+            <Label>Chat Type</Label>
+            <Select value={roomType} onValueChange={setRoomType}>
+              <SelectTrigger className="min-h-[44px]" data-testid="select-room-type">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="permanent">Permanent</SelectItem>
-                <SelectItem value="2">2 Hours (Shift)</SelectItem>
-                <SelectItem value="4">4 Hours (Half Day)</SelectItem>
-                <SelectItem value="8">8 Hours (Full Day)</SelectItem>
-                <SelectItem value="24">24 Hours</SelectItem>
+                <SelectItem value="work">Team Chat</SelectItem>
+                <SelectItem value="shift">Shift Chat</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-muted-foreground">
-              Temporary rooms auto-close after the selected duration
-            </p>
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleCreate} disabled={createRoomMutation.isPending} data-testid="button-create-room">
-            {createRoomMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Creating...
-              </>
-            ) : (
-              <>
-                <Plus className="h-4 w-4 mr-2" />
-                Create Room
-              </>
-            )}
+          <Button variant="outline" onClick={() => onOpenChange(false)} className="min-h-[44px]">
+            Cancel
+          </Button>
+          <Button onClick={handleCreate} disabled={createRoomMutation.isPending} className="min-h-[44px]" data-testid="button-create-room">
+            {createRoomMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : "Create"}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -269,974 +160,211 @@ function CreateRoomDialog({ open, onOpenChange, onSuccess }: CreateRoomDialogPro
   );
 }
 
-interface ModerateRoomDialogProps {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  room: ChatRoom | null;
-  action: string;
-  onSuccess: () => void;
-}
-
-function ModerateRoomDialog({ open, onOpenChange, room, action, onSuccess }: ModerateRoomDialogProps) {
-  const { toast } = useToast();
-  const [reason, setReason] = useState("");
-
-  const moderateMutation = useMutation({
-    mutationFn: async (data: { action: string; reason: string }) => {
-      return await apiRequest('POST', `/api/chat/rooms/${room?.id || room?.roomId}/moderate`, data);
-    },
-    onSuccess: (data: any) => {
-      toast({ 
-        title: "Action Complete", 
-        description: data.message || `Room ${action} successful` 
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/chat/rooms'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/chat/rooms/platform/all'] });
-      onSuccess();
-      onOpenChange(false);
-      setReason("");
-    },
-    onError: (error: any) => {
-      toast({ title: "Error", description: error.message || "Action failed", variant: "destructive" });
-    },
-  });
-
-  const actionLabels: Record<string, { title: string; description: string; icon: any; color: string }> = {
-    suspend: { title: "Suspend Room", description: "Temporarily pause this room", icon: Pause, color: "text-amber-500" },
-    close: { title: "Close Room", description: "Permanently close this room", icon: XCircle, color: "text-red-500" },
-    reopen: { title: "Reopen Room", description: "Reactivate this room", icon: Play, color: "text-green-500" },
-    archive: { title: "Archive Room", description: "Archive for records", icon: Archive, color: "text-slate-500" },
-    warn: { title: "Send Warning", description: "Issue a warning to room", icon: AlertTriangle, color: "text-orange-500" },
+function ConversationItem({ room, onClick }: { room: ChatRoom; onClick: () => void }) {
+  const isHelpDesk = room.slug === 'helpdesk';
+  const hasUnread = (room.unreadCount || 0) > 0;
+  
+  const getAvatar = () => {
+    if (isHelpDesk) {
+      return (
+        <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shrink-0">
+          <Headphones className="h-6 w-6 text-primary-foreground" />
+        </div>
+      );
+    }
+    return (
+      <Avatar className="w-12 h-12 shrink-0">
+        <AvatarFallback className="bg-muted text-lg">
+          {(room.name || 'C')[0].toUpperCase()}
+        </AvatarFallback>
+      </Avatar>
+    );
   };
 
-  const config = actionLabels[action] || actionLabels.warn;
-  const ActionIcon = config.icon;
+  const getTimeDisplay = () => {
+    if (!room.lastMessageAt) return '';
+    try {
+      return formatDistanceToNow(new Date(room.lastMessageAt), { addSuffix: false });
+    } catch {
+      return '';
+    }
+  };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle className={`flex items-center gap-2 ${config.color}`}>
-            <ActionIcon className="h-5 w-5" />
-            {config.title}
-          </DialogTitle>
-          <DialogDescription>
-            {config.description}: <strong>{room?.name || room?.subject}</strong>
-          </DialogDescription>
-        </DialogHeader>
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="reason">Reason (optional)</Label>
-            <Textarea
-              id="reason"
-              placeholder="Enter reason for this action..."
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="min-h-[80px]"
-              data-testid="input-moderation-reason"
-            />
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button 
-            onClick={() => moderateMutation.mutate({ action, reason })} 
-            disabled={moderateMutation.isPending}
-            variant={action === 'close' ? 'destructive' : 'default'}
-            data-testid="button-confirm-moderate"
-          >
-            {moderateMutation.isPending ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Processing...
-              </>
-            ) : (
-              <>
-                <ActionIcon className="h-4 w-4 mr-2" />
-                Confirm
-              </>
-            )}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function RoomOwnershipBadge({ ownership, workspaceLogo, workspaceName }: { 
-  ownership: RoomOwnership; 
-  workspaceLogo?: string;
-  workspaceName?: string;
-}) {
-  const config = OWNERSHIP_INDICATORS[ownership];
-  const Icon = config.icon;
-  
-  if (ownership === 'platform') {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium border ${config.className}`}>
-            <Crown className="h-3 w-3" />
-            <span className="hidden sm:inline">CoAIleague</span>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>{config.tooltip}</TooltipContent>
-      </Tooltip>
-    );
-  }
-  
-  if (ownership === 'organization' && (workspaceLogo || workspaceName)) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div className="flex items-center gap-1.5">
-            <Avatar className="h-5 w-5">
-              {workspaceLogo ? (
-                <AvatarImage src={workspaceLogo} alt={workspaceName || 'Organization'} />
-              ) : null}
-              <AvatarFallback className="text-[8px] bg-emerald-500/20 text-emerald-500">
-                {(workspaceName || 'ORG').slice(0, 2).toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-            <span className="text-xs text-muted-foreground hidden sm:inline max-w-[80px] truncate">
-              {workspaceName}
-            </span>
-          </div>
-        </TooltipTrigger>
-        <TooltipContent>{workspaceName || 'Organization channel'}</TooltipContent>
-      </Tooltip>
-    );
-  }
-  
-  return null;
-}
-
-function RoomCard({ 
-  room, 
-  isSelected, 
-  onSelect, 
-  onJoin 
-}: { 
-  room: ChatRoom; 
-  isSelected: boolean;
-  onSelect: () => void;
-  onJoin: () => void;
-}) {
-  const typeConfig = getRoomTypeConfig(room.type, room.conversationType);
-  const ownership = getRoomOwnership(room);
-  const Icon = typeConfig.icon;
-  const isPlatformRoom = ownership === 'platform';
-  const ownershipIcon = OWNERSHIP_INDICATORS[ownership];
-  const isMobile = useIsMobile();
-  
-  // Mobile list item view - optimized for touch with 44px+ touch targets
-  if (isMobile) {
-    return (
-      <div
-        className={`flex items-center gap-3 px-4 py-4 border-b border-border/50 cursor-pointer transition-colors active:bg-muted/80 ${
-          room.isParticipant ? 'opacity-60' : ''
-        }`}
-        onClick={() => {
-          if (!room.isParticipant) {
-            onSelect();
-          }
-        }}
-        data-testid={`item-room-${room.id || room.roomId}`}
-      >
-        {/* Avatar with Status Indicator - 52px touch target */}
-        <div className="relative shrink-0">
-          <div className={`h-[52px] w-[52px] rounded-full flex items-center justify-center ${typeConfig.bgColor}`}>
-            <Icon className={`h-6 w-6 ${typeConfig.color}`} />
-          </div>
-          {isPlatformRoom && (
-            <div className="absolute -bottom-1 -right-1 h-5 w-5 rounded-full bg-emerald-500 border-2 border-background flex items-center justify-center">
-              <Bot className="h-3 w-3 text-white" />
-            </div>
-          )}
-          {room.status === 'open' && (
-            <div className="absolute bottom-0 right-0 h-3.5 w-3.5 rounded-full bg-green-500 border-2 border-background"></div>
-          )}
-        </div>
-
-        {/* Room Info - larger text for mobile readability */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-baseline justify-between gap-2 mb-1">
-            <h3 className="font-semibold text-base truncate" data-testid={`text-room-name-${room.id}`}>
-              {room.name || room.subject}
-            </h3>
-            <span className="text-xs text-muted-foreground shrink-0">
-              {room.lastMessageAt 
-                ? formatDistanceToNow(new Date(room.lastMessageAt), { addSuffix: true })
-                : room.createdAt
-                ? formatDistanceToNow(new Date(room.createdAt), { addSuffix: true })
-                : 'New'
-              }
-            </span>
-          </div>
-          <p className="text-sm text-muted-foreground truncate">
-            {room.participantsCount !== undefined ? `${room.participantsCount} participant${room.participantsCount !== 1 ? 's' : ''}` : typeConfig.label}
-          </p>
-        </div>
-
-        {/* Action Button - uses default size for proper 44px+ touch compliance */}
-        {!room.isParticipant && (
-          <Button
-            variant={isSelected ? "default" : "outline"}
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect();
-            }}
-            data-testid={`button-select-room-${room.id || room.roomId}`}
-            className="shrink-0 px-4"
-          >
-            {isSelected ? <><Check className="h-4 w-4 mr-1" />Added</> : <><Plus className="h-4 w-4 mr-1" />Add</>}
-          </Button>
-        )}
-        {room.isParticipant && (
-          <Badge variant="secondary" className="shrink-0 bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
-            <Check className="h-3 w-3 mr-1" data-testid={`icon-joined-${room.id}`} />
-            Joined
-          </Badge>
-        )}
-      </div>
-    );
-  }
-
-  // Desktop grid card view
-  return (
-    <Card
-      className={`cursor-pointer transition-all hover-elevate ${
-        isSelected ? 'ring-2 ring-primary shadow-md' : ''
-      } ${room.isParticipant ? 'opacity-75' : ''}`}
-      onClick={() => {
-        if (!room.isParticipant) {
-          onSelect();
-        }
-      }}
-      data-testid={`card-room-${room.id || room.roomId}`}
+    <button
+      onClick={onClick}
+      className="w-full flex items-center gap-3 px-4 py-3 hover-elevate active-elevate-2 transition-colors border-b border-border/50 min-h-[72px] text-left"
+      data-testid={`button-chat-${room.id}`}
     >
-      <CardHeader className="p-3 sm:p-4 pb-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start gap-2 flex-1 min-w-0">
-            <div className={`p-1 sm:p-1.5 rounded-lg shrink-0 relative ${typeConfig.bgColor}`}>
-              <Icon className={`h-4 w-4 ${typeConfig.color}`} />
-              {isPlatformRoom && ownershipIcon && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <div className="absolute -top-1 -right-1 bg-background border border-primary rounded-full p-0.5">
-                      <ownershipIcon.icon className={`h-2.5 w-2.5 ${ownershipIcon.color}`} />
-                    </div>
-                  </TooltipTrigger>
-                  <TooltipContent className="text-xs">{ownershipIcon.label}</TooltipContent>
-                </Tooltip>
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-xs sm:text-sm line-clamp-1" data-testid={`text-room-name-${room.id}`}>
-                {room.name || room.subject}
-              </CardTitle>
-              <div className="flex items-center gap-1 mt-0.5 flex-wrap">
-                <Badge variant="outline" className="text-[10px] sm:text-xs py-0 px-1.5 h-5">
-                  {typeConfig.label}
-                </Badge>
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-col gap-1 items-end shrink-0">
-            {isPlatformRoom && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <Badge variant="secondary" className="text-[10px] sm:text-xs py-0 px-1.5 h-5 bg-green-500/10 text-green-600">
-                    <Bot className="h-2.5 w-2.5 mr-0.5" />
-                    <span className="hidden sm:inline">Bot</span>
-                  </Badge>
-                </TooltipTrigger>
-                <TooltipContent className="text-xs">Support bot active</TooltipContent>
-              </Tooltip>
-            )}
-            {room.isParticipant && (
-              <Badge variant="secondary" className="text-[10px] sm:text-xs py-0 px-1.5 h-5">
-                <Check className="h-2.5 w-2.5 mr-0.5" />
-                <span className="hidden sm:inline">Joined</span>
-              </Badge>
-            )}
-          </div>
+      {getAvatar()}
+      
+      <div className="flex-1 min-w-0 overflow-hidden">
+        <div className="flex items-center justify-between gap-2">
+          <span className={`font-semibold truncate ${hasUnread ? 'text-foreground' : 'text-foreground/90'}`}>
+            {room.name || 'Chat'}
+          </span>
+          <span className="text-xs text-muted-foreground shrink-0">
+            {getTimeDisplay()}
+          </span>
         </div>
-      </CardHeader>
-      <CardContent className="p-3 sm:p-4 pt-1 sm:pt-2">
-        <div className="space-y-1.5 sm:space-y-2">
-          <div className="flex gap-1 flex-wrap">
-            {room.participantsCount !== undefined && (
-              <Badge variant="outline" className="text-[10px] sm:text-xs py-0 px-1.5 h-5 flex items-center gap-0.5" data-testid={`badge-participants-${room.id}`}>
-                <Users className="h-2.5 w-2.5" />
-                {room.participantsCount}
-              </Badge>
-            )}
-            {room.status && (
-              <Badge 
-                variant={room.status === 'open' ? 'secondary' : 'outline'} 
-                className={`text-[10px] sm:text-xs py-0 px-1.5 h-5 ${room.status === 'open' ? 'bg-green-500/10 text-green-600' : ''}`}
-              >
-                {room.status === 'open' ? '✓ Open' : room.status}
-              </Badge>
-            )}
-          </div>
-          
-          <div className="flex items-center justify-between gap-1">
-            {room.lastMessageAt ? (
-              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                {formatDistanceToNow(new Date(room.lastMessageAt), { addSuffix: true })}
-              </p>
-            ) : (
-              <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                {room.createdAt ? formatDistanceToNow(new Date(room.createdAt), { addSuffix: true }) : 'Recently created'}
-              </p>
-            )}
-            
-            {!room.isParticipant && (
-              <Button
-                size="sm"
-                variant={isSelected ? "default" : "outline"}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onSelect();
-                }}
-                data-testid={`button-select-room-${room.id || room.roomId}`}
-                className="shrink-0 text-[10px] sm:text-xs h-6 px-2"
-              >
-                {isSelected ? 'Selected' : 'Select'}
-              </Button>
-            )}
-          </div>
+        <div className="flex items-center justify-between gap-2 mt-0.5">
+          <p className={`text-sm truncate ${hasUnread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
+            {room.lastMessage || (isHelpDesk ? 'Tap to chat with Trinity AI' : 'No messages yet')}
+          </p>
+          {hasUnread && (
+            <Badge className="bg-primary text-primary-foreground min-w-[20px] h-5 text-xs px-1.5 shrink-0">
+              {room.unreadCount}
+            </Badge>
+          )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </button>
   );
 }
-
-// Default HelpDesk room - always visible even when API returns empty
-// Platform-owned support room with bot (persistent across all workspaces)
-const DEFAULT_HELPDESK_ROOM: ChatRoom = {
-  roomId: 'helpdesk',
-  id: 'helpdesk',
-  name: 'Help Desk',
-  subject: 'Help Desk',
-  slug: 'helpdesk',
-  type: 'support',
-  conversationType: 'dm_support',
-  participantsCount: 2, // HelpAI bot + support staff
-  status: 'open', // Always open with bot monitoring
-  isParticipant: false,
-  visibility: 'public',
-  isPlatformOwned: true,
-  createdBy: 'platform',
-  lastMessageAt: new Date().toISOString(),
-};
 
 export default function Chatrooms() {
   const { user } = useAuth();
   const { employee } = useEmployee();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
-  const isMobile = useIsMobile();
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedRooms, setSelectedRooms] = useState<Set<string>>(new Set());
-  const [activeFilter, setActiveFilter] = useState('all');
-  const [viewMode, setViewMode] = useState<'grid' | 'table'>('grid');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [moderateDialogOpen, setModerateDialogOpen] = useState(false);
-  const [selectedRoom, setSelectedRoom] = useState<ChatRoom | null>(null);
-  const [moderateAction, setModerateAction] = useState('');
-  const [orgFilter, setOrgFilter] = useState('all');
-  const [categoryFilter, setCategoryFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
-
+  
   const hasSupportRole = isSupportRole(user?.platformRole);
   const userWorkspaceId = employee?.workspaceId;
-  
-  // Auto-switch to grid view on mobile for better UX
-  useEffect(() => {
-    if (isMobile && viewMode === 'table') {
-      setViewMode('grid');
-    }
-  }, [isMobile, viewMode]);
 
-  const { data: workspacesData } = useQuery<{ workspaces: { id: string; name: string; slug: string }[] }>({
-    queryKey: ['/api/chat/rooms/workspaces'],
-    enabled: hasSupportRole,
-  });
-
-  const { data: platformRoomsData, isLoading: platformLoading, refetch: refetchPlatform } = useQuery<{ rooms: ChatRoom[] }>({
-    queryKey: ['/api/chat/rooms/platform/all', { orgFilter, categoryFilter, search: searchQuery, status: statusFilter }],
-    enabled: hasSupportRole && viewMode === 'table',
-    staleTime: LIVE_UPDATE_CONFIG.staleTime,
-  });
-
-  const handleModerate = (room: ChatRoom, action: string) => {
-    setSelectedRoom(room);
-    setModerateAction(action);
-    setModerateDialogOpen(true);
-  };
-
-  const { data: roomsData, isLoading, error, refetch, isFetching } = useQuery<ChatRoomsResponse>({
+  const { data: roomsData, isLoading, error, refetch } = useQuery<{ rooms: ChatRoom[] }>({
     queryKey: ['/api/chat/rooms'],
-    staleTime: LIVE_UPDATE_CONFIG.staleTime,
-    refetchInterval: LIVE_UPDATE_CONFIG.enablePolling ? LIVE_UPDATE_CONFIG.refetchInterval : false,
-  });
-
-  const joinRoomsMutation = useMutation({
-    mutationFn: async (roomIds: string[]) => {
-      const response = await apiRequest('POST', '/api/chat/rooms/join-bulk', {
-        roomIds,
-      });
-      return response;
-    },
-    onSuccess: () => {
-      toast({
-        title: "Success",
-        description: `Joined ${selectedRooms.size} room(s)`,
-      });
-      queryClient.invalidateQueries({ queryKey: ['/api/chat/rooms'] });
-      setSelectedRooms(new Set());
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to join rooms",
-        variant: "destructive",
-      });
-    },
+    staleTime: 10000,
+    refetchInterval: 15000,
   });
 
   const filteredRooms = useMemo(() => {
-    // Start with rooms from API or empty array
-    // On API error, still show HelpDesk as fallback (24/7 availability)
     let normalized = (roomsData?.rooms || []).map(normalizeRoom);
     
-    // Always ensure HelpDesk room is present - critical for 24/7 support access
-    // This ensures HelpDesk appears even when API errors or returns empty
     const hasHelpDesk = normalized.some(r => r.slug === 'helpdesk' || r.id === 'helpdesk');
     if (!hasHelpDesk) {
       normalized = [DEFAULT_HELPDESK_ROOM, ...normalized];
     }
     
-    let filtered = normalized;
-
-    // Filter by workspace for non-support roles
-    if (!hasSupportRole && userWorkspaceId) {
-      filtered = filtered.filter((r: ChatRoom) => 
-        r.workspaceId === userWorkspaceId || !r.workspaceId || r.slug === 'helpdesk'
+    // For non-support roles, show rooms they're participants of or their workspace rooms
+    // Support roles see all rooms
+    if (!hasSupportRole) {
+      normalized = normalized.filter((r: ChatRoom) => 
+        r.slug === 'helpdesk' || r.isParticipant || r.status === 'open'
       );
     }
 
-    // Apply active filter
-    const currentFilter = ROOM_FILTERS.find(f => f.id === activeFilter);
-    if (currentFilter) {
-      filtered = filtered.filter((r: ChatRoom) => 
-        currentFilter.filter(r, { isParticipant: r.isParticipant })
-      );
-    }
-
-    // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter((r: ChatRoom) => {
-        const nameOrSubject = (r.name || r.subject || '').toLowerCase();
-        const roomSlug = (r.slug || '').toLowerCase();
-        const workspaceName = (r.workspaceName || '').toLowerCase();
-        return nameOrSubject.includes(query) || roomSlug.includes(query) || workspaceName.includes(query);
+      normalized = normalized.filter((r: ChatRoom) => {
+        const name = (r.name || r.subject || '').toLowerCase();
+        return name.includes(query);
       });
     }
 
-    return filtered;
-  }, [roomsData?.rooms, activeFilter, searchQuery, hasSupportRole, userWorkspaceId]);
+    normalized.sort((a, b) => {
+      if (a.slug === 'helpdesk') return -1;
+      if (b.slug === 'helpdesk') return 1;
+      const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
+      const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
+      return bTime - aTime;
+    });
 
-  const handleSelectRoom = (roomId: string | undefined) => {
-    if (!roomId) return;
-    const newSelected = new Set(selectedRooms);
-    if (newSelected.has(roomId)) {
-      newSelected.delete(roomId);
+    return normalized;
+  }, [roomsData?.rooms, searchQuery, hasSupportRole, userWorkspaceId]);
+
+  const handleOpenChat = (room: ChatRoom) => {
+    if (room.slug === 'helpdesk') {
+      setLocation('/helpdesk');
     } else {
-      newSelected.add(roomId);
+      setLocation(`/chat/${room.id || room.roomId}`);
     }
-    setSelectedRooms(newSelected);
   };
-
-  const handleJoinSelected = () => {
-    if (selectedRooms.size === 0) {
-      toast({
-        title: "No rooms selected",
-        description: "Please select at least one room to join",
-      });
-      return;
-    }
-    joinRoomsMutation.mutate(Array.from(selectedRooms));
-  };
-
-  const joinedCount = (roomsData?.rooms || []).filter((r: ChatRoom) => r.isParticipant).length;
 
   return (
-    <div className="min-h-screen bg-background pb-24 sm:pb-6">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+    <div className="h-screen flex flex-col bg-background">
+      <header className="flex items-center gap-2 px-2 py-2 border-b bg-card shrink-0">
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setLocation("/dashboard")}
+          data-testid="button-back"
+          className="h-11 w-11 shrink-0"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
         
-        <div className="mb-4 sm:mb-6 flex items-start gap-3">
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={() => setLocation("/dashboard")}
-            data-testid="button-back-to-dashboard"
-            className="shrink-0 h-9 w-9 sm:h-10 sm:w-10"
-            title="Back to Dashboard"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold">
-                {hasSupportRole ? CHATROOM_UI.supportRoleTitle : CHATROOM_UI.pageTitle}
-              </h1>
-              <div className="flex items-center gap-1.5 text-emerald-500">
-                <Wifi className="h-3 w-3 animate-pulse" />
-                <span className="text-xs font-medium">Live</span>
-              </div>
-            </div>
-            <p className="text-sm sm:text-base text-muted-foreground mt-1 line-clamp-2">
-              {hasSupportRole 
-                ? CHATROOM_UI.supportRoleDescription
-                : CHATROOM_UI.pageDescription
-              }
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {hasSupportRole && (
-              <div className="flex items-center border rounded-md">
-                <Button
-                  size="icon"
-                  variant={viewMode === 'grid' ? 'secondary' : 'ghost'}
-                  onClick={() => setViewMode('grid')}
-                  className="h-9 w-9 rounded-r-none"
-                  data-testid="button-view-grid"
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="icon"
-                  variant={viewMode === 'table' ? 'secondary' : 'ghost'}
-                  onClick={() => setViewMode('table')}
-                  className="h-9 w-9 rounded-l-none"
-                  data-testid="button-view-table"
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
-            <Button
-              size="sm"
-              onClick={() => setCreateDialogOpen(true)}
-              data-testid="button-open-create-room"
-            >
-              <Plus className="h-4 w-4 mr-1" />
-              <span className="hidden sm:inline">New Room</span>
-            </Button>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => viewMode === 'table' ? refetchPlatform() : refetch()}
-              disabled={isFetching || platformLoading}
-              className="shrink-0"
-              data-testid="button-refresh-rooms"
-            >
-              <RefreshCw className={`h-4 w-4 ${(isFetching || platformLoading) ? 'animate-spin' : ''}`} />
-            </Button>
-          </div>
+        <h1 className="text-lg font-semibold flex-1">Chats</h1>
+        
+        <Button
+          size="icon"
+          variant="ghost"
+          onClick={() => setCreateDialogOpen(true)}
+          data-testid="button-new-chat"
+          className="h-11 w-11"
+        >
+          <Plus className="h-5 w-5" />
+        </Button>
+      </header>
+
+      <div className="px-3 py-2 border-b bg-card">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search chats..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 min-h-[44px] bg-muted/50 border-0"
+            data-testid="input-search"
+          />
         </div>
-
-        <div className="mb-4 sm:mb-6 space-y-3 sm:space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder={CHATROOM_UI.searchPlaceholder}
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-10 sm:h-11"
-              data-testid="input-room-search"
-            />
-          </div>
-
-          <ScrollArea className="w-full">
-            <Tabs value={activeFilter} onValueChange={setActiveFilter} className="w-full">
-              <TabsList className="inline-flex h-11 sm:h-10 w-auto min-w-full sm:min-w-0 gap-1 bg-muted/50 p-1">
-                {ROOM_FILTERS.slice(0, 4).map((filter) => (
-                  <TabsTrigger 
-                    key={filter.id} 
-                    value={filter.id}
-                    className="text-sm sm:text-sm px-4 sm:px-4 whitespace-nowrap min-h-[40px] sm:min-h-0"
-                    data-testid={`button-filter-${filter.id}`}
-                  >
-                    {filter.label}
-                    {filter.id === 'joined' && joinedCount > 0 && (
-                      <Badge variant="secondary" className="ml-1.5 text-xs px-1.5 py-0">
-                        {joinedCount}
-                      </Badge>
-                    )}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-            </Tabs>
-          </ScrollArea>
-
-          {selectedRooms.size > 0 && (
-            <div className="flex gap-2 p-3 sm:p-4 bg-primary/5 border border-primary/20 rounded-lg items-center justify-between">
-              <span className="text-sm font-medium">
-                {selectedRooms.size} room{selectedRooms.size !== 1 ? 's' : ''} selected
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setSelectedRooms(new Set())}
-                  data-testid="button-clear-selection"
-                >
-                  Clear
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={handleJoinSelected}
-                  disabled={joinRoomsMutation.isPending}
-                  data-testid="button-join-selected"
-                >
-                  {joinRoomsMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Joining...
-                    </>
-                  ) : (
-                    <>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Join Selected
-                    </>
-                  )}
-                </Button>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {isLoading && (
-          <div className="flex items-center justify-center py-12 sm:py-16">
-            <div className="text-center">
-              <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3 text-primary" />
-              <p className="text-muted-foreground">Loading chatrooms...</p>
-            </div>
-          </div>
-        )}
-
-        {error && (
-          <Card className="border-destructive/50 bg-destructive/5">
-            <CardContent className="pt-6 text-center">
-              <p className="text-destructive font-medium">Failed to load chatrooms</p>
-              <p className="text-sm text-muted-foreground mt-1">Please try again later</p>
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={() => refetch()}
-                className="mt-4"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Retry
-              </Button>
-            </CardContent>
-          </Card>
-        )}
-
-        {hasSupportRole && viewMode === 'table' ? (
-          <>
-            <div className="mb-4 space-y-4">
-              <SupportCommandPanel />
-              <CodeChangeReviewPanel />
-            </div>
-            <div className="mb-4 flex flex-wrap gap-2">
-              <Select value={orgFilter} onValueChange={setOrgFilter}>
-                <SelectTrigger className="w-[180px]" data-testid="select-org-filter">
-                  <Building2 className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="All Organizations" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Organizations</SelectItem>
-                  {workspacesData?.workspaces?.map((ws) => (
-                    <SelectItem key={ws.id} value={ws.id}>{ws.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-                <SelectTrigger className="w-[150px]" data-testid="select-category-filter">
-                  <Filter className="h-4 w-4 mr-2" />
-                  <SelectValue placeholder="Category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Categories</SelectItem>
-                  <SelectItem value="work">Work</SelectItem>
-                  <SelectItem value="shift">Shift</SelectItem>
-                  <SelectItem value="support">Support</SelectItem>
-                  <SelectItem value="meeting">Meeting</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-[130px]" data-testid="select-status-filter">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="active">Active</SelectItem>
-                  <SelectItem value="suspended">Suspended</SelectItem>
-                  <SelectItem value="closed">Closed</SelectItem>
-                  <SelectItem value="archived">Archived</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {platformLoading ? (
-              <div className="flex items-center justify-center py-12">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
-              </div>
-            ) : (
-              <Card>
-                <ScrollArea className="h-[600px]">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Room</TableHead>
-                        <TableHead>Type</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Participants</TableHead>
-                        <TableHead>Created By</TableHead>
-                        <TableHead>Last Active</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {(platformRoomsData?.rooms || []).map((room) => {
-                        const typeConfig = getRoomTypeConfig(room.conversationType);
-                        const TypeIcon = typeConfig.icon;
-                        return (
-                          <TableRow key={room.id} data-testid={`row-room-${room.id}`}>
-                            <TableCell>
-                              <div className="flex items-center gap-2">
-                                <div className={`p-1.5 rounded ${typeConfig.bgColor}`}>
-                                  <TypeIcon className={`h-4 w-4 ${typeConfig.color}`} />
-                                </div>
-                                <div>
-                                  <p className="font-medium truncate max-w-[200px]">{room.name}</p>
-                                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                                    {room.workspaceId?.slice(0, 8)}...
-                                  </p>
-                                </div>
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="outline" className={`${typeConfig.bgColor} ${typeConfig.color}`}>
-                                {typeConfig.label}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <Badge 
-                                variant={room.status === 'active' ? 'default' : room.status === 'suspended' ? 'secondary' : 'outline'}
-                                className={room.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/30' : ''}
-                              >
-                                {room.status}
-                              </Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center gap-1">
-                                <Users className="h-3 w-3" />
-                                {room.participantsCount || 0}
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm">{room.createdBy || 'Unknown'}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground">
-                              {room.lastMessageAt 
-                                ? formatDistanceToNow(new Date(room.lastMessageAt), { addSuffix: true })
-                                : 'Never'
-                              }
-                            </TableCell>
-                            <TableCell className="text-right">
-                              <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
-                                  <Button size="icon" variant="ghost" data-testid={`button-room-actions-${room.id}`}>
-                                    <MoreHorizontal className="h-4 w-4" />
-                                  </Button>
-                                </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end">
-                                  <DropdownMenuItem onClick={() => setLocation(`/chat/${room.id}`)}>
-                                    <Eye className="h-4 w-4 mr-2" />
-                                    View Room
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  {room.status === 'active' && (
-                                    <>
-                                      <DropdownMenuItem onClick={() => handleModerate(room, 'suspend')}>
-                                        <Pause className="h-4 w-4 mr-2 text-amber-500" />
-                                        Suspend
-                                      </DropdownMenuItem>
-                                      <DropdownMenuItem onClick={() => handleModerate(room, 'warn')}>
-                                        <AlertTriangle className="h-4 w-4 mr-2 text-orange-500" />
-                                        Send Warning
-                                      </DropdownMenuItem>
-                                    </>
-                                  )}
-                                  {room.status === 'suspended' && (
-                                    <DropdownMenuItem onClick={() => handleModerate(room, 'reopen')}>
-                                      <Play className="h-4 w-4 mr-2 text-green-500" />
-                                      Reopen
-                                    </DropdownMenuItem>
-                                  )}
-                                  <DropdownMenuItem onClick={() => handleModerate(room, 'archive')}>
-                                    <Archive className="h-4 w-4 mr-2" />
-                                    Archive
-                                  </DropdownMenuItem>
-                                  <DropdownMenuSeparator />
-                                  <DropdownMenuItem 
-                                    onClick={() => handleModerate(room, 'close')}
-                                    className="text-destructive"
-                                  >
-                                    <XCircle className="h-4 w-4 mr-2" />
-                                    Close Room
-                                  </DropdownMenuItem>
-                                </DropdownMenuContent>
-                              </DropdownMenu>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                      {(platformRoomsData?.rooms || []).length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
-                            No rooms found matching your filters
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </ScrollArea>
-              </Card>
-            )}
-
-            <div className="mt-4 text-center text-sm text-muted-foreground">
-              Showing {(platformRoomsData?.rooms || []).length} rooms platform-wide
-            </div>
-          </>
-        ) : (
-          <>
-            {!isLoading && !error && (
-              <>
-                {filteredRooms.length === 0 ? (
-                  <Card className="border-dashed">
-                    <CardContent className="py-8 text-center">
-                      <MessageCircle className="h-8 w-8 mx-auto text-muted-foreground mb-3 opacity-50" />
-                      <p className="text-muted-foreground font-medium text-sm mb-1">
-                        {searchQuery ? 'No rooms match your search' : CHATROOM_UI.emptyStateTitle}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        {activeFilter === 'available'
-                          ? 'You are already a member of all available rooms'
-                          : CHATROOM_UI.emptyStateDescription}
-                      </p>
-                    </CardContent>
-                  </Card>
-                ) : (
-                  <>
-                    {/* Mobile: List View */}
-                    {isMobile ? (
-                      <div className="bg-card rounded-lg border divide-y overflow-hidden">
-                        {filteredRooms.map((room: ChatRoom) => (
-                          <RoomCard
-                            key={room.id || room.roomId}
-                            room={room}
-                            isSelected={!!(room.id && selectedRooms.has(room.id))}
-                            onSelect={() => handleSelectRoom(room.id)}
-                            onJoin={() => {
-                              if (room.id) {
-                                joinRoomsMutation.mutate([room.id]);
-                              }
-                            }}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      /* Desktop: Grid View */
-                      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-2 sm:gap-3">
-                        {filteredRooms.map((room: ChatRoom) => (
-                          <RoomCard
-                            key={room.id || room.roomId}
-                            room={room}
-                            isSelected={!!(room.id && selectedRooms.has(room.id))}
-                            onSelect={() => handleSelectRoom(room.id)}
-                            onJoin={() => {
-                              if (room.id) {
-                                joinRoomsMutation.mutate([room.id]);
-                              }
-                            }}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </>
-                )}
-
-                <div className="mt-6 text-center text-xs sm:text-sm text-muted-foreground">
-                  Showing {filteredRooms.length} of {(roomsData?.rooms || []).length || 0} room{(roomsData?.rooms || []).length !== 1 ? 's' : ''} 
-                  {!hasSupportRole && userWorkspaceId && ' (organization only)'}
-                  {isFetching && !isLoading && (
-                    <span className="ml-2 text-primary">
-                      <RefreshCw className="h-3 w-3 inline animate-spin" /> Updating...
-                    </span>
-                  )}
-                </div>
-              </>
-            )}
-
-            {isLoading && (
-              <div className="flex items-center justify-center py-12 sm:py-16">
-                <div className="text-center">
-                  <Loader2 className="h-8 w-8 animate-spin mx-auto mb-3 text-primary" />
-                  <p className="text-muted-foreground">Loading chatrooms...</p>
-                </div>
-              </div>
-            )}
-
-            {error && (
-              <Card className="border-destructive/50 bg-destructive/5">
-                <CardContent className="pt-6 text-center">
-                  <p className="text-destructive font-medium">Failed to load chatrooms</p>
-                  <p className="text-sm text-muted-foreground mt-1">Please try again later</p>
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={() => refetch()}
-                    className="mt-4"
-                  >
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Retry
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </>
-        )}
       </div>
 
-      <CreateRoomDialog 
-        open={createDialogOpen} 
-        onOpenChange={setCreateDialogOpen} 
-        onSuccess={() => {}} 
-      />
-      
-      <ModerateRoomDialog
-        open={moderateDialogOpen}
-        onOpenChange={setModerateDialogOpen}
-        room={selectedRoom}
-        action={moderateAction}
-        onSuccess={() => {}}
+      <ScrollArea className="flex-1">
+        {isLoading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          </div>
+        ) : error ? (
+          <div className="text-center py-12 px-4">
+            <p className="text-muted-foreground">Unable to load chats</p>
+            <Button variant="outline" size="sm" onClick={() => refetch()} className="mt-3 min-h-[44px]">
+              Try Again
+            </Button>
+          </div>
+        ) : filteredRooms.length === 0 ? (
+          <div className="text-center py-12 px-4">
+            <MessageCircle className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
+            <p className="text-muted-foreground">No chats found</p>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setCreateDialogOpen(true)} 
+              className="mt-3 min-h-[44px]"
+              data-testid="button-start-chat"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Start a new chat
+            </Button>
+          </div>
+        ) : (
+          <div className="divide-y divide-border/30">
+            {filteredRooms.map((room) => (
+              <ConversationItem
+                key={room.id || room.roomId}
+                room={room}
+                onClick={() => handleOpenChat(room)}
+              />
+            ))}
+          </div>
+        )}
+      </ScrollArea>
+
+      <CreateRoomDialog
+        open={createDialogOpen}
+        onOpenChange={setCreateDialogOpen}
+        onSuccess={() => refetch()}
       />
     </div>
   );
