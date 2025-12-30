@@ -618,6 +618,46 @@ export type InsertWorkspaceTheme = z.infer<typeof insertWorkspaceThemeSchema>;
 export type WorkspaceTheme = typeof workspaceThemes.$inferSelect;
 
 // ============================================================================
+// WORKSPACE INVITATIONS (Employee Onboarding)
+// ============================================================================
+
+// Invitations for employees to join existing workspaces
+// Employees don't pay - only the organization pays for the subscription
+export const workspaceInvites = pgTable("workspace_invites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Invitation details
+  inviteCode: varchar("invite_code").notNull().unique(), // Unique 8-char code
+  inviterUserId: varchar("inviter_user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  // Invitee information
+  inviteeEmail: varchar("invitee_email"), // Optional - if specified, only this email can use
+  inviteeRole: varchar("invitee_role").default("staff"), // Role to assign: staff, supervisor, etc.
+  
+  // Status tracking
+  status: varchar("status").default("pending"), // pending, accepted, expired, revoked
+  acceptedByUserId: varchar("accepted_by_user_id").references(() => users.id),
+  acceptedAt: timestamp("accepted_at"),
+  
+  // Expiry
+  expiresAt: timestamp("expires_at").notNull(), // Default: 7 days from creation
+  
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertWorkspaceInviteSchema = createInsertSchema(workspaceInvites).omit({
+  id: true,
+  createdAt: true,
+  acceptedAt: true,
+  acceptedByUserId: true,
+});
+
+export type InsertWorkspaceInvite = z.infer<typeof insertWorkspaceInviteSchema>;
+export type WorkspaceInvite = typeof workspaceInvites.$inferSelect;
+
+// ============================================================================
 // ROLE HIERARCHY ENUMS
 // ============================================================================
 
