@@ -886,7 +886,8 @@ function AppContent() {
   const currentPath = window.location.pathname;
   const isPublicRoute = PUBLIC_ROUTES.has(currentPath) || 
                         currentPath.startsWith("/onboarding/") ||
-                        currentPath.startsWith("/pay-invoice/");
+                        currentPath.startsWith("/pay-invoice/") ||
+                        currentPath === "/create-org";
 
   // CRITICAL: If on public route, render immediately without waiting for auth to load
   // This prevents loading screens from appearing on public pages
@@ -908,7 +909,9 @@ function AppContent() {
         
         <Route path="/helpdesk5"><Redirect to="/chat" /></Route>
         <Route path="/support/chat"><Redirect to="/chat" /></Route>
+        <Route path="/onboarding/start" component={OnboardingStart} />
         <Route path="/onboarding/:token" component={OnboardingPage} />
+        <Route path="/create-org" component={CreateOrg} />
         <Route path="/pay-invoice/:id" component={PayInvoice} />
         <Route path="/accept-handoff/:token" component={AcceptHandoff} />
         
