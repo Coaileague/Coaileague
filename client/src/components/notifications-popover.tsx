@@ -847,7 +847,7 @@ function NotificationCard({
               {/* Content */}
               <div className="flex-1 min-w-0 w-full">
                 <div className={`flex items-start justify-between gap-2 ${compact ? 'mb-0.5' : 'mb-1'}`}>
-                  <span className={`font-semibold ${compact ? 'text-xs' : 'text-sm'} leading-tight min-w-0 break-words whitespace-normal`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
+                  <span className={`font-semibold ${compact ? 'text-xs' : 'text-sm'} leading-tight min-w-0 break-words whitespace-normal`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere', maxWidth: 'calc(100% - 80px)' }}>
                     {notification.title}
                   </span>
                   <div className={`flex items-center ${compact ? 'gap-1' : 'gap-2'} shrink-0`}>
