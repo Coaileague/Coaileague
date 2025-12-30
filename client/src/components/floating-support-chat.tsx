@@ -257,62 +257,28 @@ export function FloatingSupportChat() {
     zIndex: CHAT_BUBBLE_CONFIG.zIndex,
   };
   
-  // Minimized pill UI - fixed position on desktop
+  // Minimized pill UI - compact icon-only on mobile to reduce blocking
   if (state.isMinimized) {
     return (
       <>
         <div
           style={positionStyle}
-          className={`flex items-center gap-2 bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text} ${CHAT_BUBBLE_CONFIG.effects.rounded} px-${CHAT_BUBBLE_CONFIG.sizes.pillPaddingX} py-${CHAT_BUBBLE_CONFIG.sizes.pillPaddingY} ${CHAT_BUBBLE_CONFIG.effects.shadow} hover-elevate active-elevate-2 cursor-pointer select-none`}
+          className={cn(
+            `bg-gradient-to-r ${CHAT_BUBBLE_CONFIG.colors.primary} ${CHAT_BUBBLE_CONFIG.colors.text} ${CHAT_BUBBLE_CONFIG.effects.rounded} ${CHAT_BUBBLE_CONFIG.effects.shadow} hover-elevate active-elevate-2 cursor-pointer select-none`,
+            isMobile 
+              ? "w-12 h-12 flex items-center justify-center rounded-full" 
+              : `flex items-center gap-2 px-${CHAT_BUBBLE_CONFIG.sizes.pillPaddingX} py-${CHAT_BUBBLE_CONFIG.sizes.pillPaddingY}`
+          )}
           onClick={handleOpenChat}
           data-testid="chat-bubble-minimized"
         >
           <Bug className={`w-${CHAT_BUBBLE_CONFIG.sizes.pillIconSize} h-${CHAT_BUBBLE_CONFIG.sizes.pillIconSize}`} />
-          <span className="font-medium text-sm">{CHAT_BUBBLE_CONFIG.content.buttonText.liveChat}</span>
+          {!isMobile && <span className="font-medium text-sm">{CHAT_BUBBLE_CONFIG.content.buttonText.liveChat}</span>}
         </div>
         
-        {/* Floating Mic Button - separate, easier to tap on mobile */}
-        {isMobile && (
-          <button
-            style={{
-              position: 'fixed',
-              bottom: `calc(${TRINITY_MOBILE_POSITION.bottom + 70}px + env(safe-area-inset-bottom, 0px))`,
-              right: `calc(${TRINITY_MOBILE_POSITION.right}px + env(safe-area-inset-right, 0px))`,
-              zIndex: CHAT_BUBBLE_CONFIG.zIndex - 1,
-            }}
-            className={cn(
-              "w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-all duration-200",
-              isListening 
-                ? "bg-red-500 text-white animate-pulse" 
-                : "bg-card border-2 border-border text-foreground hover-elevate active-elevate-2"
-            )}
-            onClick={() => {
-              setIsListening(!isListening);
-              toast({ title: isListening ? "Stopped listening" : "Listening for voice input..." });
-            }}
-            data-testid="button-floating-mic"
-          >
-            <Mic className="w-5 h-5" />
-          </button>
-        )}
+        {/* Floating Mic Button - hidden for guests on public pages to reduce clutter */}
         
-        {/* Swipe-up Command Sheet indicator on mobile */}
-        {isMobile && (
-          <div
-            style={{
-              position: 'fixed',
-              bottom: `calc(4px + env(safe-area-inset-bottom, 0px))`,
-              left: '50%',
-              transform: 'translateX(-50%)',
-              zIndex: CHAT_BUBBLE_CONFIG.zIndex - 2,
-            }}
-            className="flex flex-col items-center gap-1 opacity-50"
-            onClick={() => setShowCommandSheet(true)}
-          >
-            <ChevronUp className="w-5 h-5 text-muted-foreground animate-bounce" />
-            <span className="text-[10px] text-muted-foreground">Commands</span>
-          </div>
-        )}
+        {/* Swipe-up Command Sheet indicator - HIDDEN by default, only show when minimized pill is tapped */}
         
         {/* Command Sheet */}
         {showCommandSheet && (

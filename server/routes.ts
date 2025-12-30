@@ -3620,6 +3620,10 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error fetching oversight events:", error);
       res.status(500).json({ message: "Failed to fetch oversight events" });
+    }
+  });
+
+  /**
    * POST /api/feedback
    * Submit new feedback (bug report, feature request, improvement, general)
    */
