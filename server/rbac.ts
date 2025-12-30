@@ -326,6 +326,58 @@ export const attachWorkspaceId: RequestHandler = async (req, res, next) => {
   next();
 };
 
+/**
+ * Optional version of attachWorkspaceId that allows unauthenticated requests to pass through.
+ * Useful for endpoints that need to support both authenticated workspace-scoped access
+ * AND unauthenticated public access (e.g., platform-wide chat rooms like HelpDesk).
+ */
+export const attachWorkspaceIdOptional: RequestHandler = async (req, res, next) => {
+  const authReq = req as AuthenticatedRequest;
+  
+  // If no user, allow request to continue without workspace (public access)
+  if (!authReq.user?.id) {
+    authReq.workspaceId = undefined;
+    authReq.workspaceRole = undefined;
+    authReq.employeeId = undefined;
+    return next();
+  }
+  
+  // User is authenticated - proceed with normal workspace resolution
+  const userId = authReq.user.id;
+  
+  // Check platform role first
+  const platformRole = await getUserPlatformRole(userId);
+  
+  if (hasPlatformWideAccess(platformRole)) {
+    authReq.platformRole = platformRole;
+    
+    const requestedWorkspaceId = authReq.body?.workspaceId || authReq.query?.workspaceId || authReq.params?.workspaceId;
+    if (requestedWorkspaceId) {
+      authReq.workspaceId = requestedWorkspaceId as string;
+      return next();
+    }
+    
+    const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
+    if (user?.currentWorkspaceId) {
+      authReq.workspaceId = user.currentWorkspaceId;
+      return next();
+    }
+    
+    authReq.workspaceId = undefined;
+    return next();
+  }
+  
+  // Regular users - resolve workspace
+  const requestedWorkspaceId = authReq.body?.workspaceId || authReq.query?.workspaceId || authReq.params?.workspaceId;
+  const resolved = await resolveWorkspaceForUser(userId, requestedWorkspaceId as string | undefined);
+  
+  authReq.workspaceId = resolved.workspaceId || undefined;
+  authReq.workspaceRole = resolved.role || undefined;
+  authReq.employeeId = resolved.employeeId || undefined;
+  
+  next();
+};
+
 export async function validateManagerAssignment(
   managerId: string,
   employeeId: string,

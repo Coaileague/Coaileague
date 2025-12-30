@@ -1150,7 +1150,9 @@ function AppContent() {
               <Route path="/privacy" component={PrivacyPolicy} />
               {/* Consolidated Chat Routes - ONE UNIVERSAL CHAT via HelpAI Orchestration */}
               <Route path="/chat" component={HelpAIOrchestration} /> {/* HelpAI Orchestration - Universal chat and AI brain */}
-              <Route path="/chat/:roomId" component={HelpDesk} /> {/* Individual chat room by ID */}
+              <Route path="/chat/:roomId">
+                {(params) => <HelpDesk key={params.roomId} roomId={params.roomId} />}
+              </Route> {/* Individual chat room by ID - key forces remount */}
               <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
               <Route path="/chatrooms" component={Chatrooms} /> {/* Organization chatroom discovery and bulk join */}
               <Route path="/chatroom"><Redirect to="/chatrooms" /></Route> {/* Redirect singular to plural */}
@@ -1469,7 +1471,9 @@ function AppContent() {
                 <Route path="/privacy" component={PrivacyPolicy} />
                 {/* Consolidated Chat Routes - ONE UNIVERSAL CHAT via HelpAI Orchestration */}
                 <Route path="/chat" component={HelpAIOrchestration} /> {/* HelpAI Orchestration - Universal chat and AI brain */}
-                <Route path="/chat/:roomId" component={HelpDesk} /> {/* Individual chat room by ID */}
+                <Route path="/chat/:roomId">
+                  {(params) => <HelpDesk key={params.roomId} roomId={params.roomId} />}
+                </Route> {/* Individual chat room by ID - key forces remount */}
                 <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
                 <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route> {/* Redirect support chatrooms to unified page */}
                 

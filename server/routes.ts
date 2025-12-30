@@ -175,7 +175,7 @@ import {
 import { scheduleSmartAI, isScheduleSmartAvailable } from './services/scheduleSmartAI';
 import { seedAnchor } from './services/utils/scheduling';
 import { configRegistry } from './services/configRegistry';
-import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, attachWorkspaceId, hasPlatformWideAccess, type AuthenticatedRequest } from "./rbac";
+import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, attachWorkspaceId, attachWorkspaceIdOptional, hasPlatformWideAccess, type AuthenticatedRequest } from "./rbac";
 import { requireStarter, requireProfessional, requireEnterprise } from "./tierGuards";
 import { clientsQuerySchema } from "../shared/validation/pagination";
 import bcrypt from 'bcryptjs';
@@ -3297,7 +3297,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register AI Communications Chat Room routes (room creation, participant management, shift-based rooms)
   const chatRoomsRouter = (await import('./routes/chat-rooms')).default;
-  app.use('/api/chat/rooms', attachWorkspaceId, chatRoomsRouter);
+  app.use('/api/chat/rooms', attachWorkspaceIdOptional, chatRoomsRouter);
 
   // Register HelpAI FAQ routes (AI-powered FAQ system with semantic search)
   registerFaqRoutes(app);

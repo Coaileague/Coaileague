@@ -91,6 +91,7 @@ import {
 
 interface HelpDeskProps {
   forceMobileLayout?: boolean; // Force mobile layout regardless of screen size
+  roomId?: string; // Room ID from route params /chat/:roomId
 }
 
 // Desktop IRC/MSN-style 3-column chatroom with CoAIleague professional branding
@@ -108,7 +109,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
   
-  const { forceMobileLayout = false } = props || {};
+  const { forceMobileLayout = false, roomId: propRoomId } = props || {};
   const shouldUseMobileLayout = forceMobileLayout || isMobileView;
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
@@ -205,10 +206,11 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     return stored !== null ? stored === 'true' : true; // Default enabled
   });
   
-  // Determine the conversation ID to join (route param > mobile selection > URL param > escalation > default)
-  const conversationToJoin = routeRoomId || mobileSelectedRoom?.id || urlConversationId || parsedEscalation?.conversationId || MAIN_ROOM_ID;
+  // Determine the conversation ID to join (prop > route param > mobile selection > URL param > escalation > default)
+  const conversationToJoin = propRoomId || routeRoomId || mobileSelectedRoom?.id || urlConversationId || parsedEscalation?.conversationId || MAIN_ROOM_ID;
   
   console.log('[HelpDesk] Conversation join logic:', {
+    propRoomId,
     routeRoomId,
     urlConversationId,
     urlGuestToken,
