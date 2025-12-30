@@ -2221,22 +2221,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Note: Credits are deducted by workboardService when task executes in fast mode
-
-      // Log the voice command for analytics
-      await storage.createAuditLog({
-        workspaceId: workspaceId || 'platform',
-        userId,
-        action: 'voice_command_submitted',
-        entityType: 'voice_command',
-        entityId: voiceTask.id,
-        details: {
-          transcript: transcript.trim().substring(0, 200),
-          source,
-          routing: routingResult.assignedAgent,
-          estimatedTokens: routingResult.estimatedTokens
-        }
-      });
 
       // Submit to workboard for proper task tracking and execution
       const { workboardService } = await import('./services/ai-brain/workboardService');
