@@ -3560,9 +3560,6 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error fetching chat rooms:", error);
       res.status(500).json({ message: "Failed to fetch chat rooms" });
-    }
-  });
-
   app.post('/api/dm-audit/request', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -3597,8 +3594,6 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error creating audit request:", error);
       res.status(500).json({ message: "Failed to create audit request" });
-    }
-  });
 
   // GET /api/oversight - Get all pending oversight events for current workspace
   app.get('/api/oversight', requireAuth, async (req: AuthenticatedRequest, res) => {
