@@ -771,8 +771,8 @@ function NotificationCard({
               {/* Content & Actions - Always stacked in popover to maintain consistent width */}
               <div className={`flex-1 min-w-0 flex flex-col ${compact ? 'gap-1.5' : 'gap-2'}`}>
                 {/* Message Content */}
-                <div className="flex-1 min-w-0">
-                  <span className={`font-bold ${compact ? 'text-xs' : 'text-sm'} leading-tight block ${textColor}`}>
+                <div className="flex-1 min-w-0 w-full">
+                  <span className={`font-bold ${compact ? 'text-xs' : 'text-sm'} leading-tight block break-words whitespace-normal ${textColor}`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                     {notification.title}
                   </span>
                   <p className={`${compact ? 'text-[11px] mt-0.5 leading-snug' : 'text-sm leading-relaxed mt-1'} ${mutedText}`}>
@@ -845,9 +845,9 @@ function NotificationCard({
               </div>
               
               {/* Content */}
-              <div className="flex-1 min-w-0">
+              <div className="flex-1 min-w-0 w-full">
                 <div className={`flex items-start justify-between gap-2 ${compact ? 'mb-0.5' : 'mb-1'}`}>
-                  <span className={`font-semibold ${compact ? 'text-xs' : 'text-sm'} leading-tight`}>
+                  <span className={`font-semibold ${compact ? 'text-xs' : 'text-sm'} leading-tight min-w-0 break-words whitespace-normal`} style={{ wordBreak: 'break-word', overflowWrap: 'anywhere' }}>
                     {notification.title}
                   </span>
                   <div className={`flex items-center ${compact ? 'gap-1' : 'gap-2'} shrink-0`}>

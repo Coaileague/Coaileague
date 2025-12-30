@@ -23,8 +23,8 @@ import { gamificationActivationAgent, type ActivationResult, AUTOMATION_GATES } 
 import { cognitiveOnboardingService, type IntegrationProvider, type DataSyncType } from '../cognitiveOnboardingService';
 import { industryComplianceTemplates, type IndustryComplianceConfig } from '../industryComplianceTemplates';
 import { db } from '../../../db';
-import { workspaces, notifications, orgInvitations, employees } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { workspaces, notifications, orgInvitations, employees, userPlatformUpdateViews, platformUpdates } from '@shared/schema';
+import { eq, and, isNull, notInArray, or } from 'drizzle-orm';
 import { TrialManager } from '../../billing/trialManager';
 import { onboardingPipelineService } from '../../onboardingPipelineService';
 import { platformEventBus, type PlatformEvent } from '../../platformEventBus';
@@ -400,6 +400,10 @@ class OnboardingOrchestrator {
   }): Promise<OnboardingResult> {
     console.log(`[OnboardingOrchestrator] New org trigger: ${params.workspaceId} (${params.inviteSource})`);
 
+    // Clear all existing platform updates for new org users
+    // This prevents them seeing historical updates that aren't relevant to them
+    await this.clearPlatformUpdatesForNewUser(params.ownerId, params.workspaceId);
+
     return this.runOnboarding({
       workspaceId: params.workspaceId,
       userId: params.ownerId,
@@ -408,6 +412,64 @@ class OnboardingOrchestrator {
         unlockBasicAutomation: true,
       },
     });
+  }
+
+  /**
+   * Mark all existing platform updates as viewed for a new user
+   * Prevents new org users from seeing historical platform updates
+   */
+  private async clearPlatformUpdatesForNewUser(userId: string, workspaceId: string): Promise<number> {
+    try {
+      // Get all platform updates that the user hasn't viewed yet
+      const existingViews = await db.query.userPlatformUpdateViews.findMany({
+        where: eq(userPlatformUpdateViews.userId, userId),
+        columns: { updateId: true },
+      });
+      
+      const viewedIds = existingViews.map(v => v.updateId);
+      
+      // Find all updates that are either global or for this workspace
+      // Build conditions array filtering out undefined to avoid SQL builder issues
+      const conditions = [
+        or(
+          isNull(platformUpdates.workspaceId),
+          eq(platformUpdates.workspaceId, workspaceId)
+        )
+      ];
+      
+      // Only add notInArray condition if there are existing views
+      if (viewedIds.length > 0) {
+        conditions.push(notInArray(platformUpdates.id, viewedIds));
+      }
+      
+      const unviewedUpdates = await db.query.platformUpdates.findMany({
+        where: and(...conditions),
+        columns: { id: true },
+      });
+      
+      if (unviewedUpdates.length === 0) {
+        console.log(`[OnboardingOrchestrator] No platform updates to clear for user ${userId}`);
+        return 0;
+      }
+      
+      // Mark all as viewed
+      const now = new Date();
+      const viewRecords = unviewedUpdates.map(u => ({
+        userId,
+        updateId: u.id,
+        viewedAt: now,
+      }));
+      
+      await db.insert(userPlatformUpdateViews)
+        .values(viewRecords)
+        .onConflictDoNothing();
+      
+      console.log(`[OnboardingOrchestrator] Cleared ${viewRecords.length} platform updates for new user ${userId}`);
+      return viewRecords.length;
+    } catch (error: any) {
+      console.error('[OnboardingOrchestrator] Failed to clear platform updates:', error.message);
+      return 0;
+    }
   }
 
   /**

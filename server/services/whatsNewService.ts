@@ -9,6 +9,7 @@ import { db } from '../db';
 import { platformUpdates as platformUpdatesTable, userPlatformUpdateViews } from '@shared/schema';
 import { isFeatureEnabled, PLATFORM } from '@shared/platformConfig';
 import { desc, eq, sql, and, gte, or, isNull, notInArray } from 'drizzle-orm';
+import { humanizeTitle, humanizeText, containsTechnicalJargon, generateEndUserSummary } from '@shared/utils/humanFriendlyCopy';
 
 export interface PlatformUpdate {
   id: string;
@@ -370,13 +371,23 @@ export async function getUpdateStats(userRole: string = 'staff') {
 }
 
 export async function addUpdate(update: Omit<PlatformUpdate, 'id'> & { visibility?: string; workspaceId?: string }): Promise<PlatformUpdate> {
+  // Humanize title and description for end users
+  const humanizedTitle = containsTechnicalJargon(update.title) 
+    ? humanizeTitle(update.title)
+    : update.title;
+  const humanizedDescription = containsTechnicalJargon(update.description)
+    ? generateEndUserSummary(update.description, update.category)
+    : update.description;
+  
+  // Use ORIGINAL title for id generation to avoid collisions when multiple technical 
+  // titles map to the same humanized phrase (e.g., multiple API updates -> same friendly copy)
   const id = `${update.title.toLowerCase().replace(/\s+/g, '-')}-${update.date}`;
   
   try {
     await db.insert(platformUpdatesTable).values({
       id,
-      title: update.title,
-      description: update.description,
+      title: humanizedTitle,
+      description: humanizedDescription,
       category: update.category,
       badge: update.badge,
       version: update.version,
@@ -388,7 +399,8 @@ export async function addUpdate(update: Omit<PlatformUpdate, 'id'> & { visibilit
       date: new Date(update.date),
     });
     
-    return { ...update, id };
+    console.log(`[WhatsNew] Added humanized update: "${humanizedTitle}"`);
+    return { ...update, id, title: humanizedTitle, description: humanizedDescription };
   } catch (error) {
     console.error('[WhatsNew] Failed to add update:', error);
     throw error;

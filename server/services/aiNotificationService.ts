@@ -10,6 +10,7 @@ import { eq, and, or, desc, isNull, sql, lt, gte } from "drizzle-orm";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 import { broadcastPlatformUpdateGlobal } from '../websocket';
+import { humanizeTitle, containsTechnicalJargon } from '@shared/utils/humanFriendlyCopy';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
@@ -109,6 +110,11 @@ export async function generatePlatformUpdate(data: AIInsightData): Promise<{ id:
     return null;
   }
   
+  // Humanize title if it contains technical jargon for better end-user readability
+  const humanizedTitle = containsTechnicalJargon(data.title) 
+    ? humanizeTitle(data.title)
+    : data.title;
+  
   // Check for executionId in metadata - if present, use UUID to make idempotency key unique
   // BUT always check for title duplicates first to prevent repeated system messages
   const executionId = data.metadata?.executionId as string | undefined;
@@ -116,12 +122,18 @@ export async function generatePlatformUpdate(data: AIInsightData): Promise<{ id:
   
   // ALWAYS check for title-based duplicates first (within last 24 hours)
   // This prevents repeated system messages like "Seasonal Theming Disabled"
+  // Check BOTH original and humanized titles to catch duplicates regardless of format
+  // Also check metadata->>originalTitle for robust matching across humanization changes
   const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
   const existingByTitle = await db.select({ id: platformUpdates.id })
     .from(platformUpdates)
     .where(
       and(
-        eq(platformUpdates.title, data.title),
+        or(
+          eq(platformUpdates.title, data.title),
+          eq(platformUpdates.title, humanizedTitle),
+          sql`${platformUpdates.metadata}->>'originalTitle' = ${data.title}`
+        ),
         data.workspaceId 
           ? eq(platformUpdates.workspaceId, data.workspaceId)
           : isNull(platformUpdates.workspaceId),
@@ -131,7 +143,7 @@ export async function generatePlatformUpdate(data: AIInsightData): Promise<{ id:
     .limit(1);
   
   if (existingByTitle.length > 0) {
-    console.log(`[AINotification] Duplicate update detected (title match within 24h), skipping: ${data.title}`);
+    console.log(`[AINotification] Duplicate update detected (title match within 24h), skipping: ${humanizedTitle}`);
     return { id: existingByTitle[0].id };
   }
   
@@ -180,7 +192,7 @@ SUMMARY:`;
   const updateId = idempotencyKey;
   const [update] = await db.insert(platformUpdates).values({
     id: updateId,
-    title: data.title,
+    title: humanizedTitle,
     description: enhancedDescription,
     category: data.category || "announcement",
     workspaceId: data.workspaceId,
@@ -188,16 +200,16 @@ SUMMARY:`;
     isNew: true,
     visibility: "all",
     learnMoreUrl: data.learnMoreUrl,
-    metadata: { ...data.metadata, idempotencyKey, generatedAt: new Date().toISOString() },
+    metadata: { ...data.metadata, idempotencyKey, generatedAt: new Date().toISOString(), originalTitle: data.title },
     date: new Date(),
   }).returning({ id: platformUpdates.id });
   
-  console.log(`[AINotification] Created platform update: ${update.id} - ${data.title}`);
+  console.log(`[AINotification] Created platform update: ${update.id} - ${humanizedTitle}`);
   
   // Broadcast via WebSocket for real-time UNS updates
   broadcastPlatformUpdateGlobal({
     id: update.id,
-    title: data.title,
+    title: humanizedTitle,
     description: enhancedDescription,
     category: data.category || "announcement",
     priority: data.priority || 1,
