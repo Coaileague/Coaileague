@@ -2197,20 +2197,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         timestamp
       });
 
+      // Import subagent supervisor for task routing
+      const { subagentSupervisor } = await import('./services/ai-brain/subagentSupervisor');
+      
+      // Voice command will be submitted to workboard service for proper task tracking
+
       // Validate execution mode
       const validExecutionMode = executionMode === 'trinity_fast' ? 'trinity_fast' : 'normal';
       const isFastMode = validExecutionMode === 'trinity_fast';
       
       console.log('[VoiceCommand] Processing with execution mode:', validExecutionMode);
-
-      // Execute voice command synchronously and get the AI response inline
-      const { workboardService } = await import('./services/ai-brain/workboardService');
       
-      const result = await workboardService.executeVoiceCommandSync({
+      // Route through SubagentSupervisor to determine appropriate subagent
+      const routingResult = await subagentSupervisor.routeVoiceCommand({
         transcript: transcript.trim(),
         userId,
         workspaceId,
-        executionMode: validExecutionMode
+        executionMode: validExecutionMode,
+        context: {
+          source,
+          timestamp,
+          platform: 'mobile'
+        }
+      });
+
+
+      // Submit to workboard for proper task tracking and execution
+      const { workboardService } = await import('./services/ai-brain/workboardService');
+      
+      const workboardTask = await workboardService.submitTask({
+        workspaceId: workspaceId || '',
+        userId,
+        requestType: 'voice_command',
+        requestContent: transcript.trim(),
+        priority: isFastMode ? 'high' : 'normal',
+        executionMode: validExecutionMode,
+        fastModeRequestedBy: 'voice',
+        notifyVia: ['websocket'],
+        requestMetadata: {
+          source: source || 'mobile_trinity',
+          platform: 'mobile',
+          inputMethod: 'voice',
+          assignedAgent: routingResult.assignedAgent,
+          estimatedTokens: routingResult.estimatedTokens,
+          confidence: routingResult.confidence
+        }
       });
 
       // Emit event for real-time UI update
@@ -2218,22 +2249,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       eventBus.emit('voice_command_received', {
         userId,
         workspaceId,
-        taskId: result.taskId,
-        status: result.success ? 'completed' : 'failed',
-        assignedAgent: result.assignedAgent,
+        taskId: workboardTask.id,
+        status: 'pending',
+        assignedAgent: routingResult.assignedAgent,
         executionMode: validExecutionMode
       });
 
       res.json({
-        success: result.success,
-        taskId: result.taskId,
-        status: result.success ? 'completed' : 'failed',
-        assignedAgent: result.assignedAgent,
-        response: result.response,
-        tokensUsed: result.tokensUsed,
+        success: true,
+        taskId: workboardTask.id,
+        status: 'queued',
+        assignedAgent: routingResult.assignedAgent,
+        estimatedTokens: routingResult.estimatedTokens,
         executionMode: validExecutionMode,
         isFastMode,
-        message: result.response
+        message: `Command received and assigned to ${routingResult.assignedAgent} for processing${isFastMode ? ' (Fast Mode)' : ''}.`
       });
 
     } catch (error: any) {
@@ -2246,6 +2276,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   // ============================================================================
+  // HELPOS™ AI SUPPORT SYSTEM
   // ============================================================================
 
   // HelpAI escalation endpoint - Guest info capture and conversation creation

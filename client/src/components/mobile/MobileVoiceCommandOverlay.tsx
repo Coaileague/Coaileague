@@ -186,52 +186,28 @@ export function MobileVoiceCommandOverlay({
     onModeChange?.('THINKING');
 
     try {
-      const response = await apiRequest('POST', '/api/voice-command', {
+      const result = await apiRequest('POST', '/api/voice-command', {
         transcript: finalTranscript.trim(),
         timestamp: new Date().toISOString(),
         source: 'mobile_trinity',
         executionMode: fastModeEnabled ? 'trinity_fast' : 'normal',
       });
 
-      const taskId = response.taskId;
-      console.log('[VoiceOverlay] Task submitted:', taskId);
+      console.log('[VoiceOverlay] Task executed:', result.taskId, result.status);
 
-      const pollForResponse = async (attempts = 0): Promise<string | null> => {
-        if (attempts >= 20) return null;
-        
-        try {
-          const taskResult = await apiRequest('GET', `/api/workboard/task/${taskId}`);
-          if (taskResult.status === 'completed' && taskResult.result?.data?.response) {
-            return taskResult.result.data.response;
-          }
-          if (taskResult.status === 'failed') {
-            return taskResult.errorMessage || 'Task failed';
-          }
-          await new Promise(resolve => setTimeout(resolve, 500));
-          return pollForResponse(attempts + 1);
-        } catch (e) {
-          await new Promise(resolve => setTimeout(resolve, 500));
-          return pollForResponse(attempts + 1);
-        }
-      };
-
-      const trinityResponse = await pollForResponse();
+      const trinityResponse = result.response || result.message;
       
-      setSubmissionState('success');
-      onModeChange?.('SUCCESS');
+      setSubmissionState(result.success ? 'success' : 'error');
+      onModeChange?.(result.success ? 'SUCCESS' : 'ERROR');
       
       if (trinityResponse) {
         setAiResponse(trinityResponse);
         speak(trinityResponse);
         
         toast({
-          title: 'Trinity Says',
+          title: result.success ? 'Trinity Says' : 'Trinity Error',
           description: trinityResponse.length > 100 ? trinityResponse.substring(0, 100) + '...' : trinityResponse,
-        });
-      } else {
-        toast({
-          title: 'Command Sent',
-          description: 'Trinity is processing your request in the background.',
+          variant: result.success ? 'default' : 'destructive',
         });
       }
 

@@ -8,6 +8,7 @@
  * Flow: Submit → Analyze → Assign → Execute → Complete → Notify
  */
 
+import crypto from 'crypto';
 import { db } from '../../db';
 import { 
   aiWorkboardTasks, 
@@ -813,6 +814,192 @@ class WorkboardService {
       .where(eq(aiWorkboardTasks.id, taskId));
 
     console.log('[WorkboardService] Task escalated:', taskId, reason);
+  }
+
+  /**
+   * Execute a voice command synchronously - Trinity ACTS immediately.
+   * Uses credits because Trinity performs the action on behalf of the user.
+   * Routes through proper Workboard pipeline for credit tracking and approvals.
+   */
+  async executeVoiceCommandSync(params: {
+    transcript: string;
+    userId: string;
+    workspaceId?: string;
+    executionMode?: 'normal' | 'trinity_fast';
+  }): Promise<{
+    success: boolean;
+    taskId: string;
+    response: string;
+    assignedAgent: string;
+    actionExecuted?: string;
+    tokensUsed?: number;
+    error?: string;
+  }> {
+    const { transcript, userId, workspaceId, executionMode = 'normal' } = params;
+    
+    console.log('[WorkboardService] Trinity executing voice command:', { userId, transcript: transcript.substring(0, 50) });
+
+    const taskId = crypto.randomUUID();
+    let taskCreated = false;
+
+    try {
+      const { subagentSupervisor } = await import('./subagentSupervisor');
+      
+      // Step 1: Route through subagent supervisor for proper agent selection + credit estimation
+      const routingResult = await subagentSupervisor.routeVoiceCommand({
+        transcript,
+        userId,
+        workspaceId,
+        executionMode,
+        context: { source: 'voice_sync', platform: 'mobile' }
+      });
+
+      // Step 2: Create task in database with proper agent assignment
+      await db.insert(aiWorkboardTasks).values({
+        id: taskId,
+        workspaceId: workspaceId || '',
+        userId,
+        requestType: 'voice_command',
+        requestContent: transcript,
+        priority: executionMode === 'trinity_fast' ? 'high' : 'normal',
+        status: 'in_progress',
+        executionMode,
+        assignedAgent: routingResult.assignedAgent,
+        estimatedTokens: routingResult.estimatedTokens,
+        confidenceScore: routingResult.confidence,
+        requestMetadata: { 
+          source: 'voice_sync', 
+          platform: 'mobile', 
+          inputMethod: 'voice',
+          routedCategory: routingResult.category
+        },
+        statusHistory: [{ status: 'in_progress', timestamp: new Date().toISOString(), actor: 'voice_command_sync' }],
+        notifyVia: ['websocket'],
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      taskCreated = true;
+
+      // Step 3: Deduct credits - Trinity uses credits for convenience
+      const creditDeducted = await this.deductCredits(
+        workspaceId || '', 
+        userId, 
+        routingResult.estimatedTokens, 
+        taskId
+      );
+
+      if (!creditDeducted && workspaceId) {
+        // Credit deduction failed - insufficient credits
+        await db.update(aiWorkboardTasks)
+          .set({
+            status: 'failed',
+            errorMessage: 'Insufficient credits for this action',
+            statusHistory: sql`${aiWorkboardTasks.statusHistory} || ${JSON.stringify([{
+              status: 'failed',
+              timestamp: new Date().toISOString(),
+              actor: 'credit_check',
+              error: 'Insufficient credits'
+            }])}::jsonb`,
+            updatedAt: new Date()
+          })
+          .where(eq(aiWorkboardTasks.id, taskId));
+
+        return {
+          success: false,
+          taskId,
+          response: 'You don\'t have enough credits for this action. Please add more credits to continue.',
+          assignedAgent: routingResult.assignedAgent,
+          error: 'Insufficient credits'
+        };
+      }
+
+      // Step 4: Execute task through proper pipeline
+      const result = await this.executeTask(
+        { 
+          id: taskId, 
+          workspaceId: workspaceId || '', 
+          userId, 
+          requestType: 'voice_command',
+          requestContent: transcript,
+          priority: executionMode === 'trinity_fast' ? 'high' : 'normal',
+          executionMode,
+          assignedAgent: routingResult.assignedAgent,
+          estimatedTokens: routingResult.estimatedTokens,
+          confidenceScore: routingResult.confidence
+        } as any, 
+        routingResult
+      );
+
+      // Step 4: Update task with result
+      await db.update(aiWorkboardTasks)
+        .set({
+          status: result.success ? 'completed' : 'failed',
+          result: result.data || {},
+          resultSummary: result.summary,
+          errorMessage: result.success ? null : result.error,
+          actualTokens: result.data?.tokensUsed || routingResult.estimatedTokens,
+          completedAt: new Date(),
+          statusHistory: sql`${aiWorkboardTasks.statusHistory} || ${JSON.stringify([{
+            status: result.success ? 'completed' : 'failed',
+            timestamp: new Date().toISOString(),
+            actor: routingResult.assignedAgent
+          }])}::jsonb`,
+          updatedAt: new Date()
+        })
+        .where(eq(aiWorkboardTasks.id, taskId));
+
+      const responseMessage = result.success 
+        ? result.data?.response || result.summary || 'Done! I completed that for you.'
+        : `I couldn't complete that: ${result.error || 'Unknown error'}`;
+
+      console.log('[WorkboardService] Trinity action complete:', {
+        taskId,
+        agent: routingResult.assignedAgent,
+        success: result.success
+      });
+
+      return {
+        success: result.success,
+        taskId,
+        response: responseMessage,
+        assignedAgent: routingResult.assignedAgent,
+        actionExecuted: routingResult.category,
+        tokensUsed: result.data?.tokensUsed || routingResult.estimatedTokens,
+        error: result.success ? undefined : result.error
+      };
+
+    } catch (error: any) {
+      console.error('[WorkboardService] Trinity voice command error:', error);
+      
+      // Update task to failed if it was created
+      if (taskCreated) {
+        try {
+          await db.update(aiWorkboardTasks)
+            .set({
+              status: 'failed',
+              errorMessage: error.message,
+              statusHistory: sql`${aiWorkboardTasks.statusHistory} || ${JSON.stringify([{
+                status: 'failed',
+                timestamp: new Date().toISOString(),
+                actor: 'voice_command_sync',
+                error: error.message
+              }])}::jsonb`,
+              updatedAt: new Date()
+            })
+            .where(eq(aiWorkboardTasks.id, taskId));
+        } catch (dbError) {
+          console.error('[WorkboardService] Failed to update task status:', dbError);
+        }
+      }
+
+      return {
+        success: false,
+        taskId: taskCreated ? taskId : '',
+        response: 'Sorry, I encountered an error executing your command. Please try again.',
+        assignedAgent: 'GeneralAssistant',
+        error: error.message
+      };
+    }
   }
 
   /**
