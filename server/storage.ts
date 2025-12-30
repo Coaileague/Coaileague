@@ -332,6 +332,7 @@ export interface IStorage {
   createWorkspace(workspace: InsertWorkspace): Promise<Workspace>;
   getWorkspace(id: string): Promise<Workspace | undefined>;
   getWorkspaceByOwnerId(ownerId: string): Promise<Workspace | undefined>;
+  getWorkspaceByMembership(userId: string): Promise<Workspace | undefined>;
   updateWorkspace(id: string, data: Partial<InsertWorkspace>): Promise<Workspace | undefined>;
   
   // Workspace theme operations
@@ -1157,6 +1158,12 @@ export class DatabaseStorage implements IStorage {
       .from(workspaces)
       .where(eq(workspaces.ownerId, ownerId));
     return workspace;
+  }
+
+  async getWorkspaceByMembership(userId: string): Promise<Workspace | undefined> {
+    const employee = await this.getEmployeeByUserId(userId);
+    if (!employee) return undefined;
+    return this.getWorkspace(employee.workspaceId);
   }
 
   async updateWorkspace(id: string, data: Partial<InsertWorkspace>): Promise<Workspace | undefined> {

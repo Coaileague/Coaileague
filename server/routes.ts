@@ -2726,7 +2726,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Log the organization creation
-      await storage.createAuditLogEntry({
+      await storage.createAuditLog({
         userId,
         workspaceId: workspace.id,
         action: 'workspace_created',
@@ -18087,7 +18087,7 @@ Summary:`;
       // If role is 'none', don't create a new assignment
       if (role === 'none') {
         // Log the role removal
-        await storage.createAuditLogEntry({
+        await storage.createAuditLog({
           userId: req.user!.id,
           workspaceId: null,
           action: 'platform_role_removed',
@@ -18116,7 +18116,7 @@ Summary:`;
         .returning();
 
       // Log the role assignment
-      await storage.createAuditLogEntry({
+      await storage.createAuditLog({
         userId: req.user!.id,
         workspaceId: null,
         action: 'platform_role_assigned',
@@ -20574,7 +20574,7 @@ Summary:`;
       
       if (workspaceId) {
         // Platform staff can query any workspace
-        workspace = await storage.getWorkspaceById(workspaceId);
+        workspace = await storage.getWorkspace(workspaceId);
       } else {
         // Default to user's own workspace
         workspace = await storage.getWorkspaceByOwnerId(userId) || 
@@ -20635,7 +20635,7 @@ Summary:`;
         targetWorkspaceId = workspace?.id || null;
       } else {
         // Validate workspace exists if explicitly provided
-        const workspace = await storage.getWorkspaceById(targetWorkspaceId);
+        const workspace = await storage.getWorkspace(targetWorkspaceId);
         if (!workspace) {
           return res.status(404).json({ message: "Workspace not found" });
         }
@@ -20742,7 +20742,7 @@ Summary:`;
       const { id: conversationId } = req.params;
       
       // SECURITY: Verify conversation exists and user is a participant
-      const conversation = await storage.getChatConversationById(conversationId);
+      const conversation = await storage.getChatConversation(conversationId);
       if (!conversation) {
         return res.status(404).json({ message: "Conversation not found" });
       }
@@ -20799,7 +20799,7 @@ Summary:`;
       const { id: conversationId } = req.params;
       
       // SECURITY: Verify conversation exists and user is a participant
-      const conversation = await storage.getChatConversationById(conversationId);
+      const conversation = await storage.getChatConversation(conversationId);
       if (!conversation) {
         return res.status(404).json({ message: "Conversation not found" });
       }
@@ -21168,7 +21168,7 @@ Summary:`;
       }
       
       // SECURITY: Verify workspace exists (platform staff can manage any workspace)
-      const workspace = await storage.getWorkspaceById(workspaceId);
+      const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
       }
@@ -21212,7 +21212,7 @@ Summary:`;
       }
       
       // SECURITY: Verify workspace exists (platform staff can view any workspace)
-      const workspace = await storage.getWorkspaceById(workspaceId);
+      const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
       }
@@ -26900,7 +26900,7 @@ Return ONLY valid JSON array with this exact structure:
         return res.status(404).json({ message: "Dispute not found" });
       }
 
-      const employee = await storage.getUserById(dispute.employeeId);
+      const employee = await storage.getUser(dispute.employeeId);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
