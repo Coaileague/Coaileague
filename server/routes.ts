@@ -5292,6 +5292,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+
+  // PROTECTED: Owner only - Reactivate a previously deactivated employee
+  app.post("/api/employees/:id/reactivate", requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      
+      if (!workspaceId) {
+        return res.status(400).json({ message: "Workspace ID is required" });
+      }
+
+      const employee = await storage.reactivateEmployee(req.params.id, workspaceId);
+      if (!employee) {
+        return res.status(404).json({ message: "Employee not found" });
+      }
+      
+      console.log(`[Employees] Reactivated employee ${req.params.id} in workspace ${workspaceId}`);
+      res.json({ success: true, employee });
+    } catch (error) {
+      console.error("Error reactivating employee:", error);
+      res.status(500).json({ message: "Failed to reactivate employee" });
+    }
+  });
   // DUPLICATE REMOVED - This endpoint is defined earlier at line 1878
 
   /**

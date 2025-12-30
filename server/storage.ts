@@ -346,6 +346,7 @@ export interface IStorage {
   getWorkspaceMemberByUserId(userId: string): Promise<{ workspaceId: string; id: string } | undefined>;
   updateEmployee(id: string, workspaceId: string, data: Partial<InsertEmployee>): Promise<Employee | undefined>;
   deleteEmployee(id: string, workspaceId: string): Promise<boolean>;
+  reactivateEmployee(id: string, workspaceId: string): Promise<Employee | undefined>;
   
   // Client operations
   createClient(client: InsertClient): Promise<Client>;
@@ -1231,14 +1232,36 @@ export class DatabaseStorage implements IStorage {
     return employee;
   }
 
+  // Soft delete - marks employee as inactive, preserves records for audit purposes
   async deleteEmployee(id: string, workspaceId: string): Promise<boolean> {
     const result = await db
-      .delete(employees)
+      .update(employees)
+      .set({ 
+        isActive: false,
+        updatedAt: new Date()
+      })
       .where(and(
         eq(employees.id, id),
         eq(employees.workspaceId, workspaceId)
-      ));
-    return result.rowCount ? result.rowCount > 0 : false;
+      ))
+      .returning();
+    return result.length > 0;
+  }
+
+  // Reactivate a previously deactivated employee
+  async reactivateEmployee(id: string, workspaceId: string): Promise<Employee | undefined> {
+    const [employee] = await db
+      .update(employees)
+      .set({ 
+        isActive: true,
+        updatedAt: new Date()
+      })
+      .where(and(
+        eq(employees.id, id),
+        eq(employees.workspaceId, workspaceId)
+      ))
+      .returning();
+    return employee;
   }
 
   async getEmployeeByUserId(userId: string): Promise<Employee | undefined> {
