@@ -505,36 +505,97 @@ class WorkboardService {
   }
 
   /**
-   * Execute the actual task via the assigned subagent
+   * Execute the actual task via the assigned subagent using AI Brain
    */
   private async executeTask(
     task: AiWorkboardTask, 
     routing: { assignedAgent: string; estimatedTokens: number; confidence: number }
   ): Promise<WorkboardTaskResult> {
-    // For now, return a simulated successful result
-    // In a full implementation, this would dispatch to the actual subagent
-    
-    const agentResponses: Record<string, string> = {
-      'SchedulingAgent': 'I can help you with scheduling. What would you like to schedule?',
-      'PayrollAgent': 'I can assist with payroll-related tasks. What do you need?',
-      'BillingAgent': 'I can help with billing and invoices. What would you like to do?',
-      'HRAgent': 'I can help with HR and employee matters. How can I assist?',
-      'AnalyticsAgent': 'I can generate reports and analytics. What data would you like to see?',
-      'SupportAgent': 'I\'m here to help with any support questions. What can I help with?',
-      'ComplianceAgent': 'I can assist with compliance and certifications. What do you need?',
-      'TimeTrackingAgent': 'I can help with time tracking and timesheets. What would you like to do?',
-      'GeneralAssistant': 'I\'m your general assistant. How can I help you today?'
-    };
+    try {
+      const { geminiClient } = await import('./providers/geminiClient');
+      
+      // Build agent-specific system prompt
+      const agentSystemPrompts: Record<string, string> = {
+        'SchedulingAgent': 'You are a scheduling assistant for a workforce management platform. Help users create, modify, and manage employee schedules and shifts. Be concise and action-oriented.',
+        'PayrollAgent': 'You are a payroll assistant for a workforce management platform. Help users with payroll calculations, pay runs, and compensation queries. Always be precise with numbers.',
+        'BillingAgent': 'You are a billing assistant for a workforce management platform. Help users with invoices, payments, and client billing. Be clear about amounts and deadlines.',
+        'HRAgent': 'You are an HR assistant for a workforce management platform. Help users with employee records, onboarding, and team management. Be helpful and professional.',
+        'AnalyticsAgent': 'You are an analytics assistant for a workforce management platform. Help users understand workforce metrics, generate reports, and gain insights from data.',
+        'SupportAgent': 'You are a support assistant for a workforce management platform. Help users troubleshoot issues and find answers to their questions.',
+        'ComplianceAgent': 'You are a compliance assistant for a workforce management platform. Help users with certifications, labor law compliance, and regulatory requirements.',
+        'TimeTrackingAgent': 'You are a time tracking assistant for a workforce management platform. Help users with clock-in/out, timesheets, and attendance records.',
+        'GeneralAssistant': 'You are Trinity, an AI assistant for a workforce management platform called CoAIleague. Help users with any workforce management tasks. Be helpful, professional, and action-oriented.'
+      };
 
-    return {
-      success: true,
-      data: {
-        response: agentResponses[routing.assignedAgent] || agentResponses['GeneralAssistant'],
-        agentId: routing.assignedAgent,
-        processedAt: new Date().toISOString()
-      },
-      summary: `Task processed by ${routing.assignedAgent} with ${routing.confidence * 100}% confidence.`
-    };
+      const systemPrompt = agentSystemPrompts[routing.assignedAgent] || agentSystemPrompts['GeneralAssistant'];
+      
+      // Get workspace context if available
+      let contextInfo = '';
+      if (task.workspaceId) {
+        try {
+          const { workspaces } = await import('@shared/schema');
+          const [workspace] = await db.select()
+            .from(workspaces)
+            .where(eq(workspaces.id, task.workspaceId))
+            .limit(1);
+          if (workspace) {
+            contextInfo = `\n\nWorkspace: ${workspace.name} (${workspace.businessCategory || 'general business'})`;
+          }
+        } catch (e) {
+          // Context is optional, continue without it
+        }
+      }
+
+      // Generate AI response
+      const response = await geminiClient.generate({
+        systemPrompt: `${systemPrompt}${contextInfo}\n\nRespond conversationally as if speaking to the user. Be concise (1-3 sentences). If you need more information to complete the task, ask a clarifying question. If you can provide a direct answer or take action, do so.`,
+        userMessage: task.requestContent,
+        temperature: 0.7,
+        maxTokens: 300,
+      });
+
+      if (!response.success || !response.text) {
+        return {
+          success: false,
+          error: response.error || 'Failed to generate AI response',
+          data: {
+            agentId: routing.assignedAgent,
+            processedAt: new Date().toISOString()
+          }
+        };
+      }
+
+      console.log('[WorkboardService] AI response generated:', {
+        agent: routing.assignedAgent,
+        responseLength: response.text.length
+      });
+
+      return {
+        success: true,
+        data: {
+          response: response.text,
+          agentId: routing.assignedAgent,
+          processedAt: new Date().toISOString(),
+          tokensUsed: response.tokensUsed || routing.estimatedTokens
+        },
+        summary: `Task processed by ${routing.assignedAgent} with ${Math.round(routing.confidence * 100)}% confidence.`
+      };
+
+    } catch (error: any) {
+      console.error('[WorkboardService] AI execution error:', error);
+      
+      // Fallback to basic response on error
+      return {
+        success: true,
+        data: {
+          response: `I received your request about "${task.requestContent.substring(0, 50)}..." but I'm having trouble processing it right now. Please try again or use the app directly.`,
+          agentId: routing.assignedAgent,
+          processedAt: new Date().toISOString(),
+          fallback: true
+        },
+        summary: `Task processed with fallback response due to AI error.`
+      };
+    }
   }
 
   /**
