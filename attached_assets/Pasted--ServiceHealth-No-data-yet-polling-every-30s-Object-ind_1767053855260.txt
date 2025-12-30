@@ -1,0 +1,164 @@
+[ServiceHealth] No data yet, polling every 30s Object
+index-Cvp21slf.js:1466 [Trinity] startRotation: Starting rotation
+index-Cvp21slf.js:1337 [SeasonalTheme] Global state synced: Object
+index-Cvp21slf.js:1388 [ServiceHealth] No data yet, polling every 30s Object
+index-Cvp21slf.js:1388 [ServiceHealth] No data yet, polling every 30s Object
+index-Cvp21slf.js:1388 [ServiceHealth] No data yet, polling every 30s Object
+api/auth/me:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 ()Understand this error
+api/workspace/theme:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 ()Understand this error
+index-Cvp21slf.js:1388 [ServiceHealth] Successfully fetched health summary: Object
+index-Cvp21slf.js:1388 [ServiceHealth] System operational, polling every 30s Object
+index-Cvp21slf.js:1388 [ServiceHealth] System operational, polling every 30s Object
+api/mascot/seasonal/state:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 ()Understand this error
+api/mascot/holiday:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 ()Understand this error
+index-Cvp21slf.js:1959 [CoAIleague] Service Worker registered https://coaileague.com/
+login:1 Error while trying to use the following icon from the Manifest: https://coaileague.com/icons/icon-144x144.png (Download error or resource isn't a valid image)Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+api/mascot/seasonal/state:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 ()Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+index-Cvp21slf.js:1388 [ForceRefresh] WebSocket connected
+index-Cvp21slf.js:1337 [AnimationContext] Connected to main WebSocket for animation broadcasts
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+api/auth/login:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 ()Understand this error
+index-Cvp21slf.js:1466 [Trinity] Warmup timeout reached - showing first bubble
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+api/auth/login:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 ()Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+index-Cvp21slf.js:1388 [ServiceHealth] System operational, polling every 30s Object
+index-Cvp21slf.js:1388 [ServiceHealth] Successfully fetched health summary: Object
+index-Cvp21slf.js:1388 [ServiceHealth] System operational, polling every 30s Object
+index-Cvp21slf.js:1388 [ServiceHealth] System operational, polling every 30s Object
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+index-Cvp21slf.js:1466 [Trinity] Warmup timeout reached - showing first bubble
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+index-Cvp21slf.js:1388 [ServiceHealth] System operational, polling every 30s Object
+index-Cvp21slf.js:1388 [ServiceHealth] Successfully fetched health summary: Object
+index-Cvp21slf.js:1388 [ServiceHealth] System operational, polling every 30s Object
+index-Cvp21slf.js:1388 [ServiceHealth] System operational, polling every 30s Object
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63Understand this error
+
+                
+          
+          
+          
+         Chrome is moving towards a new experience that allows users to choose to browse without third-party cookies.Understand this warning
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+index-Cvp21slf.js:1466 [Trinity] Warmup timeout reached - showing first bubble
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+index-Cvp21slf.js:1466 [Trinity] Rotation tick: {hasContext: false, hasUser: false, hasCurrent: false, queueLen: 5, canShowThought: false}
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+index-Cvp21slf.js:1466 [Trinity] Warmup timeout reached - showing first bubble
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+index-Cvp21slf.js:1466 [Trinity] Warmup timeout reached - showing first bubble
+index-Cvp21slf.js:1388 [ServiceHealth] System operational, polling every 30s {overall: 'operational', operationalCount: 8}
+index-Cvp21slf.js:1388 [ServiceHealth] Successfully fetched health summary: {overall: 'operational', timestamp: '2025-12-30T00:17:05.997Z', serviceCount: 8}
+index-Cvp21slf.js:1388 [ServiceHealth] System operational, polling every 30s {overall: 'operational', operationalCount: 8}
+index-Cvp21slf.js:1388 [ServiceHealth] System operational, polling every 30s {overall: 'operational', operationalCount: 8}
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+index-Cvp21slf.js:1466 [Trinity] Warmup timeout reached - showing first bubble
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
+globalThis.WebSocket @ login:63
+b @ index-Cvp21slf.js:1849Understand this error
+login:63 WebSocket connection to 'wss://coaileague.com/ws' failed: 
