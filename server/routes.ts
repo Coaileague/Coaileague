@@ -4321,6 +4321,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           name: `${user?.firstName || user?.email || 'My'}'s Workspace`,
           ownerId: userId,
         });
+        
+        // Clear historical platform updates for new workspace owner (UNS fresh start)
+        const { onboardingOrchestrator } = await import('./services/ai-brain/subagents/onboardingOrchestrator');
+        onboardingOrchestrator.clearPlatformUpdatesForNewUser(userId, workspace.id)
+          .then(count => count > 0 && console.log(`[UNS] Cleared ${count} platform updates for new workspace owner ${userId}`))
+          .catch(err => console.error('[UNS] Failed to clear platform updates:', err));
       }
       
       // Get organization external ID (ORG-XXXX)
@@ -5176,6 +5182,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             `${employee.firstName} ${employee.lastName}`,
             workspace.name
           ).catch(err => console.error('Failed to send welcome notification:', err));
+          
+          // Clear historical platform updates for new users (UNS fresh start)
+          const { onboardingOrchestrator } = await import('./services/ai-brain/subagents/onboardingOrchestrator');
+          onboardingOrchestrator.clearPlatformUpdatesForNewUser(employee.userId, workspaceId)
+            .then(count => count > 0 && console.log(`[UNS] Cleared ${count} platform updates for new employee user ${employee.userId}`))
+            .catch(err => console.error('[UNS] Failed to clear platform updates:', err));
         }
       }
       

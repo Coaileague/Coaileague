@@ -417,8 +417,9 @@ class OnboardingOrchestrator {
   /**
    * Mark all existing platform updates as viewed for a new user
    * Prevents new org users from seeing historical platform updates
+   * PUBLIC: Can be called from routes when creating employees/users
    */
-  private async clearPlatformUpdatesForNewUser(userId: string, workspaceId: string): Promise<number> {
+  async clearPlatformUpdatesForNewUser(userId: string, workspaceId: string): Promise<number> {
     try {
       // Get all platform updates that the user hasn't viewed yet
       const existingViews = await db.query.userPlatformUpdateViews.findMany({
