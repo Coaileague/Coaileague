@@ -8,17 +8,71 @@
  * - Submit commands to the AI orchestration system
  */
 
-import { useCallback, useEffect, useState, useMemo } from 'react';
+import { useCallback, useEffect, useState, useMemo, useRef } from 'react';
 import { useVoiceCommand, VoiceCommandResult, VoiceCommandError } from '@/hooks/use-voice-command';
 import { useIsMobile } from '@/hooks/use-mobile';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { apiRequest, queryClient } from '@/lib/queryClient';
-import { Mic, MicOff, X, Loader2, Send, AlertCircle, CheckCircle, Zap } from 'lucide-react';
+import { Mic, MicOff, X, Loader2, Send, AlertCircle, CheckCircle, Zap, Volume2, VolumeX } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { motion, AnimatePresence } from 'framer-motion';
+
+function useTTS() {
+  const [isSpeaking, setIsSpeaking] = useState(false);
+  const [ttsEnabled, setTtsEnabled] = useState(true);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  
+  const isSupported = typeof window !== 'undefined' && 'speechSynthesis' in window;
+  
+  const speak = useCallback((text: string) => {
+    if (!isSupported || !ttsEnabled || !text) return;
+    
+    window.speechSynthesis.cancel();
+    
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    
+    const voices = window.speechSynthesis.getVoices();
+    const preferredVoice = voices.find(v => 
+      v.lang.startsWith('en') && (v.name.includes('Samantha') || v.name.includes('Google') || v.name.includes('Female'))
+    ) || voices.find(v => v.lang.startsWith('en'));
+    if (preferredVoice) {
+      utterance.voice = preferredVoice;
+    }
+    
+    utterance.onstart = () => setIsSpeaking(true);
+    utterance.onend = () => setIsSpeaking(false);
+    utterance.onerror = () => setIsSpeaking(false);
+    
+    utteranceRef.current = utterance;
+    window.speechSynthesis.speak(utterance);
+  }, [isSupported, ttsEnabled]);
+  
+  const stop = useCallback(() => {
+    if (isSupported) {
+      window.speechSynthesis.cancel();
+      setIsSpeaking(false);
+    }
+  }, [isSupported]);
+  
+  useEffect(() => {
+    if (isSupported) {
+      window.speechSynthesis.getVoices();
+    }
+    return () => {
+      if (isSupported) {
+        window.speechSynthesis.cancel();
+      }
+    };
+  }, [isSupported]);
+  
+  return { speak, stop, isSpeaking, isSupported, ttsEnabled, setTtsEnabled };
+}
 
 interface MobileVoiceCommandOverlayProps {
   isOpen: boolean;
@@ -55,6 +109,8 @@ export function MobileVoiceCommandOverlay({
   const [submissionState, setSubmissionState] = useState<SubmissionState>('idle');
   const [errorMessage, setErrorMessage] = useState('');
   const [fastModeEnabled, setFastModeEnabled] = useState(false);
+  const [aiResponse, setAiResponse] = useState('');
+  const { speak, stop: stopTTS, isSpeaking, ttsEnabled, setTtsEnabled } = useTTS();
 
   const handleResult = useCallback((result: VoiceCommandResult) => {
     console.log('[VoiceOverlay] Received result:', result);
@@ -126,6 +182,7 @@ export function MobileVoiceCommandOverlay({
     }
 
     setSubmissionState('submitting');
+    setAiResponse('');
     onModeChange?.('THINKING');
 
     try {
@@ -136,21 +193,49 @@ export function MobileVoiceCommandOverlay({
         executionMode: fastModeEnabled ? 'trinity_fast' : 'normal',
       });
 
+      const taskId = response.taskId;
+      console.log('[VoiceOverlay] Task submitted:', taskId);
+
+      const pollForResponse = async (attempts = 0): Promise<string | null> => {
+        if (attempts >= 20) return null;
+        
+        try {
+          const taskResult = await apiRequest('GET', `/api/workboard/task/${taskId}`);
+          if (taskResult.status === 'completed' && taskResult.result?.data?.response) {
+            return taskResult.result.data.response;
+          }
+          if (taskResult.status === 'failed') {
+            return taskResult.errorMessage || 'Task failed';
+          }
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return pollForResponse(attempts + 1);
+        } catch (e) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+          return pollForResponse(attempts + 1);
+        }
+      };
+
+      const trinityResponse = await pollForResponse();
+      
       setSubmissionState('success');
       onModeChange?.('SUCCESS');
       
-      toast({
-        title: 'Command Submitted',
-        description: 'Trinity is processing your request...',
-      });
+      if (trinityResponse) {
+        setAiResponse(trinityResponse);
+        speak(trinityResponse);
+        
+        toast({
+          title: 'Trinity Says',
+          description: trinityResponse.length > 100 ? trinityResponse.substring(0, 100) + '...' : trinityResponse,
+        });
+      } else {
+        toast({
+          title: 'Command Sent',
+          description: 'Trinity is processing your request in the background.',
+        });
+      }
 
       queryClient.invalidateQueries({ queryKey: ['/api/workboard'] });
-
-      setTimeout(() => {
-        setFinalTranscript('');
-        setSubmissionState('idle');
-        onClose();
-      }, 1500);
 
     } catch (error: any) {
       console.error('[VoiceOverlay] Submit error:', error);
@@ -164,18 +249,20 @@ export function MobileVoiceCommandOverlay({
         variant: 'destructive',
       });
     }
-  }, [finalTranscript, onModeChange, onClose, toast]);
+  }, [finalTranscript, fastModeEnabled, onModeChange, toast, speak]);
 
   const handleClose = useCallback(() => {
     if (isListening) {
       cancelListening();
     }
+    stopTTS();
     setFinalTranscript('');
+    setAiResponse('');
     setErrorMessage('');
     setSubmissionState('idle');
     onModeChange?.('IDLE');
     onClose();
-  }, [isListening, cancelListening, onModeChange, onClose]);
+  }, [isListening, cancelListening, stopTTS, onModeChange, onClose]);
 
   const handleMicPress = useCallback(() => {
     if (isListening) {
@@ -272,6 +359,34 @@ export function MobileVoiceCommandOverlay({
                 <div className="flex items-start gap-2 text-destructive">
                   <AlertCircle className="h-4 w-4 mt-0.5 shrink-0" />
                   <p className="text-sm">{errorMessage}</p>
+                </div>
+              ) : aiResponse ? (
+                <div className="space-y-2">
+                  <div className="flex items-start gap-2">
+                    <div className="w-5 h-5 rounded-full bg-primary/20 flex items-center justify-center shrink-0 mt-0.5">
+                      <CheckCircle className="h-3 w-3 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs text-muted-foreground mb-1">Trinity says:</p>
+                      <p className="text-sm leading-relaxed" data-testid="text-ai-response">{aiResponse}</p>
+                    </div>
+                  </div>
+                  {isSpeaking && (
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <Volume2 className="h-3 w-3 animate-pulse text-primary" />
+                      <span>Speaking...</span>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2"
+                        onClick={stopTTS}
+                        data-testid="button-stop-tts"
+                      >
+                        <VolumeX className="h-3 w-3 mr-1" />
+                        Stop
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ) : displayTranscript ? (
                 <p className="text-sm leading-relaxed" data-testid="text-voice-transcript">
