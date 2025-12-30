@@ -47,6 +47,9 @@ const platformWorkspaceSeedLock = {
         dbFeature.enabled = false;
       }
       return res.status(503).json(health);
+    }
+  });
+
   // Combined notifications endpoint - returns platform updates, notifications, and maintenance alerts
   app.get('/api/notifications/combined', async (req, res) => {
     // Prevent caching to ensure fresh data after mutations
@@ -154,6 +157,8 @@ const platformWorkspaceSeedLock = {
       });
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch notifications' });
+    }
+  });
 
   // Edit chat message
   app.patch('/api/chat/message/:id/edit', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -206,6 +211,8 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error('Error editing chat message:', error);
       res.status(500).json({ message: 'Failed to edit message' });
+    }
+  });
 
   // Get notification preferences
   app.get('/api/notifications/preferences', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -229,6 +236,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error('Error fetching notification preferences:', error);
       res.status(500).json({ message: 'Failed to fetch notification preferences' });
+    }
+  });
+
   // SMS & SHIFT REMINDER CONFIGURATION - Phase 2D
   // ============================================================================
 
@@ -245,6 +255,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error('Error checking SMS status:', error);
       res.status(500).json({ message: 'Failed to check SMS status' });
+    }
+  });
+
   app.get('/api/me/workspace-role', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -273,6 +286,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error('[API] Error fetching workspace role:', error);
       res.status(500).json({ message: 'Failed to fetch workspace role' });
+    }
+  });
+
   app.post('/api/support/escalate', chatMessageLimiter, async (req, res) => {
     try {
       const { conversationId, guestName, guestEmail, issue, sessionId } = req.body;
@@ -307,6 +323,9 @@ const platformWorkspaceSeedLock = {
         error: 'Failed to complete escalation',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
+    }
+  });
+
   
   // Auto-create support ticket when critical service fails (spam prevention: 1 ticket/hour per service)
   async function autoCreateSupportTicket(service: string, message: string, severity: 'critical' | 'high'): Promise<void> {
@@ -526,6 +545,8 @@ const platformWorkspaceSeedLock = {
       res.status(500).json({
         message: error.message || 'Registration failed. Please try again.',
       });
+    }
+  });
 
   // Get MFA status for current user
   app.get('/api/auth/mfa/status', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -542,6 +563,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error checking MFA status:", error);
       res.status(500).json({ message: "Failed to check MFA status" });
+    }
+  });
+
   app.get('/api/employees', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       // Platform staff accessing for diagnostics (middleware sets platformRole)
@@ -576,6 +600,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error fetching employees:", error);
       res.status(500).json({ message: "Failed to fetch employees" });
+    }
+  });
+
   
   app.get('/api/benefits', isAuthenticated, async (req: any, res) => {
     try {
@@ -604,6 +631,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error fetching reviews:", error);
       res.status(500).json({ message: "Failed to fetch reviews" });
+    }
+  });
+
   
   app.get('/api/pto', isAuthenticated, async (req: any, res) => {
     try {
@@ -711,6 +741,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error fetching shifts:", error);
       res.status(500).json({ message: "Failed to fetch shifts" });
+    }
+  });
+
   
   app.get('/api/schedules/week/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
@@ -788,6 +821,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error calculating week stats:", error);
       res.status(500).json({ message: "Failed to calculate week stats" });
+    }
+  });
+
   
   app.post('/api/shifts/:id/ai-fill', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
@@ -943,6 +979,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error in AI Fill:", error);
       res.status(500).json({ message: error.message || "Failed to auto-assign shift" });
+    }
+  });
 
   app.post('/api/shifts/:id/fill-request', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
@@ -1098,6 +1136,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error creating fill request:", error);
       res.status(500).json({ message: error.message || "Failed to create fill request" });
+    }
+  });
 
   app.post('/api/shift-offers/:id/respond', async (req, res) => {
     try {
@@ -1398,6 +1438,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error processing contractor response:", error);
       res.status(500).json({ message: error.message || "Failed to process response" });
+    }
+  });
 
   // Employee acknowledges AI-generated shift
   app.post('/api/shifts/:id/acknowledge', requireAuth, requireEmployee, async (req: AuthenticatedRequest, res) => {
@@ -1429,6 +1471,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error acknowledging shift:", error);
       res.status(500).json({ message: "Failed to acknowledge shift" });
+    }
+  });
+
   
   // Toggle SmartSchedule AI (Managers/Admins only) - Persists to DB
   app.post('/api/scheduleos/ai/toggle', isAuthenticated, requireManager, async (req: any, res) => {
@@ -1486,6 +1531,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error toggling SmartSchedule AI:", error);
       res.status(500).json({ message: "Failed to toggle AI" });
+    }
+  });
+
   const scheduleSmartAIRequestSchema = z.object({
     openShiftIds: z.array(z.string()).min(1, "At least one shift ID is required"),
     availableEmployeeIds: z.array(z.string()).min(1, "At least one employee ID is required"),
@@ -1503,6 +1551,9 @@ const platformWorkspaceSeedLock = {
     
     if (!workspaceId) {
       return res.status(400).json({ error: "No workspace selected" });
+    }
+  });
+
   app.get('/api/shifts/:shiftId/acknowledgments', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -1550,6 +1601,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error fetching time entries:", error);
       res.status(500).json({ message: "Failed to fetch time entries" });
+    }
+  });
+
   app.post('/api/client-rates', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -1569,6 +1623,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error creating client rate:", error);
       res.status(400).json({ message: error.message || "Failed to create client rate" });
+    }
+  });
+
   app.get('/api/expense-categories', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -1577,6 +1634,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error fetching expense categories:", error);
       res.status(500).json({ message: "Failed to fetch expense categories" });
+    }
+  });
+
   
   // Get all I-9 records for workspace (Manager/Admin only)
   app.get('/api/i9-records', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -1587,6 +1647,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error fetching I-9 records:", error);
       res.status(500).json({ message: "Failed to fetch I-9 records" });
+    }
+  });
+
   
   // Create policy (Manager/Admin only)
   app.post('/api/policies', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
@@ -1741,6 +1804,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error fetching shift audit data:", error);
       res.status(500).json({ message: error.message || "Failed to fetch shift audit data" });
+    }
+  });
+
   
   app.post('/api/chats/create', requireAuth, chatConversationLimiter, async (req: AuthenticatedRequest, res) => {
     try {
@@ -1840,6 +1906,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error creating chat:", error);
       res.status(500).json({ message: error.message || "Failed to create chat" });
+    }
+  });
 
   app.get('/api/shift-chatrooms/active', isAuthenticated, async (req: any, res) => {
     try {
@@ -1855,6 +1923,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error fetching active shift chatrooms:", error);
       res.status(400).json({ message: error.message || "Failed to fetch shift chatrooms" });
+    }
+  });
+
   app.post('/api/manager-assignments', isAuthenticated, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -1955,6 +2026,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error creating Stripe Connect account:", error);
       res.status(500).json({ message: error.message || "Failed to create Stripe account" });
+    }
+  });
+
   app.post('/api/invoices/:id/create-payment', async (req, res) => {
     try {
       if (!stripe) {
@@ -2071,6 +2145,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error('Error creating payment intent:', error);
       res.status(500).json({ message: error.message || 'Failed to create payment intent' });
+    }
+  });
 
   // Get employee availability (by employee ID - for managers viewing specific employee)
   app.get('/api/employees/:employeeId/availability', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2090,6 +2166,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error('Error getting availability:', error);
       res.status(500).json({ message: error.message || 'Failed to get availability' });
+    }
+  });
 
   // Get shift actions for employee
   app.get('/api/employees/:employeeId/shift-actions', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2113,6 +2191,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error('Error getting shift actions:', error);
       res.status(500).json({ message: error.message || 'Failed to get shift actions' });
+    }
+  });
+
   app.post('/api/timesheet-edit-requests', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -2162,6 +2243,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error('Error creating edit request:', error);
       res.status(500).json({ message: error.message || 'Failed to create edit request' });
+    }
+  });
 
   // Get all report templates (with activation status per workspace)
   app.get('/api/report-templates', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2183,6 +2266,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error fetching report templates:", error);
       res.status(500).json({ message: "Failed to fetch report templates" });
+    }
+  });
+
   app.get('/api/compliance-reports/labor-violations', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -2207,6 +2293,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error generating labor violations report:", error);
       res.status(500).json({ message: "Failed to generate labor violations report" });
+    }
+  });
+
   app.get('/api/workflow-configs', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user.claims.sub;
@@ -2220,6 +2309,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error fetching workflow configs:", error);
       res.status(500).json({ message: "Failed to fetch workflow configs" });
+    }
+  });
+
   // ============================================================================
   // PHASE 3: CRITICAL API GAPS - Support Ticket & AI Response Management
   // ============================================================================
@@ -2295,6 +2387,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error('Error updating ticket status:', error);
       res.status(500).json({ message: 'Failed to update ticket status' });
+    }
+  });
+
   // ============================================================================
 
   const AALV_SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
@@ -2356,6 +2451,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error('Error fetching AI Brain action logs:', error);
       res.status(500).json({ message: 'Failed to fetch AI audit logs' });
+    }
+  });
+
   app.get('/api/admin/support/lookup', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
       const query = String(req.query.q || '').trim();
@@ -2371,6 +2469,8 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error performing support lookup:", error);
       res.status(500).json({ message: "Failed to perform lookup" });
+    }
+  });
 
   // Delete user/employee from any workspace
   app.post('/api/admin/support/delete-user', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -2394,6 +2494,8 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error deleting user:", error);
       res.status(500).json({ message: "Failed to delete user" });
+    }
+  });
 
   // Manually create client in any workspace
   app.post('/api/admin/support/create-client', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -2440,6 +2542,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error creating client:", error);
       res.status(400).json({ message: error.message || "Failed to create client" });
+    }
+  });
+
   app.post('/api/admin/support/process-payment', isAuthenticated, async (req: any, res) => {
     try {
       const { invoiceId, workspaceId, amount, method, note } = req.body;
@@ -2466,6 +2571,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error processing payment:", error);
       res.status(500).json({ message: "Failed to process payment" });
+    }
+  });
+
   app.post('/api/admin/support/reset-chat', isAuthenticated, async (req: any, res) => {
     try {
       const { workspaceId, reason } = req.body;
@@ -2488,6 +2596,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error resetting chat:", error);
       res.status(500).json({ message: "Failed to reset chat" });
+    }
+  });
+
   const masterKeysSearchSchema = z.object({
     q: z.string().optional(),
     flag: z.string().optional(),
@@ -2575,6 +2686,9 @@ const platformWorkspaceSeedLock = {
         return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
       }
       res.status(500).json({ error: "Failed to fetch organizations" });
+    }
+  });
+
   
   // Search users by ID, work ID, email, or name (ROOT/DEPUTY ADMIN only)
   app.get('/api/platform/users/search', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -2709,6 +2823,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error('Error fetching chat ticket:', error);
       res.status(500).json({ error: 'Failed to fetch ticket' });
+    }
+  });
 
   // Get all email templates
   app.get('/api/sales/templates', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -2718,6 +2834,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error fetching email templates:", error);
       res.status(500).json({ message: "Failed to fetch email templates" });
+    }
+  });
+
   const createCustomFormSchema = z.object({
     workspaceId: z.string().min(1, "Organization ID is required"),
     name: z.string().min(1, "Form name is required").max(200),
@@ -2771,6 +2890,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error fetching custom forms:", error);
       res.status(500).json({ message: "Failed to fetch custom forms" });
+    }
+  });
+
   
   // Submit ticket feedback/rating (for training & publicity)
   app.post("/api/helpdesk/feedback", async (req, res) => {
@@ -2792,6 +2914,8 @@ const platformWorkspaceSeedLock = {
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
+    }
+  });
 
   // Accept chat agreement and store for compliance vault
   app.post("/api/helpdesk/agreement/accept", async (req: any, res) => {
@@ -2847,6 +2971,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error recording agreement acceptance:", error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
   app.get('/api/promotional-banners/active', async (req, res) => {
     try {
       const [activeBanner] = await db
@@ -2860,6 +2987,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error fetching active banner:", error);
       res.status(500).json({ error: error.message });
+    }
+  });
 
   // AI Knowledge Retrieval - Ask questions about policies, procedures, FAQs
   app.post('/api/knowledge/ask', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2963,6 +3092,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error in AI knowledge retrieval:", error);
       res.status(500).json({ error: error.message });
+    }
+  });
+
   app.post('/api/predict/turnover', requireAuth, requireManager, async (req: AuthenticatedRequest, res) => {
     try {
       const workspaceId = req.workspaceId!;
@@ -2997,6 +3129,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("PredictionOS™ turnover analysis failed:", error);
       res.status(500).json({ message: error.message || "Failed to analyze turnover risk" });
+    }
+  });
+
   
   // [1] TRAINING COURSES - CRUD operations
   
@@ -3032,6 +3167,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error fetching training courses:", error);
       res.status(500).json({ message: "Failed to fetch training courses" });
+    }
+  });
+
   
   // [1] BUDGETS - CRUD operations
   
@@ -3064,6 +3202,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error fetching budgets:", error);
       res.status(500).json({ message: "Failed to fetch budgets" });
+    }
+  });
+
   
   // [1] MARKETPLACE - Browse available integrations (All authenticated users)
   app.get('/api/integrations/marketplace', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -3091,6 +3232,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error fetching integrations:", error);
       res.status(500).json({ message: "Failed to fetch integrations" });
+    }
+  });
+
   
   // Get pending disputes with AI summaries (Manager view)
   app.get('/api/disputes/pending-review', isAuthenticated, requireHRManager, async (req: any, res) => {
@@ -3149,6 +3293,9 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error fetching pending disputes:", error);
       res.status(500).json({ message: "Failed to fetch pending disputes" });
+    }
+  });
+
   app.get('/api/disputes/:id/investigation-context', isAuthenticated, requirePlatformStaff, async (req: any, res) => {
     try {
       const { id } = req.params;
@@ -3319,6 +3466,8 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error fetching investigation context:", error);
       res.status(500).json({ message: "Failed to fetch investigation context" });
+    }
+  });
 
   // Get user onboarding progress
   app.get('/api/onboarding/progress', async (req: any, res) => {
@@ -3350,6 +3499,8 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error fetching onboarding progress:", error);
       res.status(500).json({ message: "Failed to fetch onboarding progress" });
+    }
+  });
 
   // POST /api/search - AI-powered natural language search across all data
   app.post("/api/search", requireAuth, async (req, res) => {
@@ -3484,6 +3635,8 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error performing AI search:", error);
       res.status(500).json({ message: "Search failed" });
+    }
+  });
 
   /**
    * DEVELOPMENT ONLY: Seed expired idempotency keys for cleanup testing
@@ -3531,6 +3684,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error('[DEV] Error seeding expired keys:', error);
       res.status(500).json({ message: 'Failed to seed expired keys' });
+    }
+  });
+
   app.get('/api/comm-os/rooms', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -3560,6 +3716,9 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error fetching chat rooms:", error);
       res.status(500).json({ message: "Failed to fetch chat rooms" });
+    }
+  });
+
   app.post('/api/dm-audit/request', requireAuth, requireOwner, async (req: AuthenticatedRequest, res) => {
     try {
       const authReq = req as AuthenticatedRequest;
@@ -3594,6 +3753,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error creating audit request:", error);
       res.status(500).json({ message: "Failed to create audit request" });
+    }
+  });
 
   // GET /api/oversight - Get all pending oversight events for current workspace
   app.get('/api/oversight', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -3735,6 +3896,14 @@ const platformWorkspaceSeedLock = {
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
+   * POST /api/ai-brain/command
+   * Execute AI Brain commands (support staff only)
+   */
+  app.post("/api/ai-brain/command", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { aiBrainMasterOrchestrator } = await import("./services/ai-brain/aiBrainMasterOrchestrator");
       const { aiBrainAuthorizationService } = await import("./services/ai-brain/aiBrainAuthorizationService");
@@ -3848,6 +4017,9 @@ const platformWorkspaceSeedLock = {
       const userId = req.userId!;
       const access = await checkWorkspaceAccess(userId, workspaceId);
       if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
+    }
+  });
+
       const policy = await automationGovernanceService.getOrCreatePolicy(workspaceId);
       res.json({ success: true, policy });
     } catch (error: any) {
