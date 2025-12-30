@@ -307,7 +307,11 @@ export default function Dashboard() {
     if (!isLoading && !isAuthenticated) {
       window.location.href = '/login';
     }
-  }, [isAuthenticated, isLoading]);
+    // Redirect users without a workspace to organization creation wizard
+    if (!isLoading && isAuthenticated && user && !user.currentWorkspaceId) {
+      window.location.href = '/create-org';
+    }
+  }, [isAuthenticated, isLoading, user]);
 
   if (isLoading || !isAuthenticated) {
     return (
