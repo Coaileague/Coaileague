@@ -109,12 +109,16 @@ export default function CustomLogin() {
       setLoginData(result.user);
       setShowWelcome(true);
 
+      // Determine redirect destination based on workspace status
+      // Users without a workspace need to create their organization first
+      const redirectTo = result.user.currentWorkspaceId ? "/dashboard" : "/create-org";
+
       // Hide animation and redirect after welcome notification completes
       setTimeout(() => {
         if (animationContext?.hide) {
           animationContext.hide();
         }
-        setLocation("/dashboard");
+        setLocation(redirectTo);
       }, 4500);
     } catch (error: any) {
       // Show error animation
