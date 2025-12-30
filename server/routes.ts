@@ -3660,6 +3660,10 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error creating feedback:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to create feedback" });
+    }
+  });
+
+  /**
    * GET /api/suggested-changes
    * List all available suggested changes for AI Brain
    */
@@ -3683,6 +3687,10 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error fetching suggested changes:", error);
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
    * POST /api/ai-brain/knowledge/route-query
    * Intelligent query routing with context enrichment
    */
@@ -3708,6 +3716,10 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("Error routing query:", error);
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
    * GET /api/seasonal/current-theme
    * Get the currently active seasonal theme
    */
@@ -3771,6 +3783,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error('[AI Brain Command]', error);
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
 
   /**
    * POST /api/support/session/elevate
@@ -3813,6 +3827,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error('[Elevation Route] Error:', error);
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
   // ============================================================================
 
   // Helper: Check if user has access to workspace
@@ -3836,6 +3852,8 @@ const platformWorkspaceSeedLock = {
       res.json({ success: true, policy });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
 
   app.get("/api/trinity/session", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
@@ -3846,6 +3864,8 @@ const platformWorkspaceSeedLock = {
       res.json({ success: true, sessionId: context.sessionId, turnCount: context.turns.length, knowledgeGaps: context.knowledgeGaps, pendingClarifications: context.pendingClarifications });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
 
   app.get("/api/trinity/swarm/topology", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
@@ -3862,6 +3882,8 @@ const platformWorkspaceSeedLock = {
       res.json({ success: true, topology });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
 
   /**
    * Get graduation status for the current workspace
@@ -3889,6 +3911,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("[API] Failed to get graduation status:", error);
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
 
   /**
    * Get all mailing instructions for email governance
@@ -3904,6 +3928,8 @@ const platformWorkspaceSeedLock = {
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
 
   /**
    * Execute parallel work orders - subagents working in tandem
@@ -3946,6 +3972,10 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("[API] Parallel work orders failed:", error);
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
    * Get live presence report (users + bots online)
    */
   app.get("/api/chatserver/presence", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -3956,6 +3986,10 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("[ChatServerSubagent] Presence error:", error);
       res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
+  /**
    * Get orchestration dashboard data including active overlays, recent history, and tool health
    */
   app.get("/api/orchestration/dashboard", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -4004,6 +4038,8 @@ const platformWorkspaceSeedLock = {
     } catch (error: any) {
       console.error("[OrchestrationDashboard] Error fetching data:", error);
       res.status(500).json({ error: error.message });
+    }
+  });
 
   // Generate a new compliance report
   app.post('/api/compliance-reports/generate', isAuthenticated, async (req: any, res) => {
@@ -4042,5 +4078,6 @@ const platformWorkspaceSeedLock = {
     } catch (error) {
       console.error("Error generating compliance report:", error);
       res.status(500).json({ message: "Failed to generate compliance report" });
+    }
   });
 }
