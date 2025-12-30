@@ -213,7 +213,9 @@ export const CompactBubble = memo(function CompactBubble({
             <Sparkles size={14} className="shrink-0" />
             <span className="text-xs font-semibold">Trinity</span>
           </div>
-          <button
+          <div
+            role="button"
+            tabIndex={0}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
@@ -222,6 +224,25 @@ export const CompactBubble = memo(function CompactBubble({
                 setShouldRender(false);
                 onDismiss();
               }, 300);
+            }}
+            onMouseUp={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setIsVisible(false);
+              setTimeout(() => {
+                setShouldRender(false);
+                onDismiss();
+              }, 300);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                setIsVisible(false);
+                setTimeout(() => {
+                  setShouldRender(false);
+                  onDismiss();
+                }, 300);
+              }
             }}
             onMouseDown={(e) => {
               e.stopPropagation();
@@ -241,19 +262,20 @@ export const CompactBubble = memo(function CompactBubble({
             onPointerDown={(e) => {
               e.stopPropagation();
             }}
-            className={`p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 active:bg-black/20 transition-colors cursor-pointer ${colors.text}`}
+            className={`flex items-center justify-center p-1.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10 active:bg-black/20 transition-colors ${colors.text}`}
             style={{ 
               touchAction: 'manipulation', 
               minWidth: '32px', 
               minHeight: '32px',
-              zIndex: 10000,
+              zIndex: 10002,
               position: 'relative',
               pointerEvents: 'auto',
+              cursor: 'pointer',
             }}
             data-testid="button-close-bubble"
           >
             <X size={18} />
-          </button>
+          </div>
         </div>
 
         {/* Summarized message */}
