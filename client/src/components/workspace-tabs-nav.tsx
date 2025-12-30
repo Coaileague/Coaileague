@@ -157,16 +157,16 @@ function PlatformGroupedDesktop({
     .sort(([a], [b]) => (ROUTE_GROUPS[a as RouteGroupId]?.order || 0) - (ROUTE_GROUPS[b as RouteGroupId]?.order || 0));
 
   return (
-    <div className="bg-muted/30 border-t p-3">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="bg-muted/30 border-t px-3 py-1.5">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1">
         {sortedGroups.map(([groupId, groupRoutes]) => {
           const group = ROUTE_GROUPS[groupId as RouteGroupId];
           return (
-            <div key={groupId} className="space-y-1">
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide px-2 mb-2">
+            <div key={groupId} className="flex items-center gap-1">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide mr-1">
                 {group?.label || groupId}
-              </h4>
-              <div className="space-y-1">
+              </span>
+              <div className="flex items-center gap-0.5">
                 {groupRoutes.map((route) => {
                   const isActive = location === route.href;
                   const Icon = route.icon;
@@ -177,15 +177,15 @@ function PlatformGroupedDesktop({
                       size="sm"
                       onClick={() => setLocation(route.href)}
                       className={cn(
-                        "w-full justify-start gap-2",
+                        "gap-1.5 h-7 px-2",
                         isActive && "bg-primary text-primary-foreground"
                       )}
                       data-testid={`route-${route.id}`}
                     >
-                      <Icon className="h-4 w-4 shrink-0" />
-                      <span className="text-sm truncate">{route.label}</span>
+                      <Icon className="h-3.5 w-3.5 shrink-0" />
+                      <span className="text-xs">{route.label}</span>
                       {route.badge && (
-                        <span className="ml-auto px-1.5 py-0.5 text-xs bg-accent/80 rounded shrink-0">
+                        <span className="ml-1 px-1 py-0.5 text-[10px] bg-accent/80 rounded shrink-0">
                           {route.badge}
                         </span>
                       )}
