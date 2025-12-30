@@ -4801,11 +4801,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get organizations the current user manages (owner or admin of)
   app.get('/api/organizations/managed', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.userId;
-      const workspaceId = req.workspaceId;
+      const userId = req.userId || req.user?.id;
+      const workspaceId = req.workspaceId || req.user?.defaultWorkspaceId;
       
-      if (!userId || !workspaceId) {
-        return res.status(400).json({ message: "User and workspace context required" });
+      if (!userId) {
+        return res.status(401).json({ message: "Authentication required" });
+      }
+      
+      if (!workspaceId) {
+        // User is authenticated but has no workspace - return empty array
+        return res.json([]);
       }
       
       // Get employee record to check workspace role
