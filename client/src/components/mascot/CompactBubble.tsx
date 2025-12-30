@@ -13,7 +13,7 @@
 import { useState, useEffect, memo, useRef, useCallback } from 'react';
 import { Link } from 'wouter';
 import { X, Sparkles } from 'lucide-react';
-import { useDrag } from '@use-gesture/react';
+import { triggerHaptic } from '@/hooks/use-touch-swipe';
 import type { Thought } from '@/lib/mascot/ThoughtManager';
 import type { MascotMode } from '@/config/mascotConfig';
 
@@ -65,16 +65,22 @@ export const CompactBubble = memo(function CompactBubble({
   const [shouldRender, setShouldRender] = useState(false);
   const [swipeOffset, setSwipeOffset] = useState({ x: 0, y: 0 });
   const [isDismissing, setIsDismissing] = useState(false);
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const bubbleRef = useRef<HTMLDivElement>(null);
 
   const colors = MODE_COLORS[mode];
   
   // Swipe threshold for dismissal (in pixels)
-  const SWIPE_THRESHOLD = 80;
+  const SWIPE_THRESHOLD = 60;
+  const VELOCITY_THRESHOLD = 0.3;
   
   // Handle swipe dismiss
-  const handleSwipeDismiss = useCallback(() => {
+  const handleSwipeDismiss = useCallback((dirX: number, dirY: number) => {
     if (isDismissing) return;
     setIsDismissing(true);
+    triggerHaptic('light');
+    // Animate off in swipe direction
+    setSwipeOffset({ x: dirX * 300, y: dirY * 300 });
     setIsVisible(false);
     setTimeout(() => {
       setShouldRender(false);
@@ -82,37 +88,51 @@ export const CompactBubble = memo(function CompactBubble({
     }, 300);
   }, [isDismissing, onDismiss]);
   
-  // Swipe gesture handler - swipe left, right, or down to dismiss
-  const bind = useDrag(
-    ({ down, movement: [mx, my], velocity: [vx, vy], direction: [dx, dy] }) => {
-      if (isDismissing) return;
-      
-      if (down) {
-        // While dragging, show the offset
-        setSwipeOffset({ x: mx, y: my });
-      } else {
-        // On release, check if swipe was strong enough
-        const totalMovement = Math.abs(mx) + Math.abs(my);
-        const totalVelocity = Math.abs(vx) + Math.abs(vy);
-        
-        // Dismiss if: moved far enough OR fast swipe in any direction
-        if (totalMovement > SWIPE_THRESHOLD || totalVelocity > 0.5) {
-          // Animate off in swipe direction
-          const finalX = dx * 300;
-          const finalY = dy * 300;
-          setSwipeOffset({ x: finalX, y: finalY });
-          handleSwipeDismiss();
-        } else {
-          // Snap back
-          setSwipeOffset({ x: 0, y: 0 });
-        }
-      }
-    },
-    { 
-      filterTaps: true,
-      threshold: 10,
+  // Native touch event handlers for reliable mobile swipe
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      time: Date.now(),
+    };
+  }, []);
+  
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current || isDismissing) return;
+    
+    const deltaX = e.touches[0].clientX - touchStartRef.current.x;
+    const deltaY = e.touches[0].clientY - touchStartRef.current.y;
+    setSwipeOffset({ x: deltaX, y: deltaY });
+  }, [isDismissing]);
+  
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current || isDismissing) return;
+    
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const deltaX = endX - touchStartRef.current.x;
+    const deltaY = endY - touchStartRef.current.y;
+    const timeDiff = Date.now() - touchStartRef.current.time;
+    
+    // Calculate velocity
+    const velocityX = Math.abs(deltaX) / timeDiff;
+    const velocityY = Math.abs(deltaY) / timeDiff;
+    const totalVelocity = Math.max(velocityX, velocityY);
+    
+    const totalMovement = Math.abs(deltaX) + Math.abs(deltaY);
+    
+    // Dismiss if moved far enough OR fast swipe
+    if (totalMovement > SWIPE_THRESHOLD || totalVelocity > VELOCITY_THRESHOLD) {
+      const dirX = deltaX > 0 ? 1 : deltaX < 0 ? -1 : 0;
+      const dirY = deltaY > 0 ? 1 : deltaY < 0 ? -1 : 0;
+      handleSwipeDismiss(dirX, dirY);
+    } else {
+      // Snap back
+      setSwipeOffset({ x: 0, y: 0 });
     }
-  );
+    
+    touchStartRef.current = null;
+  }, [isDismissing, handleSwipeDismiss]);
 
   // Auto-dismiss with comfortable reading time based on text length
   useEffect(() => {
@@ -162,8 +182,11 @@ export const CompactBubble = memo(function CompactBubble({
 
   return (
     <div
-      {...bind()}
-      className={`fixed pointer-events-auto trinity-bubble touch-pan-y ${
+      ref={bubbleRef}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+      className={`fixed pointer-events-auto trinity-bubble ${
         isVisible && !isDismissing ? 'opacity-100 scale-100' : 'opacity-0 scale-95'
       }`}
       data-mascot="compact-bubble"
@@ -177,7 +200,7 @@ export const CompactBubble = memo(function CompactBubble({
         transition: isDismissing ? 'all 0.3s ease-out' : (swipeOffset.x === 0 && swipeOffset.y === 0 ? 'all 0.3s ease-out' : 'none'),
         cursor: 'grab',
         userSelect: 'none',
-        touchAction: 'none',
+        touchAction: 'pan-y',
       }}
       data-testid="compact-bubble"
     >

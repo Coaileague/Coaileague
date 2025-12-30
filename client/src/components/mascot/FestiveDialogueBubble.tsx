@@ -10,7 +10,7 @@
  */
 
 import { useState, useEffect, useLayoutEffect, useRef, useCallback, memo } from 'react';
-import { useDrag } from '@use-gesture/react';
+import { triggerHaptic } from '@/hooks/use-touch-swipe';
 import type { Thought } from '@/lib/mascot/ThoughtManager';
 
 interface FestiveDialogueBubbleProps {
@@ -456,6 +456,7 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
   const handleDismiss = useCallback(() => {
     if (isDismissing) return;
     setIsDismissing(true);
+    triggerHaptic('light');
     setIsActive(false);
     lastThoughtIdRef.current = null;
     if (animFrameRef.current) {
@@ -464,36 +465,65 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
     onDismiss?.();
   }, [onDismiss, isDismissing]);
   
-  // Swipe gesture handler - swipe in any direction to dismiss
-  const bind = useDrag(
-    ({ down, movement: [mx, my], velocity: [vx, vy], direction: [dx, dy] }) => {
-      if (isDismissing) return;
-      
-      if (down) {
-        setSwipeOffset({ x: mx, y: my });
-      } else {
-        const totalMovement = Math.abs(mx) + Math.abs(my);
-        const totalVelocity = Math.abs(vx) + Math.abs(vy);
-        
-        if (totalMovement > SWIPE_THRESHOLD || totalVelocity > 0.5) {
-          const finalX = dx * 300;
-          const finalY = dy * 300;
-          setSwipeOffset({ x: finalX, y: finalY });
-          handleDismiss();
-        } else {
-          setSwipeOffset({ x: 0, y: 0 });
-        }
-      }
-    },
-    { filterTaps: true, threshold: 10 }
-  );
+  // Store touch start position for swipe detection
+  const touchStartRef = useRef<{ x: number; y: number; time: number } | null>(null);
+  const VELOCITY_THRESHOLD = 0.3;
+  
+  // Native touch event handlers for reliable mobile swipe
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    touchStartRef.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+      time: Date.now(),
+    };
+  }, []);
+  
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current || isDismissing) return;
+    
+    const deltaX = e.touches[0].clientX - touchStartRef.current.x;
+    const deltaY = e.touches[0].clientY - touchStartRef.current.y;
+    setSwipeOffset({ x: deltaX, y: deltaY });
+  }, [isDismissing]);
+  
+  const handleTouchEnd = useCallback((e: React.TouchEvent) => {
+    if (!touchStartRef.current || isDismissing) return;
+    
+    const endX = e.changedTouches[0].clientX;
+    const endY = e.changedTouches[0].clientY;
+    const deltaX = endX - touchStartRef.current.x;
+    const deltaY = endY - touchStartRef.current.y;
+    const timeDiff = Date.now() - touchStartRef.current.time;
+    
+    // Calculate velocity
+    const velocityX = Math.abs(deltaX) / timeDiff;
+    const velocityY = Math.abs(deltaY) / timeDiff;
+    const totalVelocity = Math.max(velocityX, velocityY);
+    
+    const totalMovement = Math.abs(deltaX) + Math.abs(deltaY);
+    
+    // Dismiss if moved far enough OR fast swipe
+    if (totalMovement > SWIPE_THRESHOLD || totalVelocity > VELOCITY_THRESHOLD) {
+      const dirX = deltaX > 0 ? 1 : deltaX < 0 ? -1 : 0;
+      const dirY = deltaY > 0 ? 1 : deltaY < 0 ? -1 : 0;
+      setSwipeOffset({ x: dirX * 300, y: dirY * 300 });
+      handleDismiss();
+    } else {
+      // Snap back
+      setSwipeOffset({ x: 0, y: 0 });
+    }
+    
+    touchStartRef.current = null;
+  }, [isDismissing, handleDismiss]);
 
   if (!isActive || !thought) return null;
   
   return (
     <div
       ref={containerRef}
-      {...bind()}
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
       className="pointer-events-auto trinity-bubble"
       data-mascot="festive-dialogue"
       data-trinity="true"
@@ -505,7 +535,7 @@ export const FestiveDialogueBubble = memo(function FestiveDialogueBubble({
         opacity: isDismissing ? 0 : 1,
         cursor: 'grab',
         userSelect: 'none',
-        touchAction: 'none',
+        touchAction: 'pan-y',
       }}
       data-testid="festive-dialogue-bubble"
     >
