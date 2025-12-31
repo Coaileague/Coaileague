@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -177,6 +177,20 @@ export default function OrgManagement() {
       toast({ title: "Error", description: error.message, variant: "destructive" });
     },
   });
+
+  // Auto-select the current workspace organization when data loads
+  useEffect(() => {
+    if (workspaceData && organizations.length > 0 && !selectedOrg) {
+      // Find the organization that matches the current workspace
+      const currentOrg = organizations.find(org => org.id === workspaceData.id);
+      if (currentOrg) {
+        setSelectedOrg(currentOrg);
+      } else if (organizations.length === 1) {
+        // If only one org available, select it
+        setSelectedOrg(organizations[0]);
+      }
+    }
+  }, [workspaceData, organizations, selectedOrg]);
 
   if (authLoading || !isAuthenticated) {
     return <ResponsiveLoading message="Loading Organization Management..." />;
