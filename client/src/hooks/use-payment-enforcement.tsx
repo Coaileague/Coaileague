@@ -18,6 +18,7 @@ export function usePaymentEnforcement() {
   const { toast } = useToast();
 
   const handlePaymentError = useCallback((error: PaymentErrorResponse) => {
+    console.log('[PaymentEnforcement] Handling error:', error);
     if (error.code === 'PAYMENT_REQUIRED' && error.isOwner) {
       toast({
         title: 'Payment Required',
@@ -25,7 +26,8 @@ export function usePaymentEnforcement() {
         variant: 'destructive',
         duration: 8000,
       });
-      setLocation(error.redirectTo || '/org-management');
+      // Use window.location for reliable redirect
+      window.location.href = error.redirectTo || '/org-management';
     } else if (error.code === 'ORGANIZATION_INACTIVE' && error.forceLogout) {
       toast({
         title: 'Organization Unavailable',
@@ -34,11 +36,10 @@ export function usePaymentEnforcement() {
         duration: 5000,
       });
       apiRequest('POST', '/api/auth/logout').finally(() => {
-        setLocation('/');
-        window.location.reload();
+        window.location.href = '/';
       });
     }
-  }, [toast, setLocation]);
+  }, [toast]);
 
   const checkResponse = useCallback((response: Response) => {
     if (response.status === 402 || response.status === 404) {
