@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -15,6 +15,8 @@ import { queryClient } from "@/lib/queryClient";
 import { THEME } from "@/config/theme";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { useUniversalAnimation } from "@/contexts/universal-animation-context";
+
+const REMEMBER_ME_KEY = "coaileague_remember_me";
 
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
@@ -66,6 +68,21 @@ export default function CustomLogin() {
     },
   });
 
+  // Load saved credentials on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(REMEMBER_ME_KEY);
+      if (saved) {
+        const { email, password } = JSON.parse(saved);
+        if (email) form.setValue("email", email);
+        if (password) form.setValue("password", password);
+        form.setValue("rememberMe", true);
+      }
+    } catch (e) {
+      // Ignore parse errors
+    }
+  }, []);
+
   const onSubmit = async (data: LoginFormData) => {
     setIsLoading(true);
     const startTime = Date.now();
@@ -108,11 +125,20 @@ export default function CustomLogin() {
 
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
 
+      // Save or clear Remember Me credentials
+      if (data.rememberMe) {
+        localStorage.setItem(REMEMBER_ME_KEY, JSON.stringify({ email: data.email, password: data.password }));
+      } else {
+        localStorage.removeItem(REMEMBER_ME_KEY);
+      }
+
       // Check subscription status before proceeding
       try {
         const authCheck = await fetch("/api/auth/me", { credentials: "include" });
+        console.log("[Login] Auth check status:", authCheck.status);
         if (authCheck.status === 402) {
           const paymentData = await authCheck.json();
+          console.log("[Login] Payment data:", paymentData);
           if (paymentData.code === 'PAYMENT_REQUIRED' && paymentData.isOwner) {
             // Org owner with payment issue - redirect to org management
             if (animationContext?.hide) {
@@ -124,11 +150,14 @@ export default function CustomLogin() {
               variant: "destructive",
               duration: 5000,
             });
-            setLocation(paymentData.redirectTo || "/org-management");
+            // Use window.location for more reliable redirect
+            setIsLoading(false);
+            window.location.href = paymentData.redirectTo || "/org-management";
             return;
           }
         }
       } catch (e) {
+        console.error("[Login] Auth check error:", e);
         // Continue with normal flow if check fails
       }
 
