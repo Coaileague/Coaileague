@@ -4843,45 +4843,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/api/organizations/managed', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.userId || req.user?.id;
-      const workspaceId = req.workspaceId || req.user?.defaultWorkspaceId;
       
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
       }
       
-      if (!workspaceId) {
-        // User is authenticated but has no workspace - return empty array
-        return res.json([]);
+      const isPlatformStaff = req.platformRole && ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'].includes(req.platformRole);
+      
+      // First, check if user owns any workspaces directly
+      const ownedWorkspaces = await db.select().from(workspaces).where(eq(workspaces.ownerId, userId));
+      
+      // Also check workspaceId from request context (if they're logged into a specific workspace)
+      const contextWorkspaceId = req.workspaceId || req.user?.defaultWorkspaceId;
+      
+      // Build list of organizations the user can access
+      const orgs: any[] = [];
+      const processedIds = new Set<string>();
+      
+      // Add all owned workspaces with full management access
+      for (const workspace of ownedWorkspaces) {
+        if (processedIds.has(workspace.id)) continue;
+        processedIds.add(workspace.id);
+        
+        const employees = await storage.getEmployeesByWorkspace(workspace.id);
+        const clients = await db.select().from(clientsTable).where(eq(clientsTable.workspaceId, workspace.id));
+        
+        orgs.push({
+          id: workspace.id,
+          name: workspace.name,
+          memberCount: employees.length,
+          clientCount: clients.length,
+          createdAt: workspace.createdAt,
+          isOwner: true,
+          canManage: true,
+        });
       }
       
-      // Get employee record to check workspace role
-      const employee = await storage.getEmployeeByUserId(userId, workspaceId);
-      const isPlatformStaff = req.platformRole && ['root_admin', 'sysop', 'support_manager', 'support_agent'].includes(req.platformRole);
-      
-      // Only org_owner, org_admin, or platform staff can see managed organizations
-      if (!isPlatformStaff && employee?.workspaceRole !== 'org_owner' && employee?.workspaceRole !== 'org_admin') {
-        return res.status(403).json({ message: "Only organization owners and admins can access this" });
+      // For platform staff, also add any workspace they're currently viewing
+      if (isPlatformStaff && contextWorkspaceId && !processedIds.has(contextWorkspaceId)) {
+        const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, contextWorkspaceId)).limit(1);
+        if (workspace) {
+          const employees = await storage.getEmployeesByWorkspace(contextWorkspaceId);
+          const clients = await db.select().from(clientsTable).where(eq(clientsTable.workspaceId, contextWorkspaceId));
+          
+          orgs.push({
+            id: workspace.id,
+            name: workspace.name,
+            memberCount: employees.length,
+            clientCount: clients.length,
+            createdAt: workspace.createdAt,
+            isOwner: false,
+            canManage: true, // Platform staff can manage
+          });
+        }
       }
       
-      // For now, return the current workspace as an "organization"
-      const workspace = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
-      const employees = await storage.getEmployeesByWorkspace(workspaceId);
-      const clients = await db.select().from(clientsTable).where(eq(clientsTable.workspaceId, workspaceId));
-      
-      if (workspace.length === 0) {
-        return res.json([]);
+      // If user is an org_admin in a workspace (but not owner), add that too
+      if (contextWorkspaceId && !processedIds.has(contextWorkspaceId)) {
+        const employee = await storage.getEmployeeByUserId(userId, contextWorkspaceId);
+        if (employee && (employee.workspaceRole === 'org_admin' || employee.workspaceRole === 'org_owner')) {
+          const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, contextWorkspaceId)).limit(1);
+          if (workspace) {
+            const employees = await storage.getEmployeesByWorkspace(contextWorkspaceId);
+            const clients = await db.select().from(clientsTable).where(eq(clientsTable.workspaceId, contextWorkspaceId));
+            
+            orgs.push({
+              id: workspace.id,
+              name: workspace.name,
+              memberCount: employees.length,
+              clientCount: clients.length,
+              createdAt: workspace.createdAt,
+              isOwner: employee.workspaceRole === 'org_owner',
+              canManage: true,
+            });
+          }
+        }
       }
       
-      const org = {
-        id: workspace[0].id,
-        name: workspace[0].name,
-        memberCount: employees.length,
-        clientCount: clients.length,
-        createdAt: workspace[0].createdAt,
-        isOwner: employee?.workspaceRole === 'org_owner',
-      };
-      
-      res.json([org]);
+      res.json(orgs);
     } catch (error: any) {
       console.error("Error fetching managed organizations:", error);
       res.status(500).json({ message: error.message || "Failed to fetch organizations" });
