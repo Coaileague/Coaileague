@@ -230,9 +230,9 @@ class BackupService {
       // Log to audit trail
       await db.insert(systemAuditLogs).values({
         action: 'backup_completed',
-        resource: 'database',
-        details: {
-          backupId,
+        entityType: 'backup',
+        entityId: backupId,
+        metadata: {
           type,
           sizeBytes,
           walPosition,
@@ -275,8 +275,9 @@ class BackupService {
 
       await db.insert(systemAuditLogs).values({
         action: 'backup_failed',
-        resource: 'database',
-        details: { backupId, type, error: error.message },
+        entityType: 'backup',
+        entityId: backupId,
+        metadata: { type, error: error.message },
       });
 
       return {
