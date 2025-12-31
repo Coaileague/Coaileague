@@ -33,7 +33,7 @@ export function usePaymentEnforcement() {
         variant: 'destructive',
         duration: 5000,
       });
-      apiRequest('POST', '/api/logout').finally(() => {
+      apiRequest('POST', '/api/auth/logout').finally(() => {
         setLocation('/');
         window.location.reload();
       });

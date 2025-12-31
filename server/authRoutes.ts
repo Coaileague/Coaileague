@@ -19,6 +19,7 @@ import {
   resetPassword,
   requireAuth,
 } from "./auth";
+import { checkWorkspacePaymentStatus, hasPlatformWideAccess, getUserPlatformRole } from "./rbac";
 import { emailService } from "./services/emailService";
 
 const router = Router();
@@ -283,6 +284,39 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
     .where(eq(platformRoles.userId, freshUser.id));
   
   const activePlatformRole = userPlatformRoles.find(pr => !pr.revokedAt);
+  
+  // PAYMENT ENFORCEMENT: Check workspace subscription status
+  // Platform staff bypass this check
+  const workspaceId = freshUser.currentWorkspaceId;
+  if (workspaceId && !hasPlatformWideAccess(activePlatformRole?.role)) {
+    const paymentResult = await checkWorkspacePaymentStatus(freshUser.id, workspaceId);
+    
+    if (!paymentResult.allowed) {
+      // Different responses for org owners vs end users
+      if (paymentResult.isOwner) {
+        // Org owner: Tell them payment is needed
+        return res.status(402).json({
+          code: 'PAYMENT_REQUIRED',
+          message: 'Your organization subscription is inactive. Please update your payment to continue.',
+          reason: paymentResult.reason,
+          workspaceId: paymentResult.workspaceId,
+          workspaceName: paymentResult.workspaceName,
+          redirectTo: '/org-management',
+          isOwner: true
+        });
+      }
+      
+      // End user: 404 + force logout
+      return res.status(404).json({
+        code: 'ORGANIZATION_INACTIVE',
+        message: 'This organization is currently unavailable.',
+        reason: paymentResult.reason,
+        forceLogout: true,
+        redirectTo: '/',
+        isOwner: false
+      });
+    }
+  }
   
   res.json({
     user: {
