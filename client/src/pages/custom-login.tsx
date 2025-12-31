@@ -108,6 +108,30 @@ export default function CustomLogin() {
 
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
 
+      // Check subscription status before proceeding
+      try {
+        const authCheck = await fetch("/api/auth/me", { credentials: "include" });
+        if (authCheck.status === 402) {
+          const paymentData = await authCheck.json();
+          if (paymentData.code === 'PAYMENT_REQUIRED' && paymentData.isOwner) {
+            // Org owner with payment issue - redirect to org management
+            if (animationContext?.hide) {
+              animationContext.hide();
+            }
+            toast({
+              title: "Payment Required",
+              description: `Your organization subscription needs renewal.`,
+              variant: "destructive",
+              duration: 5000,
+            });
+            setLocation(paymentData.redirectTo || "/org-management");
+            return;
+          }
+        }
+      } catch (e) {
+        // Continue with normal flow if check fails
+      }
+
       // Show personalized welcome notification with actual loading duration
       setLoginData(result.user);
       setShowWelcome(true);
