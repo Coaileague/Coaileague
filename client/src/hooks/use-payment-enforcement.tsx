@@ -184,24 +184,24 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
     <PaymentModalContext.Provider value={{ showPaymentModal, isModalOpen: modalState.isOpen }}>
       {children}
       
-      {/* Compact Payment Modal - SaaS style */}
+      {/* Ultra-compact Payment Modal */}
       <AlertDialog open={modalState.isOpen}>
-        <AlertDialogContent className="max-w-xs p-4 gap-3">
-          <AlertDialogHeader className="gap-2">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
-              <AlertDialogTitle className="text-base font-semibold">
+        <AlertDialogContent className="max-w-[280px] p-3 gap-2">
+          <AlertDialogHeader className="gap-1 space-y-0">
+            <div className="flex items-center gap-1.5">
+              <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
+              <AlertDialogTitle className="text-sm font-medium">
                 Subscription Inactive
               </AlertDialogTitle>
             </div>
-            <AlertDialogDescription className="text-sm">
-              {modalState.workspaceName} is {modalState.reason}. Reactivate to continue.
+            <AlertDialogDescription className="text-xs leading-tight">
+              {modalState.workspaceName} is {modalState.reason}.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="mt-1">
+          <AlertDialogFooter className="mt-0">
             <AlertDialogAction 
               onClick={handleActivate}
-              className="w-full h-8 text-sm"
+              className="w-full h-7 text-xs"
               data-testid="button-activate-subscription"
             >
               Activate
