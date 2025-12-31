@@ -23,6 +23,10 @@ import {
   Settings,
   Mail,
   MoreVertical,
+  CreditCard,
+  AlertTriangle,
+  CheckCircle,
+  RefreshCw,
 } from "lucide-react";
 import { WorkspaceLayout } from "@/components/workspace-layout";
 import { ResponsiveLoading } from "@/components/loading-indicators";
@@ -96,6 +100,38 @@ export default function OrgManagement() {
   const { data: organizations = [], isLoading: orgsLoading } = useQuery<Organization[]>({
     queryKey: ['/api/organizations/managed'],
     enabled: isAuthenticated,
+  });
+
+  const { data: workspaceData } = useQuery<{ 
+    id: string; 
+    name: string; 
+    subscriptionStatus: string;
+    subscriptionPlan?: string;
+  }>({
+    queryKey: ['/api/workspace'],
+    enabled: isAuthenticated,
+  });
+
+  const reactivateMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/workspace/reactivate");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/workspace'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });
+      toast({ 
+        title: "Subscription Renewed", 
+        description: "Your organization is now active. Thank you for your payment." 
+      });
+    },
+    onError: (error: Error) => {
+      toast({ 
+        title: "Renewal Failed", 
+        description: error.message || "Unable to process subscription renewal. Please try again.", 
+        variant: "destructive" 
+      });
+    },
   });
 
   const { data: members = [], isLoading: membersLoading, refetch: refetchMembers } = useQuery<OrgMember[]>({
@@ -385,6 +421,91 @@ export default function OrgManagement() {
             </CardContent>
           </Card>
         </div>
+
+        {workspaceData && isOrgOwnerOrAdmin && (
+          <Card className={workspaceData.subscriptionStatus !== 'active' ? 'border-destructive' : ''}>
+            <CardHeader className="pb-3">
+              <div className="flex items-center justify-between gap-4">
+                <div>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <CreditCard className="h-5 w-5 text-primary" />
+                    Subscription & Billing
+                  </CardTitle>
+                  <CardDescription>
+                    Manage your organization's subscription and payment settings
+                  </CardDescription>
+                </div>
+                {workspaceData.subscriptionStatus === 'active' ? (
+                  <Badge className="bg-green-100 text-green-700 border-green-300 gap-1">
+                    <CheckCircle className="h-3 w-3" />
+                    Active
+                  </Badge>
+                ) : (
+                  <Badge variant="destructive" className="gap-1">
+                    <AlertTriangle className="h-3 w-3" />
+                    {workspaceData.subscriptionStatus === 'suspended' ? 'Suspended' : 'Cancelled'}
+                  </Badge>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent>
+              {workspaceData.subscriptionStatus !== 'active' ? (
+                <div className="bg-destructive/10 border border-destructive/30 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h4 className="font-medium text-destructive">Subscription Inactive</h4>
+                      <p className="text-sm text-muted-foreground mt-1">
+                        Your organization's subscription has been {workspaceData.subscriptionStatus}. 
+                        Team members cannot access the platform until you renew your subscription.
+                      </p>
+                      <Button 
+                        className="mt-4 gap-2" 
+                        onClick={() => reactivateMutation.mutate()}
+                        disabled={reactivateMutation.isPending}
+                        data-testid="button-renew-subscription"
+                      >
+                        {reactivateMutation.isPending ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="h-4 w-4" />
+                            Renew Subscription
+                          </>
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="p-4 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground">Status</p>
+                    <p className="font-medium text-green-600 flex items-center gap-1 mt-1">
+                      <CheckCircle className="h-4 w-4" />
+                      Active
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground">Plan</p>
+                    <p className="font-medium mt-1">
+                      {workspaceData.subscriptionPlan || 'Professional'}
+                    </p>
+                  </div>
+                  <div className="p-4 rounded-lg bg-muted/50">
+                    <p className="text-xs text-muted-foreground">Organization</p>
+                    <p className="font-medium mt-1 truncate">
+                      {workspaceData.name}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
 
         <Dialog open={isRoleDialogOpen} onOpenChange={setIsRoleDialogOpen}>
           <DialogContent>

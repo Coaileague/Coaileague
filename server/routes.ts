@@ -4355,6 +4355,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reactivate workspace subscription (org owner only)
+  app.post("/api/workspace/reactivate", requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const userId = authReq.user?.id;
+      
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Get the user's workspace
+      const user = await storage.getUser(userId);
+      const workspaceId = user?.currentWorkspaceId;
+      
+      if (!workspaceId) {
+        return res.status(404).json({ message: "No workspace found" });
+      }
+      
+      // Check if user is the org owner
+      const workspace = await storage.getWorkspace(workspaceId);
+      if (!workspace || workspace.ownerId !== userId) {
+        return res.status(403).json({ message: "Only the organization owner can reactivate the subscription" });
+      }
+      
+      // Reactivate the workspace
+      await db.update(workspaces).set({ subscriptionStatus: "active" }).where(eq(workspaces.id, workspaceId));
+      
+      console.log(`[PaymentEnforcement] Workspace ${workspaceId} reactivated by owner ${userId}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Subscription reactivated successfully",
+        workspaceId,
+        status: "active"
+      });
+    } catch (error) {
+      console.error("Error reactivating workspace:", error);
+      res.status(500).json({ message: "Failed to reactivate subscription" });
+    }
+  });
+
   // Update workspace (Users can only update basic settings, Platform Admin can update critical org info)
   app.patch('/api/workspace', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
