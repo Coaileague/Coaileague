@@ -136,11 +136,13 @@ router.post("/api/auth/register", async (req, res) => {
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
+  rememberMe: z.boolean().optional().default(false),
 });
 
 router.post("/api/auth/login", async (req, res) => {
   try {
     const data = loginSchema.parse(req.body);
+    const rememberMe = data.rememberMe === true;
 
     // Find user
     const [user] = await db
@@ -207,6 +209,14 @@ router.post("/api/auth/login", async (req, res) => {
 
     // Create session - CRITICAL: explicitly save session to database immediately
     req.session.userId = user.id;
+    
+    // Extend session duration if "Remember Me" is checked (30 days vs 1 week)
+    if (rememberMe && req.session.cookie) {
+      const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+      req.session.cookie.maxAge = thirtyDays;
+      console.log('[Login] Remember Me enabled - session extended to 30 days');
+    }
+    
     await new Promise<void>((resolve, reject) => {
       req.session.save((err) => {
         if (err) {

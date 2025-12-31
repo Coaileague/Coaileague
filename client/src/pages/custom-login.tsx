@@ -8,7 +8,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { useToast } from "@/hooks/use-toast";
 import { useTransition } from "@/contexts/transition-context";
 import { UniversalWelcomeNotification } from "@/components/universal-welcome-notification";
-import { Loader2, Eye, EyeOff } from "lucide-react";
+import { Loader2, Eye, EyeOff, Check } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { THEME } from "@/config/theme";
@@ -18,6 +19,7 @@ import { useUniversalAnimation } from "@/contexts/universal-animation-context";
 const loginSchema = z.object({
   email: z.string().email("Invalid email address"),
   password: z.string().min(1, "Password is required"),
+  rememberMe: z.boolean().optional().default(false),
 });
 
 type LoginFormData = z.infer<typeof loginSchema>;
@@ -60,6 +62,7 @@ export default function CustomLogin() {
     defaultValues: {
       email: "",
       password: "",
+      rememberMe: false,
     },
   });
 
@@ -311,8 +314,33 @@ export default function CustomLogin() {
                 )}
               />
 
-              {/* Forgot Password Link */}
-              <div className="text-right" style={{ marginTop: '-8px' }}>
+              {/* Remember Me & Forgot Password Row */}
+              <div className="flex items-center justify-between" style={{ marginTop: '-4px' }}>
+                <FormField
+                  control={form.control}
+                  name="rememberMe"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center gap-2 space-y-0">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={field.onChange}
+                          disabled={isLoading}
+                          data-testid="checkbox-remember-me"
+                        />
+                      </FormControl>
+                      <FormLabel 
+                        className="cursor-pointer font-normal"
+                        style={{ 
+                          fontSize: THEME.pages.login.link.fontSize,
+                          color: THEME.pages.login.subheading.color
+                        }}
+                      >
+                        Remember me
+                      </FormLabel>
+                    </FormItem>
+                  )}
+                />
                 <button
                   type="button"
                   onClick={() => setLocation("/reset-password")}
