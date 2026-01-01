@@ -304,7 +304,8 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
     if (!paymentResult.allowed) {
       // Different responses for org owners vs end users
       if (paymentResult.isOwner) {
-        // Org owner: Tell them payment is needed
+        // Org owner: Return user data WITH payment required flag
+        // This keeps them authenticated but shows the payment modal
         return res.status(402).json({
           code: 'PAYMENT_REQUIRED',
           message: 'Your organization subscription is inactive. Please update your payment to continue.',
@@ -312,7 +313,18 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
           workspaceId: paymentResult.workspaceId,
           workspaceName: paymentResult.workspaceName,
           redirectTo: '/org-management',
-          isOwner: true
+          isOwner: true,
+          // Include actual user data so app doesn't treat as logged out
+          user: {
+            id: freshUser.id,
+            email: freshUser.email,
+            firstName: freshUser.firstName ?? "",
+            lastName: freshUser.lastName ?? "",
+            role: freshUser.role ?? "user",
+            emailVerified: freshUser.emailVerified ?? false,
+            currentWorkspaceId: freshUser.currentWorkspaceId ?? null,
+            platformRole: activePlatformRole?.role || null,
+          },
         });
       }
       

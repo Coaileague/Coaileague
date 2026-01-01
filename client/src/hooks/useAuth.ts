@@ -47,15 +47,10 @@ export function useAuth() {
         const paymentData = await res.json();
         console.log('[useAuth] 402 Payment Required:', paymentData);
         
-        // If owner, keep them "authenticated" so they can see the modal
-        if (paymentData.isOwner === true) {
+        // If owner with user data, keep them "authenticated" so they can see the modal
+        if (paymentData.isOwner === true && paymentData.user) {
           return {
-            user: {
-              id: 'payment-pending',
-              email: '',
-              firstName: 'Payment',
-              lastName: 'Required',
-            } as AuthUser,
+            user: paymentData.user as AuthUser,
             paymentRequired: true,
             isOwner: true,
             reason: paymentData.reason,
