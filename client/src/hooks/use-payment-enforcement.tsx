@@ -1,15 +1,7 @@
 import { useState, useEffect, useCallback, useRef, createContext, useContext } from 'react';
 import { apiRequest } from '@/lib/queryClient';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 // Grace period only for LOGOUT actions - owners see modal immediately
 const LOGOUT_GRACE_PERIOD_MS = 5000; // 5 seconds before any logout
@@ -31,9 +23,14 @@ interface PaymentModalState {
   redirectTo: string;
 }
 
-// Global state to persist across component remounts
-let globalModalShown = false;
-let globalModalData: PaymentModalState | null = null;
+// GLOBAL STATE - survives all React re-renders and component unmounts
+let GLOBAL_MODAL_OPEN = false;
+let GLOBAL_MODAL_DATA: PaymentModalState = {
+  isOpen: false,
+  workspaceName: '',
+  reason: '',
+  redirectTo: '/org-management'
+};
 
 const PaymentModalContext = createContext<{
   showPaymentModal: (data: PaymentErrorResponse) => void;
@@ -49,10 +46,10 @@ export function usePaymentEnforcement() {
 }
 
 export function PaymentEnforcementProvider({ children }: { children: React.ReactNode }) {
-  // Initialize from global state if modal was already shown
+  // Initialize from global state
   const [modalState, setModalState] = useState<PaymentModalState>(() => {
-    if (globalModalShown && globalModalData) {
-      return globalModalData;
+    if (GLOBAL_MODAL_OPEN) {
+      return { ...GLOBAL_MODAL_DATA, isOpen: true };
     }
     return {
       isOpen: false,
@@ -62,31 +59,27 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
     };
   });
   
-  // Prevent duplicate processing
-  const hasHandledRef = useRef(globalModalShown);
+  // Refs to prevent duplicate processing
+  const hasHandledRef = useRef(GLOBAL_MODAL_OPEN);
   const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
   const fetchInterceptorSetRef = useRef(false);
+  
+  // Force re-render to sync with global state
+  const [, forceUpdate] = useState(0);
 
   const handleActivate = useCallback(() => {
-    console.log('[PaymentEnforcement] Navigating to:', modalState.redirectTo);
-    // Clear global state before navigating
-    globalModalShown = false;
-    globalModalData = null;
+    console.log('[PaymentEnforcement] User clicked Activate - navigating to:', modalState.redirectTo);
+    // Clear global state
+    GLOBAL_MODAL_OPEN = false;
+    GLOBAL_MODAL_DATA = { isOpen: false, workspaceName: '', reason: '', redirectTo: '/org-management' };
+    // Navigate
     window.location.href = modalState.redirectTo;
   }, [modalState.redirectTo]);
 
-  // Sync modal state to global
-  useEffect(() => {
-    if (modalState.isOpen) {
-      globalModalShown = true;
-      globalModalData = modalState;
-    }
-  }, [modalState]);
-
-  // Intercept fetch calls - only set up once
+  // Intercept fetch calls - set up ONCE per app lifetime
   useEffect(() => {
     if (fetchInterceptorSetRef.current) {
-      return; // Already set up
+      return;
     }
     fetchInterceptorSetRef.current = true;
     
@@ -95,51 +88,46 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
     window.fetch = async (...args) => {
       const response = await originalFetch(...args);
       
-      // Only intercept API calls
       const url = args[0]?.toString() || '';
       if (!url.includes('/api/')) {
         return response;
       }
       
-      // Check for payment-related errors (402 or 404)
       if (response.status === 402 || response.status === 404) {
         const clonedResponse = response.clone();
         try {
           const data = await clonedResponse.json() as PaymentErrorResponse;
           
-          // Only process payment/organization codes
           if (data.code === 'PAYMENT_REQUIRED' || data.code === 'ORGANIZATION_INACTIVE') {
             console.log('[PaymentEnforcement] Intercepted:', response.status, data.code, 'isOwner:', data.isOwner);
             
-            // Prevent duplicate handling
-            if (hasHandledRef.current || globalModalShown) {
-              console.log('[PaymentEnforcement] Already handled, keeping modal open');
+            // Already showing modal? Don't process again
+            if (GLOBAL_MODAL_OPEN) {
+              console.log('[PaymentEnforcement] Modal already open, skipping');
               return response;
             }
             
-            // OWNERS: Show modal IMMEDIATELY - no delay
+            // OWNERS: Show modal IMMEDIATELY
             if (data.isOwner === true) {
               console.log('[PaymentEnforcement] Owner detected - showing modal NOW');
-              hasHandledRef.current = true;
-              globalModalShown = true;
-              const newState = {
+              GLOBAL_MODAL_OPEN = true;
+              GLOBAL_MODAL_DATA = {
                 isOpen: true,
                 workspaceName: data.workspaceName || 'Your organization',
                 reason: data.reason || 'suspended',
                 redirectTo: data.redirectTo || '/org-management'
               };
-              globalModalData = newState;
-              setModalState(newState);
+              hasHandledRef.current = true;
+              setModalState({ ...GLOBAL_MODAL_DATA });
               return response;
             }
             
             // NON-OWNERS: Wait grace period then logout
             if (data.isOwner === false && data.forceLogout === true) {
               if (!logoutTimerRef.current) {
-                console.log('[PaymentEnforcement] Non-owner - scheduling logout in', LOGOUT_GRACE_PERIOD_MS, 'ms');
+                console.log('[PaymentEnforcement] Non-owner - scheduling logout');
                 hasHandledRef.current = true;
                 logoutTimerRef.current = setTimeout(() => {
-                  console.log('[PaymentEnforcement] Grace period over - logging out');
                   apiRequest('POST', '/api/auth/logout').finally(() => {
                     window.location.href = '/';
                   });
@@ -148,64 +136,78 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
             }
           }
         } catch (e) {
-          // JSON parse error - ignore
+          // Ignore JSON parse errors
         }
       }
       
       return response;
     };
-
-    return () => {
-      // Don't restore fetch on unmount - keep intercepting
-      if (logoutTimerRef.current) {
-        clearTimeout(logoutTimerRef.current);
-      }
-    };
   }, []);
 
-  // Force modal to stay open if it was shown
+  // Keep local state synced with global state
   useEffect(() => {
-    if (globalModalShown && globalModalData && !modalState.isOpen) {
-      console.log('[PaymentEnforcement] Restoring modal state from global');
-      setModalState(globalModalData);
-    }
+    const syncInterval = setInterval(() => {
+      if (GLOBAL_MODAL_OPEN && !modalState.isOpen) {
+        console.log('[PaymentEnforcement] Syncing modal state from global');
+        setModalState({ ...GLOBAL_MODAL_DATA });
+      }
+    }, 100);
+    return () => clearInterval(syncInterval);
   }, [modalState.isOpen]);
 
+  // Check global state on mount
+  useEffect(() => {
+    if (GLOBAL_MODAL_OPEN && !modalState.isOpen) {
+      setModalState({ ...GLOBAL_MODAL_DATA });
+    }
+  }, []);
+
+  const isOpen = modalState.isOpen || GLOBAL_MODAL_OPEN;
+
   return (
-    <PaymentModalContext.Provider value={{ showPaymentModal: () => {}, isModalOpen: modalState.isOpen }}>
+    <PaymentModalContext.Provider value={{ showPaymentModal: () => {}, isModalOpen: isOpen }}>
       {children}
       
-      {/* Ultra-compact Payment Modal - blocks all interaction until resolved */}
-      <AlertDialog open={modalState.isOpen} onOpenChange={() => {}}>
-        <AlertDialogContent 
-          className="!max-w-[280px] p-4 gap-3"
-          showHomeButton={false}
-          onEscapeKeyDown={(e) => e.preventDefault()}
-          onPointerDownOutside={(e) => e.preventDefault()}
+      {/* Custom Modal - COMPLETELY blocks UI until user clicks OK */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 z-[99999] flex items-center justify-center"
+          style={{ 
+            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+            backdropFilter: 'blur(4px)'
+          }}
+          data-testid="payment-modal-overlay"
         >
-          <AlertDialogHeader className="gap-2 space-y-0">
-            <div className="flex items-center gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
-              <AlertDialogTitle className="text-sm font-semibold">
+          <div 
+            className="bg-background border border-border rounded-lg shadow-2xl p-5 max-w-[300px] w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+            data-testid="payment-modal-content"
+          >
+            <div className="flex items-center gap-2 mb-3">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-500/10">
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+              </div>
+              <h2 className="text-base font-semibold text-foreground">
                 Subscription Inactive
-              </AlertDialogTitle>
+              </h2>
             </div>
-            <AlertDialogDescription className="text-xs leading-relaxed">
-              <span className="font-medium">{modalState.workspaceName}</span> is {modalState.reason}. 
-              Click below to reactivate.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter className="mt-1">
-            <AlertDialogAction 
+            
+            <p className="text-sm text-muted-foreground mb-4 leading-relaxed">
+              <span className="font-medium text-foreground">{modalState.workspaceName || GLOBAL_MODAL_DATA.workspaceName}</span> is {modalState.reason || GLOBAL_MODAL_DATA.reason}. 
+              Please reactivate your subscription to continue.
+            </p>
+            
+            <Button 
               onClick={handleActivate}
-              className="w-full h-8 text-sm font-medium"
+              className="w-full"
+              size="default"
               data-testid="button-activate-subscription"
             >
               Activate Subscription
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            </Button>
+          </div>
+        </div>
+      )}
     </PaymentModalContext.Provider>
   );
 }
