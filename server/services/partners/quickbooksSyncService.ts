@@ -44,6 +44,20 @@ interface QBOEmployee {
   Active?: boolean;
 }
 
+interface QBOVendor {
+  Id: string;
+  SyncToken: string;
+  DisplayName: string;
+  GivenName?: string;
+  FamilyName?: string;
+  CompanyName?: string;
+  PrimaryEmailAddr?: { Address: string };
+  PrimaryPhone?: { FreeFormNumber: string };
+  Active?: boolean;
+  Vendor1099?: boolean;
+  TaxIdentifier?: string;
+}
+
 interface EntityMatch {
   coaileagueEntityId: string;
   coaileagueEntityName: string;
@@ -227,6 +241,21 @@ export class QuickBooksSyncService {
       recordsReviewRequired += employeeResult.reviewRequired;
       errors.push(...employeeResult.errors);
 
+      // Sync QuickBooks Vendors (1099 Contractors)
+      const vendorResult = await this.syncQBOVendors(
+        workspaceId,
+        connection.id,
+        realmId,
+        accessToken,
+        userId
+      );
+      
+      recordsProcessed += vendorResult.processed;
+      recordsMatched += vendorResult.matched;
+      recordsCreated += vendorResult.created;
+      recordsReviewRequired += vendorResult.reviewRequired;
+      errors.push(...vendorResult.errors);
+
       await this.updateSyncLog(jobId, {
         status: errors.length > 0 ? 'partial' : 'completed',
         recordsProcessed,
@@ -402,6 +431,230 @@ export class QuickBooksSyncService {
     }
 
     return { processed: qboEmployees.length, matched, created, reviewRequired, errors };
+  }
+
+  /**
+   * Sync QuickBooks Vendors (1099 Contractors) to employees table with workerType='contractor'
+   * Maps to existing contractors or creates manual review items for ambiguous matches
+   */
+  private async syncQBOVendors(
+    workspaceId: string,
+    connectionId: string,
+    realmId: string,
+    accessToken: string,
+    userId: string
+  ): Promise<{ processed: number; matched: number; created: number; reviewRequired: number; errors: string[] }> {
+    // Query only 1099-eligible vendors from QuickBooks
+    const qboVendors = await this.queryWithPagination<QBOVendor>(
+      'Vendor',
+      realmId,
+      accessToken,
+      'where Active = true'
+    );
+    
+    // Filter to only 1099-eligible vendors (contractors we pay)
+    const contractors = qboVendors.filter(v => v.Vendor1099 === true);
+    
+    // Get existing contractors from our employees table
+    const coaileagueContractors = await db.select().from(employees)
+      .where(and(
+        eq(employees.workspaceId, workspaceId),
+        eq(employees.workerType, 'contractor')
+      ));
+
+    let matched = 0;
+    let created = 0;
+    let reviewRequired = 0;
+    const errors: string[] = [];
+
+    for (const qboVendor of contractors) {
+      try {
+        const match = this.findBestContractorMatch(qboVendor, coaileagueContractors);
+
+        if (match.matchType === 'email_exact' || match.matchType === 'name_exact') {
+          // Update the existing contractor with QuickBooks vendor ID
+          await this.createOrUpdateMapping(
+            workspaceId,
+            connectionId,
+            'contractor',
+            match.coaileagueEntityId,
+            qboVendor.Id,
+            qboVendor.DisplayName,
+            qboVendor.SyncToken,
+            qboVendor.PrimaryEmailAddr?.Address,
+            match.confidence,
+            userId
+          );
+          
+          // Update contractor with QB vendor ID and 1099 flag
+          if (match.coaileagueEntityId) {
+            await db.update(employees)
+              .set({
+                quickbooksVendorId: qboVendor.Id,
+                is1099Eligible: true,
+                businessName: qboVendor.CompanyName || null,
+              })
+              .where(eq(employees.id, match.coaileagueEntityId));
+          }
+          matched++;
+        } else if (match.matchType === 'name_fuzzy' || match.matchType === 'ambiguous') {
+          await this.createManualReviewItem(
+            workspaceId,
+            connectionId,
+            'contractor',
+            match.coaileagueEntityId,
+            match.coaileagueEntityName,
+            qboVendor.Id,
+            qboVendor.DisplayName,
+            qboVendor.PrimaryEmailAddr?.Address,
+            match.confidence,
+            match.ambiguousCandidates || [],
+            userId
+          );
+          reviewRequired++;
+        } else if (match.matchType === 'no_match') {
+          // Create new contractor record for unmatched QuickBooks vendors
+          const firstName = qboVendor.GivenName || qboVendor.DisplayName.split(' ')[0] || 'Unknown';
+          const lastName = qboVendor.FamilyName || qboVendor.DisplayName.split(' ').slice(1).join(' ') || '';
+          
+          const [newContractor] = await db.insert(employees)
+            .values({
+              workspaceId,
+              firstName,
+              lastName,
+              email: qboVendor.PrimaryEmailAddr?.Address || null,
+              phone: qboVendor.PrimaryPhone?.FreeFormNumber || null,
+              workerType: 'contractor',
+              quickbooksVendorId: qboVendor.Id,
+              businessName: qboVendor.CompanyName || null,
+              is1099Eligible: true,
+              isActive: qboVendor.Active !== false,
+              onboardingStatus: 'completed',
+            })
+            .returning();
+          
+          // Create mapping for the new contractor
+          await this.createOrUpdateMapping(
+            workspaceId,
+            connectionId,
+            'contractor',
+            newContractor.id,
+            qboVendor.Id,
+            qboVendor.DisplayName,
+            qboVendor.SyncToken,
+            qboVendor.PrimaryEmailAddr?.Address,
+            1.0,
+            userId
+          );
+          created++;
+        }
+      } catch (error: any) {
+        errors.push(`Vendor/Contractor ${qboVendor.DisplayName}: ${error.message}`);
+      }
+    }
+
+    return { processed: contractors.length, matched, created, reviewRequired, errors };
+  }
+
+  /**
+   * Find best match for a QuickBooks Vendor in existing contractors
+   */
+  private findBestContractorMatch(
+    qboVendor: QBOVendor,
+    coaileagueContractors: any[]
+  ): EntityMatch {
+    const qboEmail = qboVendor.PrimaryEmailAddr?.Address?.toLowerCase();
+    const qboName = qboVendor.DisplayName.toLowerCase();
+    const qboCompany = qboVendor.CompanyName?.toLowerCase();
+
+    // First try email match (highest confidence)
+    if (qboEmail) {
+      const emailMatch = coaileagueContractors.find(c => 
+        c.email?.toLowerCase() === qboEmail
+      );
+      if (emailMatch) {
+        return {
+          coaileagueEntityId: emailMatch.id,
+          coaileagueEntityName: `${emailMatch.firstName} ${emailMatch.lastName}`,
+          coaileagueEmail: emailMatch.email,
+          partnerEntityId: qboVendor.Id,
+          partnerEntityName: qboVendor.DisplayName,
+          partnerEmail: qboEmail,
+          confidence: 1.0,
+          matchType: 'email_exact',
+        };
+      }
+    }
+
+    // Then try exact name match
+    const nameMatches = coaileagueContractors.filter(c => {
+      const fullName = `${c.firstName} ${c.lastName}`.toLowerCase();
+      return fullName === qboName || 
+             c.businessName?.toLowerCase() === qboName ||
+             c.businessName?.toLowerCase() === qboCompany;
+    });
+
+    if (nameMatches.length === 1) {
+      return {
+        coaileagueEntityId: nameMatches[0].id,
+        coaileagueEntityName: `${nameMatches[0].firstName} ${nameMatches[0].lastName}`,
+        coaileagueEmail: nameMatches[0].email,
+        partnerEntityId: qboVendor.Id,
+        partnerEntityName: qboVendor.DisplayName,
+        partnerEmail: qboEmail,
+        confidence: 0.9,
+        matchType: 'name_exact',
+      };
+    }
+
+    // Try fuzzy name matching
+    const fuzzyMatches = coaileagueContractors.filter(c => {
+      const fullName = `${c.firstName} ${c.lastName}`;
+      return this.fuzzyNameMatch(fullName, qboVendor.DisplayName) > 0.7 ||
+             (c.businessName && this.fuzzyNameMatch(c.businessName, qboVendor.DisplayName) > 0.7);
+    });
+
+    if (fuzzyMatches.length === 1) {
+      return {
+        coaileagueEntityId: fuzzyMatches[0].id,
+        coaileagueEntityName: `${fuzzyMatches[0].firstName} ${fuzzyMatches[0].lastName}`,
+        coaileagueEmail: fuzzyMatches[0].email,
+        partnerEntityId: qboVendor.Id,
+        partnerEntityName: qboVendor.DisplayName,
+        partnerEmail: qboEmail,
+        confidence: 0.75,
+        matchType: 'name_fuzzy',
+      };
+    }
+
+    if (fuzzyMatches.length > 1) {
+      return {
+        coaileagueEntityId: fuzzyMatches[0].id,
+        coaileagueEntityName: `${fuzzyMatches[0].firstName} ${fuzzyMatches[0].lastName}`,
+        coaileagueEmail: fuzzyMatches[0].email,
+        partnerEntityId: qboVendor.Id,
+        partnerEntityName: qboVendor.DisplayName,
+        partnerEmail: qboEmail,
+        confidence: 0.5,
+        matchType: 'ambiguous',
+        ambiguousCandidates: fuzzyMatches.map(m => ({
+          id: m.id,
+          name: `${m.firstName} ${m.lastName}`,
+          email: m.email,
+        })),
+      };
+    }
+
+    // No match found
+    return {
+      coaileagueEntityId: '',
+      coaileagueEntityName: '',
+      partnerEntityId: qboVendor.Id,
+      partnerEntityName: qboVendor.DisplayName,
+      partnerEmail: qboEmail,
+      confidence: 0,
+      matchType: 'no_match',
+    };
   }
 
   private findBestClientMatch(

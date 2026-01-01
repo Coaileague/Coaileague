@@ -889,6 +889,11 @@ export const employees = pgTable("employees", {
   
   // Payroll Information
   payType: varchar("pay_type").default("hourly"), // hourly, salary, commission, contractor
+  workerType: varchar("worker_type").default("employee"), // employee, contractor - determines W2 vs 1099 tax treatment
+  quickbooksVendorId: varchar("quickbooks_vendor_id"), // External QB vendor ID for 1099 contractor sync
+  taxIdLastFour: varchar("tax_id_last_four"), // Last 4 of SSN/EIN for verification
+  businessName: varchar("business_name"), // Contractor DBA or business name
+  is1099Eligible: boolean("is_1099_eligible").default(false), // Whether contractor receives 1099
   payAmount: decimal("pay_amount", { precision: 12, scale: 2 }), // Salary or base amount if not hourly
   payFrequency: varchar("pay_frequency").default("biweekly"), // weekly, biweekly, semimonthly, monthly
   
@@ -926,6 +931,11 @@ export const insertEmployeeSchema = createInsertSchema(employees).omit({
   updatedAt: true,
 }).extend({
   hourlyRate: z.union([z.string(), z.number()]).transform(val => typeof val === 'number' ? val.toString() : val).optional(),
+  overtimeRate: z.union([z.string(), z.number()]).transform(val => typeof val === 'number' ? val.toString() : val).optional(),
+  doubletimeRate: z.union([z.string(), z.number()]).transform(val => typeof val === 'number' ? val.toString() : val).optional(),
+  payAmount: z.union([z.string(), z.number()]).transform(val => typeof val === 'number' ? val.toString() : val).optional(),
+  latitude: z.union([z.string(), z.number()]).transform(val => typeof val === 'number' ? val.toString() : val).optional(),
+  longitude: z.union([z.string(), z.number()]).transform(val => typeof val === 'number' ? val.toString() : val).optional(),
 });
 
 export type InsertEmployee = z.infer<typeof insertEmployeeSchema>;
