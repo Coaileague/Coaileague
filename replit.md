@@ -1,7 +1,20 @@
 # CoAIleague - AI-Powered Workforce Intelligence Platform
 
 ## Overview
-CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management platform. Its purpose is to centralize dynamic configuration, eliminate hardcoded values, and integrate financial management with real Stripe payments. The platform leverages AI for advanced automation across various workforce management functions, including scheduling, sentiment analysis, onboarding, health monitoring, and dispute resolution, all orchestrated through a multi-tenant AI system called HelpAI. CoAIleague aims to deliver an efficient, comprehensive, and AI-driven workforce management solution with significant market potential.
+CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management platform. Its purpose is to centralize dynamic configuration, eliminate hardcoded values, and integrate financial management with real Stripe payments. The platform leverages AI for advanced automation across various workforce management functions, including scheduling, sentiment analysis, onboarding, health monitoring, and dispute resolution. CoAIleague aims to deliver an efficient, comprehensive, and AI-driven workforce management solution with significant market potential.
+
+## AI Architecture (Critical Distinction)
+**Trinity AI** is the AI Brain orchestrator - handles ALL end user/org automations:
+- Autonomous scheduling using client data (addresses, contract rates, post orders)
+- Platform Action Hub: Central registry for 300+ AI Brain actions
+- Multi-tenant AI orchestration for workforce management
+- Universal Diagnostic Orchestrator with 7 specialized domain subagents
+- QuickBooks integration for client enrichment
+
+**HelpAI** is ONLY for helpdesk chatroom support:
+- Staff copilot for support agents in helpdesk chatrooms
+- Escalation handling and ticket summarization
+- NOT for general user automations (that's Trinity's domain)
 
 ## User Preferences
 - I prefer simple language
@@ -20,9 +33,10 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Animated Word Logo:** A Google Doodle-style seasonal animated word logo system.
 
 **Technical Implementations:**
-- **AI Brain Services:** Utilizes a 4-tier Gemini architecture for document extraction, issue detection, autonomous scheduling, and HelpAI orchestration.
+- **Trinity AI Brain Services:** Utilizes a 4-tier Gemini architecture for document extraction, issue detection, autonomous scheduling, and platform orchestration.
+- **Platform Action Hub (Trinity):** Central registry for 300+ AI Brain actions, formerly named helpaiActionOrchestrator. This is Trinity's infrastructure - NOT related to HelpAI despite legacy naming.
 - **Universal Diagnostic Orchestrator:** Seven specialized domain subagents for root cause analysis and hotpatch suggestions.
-- **Universal Chat (HelpAI):** A unified AI chatbot for routing interactions.
+- **HelpAI (Helpdesk Only):** Support staff copilot for helpdesk chatrooms - escalation handling and ticket summarization. NOT for general user automations.
 - **Financials:** Real-time Stripe integration for payments, payroll, invoicing, and tax.
 - **Email Automation:** Resend integration with per-email billing and templates.
 - **Notifications:** WebSocket for real-time notifications and Resend for email.
