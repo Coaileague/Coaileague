@@ -28,6 +28,8 @@ export interface UsageEventInput {
   metadata?: any;
   ipAddress?: string;
   userAgent?: string;
+  // Control event bus emission - set to false when caller emits its own billing event
+  emitEvent?: boolean;
 }
 
 export interface UsageMetrics {
@@ -177,25 +179,27 @@ export class UsageMeteringService {
     // Update daily rollup asynchronously
     this.updateDailyRollup(input.workspaceId, input.featureKey, event.createdAt!).catch(console.error);
 
-    // Emit usage event to Trinity for tracking
-    platformEventBus.emit({
-      type: 'billing',
-      category: isOverage ? 'ai_overage_recorded' : 'ai_usage_recorded',
-      title: isOverage ? 'AI Overage Recorded' : 'AI Usage Recorded',
-      message: `${input.featureKey}: ${input.usageAmount} ${input.usageUnit}${isOverage ? ` (overage: ${overageAmount})` : ''}`,
-      workspaceId: input.workspaceId,
-      userId: input.userId,
-      metadata: {
-        featureKey: input.featureKey,
-        usageType: input.usageType,
-        usageAmount: input.usageAmount,
-        totalCost,
-        isOverage,
-        allowanceUsed,
-        overageAmount,
-        eventId: event.id,
-      },
-    });
+    // Emit usage event to Trinity for tracking (unless caller handles its own event emission)
+    if (input.emitEvent !== false) {
+      platformEventBus.emit({
+        type: 'billing',
+        category: isOverage ? 'ai_overage_recorded' : 'ai_usage_recorded',
+        title: isOverage ? 'AI Overage Recorded' : 'AI Usage Recorded',
+        message: `${input.featureKey}: ${input.usageAmount} ${input.usageUnit}${isOverage ? ` (overage: ${overageAmount})` : ''}`,
+        workspaceId: input.workspaceId,
+        userId: input.userId,
+        metadata: {
+          featureKey: input.featureKey,
+          usageType: input.usageType,
+          usageAmount: input.usageAmount,
+          totalCost,
+          isOverage,
+          allowanceUsed,
+          overageAmount,
+          eventId: event.id,
+        },
+      });
+    }
 
     // Log audit event
     await db.insert(billingAuditLog).values({

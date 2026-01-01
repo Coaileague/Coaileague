@@ -289,7 +289,7 @@ export class AICreditGateway {
     if (classification.isFree) {
       console.log(`[AICreditGateway] FREE usage recorded (no charge): ${featureKey}, ${tokensUsed} tokens`);
       
-      // Still record for analytics
+      // Still record for analytics (don't emit event - geminiClient handles that)
       await usageMeteringService.recordUsage({
         workspaceId,
         userId,
@@ -297,6 +297,7 @@ export class AICreditGateway {
         usageType: 'token',
         usageAmount: tokensUsed,
         usageUnit: 'tokens',
+        emitEvent: false, // Prevent duplicate events - geminiClient emits usage events
         metadata: {
           ...metadata,
           tier: 'FREE',
@@ -322,7 +323,7 @@ export class AICreditGateway {
       relatedEntityId: metadata?.entityId,
     });
 
-    // Record usage
+    // Record usage (don't emit event - we emit our own billing event below)
     await usageMeteringService.recordUsage({
       workspaceId,
       userId,
@@ -330,6 +331,7 @@ export class AICreditGateway {
       usageType: 'token',
       usageAmount: tokensUsed,
       usageUnit: 'tokens',
+      emitEvent: false, // Prevent duplicate events - we emit billing event below
       metadata: {
         ...metadata,
         tier: classification.tier,
