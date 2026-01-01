@@ -360,6 +360,7 @@ class TrialConversionOrchestrator {
   /**
    * Reactivate a suspended workspace after payment
    * Coordinates with Stripe to resume/create subscription before updating local records
+   * IMPORTANT: Aborts local activation if Stripe coordination fails to prevent state divergence
    */
   async reactivateWorkspace(workspaceId: string, newTier?: SubscriptionTier): Promise<{ success: boolean; message: string }> {
     try {
@@ -370,10 +371,38 @@ class TrialConversionOrchestrator {
 
       const tier = newTier || workspace.subscriptionTier as SubscriptionTier || 'starter';
       
-      // Coordinate with Stripe if there's an existing subscription
-      if (workspace.stripeSubscriptionId && tier !== 'free') {
-        try {
-          // Attempt to resume the Stripe subscription
+      // For paid tiers, Stripe coordination is REQUIRED before local activation
+      if (tier !== 'free') {
+        if (workspace.stripeSubscriptionId) {
+          // Resume existing Stripe subscription
+          const stripeResult = await this.subscriptionManager.resumeSubscription(workspaceId, tier);
+          
+          if (!stripeResult.success) {
+            // Stripe resume failed - abort reactivation to prevent state divergence
+            const errorMessage = stripeResult.error || 'Stripe subscription resume failed';
+            console.error(`[TrialSubscription] Reactivation aborted - Stripe resume failed: ${errorMessage}`);
+            
+            await platformEventBus.publish({
+              type: 'reactivation_failed',
+              category: 'billing',
+              title: 'Workspace Reactivation Failed',
+              description: `${workspace.name} reactivation failed: ${errorMessage}`,
+              metadata: { 
+                workspaceId, 
+                tier, 
+                reason: 'stripe_resume_failed', 
+                error: errorMessage,
+                stripeSubscriptionId: stripeResult.subscriptionId || workspace.stripeSubscriptionId,
+              },
+              visibility: 'admin',
+            });
+            
+            return { success: false, message: `Stripe resume failed: ${errorMessage}` };
+          }
+          
+          console.log(`[TrialSubscription] Stripe subscription resumed for workspace ${workspaceId}`);
+        } else {
+          // No existing subscription - create a new one
           const stripeResult = await this.subscriptionManager.createSubscription({
             workspaceId,
             tier,
@@ -381,16 +410,35 @@ class TrialConversionOrchestrator {
           });
           
           if (!stripeResult.success) {
-            console.warn(`[TrialSubscription] Stripe reactivation warning: ${stripeResult.error}`);
-            // Continue with local reactivation even if Stripe fails - admin can fix manually
+            // Stripe creation failed - abort reactivation to prevent state divergence
+            const errorMessage = stripeResult.error || 'Stripe subscription creation failed';
+            console.error(`[TrialSubscription] Reactivation aborted - Stripe creation failed: ${errorMessage}`);
+            
+            await platformEventBus.publish({
+              type: 'reactivation_failed',
+              category: 'billing',
+              title: 'Workspace Reactivation Failed',
+              description: `${workspace.name} reactivation failed: ${errorMessage}`,
+              metadata: { 
+                workspaceId, 
+                tier, 
+                reason: 'stripe_creation_failed', 
+                error: errorMessage,
+                stripeCustomerId: workspace.stripeCustomerId,
+              },
+              visibility: 'admin',
+            });
+            
+            return { success: false, message: `Stripe subscription creation failed: ${errorMessage}` };
           }
-        } catch (stripeError: any) {
-          console.warn(`[TrialSubscription] Stripe coordination failed: ${stripeError.message}`);
-          // Continue with local reactivation - webhook will sync later
+          
+          console.log(`[TrialSubscription] New Stripe subscription created for workspace ${workspaceId}`);
         }
       }
       
-      // Update local records atomically
+      // Stripe coordination succeeded (or free tier) - now update local records
+      // Note: For paid tiers, resumeSubscription already updated workspace state,
+      // but we ensure consistency here
       await db.update(workspaces).set({
         subscriptionStatus: 'active',
         subscriptionTier: tier,
@@ -411,7 +459,7 @@ class TrialConversionOrchestrator {
         category: 'billing',
         title: 'Workspace Reactivated',
         description: `${workspace.name} reactivated with ${tier} plan`,
-        metadata: { workspaceId, tier, stripeCoordinated: !!workspace.stripeSubscriptionId },
+        metadata: { workspaceId, tier, stripeCoordinated: tier !== 'free' },
         visibility: 'admin',
       });
 
@@ -419,6 +467,17 @@ class TrialConversionOrchestrator {
       return { success: true, message: `Workspace reactivated with ${tier} plan` };
     } catch (error: any) {
       console.error('[TrialSubscription] Reactivation failed:', error);
+      
+      // Emit failure event for visibility
+      await platformEventBus.publish({
+        type: 'reactivation_failed',
+        category: 'billing',
+        title: 'Workspace Reactivation Failed',
+        description: `Reactivation failed: ${error.message}`,
+        metadata: { workspaceId, reason: 'exception', error: error.message },
+        visibility: 'admin',
+      });
+      
       return { success: false, message: error.message };
     }
   }

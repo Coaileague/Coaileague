@@ -389,6 +389,112 @@ export class SubscriptionManager {
   }
 
   /**
+   * Resume a suspended or cancelled subscription
+   * Handles different Stripe subscription states:
+   * - Active: Already good, optionally removes cancel_at_period_end
+   * - Paused: Uses stripe.subscriptions.resume()
+   * - Past_due/unpaid: Returns failure (requires payment resolution first)
+   * - Fully cancelled: Returns error (caller should create new subscription)
+   * 
+   * IMPORTANT: Does NOT mutate local state - caller is responsible for updating
+   * local records only after this returns success=true
+   */
+  async resumeSubscription(workspaceId: string, tier?: SubscriptionTier): Promise<SubscriptionResult> {
+    try {
+      const [workspace] = await db.select()
+        .from(workspaces)
+        .where(eq(workspaces.id, workspaceId))
+        .limit(1);
+
+      if (!workspace?.stripeSubscriptionId) {
+        return {
+          success: false,
+          error: 'No existing subscription to resume - create a new subscription instead',
+        };
+      }
+
+      // Retrieve current Stripe subscription state
+      const subscription = await stripe.subscriptions.retrieve(workspace.stripeSubscriptionId);
+      
+      const targetTier = tier || workspace.subscriptionTier as SubscriptionTier || 'starter';
+      const stripeSubId = workspace.stripeSubscriptionId;
+
+      // Handle based on subscription status - only return success for confirmed resumable states
+      switch (subscription.status) {
+        case 'active':
+          // Already active - update tier if different and remove pending cancellation
+          if (subscription.cancel_at_period_end) {
+            await stripe.subscriptions.update(stripeSubId, {
+              cancel_at_period_end: false,
+              metadata: {
+                ...subscription.metadata,
+                tier: targetTier,
+                resumed: new Date().toISOString(),
+              },
+            });
+          }
+          // Subscription is active - success
+          console.log(`[SubscriptionManager] Stripe subscription ${stripeSubId} confirmed active`);
+          return { success: true, subscriptionId: stripeSubId };
+
+        case 'trialing':
+          // Trial subscriptions are also considered active
+          console.log(`[SubscriptionManager] Stripe subscription ${stripeSubId} is in trial - confirmed active`);
+          return { success: true, subscriptionId: stripeSubId };
+
+        case 'paused':
+          // Resume paused subscription - this activates it in Stripe
+          await stripe.subscriptions.resume(stripeSubId, {
+            billing_cycle_anchor: 'now',
+          });
+          console.log(`[SubscriptionManager] Stripe subscription ${stripeSubId} resumed from paused`);
+          return { success: true, subscriptionId: stripeSubId };
+
+        case 'past_due':
+        case 'unpaid':
+          // Cannot resume until payment succeeds - do NOT update local state
+          console.log(`[SubscriptionManager] Subscription ${stripeSubId} is ${subscription.status}, cannot resume until payment succeeds`);
+          return {
+            success: false,
+            error: `Subscription is ${subscription.status} - payment must be resolved before reactivation`,
+            subscriptionId: stripeSubId,
+          };
+
+        case 'canceled':
+        case 'incomplete_expired':
+          // Fully cancelled - cannot resume, must create new
+          return {
+            success: false,
+            error: `Subscription is fully cancelled (${subscription.status}) - create a new subscription instead`,
+            subscriptionId: stripeSubId,
+          };
+
+        case 'incomplete':
+          // Initial payment never completed
+          return {
+            success: false,
+            error: 'Subscription is incomplete - initial payment never completed',
+            subscriptionId: stripeSubId,
+          };
+
+        default:
+          console.log(`[SubscriptionManager] Unexpected subscription status: ${subscription.status}`);
+          return {
+            success: false,
+            error: `Unexpected subscription status: ${subscription.status}`,
+            subscriptionId: stripeSubId,
+          };
+      }
+    } catch (error: any) {
+      console.error('Subscription resume error:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to resume subscription',
+      };
+    }
+  }
+
+  /**
    * Handle Stripe webhook for subscription updates
    */
   async handleSubscriptionWebhook(event: Stripe.Event): Promise<void> {
