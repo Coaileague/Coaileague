@@ -9,11 +9,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { AlertTriangle } from 'lucide-react';
+import { AlertTriangle, Loader2 } from 'lucide-react';
 
-// Grace period configuration
-const STARTUP_GRACE_PERIOD_MS = 3000; // 3 seconds for system to fully load
-const DEBOUNCE_DELAY_MS = 500; // 500ms debounce for duplicate triggers
+// Grace period only for LOGOUT actions - owners see modal immediately
+const LOGOUT_GRACE_PERIOD_MS = 5000; // 5 seconds before any logout
 
 interface PaymentErrorResponse {
   code: 'PAYMENT_REQUIRED' | 'ORGANIZATION_INACTIVE';
@@ -53,97 +52,16 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
     redirectTo: '/org-management'
   });
   
-  // System state tracking
-  const isSystemReadyRef = useRef(false);
-  const isProcessingRef = useRef(false);
-  const hasShownModalRef = useRef(false);
-  const startupTimeRef = useRef(Date.now());
-  const lastActionTimeRef = useRef(0);
-
-  // Wait for system to be ready before intercepting
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      console.log('[PaymentEnforcement] System ready after grace period');
-      isSystemReadyRef.current = true;
-    }, STARTUP_GRACE_PERIOD_MS);
-    
-    return () => clearTimeout(timer);
-  }, []);
-
-  const showPaymentModal = useCallback((data: PaymentErrorResponse) => {
-    // Prevent duplicate modals
-    if (hasShownModalRef.current || modalState.isOpen) {
-      console.log('[PaymentEnforcement] Modal already shown, skipping');
-      return;
-    }
-    
-    console.log('[PaymentEnforcement] Showing modal for:', data);
-    hasShownModalRef.current = true;
-    setModalState({
-      isOpen: true,
-      workspaceName: data.workspaceName || 'Your organization',
-      reason: data.reason || 'suspended',
-      redirectTo: data.redirectTo || '/org-management'
-    });
-  }, [modalState.isOpen]);
+  // Prevent duplicate processing
+  const hasHandledRef = useRef(false);
+  const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const handleActivate = useCallback(() => {
+    console.log('[PaymentEnforcement] Navigating to:', modalState.redirectTo);
     window.location.href = modalState.redirectTo;
   }, [modalState.redirectTo]);
 
-  // Debounced action handler
-  const handlePaymentAction = useCallback((data: PaymentErrorResponse) => {
-    const now = Date.now();
-    
-    // Check if within startup grace period
-    if (now - startupTimeRef.current < STARTUP_GRACE_PERIOD_MS) {
-      console.log('[PaymentEnforcement] Still in startup grace period, queuing action');
-      // Queue the action to run after grace period
-      setTimeout(() => handlePaymentAction(data), STARTUP_GRACE_PERIOD_MS - (now - startupTimeRef.current) + 100);
-      return;
-    }
-    
-    // Debounce rapid duplicate actions
-    if (now - lastActionTimeRef.current < DEBOUNCE_DELAY_MS) {
-      console.log('[PaymentEnforcement] Debouncing duplicate action');
-      return;
-    }
-    lastActionTimeRef.current = now;
-    
-    // Prevent concurrent processing
-    if (isProcessingRef.current) {
-      console.log('[PaymentEnforcement] Already processing, skipping');
-      return;
-    }
-    isProcessingRef.current = true;
-    
-    console.log('[PaymentEnforcement] Processing payment action:', data);
-    
-    // CRITICAL: Check isOwner FIRST - owners NEVER get logged out
-    if (data.isOwner === true) {
-      console.log('[PaymentEnforcement] Owner detected - showing modal');
-      showPaymentModal(data);
-      isProcessingRef.current = false;
-      return;
-    }
-    
-    // Only logout if EXPLICITLY non-owner AND forceLogout is true
-    if (data.isOwner === false && data.forceLogout === true) {
-      console.log('[PaymentEnforcement] Non-owner with forceLogout - logging out after delay');
-      // Add small delay to ensure UI has time to render any messages
-      setTimeout(() => {
-        apiRequest('POST', '/api/auth/logout').finally(() => {
-          window.location.href = '/';
-        });
-      }, 1000);
-    } else {
-      console.log('[PaymentEnforcement] Ambiguous state - not taking action', data);
-    }
-    
-    isProcessingRef.current = false;
-  }, [showPaymentModal]);
-
-  // Intercept fetch calls with grace period protection
+  // Intercept fetch calls
   useEffect(() => {
     const originalFetch = window.fetch;
     
@@ -156,16 +74,48 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
         return response;
       }
       
-      // Check for payment-related errors
+      // Check for payment-related errors (402 or 404)
       if (response.status === 402 || response.status === 404) {
         const clonedResponse = response.clone();
         try {
-          const data = await clonedResponse.json();
+          const data = await clonedResponse.json() as PaymentErrorResponse;
           
           // Only process payment/organization codes
           if (data.code === 'PAYMENT_REQUIRED' || data.code === 'ORGANIZATION_INACTIVE') {
             console.log('[PaymentEnforcement] Intercepted:', response.status, data.code, 'isOwner:', data.isOwner);
-            handlePaymentAction(data);
+            
+            // Prevent duplicate handling
+            if (hasHandledRef.current) {
+              console.log('[PaymentEnforcement] Already handled, skipping');
+              return response;
+            }
+            
+            // OWNERS: Show modal IMMEDIATELY - no delay
+            if (data.isOwner === true) {
+              console.log('[PaymentEnforcement] Owner detected - showing modal NOW');
+              hasHandledRef.current = true;
+              setModalState({
+                isOpen: true,
+                workspaceName: data.workspaceName || 'Your organization',
+                reason: data.reason || 'suspended',
+                redirectTo: data.redirectTo || '/org-management'
+              });
+              return response;
+            }
+            
+            // NON-OWNERS: Wait grace period then logout
+            if (data.isOwner === false && data.forceLogout === true) {
+              if (!logoutTimerRef.current) {
+                console.log('[PaymentEnforcement] Non-owner - scheduling logout in', LOGOUT_GRACE_PERIOD_MS, 'ms');
+                hasHandledRef.current = true;
+                logoutTimerRef.current = setTimeout(() => {
+                  console.log('[PaymentEnforcement] Grace period over - logging out');
+                  apiRequest('POST', '/api/auth/logout').finally(() => {
+                    window.location.href = '/';
+                  });
+                }, LOGOUT_GRACE_PERIOD_MS);
+              }
+            }
           }
         } catch (e) {
           // JSON parse error - ignore
@@ -177,37 +127,42 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
 
     return () => {
       window.fetch = originalFetch;
+      if (logoutTimerRef.current) {
+        clearTimeout(logoutTimerRef.current);
+      }
     };
-  }, [handlePaymentAction]);
+  }, []);
 
   return (
-    <PaymentModalContext.Provider value={{ showPaymentModal, isModalOpen: modalState.isOpen }}>
+    <PaymentModalContext.Provider value={{ showPaymentModal: () => {}, isModalOpen: modalState.isOpen }}>
+      {/* Show children normally - modal overlays on top */}
       {children}
       
-      {/* Ultra-compact Payment Modal */}
+      {/* Ultra-compact Payment Modal - blocks all interaction until resolved */}
       <AlertDialog open={modalState.isOpen}>
         <AlertDialogContent 
-          className="!max-w-[280px] p-3 gap-2"
+          className="!max-w-[280px] p-4 gap-3"
           showHomeButton={false}
         >
-          <AlertDialogHeader className="gap-1 space-y-0">
-            <div className="flex items-center gap-1.5">
-              <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
-              <AlertDialogTitle className="text-sm font-medium">
+          <AlertDialogHeader className="gap-2 space-y-0">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="h-4 w-4 text-amber-500 shrink-0" />
+              <AlertDialogTitle className="text-sm font-semibold">
                 Subscription Inactive
               </AlertDialogTitle>
             </div>
-            <AlertDialogDescription className="text-xs leading-tight">
-              {modalState.workspaceName} is {modalState.reason}.
+            <AlertDialogDescription className="text-xs leading-relaxed">
+              <span className="font-medium">{modalState.workspaceName}</span> is {modalState.reason}. 
+              Click below to reactivate.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="mt-0">
+          <AlertDialogFooter className="mt-1">
             <AlertDialogAction 
               onClick={handleActivate}
-              className="w-full h-7 text-xs"
+              className="w-full h-8 text-sm font-medium"
               data-testid="button-activate-subscription"
             >
-              Activate
+              Activate Subscription
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
