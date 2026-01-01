@@ -1564,12 +1564,12 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         )}
       </div>
       
-      {/* Tab description - help users understand each tab */}
-      <div className={`${compact ? 'px-2 py-1' : 'px-3 py-1.5'} border-b bg-muted/10 flex-shrink-0`}>
-        <span className={`${compact ? 'text-[9px]' : 'text-[10px]'} text-muted-foreground`}>
-          {activeTab === 'alerts' && 'Payroll, schedule, client & employee alerts requiring attention'}
-          {activeTab === 'updates' && 'Schedule changes, settings updates & general information'}
-          {activeTab === 'system' && 'Workflow approvals & admin actions (org owners/managers only)'}
+      {/* Tab description - single line on mobile for space efficiency */}
+      <div className={`${compact ? 'px-2 py-0.5' : 'px-3 py-1.5'} border-b bg-muted/10 flex-shrink-0`}>
+        <span className={`${compact ? 'text-[8px] leading-tight' : 'text-[10px]'} text-muted-foreground line-clamp-1`}>
+          {activeTab === 'alerts' && 'Action required alerts'}
+          {activeTab === 'updates' && 'Updates & info'}
+          {activeTab === 'system' && 'Admin actions'}
         </span>
       </div>
       
