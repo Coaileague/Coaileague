@@ -16,7 +16,7 @@ import cron from "node-cron";
 const CLEANUP_CONFIG = {
   readNotificationsMaxAgeDays: 30,      // Remove read notifications after 30 days
   unreadNotificationsMaxAgeDays: 90,    // Remove unread notifications after 90 days
-  platformUpdatesMaxAgeDays: 180,       // Keep platform updates for 6 months
+  platformUpdatesMaxAgeDays: 14,        // Keep platform updates for 2 weeks (synced with 7-day display window)
   batchSize: 500,                        // Delete in batches to avoid locking
 };
 

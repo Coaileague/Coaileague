@@ -6854,6 +6854,9 @@ export class DatabaseStorage implements IStorage {
 
   async getPlatformUpdatesWithReadState(userId: string, workspaceId: string, limit: number = 20): Promise<Array<PlatformUpdate & { isViewed: boolean }>> {
     
+    // Only show updates from the last 7 days to prevent stale data
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    
     // Single SQL query with LEFT JOIN for reliable isViewed computation
     const result = await db.execute(sql`
       SELECT 
@@ -6863,9 +6866,10 @@ export class DatabaseStorage implements IStorage {
       LEFT JOIN user_platform_update_views v 
         ON v.update_id = p.id 
         AND v.user_id = ${userId}
-      WHERE p.visibility = 'all' 
+      WHERE (p.visibility = 'all' 
         OR p.workspace_id IS NULL 
-        OR p.workspace_id = ${workspaceId}
+        OR p.workspace_id = ${workspaceId})
+        AND p.created_at >= ${sevenDaysAgo}
       ORDER BY p.created_at DESC
       LIMIT ${limit}
     `);
@@ -6904,6 +6908,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUnreadPlatformUpdatesCount(userId: string, workspaceId?: string): Promise<number> {
+    // Only count updates from the last 7 days to prevent stale data
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+    
     // Direct SQL count of unviewed platform updates
     const result = await db.execute(sql`
       SELECT COUNT(*) as count
@@ -6913,6 +6920,7 @@ export class DatabaseStorage implements IStorage {
         AND v.user_id = ${userId}
       WHERE v.id IS NULL
         AND (p.visibility = 'all' OR p.workspace_id IS NULL ${workspaceId ? sql`OR p.workspace_id = ${workspaceId}` : sql``})
+        AND p.created_at >= ${sevenDaysAgo}
     `);
     return parseInt((result.rows[0] as any)?.count || '0', 10);
   }
