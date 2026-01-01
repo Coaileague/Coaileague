@@ -168,15 +168,43 @@ router.get("/mailbox/auto-create", requireAuth, async (req: Request, res: Respon
 
     if (!mailbox) {
       const emailPrefix = user.email?.split('@')[0] || `user-${user.id.substring(0, 8)}`;
-      const internalAddress = `${emailPrefix}@coaileague.internal`;
+      const baseAddress = `${emailPrefix}@coaileague.internal`;
+      
+      // Check if this email already exists (for a different user/workspace combo)
+      const existingWithEmail = await db.query.internalMailboxes.findFirst({
+        where: eq(internalMailboxes.emailAddress, baseAddress),
+      });
+      
+      // If email exists for different user, create unique address
+      const internalAddress = existingWithEmail 
+        ? `${emailPrefix}-${user.id.substring(0, 8)}@coaileague.internal`
+        : baseAddress;
 
-      [mailbox] = await db.insert(internalMailboxes).values({
-        userId: user.id,
-        workspaceId: user.currentWorkspaceId || null,
-        emailAddress: internalAddress,
-        displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'User',
-        mailboxType: 'personal',
-      }).returning();
+      try {
+        [mailbox] = await db.insert(internalMailboxes).values({
+          userId: user.id,
+          workspaceId: user.currentWorkspaceId || null,
+          emailAddress: internalAddress,
+          displayName: `${user.firstName || ''} ${user.lastName || ''}`.trim() || user.email || 'User',
+          mailboxType: 'personal',
+        }).returning();
+      } catch (insertError: any) {
+        // Handle race condition - mailbox may have been created by another request
+        if (insertError?.code === '23505') {
+          mailbox = await db.query.internalMailboxes.findFirst({
+            where: and(
+              eq(internalMailboxes.userId, user.id),
+              user.currentWorkspaceId 
+                ? eq(internalMailboxes.workspaceId, user.currentWorkspaceId)
+                : isNull(internalMailboxes.workspaceId)
+            ),
+          });
+          if (mailbox) {
+            return res.json({ mailbox });
+          }
+        }
+        throw insertError;
+      }
 
       const systemFolders = [
         { name: "Inbox", folderType: "inbox" as const, sortOrder: 0, isSystem: true },
