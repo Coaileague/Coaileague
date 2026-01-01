@@ -26,6 +26,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GEMINI_MODELS } from '../providers/geminiClient';
 import { enhancedLLMJudge } from '../llmJudgeEnhanced';
 import { platformEventBus } from '../../platformEventBus';
+import { auditLogger } from '../../audit-logger';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -512,6 +513,32 @@ Generate a JSON schedule with format:
           });
 
           console.log(`[SchedulingSubagent] LLM Judge evaluation: ${riskEvaluation.verdict} (risk: ${riskEvaluation.riskScore})`);
+
+          // Audit log the LLM Judge decision
+          await auditLogger.logEvent(
+            {
+              actorId: 'trinity-llm-judge',
+              actorType: 'AI_AGENT',
+              actorName: 'Trinity LLM Judge',
+              workspaceId,
+            },
+            {
+              eventType: 'llm_judge.schedule_evaluation',
+              aggregateId: `schedule-${workspaceId}-${new Date().toISOString()}`,
+              aggregateType: 'schedule',
+              payload: {
+                verdict: riskEvaluation.verdict,
+                riskScore: riskEvaluation.riskScore,
+                riskLevel: riskEvaluation.riskLevel,
+                confidenceScore: riskEvaluation.confidenceScore,
+                employeesAffected: schedule.length,
+                coveragePercent,
+                overtimeHours,
+                reasoning: riskEvaluation.reasoning,
+              },
+            },
+            { generateHash: true }
+          ).catch(err => console.error('[SchedulingSubagent] Audit log failed:', err.message));
 
           if (riskEvaluation.verdict === 'blocked' || riskEvaluation.verdict === 'rejected') {
             llmJudgeApproved = false;

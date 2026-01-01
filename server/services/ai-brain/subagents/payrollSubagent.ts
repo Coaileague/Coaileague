@@ -23,6 +23,7 @@ import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GEMINI_MODELS } from '../providers/geminiClient';
 import { enhancedLLMJudge } from '../llmJudgeEnhanced';
 import { platformEventBus } from '../../platformEventBus';
+import { auditLogger } from '../../audit-logger';
 import crypto from 'crypto';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -476,6 +477,33 @@ class PayrollSubagentService {
         verdict: riskEvaluation.verdict,
         approved: riskEvaluation.verdict === 'approved',
       });
+
+      // Audit log the LLM Judge decision
+      await auditLogger.logEvent(
+        {
+          actorId: 'trinity-llm-judge',
+          actorType: 'AI_AGENT',
+          actorName: 'Trinity LLM Judge',
+          workspaceId,
+        },
+        {
+          eventType: 'llm_judge.payroll_evaluation',
+          aggregateId: `payroll-${workspaceId}-${payPeriodStart.toISOString()}`,
+          aggregateType: 'payroll_run',
+          payload: {
+            verdict: riskEvaluation.verdict,
+            riskScore: riskEvaluation.riskScore,
+            riskLevel: riskEvaluation.riskLevel,
+            confidenceScore: riskEvaluation.confidenceScore,
+            totalGross,
+            employeeCount: employeeData.length,
+            criticalIssues: criticalIssues.length,
+            reasoning: riskEvaluation.reasoning,
+            recommendations: riskEvaluation.recommendations,
+          },
+        },
+        { generateHash: true }
+      ).catch(err => console.error('[PayrollSubagent] Audit log failed:', err.message));
 
       // Block execution if risk is too high
       if (riskEvaluation.verdict === 'blocked' || riskEvaluation.verdict === 'rejected') {
