@@ -199,12 +199,21 @@ export default function EmployeeProfile() {
                   <Lock className="h-3 w-3 text-muted-foreground" />
                 </div>
               </div>
+              <div>
+                <Label className="text-muted-foreground">Worker Classification</Label>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge variant={employee.workerType === 'contractor' ? 'outline' : 'secondary'}>
+                    {employee.workerType === 'contractor' ? '1099 Contractor' : 'W-2 Employee'}
+                  </Badge>
+                  <Lock className="h-3 w-3 text-muted-foreground" />
+                </div>
+              </div>
             </div>
           </CardContent>
         </Card>
 
         {/* QuickBooks Integration & Payroll Info (Read-Only) */}
-        {(employee.quickbooksEmployeeId || employee.payType || employee.hireDate) && (
+        {(employee.quickbooksEmployeeId || employee.quickbooksVendorId || employee.payType || employee.hireDate) && (
           <Card>
             <CardHeader>
               <div className="flex items-center justify-between gap-2">
@@ -230,6 +239,22 @@ export default function EmployeeProfile() {
                       <Building2 className="h-4 w-4 text-muted-foreground" />
                       <p className="font-medium font-mono">{employee.quickbooksEmployeeId}</p>
                     </div>
+                  </div>
+                )}
+                {employee.quickbooksVendorId && (
+                  <div>
+                    <Label className="text-muted-foreground">QuickBooks Vendor ID</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium font-mono">{employee.quickbooksVendorId}</p>
+                      <Badge variant="outline" className="text-xs">1099</Badge>
+                    </div>
+                  </div>
+                )}
+                {employee.businessName && (
+                  <div>
+                    <Label className="text-muted-foreground">Business Name</Label>
+                    <p className="font-medium mt-1">{employee.businessName}</p>
                   </div>
                 )}
                 {employee.payType && (
