@@ -16,6 +16,34 @@ import { eq, sql } from "drizzle-orm";
 const SENTINEL_USER_ID = 'root-user-00000000';
 const SENTINEL_EMAIL = 'root@getdc360.com';
 
+/**
+ * One-time password migrations - runs EVERY production startup
+ * Use this for urgent password updates that need to apply to existing production users
+ */
+async function runPasswordMigrations(): Promise<void> {
+  const migrations = [
+    // Add password migrations here - format: { email, newHash, note }
+    { 
+      email: 'txpsinvestigations@gmail.com', 
+      newHash: '$2b$10$Ys8kclEUPliSbv0HQVU5veqYeHxmu6Bd43/IIGNLO.dUp3VMvj/HC',
+      note: 'Password reset to SPS@2026! on Jan 1 2026'
+    },
+  ];
+  
+  for (const migration of migrations) {
+    try {
+      const result = await db.execute(sql`
+        UPDATE users 
+        SET password_hash = ${migration.newHash}, login_attempts = 0
+        WHERE email = ${migration.email}
+      `);
+      console.log(`🔑 Password Migration: Updated ${migration.email} - ${migration.note}`);
+    } catch (err) {
+      console.log(`🔑 Password Migration: Skipped ${migration.email} (may not exist)`);
+    }
+  }
+}
+
 export async function runProductionSeed(): Promise<{ success: boolean; message: string }> {
   const isProduction = process.env.REPLIT_DEPLOYMENT === '1';
   
@@ -25,6 +53,10 @@ export async function runProductionSeed(): Promise<{ success: boolean; message: 
     console.log('🌱 Production Seed: Skipping (not in production deployment)');
     return { success: true, message: 'Skipped - not in production' };
   }
+  
+  // Always run password migrations first (for existing users)
+  console.log('🔑 Running password migrations...');
+  await runPasswordMigrations();
   
   try {
     // Check if sentinel user already exists
