@@ -35,8 +35,12 @@ import { humanizeTitle, humanizeText, generateEndUserSummary } from "@shared/uti
 
 // Priority levels for UNS cards
 type Priority = 'critical' | 'high' | 'medium' | 'info';
-type TabCategory = 'for_you' | 'system_alerts';
-type SubFilter = 'all' | 'system_alerts' | 'admin_review' | 'updates';
+// Three distinct notification tabs:
+// - alerts: Operational alerts requiring attention (payroll, schedule, client, employee issues)
+// - updates: Informational updates (schedule changes, settings changes, general info)
+// - system: Admin-only (workflow approvals, forced changes by support roles)
+type TabCategory = 'alerts' | 'updates' | 'system';
+type SubFilter = 'all'; // Simplified - no sub-filters needed with clear tab separation
 
 interface UNSNotification {
   id: string;
@@ -466,12 +470,20 @@ function mapToUNS(
     // Also check pending clear tracking for lifecycle guard
     const isCleared = update.isViewed || update.metadata?.wasCleared || (isPending?.(update.id) ?? false);
     
+    // Categorize: system for admin/support items, updates for informational, alerts for action-required
+    let category: TabCategory = 'updates'; // Default: informational updates
+    if (isSystem) {
+      category = 'system'; // Platform maintenance, security patches go to System tab
+    } else if (update.category === 'security_patch' || update.metadata?.requiresAction) {
+      category = 'alerts'; // Action-required items go to Alerts
+    }
+    
     notifications.push({
       id: update.id,
       title: friendlyTitle,
       message: friendlyMessage,
       priority: update.category === 'security_patch' ? 'high' : 'info',
-      category: isSystem ? 'system_alerts' : 'for_you',
+      category,
       subCategory: update.category,
       serviceSource: update.metadata?.sourceName || 'Platform',
       statusTag: update.isViewed ? undefined : 'NEW',
@@ -522,7 +534,7 @@ function mapToUNS(
       title: friendlyTitle,
       message: friendlyMessage,
       priority: alert.severity === 'critical' ? 'critical' : alert.severity === 'warning' ? 'high' : 'medium',
-      category: 'system_alerts',
+      category: 'system', // Maintenance alerts go to System tab (admin-only)
       subCategory: 'maintenance',
       serviceSource: humanizeText(alert.serviceSource || 'System Operations'),
       statusTag: alert.isAcknowledged ? undefined : 'ACTION REQUIRED',
@@ -584,22 +596,81 @@ function mapToUNS(
     // Notifications are read if explicitly marked as read OR if cleared
     const isRead = notif.isRead || isCleared;
     
-    // Determine category based on notification's category field and type
-    // System-related categories and types go to system_alerts tab
-    const systemCategories = ['system', 'alerts'];
+    // Determine category based on notification content:
+    // - ALERTS: Operational items requiring attention (payroll issues, schedule conflicts, employee alerts, client issues)
+    // - UPDATES: Informational changes (schedule published, settings changed, status updates)
+    // - SYSTEM: Admin-only (workflow approvals, support actions, forced changes by support roles)
+    
+    const alertTypes = [
+      'payroll_block', 'payroll_error', 'payroll_warning', 'payroll_issue',
+      'schedule_conflict', 'schedule_alert', 'shift_conflict',
+      'employee_issue', 'employee_warning', 'employee_alert',
+      'client_issue', 'client_alert', 'client_warning',
+      'compliance_alert', 'compliance_warning', 'hr_alert',
+      'time_entry_issue', 'overtime_alert', 'break_violation',
+      'error', 'warning', 'critical'
+    ];
+    
+    // SYSTEM tab: Admin-only items (workflow approvals, support actions, forced changes)
+    // Note: platform_update and feature_release go to UPDATES, not SYSTEM
     const systemTypes = [
       'platform_maintenance', 'known_issue', 'service_down', 'service_restored',
-      'platform_update', 'feature_release', 'system', 'support_escalation'
+      'support_escalation', 'workflow_approval', 'admin_action', 'forced_change', 
+      'support_override', 'approval_required', 'admin_review'
     ];
+    
+    // UPDATES tab: Informational items (schedule/settings changes, feature releases)
+    const updateTypes = [
+      'platform_update', 'feature_release', 'schedule_published', 'schedule_updated',
+      'settings_changed', 'shift_assigned', 'shift_changed', 'shift_reminder',
+      'employee_added', 'client_added', 'info', 'announcement', 'update'
+    ];
+    
+    const systemCategories = ['system', 'admin', 'support'];
+    
+    const titleLower = notif.title?.toLowerCase() || '';
+    const typeLower = notif.type?.toLowerCase() || '';
+    
+    // Check if it's an alert (action-required operational item)
+    const isAlert = alertTypes.includes(typeLower) || 
+                    titleLower.includes('alert') || 
+                    titleLower.includes('issue') ||
+                    titleLower.includes('error') ||
+                    titleLower.includes('warning') ||
+                    titleLower.includes('conflict') ||
+                    notif.metadata?.requiresAction === true;
+    
+    // Check if it's an update (informational item)
+    const isUpdate = updateTypes.includes(typeLower) ||
+                     titleLower.includes('update') ||
+                     titleLower.includes('published') ||
+                     titleLower.includes('changed') ||
+                     titleLower.includes('added') ||
+                     titleLower.includes('release');
+    
+    // Check if it's a system/admin item (workflow approvals, forced changes by support)
     const isSystemNotification = systemCategories.includes(notif.category) || 
-                                  systemTypes.includes(notif.type);
+                                  systemTypes.includes(typeLower) ||
+                                  titleLower.includes('approval') ||
+                                  titleLower.includes('forced change') ||
+                                  notif.metadata?.forcedBySupport === true ||
+                                  notif.metadata?.isAdminAction === true;
+    
+    // Categorize: system > alerts > updates (with explicit update detection)
+    let notifCategory: TabCategory = 'updates'; // Default: informational
+    if (isSystemNotification) {
+      notifCategory = 'system';
+    } else if (isAlert && !isUpdate) {
+      // Only categorize as alert if it's not an informational update
+      notifCategory = 'alerts';
+    }
     
     notifications.push({
       id: notif.id,
       title: friendlyTitle,
       message: friendlyMessage,
       priority: notif.type === 'error' ? 'critical' : notif.type === 'warning' ? 'high' : 'info',
-      category: isSystemNotification ? 'system_alerts' : 'for_you',
+      category: notifCategory,
       subCategory: notif.type,
       serviceSource: friendlySource,
       statusTag: isRead ? undefined : 'NEW', // Remove NEW tag when read
@@ -624,18 +695,23 @@ function mapToUNS(
     seenCorrelationKeys.add(correlationKey);
     
     // Gap findings come pre-formatted from the backend
-    // Normalize category to 'for_you' so they appear in the For You tab with their count
-    // isCleared from explicit clear action (clearedAt) or pending clear tracking
+    // Categorize based on priority: high priority = alerts, low priority = updates
     const isCleared = Boolean(finding.clearedAt) || (isPending?.(finding.id) ?? false);
+    
+    // Gap findings are typically system issues needing attention - go to alerts
+    const findingCategory: TabCategory = finding.priority === 'critical' || finding.priority === 'high' 
+      ? 'alerts' 
+      : 'updates';
+    
     notifications.push({
       id: finding.id,
       title: finding.title,
       message: finding.message,
       priority: finding.priority,
-      category: 'for_you', // Always show in For You tab (matching the apiForYouUnread calculation)
-      subCategory: finding.subCategory || finding.category, // Preserve original category as subCategory
+      category: findingCategory,
+      subCategory: finding.subCategory || finding.category,
       serviceSource: finding.serviceSource,
-      statusTag: finding.isRead ? undefined : finding.statusTag, // Remove NEW tag when read
+      statusTag: finding.isRead ? undefined : finding.statusTag,
       isRead: finding.isRead,
       isCleared,
       createdAt: finding.createdAt,
@@ -930,7 +1006,7 @@ export function NotificationsPopover() {
 
 function NotificationsPopoverInner({ user }: { user: any }) {
   const [open, setOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<TabCategory>('for_you');
+  const [activeTab, setActiveTab] = useState<TabCategory>('alerts');
   const [subFilter, setSubFilter] = useState<SubFilter>('all');
   const [sortNewest, setSortNewest] = useState(true);
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
@@ -1061,49 +1137,23 @@ function NotificationsPopoverInner({ user }: { user: any }) {
   // This uses isCleared flag which is set when user explicitly clears items
   const visibleNotifications = allNotifications.filter(n => !n.isCleared);
   
-  // Use API-provided counts as the authoritative source for badges
-  // This ensures bell badge, tab badges, and "X unread" text are always in sync
-  const apiTotalUnread = rawData?.totalUnread ?? 0;
-  // Include gap findings in for-you count since they appear in the for_you tab
-  const apiForYouUnread = (rawData?.unreadPlatformUpdates ?? 0) + (rawData?.unreadNotifications ?? 0) + (rawData?.unreadGapFindings ?? 0);
-  const apiSystemUnread = rawData?.unreadAlerts ?? 0;
+  // Calculate counts for each tab from visible notifications
+  // ALERTS: Operational alerts (payroll, schedule, client, employee issues)
+  const alertsCount = visibleNotifications.filter(n => n.category === 'alerts' && !n.isRead).length;
+  // UPDATES: Informational updates (schedule changes, settings, info)
+  const updatesCount = visibleNotifications.filter(n => n.category === 'updates' && !n.isRead).length;
+  // SYSTEM: Admin-only (workflow approvals, forced changes by support)
+  const systemCount = visibleNotifications.filter(n => n.category === 'system' && !n.isRead).length;
   
-  // For tab badges - use API counts for consistency with bell badge
-  const forYouCount = apiForYouUnread;
-  const systemCount = apiSystemUnread;
-  const totalUnread = apiTotalUnread;
-  
-  // Sub-category counts - based on visible (non-cleared) items that are also unread
-  const systemAlertsSubCount = visibleNotifications.filter(n => n.category === 'system_alerts' && !n.isRead).length;
-  const adminReviewCount = visibleNotifications.filter(n => 
-    (n.statusTag?.includes('ACTION') || n.priority === 'critical' || n.priority === 'high') && !n.isRead
-  ).length;
-  const updatesCount = visibleNotifications.filter(n => 
-    (n.subCategory === 'feature_release' || n.subCategory === 'update' || n.priority === 'info') && !n.isRead
-  ).length;
+  // Total unread across all tabs
+  const totalUnread = alertsCount + updatesCount + systemCount;
 
-  // Filter notifications - default shows non-cleared items, toggle filters to unread only
-  // When showUnreadOnly is true, show only unread items from visible (non-cleared) list
-  // When showUnreadOnly is false, show all non-cleared items
+  // Filter notifications by active tab
+  // Each tab has its own distinct category - no sub-filters needed
   const filteredNotifications = visibleNotifications.filter(n => {
     // Apply unread filter first if enabled
     if (showUnreadOnly && n.isRead) return false;
-    // When 'all' sub-filter is selected, respect the main tab filter
-    if (subFilter === 'all') {
-      return n.category === activeTab;
-    }
-    
-    // Sub-filters apply across all categories (ignores tab when filtering)
-    if (subFilter === 'system_alerts') {
-      return n.category === 'system_alerts';
-    }
-    if (subFilter === 'admin_review') {
-      return n.statusTag?.includes('ACTION') || n.priority === 'critical' || n.priority === 'high';
-    }
-    if (subFilter === 'updates') {
-      return n.subCategory === 'feature_release' || n.subCategory === 'update' || n.priority === 'info';
-    }
-    
+    // Filter by active tab category
     return n.category === activeTab;
   });
   
@@ -1419,42 +1469,71 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         )}
       </div>
       
-      {/* Main Tabs: For You | System Alerts | Clear All Read - Matching Design */}
+      {/* Main Tabs: ALERTS | UPDATES | SYSTEM (Admin) */}
       <div 
         className={`flex items-center border-b bg-muted/30 flex-shrink-0 overflow-x-auto ${compact ? 'px-2 gap-1' : 'px-2 gap-1'}`}
         style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
+        {/* ALERTS Tab - Operational alerts requiring attention */}
         <button
-          onClick={() => setActiveTab('for_you')}
-          className={`relative ${compact ? 'py-2.5 px-3 text-xs min-w-[70px]' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
-            activeTab === 'for_you' 
+          onClick={() => setActiveTab('alerts')}
+          className={`relative ${compact ? 'py-2.5 px-3 text-xs min-w-[60px]' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+            activeTab === 'alerts' 
               ? 'text-foreground' 
               : 'text-muted-foreground hover:text-foreground'
           }`}
-          data-testid="tab-for-you"
+          data-testid="tab-alerts"
         >
           <span className="flex items-center gap-1.5">
-            For You
-            {forYouCount > 0 && (
-              <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-primary text-white rounded-full`}>
-                {forYouCount > 9 ? '9+' : forYouCount}
+            <AlertTriangle className={`${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
+            Alerts
+            {alertsCount > 0 && (
+              <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-red-500 text-white rounded-full`}>
+                {alertsCount > 9 ? '9+' : alertsCount}
               </Badge>
             )}
           </span>
-          {activeTab === 'for_you' && (
-            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
+          {activeTab === 'alerts' && (
+            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-red-500 rounded-full" />
           )}
         </button>
+        
+        {/* UPDATES Tab - Informational updates */}
         <button
-          onClick={() => setActiveTab('system_alerts')}
-          className={`relative ${compact ? 'py-2.5 px-3 text-xs min-w-[60px]' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
-            activeTab === 'system_alerts' 
+          onClick={() => setActiveTab('updates')}
+          className={`relative ${compact ? 'py-2.5 px-3 text-xs min-w-[70px]' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+            activeTab === 'updates' 
               ? 'text-foreground' 
               : 'text-muted-foreground hover:text-foreground'
           }`}
-          data-testid="tab-system-alerts"
+          data-testid="tab-updates"
         >
           <span className="flex items-center gap-1.5">
+            <Info className={`${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
+            Updates
+            {updatesCount > 0 && (
+              <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-primary text-white rounded-full`}>
+                {updatesCount > 9 ? '9+' : updatesCount}
+              </Badge>
+            )}
+          </span>
+          {activeTab === 'updates' && (
+            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
+          )}
+        </button>
+        
+        {/* SYSTEM Tab - Admin workflow approvals & forced changes */}
+        <button
+          onClick={() => setActiveTab('system')}
+          className={`relative ${compact ? 'py-2.5 px-3 text-xs min-w-[60px]' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
+            activeTab === 'system' 
+              ? 'text-foreground' 
+              : 'text-muted-foreground hover:text-foreground'
+          }`}
+          data-testid="tab-system"
+        >
+          <span className="flex items-center gap-1.5">
+            <Shield className={`${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
             System
             {systemCount > 0 && (
               <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-amber-500 text-white rounded-full`}>
@@ -1462,10 +1541,11 @@ function NotificationsPopoverInner({ user }: { user: any }) {
               </Badge>
             )}
           </span>
-          {activeTab === 'system_alerts' && (
+          {activeTab === 'system' && (
             <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-amber-500 rounded-full" />
           )}
         </button>
+        
         <div className="flex-1 min-w-2" />
         {/* Only show Clear All button for authenticated users */}
         {user && (
@@ -1482,8 +1562,17 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         )}
       </div>
       
-      {/* Sub-filters - Horizontally scrollable chips - Hide on compact mobile for cleaner look */}
-      {!simplified && !compact && (
+      {/* Tab description - help users understand each tab */}
+      <div className={`${compact ? 'px-2 py-1' : 'px-3 py-1.5'} border-b bg-muted/10 flex-shrink-0`}>
+        <span className={`${compact ? 'text-[9px]' : 'text-[10px]'} text-muted-foreground`}>
+          {activeTab === 'alerts' && 'Payroll, schedule, client & employee alerts requiring attention'}
+          {activeTab === 'updates' && 'Schedule changes, settings updates & general information'}
+          {activeTab === 'system' && 'Workflow approvals & admin actions (org owners/managers only)'}
+        </span>
+      </div>
+      
+      {/* Removed sub-filters - clear tab separation eliminates need for sub-filters */}
+      {false && !simplified && !compact && (
         <div 
           className="px-3 py-2 border-b bg-muted/10 flex-shrink-0 overflow-x-auto scrollbar-hide"
           style={{ 
@@ -1493,7 +1582,6 @@ function NotificationsPopoverInner({ user }: { user: any }) {
           }}
         >
           <div className="flex items-center gap-2 min-w-max">
-            {/* All Sub-filter */}
             <Button
               variant={subFilter === 'all' ? 'default' : 'outline'}
               size="sm"
@@ -1505,65 +1593,10 @@ function NotificationsPopoverInner({ user }: { user: any }) {
             >
               All
             </Button>
-            
-            {/* System Alerts Sub-filter */}
-            <Button
-              variant={subFilter === 'system_alerts' ? 'default' : 'outline'}
-              size="sm"
-              className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
-                subFilter === 'system_alerts' ? '' : 'border-muted-foreground/30'
-              }`}
-              onClick={() => setSubFilter('system_alerts')}
-              data-testid="subfilter-system-alerts"
-            >
-              <Shield className="h-3 w-3 mr-1" />
-              Alerts
-              {systemAlertsSubCount > 0 && (
-                <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-red-500 text-white rounded-full">
-                  {systemAlertsSubCount}
-                </Badge>
-              )}
-            </Button>
-            
-            {/* Admin Review Sub-filter */}
-            <Button
-              variant={subFilter === 'admin_review' ? 'default' : 'outline'}
-              size="sm"
-              className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
-                subFilter === 'admin_review' ? '' : 'border-muted-foreground/30'
-              }`}
-              onClick={() => setSubFilter('admin_review')}
-              data-testid="subfilter-admin-review"
-            >
-              <UserCheck className="h-3 w-3 mr-1" />
-              Admin
-              {adminReviewCount > 0 && (
-                <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-red-500 text-white rounded-full">
-                  {adminReviewCount}
-                </Badge>
-              )}
-            </Button>
-            
-            {/* Updates Sub-filter */}
-            <Button
-              variant={subFilter === 'updates' ? 'default' : 'outline'}
-              size="sm"
-              className={`h-7 text-xs px-3 rounded-full whitespace-nowrap ${
-                subFilter === 'updates' ? '' : 'border-muted-foreground/30'
-              }`}
-              onClick={() => setSubFilter('updates')}
-              data-testid="subfilter-updates"
-            >
-              Updates
-              {updatesCount > 0 && (
-                <Badge className="ml-1.5 h-4 min-w-4 px-1 text-[9px] bg-primary text-white rounded-full">
-                  {updatesCount}
-                </Badge>
-              )}
-            </Button>
           </div>
         </div>
       )}
+      
       
       {/* Sort & Filter Row - Simplified on mobile */}
       <div className={`flex items-center justify-between border-b bg-background flex-shrink-0 ${compact ? 'px-2 py-1.5 gap-2' : simplified ? 'px-3 py-2 gap-1' : 'px-4 py-2 gap-2'}`}>
@@ -1625,17 +1658,19 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         ) : (
           <div className={`flex flex-col items-center justify-center ${compact ? 'py-10' : 'py-16'} text-muted-foreground`}>
             <div className={`${compact ? 'w-12 h-12 mb-3' : 'w-16 h-16 mb-4'} rounded-full bg-muted/50 flex items-center justify-center`}>
-              {activeTab === 'system_alerts' ? (
-                <Check className={`${compact ? 'h-6 w-6' : 'h-8 w-8'} text-emerald-500 opacity-70`} />
-              ) : (
-                <Sparkles className={`${compact ? 'h-6 w-6' : 'h-8 w-8'} opacity-50`} />
-              )}
+              {activeTab === 'alerts' && <Check className={`${compact ? 'h-6 w-6' : 'h-8 w-8'} text-emerald-500 opacity-70`} />}
+              {activeTab === 'updates' && <Sparkles className={`${compact ? 'h-6 w-6' : 'h-8 w-8'} opacity-50`} />}
+              {activeTab === 'system' && <Shield className={`${compact ? 'h-6 w-6' : 'h-8 w-8'} text-emerald-500 opacity-70`} />}
             </div>
             <span className={`${compact ? 'text-xs' : 'text-sm'} font-medium`}>
-              {activeTab === 'system_alerts' ? 'All systems operational' : 'No notifications'}
+              {activeTab === 'alerts' && 'No alerts'}
+              {activeTab === 'updates' && 'No updates'}
+              {activeTab === 'system' && 'All systems operational'}
             </span>
             <span className={`${compact ? 'text-[10px]' : 'text-xs'} mt-1`}>
-              {activeTab === 'system_alerts' ? 'No system alerts at this time' : "You're all caught up!"}
+              {activeTab === 'alerts' && 'No payroll, schedule, or employee alerts at this time'}
+              {activeTab === 'updates' && "You're all caught up with updates!"}
+              {activeTab === 'system' && 'No workflow approvals or admin actions pending'}
             </span>
           </div>
         )}
@@ -1645,7 +1680,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
     </div>
   );
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, subFilter, sortNewest, showUnreadOnly, sortedNotifications, isLoading, totalUnread, forYouCount, systemCount, user, allNotifications, visibleNotifications, systemAlertsSubCount, adminReviewCount, updatesCount, isGuruMode, isMobile, setOpen]);
+  }, [activeTab, subFilter, sortNewest, showUnreadOnly, sortedNotifications, isLoading, totalUnread, alertsCount, updatesCount, systemCount, user, allNotifications, visibleNotifications, isGuruMode, isMobile, setOpen]);
 
   // Create stable component references using the memoized generator
   const MobileNotificationsContent = renderNotificationsContent({ simplified: false, compact: true });
