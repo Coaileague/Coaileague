@@ -21,6 +21,7 @@ import { exec } from 'child_process';
 import { promisify } from 'util';
 import * as fs from 'fs';
 import * as path from 'path';
+import cron from 'node-cron';
 import { db } from '../../db';
 import { aiGapFindings, aiWorkflowApprovals } from '@shared/schema';
 import { eq, and, desc, sql, inArray } from 'drizzle-orm';
@@ -1108,6 +1109,120 @@ class AutonomousFixPipelineService {
   }
 
   // ==========================================================================
+  // AUTONOMOUS SELF-HEALING - Process Outstanding Findings
+  // ==========================================================================
+
+  /**
+   * Process outstanding gap findings automatically.
+   * This is Trinity's self-healing loop - no human intervention needed.
+   * Guardrails (hotpatch cadence, confidence threshold) prevent platform breakage.
+   */
+  async processOutstandingFindings(): Promise<{ processed: number; fixed: number; skipped: number; errors: string[] }> {
+    const results = { processed: 0, fixed: 0, skipped: 0, errors: [] as string[] };
+
+    try {
+      // Fetch unresolved high-confidence findings (errors/criticals first)
+      const findings = await db
+        .select()
+        .from(aiGapFindings)
+        .where(
+          and(
+            eq(aiGapFindings.status, 'open'),
+            sql`${aiGapFindings.confidence} >= ${this.config.autoApproveThreshold}`
+          )
+        )
+        .orderBy(
+          sql`CASE WHEN ${aiGapFindings.severity} = 'critical' THEN 1 
+                   WHEN ${aiGapFindings.severity} = 'error' THEN 2 
+                   WHEN ${aiGapFindings.severity} = 'warning' THEN 3 
+                   ELSE 4 END`,
+          desc(aiGapFindings.createdAt)
+        )
+        .limit(10);
+
+      if (findings.length === 0) {
+        console.log('[AutonomousFix] No high-confidence findings to process');
+        return results;
+      }
+
+      console.log(`[AutonomousFix] Processing ${findings.length} outstanding findings (confidence >= ${this.config.autoApproveThreshold})`);
+
+      for (const finding of findings) {
+        results.processed++;
+
+        try {
+          // Skip if we're at max concurrent fixes
+          if (this.activeFixes.size >= this.config.maxConcurrentFixes) {
+            console.log(`[AutonomousFix] Max concurrent fixes reached, queuing remaining`);
+            results.skipped += findings.length - results.processed + 1;
+            break;
+          }
+
+          // Generate fix specification
+          const spec = await this.generateFixSpecification(finding.id);
+          if (!spec) {
+            console.log(`[AutonomousFix] Could not generate spec for finding ${finding.id}`);
+            results.skipped++;
+            continue;
+          }
+
+          // Auto-approve if confidence meets threshold and risk is acceptable
+          const canAutoApprove = spec.confidence >= this.config.autoApproveThreshold && 
+                                  (spec.riskLevel === 'low' || spec.riskLevel === 'medium');
+
+          if (!canAutoApprove) {
+            console.log(`[AutonomousFix] Finding ${finding.id} requires human approval (risk: ${spec.riskLevel}, confidence: ${spec.confidence})`);
+            results.skipped++;
+            continue;
+          }
+
+          // Execute fix with reflection for self-correction
+          console.log(`[AutonomousFix] Auto-executing fix for finding ${finding.id}: ${spec.title}`);
+          const result = await this.executeFixWithReflection(finding.id, { 
+            maxRetries: 2, 
+            skipUserProposal: true 
+          });
+
+          if (result.success) {
+            results.fixed++;
+            console.log(`[AutonomousFix] Successfully fixed: ${finding.title}`);
+            
+            // Mark finding as resolved
+            await db
+              .update(aiGapFindings)
+              .set({ status: 'resolved', resolvedAt: new Date() })
+              .where(eq(aiGapFindings.id, finding.id));
+          } else {
+            results.errors.push(`${finding.id}: ${result.message}`);
+            console.error(`[AutonomousFix] Failed to fix ${finding.id}: ${result.message}`);
+          }
+        } catch (error: any) {
+          results.errors.push(`${finding.id}: ${error.message}`);
+          console.error(`[AutonomousFix] Error processing finding ${finding.id}:`, error);
+        }
+      }
+
+      console.log(`[AutonomousFix] Self-healing complete: ${results.fixed}/${results.processed} fixed, ${results.skipped} skipped`);
+      
+      // Emit self-healing summary event
+      await platformEventBus.publish({
+        type: 'automation_completed',
+        category: 'automation',
+        title: 'Trinity Self-Healing Cycle Complete',
+        description: `Processed ${results.processed} findings: ${results.fixed} fixed, ${results.skipped} skipped, ${results.errors.length} errors`,
+        metadata: results,
+        visibility: 'admin',
+      });
+
+      return results;
+    } catch (error: any) {
+      console.error('[AutonomousFix] Error in processOutstandingFindings:', error);
+      results.errors.push(error.message);
+      return results;
+    }
+  }
+
+  // ==========================================================================
   // AI BRAIN ACTIONS
   // ==========================================================================
 
@@ -1133,6 +1248,10 @@ class AutonomousFixPipelineService {
       { id: 'autofix.get_active', name: 'Get Active Fixes', desc: 'Get currently active fix operations', 
         fn: () => Array.from(self.getActiveFixes().entries()).map(([id, info]) => ({ findingId: id, ...info })) 
       },
+      { id: 'autofix.self_heal', name: 'Self-Heal Platform', 
+        desc: 'Process all outstanding high-confidence findings and auto-fix them (Trinity autonomous self-healing)', 
+        fn: () => self.processOutstandingFindings() 
+      },
     ];
 
     for (const action of actions) {
@@ -1156,7 +1275,7 @@ class AutonomousFixPipelineService {
       });
     }
 
-    console.log('[AutonomousFix] Registered 8 AI Brain actions (includes reflection & internal approval gate)');
+    console.log('[AutonomousFix] Registered 9 AI Brain actions (includes self-heal, reflection & internal approval gate)');
   }
 }
 
@@ -1188,6 +1307,38 @@ export async function initializeAutonomousFixPipeline(): Promise<void> {
     }
   });
   console.log('[AutonomousFix] Subscribed to approval_approved events for auto-execution');
+  
+  // Subscribe to gap_intelligence_scan events to auto-process findings
+  platformEventBus.subscribe('gap_intelligence_scan', async (event: PlatformEvent) => {
+    const { newFindings, errorCount, criticalCount } = event.metadata || {};
+    
+    if (newFindings > 0 && (errorCount > 0 || criticalCount > 0)) {
+      console.log(`[AutonomousFix] Gap Intelligence detected ${newFindings} new issues (${criticalCount} critical, ${errorCount} errors) - auto-processing...`);
+      
+      try {
+        // Process outstanding high-confidence findings
+        await autonomousFixPipeline.processOutstandingFindings();
+      } catch (error) {
+        console.error('[AutonomousFix] Error auto-processing gap findings:', error);
+      }
+    }
+  });
+  console.log('[AutonomousFix] Subscribed to gap_intelligence_scan events for self-healing');
+  
+  // Schedule periodic self-healing (every hour at :45)
+  // This catches any findings that might have been missed by event-based triggering
+  cron.schedule('45 * * * *', async () => {
+    console.log('[AutonomousFix] Running scheduled self-healing cycle...');
+    try {
+      const results = await autonomousFixPipeline.processOutstandingFindings();
+      if (results.fixed > 0) {
+        console.log(`[AutonomousFix] Scheduled self-healing: Fixed ${results.fixed} issues`);
+      }
+    } catch (error) {
+      console.error('[AutonomousFix] Scheduled self-healing error:', error);
+    }
+  });
+  console.log('[AutonomousFix] Scheduled hourly self-healing job (at :45)');
   
   console.log('[AutonomousFix] Autonomous Fix Pipeline initialized');
 }
