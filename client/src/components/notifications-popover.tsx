@@ -1632,7 +1632,8 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       <div 
         className="flex-1 min-h-0 overflow-y-auto overscroll-contain"
         style={{ 
-          maxHeight: compact ? 'calc(85vh - 200px)' : 'calc(75vh - 200px)',
+          minHeight: compact ? '40vh' : '35vh',
+          maxHeight: compact ? 'calc(85vh - 140px)' : 'calc(75vh - 160px)',
           WebkitOverflowScrolling: 'touch',
           touchAction: 'pan-y',
         }}
@@ -1742,7 +1743,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         </div>
         <SheetContent 
           side="bottom" 
-          className="p-0 rounded-t-2xl flex flex-col max-h-[85vh]"
+          className="p-0 rounded-t-2xl flex flex-col max-h-[90vh]"
           data-testid="notification-sheet-content"
           data-trinity-avoid="true"
         >
