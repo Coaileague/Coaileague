@@ -21,6 +21,8 @@ import {
 } from "./auth";
 import { checkWorkspacePaymentStatus, hasPlatformWideAccess, getUserPlatformRole } from "./rbac";
 import { emailService } from "./services/emailService";
+import { platformEventBus } from "./services/platformEventBus";
+import { systemAuditLogs } from "@shared/schema";
 
 const router = Router();
 
@@ -304,6 +306,38 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
     if (!paymentResult.allowed) {
       // Different responses for org owners vs end users
       if (paymentResult.isOwner) {
+        // Log to Trinity Orchestration for audit trail
+        try {
+          await db.insert(systemAuditLogs).values({
+            action: 'payment_block_owner',
+            category: 'billing',
+            severity: 'warning',
+            userId: freshUser.id,
+            workspaceId: paymentResult.workspaceId,
+            details: {
+              reason: paymentResult.reason,
+              workspaceName: paymentResult.workspaceName,
+              blockedAt: new Date().toISOString(),
+            },
+            ipAddress: req.ip || 'unknown',
+            userAgent: req.headers['user-agent'] || 'unknown',
+          });
+          
+          // Emit event for Trinity AI monitoring
+          platformEventBus.emit({
+            type: 'subscription.payment_blocked',
+            payload: {
+              userId: freshUser.id,
+              workspaceId: paymentResult.workspaceId,
+              workspaceName: paymentResult.workspaceName,
+              reason: paymentResult.reason,
+              isOwner: true,
+            },
+          });
+        } catch (logError) {
+          console.error('[PaymentEnforcement] Failed to log audit:', logError);
+        }
+        
         // Org owner: Return user data WITH payment required flag
         // This keeps them authenticated but shows the payment modal
         return res.status(402).json({
