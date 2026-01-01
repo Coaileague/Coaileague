@@ -24,6 +24,8 @@ import {
 import { eq, and, gte, lte, sql, desc, count, avg, inArray } from 'drizzle-orm';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GEMINI_MODELS } from '../providers/geminiClient';
+import { enhancedLLMJudge } from '../llmJudgeEnhanced';
+import { platformEventBus } from '../../platformEventBus';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -479,6 +481,70 @@ Generate a JSON schedule with format:
           return sum + hours;
         }, 0);
 
+        // Calculate coverage and overtime metrics
+        const coveragePercent = Math.min(100, (schedule.length / (constraints.minimumCoverage / 10)) * 100);
+        const overtimeHours = Math.max(0, totalHours - (employeeData.length * 40));
+        
+        // LLM Judge Risk Evaluation before publishing schedule
+        let llmJudgeApproved = true;
+        let llmJudgeWarning: string | null = null;
+
+        try {
+          await enhancedLLMJudge.initialize();
+          const riskEvaluation = await enhancedLLMJudge.evaluateRisk({
+            subjectId: `schedule-${workspaceId}-${new Date().toISOString()}`,
+            subjectType: 'workflow',
+            content: {
+              employeesAffected: schedule.length,
+              coveragePercent,
+              overtimeHours,
+              timeOffConflicts: timeOffData.length,
+            },
+            context: {
+              constraints,
+              insights: parsed.insights,
+            },
+            workspaceId,
+            affectsFinancials: false,
+            isDestructive: false,
+            domain: 'scheduling',
+            actionType: 'schedule.publish',
+          });
+
+          console.log(`[SchedulingSubagent] LLM Judge evaluation: ${riskEvaluation.verdict} (risk: ${riskEvaluation.riskScore})`);
+
+          if (riskEvaluation.verdict === 'blocked' || riskEvaluation.verdict === 'rejected') {
+            llmJudgeApproved = false;
+            console.log(`[SchedulingSubagent] LLM Judge BLOCKED schedule: ${riskEvaluation.reasoning}`);
+            
+            platformEventBus.publish('schedule_escalation', {
+              workspaceId,
+              reason: riskEvaluation.reasoning,
+              riskScore: riskEvaluation.riskScore,
+              recommendations: riskEvaluation.recommendations,
+              requiresApproval: true,
+            });
+          } else if (riskEvaluation.verdict === 'needs_review') {
+            llmJudgeWarning = riskEvaluation.reasoning;
+          }
+        } catch (judgeError: any) {
+          console.error('[SchedulingSubagent] LLM Judge evaluation failed, proceeding:', judgeError.message);
+        }
+
+        // If blocked, return empty schedule with explanation
+        if (!llmJudgeApproved) {
+          return {
+            schedule: [],
+            metrics: {
+              coveragePercent: 0,
+              overtimeHours: 0,
+              preferenceScore: 0,
+              costEfficiency: 0,
+            },
+            aiInsights: 'Schedule blocked by LLM Judge safety review. Admin approval required.',
+          };
+        }
+
         return {
           schedule: schedule.map((s: any) => ({
             ...s,
@@ -487,12 +553,14 @@ Generate a JSON schedule with format:
             reason: 'AI-optimized assignment',
           })),
           metrics: {
-            coveragePercent: Math.min(100, (schedule.length / (constraints.minimumCoverage / 10)) * 100),
-            overtimeHours: Math.max(0, totalHours - (employeeData.length * 40)),
+            coveragePercent,
+            overtimeHours,
             preferenceScore: 85,
             costEfficiency: 92,
           },
-          aiInsights: parsed.insights || 'Schedule optimized for coverage and cost efficiency.',
+          aiInsights: llmJudgeWarning 
+            ? `${parsed.insights || 'Schedule optimized.'} ⚠️ Note: ${llmJudgeWarning}` 
+            : (parsed.insights || 'Schedule optimized for coverage and cost efficiency.'),
         };
       }
     } catch (error) {
