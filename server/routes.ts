@@ -5369,11 +5369,60 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { workspaceId: _, ...updateData } = req.body;
       const validated = insertEmployeeSchema.partial().parse(updateData);
 
+      // RBAC SYNC: When organizationalTitle changes, sync to workspaceRole
+      // This ensures role-based access control stays consistent with org hierarchy
+      if ((validated as any).organizationalTitle) {
+        const titleToRoleMap: Record<string, string> = {
+          'owner': 'org_owner',
+          'director': 'org_admin',
+          'manager': 'department_manager',
+          'supervisor': 'supervisor',
+          'staff': 'staff',
+        };
+        const mappedRole = titleToRoleMap[(validated as any).organizationalTitle];
+        if (mappedRole) {
+          (validated as any).workspaceRole = mappedRole;
+          console.log(`[RBAC Sync] Employee ${req.params.id}: organizationalTitle=${(validated as any).organizationalTitle} -> workspaceRole=${mappedRole}`);
+        }
+      }
+
+      // Fetch old employee record for change comparison
+      const oldEmployee = await storage.getEmployee(req.params.id, workspaceId);
+      const oldOrgTitle = (oldEmployee as any)?.organizationalTitle;
+      const oldWorkspaceRole = oldEmployee?.workspaceRole;
+
       const employee = await storage.updateEmployee(req.params.id, workspaceId, validated);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
       }
+
+      // Emit Trinity orchestration event only when role/title actually changes
+      const newOrgTitle = (employee as any)?.organizationalTitle;
+      const newWorkspaceRole = employee?.workspaceRole;
+      const titleChanged = oldOrgTitle !== newOrgTitle;
+      const roleChanged = oldWorkspaceRole !== newWorkspaceRole;
       
+      if (titleChanged || roleChanged) {
+        platformEventBus.emit({
+          type: 'employee.role_changed',
+          payload: {
+            employeeId: req.params.id,
+            workspaceId,
+            previousTitle: oldOrgTitle || null,
+            newTitle: newOrgTitle || null,
+            previousRole: oldWorkspaceRole || null,
+            newRole: newWorkspaceRole || null,
+            updatedBy: (req as any).user?.id,
+          },
+        });
+        console.log(`[RBAC Event] Employee ${req.params.id}: role/title changed`, {
+          titleChanged,
+          roleChanged,
+          previous: { title: oldOrgTitle, role: oldWorkspaceRole },
+          new: { title: newOrgTitle, role: newWorkspaceRole }
+        });
+      }
+
       res.json(employee);
     } catch (error: any) {
       console.error("Error updating employee:", error);
