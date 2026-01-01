@@ -1,4 +1,5 @@
 import { createRoot } from "react-dom/client";
+import { HelmetProvider } from 'react-helmet-async';
 import App from "./App";
 import "./index.css";
 
@@ -31,7 +32,11 @@ if (import.meta.env.DEV) {
   };
 }
 
-createRoot(document.getElementById("root")!).render(<App />);
+createRoot(document.getElementById("root")!).render(
+  <HelmetProvider>
+    <App />
+  </HelmetProvider>
+);
 
 // Force clear old service workers and caches on version mismatch
 const APP_VERSION = 'v1.0.3';
