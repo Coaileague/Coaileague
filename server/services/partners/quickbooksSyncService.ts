@@ -31,6 +31,29 @@ interface QBOCustomer {
   PrimaryEmailAddr?: { Address: string };
   PrimaryPhone?: { FreeFormNumber: string };
   Active?: boolean;
+  // Address fields for Trinity scheduling
+  BillAddr?: {
+    Line1?: string;
+    Line2?: string;
+    City?: string;
+    CountrySubDivisionCode?: string; // State
+    PostalCode?: string;
+    Country?: string;
+    Lat?: string;
+    Long?: string;
+  };
+  ShipAddr?: {
+    Line1?: string;
+    Line2?: string;
+    City?: string;
+    CountrySubDivisionCode?: string;
+    PostalCode?: string;
+    Country?: string;
+    Lat?: string;
+    Long?: string;
+  };
+  // Notes for post orders
+  Notes?: string;
 }
 
 interface QBOEmployee {
@@ -345,6 +368,11 @@ export class QuickBooksSyncService {
             match.confidence,
             userId
           );
+          
+          // Enrich client with QuickBooks data (address, contact, notes for post orders)
+          if (match.coaileagueEntityId) {
+            await this.enrichClientFromQBO(match.coaileagueEntityId, qboCustomer);
+          }
           matched++;
         } else if (match.matchType === 'name_fuzzy' || match.matchType === 'ambiguous') {
           await this.createManualReviewItem(
@@ -745,6 +773,65 @@ export class QuickBooksSyncService {
       confidence: 0,
       matchType: 'no_match',
     };
+  }
+
+  /**
+   * Enrich a CoAIleague client with QuickBooks Customer data
+   * Called after a successful client mapping to sync address, contact, and notes
+   * This enables Trinity scheduling with accurate driving distance calculations
+   */
+  private async enrichClientFromQBO(
+    clientId: string,
+    qboCustomer: QBOCustomer
+  ): Promise<void> {
+    // Prefer ShipAddr (service location) over BillAddr for scheduling
+    const addr = qboCustomer.ShipAddr || qboCustomer.BillAddr;
+    
+    const updateData: Record<string, any> = {
+      quickbooksClientId: qboCustomer.Id,
+      qboSyncToken: qboCustomer.SyncToken,
+      lastQboSyncAt: new Date(),
+      qboSyncStatus: 'synced',
+      updatedAt: new Date(),
+    };
+    
+    // Enrich with address data for Trinity driving distance
+    if (addr) {
+      if (addr.Line1) updateData.address = addr.Line1;
+      if (addr.Line2) updateData.addressLine2 = addr.Line2;
+      if (addr.City) updateData.city = addr.City;
+      if (addr.CountrySubDivisionCode) updateData.state = addr.CountrySubDivisionCode;
+      if (addr.PostalCode) updateData.postalCode = addr.PostalCode;
+      if (addr.Country) updateData.country = addr.Country;
+      
+      // Geocoordinates for Trinity driving distance calculations
+      if (addr.Lat) updateData.latitude = addr.Lat;
+      if (addr.Long) updateData.longitude = addr.Long;
+    }
+    
+    // Email and phone for POC
+    if (qboCustomer.PrimaryEmailAddr?.Address) {
+      updateData.email = qboCustomer.PrimaryEmailAddr.Address;
+    }
+    if (qboCustomer.PrimaryPhone?.FreeFormNumber) {
+      updateData.phone = qboCustomer.PrimaryPhone.FreeFormNumber;
+    }
+    
+    // Company name
+    if (qboCustomer.CompanyName) {
+      updateData.companyName = qboCustomer.CompanyName;
+    }
+    
+    // Notes can contain post orders for security industry
+    if (qboCustomer.Notes) {
+      updateData.postOrders = qboCustomer.Notes;
+    }
+    
+    await db.update(clients)
+      .set(updateData)
+      .where(eq(clients.id, clientId));
+    
+    console.log(`[QuickBooksSync] Enriched client ${clientId} with QB data (address, contact, notes)`);
   }
 
   private findBestEmployeeMatch(

@@ -1621,6 +1621,7 @@ export const clients = pgTable("clients", {
   // External ID (CLI-XXXX-NNNNN format)
   clientCode: varchar("client_code"),
   quickbooksClientId: varchar("quickbooks_client_id"), // External QB client ID for billing sync
+  qboSyncToken: varchar("qbo_sync_token"), // QuickBooks sync token for change detection
 
   // Client information
   firstName: varchar("first_name").notNull(),
@@ -1628,13 +1629,22 @@ export const clients = pgTable("clients", {
   companyName: varchar("company_name"),
   email: varchar("email"),
   phone: varchar("phone"),
-  address: text("address"),
+  
+  // Enhanced address for Trinity scheduling (driving distance calculations)
+  address: text("address"), // Full formatted address or street line 1
+  addressLine2: varchar("address_line_2"), // Suite, unit, building number
+  city: varchar("city"),
+  state: varchar("state"),
+  postalCode: varchar("postal_code"),
+  country: varchar("country").default("US"),
 
-  // Job site location (for geo-compliance)
+  // Job site location (for geo-compliance and Trinity driving distance)
   latitude: decimal("latitude", { precision: 10, scale: 7 }), // Job site GPS latitude
   longitude: decimal("longitude", { precision: 10, scale: 7 }), // Job site GPS longitude
 
-  // Billing
+  // Contract and Billing (for Trinity scheduling and invoicing)
+  contractRate: decimal("contract_rate", { precision: 10, scale: 2 }), // Base billing rate per hour
+  contractRateType: varchar("contract_rate_type").default("hourly"), // 'hourly', 'daily', 'weekly', 'monthly', 'project'
   billingEmail: varchar("billing_email"),
   taxId: varchar("tax_id"),
   stripeCustomerId: varchar("stripe_customer_id"), // Stripe customer ID for automated billing
@@ -1644,6 +1654,19 @@ export const clients = pgTable("clients", {
   clientOvertimeMultiplier: decimal("client_overtime_multiplier", { precision: 5, scale: 2 }), // Override workspace OT multiplier
   clientHolidayMultiplier: decimal("client_holiday_multiplier", { precision: 5, scale: 2 }), // Override workspace holiday multiplier
 
+  // Security Industry: Post Orders & POC (Point of Contact)
+  postOrders: text("post_orders"), // Post orders / standing instructions for security sites
+  pocName: varchar("poc_name"), // Point of Contact name at client site
+  pocPhone: varchar("poc_phone"), // POC phone number
+  pocEmail: varchar("poc_email"), // POC email address
+  pocTitle: varchar("poc_title"), // POC job title
+
+  // Scheduling preferences (for Trinity auto-scheduling)
+  preferredEmployees: text("preferred_employees").array(), // Array of preferred employee IDs
+  requiredCertifications: text("required_certifications").array(), // Required certs for this site
+  minimumStaffing: integer("minimum_staffing"), // Minimum employees per shift at this client
+  maxDrivingDistance: integer("max_driving_distance"), // Max acceptable driving distance in miles
+
   // Status
   isActive: boolean("is_active").default(true),
   notes: text("notes"),
@@ -1651,11 +1674,17 @@ export const clients = pgTable("clients", {
   // Visual branding (for schedule display)
   color: varchar("color").default("#3b82f6"), // Brand color for calendar display (vibrant blue default)
 
+  // Sync tracking
+  lastQboSyncAt: timestamp("last_qbo_sync_at"), // Last synced from QuickBooks
+  qboSyncStatus: varchar("qbo_sync_status"), // 'synced', 'pending', 'error'
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => ({
   // Add index on userId for performance
   userIdIdx: index("clients_user_id_idx").on(table.userId),
+  // Add index on quickbooksClientId for sync lookups
+  qboClientIdIdx: index("clients_qbo_client_id_idx").on(table.quickbooksClientId),
 }));
 
 export const insertClientSchema = createInsertSchema(clients).omit({
