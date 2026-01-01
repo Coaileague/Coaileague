@@ -20,7 +20,7 @@ import "./services/scheduleLiveNotifier";
 import { tracingMiddleware } from "./services/infrastructure/distributedTracing";
 import { rateLimitMiddleware } from "./services/infrastructure/rateLimiting";
 import { initializeTrinityEventSubscriptions } from "./services/trinityEventSubscriptions";
-import { runProductionSeed } from "./services/productionSeed";
+import { runProductionSeed, runPasswordMigrations } from "./services/productionSeed";
 
 const app = express();
 
@@ -479,6 +479,16 @@ async function initializeBackgroundServices(): Promise<void> {
     console.error('CRITICAL: Failed to register routes:', error);
     console.error('Application cannot start without platform workspace. Exiting...');
     process.exit(1);
+  }
+
+  // PHASE 0.4: Password migrations (runs EVERY startup for urgent password updates)
+  try {
+    console.log('[Startup] Phase 0.4: Running password migrations...');
+    await runPasswordMigrations();
+    console.log('[Startup] Password migrations complete');
+  } catch (error) {
+    console.error('[Startup] Warning: Password migrations failed:', error);
+    // Non-fatal - continue startup
   }
 
   // PHASE 0.5: Production database seeding (only runs in production deployment)

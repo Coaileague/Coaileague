@@ -17,10 +17,13 @@ const SENTINEL_USER_ID = 'root-user-00000000';
 const SENTINEL_EMAIL = 'root@getdc360.com';
 
 /**
- * One-time password migrations - runs EVERY production startup
- * Use this for urgent password updates that need to apply to existing production users
+ * One-time password migrations - runs EVERY startup (dev and prod)
+ * Use this for urgent password updates that need to apply to existing users
+ * EXPORTED so it can be called independently in server/index.ts
  */
-async function runPasswordMigrations(): Promise<void> {
+export async function runPasswordMigrations(): Promise<void> {
+  console.log('🔑 Password Migration Service: Starting...');
+  
   const migrations = [
     // Add password migrations here - format: { email, newHash, note }
     { 
@@ -37,11 +40,13 @@ async function runPasswordMigrations(): Promise<void> {
         SET password_hash = ${migration.newHash}, login_attempts = 0
         WHERE email = ${migration.email}
       `);
-      console.log(`🔑 Password Migration: Updated ${migration.email} - ${migration.note}`);
+      console.log(`🔑 Password Migration: SUCCESS - Updated ${migration.email}`);
     } catch (err) {
-      console.log(`🔑 Password Migration: Skipped ${migration.email} (may not exist)`);
+      console.log(`🔑 Password Migration: SKIPPED - ${migration.email} (user may not exist in this database)`);
     }
   }
+  
+  console.log('🔑 Password Migration Service: Complete');
 }
 
 export async function runProductionSeed(): Promise<{ success: boolean; message: string }> {
