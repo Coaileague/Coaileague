@@ -12,7 +12,7 @@
  * Trinity can query state and issue commands to control any UI component.
  */
 
-import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import { platformEventBus } from '../platformEventBus';
 import { log } from '../../vite';
 

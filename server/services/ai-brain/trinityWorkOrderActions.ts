@@ -5,7 +5,7 @@
  * Enables Trinity to process work orders like an autonomous AI agent.
  */
 
-import { helpaiOrchestrator, type ActionRequest } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator, type ActionRequest } from '../helpai/platformActionHub';
 import {
   trinityWorkOrderOrchestrator,
   trinityWorkOrderIntake,

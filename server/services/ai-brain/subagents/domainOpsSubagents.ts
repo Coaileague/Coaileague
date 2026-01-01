@@ -20,7 +20,7 @@ import {
 import { eq, and, like, desc, sql, inArray } from 'drizzle-orm';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GEMINI_MODELS } from '../providers/geminiClient';
-import { helpaiOrchestrator } from '../../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../../helpai/platformActionHub';
 import * as fs from 'fs';
 import * as path from 'path';
 

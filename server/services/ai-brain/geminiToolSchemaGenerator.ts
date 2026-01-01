@@ -13,7 +13,7 @@
  */
 
 import { FunctionDeclaration, SchemaType, FunctionDeclarationsTool } from "@google/generative-ai";
-import { helpaiOrchestrator, type ActionHandler, type ActionCategory } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator, type ActionHandler, type ActionCategory } from '../helpai/platformActionHub';
 
 // ============================================================================
 // TOOL CATEGORY DEFINITIONS

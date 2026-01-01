@@ -34421,7 +34421,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         return res.status(403).json({ error: actionAuthCheck.reason });
       }
 
-      const { helpaiOrchestrator } = await import("./services/helpai/helpaiActionOrchestrator");
+      const { helpaiOrchestrator } = await import("./services/helpai/platformActionHub");
       const result = await helpaiOrchestrator.executeAction({
         actionId: `${category}.${actionId}`,
         category: category as any,

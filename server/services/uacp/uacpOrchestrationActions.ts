@@ -10,7 +10,7 @@ import { agentIdentityService } from './agentIdentityService';
 import { db } from '../../db';
 import { accessPolicies, accessControlEvents, agentIdentities } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
-import type { ActionRequest, ActionResult } from '../helpai/helpaiActionOrchestrator';
+import type { ActionRequest, ActionResult } from '../helpai/platformActionHub';
 
 export interface UACPActionContext {
   userId: string;

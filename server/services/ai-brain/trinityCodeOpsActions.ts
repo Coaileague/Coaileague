@@ -6,7 +6,7 @@
  */
 
 import { trinityCodeOps } from './trinityCodeOps';
-import type { ActionRequest, ActionResult } from '../helpai/helpaiActionOrchestrator';
+import type { ActionRequest, ActionResult } from '../helpai/platformActionHub';
 import crypto from 'crypto';
 
 /**

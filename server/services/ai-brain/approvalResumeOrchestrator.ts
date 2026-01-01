@@ -22,7 +22,7 @@ import { eq, and, inArray, isNotNull } from 'drizzle-orm';
 import { sendAutomationEmail } from '../emailService';
 import { createNotification } from '../notificationService';
 import { platformEventBus } from '../platformEventBus';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { trinityThoughtEngine } from './trinityThoughtEngine';
 
 // ============================================================================

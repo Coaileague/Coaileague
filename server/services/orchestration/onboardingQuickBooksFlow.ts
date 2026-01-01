@@ -13,7 +13,7 @@
 
 import { db } from '../../db';
 import { platformEventBus } from '../platformEventBus';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { onboardingStateMachine } from './onboardingStateMachine';
 import { quickbooksSyncService } from '../partners/quickbooksSyncService';
 import { dataMigrationAgent } from '../ai-brain/subagents/dataMigrationAgent';

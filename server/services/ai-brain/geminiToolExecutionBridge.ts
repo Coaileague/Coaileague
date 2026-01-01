@@ -10,7 +10,7 @@
  * Steps 5-8: Results back to Gemini → Final response (handled by geminiClient.ts)
  */
 
-import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import { geminiToolSchemaGenerator } from './geminiToolSchemaGenerator';
 
 export interface ToolExecutionContext {

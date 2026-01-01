@@ -213,25 +213,25 @@ export const DIAGNOSTIC_SERVICE_REGISTRY: DiagnosticService[] = [
     };
   }, { tier: 'essential', description: 'AI mascot with contextual thoughts' }),
 
-  createQuickCheck('helpai', 'HelpAI Orchestration', 'ai_brain', async () => {
+  createQuickCheck('platform_action_hub', 'Platform Action Hub (Trinity)', 'ai_brain', async () => {
     const start = Date.now();
     try {
-      const { helpaiOrchestrator } = await import('./helpai/helpaiActionOrchestrator');
-      if (helpaiOrchestrator?.getActionCountByCategory) {
-        const actionCounts = helpaiOrchestrator.getActionCountByCategory();
+      const { platformActionHub } = await import('./helpai/platformActionHub');
+      if (platformActionHub?.getActionCountByCategory) {
+        const actionCounts = platformActionHub.getActionCountByCategory();
         const totalActions = Object.values(actionCounts).reduce((a: number, b: number) => a + b, 0);
         return { 
           ok: totalActions > 0, 
-          message: `HelpAI active - ${totalActions} registered actions across ${Object.keys(actionCounts).length} categories`,
+          message: `Platform Action Hub active - ${totalActions} registered actions across ${Object.keys(actionCounts).length} categories`,
           latencyMs: Date.now() - start,
           metadata: { actionCounts, totalActions }
         };
       }
-      return { ok: true, message: 'HelpAI orchestrator loaded', latencyMs: Date.now() - start };
+      return { ok: true, message: 'Platform Action Hub loaded', latencyMs: Date.now() - start };
     } catch {
-      return { ok: true, message: 'HelpAI system available', latencyMs: Date.now() - start };
+      return { ok: true, message: 'Platform Action Hub available', latencyMs: Date.now() - start };
     }
-  }, { tier: 'essential', description: 'Universal chat AI routing' }),
+  }, { tier: 'essential', description: 'Trinity AI Brain action infrastructure' }),
 
   createQuickCheck('subagent_supervisor', 'Subagent Supervisor', 'ai_brain', async () => {
     const start = Date.now();

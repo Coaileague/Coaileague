@@ -414,7 +414,7 @@ helpaiRouter.post(
 // Universal action handler that routes all actions through AI Brain
 // ============================================================================
 
-import { helpaiOrchestrator, type ActionRequest } from './services/helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator, type ActionRequest } from './services/helpai/platformActionHub';
 
 /**
  * GET /api/helpai/orchestrator/actions

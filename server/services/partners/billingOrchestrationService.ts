@@ -21,7 +21,7 @@ import {
 } from '@shared/schema';
 import { createHash } from 'crypto';
 import { platformEventBus } from '../platformEventBus';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 
 type RiskSignal = 
   | 'MAPPING_AMBIGUOUS'

@@ -22,7 +22,7 @@
 
 import { trinityGuruMode } from './trinityGuruMode';
 import { trinityBusinessProMode } from './trinityBusinessProMode';
-import type { ActionRequest, ActionResult } from '../helpai/helpaiActionOrchestrator';
+import type { ActionRequest, ActionResult } from '../helpai/platformActionHub';
 
 export function registerTrinityEnhancedModeActions(orchestrator: any): void {
   console.log('[TrinityEnhanced] Registering Enhanced Guru Mode + Business Pro Mode actions...');

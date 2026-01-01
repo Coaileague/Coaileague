@@ -21,7 +21,7 @@ import {
   AiWorkflowApproval,
 } from '@shared/schema';
 import { eq, and, desc, sql, inArray, gte, isNull, or } from 'drizzle-orm';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { platformEventBus, PlatformEvent } from '../platformEventBus';
 import { GapFinding } from './subagents/domainOpsSubagents';
 import { trinityOrchestration } from '../trinity/trinityOrchestrationAdapter';

@@ -10,7 +10,7 @@
  * - Partner catalog management (support roles)
  */
 
-import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import { integrationManagementService, type IntegrationAccessContext } from './integrationManagementService';
 import { integrationPartnerService, type SupportContext } from './integrationPartnerService';
 

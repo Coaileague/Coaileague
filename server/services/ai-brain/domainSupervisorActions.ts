@@ -8,7 +8,7 @@
 
 import { domainLeadSupervisorService } from './domainLeadSupervisors';
 import { enhancedLLMJudge } from './llmJudgeEnhanced';
-import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 
 export function registerDomainSupervisorActions(): void {
   console.log('[DomainSupervisorActions] Registering domain lead supervisor actions...');

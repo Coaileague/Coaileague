@@ -229,7 +229,7 @@ async function initializeExtendedServices(): Promise<void> {
   const results = await Promise.allSettled([
     timedInit('Universal Diagnostic Orchestrator', async () => {
       const { registerUniversalDiagnosticActions } = await import("./services/ai-brain/universalDiagnosticOrchestrator");
-      const { helpaiOrchestrator } = await import("./services/helpai/helpaiActionOrchestrator");
+      const { helpaiOrchestrator } = await import("./services/helpai/platformActionHub");
       await registerUniversalDiagnosticActions(helpaiOrchestrator);
       console.log("[Server] Universal Diagnostic Orchestrator initialized");
     }),
@@ -395,7 +395,7 @@ async function initializeBackgroundServices(): Promise<void> {
     
     timedInit('HRIS Integration Service', async () => {
       const { hrisIntegrationService } = await import('./services/hris/hrisIntegrationService');
-      const { helpaiOrchestrator } = await import('./services/helpai/helpaiActionOrchestrator');
+      const { helpaiOrchestrator } = await import('./services/helpai/platformActionHub');
       const actions = hrisIntegrationService.getAIBrainActions();
       for (const action of actions) {
         helpaiOrchestrator.registerAction({

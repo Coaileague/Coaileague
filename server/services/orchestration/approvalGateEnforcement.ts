@@ -15,7 +15,7 @@
 
 import { db } from '../../db';
 import { platformEventBus } from '../platformEventBus';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 
 export type ApprovalCategory = 
   | 'payroll'

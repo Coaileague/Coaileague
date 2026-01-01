@@ -27,7 +27,7 @@ import { eq, and, desc, sql, inArray } from 'drizzle-orm';
 import { trinityCodeOps, PatchOperation, PatchResult } from './trinityCodeOps';
 import { workflowApprovalService } from './workflowApprovalService';
 import { gapIntelligenceService } from './gapIntelligenceService';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { platformEventBus, PlatformEvent } from '../platformEventBus';
 import { GapFinding } from './subagents/domainOpsSubagents';
 import { trinityOrchestrationGovernance, hotpatchCadenceController } from './trinityOrchestrationGovernance';

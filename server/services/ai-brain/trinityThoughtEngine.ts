@@ -29,7 +29,7 @@ import {
   WorkspaceGovernancePolicy,
 } from '@shared/schema';
 import { eq, desc, and, gte, sql } from 'drizzle-orm';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { platformEventBus } from '../platformEventBus';
 
 // ============================================================================

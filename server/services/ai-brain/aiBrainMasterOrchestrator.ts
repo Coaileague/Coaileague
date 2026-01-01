@@ -12,7 +12,7 @@
  * The AI Brain (Gemini) uses this to orchestrate the ENTIRE platform.
  */
 
-import { helpaiOrchestrator, type ActionRequest, type ActionResult, type ActionHandler } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator, type ActionRequest, type ActionResult, type ActionHandler } from '../helpai/platformActionHub';
 import { platformEventBus, publishPlatformUpdate } from '../platformEventBus';
 import { AIBrainService } from './aiBrainService';
 import { aiBrainAuthorizationService } from './aiBrainAuthorizationService';

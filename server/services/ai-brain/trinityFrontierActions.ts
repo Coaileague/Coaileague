@@ -12,7 +12,7 @@
  */
 
 import { trinityFrontierCapabilities } from './trinityFrontierCapabilities';
-import type { ActionRequest, ActionResult } from '../helpai/helpaiActionOrchestrator';
+import type { ActionRequest, ActionResult } from '../helpai/platformActionHub';
 
 export function registerTrinityFrontierActions(orchestrator: any): void {
   console.log('[TrinityFrontier] Registering 2025 Frontier Capability actions...');

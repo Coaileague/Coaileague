@@ -5,7 +5,7 @@
  * enabling Trinity and automation to trigger real-time schedule notifications.
  */
 
-import { helpaiOrchestrator, type ActionRequest } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator, type ActionRequest } from '../helpai/platformActionHub';
 import {
   onShiftCreated,
   onShiftUpdated,

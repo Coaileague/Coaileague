@@ -12,7 +12,7 @@
 
 import { db } from '../../db';
 import { platformEventBus } from '../platformEventBus';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { approvalGateEnforcementService } from './approvalGateEnforcement';
 import { employees } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';

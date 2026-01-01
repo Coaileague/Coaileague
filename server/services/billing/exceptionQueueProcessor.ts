@@ -23,7 +23,7 @@ import { db } from '../../db';
 import { exceptionTriageQueue, users, workspaces, notifications } from '@shared/schema';
 import { eq, and, lt, isNull, desc, sql } from 'drizzle-orm';
 import { platformEventBus, type PlatformEvent } from '../platformEventBus';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 
 type ExceptionType = 
   | 'mapping_ambiguous'

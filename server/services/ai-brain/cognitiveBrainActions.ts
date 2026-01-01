@@ -10,7 +10,7 @@
  * - Reinforcement Learning metrics and adaptation
  */
 
-import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import { cognitiveOnboardingService, type IntegrationProvider, type DataSyncType } from './cognitiveOnboardingService';
 import { sharedKnowledgeGraph, type KnowledgeDomain, type EntityType } from './sharedKnowledgeGraph';
 import { agentToAgentProtocol, type MessageType, type MessagePriority } from './agentToAgentProtocol';

@@ -14,7 +14,7 @@
 
 import { Router, Response, NextFunction } from 'express';
 import { type AuthenticatedRequest } from '../rbac';
-import { helpaiOrchestrator } from '../services/helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../services/helpai/platformActionHub';
 import { aiBrainMasterOrchestrator } from '../services/ai-brain/aiBrainMasterOrchestrator';
 import { aiBrainFileSystemTools } from '../services/ai-brain/aiBrainFileSystemTools';
 import { aiBrainWorkflowExecutor } from '../services/ai-brain/aiBrainWorkflowExecutor';

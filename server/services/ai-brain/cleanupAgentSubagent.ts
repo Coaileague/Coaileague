@@ -10,7 +10,7 @@
  */
 
 import { db } from '../../db';
-import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator, type ActionRequest, type ActionResult } from '../helpai/platformActionHub';
 import specIndex from '../../../spec-index.json';
 import * as fs from 'fs';
 import * as path from 'path';

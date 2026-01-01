@@ -29,7 +29,7 @@ import {
   persistGapFindings,
   GapFinding,
 } from './subagents/domainOpsSubagents';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { platformEventBus, PlatformEvent } from '../platformEventBus';
 
 const execAsync = promisify(exec);

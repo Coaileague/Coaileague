@@ -13,7 +13,7 @@
 
 import { db } from '../../db';
 import { platformEventBus } from '../platformEventBus';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { crossDomainExceptionService } from './crossDomainExceptionService';
 
 export type ScheduleStatus = 'draft' | 'pending_review' | 'approved' | 'published' | 'archived';

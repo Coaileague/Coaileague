@@ -112,10 +112,10 @@ export interface ServiceHealthStatus {
 const ACTION_REGISTRY: Map<string, ActionHandler> = new Map();
 
 // ============================================================================
-// HELPAI ACTION ORCHESTRATOR CLASS
+// PLATFORM ACTION HUB CLASS (Trinity's Action Infrastructure)
 // ============================================================================
 
-class HelpaiActionOrchestrator {
+class PlatformActionHub {
   private serviceHealth: Map<string, ServiceHealthStatus> = new Map();
   private healthCheckInterval: NodeJS.Timeout | null = null;
   private wsBroadcaster: ((message: any) => void) | null = null;
@@ -1742,5 +1742,7 @@ class HelpaiActionOrchestrator {
   }
 }
 
-// Export singleton instance
-export const helpaiOrchestrator = new HelpaiActionOrchestrator();
+// Export singleton instance - aliased as both names for backward compatibility during migration
+export const platformActionHub = new PlatformActionHub();
+// Legacy alias - will be removed after full migration
+export const helpaiOrchestrator = platformActionHub;

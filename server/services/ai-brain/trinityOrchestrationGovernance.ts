@@ -20,7 +20,7 @@ import {
   aiWorkflowApprovals,
 } from '@shared/schema';
 import { eq, and, gte, lte, desc, sql, inArray } from 'drizzle-orm';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { platformEventBus, PlatformEvent } from '../platformEventBus';
 import { createNotification } from '../notificationService';
 import { sendAutomationEmail } from '../emailService';

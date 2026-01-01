@@ -24,7 +24,7 @@ import { db } from '../../db';
 import { workspaces, subscriptions, invoices, notifications, users } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
 import { platformEventBus, type PlatformEvent } from '../platformEventBus';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { AccountStateService } from './accountState';
 
 const stripe = process.env.STRIPE_SECRET_KEY

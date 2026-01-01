@@ -17,7 +17,7 @@ import { db } from '../../db';
 import { trinitySelfAwareness, InsertTrinitySelfAwareness, TrinitySelfAwareness } from '@shared/schema';
 import { eq, and, desc, like, isNull, not, sql } from 'drizzle-orm';
 import { TRINITY_PERSONA, PERSONA_SYSTEM_INSTRUCTION } from './trinityPersona';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 
 // ============================================================================
 // TYPES

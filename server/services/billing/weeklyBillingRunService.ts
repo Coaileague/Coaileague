@@ -16,7 +16,7 @@ import {
 import { eq, and, lte, isNull, or, desc } from 'drizzle-orm';
 import { InvoiceService } from './invoice';
 import { emailService } from '../emailService';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 
 interface BillingRunResult {
   runId: string;

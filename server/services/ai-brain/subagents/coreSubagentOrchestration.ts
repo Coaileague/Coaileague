@@ -9,7 +9,7 @@ import { schedulingSubagent } from './schedulingSubagent';
 import { payrollSubagent } from './payrollSubagent';
 import { invoiceSubagent } from './invoiceSubagent';
 import { notificationSubagent, NotificationPriority } from './notificationSubagent';
-import type { ActionRequest, ActionResult } from '../../helpai/helpaiActionOrchestrator';
+import type { ActionRequest, ActionResult } from '../../helpai/platformActionHub';
 
 export interface CoreSubagentActionContext {
   userId: string;

@@ -20,7 +20,7 @@ import { eq, and, lte, gte, isNotNull, isNull } from 'drizzle-orm';
 import { TrialManager } from './trialManager';
 import { SubscriptionManager, type SubscriptionTier, type BillingCycle } from './subscriptionManager';
 import { platformEventBus, type PlatformEvent } from '../platformEventBus';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 import { BILLING } from '@shared/billingConfig';
 
 const GRACE_PERIOD_DAYS = 7;

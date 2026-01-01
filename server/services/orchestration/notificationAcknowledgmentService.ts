@@ -12,7 +12,7 @@
 
 import { db } from '../../db';
 import { platformEventBus } from '../platformEventBus';
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 
 export type NotificationChannel = 'in_app' | 'email' | 'sms' | 'push' | 'webhook';
 

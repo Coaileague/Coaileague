@@ -9,7 +9,7 @@
  * - Schedule Lifecycle Orchestrator
  */
 
-import { helpaiOrchestrator } from '../helpai/helpaiActionOrchestrator';
+import { helpaiOrchestrator } from '../helpai/platformActionHub';
 
 import { onboardingStateMachine, registerOnboardingActions } from './onboardingStateMachine';
 import { approvalGateEnforcementService, registerApprovalGateActions } from './approvalGateEnforcement';

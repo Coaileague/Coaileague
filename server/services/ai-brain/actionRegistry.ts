@@ -11,7 +11,7 @@ import {
   type ActionRequest, 
   type ActionResult,
   type ActionCategory 
-} from '../helpai/helpaiActionOrchestrator';
+} from '../helpai/platformActionHub';
 import { serviceController, featureToggleManager, consoleCommandExecutor, endUserBotSupport, supportStaffAssistant } from './orchestratorCapabilities';
 import { db } from '../../db';
 import { eq, and, desc, gte, lte, sql, isNull } from 'drizzle-orm';
