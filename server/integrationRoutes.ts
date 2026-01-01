@@ -504,6 +504,9 @@ router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), asy
           const lastName = String(emp.familyName || displayName.split(' ').slice(1).join(' ') || '').trim().slice(0, 100);
           const phone = String(emp.phone || '').trim().slice(0, 20) || null;
 
+          // Get pay rate from employee data if available
+          const payRate = emp.payRate ? parseFloat(String(emp.payRate)) : null;
+          
           await db.insert(employeesTable).values({
             workspaceId,
             firstName,
@@ -516,6 +519,8 @@ router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), asy
             status: 'active',
             partnerEmployeeId: qboId,
             partnerType: 'quickbooks',
+            quickbooksEmployeeId: qboId,
+            payRate: payRate ? String(payRate) : null,
           });
           
           // Update our maps to prevent same-batch duplicates
@@ -580,6 +585,7 @@ router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), asy
             status: 'active',
             partnerCustomerId: qboId,
             partnerType: 'quickbooks',
+            quickbooksClientId: qboId,
           });
           
           // Update maps to prevent same-batch duplicates
@@ -606,6 +612,131 @@ router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), asy
   } catch (error: any) {
     console.error('QuickBooks import error:', error);
     return res.status(500).json({ error: error.message || 'Failed to import QuickBooks data' });
+  }
+});
+
+/**
+ * POST /api/integrations/quickbooks/preflight
+ * 
+ * Run pre-flight tests to verify QuickBooks integration works correctly
+ */
+router.post('/quickbooks/preflight', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId } = req.body;
+
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Missing workspaceId' });
+    }
+
+    // Find connection
+    const [connection] = await db.select()
+      .from(partnerConnections)
+      .where(
+        and(
+          eq(partnerConnections.workspaceId, workspaceId),
+          eq(partnerConnections.partnerType, 'quickbooks'),
+          eq(partnerConnections.status, 'connected')
+        )
+      )
+      .limit(1);
+
+    if (!connection) {
+      return res.status(404).json({ error: 'QuickBooks not connected' });
+    }
+
+    const tests: Array<{ name: string; status: 'passed' | 'failed'; error?: string }> = [];
+
+    // Test 1: Verify access token is valid
+    try {
+      const accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
+      if (accessToken) {
+        tests.push({ name: 'Access Token Valid', status: 'passed' });
+      } else {
+        tests.push({ name: 'Access Token Valid', status: 'failed', error: 'No access token' });
+      }
+    } catch (err: any) {
+      tests.push({ name: 'Access Token Valid', status: 'failed', error: err.message });
+    }
+
+    // Test 2: Can fetch company info
+    try {
+      const accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
+      const realmId = connection.realmId!;
+      const apiBase = 'https://quickbooks.api.intuit.com/v3/company';
+      
+      const companyResponse = await fetch(`${apiBase}/${realmId}/companyinfo/${realmId}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (companyResponse.ok) {
+        tests.push({ name: 'Fetch Company Info', status: 'passed' });
+      } else {
+        tests.push({ name: 'Fetch Company Info', status: 'failed', error: `HTTP ${companyResponse.status}` });
+      }
+    } catch (err: any) {
+      tests.push({ name: 'Fetch Company Info', status: 'failed', error: err.message });
+    }
+
+    // Test 3: Can query customers
+    try {
+      const accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
+      const realmId = connection.realmId!;
+      const apiBase = 'https://quickbooks.api.intuit.com/v3/company';
+      
+      const query = encodeURIComponent('select count(*) from Customer');
+      const custResponse = await fetch(`${apiBase}/${realmId}/query?query=${query}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (custResponse.ok) {
+        tests.push({ name: 'Query Customers', status: 'passed' });
+      } else {
+        tests.push({ name: 'Query Customers', status: 'failed', error: `HTTP ${custResponse.status}` });
+      }
+    } catch (err: any) {
+      tests.push({ name: 'Query Customers', status: 'failed', error: err.message });
+    }
+
+    // Test 4: Can query invoices
+    try {
+      const accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
+      const realmId = connection.realmId!;
+      const apiBase = 'https://quickbooks.api.intuit.com/v3/company';
+      
+      const query = encodeURIComponent('select count(*) from Invoice');
+      const invResponse = await fetch(`${apiBase}/${realmId}/query?query=${query}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+      
+      if (invResponse.ok) {
+        tests.push({ name: 'Query Invoices', status: 'passed' });
+      } else {
+        tests.push({ name: 'Query Invoices', status: 'failed', error: `HTTP ${invResponse.status}` });
+      }
+    } catch (err: any) {
+      tests.push({ name: 'Query Invoices', status: 'failed', error: err.message });
+    }
+
+    const allPassed = tests.every(t => t.status === 'passed');
+    
+    return res.json({
+      success: true,
+      allPassed,
+      tests,
+      connectionId: connection.id,
+    });
+  } catch (error: any) {
+    console.error('QuickBooks preflight error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to run pre-flight tests' });
   }
 });
 
