@@ -5,20 +5,114 @@ import { pool } from "./db"; // Assuming 'pool' is your PostgreSQL client connec
 import { monitoringService } from "./monitoring";
 import { startAutonomousScheduler } from "./services/autonomousScheduler";
 import { execSync } from "child_process";
+import * as net from "net";
+import * as fs from "fs";
 
-// Kill any existing process on port 5000 before starting
-function cleanupPort(port: number): void {
+// ============================================================================
+// ROBUST PORT MANAGEMENT SYSTEM
+// ============================================================================
+
+const PORT_LOCK_FILE = '/tmp/coaileague-port-5000.lock';
+let serverInstance: any = null;
+let isShuttingDown = false;
+
+// Check if port is actually available by attempting exclusive bind
+async function isPortAvailable(port: number): Promise<boolean> {
+  return new Promise((resolve) => {
+    const testServer = net.createServer();
+    testServer.once('error', () => resolve(false));
+    testServer.once('listening', () => {
+      testServer.close(() => resolve(true));
+    });
+    testServer.listen(port, '0.0.0.0');
+  });
+}
+
+// Kill processes using port with multiple strategies
+function killPortProcesses(port: number): void {
   try {
-    // Find and kill processes using the port
+    // Strategy 1: Kill by port using lsof
     execSync(`lsof -ti:${port} | xargs -r kill -9 2>/dev/null || true`, { stdio: 'ignore' });
-    console.log(`[Startup] Port ${port} cleanup completed`);
+  } catch (e) { /* ignore */ }
+  
+  try {
+    // Strategy 2: Kill by port using fuser
+    execSync(`fuser -k ${port}/tcp 2>/dev/null || true`, { stdio: 'ignore' });
+  } catch (e) { /* ignore */ }
+  
+  try {
+    // Strategy 3: Read PID from lock file and kill
+    if (fs.existsSync(PORT_LOCK_FILE)) {
+      const pid = fs.readFileSync(PORT_LOCK_FILE, 'utf8').trim();
+      if (pid && !isNaN(parseInt(pid))) {
+        execSync(`kill -9 ${pid} 2>/dev/null || true`, { stdio: 'ignore' });
+      }
+      fs.unlinkSync(PORT_LOCK_FILE);
+    }
+  } catch (e) { /* ignore */ }
+}
+
+// Wait for port to become available with retry
+async function waitForPortAvailable(port: number, maxRetries: number = 10, retryDelay: number = 500): Promise<boolean> {
+  for (let i = 0; i < maxRetries; i++) {
+    if (await isPortAvailable(port)) {
+      return true;
+    }
+    console.log(`[PortManager] Port ${port} busy, attempt ${i + 1}/${maxRetries}...`);
+    
+    // Try to kill processes on each retry
+    if (i > 0) {
+      killPortProcesses(port);
+    }
+    
+    await new Promise(resolve => setTimeout(resolve, retryDelay));
+  }
+  return false;
+}
+
+// Create PID lock file
+function createLockFile(): void {
+  try {
+    fs.writeFileSync(PORT_LOCK_FILE, process.pid.toString());
+    console.log(`[PortManager] Lock file created: PID ${process.pid}`);
   } catch (e) {
-    // Ignore errors - port may already be free
+    console.warn('[PortManager] Could not create lock file');
   }
 }
 
-// Track server instance for graceful shutdown
-let serverInstance: any = null;
+// Remove PID lock file
+function removeLockFile(): void {
+  try {
+    if (fs.existsSync(PORT_LOCK_FILE)) {
+      fs.unlinkSync(PORT_LOCK_FILE);
+    }
+  } catch (e) { /* ignore */ }
+}
+
+// Comprehensive port cleanup with verification
+async function cleanupAndVerifyPort(port: number): Promise<boolean> {
+  console.log(`[PortManager] Starting port ${port} cleanup...`);
+  
+  // First attempt - check if port is already free
+  if (await isPortAvailable(port)) {
+    console.log(`[PortManager] Port ${port} is available`);
+    return true;
+  }
+  
+  // Kill existing processes
+  killPortProcesses(port);
+  
+  // Wait for port with retries
+  const available = await waitForPortAvailable(port, 15, 300);
+  
+  if (available) {
+    console.log(`[PortManager] Port ${port} cleanup successful`);
+  } else {
+    console.error(`[PortManager] CRITICAL: Port ${port} could not be freed after all attempts`);
+  }
+  
+  return available;
+}
 import { initializeChatServerHub } from "./services/ChatServerHub";
 import { GamificationEventTracker } from "./services/gamification/eventTracker";
 import { AiBrainNotifier } from "./services/gamification/aiBrainNotifier";
@@ -483,11 +577,28 @@ async function initializeBackgroundServices(): Promise<void> {
 // GRACEFUL SHUTDOWN HANDLERS
 // ============================================================================
 async function gracefulShutdown(signal: string): Promise<void> {
+  // Prevent multiple simultaneous shutdowns
+  if (isShuttingDown) {
+    console.log(`[Shutdown] Already shutting down, ignoring ${signal}`);
+    return;
+  }
+  isShuttingDown = true;
+  
   console.log(`\n[Shutdown] Received ${signal}, starting graceful shutdown...`);
   
+  // Close HTTP server first with timeout
   if (serverInstance) {
-    serverInstance.close(() => {
-      console.log('[Shutdown] HTTP server closed');
+    await new Promise<void>((resolve) => {
+      const shutdownTimeout = setTimeout(() => {
+        console.log('[Shutdown] HTTP server close timeout, forcing...');
+        resolve();
+      }, 5000);
+      
+      serverInstance.close(() => {
+        clearTimeout(shutdownTimeout);
+        console.log('[Shutdown] HTTP server closed');
+        resolve();
+      });
     });
   }
   
@@ -499,6 +610,9 @@ async function gracefulShutdown(signal: string): Promise<void> {
     console.error('[Shutdown] Error closing database:', e);
   }
   
+  // Remove lock file
+  removeLockFile();
+  
   console.log('[Shutdown] Graceful shutdown complete');
   process.exit(0);
 }
@@ -508,6 +622,17 @@ process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
 process.on('SIGINT', () => gracefulShutdown('SIGINT'));
 process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
 
+// Handle uncaught exceptions to clean up port
+process.on('uncaughtException', (err) => {
+  console.error('[FATAL] Uncaught exception:', err);
+  removeLockFile();
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[FATAL] Unhandled rejection at:', promise, 'reason:', reason);
+});
+
 // ============================================================================
 // MAIN STARTUP SEQUENCE
 // ============================================================================
@@ -515,9 +640,14 @@ process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
   const startupStart = Date.now();
   let server;
   
-  // PRE-STARTUP: Clean up any stale processes on port 5000
+  // PRE-STARTUP: Robust port cleanup with verification
   const port = parseInt(process.env.PORT || '5000', 10);
-  cleanupPort(port);
+  const portAvailable = await cleanupAndVerifyPort(port);
+  if (!portAvailable) {
+    console.error(`[CRITICAL] Port ${port} unavailable after all attempts. Exiting.`);
+    process.exit(1);
+  }
+  createLockFile();
   
   // PHASE 0: Register routes (required before anything else)
   try {

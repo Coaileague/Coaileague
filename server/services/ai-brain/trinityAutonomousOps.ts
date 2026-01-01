@@ -205,6 +205,127 @@ class TrinityAutonomousOps {
     console.log('[TrinityAutonomousOps] Initializing autonomous operations service...');
   }
 
+  // ============================================================================
+  // PORT CONFLICT DETECTION & SELF-HEALING
+  // ============================================================================
+
+  async checkPortHealth(port: number = 5000): Promise<{ healthy: boolean; issue?: string; processes?: string[] }> {
+    try {
+      const { execSync } = await import('child_process');
+      
+      // Check how many processes are bound to the port
+      let lsofOutput = '';
+      try {
+        lsofOutput = execSync(`lsof -ti:${port} 2>/dev/null || true`, { encoding: 'utf8' });
+      } catch (e) {
+        // No processes on port - that's fine
+      }
+      
+      const pids = lsofOutput.trim().split('\n').filter(Boolean);
+      
+      if (pids.length === 0) {
+        // No process on port - could indicate the server isn't running
+        return { healthy: true };
+      }
+      
+      if (pids.length > 1) {
+        // Multiple processes on same port - this is a conflict!
+        console.warn(`[TrinityAutonomousOps] PORT CONFLICT DETECTED: ${pids.length} processes on port ${port}`);
+        
+        // Log this as a critical issue
+        const action: AutonomousAction = {
+          id: crypto.randomUUID(),
+          type: 'anomaly_detection',
+          severity: 'critical',
+          title: 'Port Conflict Detected',
+          description: `Multiple processes (${pids.length}) detected on port ${port}. PIDs: ${pids.join(', ')}`,
+          targetComponent: 'network',
+          initiatedAt: new Date(),
+          completedAt: new Date(),
+          success: true,
+          result: `Detected ${pids.length} conflicting processes`,
+          metrics: { processCount: pids.length, port },
+          requiresHumanReview: true,
+        };
+        
+        this.recordAction(action);
+        
+        return {
+          healthy: false,
+          issue: `Port ${port} has ${pids.length} processes bound (conflict)`,
+          processes: pids,
+        };
+      }
+      
+      // Single process - healthy
+      return { healthy: true };
+    } catch (error) {
+      console.error('[TrinityAutonomousOps] Port health check error:', error);
+      return { healthy: true }; // Assume healthy on error to prevent false alarms
+    }
+  }
+
+  async resolvePortConflict(port: number = 5000): Promise<boolean> {
+    console.log(`[TrinityAutonomousOps] Attempting to resolve port ${port} conflict...`);
+    
+    try {
+      const { execSync } = await import('child_process');
+      const currentPid = process.pid.toString();
+      
+      // Get all PIDs on the port
+      let lsofOutput = '';
+      try {
+        lsofOutput = execSync(`lsof -ti:${port} 2>/dev/null || true`, { encoding: 'utf8' });
+      } catch (e) { return true; }
+      
+      const pids = lsofOutput.trim().split('\n').filter(Boolean);
+      
+      // Kill all processes EXCEPT the current one
+      for (const pid of pids) {
+        if (pid !== currentPid) {
+          try {
+            execSync(`kill -9 ${pid} 2>/dev/null || true`, { stdio: 'ignore' });
+            console.log(`[TrinityAutonomousOps] Killed stale process PID ${pid}`);
+          } catch (e) { /* ignore */ }
+        }
+      }
+      
+      // Log the self-healing action
+      const action: AutonomousAction = {
+        id: crypto.randomUUID(),
+        type: 'self_healing',
+        severity: 'urgent',
+        title: 'Port Conflict Resolved',
+        description: `Terminated ${pids.length - 1} stale processes on port ${port}`,
+        targetComponent: 'network',
+        initiatedAt: new Date(),
+        completedAt: new Date(),
+        success: true,
+        result: `Killed PIDs: ${pids.filter(p => p !== currentPid).join(', ')}`,
+        metrics: { killedCount: pids.length - 1, port },
+        requiresHumanReview: false,
+      };
+      
+      this.recordAction(action);
+      this.issuesResolved++;
+      
+      // Emit event for audit trail
+      platformEventBus.emit({
+        type: 'trinity_issue_detected',
+        workspaceId: PLATFORM_WORKSPACE_ID,
+        userId: 'trinity-system',
+        description: `Self-healed port ${port} conflict by terminating stale processes`,
+        metadata: { killedPids: pids.filter(p => p !== currentPid), port },
+        timestamp: new Date(),
+      });
+      
+      return true;
+    } catch (error) {
+      console.error('[TrinityAutonomousOps] Port conflict resolution failed:', error);
+      return false;
+    }
+  }
+
   static getInstance(): TrinityAutonomousOps {
     if (!TrinityAutonomousOps.instance) {
       TrinityAutonomousOps.instance = new TrinityAutonomousOps();
@@ -353,6 +474,27 @@ class TrinityAutonomousOps {
     }
 
     const connectorDiagnostics = trinityPlatformConnector.getDiagnostics();
+
+    // Check for port conflicts and auto-resolve if detected
+    const portHealth = await this.checkPortHealth(5000);
+    if (!portHealth.healthy) {
+      console.warn('[TrinityAutonomousOps] Port conflict detected during health scan');
+      anomalies.push({
+        id: crypto.randomUUID(),
+        type: 'resource_exhaustion',
+        component: 'network',
+        severity: 'critical',
+        description: portHealth.issue || 'Port 5000 conflict detected',
+        metrics: { processCount: portHealth.processes?.length || 0 },
+        detectedAt: new Date(),
+      });
+      
+      // Attempt self-healing
+      const resolved = await this.resolvePortConflict(5000);
+      if (resolved) {
+        console.log('[TrinityAutonomousOps] Port conflict self-healed successfully');
+      }
+    }
 
     const overallHealth = this.calculateOverallHealth(healthSummary, sentinelAlerts);
     const healthScore = this.calculateHealthScore(healthSummary, sentinelAlerts, connectorDiagnostics);
