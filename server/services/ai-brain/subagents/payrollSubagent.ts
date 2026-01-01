@@ -21,6 +21,8 @@ import {
 import { eq, and, gte, lte, sql, desc, inArray } from 'drizzle-orm';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { GEMINI_MODELS } from '../providers/geminiClient';
+import { enhancedLLMJudge } from '../llmJudgeEnhanced';
+import { platformEventBus } from '../../platformEventBus';
 import crypto from 'crypto';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -437,7 +439,88 @@ class PayrollSubagentService {
       issueCount: issues.length,
     });
 
-    // Step 4: Create payroll run (if not validate only)
+    // Step 4: LLM Judge Risk Evaluation (Safety Gate)
+    const riskSpan = this.tracer.startSpan(parentTrace, 'payroll.llm_judge_evaluation');
+    const criticalIssues = issues.filter(i => i.severity === 'critical');
+    const warningIssues = issues.filter(i => i.severity === 'warning');
+    const overtimePercent = employeeData.length > 0 
+      ? (calculations.filter(c => c.hours > 40).length / employeeData.length) * 100 
+      : 0;
+
+    try {
+      await enhancedLLMJudge.initialize();
+      const riskEvaluation = await enhancedLLMJudge.evaluateRisk({
+        subjectId: `payroll-${workspaceId}-${payPeriodStart.toISOString()}`,
+        subjectType: 'workflow',
+        content: {
+          totalAmount: totalGross,
+          employeeCount: employeeData.length,
+          criticalIssues: criticalIssues.length,
+          warningIssues: warningIssues.length,
+          overtimePercent: overtimePercent.toFixed(1),
+        },
+        context: {
+          payPeriodStart: payPeriodStart.toISOString(),
+          payPeriodEnd: payPeriodEnd.toISOString(),
+          anomaliesDetected: criticalIssues.map(i => i.description),
+        },
+        workspaceId,
+        affectsFinancials: true,
+        isDestructive: false,
+        domain: 'payroll',
+        actionType: 'payroll.process',
+      });
+
+      this.tracer.endSpan(riskSpan, 'completed', {
+        riskScore: riskEvaluation.riskScore,
+        verdict: riskEvaluation.verdict,
+        approved: riskEvaluation.verdict === 'approved',
+      });
+
+      // Block execution if risk is too high
+      if (riskEvaluation.verdict === 'blocked' || riskEvaluation.verdict === 'rejected') {
+        console.log(`[PayrollSubagent] LLM Judge BLOCKED payroll: ${riskEvaluation.reasoning}`);
+        
+        // Emit escalation event
+        platformEventBus.publish('payroll_escalation', {
+          workspaceId,
+          reason: riskEvaluation.reasoning,
+          riskScore: riskEvaluation.riskScore,
+          recommendations: riskEvaluation.recommendations,
+          requiresApproval: true,
+        });
+
+        return {
+          success: false,
+          totalGross,
+          totalDeductions,
+          totalNet,
+          employeeCount: employeeData.length,
+          issues: [{
+            severity: 'critical',
+            type: 'compliance',
+            description: `LLM Judge blocked execution: ${riskEvaluation.reasoning}`,
+            resolution: riskEvaluation.recommendations.join('; '),
+          }, ...issues],
+        };
+      }
+
+      // Log approval for audit trail
+      if (riskEvaluation.verdict === 'needs_review') {
+        console.log(`[PayrollSubagent] LLM Judge flagged for review but proceeding: ${riskEvaluation.reasoning}`);
+        issues.push({
+          severity: 'warning',
+          type: 'validation',
+          description: `LLM Judge flagged: ${riskEvaluation.reasoning}`,
+          resolution: 'Proceeding with caution - admin review recommended',
+        });
+      }
+    } catch (riskError: any) {
+      console.error('[PayrollSubagent] LLM Judge evaluation failed, proceeding with caution:', riskError.message);
+      this.tracer.endSpan(riskSpan, 'failed', { error: riskError.message });
+    }
+
+    // Step 5: Create payroll run (if not validate only and approved by LLM Judge)
     if (!options.validateOnly) {
       const createSpan = this.tracer.startSpan(parentTrace, 'payroll.create_run');
       

@@ -17,7 +17,11 @@ import {
 import { eq, and, or, ilike, gte, lte, desc, isNull } from 'drizzle-orm';
 import { quickbooksOAuthService } from '../oauth/quickbooks';
 import { platformEventBus } from '../platformEventBus';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { enhancedLLMJudge } from '../ai-brain/llmJudgeEnhanced';
 import crypto from 'crypto';
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 const QBO_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
 
@@ -1380,6 +1384,136 @@ export class QuickBooksSyncService {
         })
         .where(eq(partnerManualReviewQueue.id, reviewItemId));
     }
+  }
+
+  // ---------------------------------------------------------------------------
+  // INTELLIGENT ERROR HANDLING WITH GEMINI AI
+  // ---------------------------------------------------------------------------
+  
+  /**
+   * Analyze QuickBooks sync errors using Gemini AI and determine retry strategy
+   * Returns: RETRY (with modifications), FIX_DATA, ESCALATE, or ABORT
+   */
+  async analyzeAndHandleSyncError(
+    workspaceId: string,
+    error: Error | any,
+    context: {
+      operation: string;
+      entityType?: string;
+      payload?: any;
+      retryCount: number;
+    }
+  ): Promise<{
+    action: 'RETRY' | 'FIX_DATA' | 'ESCALATE' | 'ABORT';
+    reasoning: string;
+    modifications?: Record<string, any>;
+    suggestedFix?: string;
+    shouldRetry: boolean;
+    retryDelayMs?: number;
+  }> {
+    console.log(`[QuickBooksSyncService] Analyzing error with Gemini AI: ${error.message}`);
+
+    try {
+      const model = genAI.getGenerativeModel({
+        model: 'gemini-2.5-flash',
+        generationConfig: { maxOutputTokens: 500, temperature: 0.2 },
+      });
+
+      const prompt = `You are a QuickBooks integration specialist. Analyze this sync error and recommend an action.
+
+ERROR DETAILS:
+- Message: ${error.message}
+- Code: ${error.code || 'unknown'}
+- Operation: ${context.operation}
+- Entity Type: ${context.entityType || 'unknown'}
+- Retry Count: ${context.retryCount}
+
+PAYLOAD SAMPLE (if any):
+${context.payload ? JSON.stringify(context.payload, null, 2).substring(0, 500) : 'N/A'}
+
+DECISION FRAMEWORK:
+- RETRY: Temporary issue (rate limit, timeout, network) - safe to retry with delay
+- FIX_DATA: Data validation issue (missing required fields, format errors)
+- ESCALATE: Authentication/authorization issue or unknown error requiring human attention
+- ABORT: Permanent failure, data corruption, or exceeded max retries (${context.retryCount >= 3})
+
+Respond in JSON format:
+{
+  "action": "RETRY" | "FIX_DATA" | "ESCALATE" | "ABORT",
+  "reasoning": "Brief explanation",
+  "modifications": { "field": "corrected_value" },
+  "suggestedFix": "What needs to change for FIX_DATA cases",
+  "retryDelayMs": 1000
+}`;
+
+      const result = await model.generateContent(prompt);
+      const responseText = result.response.text();
+      
+      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        // LLM Judge validation for retry decisions
+        if (parsed.action === 'RETRY' && context.retryCount >= 2) {
+          try {
+            await enhancedLLMJudge.initialize();
+            const riskEval = await enhancedLLMJudge.evaluateRisk({
+              subjectId: `qb-retry-${workspaceId}-${Date.now()}`,
+              subjectType: 'action',
+              content: {
+                operation: context.operation,
+                retryCount: context.retryCount,
+                errorMessage: error.message,
+                aiRecommendation: parsed.action,
+              },
+              context: { entityType: context.entityType },
+              workspaceId,
+              domain: 'quickbooks',
+              actionType: 'quickbooks.retry_sync',
+            });
+
+            if (riskEval.verdict === 'blocked' || riskEval.verdict === 'rejected') {
+              console.log(`[QuickBooksSyncService] LLM Judge blocked retry: ${riskEval.reasoning}`);
+              return {
+                action: 'ESCALATE',
+                reasoning: `LLM Judge blocked retry after ${context.retryCount} attempts: ${riskEval.reasoning}`,
+                shouldRetry: false,
+              };
+            }
+          } catch (judgeError) {
+            console.error('[QuickBooksSyncService] LLM Judge evaluation failed:', judgeError);
+          }
+        }
+
+        return {
+          action: parsed.action,
+          reasoning: parsed.reasoning,
+          modifications: parsed.modifications,
+          suggestedFix: parsed.suggestedFix,
+          shouldRetry: parsed.action === 'RETRY',
+          retryDelayMs: parsed.retryDelayMs || 2000,
+        };
+      }
+    } catch (aiError: any) {
+      console.error('[QuickBooksSyncService] Gemini analysis failed:', aiError.message);
+    }
+
+    // Fallback: Basic error classification without AI
+    const isRateLimit = error.message?.includes('rate') || error.message?.includes('429');
+    const isAuth = error.message?.includes('auth') || error.message?.includes('401') || error.message?.includes('403');
+    const isTimeout = error.message?.includes('timeout') || error.message?.includes('ETIMEDOUT');
+
+    if (context.retryCount >= 3) {
+      return { action: 'ABORT', reasoning: 'Max retries exceeded', shouldRetry: false };
+    }
+    if (isAuth) {
+      return { action: 'ESCALATE', reasoning: 'Authentication issue detected', shouldRetry: false };
+    }
+    if (isRateLimit || isTimeout) {
+      return { action: 'RETRY', reasoning: 'Temporary issue detected', shouldRetry: true, retryDelayMs: 5000 };
+    }
+
+    return { action: 'ESCALATE', reasoning: 'Unknown error requires human review', shouldRetry: false };
   }
 }
 
