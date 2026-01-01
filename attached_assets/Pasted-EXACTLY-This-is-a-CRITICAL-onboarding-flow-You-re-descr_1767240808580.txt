@@ -1,0 +1,331 @@
+EXACTLY. This is a CRITICAL onboarding flow.
+You're describing an intelligent migration wizard, not a blind data dump.
+
+🎯 WHAT THE PERFECT FLOW SHOULD BE:
+User clicks "Integrate QuickBooks" →
+Step 1: OAuth Connection
+
+Redirect to QuickBooks OAuth
+User authorizes CoAIleague
+Returns with access token
+Trinity confirms: "✅ Connected to QuickBooks"
+
+Step 2: Data Discovery (Trinity Analyzes)
+
+Trinity fetches from QuickBooks:
+
+Customers (potential clients)
+Employees (your workforce)
+Vendors
+Chart of accounts
+Existing payroll items
+Invoice history
+
+
+
+Trinity shows:
+"Found in your QuickBooks:
+
+47 Customers
+23 Employees
+12 Payroll Items
+156 Past Invoices"
+
+Step 3: Smart Selection Interface
+CUSTOMERS → CLIENTS:
+Select which QuickBooks Customers to import as Clients:
+
+☑ MegaCorp Security Services     $15,000/mo    [RECOMMENDED]
+☑ Bank HQ Downtown               $8,500/mo     [RECOMMENDED]  
+☐ John's Pizza (vendor)          $0/mo         [Skip - not security client]
+☑ Construction Site Alpha        $4,200/mo     [RECOMMENDED]
+☐ Office Supplies Co             $0/mo         [Skip - vendor]
+
+[Select All] [Deselect All] [Import Selected (45)]
+Trinity's AI analyzes:
+
+Revenue patterns → Recommends high-value customers
+Transaction history → Identifies actual clients vs vendors
+Flags anomalies: "Office Supplies Co has $0 security billing"
+
+
+EMPLOYEES → WORKFORCE:
+Select which QuickBooks Employees to import:
+
+☑ John Doe                Security Guard      Active    [IMPORT]
+☑ Jane Smith              Security Guard      Active    [IMPORT]
+☐ Mary Johnson            Office Manager      Active    [Skip - not field staff]
+☑ Bob Wilson              Security Guard      Active    [IMPORT]
+☐ Accountant LLC          1099 Contractor     Active    [Skip - contractor]
+
+Found Pay Rates:
+- John Doe: $18/hr ✅
+- Jane Smith: $20/hr ✅  
+- Bob Wilson: $17/hr ✅
+
+[Import Selected Employees (21)]
+Trinity validates:
+
+Pay rates exist
+W2 vs 1099 status
+Active vs terminated
+Certifications (if stored in QB custom fields)
+
+
+PAYROLL ITEMS MAPPING:
+Map QuickBooks Payroll Items to CoAIleague:
+
+QuickBooks Item          →    CoAIleague Category
+Hourly Wages             →    Regular Pay ✅
+Overtime Pay             →    Overtime (1.5x) ✅
+Holiday Pay              →    Holiday Premium ✅
+Federal Tax              →    Tax Withholding ✅
+State Tax                →    Tax Withholding ✅
+Health Insurance         →    Deduction ✅
+
+[Confirm Mapping]
+
+Step 4: ID Mapping & Validation
+Trinity creates bidirectional mapping:
+CUSTOMER MAPPING:
+MegaCorp (QB ID: 123) → Client (CoAI ID: cli_abc)
+  ↳ Validates: Can create invoices ✅
+  ↳ Tests: Sync invoice back to QB ✅
+  
+EMPLOYEE MAPPING:  
+John Doe (QB ID: 456) → Employee (CoAI ID: emp_xyz)
+  ↳ Validates: Pay rate imported ✅
+  ↳ Tests: Timesheet → Payroll sync ✅
+  
+CHART OF ACCOUNTS:
+Security Services Revenue (QB: 4000) → Revenue (CoAI)
+Payroll Expense (QB: 5000) → Payroll Expense (CoAI)
+  ↳ Validates: Can post transactions ✅
+
+Step 5: Pre-Flight Testing (Trinity Runs Tests)
+Trinity performs test transactions:
+🧪 RUNNING PRE-FLIGHT TESTS...
+
+Test 1: Create Test Invoice
+  - Create $100 test invoice for MegaCorp
+  - Push to QuickBooks
+  - Verify QB received it
+  - Result: ✅ PASS
+
+Test 2: Sync Employee Timesheet  
+  - Create 8hr timesheet for John Doe
+  - Calculate payroll ($144)
+  - Sync to QuickBooks payroll
+  - Result: ✅ PASS
+  
+Test 3: Fetch Payment Status
+  - Query QuickBooks for invoice status
+  - Verify webhook subscription active
+  - Result: ✅ PASS
+
+Test 4: Error Handling
+  - Send invalid data
+  - Verify error caught & logged
+  - Result: ✅ PASS
+
+ALL TESTS PASSED ✅
+
+Step 6: Confirmation Before Activation
+🎯 MIGRATION SUMMARY
+
+Ready to activate your workspace:
+
+CLIENTS: 45 imported
+  - Enterprise: 8
+  - Premium: 12  
+  - Standard: 25
+  
+EMPLOYEES: 21 imported
+  - Active: 21
+  - Average Pay: $18.50/hr
+  - Certifications: 67 total
+  
+INTEGRATIONS:
+  ✅ QuickBooks connected
+  ✅ Invoice sync ready
+  ✅ Payroll sync ready
+  ✅ Payment webhooks active
+  
+TRINITY AI STATUS:
+  ✅ Can schedule automatically
+  ✅ Can process payroll
+  ✅ Can generate invoices
+  ✅ All IDs mapped correctly
+
+⚠️ IMPORTANT:
+- Your QuickBooks data is now synced
+- Trinity will begin autonomous operations
+- First AI schedule runs tonight at 11 PM
+- First payroll sync: Friday 3 AM
+
+[Cancel] [Activate Workspace]
+
+Step 7: Post-Activation Checklist
+After user clicks "Activate Workspace":
+✅ Workspace Activated
+
+Trinity is now managing your workforce:
+
+IMMEDIATE ACTIONS:
+  ✅ Employees imported
+  ✅ Clients imported  
+  ✅ QuickBooks synced
+  ✅ IDs mapped
+  
+SCHEDULED TONIGHT (11 PM):
+  🤖 Trinity will generate optimized schedule
+  📧 Employees will be notified
+  
+NEXT STEPS FOR YOU:
+  1. Review employee certifications
+  2. Add client site locations
+  3. Set billing rates (if not in QB)
+  4. Upload employee photos (optional)
+  
+TRINITY IS READY TO WORK 🚀
+
+[Go to Dashboard]
+
+📋 VERIFICATION PROMPT FOR REPLIT:
+
+"QUICKBOOKS MIGRATION FLOW - INTELLIGENT ONBOARDING VERIFICATION"
+Verify that the QuickBooks integration onboarding flow is intelligent and user-controlled, not a blind data dump:
+
+REQUIRED FLOW:
+1. CONNECTION PHASE:
+
+ OAuth redirect to QuickBooks works
+ Returns with valid access token
+ Stores credentials securely
+ Tests connection immediately
+
+2. DATA DISCOVERY PHASE:
+Trinity should fetch and analyze:
+- QuickBooks Customers (potential clients)
+- QuickBooks Employees (workforce)  
+- Payroll Items (pay types)
+- Chart of Accounts (for mapping)
+- Recent Invoices (to understand billing patterns)
+- Payment history (to identify active clients)
+
+Show user a summary:
+"Found 47 Customers, 23 Employees, 12 Payroll Items"
+3. SMART SELECTION INTERFACE:
+Does the UI allow users to SELECT what to import?
+CUSTOMERS:
+- Show list with checkboxes
+- Display: Name, Revenue, Last Invoice Date
+- AI recommendation: Mark high-value clients as [RECOMMENDED]
+- Allow: Select All / Deselect All / Individual selection
+- Exclude: Vendors, inactive customers
+
+EMPLOYEES:
+- Show list with checkboxes
+- Display: Name, Role, Pay Rate, Status
+- AI recommendation: Auto-select W2 active employees
+- Allow: Deselect if contractor/admin/not field staff
+- Validate: Pay rate exists before import
+4. ID MAPPING & VALIDATION:
+Does Trinity create bidirectional mapping?
+For each imported entity:
+- QuickBooks ID → CoAIleague ID
+- Store mapping in database (for sync)
+- Validate mapping works both ways
+
+Example:
+qb_customers → clients (with qb_customer_id foreign key)
+qb_employees → employees (with qb_employee_id foreign key)
+5. PRE-FLIGHT TESTING:
+Does Trinity test the integration before activating?
+Run these tests:
+1. Create test invoice → Push to QB → Verify received
+2. Create test timesheet → Sync to QB → Verify payroll data
+3. Fetch QB data → Verify can read updates
+4. Test webhook → Verify can receive payment notifications
+5. Error handling → Send invalid data → Verify graceful failure
+
+ALL TESTS MUST PASS before allowing activation
+6. VALIDATION CHECKS:
+Before allowing "Activate Workspace", verify:
+- [ ] At least 1 client imported
+- [ ] At least 1 employee imported  
+- [ ] All employees have pay rates
+- [ ] QuickBooks sync tested successfully
+- [ ] All IDs mapped correctly
+- [ ] Webhooks subscribed
+- [ ] Chart of accounts mapped
+7. USER CONFIRMATION:
+Show comprehensive summary BEFORE activation:
+Display:
+- Number of clients imported
+- Number of employees imported
+- What Trinity will do automatically
+- When scheduled jobs will run
+- How to pause if needed
+
+Require explicit user action: [Activate Workspace]
+Don't auto-activate without confirmation
+8. POST-ACTIVATION:
+After activation:
+- Mark workspace as "active"
+- Enable Trinity's autonomous operations
+- Schedule first AI scheduling job
+- Send welcome email to user
+- Log activation in audit trail
+- Provide clear next steps
+
+CRITICAL QUESTIONS:
+A) SELECTION INTERFACE:
+
+Does the UI show QuickBooks customers/employees with checkboxes?
+Can users SELECT which ones to import?
+Or does it blindly import everything?
+
+B) SMART RECOMMENDATIONS:
+
+Does Trinity analyze QB data and recommend what to import?
+Does it flag vendors vs clients?
+Does it identify inactive employees?
+
+C) ID MAPPING:
+
+Are QuickBooks IDs stored in CoAIleague database?
+Can Trinity map back and forth for sync?
+Show me the database schema for mappings
+
+D) PRE-FLIGHT TESTS:
+
+Does Trinity test invoice creation before activation?
+Does it verify payroll sync works?
+Are there automated validation tests?
+
+E) ERROR HANDLING:
+
+What happens if QB connection fails mid-migration?
+Can user retry? Resume? Cancel?
+Is partial state handled gracefully?
+
+F) USER CONTROL:
+
+Can users pause/stop the migration?
+Can they review before confirming?
+Can they edit selections before import?
+
+
+SHOW ME:
+
+The onboarding flow files - which components handle this?
+The selection UI - is it smart or blind import?
+The validation logic - where are pre-flight tests?
+The ID mapping tables - how is QB↔CoAI mapping stored?
+The error handling - what happens if something fails?
+
+If ANY of these features don't exist, flag them as CRITICAL GAPS.
+The goal: User should feel IN CONTROL of migration, with Trinity as intelligent assistant, not blind automation.
+
+END OF VERIFICATION REQUEST

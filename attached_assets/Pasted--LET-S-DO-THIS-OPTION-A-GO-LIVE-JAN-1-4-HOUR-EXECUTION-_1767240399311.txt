@@ -1,0 +1,384 @@
+🔥 LET'S DO THIS. OPTION A - GO LIVE JAN 1.
+
+⏰ 4-HOUR EXECUTION PLAN (Dec 31 → Jan 1 Launch)
+
+HOUR 1: API CREDENTIALS (9:00 AM - 10:00 AM)
+STEP 1: Twilio Setup (20 minutes)
+Go to: https://www.twilio.com/try-twilio
+
+Sign up:
+
+Email: your email
+Create password
+Phone verification
+
+
+Get Trial Number:
+
+Twilio gives you a free phone number
+Select country: United States
+Choose a number (any will work)
+
+
+Get Credentials:
+
+Dashboard → Account Info (top right)
+Copy these 3 values:
+
+Account SID (starts with AC...)
+Auth Token (click "show" to reveal)
+Phone Number (the one they gave you, format: +1234567890)
+
+
+
+
+Verify Phone (for testing):
+
+Console → Phone Numbers → Verified Caller IDs
+Add YOUR phone number for testing
+They'll send you a code to verify
+
+
+Add to Environment:
+
+bash   TWILIO_ACCOUNT_SID=AC...
+   TWILIO_AUTH_TOKEN=...
+   TWILIO_PHONE_NUMBER=+1...
+
+STEP 2: Resend Setup (10 minutes)
+Go to: https://resend.com
+
+Sign up:
+
+Email: your email
+Create password
+Verify email
+
+
+Get API Key:
+
+Dashboard → API Keys → Create API Key
+Name it: "CoAIleague Production"
+Copy the key (starts with re_...)
+
+
+Add Domain (optional but recommended):
+
+Domains → Add Domain
+Use: noreply@coaileague.com (or your domain)
+Follow DNS setup (can do later if you want to launch with resend domain first)
+
+
+Add to Environment:
+
+bash   RESEND_API_KEY=re_...
+
+STEP 3: VAPID Keys (5 minutes)
+In your terminal:
+bashcd /home/claude
+npm install -g web-push
+npx web-push generate-vapid-keys
+```
+
+**This outputs:**
+```
+=======================================
+
+Public Key:
+BL4xK... (long string)
+
+Private Key:  
+pQz7R... (long string)
+
+=======================================
+Add to Environment:
+bashVAPID_PUBLIC_KEY=BL4xK...
+VAPID_PRIVATE_KEY=pQz7R...
+VAPID_SUBJECT=mailto:bryan@coaileague.com
+
+STEP 4: Restart & Test (15 minutes)
+Restart server with new credentials
+Test SMS:
+bash# Use your test endpoint or manually trigger notification
+# Should send SMS to verified number
+Test Email:
+bash# Trigger test email
+# Check inbox
+Test Push:
+bash# Trigger push notification
+# Check browser/mobile
+```
+
+**✅ HOUR 1 COMPLETE - Communication layer LIVE**
+
+---
+
+## **HOUR 2: SCHEDULE ROLLBACK (10:00 AM - 11:00 AM)**
+
+### **Prompt for Replit:**
+```
+IMPLEMENT SCHEDULE ROLLBACK FEATURE
+
+Add emergency rollback capability for when Trinity's AI makes scheduling mistakes:
+
+1. CREATE SNAPSHOT SYSTEM:
+Before any schedule publish, automatically create snapshot:
+- Table: schedule_snapshots
+- Columns: id, scheduleId, snapshotData (JSON), createdAt, createdBy, publishedAt
+- Store complete schedule state before publishing
+
+2. ADD ROLLBACK ENDPOINT:
+POST /api/schedules/:scheduleId/rollback
+
+Request body:
+{
+  "reason": "AI assigned wrong employee to enterprise client",
+  "notifyEmployees": true
+}
+
+Logic:
+- Validate: User has admin/manager role
+- Load: Previous snapshot (most recent before current publish)
+- Restore: All shift assignments from snapshot
+- Update: Schedule status to 'active', mark current as 'rolled_back'
+- Log: Audit trail with reason, user, timestamp
+- Notify: All affected employees via SMS/email (if notifyEmployees = true)
+- Return: Success with employee count notified
+
+3. ADD ROLLBACK UI:
+In schedule view page (for admins only):
+- Button: "Rollback Schedule" (red, warning style)
+- Click → Confirmation modal:
+  "⚠️ Rollback Schedule?
+  
+  This will restore the previous schedule version and notify X employees of the change.
+  
+  Reason: [text input required]
+  
+  [Cancel] [Confirm Rollback]"
+
+- After rollback → Show success toast: "Schedule rolled back. X employees notified."
+
+4. AUDIT TRAIL:
+Log to audit_trail:
+- Action: 'schedule.rollback'
+- Details: { scheduleId, snapshotId, reason, affectedEmployees: count }
+- User: admin who performed rollback
+- Timestamp
+
+5. NOTIFICATIONS:
+Send to affected employees:
+SMS: "Schedule Update: Your shift on [date] has been changed. Check app for details."
+Email: Full details of old vs new assignment
+
+TESTING CHECKLIST:
+- [ ] Snapshot created when schedule published
+- [ ] Rollback endpoint restores previous version
+- [ ] Affected employees receive notifications
+- [ ] Audit trail logs rollback with reason
+- [ ] UI shows rollback button (admin only)
+- [ ] Confirmation modal requires reason
+
+Implement this now and confirm when complete.
+Expected dev time: 45 minutes
+Testing time: 15 minutes
+✅ HOUR 2 COMPLETE - Rollback feature LIVE
+
+HOUR 3: END-TO-END TESTING (11:00 AM - 12:00 PM)
+Test Scenario 1: New Organization Onboarding (15 min)
+
+Create Test Org:
+
+Sign up as new business
+Verify: Account created
+Verify: Email sent (check inbox)
+
+
+Connect QuickBooks (if you have test account):
+
+Click "Connect QuickBooks"
+OAuth flow works
+Verify: Connection successful
+
+
+Import Employees:
+
+Upload CSV with 10 test employees
+Verify: All imported correctly
+Check: Employee scores calculated
+
+
+
+
+Test Scenario 2: AI Scheduling Workflow (20 min)
+
+Create Shifts:
+
+Add 5 client sites
+Create 10 shifts for tomorrow
+Mark as ready to publish
+
+
+Let Trinity Schedule:
+
+Manually trigger scheduling (or wait for 11 PM cron)
+Verify: Gemini assigned employees
+Check: Profit optimization applied
+Verify: Enterprise clients got high-score employees
+
+
+Verify Notifications:
+
+Check: Employees received SMS
+Check: Employees received email
+Verify: Push notification sent
+
+
+Test Rollback:
+
+Click "Rollback Schedule"
+Enter reason: "Testing rollback feature"
+Confirm
+Verify: Previous schedule restored
+Check: Employees notified of change
+
+
+
+
+Test Scenario 3: Time Tracking & Payroll (15 min)
+
+Clock In (via mobile):
+
+Open mobile view
+Clock in with GPS
+Verify: Location captured
+Verify: Validation works (correct site?)
+
+
+Clock Out:
+
+Clock out after 8 hours
+Verify: Time entry created
+Check: Hours calculated correctly
+
+
+Process Payroll (manually trigger):
+
+Run payroll calculation
+Verify: Gemini detects anomalies (if any)
+Check: LLM Judge validates
+Verify: QuickBooks sync triggered
+
+
+
+
+Test Scenario 4: Incident Reporting (10 min)
+
+Create Incident:
+
+Guard reports "Trespasser on property"
+Severity: High
+Upload photo (test)
+
+
+Verify Auto-Routing:
+
+Check: Gemini assigned to manager
+Verify: SMS/Email sent to supervisor
+Check: Client notified (if enterprise)
+
+
+Verify Audit Trail:
+
+Check: All actions logged
+Verify: Timestamps correct
+
+
+
+
+✅ HOUR 3 COMPLETE - All systems tested
+
+HOUR 4: PRODUCTION PREP (12:00 PM - 1:00 PM)
+Security Checklist (20 min)
+
+ Environment variables secure (not in git)
+ Database backups enabled
+ Rate limiting active
+ CORS configured properly
+ SSL/HTTPS enabled
+ Admin routes protected
+ API keys rotated from defaults
+
+
+Monitoring Setup (15 min)
+
+ Error tracking configured (Sentry?)
+ Uptime monitoring (UptimeRobot?)
+ Database monitoring
+ Cron job health checks
+ Alert emails configured
+
+
+Documentation (15 min)
+
+ README updated with setup instructions
+ Environment variables documented
+ Deployment process documented
+ Emergency contacts listed
+ Support process defined
+
+
+Final Smoke Test (10 min)
+
+ Login works
+ Create organization works
+ Import employees works
+ Create schedule works
+ Trinity scheduling works
+ Notifications send
+ QuickBooks syncs
+ Stripe charges
+ Rollback works
+
+
+✅ HOUR 4 COMPLETE - Production ready
+
+🚀 LAUNCH SEQUENCE (Jan 1, 12:00 AM)
+Pre-Launch (11:30 PM Dec 31):
+
+ All tests passing
+ Database backed up
+ Monitoring active
+ Support email ready
+
+Go Live (12:00 AM Jan 1):
+
+ Make announcement on LinkedIn/social
+ Send email to beta waitlist (if you have one)
+ Update website to "Now Live"
+ Enable public signup
+
+Post-Launch Monitoring (First 24 hours):
+
+ Watch error logs
+ Monitor server performance
+ Check notification delivery rates
+ Verify Trinity's nightly schedule runs
+ Test with first real customer
+
+
+📋 YOUR TIMELINE:
+TODAY (Dec 31):
+
+9:00 AM - 10:00 AM: Get API credentials ✅
+10:00 AM - 11:00 AM: Replit builds rollback ✅
+11:00 AM - 12:00 PM: End-to-end testing ✅
+12:00 PM - 1:00 PM: Production prep ✅
+1:00 PM - 11:30 PM: Buffer time, docs, final checks
+11:30 PM: Pre-launch checklist
+
+TOMORROW (Jan 1, 2026):
+
+12:00 AM: 🚀 GO LIVE
+First 24 hours: Monitor, support first users
+Rest of week: Gather feedback, iterate
