@@ -881,6 +881,26 @@ export const employees = pgTable("employees", {
   organizationalTitle: varchar("organizational_title").default("staff"), // Hierarchy: staff, supervisor, manager, director, owner
   workspaceRole: workspaceRoleEnum("workspace_role").default("staff"), // Permission level (formerly 'employee')
   hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
+  overtimeRate: decimal("overtime_rate", { precision: 10, scale: 2 }),
+  doubletimeRate: decimal("doubletime_rate", { precision: 10, scale: 2 }),
+  
+  // QuickBooks Integration - External ID for payment routing
+  quickbooksEmployeeId: varchar("quickbooks_employee_id"), // External QB employee ID for payroll sync
+  
+  // Payroll Information
+  payType: varchar("pay_type").default("hourly"), // hourly, salary, commission, contractor
+  payAmount: decimal("pay_amount", { precision: 12, scale: 2 }), // Salary or base amount if not hourly
+  payFrequency: varchar("pay_frequency").default("biweekly"), // weekly, biweekly, semimonthly, monthly
+  
+  // Employment Dates
+  hireDate: timestamp("hire_date"), // Employment start date
+  terminationDate: timestamp("termination_date"), // Employment end date (null if active)
+  
+  // Address for Trinity Auto-Scheduling (driving distance calculations)
+  addressLine2: varchar("address_line_2"),
+  country: varchar("country").default("US"),
+  latitude: decimal("latitude", { precision: 10, scale: 7 }), // Home GPS latitude for driving distance
+  longitude: decimal("longitude", { precision: 10, scale: 7 }), // Home GPS longitude for driving distance
   color: varchar("color").default("#3b82f6"), // For calendar display
 
   // Onboarding status
@@ -1590,6 +1610,7 @@ export const clients = pgTable("clients", {
   
   // External ID (CLI-XXXX-NNNNN format)
   clientCode: varchar("client_code"),
+  quickbooksClientId: varchar("quickbooks_client_id"), // External QB client ID for billing sync
 
   // Client information
   firstName: varchar("first_name").notNull(),
@@ -7515,7 +7536,7 @@ export const assets = pgTable("assets", {
   assignedToClientId: varchar("assigned_to_client_id").references(() => clients.id),
 
   // Billing configuration
-  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }), // $75/hr for Rig usage
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
   dailyRate: decimal("daily_rate", { precision: 10, scale: 2 }),
   weeklyRate: decimal("weekly_rate", { precision: 10, scale: 2 }),
   billingType: varchar("billing_type").default("hourly"), // 'hourly', 'daily', 'weekly', 'flat_fee'
@@ -7596,7 +7617,7 @@ export const assetSchedules = pgTable("asset_schedules", {
 
   // Billing (auto-calculated for Billing Platform)
   billableHours: decimal("billable_hours", { precision: 10, scale: 2 }),
-  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }), // Snapshot from asset
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
   totalCharge: decimal("total_charge", { precision: 10, scale: 2 }),
   invoiced: boolean("invoiced").default(false),
   invoiceId: varchar("invoice_id").references(() => invoices.id),
