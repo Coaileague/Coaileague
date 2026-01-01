@@ -6245,7 +6245,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Only allow updating contact info fields (not employment details)
-      const allowedFields = ['phone', 'email', 'address', 'city', 'state', 'zipCode', 
+      const allowedFields = ['phone', 'email', 'address', 'addressLine2', 'city', 'state', 'zipCode', 'country', 
                              'emergencyContactName', 'emergencyContactPhone', 'emergencyContactRelation'];
       const filteredData: any = {};
       for (const key of allowedFields) {

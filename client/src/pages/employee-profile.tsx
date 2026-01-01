@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { User, Phone, Mail, MapPin, Lock, Unlock, Shield, FileText, CheckCircle } from "lucide-react";
+import { User, Phone, Mail, MapPin, Lock, Unlock, Shield, FileText, CheckCircle, Building2, DollarSign, Calendar, Navigation } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 
@@ -36,9 +36,11 @@ export default function EmployeeProfile() {
     phone: '',
     email: '',
     address: '',
+    addressLine2: '',
     city: '',
     state: '',
     zipCode: '',
+    country: 'US',
     emergencyContactName: '',
     emergencyContactPhone: '',
     emergencyContactRelation: '',
@@ -51,9 +53,11 @@ export default function EmployeeProfile() {
         phone: employee.phone || '',
         email: employee.email || '',
         address: employee.address || '',
+        addressLine2: employee.addressLine2 || '',
         city: employee.city || '',
         state: employee.state || '',
         zipCode: employee.zipCode || '',
+        country: employee.country || 'US',
         emergencyContactName: employee.emergencyContactName || '',
         emergencyContactPhone: employee.emergencyContactPhone || '',
         emergencyContactRelation: employee.emergencyContactRelation || '',
@@ -95,9 +99,11 @@ export default function EmployeeProfile() {
         phone: employee.phone || '',
         email: employee.email || '',
         address: employee.address || '',
+        addressLine2: employee.addressLine2 || '',
         city: employee.city || '',
         state: employee.state || '',
         zipCode: employee.zipCode || '',
+        country: employee.country || 'US',
         emergencyContactName: employee.emergencyContactName || '',
         emergencyContactPhone: employee.emergencyContactPhone || '',
         emergencyContactRelation: employee.emergencyContactRelation || '',
@@ -197,10 +203,121 @@ export default function EmployeeProfile() {
           </CardContent>
         </Card>
 
+        {/* QuickBooks Integration & Payroll Info (Read-Only) */}
+        {(employee.quickbooksEmployeeId || employee.payType || employee.hireDate) && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <CardTitle className="flex items-center gap-2">
+                    <Building2 className="h-5 w-5 text-blue-600" />
+                    QuickBooks Integration & Payroll
+                  </CardTitle>
+                  <CardDescription>Synced from QuickBooks for accurate payroll processing</CardDescription>
+                </div>
+                <Badge variant="secondary">
+                  <Lock className="h-3 w-3 mr-1" />
+                  System Managed
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {employee.quickbooksEmployeeId && (
+                  <div>
+                    <Label className="text-muted-foreground">QuickBooks Employee ID</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium font-mono">{employee.quickbooksEmployeeId}</p>
+                    </div>
+                  </div>
+                )}
+                {employee.payType && (
+                  <div>
+                    <Label className="text-muted-foreground">Pay Type</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium capitalize">{employee.payType}</p>
+                    </div>
+                  </div>
+                )}
+                {employee.payAmount && (
+                  <div>
+                    <Label className="text-muted-foreground">Pay Amount</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium">${parseFloat(employee.payAmount).toFixed(2)}</p>
+                    </div>
+                  </div>
+                )}
+                {employee.payFrequency && (
+                  <div>
+                    <Label className="text-muted-foreground">Pay Frequency</Label>
+                    <p className="font-medium mt-1 capitalize">{employee.payFrequency}</p>
+                  </div>
+                )}
+                {employee.hourlyRate && (
+                  <div>
+                    <Label className="text-muted-foreground">Hourly Rate</Label>
+                    <p className="font-medium mt-1">${parseFloat(employee.hourlyRate).toFixed(2)}/hr</p>
+                  </div>
+                )}
+                {employee.overtimeRate && (
+                  <div>
+                    <Label className="text-muted-foreground">Overtime Rate</Label>
+                    <p className="font-medium mt-1">${parseFloat(employee.overtimeRate).toFixed(2)}/hr</p>
+                  </div>
+                )}
+                {employee.doubletimeRate && (
+                  <div>
+                    <Label className="text-muted-foreground">Double Time Rate</Label>
+                    <p className="font-medium mt-1">${parseFloat(employee.doubletimeRate).toFixed(2)}/hr</p>
+                  </div>
+                )}
+                {employee.hireDate && (
+                  <div>
+                    <Label className="text-muted-foreground">Hire Date</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium">{new Date(employee.hireDate).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                )}
+                {employee.terminationDate && (
+                  <div>
+                    <Label className="text-muted-foreground">Termination Date</Label>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium text-destructive">{new Date(employee.terminationDate).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {(employee.latitude && employee.longitude) && (
+                <>
+                  <Separator className="my-4" />
+                  <div>
+                    <Label className="text-muted-foreground flex items-center gap-2">
+                      <Navigation className="h-4 w-4" />
+                      GPS Location (Trinity Auto-Scheduling)
+                    </Label>
+                    <p className="font-medium mt-1 text-sm font-mono">
+                      {parseFloat(employee.latitude).toFixed(6)}, {parseFloat(employee.longitude).toFixed(6)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Used for optimized driving distance calculations in Trinity scheduling
+                    </p>
+                  </div>
+                </>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {/* Contact Information (Editable) */}
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Unlock className="h-5 w-5 text-blue-600" />
@@ -261,24 +378,39 @@ export default function EmployeeProfile() {
 
               <Separator />
 
-              <div>
-                <Label>Street Address</Label>
-                {isEditingContact ? (
-                  <Input
-                    value={contactInfo.address}
-                    onChange={(e) => setContactInfo({ ...contactInfo, address: e.target.value })}
-                    placeholder="123 Main St"
-                    data-testid="input-address"
-                  />
-                ) : (
-                  <div className="flex items-center gap-2 mt-1">
-                    <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <p className="font-medium">{employee.address || 'Not provided'}</p>
-                  </div>
-                )}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label>Street Address</Label>
+                  {isEditingContact ? (
+                    <Input
+                      value={contactInfo.address}
+                      onChange={(e) => setContactInfo({ ...contactInfo, address: e.target.value })}
+                      placeholder="123 Main St"
+                      data-testid="input-address"
+                    />
+                  ) : (
+                    <div className="flex items-center gap-2 mt-1">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <p className="font-medium">{employee.address || 'Not provided'}</p>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <Label>Address Line 2</Label>
+                  {isEditingContact ? (
+                    <Input
+                      value={contactInfo.addressLine2}
+                      onChange={(e) => setContactInfo({ ...contactInfo, addressLine2: e.target.value })}
+                      placeholder="Apt 4B, Suite 100, etc."
+                      data-testid="input-address-line2"
+                    />
+                  ) : (
+                    <p className="font-medium mt-1">{employee.addressLine2 || 'N/A'}</p>
+                  )}
+                </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div>
                   <Label>City</Label>
                   {isEditingContact ? (
@@ -317,6 +449,19 @@ export default function EmployeeProfile() {
                     />
                   ) : (
                     <p className="font-medium mt-1">{employee.zipCode || 'N/A'}</p>
+                  )}
+                </div>
+                <div>
+                  <Label>Country</Label>
+                  {isEditingContact ? (
+                    <Input
+                      value={contactInfo.country}
+                      onChange={(e) => setContactInfo({ ...contactInfo, country: e.target.value })}
+                      placeholder="US"
+                      data-testid="input-country"
+                    />
+                  ) : (
+                    <p className="font-medium mt-1">{employee.country || 'US'}</p>
                   )}
                 </div>
               </div>
