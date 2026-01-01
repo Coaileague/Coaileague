@@ -1,0 +1,630 @@
+📋 SEND THIS TO REPLIT RIGHT NOW:
+
+"TRINITY CREDIT & TIER ENFORCEMENT - Platform Business Rules Gatekeeper"
+CRITICAL ARCHITECTURE REQUIREMENT:
+Trinity is not just an AI orchestrator - she is the ENFORCEMENT LAYER for all platform business rules. Every user action must flow through Trinity for credit validation and tier limit enforcement BEFORE execution.
+Current Problem: Users could theoretically trigger unlimited AI operations, exceed tier limits, or use features they haven't paid for.
+Required Solution: Trinity intercepts ALL user actions, validates credits/permissions, blocks if insufficient, prompts for upgrade/top-up.
+
+PHASE 1: TRINITY CREDIT TRACKING SYSTEM
+A) Add Credit Balance Tracking to Database:
+sql-- Add to workspaces table
+ALTER TABLE workspaces ADD COLUMN ai_credits_balance INTEGER DEFAULT 0;
+ALTER TABLE workspaces ADD COLUMN ai_credits_used_this_month INTEGER DEFAULT 0;
+ALTER TABLE workspaces ADD COLUMN tier VARCHAR(50); -- starter/professional/enterprise
+ALTER TABLE workspaces ADD COLUMN credits_included_monthly INTEGER; -- based on tier
+
+-- Credit usage log
+CREATE TABLE credit_usage_log (
+  id UUID PRIMARY KEY,
+  workspace_id UUID REFERENCES workspaces(id),
+  action_type VARCHAR(100), -- 'schedule.optimize', 'payroll.analyze', etc.
+  credits_required INTEGER,
+  credits_before INTEGER,
+  credits_after INTEGER,
+  approved BOOLEAN,
+  blocked_reason TEXT,
+  timestamp TIMESTAMP DEFAULT NOW()
+);
+
+-- Credit top-up transactions
+CREATE TABLE credit_purchases (
+  id UUID PRIMARY KEY,
+  workspace_id UUID REFERENCES workspaces(id),
+  credits_purchased INTEGER,
+  amount_paid DECIMAL(10,2),
+  stripe_payment_id VARCHAR(255),
+  purchased_at TIMESTAMP DEFAULT NOW()
+);
+B) Define Credit Costs for Each Action:
+typescript// File: server/config/creditCosts.ts
+
+export const CREDIT_COSTS = {
+  // AI Scheduling
+  'schedule.generate_optimized': 50, // Gemini 3 Pro analysis
+  'schedule.detect_conflicts': 10,
+  'schedule.resolve_conflict': 15,
+  
+  // AI Payroll
+  'payroll.analyze_anomalies': 30, // Gemini analysis
+  'payroll.auto_resolve_exception': 20,
+  
+  // AI Incident Management
+  'incident.auto_route': 5,
+  'incident.analyze_severity': 10,
+  
+  // AI Strategic Insights
+  'insights.employee_performance': 25,
+  'insights.client_risk_analysis': 35,
+  'insights.business_strategy': 50,
+  
+  // QuickBooks Intelligence
+  'quickbooks.error_analysis': 15, // Gemini analyzes QB errors
+  
+  // Trinity Self-Healing
+  'trinity.code_analysis': 40,
+  'trinity.generate_fix': 60,
+  
+  // Simple Operations (no AI)
+  'time_entry.create': 0, // Free - no AI needed
+  'schedule.manual_create': 0, // Free - manual action
+  'invoice.generate_standard': 0, // Free - template based
+};
+
+export const TIER_CREDITS = {
+  starter: 2000, // 2,000 credits/month
+  professional: 10000, // 10,000 credits/month
+  enterprise: -1 // Unlimited (represented as -1)
+};
+C) Trinity Credit Validation Middleware:
+typescript// File: server/services/trinity/trinityCreditEnforcement.ts
+
+class TrinityCreditEnforcement {
+  
+  /**
+   * Trinity checks if user has enough credits BEFORE allowing action
+   * This runs for EVERY AI-powered operation
+   */
+  async validateCreditsBeforeAction(
+    workspaceId: string,
+    actionType: string,
+    userId: string
+  ): Promise<CreditValidationResult> {
+    
+    // 1. Get workspace credit balance
+    const workspace = await getWorkspace(workspaceId);
+    const currentBalance = workspace.ai_credits_balance;
+    const tier = workspace.tier;
+    
+    // 2. Get credit cost for this action
+    const creditsRequired = CREDIT_COSTS[actionType] || 0;
+    
+    // 3. Enterprise tier = unlimited credits
+    if (tier === 'enterprise') {
+      return {
+        approved: true,
+        creditsRequired,
+        creditsRemaining: Infinity,
+        message: 'Enterprise tier - unlimited credits'
+      };
+    }
+    
+    // 4. Check if action requires credits
+    if (creditsRequired === 0) {
+      // Free action - no credit check needed
+      return {
+        approved: true,
+        creditsRequired: 0,
+        creditsRemaining: currentBalance,
+        message: 'Action does not require AI credits'
+      };
+    }
+    
+    // 5. Gemini analyzes: Is this action worth the credits?
+    const worthinessAnalysis = await gemini.analyze(`
+Action Requested: ${actionType}
+Credits Required: ${creditsRequired}
+User Current Balance: ${currentBalance}
+User Tier: ${tier}
+
+Context:
+- User has used ${workspace.ai_credits_used_this_month} credits this month
+- Monthly allowance: ${TIER_CREDITS[tier]}
+
+Should Trinity approve this action?
+Consider:
+1. Does user have enough credits?
+2. Is this action critical vs nice-to-have?
+3. Would blocking this harm user experience?
+4. Should we suggest upgrade instead?
+
+Respond in JSON:
+{
+  "approved": boolean,
+  "reasoning": string,
+  "suggestTopUp": boolean,
+  "suggestUpgrade": boolean,
+  "alternativeAction": string (if any)
+}
+    `);
+    
+    const analysis = JSON.parse(worthinessAnalysis.response.text());
+    
+    // 6. Check sufficient balance
+    if (currentBalance < creditsRequired) {
+      
+      // Log blocked action
+      await db.credit_usage_log.create({
+        workspace_id: workspaceId,
+        action_type: actionType,
+        credits_required: creditsRequired,
+        credits_before: currentBalance,
+        credits_after: currentBalance, // No change
+        approved: false,
+        blocked_reason: 'Insufficient credits',
+        timestamp: new Date()
+      });
+      
+      // Trinity logs enforcement
+      await trinity.log({
+        action: 'credit.enforcement.blocked',
+        workspaceId,
+        actionType,
+        creditsRequired,
+        currentBalance,
+        geminiAnalysis: analysis
+      });
+      
+      return {
+        approved: false,
+        creditsRequired,
+        creditsRemaining: currentBalance,
+        creditsNeeded: creditsRequired - currentBalance,
+        message: `Insufficient credits. This action requires ${creditsRequired} credits, but you have ${currentBalance}.`,
+        suggestTopUp: analysis.suggestTopUp,
+        suggestUpgrade: analysis.suggestUpgrade,
+        upgradeTo: tier === 'starter' ? 'professional' : 'enterprise'
+      };
+    }
+    
+    // 7. Sufficient credits - APPROVED
+    return {
+      approved: true,
+      creditsRequired,
+      creditsRemaining: currentBalance,
+      message: `Action approved. ${creditsRequired} credits will be deducted.`
+    };
+  }
+  
+  /**
+   * Trinity deducts credits AFTER successful action
+   */
+  async deductCredits(
+    workspaceId: string,
+    actionType: string,
+    creditsUsed: number
+  ): Promise<void> {
+    
+    const workspace = await getWorkspace(workspaceId);
+    
+    // Update balance
+    await db.workspaces.update(workspaceId, {
+      ai_credits_balance: workspace.ai_credits_balance - creditsUsed,
+      ai_credits_used_this_month: workspace.ai_credits_used_this_month + creditsUsed
+    });
+    
+    // Log usage
+    await db.credit_usage_log.create({
+      workspace_id: workspaceId,
+      action_type: actionType,
+      credits_required: creditsUsed,
+      credits_before: workspace.ai_credits_balance,
+      credits_after: workspace.ai_credits_balance - creditsUsed,
+      approved: true,
+      timestamp: new Date()
+    });
+    
+    // Trinity logs deduction
+    await trinity.log({
+      action: 'credit.deducted',
+      workspaceId,
+      actionType,
+      creditsUsed,
+      remainingBalance: workspace.ai_credits_balance - creditsUsed
+    });
+    
+    // Check if low balance - warn user
+    const remainingBalance = workspace.ai_credits_balance - creditsUsed;
+    if (remainingBalance < 100 && remainingBalance > 0) {
+      await this.sendLowCreditWarning(workspaceId, remainingBalance);
+    }
+  }
+  
+  /**
+   * Send warning when credits are low
+   */
+  async sendLowCreditWarning(workspaceId: string, balance: number): Promise<void> {
+    const workspace = await getWorkspace(workspaceId);
+    
+    await emailService.send({
+      to: workspace.ownerEmail,
+      subject: '⚠️ Low AI Credit Balance',
+      body: `Your AI credit balance is low: ${balance} credits remaining.
+
+Trinity AI operations may be limited soon. Consider:
+- Top up credits: ${process.env.APP_URL}/billing/credits
+- Upgrade tier: ${process.env.APP_URL}/billing/upgrade
+
+Your current tier: ${workspace.tier}
+Monthly allowance: ${TIER_CREDITS[workspace.tier]} credits
+
+- Trinity AI`
+    });
+  }
+}
+
+export const trinityCreditEnforcement = new TrinityCreditEnforcement();
+
+PHASE 2: INTEGRATE CREDIT ENFORCEMENT INTO ALL AI ACTIONS
+Apply Credit Checks to Every AI Operation:
+typescript// EXAMPLE: AI Scheduling
+
+async function generateOptimizedSchedule(workspaceId: string) {
+  
+  // 1. TRINITY CHECKS CREDITS FIRST
+  const creditCheck = await trinityCreditEnforcement.validateCreditsBeforeAction(
+    workspaceId,
+    'schedule.generate_optimized',
+    userId
+  );
+  
+  if (!creditCheck.approved) {
+    // BLOCKED - Insufficient credits
+    throw new InsufficientCreditsError({
+      message: creditCheck.message,
+      creditsRequired: creditCheck.creditsRequired,
+      creditsRemaining: creditCheck.creditsRemaining,
+      creditsNeeded: creditCheck.creditsNeeded,
+      suggestTopUp: creditCheck.suggestTopUp,
+      suggestUpgrade: creditCheck.suggestUpgrade,
+      upgradeTo: creditCheck.upgradeTo
+    });
+  }
+  
+  // 2. CREDITS APPROVED - Proceed with action
+  const schedule = await trinity.orchestrateScheduleGeneration({
+    workspaceId,
+    optimize: true,
+    applyProfitStrategy: true
+  });
+  
+  // 3. DEDUCT CREDITS AFTER SUCCESS
+  await trinityCreditEnforcement.deductCredits(
+    workspaceId,
+    'schedule.generate_optimized',
+    creditCheck.creditsRequired
+  );
+  
+  return schedule;
+}
+
+// APPLY THIS PATTERN TO ALL AI ACTIONS:
+// - Payroll analysis
+// - Incident routing
+// - Employee performance scoring
+// - Client risk analysis
+// - QuickBooks error analysis
+// - Trinity self-healing
+// - Strategic insights
+
+PHASE 3: TIER LIMIT ENFORCEMENT
+Trinity Enforces Feature Access by Tier:
+typescript// File: server/config/tierLimits.ts
+
+export const TIER_LIMITS = {
+  starter: {
+    maxEmployees: 15,
+    maxClients: 10,
+    maxManagers: 1,
+    features: [
+      'basic_scheduling',
+      'time_tracking',
+      'basic_compliance',
+      'email_support'
+    ],
+    restrictedFeatures: [
+      'profit_optimization', // Professional+
+      'strategic_insights', // Professional+
+      'multi_location', // Enterprise
+      'custom_integrations', // Enterprise
+      'api_access' // Enterprise
+    ]
+  },
+  
+  professional: {
+    maxEmployees: 50,
+    maxClients: 50,
+    maxManagers: 2,
+    features: [
+      'basic_scheduling',
+      'time_tracking',
+      'profit_optimization',
+      'automated_payroll',
+      'client_billing',
+      'quickbooks_integration',
+      'incident_management',
+      'strategic_insights',
+      'advanced_compliance',
+      'priority_support'
+    ],
+    restrictedFeatures: [
+      'multi_location', // Enterprise
+      'custom_integrations', // Enterprise
+      'api_access', // Enterprise
+      'white_label' // Enterprise
+    ]
+  },
+  
+  enterprise: {
+    maxEmployees: -1, // Unlimited
+    maxClients: -1, // Unlimited
+    maxManagers: -1, // Unlimited
+    features: [
+      'everything' // All features enabled
+    ],
+    restrictedFeatures: [] // Nothing restricted
+  }
+};
+
+// Trinity tier enforcement
+class TrinityTierEnforcement {
+  
+  async validateTierAccess(
+    workspaceId: string,
+    feature: string,
+    actionDetails?: any
+  ): Promise<TierAccessResult> {
+    
+    const workspace = await getWorkspace(workspaceId);
+    const tier = workspace.tier;
+    const limits = TIER_LIMITS[tier];
+    
+    // 1. Check if feature is restricted for this tier
+    if (limits.restrictedFeatures.includes(feature)) {
+      return {
+        allowed: false,
+        reason: `Feature '${feature}' requires ${this.getRequiredTier(feature)} tier`,
+        currentTier: tier,
+        requiredTier: this.getRequiredTier(feature),
+        suggestUpgrade: true
+      };
+    }
+    
+    // 2. Check employee count limit
+    if (actionDetails?.addingEmployee) {
+      const currentEmployeeCount = await getEmployeeCount(workspaceId);
+      if (limits.maxEmployees !== -1 && currentEmployeeCount >= limits.maxEmployees) {
+        return {
+          allowed: false,
+          reason: `Your ${tier} plan allows up to ${limits.maxEmployees} employees. You have ${currentEmployeeCount}.`,
+          currentTier: tier,
+          suggestUpgrade: true,
+          upgradeMessage: `Upgrade to ${tier === 'starter' ? 'Professional' : 'Enterprise'} for ${tier === 'starter' ? '50' : 'unlimited'} employees`
+        };
+      }
+    }
+    
+    // 3. Check client limit
+    if (actionDetails?.addingClient) {
+      const currentClientCount = await getClientCount(workspaceId);
+      if (limits.maxClients !== -1 && currentClientCount >= limits.maxClients) {
+        return {
+          allowed: false,
+          reason: `Your ${tier} plan allows up to ${limits.maxClients} clients. You have ${currentClientCount}.`,
+          currentTier: tier,
+          suggestUpgrade: true
+        };
+      }
+    }
+    
+    // 4. APPROVED
+    return {
+      allowed: true,
+      currentTier: tier
+    };
+  }
+  
+  getRequiredTier(feature: string): string {
+    if (TIER_LIMITS.starter.features.includes(feature)) return 'starter';
+    if (TIER_LIMITS.professional.features.includes(feature)) return 'professional';
+    return 'enterprise';
+  }
+}
+
+export const trinityTierEnforcement = new TrinityTierEnforcement();
+
+PHASE 4: USER-FACING ERROR HANDLING
+When Trinity Blocks an Action:
+typescript// Frontend error handler
+async function handleAction(actionType: string) {
+  try {
+    const result = await api.executeAction(actionType);
+    return result;
+    
+  } catch (error) {
+    if (error instanceof InsufficientCreditsError) {
+      // Show credit top-up modal
+      showModal({
+        title: '⚠️ Insufficient AI Credits',
+        message: error.message,
+        creditsRequired: error.creditsRequired,
+        creditsRemaining: error.creditsRemaining,
+        creditsNeeded: error.creditsNeeded,
+        actions: [
+          {
+            label: 'Top Up Credits',
+            onClick: () => navigate('/billing/credits'),
+            primary: true
+          },
+          {
+            label: error.suggestUpgrade ? 'Upgrade Plan' : 'Cancel',
+            onClick: () => error.suggestUpgrade ? navigate('/billing/upgrade') : closeModal()
+          }
+        ]
+      });
+    } else if (error instanceof TierLimitError) {
+      // Show upgrade modal
+      showModal({
+        title: '🚀 Upgrade Required',
+        message: error.reason,
+        currentTier: error.currentTier,
+        requiredTier: error.requiredTier,
+        actions: [
+          {
+            label: `Upgrade to ${error.requiredTier}`,
+            onClick: () => navigate('/billing/upgrade'),
+            primary: true
+          },
+          {
+            label: 'Cancel',
+            onClick: closeModal
+          }
+        ]
+      });
+    }
+  }
+}
+
+PHASE 5: CREDIT TOP-UP FLOW
+Allow Users to Purchase Additional Credits:
+typescript// Credit packages
+const CREDIT_PACKAGES = [
+  { credits: 1000, price: 50, label: '1,000 credits - $50' },
+  { credits: 5000, price: 200, label: '5,000 credits - $200 (20% off)' },
+  { credits: 10000, price: 350, label: '10,000 credits - $350 (30% off)' }
+];
+
+// Purchase flow
+async function purchaseCredits(workspaceId: string, packageId: number) {
+  const package = CREDIT_PACKAGES[packageId];
+  
+  // Create Stripe payment intent
+  const paymentIntent = await stripe.paymentIntents.create({
+    amount: package.price * 100, // cents
+    currency: 'usd',
+    metadata: {
+      workspaceId,
+      credits: package.credits,
+      type: 'credit_topup'
+    }
+  });
+  
+  // After successful payment (via webhook)
+  await addCreditsToWorkspace(workspaceId, package.credits);
+  
+  // Trinity logs credit purchase
+  await trinity.log({
+    action: 'credit.purchased',
+    workspaceId,
+    creditsPurchased: package.credits,
+    amountPaid: package.price
+  });
+}
+
+PHASE 6: MONTHLY CREDIT RESET
+Refill Credits at Start of Each Billing Cycle:
+typescript// Run on subscription renewal
+async function resetMonthlyCredits(workspaceId: string) {
+  const workspace = await getWorkspace(workspaceId);
+  const tier = workspace.tier;
+  const monthlyAllowance = TIER_CREDITS[tier];
+  
+  // Reset to monthly allowance
+  await db.workspaces.update(workspaceId, {
+    ai_credits_balance: monthlyAllowance,
+    ai_credits_used_this_month: 0,
+    credits_reset_at: new Date()
+  });
+  
+  // Trinity logs reset
+  await trinity.log({
+    action: 'credit.monthly_reset',
+    workspaceId,
+    tier,
+    creditsRefilled: monthlyAllowance
+  });
+  
+  // Email confirmation
+  await emailService.send({
+    to: workspace.ownerEmail,
+    subject: '✅ AI Credits Refilled',
+    body: `Your monthly AI credits have been refilled!
+
+Tier: ${tier}
+Credits: ${monthlyAllowance}
+Usage Last Month: ${workspace.ai_credits_used_this_month}
+
+Happy automating!
+- Trinity AI`
+  });
+}
+
+// Stripe webhook handler
+stripeWebhook.on('invoice.payment_succeeded', async (invoice) => {
+  const workspaceId = invoice.metadata.workspaceId;
+  await resetMonthlyCredits(workspaceId);
+});
+
+IMPLEMENTATION CHECKLIST:
+Database:
+
+ Add credit tracking columns to workspaces
+ Create credit_usage_log table
+ Create credit_purchases table
+
+Credit System:
+
+ Define credit costs for all AI actions
+ Implement Trinity credit validation middleware
+ Implement credit deduction after actions
+ Add low credit warnings
+
+Tier Enforcement:
+
+ Define tier limits (employees, clients, features)
+ Implement Trinity tier validation
+ Block restricted features by tier
+ Enforce employee/client count limits
+
+User Experience:
+
+ Show credit balance in UI
+ Display "X credits required" before AI actions
+ Show upgrade prompts when limits hit
+ Credit top-up modal when insufficient
+ Tier upgrade flow
+
+Automation:
+
+ Monthly credit reset on billing cycle
+ Credit purchase via Stripe
+ Low balance email warnings
+ Usage analytics dashboard
+
+
+SUCCESS CRITERIA:
+Trinity successfully enforces business rules when:
+
+ User tries AI action with insufficient credits → BLOCKED with top-up prompt
+ Starter user tries to add 20th employee → BLOCKED with upgrade prompt
+ Professional user tries custom integration → BLOCKED (enterprise only)
+ User purchases credits → Balance updates immediately
+ Monthly billing → Credits refill automatically
+ Trinity logs all enforcement decisions
+ All AI operations check credits BEFORE execution
+ Dashboard shows real-time credit usage
+
+This makes Trinity the gatekeeper for the entire business model - nothing happens without her approval.
+Implement and confirm when complete. THIS IS THE FINAL PIECE before launch.
+
+END OF CREDIT & TIER ENFORCEMENT
