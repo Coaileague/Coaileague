@@ -328,7 +328,6 @@ import {
   trinityCredits,
   trinityCreditTransactions,
   workspaceInvites,
-  clients,
 } from "@shared/schema";
 import crypto from "crypto";
 import { sql, eq, and, or, isNull, isNotNull, lte, gte, desc, asc, inArray, ne } from "drizzle-orm";
@@ -4867,13 +4866,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         processedIds.add(workspace.id);
         
         const employees = await storage.getEmployeesByWorkspace(workspace.id);
-        const clients = await db.select().from(clients).where(eq(clients.workspaceId, workspace.id));
+        const clientList = await db.select().from(clients).where(eq(clients.workspaceId, workspace.id));
         
         orgs.push({
           id: workspace.id,
           name: workspace.name,
           memberCount: employees.length,
-          clientCount: clients.length,
+          clientCount: clientList.length,
           createdAt: workspace.createdAt,
           isOwner: true,
           canManage: true,
@@ -4885,13 +4884,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, contextWorkspaceId)).limit(1);
         if (workspace) {
           const employees = await storage.getEmployeesByWorkspace(contextWorkspaceId);
-          const clients = await db.select().from(clients).where(eq(clients.workspaceId, contextWorkspaceId));
+          const clientList = await db.select().from(clients).where(eq(clients.workspaceId, contextWorkspaceId));
           
           orgs.push({
             id: workspace.id,
             name: workspace.name,
             memberCount: employees.length,
-            clientCount: clients.length,
+            clientCount: clientList.length,
             createdAt: workspace.createdAt,
             isOwner: false,
             canManage: true, // Platform staff can manage
@@ -4906,13 +4905,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, contextWorkspaceId)).limit(1);
           if (workspace) {
             const employees = await storage.getEmployeesByWorkspace(contextWorkspaceId);
-            const clients = await db.select().from(clients).where(eq(clients.workspaceId, contextWorkspaceId));
+            const clientList = await db.select().from(clients).where(eq(clients.workspaceId, contextWorkspaceId));
             
             orgs.push({
               id: workspace.id,
               name: workspace.name,
               memberCount: employees.length,
-              clientCount: clients.length,
+              clientCount: clientList.length,
               createdAt: workspace.createdAt,
               isOwner: employee.workspaceRole === 'org_owner',
               canManage: true,

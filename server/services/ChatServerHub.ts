@@ -145,9 +145,11 @@ class ChatServerHubClass {
   private activeRooms: Map<string, ActiveRoom> = new Map(); // Key: conversationId
   private gatewayInitialized: boolean = false;
   private heartbeatInterval: NodeJS.Timeout | null = null;
+  private eventBusSubscribed: boolean = false;
 
   constructor() {
-    this.subscribeToEventBus();
+    // Defer event bus subscription to avoid circular dependency issues
+    setImmediate(() => this.subscribeToEventBus());
     console.log(`[ChatServerHub] Initialized - Version ${CHAT_SERVER_HUB.version}`);
   }
 
@@ -554,6 +556,9 @@ class ChatServerHubClass {
    * Subscribe to platform event bus for incoming events
    */
   private subscribeToEventBus(): void {
+    if (this.eventBusSubscribed) return;
+    this.eventBusSubscribed = true;
+    
     platformEventBus.subscribe('*', {
       name: 'ChatServerHub',
       handler: async (event: PlatformEvent) => {
