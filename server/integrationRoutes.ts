@@ -252,8 +252,8 @@ router.get('/quickbooks/preview', requireAuth, requireWorkspaceMembership('query
     const realmId = connection.realmId!;
     const apiBase = 'https://quickbooks.api.intuit.com/v3/company';
 
-    // Fetch employees
-    const employeeQuery = encodeURIComponent('select * from Employee where Active = true MAXRESULTS 100');
+    // Fetch employees (all, not just active, for complete view)
+    const employeeQuery = encodeURIComponent('select * from Employee MAXRESULTS 100');
     const employeeResponse = await fetch(`${apiBase}/${realmId}/query?query=${employeeQuery}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -272,11 +272,14 @@ router.get('/quickbooks/preview', requireAuth, requireWorkspaceMembership('query
         email: e.PrimaryEmailAddr?.Address || '',
         phone: e.PrimaryPhone?.FreeFormNumber || '',
         active: e.Active !== false,
+        payRate: e.BillRate || e.CostRate || null,
+        employeeType: e.V4IDPseudonym ? '1099' : 'W2',
+        role: e.JobTitle || 'Field Staff',
       }));
     }
 
-    // Fetch customers (clients)
-    const customerQuery = encodeURIComponent('select * from Customer where Active = true MAXRESULTS 100');
+    // Fetch customers (all, not just active)
+    const customerQuery = encodeURIComponent('select * from Customer MAXRESULTS 100');
     const customerResponse = await fetch(`${apiBase}/${realmId}/query?query=${customerQuery}`, {
       headers: {
         'Authorization': `Bearer ${accessToken}`,
@@ -294,12 +297,101 @@ router.get('/quickbooks/preview', requireAuth, requireWorkspaceMembership('query
         email: c.PrimaryEmailAddr?.Address || '',
         phone: c.PrimaryPhone?.FreeFormNumber || '',
         active: c.Active !== false,
+        balance: c.Balance || 0,
       }));
+    }
+
+    // Fetch invoices to calculate customer revenue
+    const invoiceQuery = encodeURIComponent('select * from Invoice MAXRESULTS 500');
+    const invoiceResponse = await fetch(`${apiBase}/${realmId}/query?query=${invoiceQuery}`, {
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Accept': 'application/json',
+      },
+    });
+
+    const customerRevenue: Record<string, { total: number; count: number; lastDate: string | null }> = {};
+    if (invoiceResponse.ok) {
+      const invData = await invoiceResponse.json();
+      const invoices = invData.QueryResponse?.Invoice || [];
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+      
+      for (const inv of invoices) {
+        const custRef = inv.CustomerRef?.value;
+        if (custRef) {
+          if (!customerRevenue[custRef]) {
+            customerRevenue[custRef] = { total: 0, count: 0, lastDate: null };
+          }
+          const invDate = new Date(inv.TxnDate || inv.MetaData?.CreateTime);
+          if (invDate >= threeMonthsAgo) {
+            customerRevenue[custRef].total += inv.TotalAmt || 0;
+          }
+          customerRevenue[custRef].count++;
+          if (!customerRevenue[custRef].lastDate || inv.TxnDate > customerRevenue[custRef].lastDate) {
+            customerRevenue[custRef].lastDate = inv.TxnDate;
+          }
+        }
+      }
+    }
+
+    // Enrich customers with revenue data
+    customers = customers.map(c => ({
+      ...c,
+      monthlyRevenue: Math.round((customerRevenue[c.qboId]?.total || 0) / 3),
+      invoiceCount: customerRevenue[c.qboId]?.count || 0,
+      lastInvoiceDate: customerRevenue[c.qboId]?.lastDate || null,
+    }));
+
+    // Fetch payroll items
+    const payrollQuery = encodeURIComponent('select * from PayrollItemWage MAXRESULTS 50');
+    let payrollItems: any[] = [];
+    try {
+      const payrollResponse = await fetch(`${apiBase}/${realmId}/query?query=${payrollQuery}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+      if (payrollResponse.ok) {
+        const payrollData = await payrollResponse.json();
+        payrollItems = (payrollData.QueryResponse?.PayrollItemWage || []).map((p: any) => ({
+          qboId: p.Id,
+          name: p.Name,
+          type: p.Type || 'wage',
+        }));
+      }
+    } catch (err) {
+      console.log('Payroll items not available (may require payroll subscription)');
+    }
+
+    // Fetch chart of accounts
+    const accountQuery = encodeURIComponent('select * from Account MAXRESULTS 100');
+    let chartOfAccounts: any[] = [];
+    try {
+      const accountResponse = await fetch(`${apiBase}/${realmId}/query?query=${accountQuery}`, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+        },
+      });
+      if (accountResponse.ok) {
+        const accData = await accountResponse.json();
+        chartOfAccounts = (accData.QueryResponse?.Account || []).map((a: any) => ({
+          id: a.Id,
+          name: a.Name,
+          type: a.AccountType,
+        }));
+      }
+    } catch (err) {
+      console.log('Chart of accounts fetch error');
     }
 
     return res.json({
       employees,
       customers,
+      payrollItems,
+      chartOfAccounts,
       connectionId: connection.id,
       companyName: connection.companyName || 'QuickBooks Company',
     });
