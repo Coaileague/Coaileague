@@ -732,7 +732,7 @@ export default function WorkflowApprovals() {
         </Sheet>
       ) : (
         <Dialog open={showApprovalSheet} onOpenChange={setShowApprovalSheet}>
-        <DialogContent className="max-w-md">
+        <DialogContent size="md">
           <DialogHeader>
             <DialogTitle>
               {approvalAction === 'approve' 

@@ -1252,15 +1252,15 @@ export default function UniversalSchedule() {
 
       {/* Shift Creation Modal - Compact GetSling-style popup */}
       <Dialog open={showShiftModal} onOpenChange={setShowShiftModal}>
-        <DialogContent className="max-w-md max-h-[85vh] overflow-y-auto p-4 sm:p-6">
-          <DialogHeader className="pb-3">
-            <DialogTitle className="text-lg">New Shift</DialogTitle>
+        <DialogContent size="md">
+          <DialogHeader className="pb-2">
+            <DialogTitle className="text-base">New Shift</DialogTitle>
             <DialogDescription className="text-sm">
               {days[modalPosition.day]} at {modalPosition.hour}:00
             </DialogDescription>
           </DialogHeader>
 
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {/* Open Shift Toggle - Compact */}
             <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50">
               <Checkbox
@@ -1520,7 +1520,7 @@ export default function UniversalSchedule() {
       
       {/* Duplicate Shift Modal */}
       <Dialog open={showDuplicateModal} onOpenChange={setShowDuplicateModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent size="md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <CopyPlus className="w-5 h-5 text-blue-600" />
@@ -1596,7 +1596,7 @@ export default function UniversalSchedule() {
       
       {/* Swap Request Modal */}
       <Dialog open={showSwapModal} onOpenChange={setShowSwapModal}>
-        <DialogContent className="max-w-md">
+        <DialogContent size="md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ArrowRightLeft className="w-5 h-5 text-orange-600" />

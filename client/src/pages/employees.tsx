@@ -475,9 +475,9 @@ export default function Employees() {
                   <span className="sm:hidden">Add</span>
                 </Button>
               </DialogTrigger>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-              <DialogHeader className="space-y-2 pb-3">
-                <DialogTitle className="text-lg sm:text-xl">Add Employee</DialogTitle>
+            <DialogContent size="md">
+              <DialogHeader className="space-y-1.5 pb-2">
+                <DialogTitle className="text-base sm:text-lg">Add Employee</DialogTitle>
                 <DialogDescription className="text-xs sm:text-sm">
                   Enter employee details
                 </DialogDescription>
@@ -1068,9 +1068,9 @@ export default function Employees() {
 
         {/* Edit Employee Dialog */}
         <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto p-4 sm:p-6">
-            <DialogHeader className="space-y-2 pb-3">
-              <DialogTitle className="text-lg sm:text-xl">Edit Employee</DialogTitle>
+          <DialogContent size="md">
+            <DialogHeader className="space-y-1.5 pb-2">
+              <DialogTitle className="text-base sm:text-lg">Edit Employee</DialogTitle>
               <DialogDescription className="text-xs sm:text-sm">
                 Update employee details
               </DialogDescription>

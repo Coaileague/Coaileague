@@ -448,7 +448,7 @@ function AIScheduleSuggestionsWidget({ loading = false }: { loading?: boolean })
 
       {/* Suggestion Detail Dialog */}
       <Dialog open={!!selectedSuggestion} onOpenChange={() => setSelectedSuggestion(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent size="md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />

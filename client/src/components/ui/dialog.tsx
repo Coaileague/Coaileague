@@ -4,6 +4,7 @@ import * as React from "react"
 import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { X, Home } from "lucide-react"
 import { useLocation } from "wouter"
+import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 import { HOME_BUTTON_CONFIG, getHomeButtonConfig } from "@/config/homeButton"
@@ -31,7 +32,28 @@ const DialogOverlay = React.forwardRef<
 ))
 DialogOverlay.displayName = DialogPrimitive.Overlay.displayName
 
-interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content> {
+const dialogContentVariants = cva(
+  "fixed left-[50%] top-[50%] z-50 grid translate-x-[-50%] translate-y-[-50%] gap-3 border bg-background/95 backdrop-blur-md p-4 shadow-2xl duration-150 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-xl max-h-[min(90vh,800px)] overflow-y-auto",
+  {
+    variants: {
+      size: {
+        sm: "w-[min(92vw,22rem)]",
+        md: "w-[min(92vw,26rem)]",
+        default: "w-[min(92vw,28rem)]",
+        lg: "w-[min(92vw,32rem)]",
+        xl: "w-[min(92vw,42rem)]",
+        full: "w-[min(95vw,56rem)]",
+      },
+    },
+    defaultVariants: {
+      size: "default",
+    },
+  }
+)
+
+interface DialogContentProps 
+  extends React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>,
+    VariantProps<typeof dialogContentVariants> {
   showHomeButton?: boolean;
   homeButtonPath?: string;
   isGuest?: boolean;
@@ -40,7 +62,7 @@ interface DialogContentProps extends React.ComponentPropsWithoutRef<typeof Dialo
 const DialogContent = React.forwardRef<
   React.ElementRef<typeof DialogPrimitive.Content>,
   DialogContentProps
->(({ className, children, showHomeButton = HOME_BUTTON_CONFIG.enabled, homeButtonPath, isGuest = false, ...props }, ref) => {
+>(({ className, children, showHomeButton = HOME_BUTTON_CONFIG.enabled, homeButtonPath, isGuest = false, size, ...props }, ref) => {
   const [, setLocation] = useLocation();
   const config = getHomeButtonConfig(isGuest);
   const navPath = homeButtonPath || config.navigationPath;
@@ -71,10 +93,7 @@ const DialogContent = React.forwardRef<
       <DialogOverlay />
       <DialogPrimitive.Content
         ref={ref}
-        className={cn(
-          "fixed left-[50%] top-[50%] z-50 grid w-full max-w-lg translate-x-[-50%] translate-y-[-50%] gap-3 border bg-background/95 backdrop-blur-md p-4 shadow-2xl duration-150 data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=open]:slide-in-from-left-1/2 data-[state=open]:slide-in-from-top-[48%] rounded-xl",
-          className
-        )}
+        className={cn(dialogContentVariants({ size }), className)}
         {...props}
       >
         {children}
@@ -82,17 +101,17 @@ const DialogContent = React.forwardRef<
           {showHomeButton && (
             <button
               onClick={handleHomeClick}
-              className="flex items-center justify-center rounded-md min-h-11 min-w-11 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-accent active:bg-accent/80"
+              className="flex items-center justify-center rounded-md min-h-9 min-w-9 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-accent active:bg-accent/80"
               data-testid={config.testId}
               title={config.tooltip}
               aria-label={config.ariaLabel}
             >
-              <Home className="h-5 w-5" />
+              <Home className="h-4 w-4" />
               <span className="sr-only">{config.ariaLabel}</span>
             </button>
           )}
-          <DialogPrimitive.Close className="flex items-center justify-center rounded-md min-h-11 min-w-11 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:bg-accent active:bg-accent/80">
-            <X className="h-5 w-5" />
+          <DialogPrimitive.Close className="flex items-center justify-center rounded-md min-h-9 min-w-9 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none data-[state=open]:bg-accent data-[state=open]:text-muted-foreground hover:bg-accent active:bg-accent/80">
+            <X className="h-4 w-4" />
             <span className="sr-only">Close</span>
           </DialogPrimitive.Close>
         </div>
@@ -168,4 +187,5 @@ export {
   DialogFooter,
   DialogTitle,
   DialogDescription,
+  dialogContentVariants,
 }

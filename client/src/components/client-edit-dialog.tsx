@@ -103,21 +103,21 @@ export function ClientEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+      <DialogContent size="md">
         <DialogHeader>
-          <div className="flex justify-center mb-6">
-            <CoAIleagueLogo width={180} height={45} showTagline={false} />
+          <div className="flex justify-center mb-4">
+            <CoAIleagueLogo width={160} height={40} showTagline={false} />
           </div>
-          <DialogTitle className="flex items-center justify-center gap-2">
-            <Building2 className="w-5 h-5" />
+          <DialogTitle className="flex items-center justify-center gap-2 text-base">
+            <Building2 className="w-4 h-4" />
             Edit Client
           </DialogTitle>
-          <DialogDescription>
+          <DialogDescription className="text-sm">
             Update client information and details.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
             <Label htmlFor="name">Client Name</Label>
             <Input
