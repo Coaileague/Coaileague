@@ -19,6 +19,7 @@ import { initializeSkillsSystem } from "./services/ai-brain/skills/skill-loader"
 import "./services/scheduleLiveNotifier";
 import { tracingMiddleware } from "./services/infrastructure/distributedTracing";
 import { rateLimitMiddleware } from "./services/infrastructure/rateLimiting";
+import { initializeTrinityEventSubscriptions } from "./services/trinityEventSubscriptions";
 
 const app = express();
 
@@ -548,6 +549,15 @@ async function initializeBackgroundServices(): Promise<void> {
       console.log('[Server] Autonomous scheduler started successfully');
     } catch (error) {
       console.error('[Server] CRITICAL: Failed to start autonomous scheduler:', error);
+    }
+    
+    // PHASE 6: Initialize Trinity event subscriptions
+    console.log('[Startup] Phase 6: Trinity event subscriptions...');
+    try {
+      initializeTrinityEventSubscriptions();
+      console.log('[Server] Trinity event subscriptions initialized successfully');
+    } catch (error) {
+      console.error('[Server] Failed to initialize Trinity event subscriptions:', error);
     }
     
     const totalTime = Date.now() - startupStart;

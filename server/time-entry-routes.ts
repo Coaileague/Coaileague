@@ -7,6 +7,7 @@ import { gamificationService } from "./services/gamification/gamificationService
 import { emitGamificationEvent } from "./services/gamification/eventTracker";
 import { aiBrainService } from "./services/ai-brain/aiBrainService";
 import { isFeatureEnabled } from '@shared/platformConfig';
+import { gpsGeofenceService } from "./services/gpsGeofenceService";
 import { eq, and, isNull, desc, gte, lte, sql } from "drizzle-orm";
 import { startOfWeek, endOfWeek, subDays, differenceInMinutes } from "date-fns";
 import './types';
@@ -212,6 +213,28 @@ timeEntryRouter.post('/clock-in', requireAuth, mutationLimiter, async (req: Auth
       return res.status(400).json({ error: 'Already clocked in. Please clock out first.' });
     }
 
+    // GPS Geofence Validation - prevent clock-in if not at correct location
+    if (latitude && longitude && isFeatureEnabled('enableGPS')) {
+      try {
+        const gpsValidation = await gpsGeofenceService.validateClockIn(
+          user.currentWorkspaceId,
+          employee.id,
+          { latitude: Number(latitude), longitude: Number(longitude) }
+        );
+
+        if (!gpsValidation.allowed) {
+          return res.status(403).json({
+            error: 'GPS validation failed',
+            message: gpsValidation.reason,
+            distanceMeters: gpsValidation.distanceMeters,
+            violationType: gpsValidation.violationType,
+          });
+        }
+      } catch (gpsError) {
+        console.error('GPS validation error (non-blocking):', gpsError);
+      }
+    }
+
     // Create new time entry
     const clockInTime = new Date();
     const [newEntry] = await db.insert(timeEntries).values({
@@ -364,6 +387,28 @@ timeEntryRouter.post('/clock-out', requireAuth, mutationLimiter, async (req: Aut
 
     if (!activeEntry) {
       return res.status(400).json({ error: 'No active time entry found. Please clock in first.' });
+    }
+
+    // GPS Geofence Validation for clock-out - prevent if not at correct location
+    if (latitude && longitude && isFeatureEnabled('enableGPS')) {
+      try {
+        const gpsValidation = await gpsGeofenceService.validateClockOut(
+          user.currentWorkspaceId,
+          employee.id,
+          { latitude: Number(latitude), longitude: Number(longitude) }
+        );
+
+        if (!gpsValidation.allowed) {
+          return res.status(403).json({
+            error: 'GPS validation failed',
+            message: gpsValidation.reason,
+            distanceMeters: gpsValidation.distanceMeters,
+            violationType: gpsValidation.violationType,
+          });
+        }
+      } catch (gpsError) {
+        console.error('GPS validation error (non-blocking):', gpsError);
+      }
     }
 
     // End any active breaks
