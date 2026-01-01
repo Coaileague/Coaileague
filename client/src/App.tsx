@@ -140,6 +140,8 @@ import Updates from "@/pages/updates";
 import Help from "@/pages/help";
 import CompanyReports from "./pages/company-reports";
 import PayInvoice from "@/pages/pay-invoice";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 import Expenses from "@/pages/expenses";
 import ExpenseApprovals from "@/pages/expense-approvals";
 import I9Compliance from "@/pages/i9-compliance";
@@ -870,6 +872,8 @@ function AppContent() {
     "/",
     "/login",
     "/register",
+    "/forgot-password",
+    "/reset-password",
     "/pricing",
     "/contact",
     "/support",
@@ -899,6 +903,8 @@ function AppContent() {
         <Route path="/" component={Homepage} />
         <Route path="/login" component={CustomLogin} />
         <Route path="/register" component={CustomRegister} />
+        <Route path="/forgot-password" component={ForgotPassword} />
+        <Route path="/reset-password" component={ResetPassword} />
         <Route path="/pricing" component={UniversalMarketing} />
         <Route path="/contact" component={Contact} />
         <Route path="/support" component={Support} />

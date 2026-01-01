@@ -396,13 +396,13 @@ export default function CustomLogin() {
                 />
                 <button
                   type="button"
-                  onClick={() => setLocation("/reset-password")}
+                  onClick={() => setLocation("/forgot-password")}
                   className="font-medium transition-colors"
                   style={{ 
                     fontSize: THEME.pages.login.link.fontSize,
                     color: THEME.pages.login.link.color
                   }}
-                  data-testid="link-reset-password"
+                  data-testid="link-forgot-password"
                 >
                   Forgot password?
                 </button>
