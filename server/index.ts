@@ -4,6 +4,21 @@ import { setupVite, serveStatic, log } from "./vite";
 import { pool } from "./db"; // Assuming 'pool' is your PostgreSQL client connection pool
 import { monitoringService } from "./monitoring";
 import { startAutonomousScheduler } from "./services/autonomousScheduler";
+import { execSync } from "child_process";
+
+// Kill any existing process on port 5000 before starting
+function cleanupPort(port: number): void {
+  try {
+    // Find and kill processes using the port
+    execSync(`lsof -ti:${port} | xargs -r kill -9 2>/dev/null || true`, { stdio: 'ignore' });
+    console.log(`[Startup] Port ${port} cleanup completed`);
+  } catch (e) {
+    // Ignore errors - port may already be free
+  }
+}
+
+// Track server instance for graceful shutdown
+let serverInstance: any = null;
 import { initializeChatServerHub } from "./services/ChatServerHub";
 import { GamificationEventTracker } from "./services/gamification/eventTracker";
 import { AiBrainNotifier } from "./services/gamification/aiBrainNotifier";
@@ -465,11 +480,44 @@ async function initializeBackgroundServices(): Promise<void> {
 }
 
 // ============================================================================
+// GRACEFUL SHUTDOWN HANDLERS
+// ============================================================================
+async function gracefulShutdown(signal: string): Promise<void> {
+  console.log(`\n[Shutdown] Received ${signal}, starting graceful shutdown...`);
+  
+  if (serverInstance) {
+    serverInstance.close(() => {
+      console.log('[Shutdown] HTTP server closed');
+    });
+  }
+  
+  // Close database connections
+  try {
+    await pool.end();
+    console.log('[Shutdown] Database connections closed');
+  } catch (e) {
+    console.error('[Shutdown] Error closing database:', e);
+  }
+  
+  console.log('[Shutdown] Graceful shutdown complete');
+  process.exit(0);
+}
+
+// Register shutdown handlers
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
+
+// ============================================================================
 // MAIN STARTUP SEQUENCE
 // ============================================================================
 (async () => {
   const startupStart = Date.now();
   let server;
+  
+  // PRE-STARTUP: Clean up any stale processes on port 5000
+  const port = parseInt(process.env.PORT || '5000', 10);
+  cleanupPort(port);
   
   // PHASE 0: Register routes (required before anything else)
   try {
@@ -537,7 +585,8 @@ async function initializeBackgroundServices(): Promise<void> {
   }
 
   // START SERVER IMMEDIATELY - don't wait for heavy services
-  const port = parseInt(process.env.PORT || '5000', 10);
+  // Note: port variable is declared at top of startup sequence
+  serverInstance = server;
   server.listen({
     port,
     host: "0.0.0.0",
