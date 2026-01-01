@@ -14,6 +14,13 @@ export function registerDomainSupervisorActions(): void {
   console.log('[DomainSupervisorActions] Registering domain lead supervisor actions...');
 
   // ============================================================================
+  // PHASE 2 CLEANUP: Deferred 37 actions, keeping 2 LLM Judge core actions
+  // Evidence: grep shows these are only in registration files, not actively called
+  // Actual work done by: coreSubagentOrchestration.ts, billingOrchestrationService.ts
+  // ============================================================================
+
+  /* DEFERRED: RevenueOps (6) - Duplicate with Core Subagent payroll.*, invoice.* actions
+  // ============================================================================
   // REVENUE OPS ACTIONS
   // ============================================================================
 
@@ -678,9 +685,11 @@ export function registerDomainSupervisorActions(): void {
   });
 
   console.log('[DomainSupervisorActions] Registered 6 CommunicationOps actions');
+  */ // END DEFERRED: RevenueOps, SecurityOps, OnboardingOps, DataOps, CommunicationOps (30 actions)
 
   // ============================================================================
-  // ENHANCED LLM JUDGE ACTIONS - Trinity safety layer
+  // ENHANCED LLM JUDGE ACTIONS - Keep 2 core MVP actions
+  // Evidence: judge.evaluate_risk called in cleanupAgentSubagent.ts
   // ============================================================================
 
   helpaiOrchestrator.registerAction({
@@ -736,6 +745,9 @@ export function registerDomainSupervisorActions(): void {
     },
   });
 
+  console.log('[DomainSupervisorActions] Registered 2 LLM Judge MVP actions (evaluate_risk, evaluate_hotpatch)');
+
+  /* DEFERRED: LLM Judge extras (4) + Management (3) - Not actively called in MVP workflows
   helpaiOrchestrator.registerAction({
     actionId: 'judge.get_policies',
     name: 'Get Active Policies',
@@ -877,6 +889,9 @@ export function registerDomainSupervisorActions(): void {
   });
 
   console.log('[DomainSupervisorActions] Registered 3 Supervisor Management actions');
-  console.log('[DomainSupervisorActions] Total: 39 domain-related actions registered');
-  console.log('[DomainSupervisorActions] Categories: RevenueOps (6), SecurityOps (6), OnboardingOps (6), DataOps (6), CommunicationOps (6), LLM Judge (6), Management (3)');
+  */ // END DEFERRED: LLM Judge extras (4) + Management (3)
+
+  console.log('[DomainSupervisorActions] Phase 2 Cleanup: Kept 2 actions, deferred 37');
+  console.log('[DomainSupervisorActions] KEPT: judge.evaluate_risk, judge.evaluate_hotpatch');
+  console.log('[DomainSupervisorActions] DEFERRED: RevenueOps(6), SecurityOps(6), OnboardingOps(6), DataOps(6), CommunicationOps(6), Judge extras(4), Management(3)');
 }
