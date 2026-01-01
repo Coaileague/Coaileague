@@ -186,7 +186,10 @@ export function PaymentEnforcementProvider({ children }: { children: React.React
       
       {/* Ultra-compact Payment Modal */}
       <AlertDialog open={modalState.isOpen}>
-        <AlertDialogContent className="max-w-[280px] p-3 gap-2">
+        <AlertDialogContent 
+          className="!max-w-[280px] p-3 gap-2"
+          showHomeButton={false}
+        >
           <AlertDialogHeader className="gap-1 space-y-0">
             <div className="flex items-center gap-1.5">
               <AlertTriangle className="h-3.5 w-3.5 text-amber-500 shrink-0" />
