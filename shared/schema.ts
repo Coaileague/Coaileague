@@ -2161,6 +2161,40 @@ export const insertPublishedScheduleSchema = createInsertSchema(publishedSchedul
 export type InsertPublishedSchedule = z.infer<typeof insertPublishedScheduleSchema>;
 export type PublishedSchedule = typeof publishedSchedules.$inferSelect;
 
+// Schedule Snapshots - For rollback capability when Trinity makes scheduling mistakes
+export const scheduleSnapshots = pgTable("schedule_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  publishedScheduleId: varchar("published_schedule_id").notNull().references(() => publishedSchedules.id, { onDelete: 'cascade' }),
+  
+  // Snapshot data - complete state of all shifts at publish time
+  snapshotData: jsonb("snapshot_data").notNull(), // Array of shift objects with all fields
+  
+  // Metadata
+  shiftCount: integer("shift_count").default(0),
+  employeesAffected: integer("employees_affected").default(0),
+  
+  // Rollback tracking
+  isRolledBack: boolean("is_rolled_back").default(false),
+  rolledBackAt: timestamp("rolled_back_at"),
+  rolledBackBy: varchar("rolled_back_by").references(() => users.id),
+  rollbackReason: text("rollback_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("schedule_snapshots_workspace_idx").on(table.workspaceId),
+  index("schedule_snapshots_published_schedule_idx").on(table.publishedScheduleId),
+  index("schedule_snapshots_created_at_idx").on(table.createdAt),
+]);
+
+export const insertScheduleSnapshotSchema = createInsertSchema(scheduleSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertScheduleSnapshot = z.infer<typeof insertScheduleSnapshotSchema>;
+export type ScheduleSnapshot = typeof scheduleSnapshots.$inferSelect;
+
 // Schedule Proposals - AI-generated schedules awaiting approval (99% AI, 1% Human Governance)
 export const scheduleProposals = pgTable("schedule_proposals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

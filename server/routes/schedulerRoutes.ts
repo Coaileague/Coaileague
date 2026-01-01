@@ -19,6 +19,8 @@ import {
   aiDecisionAudit,
   schedulerNotificationEvents,
   shiftAcceptanceRecords,
+  publishedSchedules,
+  scheduleSnapshots,
 } from '@shared/schema';
 import { eq, and, desc, sql, gte, lte, count } from 'drizzle-orm';
 import { 
@@ -27,6 +29,7 @@ import {
   SchedulerNotFoundError, 
   SchedulerAccessDeniedError 
 } from '../services/automation/coaileagueScoringService';
+import { scheduleRollbackService } from '../services/scheduleRollbackService';
 
 const router = Router();
 
@@ -591,6 +594,137 @@ router.get('/analytics/leaderboard', async (req: Request, res: Response) => {
     res.json(leaderboard);
   } catch (error) {
     return handleSchedulerError(error, res, 'Failed to fetch leaderboard');
+  }
+});
+
+// ============================================================================
+// SCHEDULE ROLLBACK ENDPOINTS
+// ============================================================================
+
+/**
+ * GET /api/scheduler/schedules/published
+ * Get published schedules for a workspace (with rollback availability)
+ */
+router.get('/schedules/published', async (req: Request, res: Response) => {
+  try {
+    const workspaceId = (req.session as any)?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Workspace not identified' });
+    }
+
+    const published = await db.query.publishedSchedules.findMany({
+      where: eq(publishedSchedules.workspaceId, workspaceId),
+      orderBy: desc(publishedSchedules.publishedAt),
+      limit: 20,
+    });
+
+    const snapshots = await scheduleRollbackService.getSnapshots(workspaceId);
+    const snapshotMap = new Map(snapshots.map(s => [s.publishedScheduleId, s]));
+
+    const enriched = published.map(p => ({
+      ...p,
+      hasSnapshot: snapshotMap.has(p.id),
+      isRolledBack: snapshotMap.get(p.id)?.isRolledBack || false,
+      rollbackAvailable: snapshotMap.has(p.id) && !snapshotMap.get(p.id)?.isRolledBack,
+    }));
+
+    res.json(enriched);
+  } catch (error) {
+    return handleSchedulerError(error, res, 'Failed to fetch published schedules');
+  }
+});
+
+/**
+ * GET /api/scheduler/schedules/:scheduleId/snapshots
+ * Get snapshots for a specific published schedule
+ */
+router.get('/schedules/:scheduleId/snapshots', async (req: Request, res: Response) => {
+  try {
+    const workspaceId = (req.session as any)?.workspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Workspace not identified' });
+    }
+
+    const { scheduleId } = req.params;
+    
+    const schedule = await db.query.publishedSchedules.findFirst({
+      where: and(
+        eq(publishedSchedules.id, scheduleId),
+        eq(publishedSchedules.workspaceId, workspaceId)
+      ),
+    });
+
+    if (!schedule) {
+      return res.status(404).json({ error: 'Published schedule not found' });
+    }
+
+    const snapshots = await scheduleRollbackService.getSnapshots(workspaceId, scheduleId);
+    res.json(snapshots);
+  } catch (error) {
+    return handleSchedulerError(error, res, 'Failed to fetch snapshots');
+  }
+});
+
+/**
+ * POST /api/scheduler/schedules/:scheduleId/rollback
+ * Rollback a published schedule to its previous snapshot
+ */
+router.post('/schedules/:scheduleId/rollback', async (req: Request, res: Response) => {
+  try {
+    const workspaceId = (req.session as any)?.workspaceId;
+    const userId = (req.session as any)?.userId;
+    const userRole = (req.session as any)?.role;
+    
+    if (!workspaceId || !userId) {
+      return res.status(401).json({ error: 'Authentication required' });
+    }
+
+    const allowedRoles = ['owner', 'root_admin', 'deputy_admin', 'manager'];
+    if (!allowedRoles.includes(userRole)) {
+      return res.status(403).json({ error: 'Only admins and managers can rollback schedules' });
+    }
+
+    const { scheduleId } = req.params;
+    const { reason, notifyEmployees = true } = req.body;
+
+    if (!reason || typeof reason !== 'string' || reason.trim().length < 5) {
+      return res.status(400).json({ error: 'A rollback reason is required (at least 5 characters)' });
+    }
+
+    const schedule = await db.query.publishedSchedules.findFirst({
+      where: and(
+        eq(publishedSchedules.id, scheduleId),
+        eq(publishedSchedules.workspaceId, workspaceId)
+      ),
+    });
+
+    if (!schedule) {
+      return res.status(404).json({ error: 'Published schedule not found' });
+    }
+
+    const result = await scheduleRollbackService.rollback(
+      workspaceId,
+      scheduleId,
+      userId,
+      reason.trim(),
+      notifyEmployees
+    );
+
+    if (!result.success) {
+      return res.status(400).json({ 
+        error: result.message,
+        code: result.error 
+      });
+    }
+
+    res.json({
+      success: true,
+      message: result.message,
+      affectedEmployees: result.affectedEmployees,
+      restoredShifts: result.restoredShifts,
+    });
+  } catch (error) {
+    return handleSchedulerError(error, res, 'Failed to rollback schedule');
   }
 });
 
