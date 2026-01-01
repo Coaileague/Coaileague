@@ -399,8 +399,10 @@ class AIBrainMasterOrchestrator {
     this.registerWorkflowActions();
     this.registerTestRunnerActions();
     this.registerOnboardingAssistantActions();
-    this.registerExpenseCategorizationActions();
-    this.registerDynamicPricingActions();
+    // DISABLED: Phase 1 cleanup - expense categorization is not MVP
+    // this.registerExpenseCategorizationActions();
+    // DISABLED: Phase 1 cleanup - dynamic pricing is not MVP
+    // this.registerDynamicPricingActions();
     await this.registerSessionCheckpointActions();
     await this.registerElevatedSessionGuardianActions();
     this.registerMemoryAndGovernanceActions();
@@ -410,10 +412,14 @@ class AIBrainMasterOrchestrator {
     registerCoreSubagentActions(helpaiOrchestrator); // Fortune 500-grade Core Subagent Actions (Scheduling, Payroll, Invoice, Notification)
     registerTrinityCodeOpsActions(helpaiOrchestrator); // Trinity Autonomous Coding Actions (grep, patch, commit, FAST mode)
     registerScheduleLiveNotifierActions(); // Real-time schedule notification actions
-    registerTrinityWorkOrderActions(); // Trinity Work Order System (intake, decompose, execute, summarize)
-    registerTrinityFrontierActions(helpaiOrchestrator); // Trinity 2025 Frontier Capabilities (external agents, frustration prediction, self-evolution, digital twin, ethics)
-    registerTrinityEnhancedModeActions(helpaiOrchestrator); // Trinity Enhanced Guru Mode + Business Pro Mode (12 actions)
-    registerCognitiveBrainActions(); // Cognitive Brain: API integrations, Knowledge Graph, A2A, Reinforcement Learning
+    // DISABLED: Phase 1 cleanup - Work Order System is not MVP
+    // registerTrinityWorkOrderActions(); // Trinity Work Order System (intake, decompose, execute, summarize)
+    // DISABLED: Phase 1 cleanup - Frontier Capabilities are not MVP (external agents, frustration prediction, self-evolution, digital twin, ethics)
+    // registerTrinityFrontierActions(helpaiOrchestrator);
+    // DISABLED: Phase 1 cleanup - Guru Mode + Business Pro Mode are not MVP
+    // registerTrinityEnhancedModeActions(helpaiOrchestrator);
+    // DISABLED: Phase 1 cleanup - Cognitive Brain is not MVP (API integrations, Knowledge Graph, A2A, Reinforcement Learning)
+    // registerCognitiveBrainActions();
     registerIntegrationBrainActions(); // Integration Management: Workspace integrations, API keys, Partner management
     registerDomainSupervisorActions(); // Domain Lead Supervisors: RevenueOps, SecurityOps, OnboardingOps + Enhanced LLM Judge
     
@@ -6475,9 +6481,9 @@ Provide your analysis in the following format:
     console.log('[AI Brain Master Orchestrator] Registered 12 autonomous orchestration tool actions');
 
     // ============================================================================
-    // GAMIFICATION DOMAIN ACTIONS
+    // GAMIFICATION DOMAIN ACTIONS - DISABLED: Phase 1 cleanup - not MVP
     // ============================================================================
-
+    /* DISABLED: Gamification not in MVP
     helpaiOrchestrator.registerAction({
       actionId: 'gamification.award_points',
       name: 'Award Points',
@@ -6662,6 +6668,7 @@ Provide your analysis in the following format:
     });
 
     console.log('[AI Brain Master Orchestrator] Registered 4 gamification domain actions');
+    */ // END DISABLED: Gamification not in MVP
 
     // ============================================================================
     // DEPLOYMENT DOMAIN ACTIONS
