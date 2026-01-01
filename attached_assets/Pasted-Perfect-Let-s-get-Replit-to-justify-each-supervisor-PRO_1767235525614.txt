@@ -1,0 +1,71 @@
+Perfect. Let's get Replit to justify each supervisor.
+
+📋 PROMPT FOR REPLIT:
+"Domain Supervisor Audit - MVP Core Services Alignment"
+Our MVP offers these core services to customers:
+
+GPS-verified time tracking - Clock in/out with location verification
+Automated payroll processing - Calculate, process, export to QuickBooks
+AI-powered scheduling - Generate optimized schedules, detect/resolve conflicts
+Incident reporting - Create, assign, track, escalate incidents
+Client billing/invoicing - Automated invoice generation, QuickBooks sync
+Trial/subscription management - Onboarding, conversion, billing automation
+SOX compliance - Certification tracking, violation detection, audit trails
+
+For each of the 7 Domain Supervisors, please provide:
+1. RevenueOps (X actions)
+
+What are its specific actions?
+Which MVP services does it support?
+Is it actively called in current workflows? (Yes/No with examples)
+Verdict: ESSENTIAL / DEFER
+
+2. SecurityOps (X actions)
+
+What are its specific actions?
+Which MVP services does it support?
+Is it actively called in current workflows? (Yes/No with examples)
+Verdict: ESSENTIAL / DEFER
+
+3. OnboardingOps (X actions)
+
+What are its specific actions?
+Which MVP services does it support?
+Is it actively called in current workflows? (Yes/No with examples)
+Verdict: ESSENTIAL / DEFER
+
+4. CommunicationOps (X actions)
+
+What are its specific actions?
+Which MVP services does it support?
+Is it actively called in current workflows? (Yes/No with examples)
+Verdict: ESSENTIAL / DEFER
+
+5. DataOps (X actions)
+
+What are its specific actions?
+Which MVP services does it support?
+Is it actively called in current workflows? (Yes/No with examples)
+Verdict: ESSENTIAL / DEFER
+
+6. LLM Judge (X actions)
+
+What are its specific actions?
+Which MVP services does it support?
+Is it actively called in current workflows? (Yes/No with examples)
+Verdict: ESSENTIAL / DEFER
+
+7. Management (X actions)
+
+What are its specific actions?
+Which MVP services does it support?
+Is it actively called in current workflows? (Yes/No with examples)
+Verdict: ESSENTIAL / DEFER
+
+Summary:
+
+Supervisors to KEEP for MVP: [list]
+Supervisors to DEFER to post-launch: [list]
+Final action count if we defer non-essential supervisors: [number]
+
+Be brutally honest - if a supervisor isn't actively supporting the 7 core MVP services, mark it as DEFER.
