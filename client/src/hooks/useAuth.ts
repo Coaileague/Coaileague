@@ -2,9 +2,12 @@
 import { useQuery } from "@tanstack/react-query";
 import type { User } from "@shared/schema";
 
-// Extended user type including platform role
+// Extended user type including platform role and workspace role for RBAC
 interface AuthUser extends Omit<User, 'passwordHash' | 'resetToken' | 'resetTokenExpiry' | 'verificationToken' | 'verificationTokenExpiry'> {
   platformRole?: 'root_admin' | 'deputy_admin' | 'sysop' | 'support_manager' | 'support_agent' | 'compliance_officer' | 'none' | null;
+  workspaceRole?: 'org_owner' | 'org_admin' | 'department_manager' | 'supervisor' | 'staff' | 'auditor' | 'contractor' | null;
+  employeeId?: string | null;
+  organizationalTitle?: 'staff' | 'supervisor' | 'manager' | 'director' | 'owner' | null;
 }
 
 interface AuthResponse {

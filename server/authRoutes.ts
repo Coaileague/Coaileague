@@ -3,7 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { db } from "./db";
 import { users, platformRoles, employees, workspaces, expenseCategories } from "@shared/schema";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 // Type for User from database queries
 type User = typeof users.$inferSelect;
@@ -297,6 +297,44 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
   
   const activePlatformRole = userPlatformRoles.find(pr => !pr.revokedAt);
   
+  // RBAC: Fetch workspace role from employee record for current workspace
+  let workspaceRole: string | null = null;
+  let employeeId: string | null = null;
+  let organizationalTitle: string | null = null;
+  
+  if (freshUser.currentWorkspaceId) {
+    // Check if user is the workspace owner first
+    const [ownedWorkspace] = await db
+      .select()
+      .from(workspaces)
+      .where(and(
+        eq(workspaces.id, freshUser.currentWorkspaceId),
+        eq(workspaces.ownerId, freshUser.id)
+      ))
+      .limit(1);
+    
+    if (ownedWorkspace) {
+      workspaceRole = 'org_owner';
+    }
+    
+    // Get employee record for additional details and workspaceRole if not owner
+    const employeeRecord = await db.query.employees.findFirst({
+      where: and(
+        eq(employees.userId, freshUser.id),
+        eq(employees.workspaceId, freshUser.currentWorkspaceId)
+      ),
+    });
+    
+    if (employeeRecord) {
+      employeeId = employeeRecord.id;
+      organizationalTitle = (employeeRecord as any).organizationalTitle || null;
+      // Use employee workspaceRole only if not already set as owner
+      if (!workspaceRole) {
+        workspaceRole = employeeRecord.workspaceRole || 'staff';
+      }
+    }
+  }
+  
   // PAYMENT ENFORCEMENT: Check workspace subscription status
   // Platform staff bypass this check
   const workspaceId = freshUser.currentWorkspaceId;
@@ -360,6 +398,9 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
             emailVerified: freshUser.emailVerified ?? false,
             currentWorkspaceId: freshUser.currentWorkspaceId ?? null,
             platformRole: activePlatformRole?.role || null,
+            workspaceRole: workspaceRole,
+            employeeId: employeeId,
+            organizationalTitle: organizationalTitle,
           },
         });
       }
@@ -386,6 +427,9 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
       emailVerified: freshUser.emailVerified ?? false,
       currentWorkspaceId: freshUser.currentWorkspaceId ?? null,
       platformRole: activePlatformRole?.role || null, // GATEKEEPER: Include platform role
+      workspaceRole: workspaceRole, // RBAC: Include workspace role for permissions
+      employeeId: employeeId,
+      organizationalTitle: organizationalTitle,
     },
   });
 });
