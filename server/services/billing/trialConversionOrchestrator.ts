@@ -344,9 +344,128 @@ class TrialConversionOrchestrator {
   }
 
   /**
-   * Register AI Brain actions for trial conversion
+   * Reactivate a suspended workspace after payment
+   */
+  async reactivateWorkspace(workspaceId: string, newTier?: SubscriptionTier): Promise<{ success: boolean; message: string }> {
+    try {
+      const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+      if (!workspace) {
+        return { success: false, message: 'Workspace not found' };
+      }
+
+      const tier = newTier || workspace.subscriptionTier as SubscriptionTier || 'starter';
+      
+      await db.update(workspaces).set({
+        subscriptionStatus: 'active',
+        subscriptionTier: tier,
+        isActive: true,
+        isSuspended: false,
+      }).where(eq(workspaces.id, workspaceId));
+
+      await db.update(subscriptions).set({
+        status: 'active',
+        plan: tier,
+      }).where(eq(subscriptions.workspaceId, workspaceId));
+
+      await platformEventBus.publish({
+        type: 'workspace_reactivated',
+        category: 'billing',
+        title: 'Workspace Reactivated',
+        description: `${workspace.name} reactivated with ${tier} plan`,
+        metadata: { workspaceId, tier },
+        visibility: 'admin',
+      });
+
+      console.log(`[TrialConversion] Workspace ${workspaceId} reactivated with ${tier} tier`);
+      return { success: true, message: `Workspace reactivated with ${tier} plan` };
+    } catch (error: any) {
+      console.error('[TrialConversion] Reactivation failed:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Cancel a subscription
+   */
+  async cancelSubscription(workspaceId: string, reason?: string): Promise<{ success: boolean; message: string }> {
+    try {
+      const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+      if (!workspace) {
+        return { success: false, message: 'Workspace not found' };
+      }
+
+      await db.update(workspaces).set({
+        subscriptionStatus: 'cancelled',
+        isActive: false,
+      }).where(eq(workspaces.id, workspaceId));
+
+      await db.update(subscriptions).set({
+        status: 'cancelled',
+      }).where(eq(subscriptions.workspaceId, workspaceId));
+
+      await platformEventBus.publish({
+        type: 'subscription_cancelled',
+        category: 'billing',
+        title: 'Subscription Cancelled',
+        description: `${workspace.name} subscription cancelled${reason ? `: ${reason}` : ''}`,
+        metadata: { workspaceId, reason },
+        visibility: 'admin',
+      });
+
+      console.log(`[TrialConversion] Subscription cancelled for workspace ${workspaceId}`);
+      return { success: true, message: 'Subscription cancelled' };
+    } catch (error: any) {
+      console.error('[TrialConversion] Cancellation failed:', error);
+      return { success: false, message: error.message };
+    }
+  }
+
+  /**
+   * Get status of all subscriptions for monitoring
+   */
+  async getAllSubscriptionStatuses(): Promise<{
+    total: number;
+    byStatus: Record<string, number>;
+    expiringSoon: number;
+    suspended: number;
+    recentConversions: number;
+  }> {
+    const allSubs = await db.select({
+      status: subscriptions.status,
+      trialEndsAt: subscriptions.trialEndsAt,
+    }).from(subscriptions);
+
+    const now = new Date();
+    const sevenDaysFromNow = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+
+    const byStatus: Record<string, number> = {};
+    let expiringSoon = 0;
+    let suspended = 0;
+
+    for (const sub of allSubs) {
+      const status = sub.status || 'unknown';
+      byStatus[status] = (byStatus[status] || 0) + 1;
+      
+      if (status === 'suspended') suspended++;
+      if (status === 'trial' && sub.trialEndsAt && sub.trialEndsAt <= sevenDaysFromNow) {
+        expiringSoon++;
+      }
+    }
+
+    return {
+      total: allSubs.length,
+      byStatus,
+      expiringSoon,
+      suspended,
+      recentConversions: byStatus['active'] || 0,
+    };
+  }
+
+  /**
+   * Register AI Brain actions for trial conversion and subscription management
    */
   registerActions(): void {
+    // Trial Actions
     helpaiOrchestrator.registerAction({
       actionId: 'trial.process_expiring',
       name: 'Process Expiring Trials',
@@ -384,7 +503,78 @@ class TrialConversionOrchestrator {
       },
     });
 
-    console.log('[TrialConversion] Registered 3 AI Brain actions');
+    helpaiOrchestrator.registerAction({
+      actionId: 'trial.start',
+      name: 'Start Trial',
+      category: 'billing',
+      description: 'Start a new trial for a workspace',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request) => {
+        const { workspaceId } = request.payload;
+        const result = await this.trialManager.startTrial(workspaceId);
+        return { success: result.success, actionId: request.actionId, message: result.success ? 'Trial started' : result.error, data: result };
+      },
+    });
+
+    // Subscription Lifecycle Actions
+    helpaiOrchestrator.registerAction({
+      actionId: 'subscription.reactivate',
+      name: 'Reactivate Subscription',
+      category: 'billing',
+      description: 'Reactivate a suspended workspace after payment',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request) => {
+        const { workspaceId, tier } = request.payload;
+        const result = await this.reactivateWorkspace(workspaceId, tier);
+        return { success: result.success, actionId: request.actionId, message: result.message, data: result };
+      },
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'subscription.cancel',
+      name: 'Cancel Subscription',
+      category: 'billing',
+      description: 'Cancel a workspace subscription',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request) => {
+        const { workspaceId, reason } = request.payload;
+        const result = await this.cancelSubscription(workspaceId, reason);
+        return { success: result.success, actionId: request.actionId, message: result.message, data: result };
+      },
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'subscription.get_all_status',
+      name: 'Get All Subscription Statuses',
+      category: 'billing',
+      description: 'Get status summary of all subscriptions for monitoring',
+      requiredRoles: ['support', 'admin', 'super_admin'],
+      handler: async (request) => {
+        const data = await this.getAllSubscriptionStatuses();
+        return { success: true, actionId: request.actionId, message: 'Subscription statuses retrieved', data };
+      },
+    });
+
+    helpaiOrchestrator.registerAction({
+      actionId: 'subscription.suspend',
+      name: 'Suspend Subscription',
+      category: 'billing',
+      description: 'Manually suspend a workspace subscription',
+      requiredRoles: ['admin', 'super_admin'],
+      handler: async (request) => {
+        const { workspaceId, reason } = request.payload;
+        await this.suspendWorkspace({
+          workspaceId,
+          workspaceName: 'Manual Suspension',
+          ownerEmail: '',
+          daysRemaining: 0,
+          hasPaymentMethod: false,
+        });
+        return { success: true, actionId: request.actionId, message: `Workspace ${workspaceId} suspended${reason ? `: ${reason}` : ''}` };
+      },
+    });
+
+    console.log('[TrialSubscription] Registered 8 AI Brain actions (4 trial + 4 subscription lifecycle)');
   }
 }
 
