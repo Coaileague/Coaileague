@@ -752,24 +752,21 @@ export default function Employees() {
         )}
 
         {isLoading ? (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mobile-cols-1">
-            {[1, 2, 3, 4, 5, 6].map((i) => (
-              <Card key={i} className="mobile-card-tight">
-                <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="flex-1 space-y-2">
-                    <Skeleton className="h-5 w-32" />
-                    <Skeleton className="h-4 w-24" />
-                    <div className="flex gap-2">
-                      <Skeleton className="h-5 w-20" />
-                      <Skeleton className="h-5 w-24" />
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mobile-cols-1">
+            {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
+              <Card key={i}>
+                <CardContent className="p-3">
+                  <div className="flex items-start gap-3">
+                    <Skeleton className="h-9 w-9 rounded-full shrink-0" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <div className="flex gap-1">
+                        <Skeleton className="h-5 w-14" />
+                        <Skeleton className="h-5 w-16" />
+                      </div>
+                      <Skeleton className="h-3 w-32" />
                     </div>
                   </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-4 w-1/2" />
                 </CardContent>
               </Card>
             ))}
@@ -789,135 +786,112 @@ export default function Employees() {
             </CardContent>
           </Card>
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 mobile-cols-1">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 mobile-cols-1">
             {filteredEmployees.map((employee) => {
               const employeeCard = (
-              <Card key={employee.id} className="hover-elevate mobile-card-tight" data-testid={`card-employee-${employee.id}`}>
-                <CardHeader className="flex flex-row items-start gap-4 space-y-0 pb-4">
-                  <Avatar className="h-12 w-12">
-                    <AvatarFallback style={{ backgroundColor: employee.color || '#3b82f6' }}>
-                      {getInitials(employee.firstName, employee.lastName)}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="flex-1 min-w-0">
-                    <CardTitle className="text-base truncate">
-                      {employee.firstName} {employee.lastName}
-                    </CardTitle>
-                    {employee.employeeNumber && (
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        ID: {employee.employeeNumber}
-                      </p>
-                    )}
-                    <div className="flex flex-wrap gap-1 mt-1">
-                      <Badge variant="secondary" className="text-xs">
-                        {employee.role || "Employee"}
-                      </Badge>
-                      {(employee as any).organizationalTitle && (employee as any).organizationalTitle !== 'staff' && (
-                        <Badge variant="outline" className="text-xs capitalize">
-                          {(employee as any).organizationalTitle}
+              <Card key={employee.id} className="hover-elevate" data-testid={`card-employee-${employee.id}`}>
+                <CardContent className="p-3">
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-9 w-9 shrink-0">
+                      <AvatarFallback style={{ backgroundColor: employee.color || '#3b82f6' }} className="text-xs">
+                        {getInitials(employee.firstName, employee.lastName)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="flex-1 min-w-0 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="min-w-0">
+                          <p className="text-sm font-medium truncate">
+                            {employee.firstName} {employee.lastName}
+                          </p>
+                          {employee.employeeNumber && (
+                            <p className="text-[10px] text-muted-foreground">
+                              {employee.employeeNumber}
+                            </p>
+                          )}
+                        </div>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className={isMobile ? "h-8 w-8 min-h-[44px] min-w-[44px] shrink-0 -mt-1 -mr-1" : "h-6 w-6 shrink-0 -mt-1 -mr-1"}
+                              style={isMobile ? { touchAction: 'manipulation' } : undefined}
+                              data-testid={`button-employee-menu-${employee.id}`}
+                            >
+                              <MoreVertical className="h-3.5 w-3.5" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className={isMobile ? "min-w-[180px]" : ""}>
+                            <DropdownMenuItem 
+                              onClick={() => handleEditEmployee(employee)}
+                              className={isMobile ? "py-2.5" : "text-xs"}
+                              data-testid={`button-edit-employee-${employee.id}`}
+                            >
+                              <Edit className="h-3.5 w-3.5 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            {employee.onboardingStatus !== 'completed' && employee.onboardingStatus !== 'pending_review' && (
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setSelectedEmployee(employee);
+                                  setIsInviteDialogOpen(true);
+                                }}
+                                className={isMobile ? "py-2.5" : "text-xs"}
+                                data-testid={`menu-invite-${employee.id}`}
+                              >
+                                <Send className="h-3.5 w-3.5 mr-2" />
+                                Send Invite
+                              </DropdownMenuItem>
+                            )}
+                            {employee.onboardingStatus === 'pending_review' && (
+                              <DropdownMenuItem 
+                                onClick={() => {
+                                  setSelectedEmployee(employee);
+                                  setApprovalPayRate(employee.hourlyRate || "");
+                                  setIsApprovalDialogOpen(true);
+                                }}
+                                className={isMobile ? "py-2.5 text-orange-600" : "text-xs text-orange-600"}
+                                data-testid={`menu-approve-${employee.id}`}
+                              >
+                                <CheckCircle2 className="h-3.5 w-3.5 mr-2" />
+                                Approve
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteEmployee(employee)}
+                              className={`text-destructive focus:text-destructive ${isMobile ? "py-2.5" : "text-xs"}`}
+                              data-testid={`button-delete-employee-${employee.id}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5 mr-2" />
+                              Deactivate
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                          {employee.role || "Employee"}
                         </Badge>
-                      )}
-                      {getOnboardingStatusBadge(employee.onboardingStatus ?? undefined)}
-                    </div>
-                  </div>
-                  {/* 3-Dot Action Menu - Available on BOTH mobile and desktop */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className={isMobile ? "h-10 w-10 min-h-[44px] min-w-[44px] shrink-0" : "h-8 w-8 shrink-0"}
-                        style={isMobile ? { touchAction: 'manipulation' } : undefined}
-                        data-testid={`button-employee-menu-${employee.id}`}
-                      >
-                        <MoreVertical className={isMobile ? "h-5 w-5" : "h-4 w-4"} />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className={isMobile ? "min-w-[200px]" : ""}>
-                      <DropdownMenuItem 
-                        onClick={() => handleEditEmployee(employee)}
-                        className={isMobile ? "py-3 text-base" : ""}
-                        data-testid={`button-edit-employee-${employee.id}`}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Edit Details
-                      </DropdownMenuItem>
-                      {employee.onboardingStatus !== 'completed' && employee.onboardingStatus !== 'pending_review' && (
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            setSelectedEmployee(employee);
-                            setIsInviteDialogOpen(true);
-                          }}
-                          className={isMobile ? "py-3 text-base" : ""}
-                          data-testid={`menu-invite-${employee.id}`}
-                        >
-                          <Send className="h-4 w-4 mr-2" />
-                          Send Invite
-                        </DropdownMenuItem>
-                      )}
-                      {employee.onboardingStatus === 'pending_review' && (
-                        <DropdownMenuItem 
-                          onClick={() => {
-                            setSelectedEmployee(employee);
-                            setApprovalPayRate(employee.hourlyRate || "");
-                            setIsApprovalDialogOpen(true);
-                          }}
-                          className={isMobile ? "py-3 text-base text-orange-600" : "text-orange-600"}
-                          data-testid={`menu-approve-${employee.id}`}
-                        >
-                          <CheckCircle2 className="h-4 w-4 mr-2" />
-                          Approve Employee
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={() => handleDeleteEmployee(employee)}
-                        className={`text-destructive focus:text-destructive ${isMobile ? "py-3 text-base" : ""}`}
-                        data-testid={`button-delete-employee-${employee.id}`}
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Deactivate
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                </CardHeader>
-                <CardContent className={isMobile ? "space-y-2 pt-0" : "space-y-3"}>
-                  {/* Mobile: Compact horizontal layout */}
-                  {isMobile ? (
-                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        <span className="truncate max-w-[140px]">{employee.email || "No email"}</span>
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <DollarSign className="h-3 w-3" />
-                        ${employee.hourlyRate || "0"}/hr
-                      </span>
-                      {employee.phone && (
+                        {(employee as any).organizationalTitle && (employee as any).organizationalTitle !== 'staff' && (
+                          <Badge variant="outline" className="text-[10px] h-5 px-1.5 capitalize">
+                            {(employee as any).organizationalTitle}
+                          </Badge>
+                        )}
+                        {getOnboardingStatusBadge(employee.onboardingStatus ?? undefined)}
+                      </div>
+                      <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground pt-1">
                         <span className="flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {employee.phone}
+                          <Mail className="h-3 w-3" />
+                          <span className="truncate max-w-[120px]">{employee.email || "—"}</span>
                         </span>
-                      )}
-                    </div>
-                  ) : (
-                    <>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Mail className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground truncate">{employee.email || "No email"}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">{employee.phone || "No phone"}</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-sm">
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                        <span className="text-muted-foreground">
+                        <span className="flex items-center gap-1">
+                          <DollarSign className="h-3 w-3" />
                           ${employee.hourlyRate || "0"}/hr
                         </span>
                       </div>
-                    </>
-                  )}
+                    </div>
+                  </div>
                   {/* Desktop only: Show action buttons (mobile uses 3-dot menu) */}
                   {!isMobile && employee.onboardingStatus === 'pending_review' && (
                     <Button
