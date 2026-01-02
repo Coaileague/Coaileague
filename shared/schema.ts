@@ -21615,3 +21615,46 @@ export {
   toSubagentExecutionResult,
   createTrinityTask,
 } from './trinityTaskSchema';
+
+// ============================================================================
+// TESTIMONIAL COLLECTION SYSTEM
+// ============================================================================
+
+export const testimonials = pgTable("testimonials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Who submitted
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Display info
+  userName: varchar("user_name").notNull(),
+  companyName: varchar("company_name").notNull(),
+  industry: varchar("industry").default("security"),
+  title: varchar("title"), // Job title
+  photoUrl: varchar("photo_url"),
+  
+  // Content
+  rating: integer("rating").notNull().default(5), // 1-5 stars
+  quote: text("quote").notNull(),
+  
+  // Publishing workflow
+  isApproved: boolean("is_approved").default(false), // User approved for publishing
+  isPublished: boolean("is_published").default(false), // Admin published
+  publishedAt: timestamp("published_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("testimonials_workspace_idx").on(table.workspaceId),
+  index("testimonials_published_idx").on(table.isPublished, table.rating),
+]);
+
+export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
+export type Testimonial = typeof testimonials.$inferSelect;

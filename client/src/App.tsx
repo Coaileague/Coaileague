@@ -63,6 +63,8 @@ import CustomLogin from "@/pages/custom-login";
 import CustomRegister from "@/pages/custom-register";
 import UniversalMarketing from "@/pages/universal-marketing";
 import Contact from "@/pages/contact";
+import ROICalculator from "@/pages/roi-calculator"; // Marketing: ROI Calculator landing page
+import ComparePage from "@/pages/compare"; // Marketing: Competitor comparison pages
 import Support from "@/pages/support";
 import TermsOfService from "@/pages/terms-of-service";
 import PrivacyPolicy from "@/pages/privacy-policy";
@@ -911,6 +913,9 @@ function AppContent() {
         <Route path="/forgot-password" component={ForgotPassword} />
         <Route path="/reset-password" component={ResetPassword} />
         <Route path="/pricing" component={UniversalMarketing} />
+        <Route path="/roi-calculator" component={ROICalculator} />
+        <Route path="/compare" component={ComparePage} />
+        <Route path="/compare/:competitor" component={ComparePage} />
         <Route path="/contact" component={Contact} />
         <Route path="/support" component={Support} />
         <Route path="/terms" component={TermsOfService} />
@@ -1157,6 +1162,9 @@ function AppContent() {
               <Route path="/alert-settings" component={AlertSettings} />
               <Route path="/employee/profile" component={EmployeeProfile} />
               <Route path="/pricing" component={UniversalMarketing} />
+        <Route path="/roi-calculator" component={ROICalculator} />
+        <Route path="/compare" component={ComparePage} />
+        <Route path="/compare/:competitor" component={ComparePage} />
               <Route path="/contact" component={Contact} />
               <Route path="/terms" component={TermsOfService} />
               <Route path="/privacy" component={PrivacyPolicy} />
@@ -1478,6 +1486,9 @@ function AppContent() {
               <Route path="/alert-settings" component={AlertSettings} />
                 <Route path="/employee/profile" component={EmployeeProfile} />
                 <Route path="/pricing" component={UniversalMarketing} />
+        <Route path="/roi-calculator" component={ROICalculator} />
+        <Route path="/compare" component={ComparePage} />
+        <Route path="/compare/:competitor" component={ComparePage} />
                 <Route path="/contact" component={Contact} />
                 <Route path="/terms" component={TermsOfService} />
                 <Route path="/privacy" component={PrivacyPolicy} />
