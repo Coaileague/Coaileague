@@ -25,6 +25,8 @@ import { TransitionProvider } from "@/contexts/transition-context";
 import { LoadingProvider } from "@/contexts/loading-context";
 import { UniversalAnimationProvider } from "@/contexts/universal-animation-context";
 import { SeasonalThemeProvider, useSeasonalTheme } from "@/context/SeasonalThemeContext";
+import { SimpleModeProvider } from "@/contexts/SimpleModeContext";
+import { SimpleModeToggle } from "@/components/SimpleModeToggle";
 import SeasonalEffectsLayer from "@/components/effects/SeasonalEffectsLayer";
 import { Button } from "@/components/ui/button";
 import { PaymentEnforcementProvider } from "@/hooks/use-payment-enforcement";
@@ -972,6 +974,8 @@ function AppContent() {
                   <CoAIleagueLogo width={140} height={46} showTagline={false} className="h-11 w-auto" />
                 </a>
                 <div className="flex items-center gap-2">
+                  {/* Easy View Toggle - Simplified interface for mobile */}
+                  <SimpleModeToggle variant="compact" />
                   {/* Chat Button - Header mounted for easy access */}
                   <HeaderChatButton />
                   {/* Inbox Button - Internal email system with unread badge */}
@@ -1232,6 +1236,8 @@ function AppContent() {
                     </a>
                   </div>
                   <div className="flex items-center gap-2">
+                    {/* Easy View Toggle - Simplified interface for non-technical users */}
+                    <SimpleModeToggle variant="compact" />
                     {/* Chat Button - Header mounted in middle */}
                     <HeaderChatButton />
                     {/* Inbox Button - Internal email system with unread badge */}
@@ -1547,6 +1553,7 @@ export default function App() {
                   <TooltipProvider>
                     <UniversalAnimationProvider>
                       <SeasonalThemeProvider>
+                        <SimpleModeProvider>
                         <ResponsiveAppFrame>
                           <ChatroomNotificationListener />
                           <PaymentEnforcementProvider><AppContent /></PaymentEnforcementProvider>
@@ -1554,6 +1561,7 @@ export default function App() {
                           <Toaster />
                           <TrinityAnnouncementDisplay position="bottom-right" />
                         </ResponsiveAppFrame>
+                        </SimpleModeProvider>
                         {/* Seasonal effects layer - snowfall, ornaments, etc. */}
                         <SeasonalEffectsLayer />
                         {/* Floating Setup Guide - Stripe-style universal widget (positioned bottom-right) */}
