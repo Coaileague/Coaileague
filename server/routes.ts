@@ -47,6 +47,7 @@ import automationEventsRouter from "./routes/automation-events"; // Automation E
 import { migrationRouter } from "./routes/migration"; // Data Migration from External Platforms
 import { registerHealthRoutes } from "./routes/health"; // Health check monitoring
 import { registerSearchRoutes } from "./routes/searchRoutes"; // AI-Powered Intelligent Search
+import { registerIntegrationRoutes } from "./routes/integrationRoutes"; // QuickBooks exception and automation health
 import { registerWorkboardRoutes } from "./routes/workboardRoutes"; // AI Brain Workboard Job Queue
 import approvalRoutes from "./routes/approvalRoutes"; // AI Approval Requests
 import { auditContextMiddleware } from "./middleware/audit";
@@ -488,6 +489,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerHealthRoutes(app, requireAuth);
   app.use(resendWebhooksRouter); // Resend email event webhooks
   registerSearchRoutes(app, requireAuth); // AI-Powered Search
+  registerIntegrationRoutes(app); // QuickBooks exception and automation health routes
 
   registerWorkboardRoutes(app, requireAuth); // AI Brain Workboard Job Queue
   app.use("/api/approvals", requireAuth, approvalRoutes); // AI Approval Requests
