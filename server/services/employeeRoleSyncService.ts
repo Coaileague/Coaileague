@@ -17,7 +17,7 @@
 import { db } from '../db';
 import { employees, users, workspaces } from '@shared/schema';
 import { eq, and } from 'drizzle-orm';
-import { eventBus } from './eventBus';
+import { eventBus } from './trinity/eventBus';
 import type { WorkspaceRole } from '../rbac';
 
 interface RoleMappingRule {

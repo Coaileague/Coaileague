@@ -14,7 +14,7 @@
 import { db } from '../db';
 import { employees, users, workspaces, shifts, timeEntries, clients } from '@shared/schema';
 import { eq, and, gte, desc } from 'drizzle-orm';
-import { eventBus } from './eventBus';
+import { eventBus } from './trinity/eventBus';
 import { sessionSyncService } from './ai-brain/sessionSyncService';
 
 interface SyncState {
