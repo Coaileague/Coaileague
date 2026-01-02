@@ -5,9 +5,23 @@
  * Routes events to the platform event bus and AI Brain for orchestration.
  */
 
+import { EventEmitter } from 'events';
 import { platformEventBus, type PlatformEvent, type EventCategory } from '../platformEventBus';
 import { db } from '../../db';
 import { aiBrainActionLogs } from '@shared/schema';
+
+/**
+ * General-purpose event bus for internal service communication
+ * Provides EventEmitter-style API for cross-service events
+ */
+class TrinityEventBus extends EventEmitter {
+  constructor() {
+    super();
+    this.setMaxListeners(50); // Allow many services to subscribe
+  }
+}
+
+export const eventBus = new TrinityEventBus();
 
 // Domain-specific event types that Trinity tracks
 export type TrinityEmailEventType = 
