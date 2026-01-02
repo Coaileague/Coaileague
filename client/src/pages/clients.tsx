@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useCreateClient } from "@/hooks/useClients";
+import { useQBTerminology } from "@/hooks/useQBTerminology";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -29,6 +30,7 @@ import {
 export default function Clients() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const qb = useQBTerminology();
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     firstName: "",
@@ -80,7 +82,7 @@ export default function Clients() {
       onSuccess: () => {
         toast({
           title: "Success",
-          description: "Client added successfully",
+          description: `${qb.entity('client')} added successfully`,
         });
         setIsAddDialogOpen(false);
         setFormData({
@@ -111,7 +113,7 @@ export default function Clients() {
         }
         toast({
           title: "Error",
-          description: error.message || "Failed to create client",
+          description: error.message || `Failed to create ${qb.entity('client').toLowerCase()}`,
           variant: "destructive",
         });
       },
@@ -138,10 +140,10 @@ export default function Clients() {
           <div className="flex flex-wrap items-center justify-between gap-4 mobile-flex-col">
             <div>
               <h2 className="text-2xl sm:text-3xl font-bold mb-1" data-testid="text-clients-title">
-                Clients
+                {qb.entity('clients')}
               </h2>
               <p className="text-sm sm:text-base text-[hsl(var(--cad-text-secondary))]" data-testid="text-clients-subtitle">
-                Manage your customers and their appointments
+                Manage your {qb.entity('clients').toLowerCase()} and their service locations
               </p>
             </div>
           
@@ -149,14 +151,14 @@ export default function Clients() {
             <DialogTrigger asChild>
               <Button data-testid="button-add-client">
                 <Plus className="mr-2 h-4 w-4" />
-                Add Client
+                Add {qb.entity('client')}
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Add New Client</DialogTitle>
+                <DialogTitle>Add New {qb.entity('client')}</DialogTitle>
                 <DialogDescription>
-                  Enter client contact and billing details
+                  Enter {qb.entity('client').toLowerCase()} contact and billing details
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-6 py-4">
@@ -314,7 +316,7 @@ export default function Clients() {
                   disabled={createMutation.isPending}
                   data-testid="button-save-client"
                 >
-                  {createMutation.isPending ? "Saving..." : "Save Client"}
+                  {createMutation.isPending ? "Saving..." : `Save ${qb.entity('client')}`}
                 </Button>
               </DialogFooter>
             </DialogContent>
