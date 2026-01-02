@@ -6,6 +6,7 @@ import {
   Activity, Target, AlertCircle, ChevronDown, Lightbulb, Award,
   Brain, Sparkles, Zap, AlertTriangle, ArrowUpRight, ArrowDownRight, Minus
 } from "lucide-react";
+import { HideInSimpleMode } from "@/components/SimpleMode";
 import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
 import { CalendarHeatmap } from "@/components/calendar-heatmap";
 import { Button } from "@/components/ui/button";
@@ -403,82 +404,84 @@ function AIInsightsPanel({
         </Card>
       )}
 
-      <div className="space-y-6">
-        {anomalies.length > 0 && (
-          <Card className="backdrop-blur-xl bg-gradient-to-br from-orange-500/10 to-red-500/5 border border-orange-500/20">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-orange-500" />
-                <CardTitle>Anomalies Detected</CardTitle>
-              </div>
-              <CardDescription>Areas requiring attention</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {anomalies.slice(0, 5).map((anomaly, i) => (
-                <div 
-                  key={i} 
-                  className={`flex items-start gap-3 p-3 rounded-lg ${
-                    anomaly.severity === 'high' ? 'bg-red-500/10 border border-red-500/20' :
-                    anomaly.severity === 'medium' ? 'bg-orange-500/10 border border-orange-500/20' :
-                    'bg-yellow-500/10 border border-yellow-500/20'
-                  }`}
-                >
-                  <Badge 
-                    variant={anomaly.severity === 'high' ? 'destructive' : 'secondary'}
-                    className="flex-shrink-0"
+      <HideInSimpleMode>
+        <div className="space-y-6">
+          {anomalies.length > 0 && (
+            <Card className="backdrop-blur-xl bg-gradient-to-br from-orange-500/10 to-red-500/5 border border-orange-500/20">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5 text-orange-500" />
+                  <CardTitle>Anomalies Detected</CardTitle>
+                </div>
+                <CardDescription>Areas requiring attention</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {anomalies.slice(0, 5).map((anomaly, i) => (
+                  <div 
+                    key={i} 
+                    className={`flex items-start gap-3 p-3 rounded-lg ${
+                      anomaly.severity === 'high' ? 'bg-red-500/10 border border-red-500/20' :
+                      anomaly.severity === 'medium' ? 'bg-orange-500/10 border border-orange-500/20' :
+                      'bg-yellow-500/10 border border-yellow-500/20'
+                    }`}
                   >
-                    {anomaly.severity}
-                  </Badge>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium capitalize">{anomaly.type}</p>
-                    <p className="text-sm text-muted-foreground">{anomaly.description}</p>
+                    <Badge 
+                      variant={anomaly.severity === 'high' ? 'destructive' : 'secondary'}
+                      className="flex-shrink-0"
+                    >
+                      {anomaly.severity}
+                    </Badge>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium capitalize">{anomaly.type}</p>
+                      <p className="text-sm text-muted-foreground">{anomaly.description}</p>
+                    </div>
                   </div>
-                </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
+                ))}
+              </CardContent>
+            </Card>
+          )}
 
-        {forecasts.length > 0 && (
-          <Card className="backdrop-blur-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/5 border border-cyan-500/20">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="w-5 h-5 text-cyan-500" />
-                <CardTitle>Forecasts</CardTitle>
-              </div>
-              <CardDescription>Projected trends for next period</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {forecasts.slice(0, 4).map((forecast, i) => (
-                <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
-                  <div className="flex items-center gap-2">
-                    {forecast.trend === 'up' ? (
-                      <ArrowUpRight className="w-4 h-4 text-green-500" />
-                    ) : forecast.trend === 'down' ? (
-                      <ArrowDownRight className="w-4 h-4 text-red-500" />
-                    ) : (
-                      <Minus className="w-4 h-4 text-muted-foreground" />
-                    )}
-                    <span className="text-sm font-medium">{forecast.metric}</span>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm font-medium">
-                      {forecast.metric.includes('Rate') 
-                        ? `${forecast.projectedValue.toFixed(1)}%`
-                        : forecast.metric.includes('Revenue') || forecast.metric.includes('$')
-                          ? `$${forecast.projectedValue.toLocaleString()}`
-                          : forecast.projectedValue.toLocaleString('en-US', { maximumFractionDigits: 1 })}
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      {forecast.confidence}% confidence
-                    </p>
-                  </div>
+          {forecasts.length > 0 && (
+            <Card className="backdrop-blur-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/5 border border-cyan-500/20">
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="w-5 h-5 text-cyan-500" />
+                  <CardTitle>Forecasts</CardTitle>
                 </div>
-              ))}
-            </CardContent>
-          </Card>
-        )}
-      </div>
+                <CardDescription>Projected trends for next period</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                {forecasts.slice(0, 4).map((forecast, i) => (
+                  <div key={i} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                    <div className="flex items-center gap-2">
+                      {forecast.trend === 'up' ? (
+                        <ArrowUpRight className="w-4 h-4 text-green-500" />
+                      ) : forecast.trend === 'down' ? (
+                        <ArrowDownRight className="w-4 h-4 text-red-500" />
+                      ) : (
+                        <Minus className="w-4 h-4 text-muted-foreground" />
+                      )}
+                      <span className="text-sm font-medium">{forecast.metric}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-medium">
+                        {forecast.metric.includes('Rate') 
+                          ? `${forecast.projectedValue.toFixed(1)}%`
+                          : forecast.metric.includes('Revenue') || forecast.metric.includes('$')
+                            ? `$${forecast.projectedValue.toLocaleString()}`
+                            : forecast.projectedValue.toLocaleString('en-US', { maximumFractionDigits: 1 })}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {forecast.confidence}% confidence
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </CardContent>
+            </Card>
+          )}
+        </div>
+      </HideInSimpleMode>
     </div>
   );
 }

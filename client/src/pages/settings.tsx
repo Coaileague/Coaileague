@@ -57,6 +57,7 @@ import { WorkspaceLayout } from "@/components/workspace-layout";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes";
 import { SettingsCardSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
 import { SimpleModeToggle } from "@/components/SimpleModeToggle";
+import { useSimpleMode } from "@/contexts/SimpleModeContext";
 
 // Settings section configuration for navigation
 const SETTINGS_SECTIONS = [
@@ -74,8 +75,22 @@ export default function Settings() {
   const { toast } = useToast();
   const { isAuthenticated, isLoading } = useAuth();
   const isMobile = useIsMobile();
+  const { isSimpleMode } = useSimpleMode();
   const [activeSection, setActiveSection] = useState<SettingsSection>('quick');
   const [selectedCategory, setSelectedCategory] = useState<string>("");
+  
+  // In Simple Mode, hide technical settings tabs (automation, compliance)
+  const hiddenInSimpleMode = ['automation', 'compliance'];
+  const visibleSections = isSimpleMode 
+    ? SETTINGS_SECTIONS.filter(s => !hiddenInSimpleMode.includes(s.id))
+    : SETTINGS_SECTIONS;
+  
+  // Reset to a visible tab if current tab becomes hidden when Simple Mode is enabled
+  useEffect(() => {
+    if (isSimpleMode && hiddenInSimpleMode.includes(activeSection)) {
+      setActiveSection('quick');
+    }
+  }, [isSimpleMode, activeSection]);
   
   // Form state for workspace settings
   const [workspaceName, setWorkspaceName] = useState<string>("");
@@ -803,7 +818,7 @@ export default function Settings() {
       <Tabs value={activeSection} onValueChange={(v) => setActiveSection(v as SettingsSection)} className="w-full">
         <ScrollArea className="w-full">
           <TabsList className="inline-flex w-full sm:w-auto h-auto p-1 gap-1 bg-muted/50">
-            {SETTINGS_SECTIONS.map((section) => (
+            {visibleSections.map((section) => (
               <TabsTrigger
                 key={section.id}
                 value={section.id}

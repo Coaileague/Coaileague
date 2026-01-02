@@ -42,6 +42,7 @@ import {
 import type { Shift, Employee, Client, ShiftOrder, RecurringShiftPattern, ShiftSwapRequest } from '@shared/schema';
 import ScheduleMobileFirst from '@/pages/schedule-mobile-first';
 import { WorkspaceLayout } from '@/components/workspace-layout';
+import { HideInSimpleMode } from "@/components/SimpleMode";
 
 // Post order template data (will be pre-created in database)
 const POST_ORDER_TEMPLATES = [
@@ -1194,7 +1195,8 @@ export default function UniversalSchedule() {
         </ScrollArea>
       </div>
 
-      {/* Right Sidebar - AI Panel */}
+      {/* Right Sidebar - AI Panel (hidden in Simple Mode) */}
+      <HideInSimpleMode>
       {showAIPanel && !isMobile && (
         <div className="w-96 bg-card border-l flex flex-col">
           <div className="p-4 border-b">
@@ -1249,6 +1251,7 @@ export default function UniversalSchedule() {
           </div>
         </div>
       )}
+      </HideInSimpleMode>
 
       {/* Shift Creation Modal - Compact GetSling-style popup */}
       <Dialog open={showShiftModal} onOpenChange={setShowShiftModal}>
