@@ -635,7 +635,7 @@ export default function Dashboard() {
           </div>
           
           {/* Automation Credits */}
-          <CreditBalanceCard onBuyCredits={() => setLocation('/usage')} />
+          <CreditBalanceCard />
         </div>
         </ResponsiveSection>
 

@@ -51,7 +51,8 @@ export type FeatureCategory =
   | 'payroll'
   | 'compliance'
   | 'communication'
-  | 'ai_features';
+  | 'ai_features'
+  | 'integrations';
 
 export const PLATFORM_FEATURES: PlatformFeature[] = [
   // ============================================================================
@@ -816,6 +817,62 @@ export const PLATFORM_FEATURES: PlatformFeature[] = [
         issue: 'Not receiving messages',
         symptoms: ['Messages not appearing', 'Missing notifications'],
         solution: 'Check notification settings, ensure browser notifications enabled, try refreshing the page'
+      }
+    ]
+  },
+
+  // ============================================================================
+  // QUICKBOOKS INTEGRATION (Jan 2026)
+  // ============================================================================
+  {
+    id: 'quickbooks_integration',
+    name: 'QuickBooks Integration',
+    category: 'integrations',
+    description: 'Full QuickBooks Online/Desktop bidirectional sync with Intuit-compliant rate limiting and token management',
+    icon: 'Calculator',
+    requiredTier: 'professional',
+    enabled: true,
+    keywords: ['quickbooks', 'qbo', 'accounting', 'invoices', 'sync', 'intuit', 'migration', 'import'],
+    capabilities: [
+      {
+        name: 'QuickBooks Migration Wizard',
+        description: '7-step wizard to import employees, clients, and invoices from QuickBooks',
+        howTo: 'Settings > Integrations > QuickBooks > Connect. Follow the 7-step wizard to map fields and import data.',
+        apiEndpoints: ['/api/quickbooks/migration', '/api/quickbooks/connect']
+      },
+      {
+        name: 'Invoice Sync',
+        description: 'Auto-sync invoices generated in CoAIleague to QuickBooks for unified accounting',
+        howTo: 'Invoices created in CoAIleague automatically sync to QuickBooks after generation. Check sync status in Integrations.',
+        relatedFeatures: ['invoicing']
+      },
+      {
+        name: 'Rate Limiting & Quota Enforcement',
+        description: 'Intuit-compliant per-realm rate limiting (500 req/min production, 100 req/min sandbox) with persisted usage tracking',
+        howTo: 'Automatic - Trinity monitors API usage per QuickBooks company. Alerts when approaching limits.',
+        requiredTier: 'professional'
+      },
+      {
+        name: 'Proactive Token Refresh',
+        description: 'Automatic OAuth token refresh 15 minutes before expiry prevents sync interruptions',
+        howTo: 'Automatic - background daemon monitors token expiry and refreshes proactively.'
+      },
+      {
+        name: 'Dynamic OAuth Discovery',
+        description: 'Uses Intuit Discovery Document for dynamic OAuth endpoint resolution with 24-hour caching',
+        howTo: 'Automatic - ensures compatibility with Intuit API v75+ endpoint changes.'
+      }
+    ],
+    commonIssues: [
+      {
+        issue: 'QuickBooks sync failing',
+        symptoms: ['Invoices not appearing in QB', 'Sync errors', '429 rate limit'],
+        solution: 'Check API quota in Trinity diagnostics. Per-realm rate limits are 500/min. Wait for quota reset or contact support for limit increase.'
+      },
+      {
+        issue: 'QuickBooks token expired',
+        symptoms: ['Authentication errors', 'Need to reconnect', 'Token invalid'],
+        solution: 'Token refresh daemon should handle this automatically. If persisting, go to Settings > Integrations > QuickBooks > Reconnect.'
       }
     ]
   }
