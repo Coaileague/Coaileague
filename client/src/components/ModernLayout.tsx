@@ -19,7 +19,7 @@ export default function ModernLayout({ children }: ModernLayoutProps) {
   const navItems = [
     { id: 'dashboard', icon: BarChart3, label: 'Dashboard', href: '/dashboard' },
     { id: 'employees', icon: Users, label: 'Employees', href: '/employees' },
-    { id: 'clients', icon: Target, label: 'Clients', href: '/clients' },
+    { id: 'clients', icon: Target, label: 'Customers', href: '/clients' },
     { id: 'schedule', icon: Calendar, label: 'Schedule', href: '/schedule' },
     { id: 'time', icon: Clock, label: 'Time Tracking', href: '/time-tracking' },
     { id: 'invoices', icon: FileText, label: 'Invoices', href: '/invoices' },

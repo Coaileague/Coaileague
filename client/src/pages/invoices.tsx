@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { useClientLookup } from "@/hooks/useClients";
+import { useQBTerminology } from "@/hooks/useQBTerminology";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
@@ -69,6 +70,7 @@ import { CoAIleagueLogo } from "@/components/coailleague-logo";
 
 export default function Invoices() {
   const { toast } = useToast();
+  const qb = useQBTerminology();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
@@ -339,7 +341,7 @@ export default function Invoices() {
     if (!generateFormData.clientId || !generateFormData.dueDate) {
       toast({
         title: "Validation Error",
-        description: "Please select a client and due date",
+        description: `Please select a ${qb.entity('client').toLowerCase()} and due date`,
         variant: "destructive",
       });
       return;
@@ -798,10 +800,10 @@ export default function Invoices() {
                 <div className="space-y-4 py-4">
                   <div className="grid grid-cols-2 gap-4 mobile-cols-1">
                     <div className="space-y-2">
-                      <Label>Client *</Label>
+                      <Label>{qb.entity('client')} *</Label>
                       <Select value={generateFormData.clientId} onValueChange={(value) => setGenerateFormData({ ...generateFormData, clientId: value, selectedTimeEntries: [] })}>
                         <SelectTrigger data-testid="select-generate-client">
-                          <SelectValue placeholder="Select client" />
+                          <SelectValue placeholder={`Select ${qb.entity('client').toLowerCase()}`} />
                         </SelectTrigger>
                         <SelectContent>
                           {clients.map((client) => (
@@ -839,7 +841,7 @@ export default function Invoices() {
                       <Label>Select Time Entries</Label>
                       {unbilledTimeEntries.length === 0 ? (
                         <p className="text-sm text-muted-foreground py-4">
-                          No unbilled time entries for this client
+                          No unbilled time entries for this {qb.entity('client').toLowerCase()}
                         </p>
                       ) : (
                         <div className="space-y-2 max-h-[300px] overflow-y-auto border rounded-md p-3">
@@ -1003,13 +1005,13 @@ export default function Invoices() {
                 <div className="space-y-6 py-4">
                   <div className="grid grid-cols-2 gap-4 mobile-cols-1">
                     <div className="space-y-2">
-                      <Label>Client *</Label>
+                      <Label>{qb.entity('client')} *</Label>
                       <Select 
                         value={hoursFormData.clientId} 
                         onValueChange={(value) => setHoursFormData({ ...hoursFormData, clientId: value })}
                       >
                         <SelectTrigger data-testid="select-hours-client">
-                          <SelectValue placeholder="Select client" />
+                          <SelectValue placeholder={`Select ${qb.entity('client').toLowerCase()}`} />
                         </SelectTrigger>
                         <SelectContent>
                           {clients.map((client) => (
@@ -1328,20 +1330,20 @@ export default function Invoices() {
               <DialogHeader>
                 <DialogTitle>Create Invoice</DialogTitle>
                 <DialogDescription>
-                  Generate a new invoice for a client
+                  Generate a new invoice for a {qb.entity('client').toLowerCase()}
                 </DialogDescription>
               </DialogHeader>
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4 mobile-cols-1">
                   <div className="space-y-2">
-                    <Label htmlFor="client">Client *</Label>
+                    <Label htmlFor="client">{qb.entity('client')} *</Label>
                     <Select value={formData.clientId} onValueChange={(value) => setFormData({ ...formData, clientId: value })}>
                       <SelectTrigger id="client" data-testid="select-invoice-client">
-                        <SelectValue placeholder="Select client" />
+                        <SelectValue placeholder={`Select ${qb.entity('client').toLowerCase()}`} />
                       </SelectTrigger>
                       <SelectContent>
                         {clients.length === 0 ? (
-                          <SelectItem value="none">No clients available</SelectItem>
+                          <SelectItem value="none">No {qb.entity('clients').toLowerCase()} available</SelectItem>
                         ) : (
                           clients.map((client) => (
                             <SelectItem key={client.id} value={client.id}>
@@ -1559,7 +1561,7 @@ export default function Invoices() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Invoice #</TableHead>
-                  <TableHead>Client</TableHead>
+                  <TableHead>{qb.entity('client')}</TableHead>
                   <TableHead>Due Date</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
@@ -1587,7 +1589,7 @@ export default function Invoices() {
               <FileText className="h-16 w-16 text-muted-foreground opacity-20 mb-4" />
               <h3 className="text-lg font-medium mb-2">No invoices yet</h3>
               <p className="text-sm text-muted-foreground mb-6 text-center max-w-md">
-                Create your first invoice to start billing clients
+                Create your first invoice to start billing {qb.entity('clients').toLowerCase()}
               </p>
               <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-first-invoice">
                 <Plus className="mr-2 h-4 w-4" />
@@ -1602,7 +1604,7 @@ export default function Invoices() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Invoice #</TableHead>
-                  <TableHead>Client</TableHead>
+                  <TableHead>{qb.entity('client')}</TableHead>
                   <TableHead>Due Date</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>

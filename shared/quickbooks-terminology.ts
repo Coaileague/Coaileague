@@ -152,7 +152,8 @@ export const QB_HIERARCHY = {
     coaEntity: 'Invoice',
     qbId: 'Id',
     coaId: 'quickbooksInvoiceId',
-    parent: 'Customer',
+    parent: 'Job',
+    note: 'Invoices can be at Customer level or Job (sub-customer) level. For security services, typically linked to Job (site/contract).',
     children: ['Line'],
   },
   line: {
