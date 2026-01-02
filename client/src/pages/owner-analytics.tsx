@@ -26,7 +26,10 @@ import {
   Zap,
   Target,
   UserCheck,
-  Clock
+  Clock,
+  Crown,
+  Shield,
+  Sparkles
 } from "lucide-react";
 import { 
   AreaChart, 
@@ -193,6 +196,46 @@ export default function OwnerAnalytics() {
   return (
     <WorkspaceLayout>
       <div className="p-6 space-y-6" data-testid="owner-analytics-page">
+        <Card className="border-primary/20 bg-gradient-to-r from-primary/5 to-transparent" data-testid="card-trinity-elite">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-primary/10">
+                  <Crown className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold">Trinity Elite</h3>
+                    <Badge variant="outline" className="text-xs">
+                      <Sparkles className="h-3 w-3 mr-1" />
+                      Strategic AI
+                    </Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Profit-optimized scheduling with employee scoring and client tiering
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-sm">
+                <div className="text-right">
+                  <div className="font-medium">Employee Scoring</div>
+                  <div className="text-muted-foreground">0-100 weighted metrics</div>
+                </div>
+                <div className="text-right">
+                  <div className="font-medium">Client Tiering</div>
+                  <div className="text-muted-foreground">Enterprise to Trial</div>
+                </div>
+                <Button variant="outline" size="sm" asChild data-testid="button-view-resolution-inbox">
+                  <a href="/resolution-inbox">
+                    <Shield className="h-4 w-4 mr-2" />
+                    Automation Health
+                  </a>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold" data-testid="text-page-title">Usage Analytics</h1>

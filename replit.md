@@ -21,7 +21,7 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 
 **Technical Implementations:**
 - **Trinity AI Brain Services:** Utilizes a 4-tier Gemini architecture for document extraction, issue detection, autonomous scheduling, and platform orchestration.
-- **Platform Action Hub (Trinity):** Central registry for 33+ AI Brain actions, including 8 strategic optimization actions for profit-first scheduling and business intelligence.
+- **Platform Action Hub (Trinity):** Central registry for 350+ AI Brain actions, including 8 strategic optimization actions for profit-first scheduling and business intelligence.
 - **Universal Diagnostic Orchestrator:** Seven specialized domain subagents for root cause analysis and hotpatch suggestions.
 - **HelpAI:** Support staff copilot exclusively for helpdesk chatrooms, focusing on escalation handling and ticket summarization.
 - **Financials:** Real-time Stripe integration for payments, payroll, invoicing, and tax.
@@ -48,11 +48,21 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **AI/Automation Bypass Pattern:** Elevated session bypass for AI features and automation services using HMAC-signed elevation tokens.
 - **ChatServerHub Architecture:** Unified gateway connecting chat rooms to AI Brain, notifications, tickets, and analytics.
 - **Trinity Command Center RBAC:** Chat interface restricted to support staff roles, org owners see Quick Actions.
-- **Trinity Command Center Frontier UI:** Diagnostic/Strategic Guru mode toggle, System Issues panel, real-time frontier capability metadata display.
 - **Spec-Driven Development:** Component registry with tier-based AI editing rules.
-- **Trinity Agent Parity Layer:** Replit Agent-equivalent autonomous coding capabilities.
 - **Trinity Humanized Persona System:** Human-like AI communication patterns with a senior engineer persona.
-- **Trinity 2025 Frontier Capabilities:** Advanced AI capabilities including Agentic Interoperability Protocols (AIP), Chain-of-Action (CoA) Physical Reasoning, Self-Evolving Cognitive Architectures, Preemptive "What-If" Scenario Modeling, and Multi-Tenant Contextual Ethics.
+
+**Trinity Elite (Verified Capabilities):**
+- **Strategic Optimization Engine:** Employee scoring (0-100), client tiering, profit-first scheduling
+- **Go-Live Confidence Check:** GREEN/YELLOW/RED automation health status
+- **Resolution Inbox:** Exception management UI for operational visibility
+- **QuickBooks 99% Automation:** Invoice sync, identity mapping, exception triage
+- **Capability Evidence Matrix:** See `TRINITY_CAPABILITY_MATRIX.md` for verified vs roadmap features
+
+**Roadmap Features (Not Yet Active):**
+- Business Pro Mode (Revenue Intelligence Engine)
+- Guru Mode (Strategic Advisory)
+- Dynamic Pricing Optimization
+- Self-Evolving Cognitive Architectures
 
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
