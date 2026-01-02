@@ -1469,99 +1469,99 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         )}
       </div>
       
-      {/* Main Tabs: ALERTS | UPDATES | SYSTEM (Admin) + Clear All */}
-      <div className={`flex items-center border-b bg-muted/30 flex-shrink-0 ${compact ? 'px-2 gap-1' : 'px-2 gap-1'}`}>
-        {/* Scrollable tabs area */}
-        <div 
-          className="flex items-center flex-1 min-w-0 overflow-x-auto"
-          style={{ WebkitOverflowScrolling: 'touch', scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-        {/* ALERTS Tab - Operational alerts requiring attention */}
-        <button
-          onClick={() => setActiveTab('alerts')}
-          className={`relative ${compact ? 'py-2.5 px-3 text-xs min-w-[60px]' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
-            activeTab === 'alerts' 
-              ? 'text-foreground' 
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-          data-testid="tab-alerts"
-        >
-          <span className="flex items-center gap-1.5">
-            <AlertTriangle className={`${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
-            Alerts
-            {alertsCount > 0 && (
-              <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-red-500 text-white rounded-full`}>
-                {alertsCount > 9 ? '9+' : alertsCount}
-              </Badge>
-            )}
-          </span>
-          {activeTab === 'alerts' && (
-            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-red-500 rounded-full" />
+      {/* Main Tabs: ALERTS | UPDATES | SYSTEM (Admin) */}
+      <div className={`border-b bg-muted/30 flex-shrink-0 ${compact ? 'px-2' : 'px-2'}`}>
+        {/* Tabs row - full width on mobile */}
+        <div className="flex items-center justify-between w-full">
+          {/* All tabs in a row */}
+          <div className="flex items-center">
+            {/* ALERTS Tab - Operational alerts requiring attention */}
+            <button
+              onClick={() => setActiveTab('alerts')}
+              className={`relative ${compact ? 'py-2.5 px-2 text-xs' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'alerts' 
+                  ? 'text-foreground' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              data-testid="tab-alerts"
+            >
+              <span className="flex items-center gap-1">
+                <AlertTriangle className={`${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                {!compact && 'Alerts'}
+                {alertsCount > 0 && (
+                  <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-red-500 text-white rounded-full`}>
+                    {alertsCount > 9 ? '9+' : alertsCount}
+                  </Badge>
+                )}
+              </span>
+              {activeTab === 'alerts' && (
+                <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-red-500 rounded-full" />
+              )}
+            </button>
+            
+            {/* UPDATES Tab - Informational updates */}
+            <button
+              onClick={() => setActiveTab('updates')}
+              className={`relative ${compact ? 'py-2.5 px-2 text-xs' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'updates' 
+                  ? 'text-foreground' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              data-testid="tab-updates"
+            >
+              <span className="flex items-center gap-1">
+                <Info className={`${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                {!compact && 'Updates'}
+                {updatesCount > 0 && (
+                  <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-primary text-white rounded-full`}>
+                    {updatesCount > 9 ? '9+' : updatesCount}
+                  </Badge>
+                )}
+              </span>
+              {activeTab === 'updates' && (
+                <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
+              )}
+            </button>
+            
+            {/* SYSTEM Tab - Admin workflow approvals & forced changes */}
+            <button
+              onClick={() => setActiveTab('system')}
+              className={`relative ${compact ? 'py-2.5 px-2 text-xs' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap ${
+                activeTab === 'system' 
+                  ? 'text-foreground' 
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+              data-testid="tab-system"
+            >
+              <span className="flex items-center gap-1">
+                <Shield className={`${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
+                {!compact && 'System'}
+                {systemCount > 0 && (
+                  <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-amber-500 text-white rounded-full`}>
+                    {systemCount > 9 ? '9+' : systemCount}
+                  </Badge>
+                )}
+              </span>
+              {activeTab === 'system' && (
+                <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-amber-500 rounded-full" />
+              )}
+            </button>
+          </div>
+          
+          {/* Fixed Clear All button */}
+          {user && (
+            <Button
+              variant="outline"
+              size="sm"
+              className={`${compact ? 'h-7 px-2 text-[10px]' : 'h-8 px-3 text-xs'} font-medium bg-background border-muted-foreground/20 flex-shrink-0`}
+              onClick={() => clearAllMutation.mutate()}
+              disabled={clearAllMutation.isPending || totalUnread === 0}
+              data-testid="button-clear-all-read"
+            >
+              {compact ? 'Clear' : 'Clear All'}
+            </Button>
           )}
-        </button>
-        
-        {/* UPDATES Tab - Informational updates */}
-        <button
-          onClick={() => setActiveTab('updates')}
-          className={`relative ${compact ? 'py-2.5 px-3 text-xs min-w-[70px]' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
-            activeTab === 'updates' 
-              ? 'text-foreground' 
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-          data-testid="tab-updates"
-        >
-          <span className="flex items-center gap-1.5">
-            <Info className={`${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
-            Updates
-            {updatesCount > 0 && (
-              <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-primary text-white rounded-full`}>
-                {updatesCount > 9 ? '9+' : updatesCount}
-              </Badge>
-            )}
-          </span>
-          {activeTab === 'updates' && (
-            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-primary rounded-full" />
-          )}
-        </button>
-        
-        {/* SYSTEM Tab - Admin workflow approvals & forced changes */}
-        <button
-          onClick={() => setActiveTab('system')}
-          className={`relative ${compact ? 'py-2.5 px-3 text-xs min-w-[60px]' : 'py-3 px-4 text-sm'} font-medium transition-colors whitespace-nowrap flex-shrink-0 ${
-            activeTab === 'system' 
-              ? 'text-foreground' 
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
-          data-testid="tab-system"
-        >
-          <span className="flex items-center gap-1.5">
-            <Shield className={`${compact ? 'h-3 w-3' : 'h-4 w-4'}`} />
-            System
-            {systemCount > 0 && (
-              <Badge className={`${compact ? 'h-4 min-w-4 px-1 text-[9px]' : 'h-5 min-w-5 px-1.5 text-[10px]'} flex items-center justify-center bg-amber-500 text-white rounded-full`}>
-                {systemCount > 9 ? '9+' : systemCount}
-              </Badge>
-            )}
-          </span>
-          {activeTab === 'system' && (
-            <div className="absolute bottom-0 left-2 right-2 h-0.5 bg-amber-500 rounded-full" />
-          )}
-        </button>
         </div>
-        
-        {/* Fixed Clear All button - always visible, never scrolls */}
-        {user && (
-          <Button
-            variant="outline"
-            size="sm"
-            className={`${compact ? 'h-7 px-2 text-[10px]' : 'h-8 px-3 text-xs'} font-medium bg-background border-muted-foreground/20 flex-shrink-0 ml-auto`}
-            onClick={() => clearAllMutation.mutate()}
-            disabled={clearAllMutation.isPending || totalUnread === 0}
-            data-testid="button-clear-all-read"
-          >
-            {compact ? 'Clear' : 'Clear All'}
-          </Button>
-        )}
       </div>
       
       {/* Tab description - single line on mobile for space efficiency */}
