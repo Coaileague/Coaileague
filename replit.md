@@ -70,6 +70,14 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - Dynamic Pricing Optimization
 - Self-Evolving Cognitive Architectures
 
+## Recent Changes (January 2026)
+- **Financial Watchdog Complete:** Platform Hours vs Invoice Hours reconciliation tab with Trinity Verified badges
+- **Widget Toggle System:** Simple/Full view modes for less technical users
+- **Notification Deduplication Fixed:** Trinity is exclusive writer for What's New, UNS is fallback only
+- **Feature Registry Sync:** Auto-bumps sync version on every live patch deployment
+- **Integration Tests Added:** 4 tests for notification deduplication enforcement
+- **Capability Matrix Audit:** Full audit of 367+ actions, 7 domain subagents, QuickBooks integration
+
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
 - **Resend**: Email delivery and notification workflows.
