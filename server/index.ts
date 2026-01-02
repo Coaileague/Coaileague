@@ -565,6 +565,18 @@ async function initializeBackgroundServices(): Promise<void> {
       initTokenCleanupScheduler();
       console.log('[Server] Token cleanup scheduler started');
     }),
+    
+    timedInit('Employee Role Sync Service', async () => {
+      const { employeeRoleSyncService } = await import('./services/employeeRoleSyncService');
+      await employeeRoleSyncService.initialize();
+      console.log('[Server] Employee Role Sync Service initialized - auto role assignment active');
+    }),
+    
+    timedInit('Cross-Device Sync Service', async () => {
+      const { crossDeviceSyncService } = await import('./services/crossDeviceSyncService');
+      await crossDeviceSyncService.initialize();
+      console.log('[Server] Cross-Device Sync Service initialized - mobile/desktop sync active');
+    }),
   ];
   
   // Run all background tasks in parallel
