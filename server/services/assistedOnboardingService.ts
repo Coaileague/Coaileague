@@ -152,6 +152,16 @@ class AssistedOnboardingService {
 
       console.log(`[AssistedOnboarding] Created workspace ${workspace.id} for ${targetUserEmail} by support ${supportUserId}`);
 
+      // Auto-initialize onboarding pipeline for the new workspace
+      try {
+        const { onboardingPipelineService } = await import('./onboardingPipelineService');
+        await onboardingPipelineService.initializeOnboarding(workspace.id);
+        console.log(`[AssistedOnboarding] Initialized onboarding pipeline for workspace ${workspace.id}`);
+      } catch (onboardingError) {
+        console.warn(`[AssistedOnboarding] Failed to initialize onboarding pipeline:`, onboardingError);
+        // Don't fail workspace creation if onboarding init fails
+      }
+
       return {
         success: true,
         workspaceId: workspace.id,

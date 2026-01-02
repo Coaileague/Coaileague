@@ -12350,6 +12350,56 @@ export const insertPartnerSyncLogSchema = createInsertSchema(partnerSyncLogs).om
 export type InsertPartnerSyncLog = z.infer<typeof insertPartnerSyncLogSchema>;
 export type PartnerSyncLog = typeof partnerSyncLogs.$inferSelect;
 
+// QuickBooks Onboarding Flows - Durable storage for migration flow state
+export const quickbooksFlowStageEnum = pgEnum('quickbooks_flow_stage', [
+  'oauth_initiated',
+  'oauth_completed',
+  'initial_sync_running',
+  'initial_sync_complete',
+  'data_mapping_running',
+  'data_mapping_complete',
+  'employees_importing',
+  'employees_imported',
+  'schedule_generating',
+  'schedule_generated',
+  'automation_configuring',
+  'automation_configured',
+  'flow_complete',
+  'flow_failed',
+]);
+
+export const quickbooksOnboardingFlows = pgTable("quickbooks_onboarding_flows", {
+  id: varchar("id").primaryKey(),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  stage: quickbooksFlowStageEnum("stage").notNull().default('oauth_initiated'),
+  connectionId: varchar("connection_id"),
+  realmId: varchar("realm_id"),
+  syncJobId: varchar("sync_job_id"),
+  importedEmployeeCount: integer("imported_employee_count").default(0),
+  generatedScheduleId: varchar("generated_schedule_id"),
+  automationSettings: jsonb("automation_settings").default({ autoInvoice: true, autoPayroll: true, autoSchedule: true }),
+  errors: jsonb("errors").default([]),
+  warnings: jsonb("warnings").default([]),
+  flowData: jsonb("flow_data"),
+  startedAt: timestamp("started_at").defaultNow(),
+  completedAt: timestamp("completed_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("qb_flows_workspace_idx").on(table.workspaceId),
+  stageIdx: index("qb_flows_stage_idx").on(table.stage),
+  userIdx: index("qb_flows_user_idx").on(table.userId),
+}));
+
+export const insertQuickbooksOnboardingFlowSchema = createInsertSchema(quickbooksOnboardingFlows).omit({
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertQuickbooksOnboardingFlow = z.infer<typeof insertQuickbooksOnboardingFlowSchema>;
+export type QuickbooksOnboardingFlow = typeof quickbooksOnboardingFlows.$inferSelect;
+
 // Partner Manual Review Queue - For ambiguous auto-matches requiring human review
 export const partnerManualReviewQueue = pgTable("partner_manual_review_queue", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

@@ -123,6 +123,7 @@ import { aiBrainMasterOrchestrator } from "./services/ai-brain/aiBrainMasterOrch
 import { platformEventBus } from "./services/platformEventBus";
 import { handlePlatformChangeEvent } from "./services/aiNotificationService";
 import { startNotificationCleanupScheduler } from "./services/notificationCleanupService";
+import { initTokenCleanupScheduler } from "./services/tokenCleanupService";
 import { initializeOrchestrationServices, setOrchestrationWebSocketBroadcaster } from "./services/ai-brain/orchestrationBridge";
 import { broadcastToWorkspace } from "./websocket";
 import { initializeSkillsSystem } from "./services/ai-brain/skills/skill-loader";
@@ -559,6 +560,10 @@ async function initializeBackgroundServices(): Promise<void> {
     timedInit('Notification Cleanup Scheduler', async () => {
       startNotificationCleanupScheduler();
       console.log('[Server] Notification cleanup scheduler started');
+    }),
+    timedInit('Token Cleanup Scheduler', async () => {
+      initTokenCleanupScheduler();
+      console.log('[Server] Token cleanup scheduler started');
     }),
   ];
   

@@ -21,9 +21,11 @@ import {
   partnerConnections,
   employees,
   workspaces,
-  schedules
+  schedules,
+  quickbooksOnboardingFlows,
+  partnerDataMappings,
 } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, ne, inArray } from 'drizzle-orm';
 
 export type FlowStage = 
   | 'oauth_initiated'
@@ -608,41 +610,247 @@ class OnboardingQuickBooksFlow {
     return `https://appcenter.intuit.com/connect/oauth2?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${state}`;
   }
 
+  private serializeFlowData(flow: QuickBooksFlowState): Record<string, any> {
+    return {
+      flowId: flow.flowId,
+      workspaceId: flow.workspaceId,
+      userId: flow.userId,
+      stage: flow.stage,
+      connectionId: flow.connectionId || null,
+      realmId: flow.realmId || null,
+      syncJobId: flow.syncJobId || null,
+      importedEmployeeCount: flow.importedEmployeeCount,
+      generatedScheduleId: flow.generatedScheduleId || null,
+      automationSettings: flow.automationSettings,
+      errors: Array.isArray(flow.errors) ? [...flow.errors] : [],
+      warnings: Array.isArray(flow.warnings) ? [...flow.warnings] : [],
+      startedAt: flow.startedAt.toISOString(),
+      completedAt: flow.completedAt ? flow.completedAt.toISOString() : null,
+      lastUpdatedAt: flow.lastUpdatedAt.toISOString(),
+    };
+  }
+
   private async persistFlow(flow: QuickBooksFlowState): Promise<void> {
     try {
-      await db.execute(`
-        INSERT INTO quickbooks_onboarding_flows (id, workspace_id, flow_data, created_at, updated_at)
-        VALUES ($1, $2, $3, NOW(), NOW())
-        ON CONFLICT (id) DO UPDATE SET
-          flow_data = $3,
-          updated_at = NOW()
-      `, [flow.flowId, flow.workspaceId, JSON.stringify(flow)]);
+      const flowData = this.serializeFlowData(flow);
+
+      const existing = await db.query.quickbooksOnboardingFlows.findFirst({
+        where: eq(quickbooksOnboardingFlows.id, flow.flowId),
+      });
+
+      if (existing) {
+        await db.update(quickbooksOnboardingFlows)
+          .set({
+            stage: flow.stage as any,
+            connectionId: flow.connectionId,
+            realmId: flow.realmId,
+            syncJobId: flow.syncJobId,
+            importedEmployeeCount: flow.importedEmployeeCount,
+            generatedScheduleId: flow.generatedScheduleId,
+            automationSettings: flow.automationSettings,
+            errors: flow.errors,
+            warnings: flow.warnings,
+            flowData: flowData,
+            completedAt: flow.completedAt,
+            updatedAt: new Date(),
+          })
+          .where(eq(quickbooksOnboardingFlows.id, flow.flowId));
+      } else {
+        await db.insert(quickbooksOnboardingFlows).values({
+          id: flow.flowId,
+          workspaceId: flow.workspaceId,
+          userId: flow.userId,
+          stage: flow.stage as any,
+          connectionId: flow.connectionId,
+          realmId: flow.realmId,
+          syncJobId: flow.syncJobId,
+          importedEmployeeCount: flow.importedEmployeeCount,
+          generatedScheduleId: flow.generatedScheduleId,
+          automationSettings: flow.automationSettings,
+          errors: flow.errors,
+          warnings: flow.warnings,
+          flowData: flowData,
+          startedAt: flow.startedAt,
+          completedAt: flow.completedAt,
+        });
+      }
     } catch (error) {
-      console.log('[OnboardingQuickBooksFlow] Persistence skipped - table may not exist');
+      console.error('[OnboardingQuickBooksFlow] Persistence failed:', error);
     }
   }
 
   async loadFlows(): Promise<void> {
     try {
-      const result = await db.execute(`
-        SELECT flow_data FROM quickbooks_onboarding_flows
-        WHERE flow_data->>'stage' NOT IN ('flow_complete', 'flow_failed')
-      `);
+      const activeFlows = await db.query.quickbooksOnboardingFlows.findMany({
+        where: and(
+          ne(quickbooksOnboardingFlows.stage, 'flow_complete'),
+          ne(quickbooksOnboardingFlows.stage, 'flow_failed')
+        ),
+      });
       
-      for (const row of result.rows || []) {
-        const flowData = row.flow_data as QuickBooksFlowState;
-        flowData.startedAt = new Date(flowData.startedAt);
-        flowData.lastUpdatedAt = new Date(flowData.lastUpdatedAt);
-        if (flowData.completedAt) {
-          flowData.completedAt = new Date(flowData.completedAt);
+      for (const row of activeFlows) {
+        const rawData = row.flowData as Record<string, any>;
+        if (rawData) {
+          const flow: QuickBooksFlowState = {
+            flowId: rawData.flowId || row.id,
+            workspaceId: rawData.workspaceId || row.workspaceId,
+            userId: rawData.userId || row.userId,
+            stage: (rawData.stage || row.stage) as FlowStage,
+            connectionId: rawData.connectionId || row.connectionId,
+            realmId: rawData.realmId || row.realmId,
+            syncJobId: rawData.syncJobId || row.syncJobId,
+            importedEmployeeCount: rawData.importedEmployeeCount ?? row.importedEmployeeCount ?? 0,
+            generatedScheduleId: rawData.generatedScheduleId || row.generatedScheduleId,
+            automationSettings: rawData.automationSettings || row.automationSettings || {
+              autoInvoice: true,
+              autoPayroll: true,
+              autoSchedule: true,
+            },
+            errors: Array.isArray(rawData.errors) ? rawData.errors : (row.errors as string[] || []),
+            warnings: Array.isArray(rawData.warnings) ? rawData.warnings : (row.warnings as string[] || []),
+            startedAt: new Date(rawData.startedAt || row.startedAt),
+            lastUpdatedAt: new Date(rawData.lastUpdatedAt || row.updatedAt || new Date()),
+            completedAt: rawData.completedAt ? new Date(rawData.completedAt) : 
+                         row.completedAt ? new Date(row.completedAt) : undefined,
+          };
+          this.flows.set(flow.flowId, flow);
         }
-        this.flows.set(flowData.flowId, flowData);
       }
       
-      console.log(`[OnboardingQuickBooksFlow] Loaded ${this.flows.size} active flows`);
+      console.log(`[OnboardingQuickBooksFlow] Loaded ${this.flows.size} active flows from database`);
     } catch (error) {
       console.log('[OnboardingQuickBooksFlow] No persisted flows to load');
     }
+  }
+
+  /**
+   * Import employees from QuickBooks to CoAIleague database
+   * Validates fields, checks duplicates, and inserts with proper schema types
+   */
+  async importQuickBooksEmployees(
+    workspaceId: string, 
+    qbEmployees: Array<{
+      id: string;
+      displayName?: string;
+      givenName?: string;
+      familyName?: string;
+      primaryPhone?: { freeFormNumber?: string };
+      primaryEmailAddr?: { address?: string };
+      hireDate?: string;
+      billRate?: number;
+      costRate?: number;
+    }>
+  ): Promise<{ imported: number; failed: number; skipped: number; errors: string[] }> {
+    const results = { imported: 0, failed: 0, skipped: 0, errors: [] as string[] };
+
+    if (!qbEmployees || qbEmployees.length === 0) {
+      return results;
+    }
+
+    // Pre-validate all employees
+    const validEmployees: Array<{
+      qbId: string;
+      firstName: string;
+      lastName: string;
+      displayName: string;
+      email: string | null;
+      phone: string | null;
+      hourlyRate: string;
+      hireDate: Date | null;
+    }> = [];
+
+    for (const qbEmp of qbEmployees) {
+      if (!qbEmp.id) {
+        results.errors.push(`Employee missing QuickBooks ID`);
+        results.failed++;
+        continue;
+      }
+
+      const firstName = qbEmp.givenName?.trim() || '';
+      const lastName = qbEmp.familyName?.trim() || '';
+      const displayName = qbEmp.displayName?.trim() || `${firstName} ${lastName}`.trim();
+      
+      if (!firstName && !lastName && !displayName) {
+        results.errors.push(`Employee ID ${qbEmp.id}: Missing name fields`);
+        results.failed++;
+        continue;
+      }
+
+      const hourlyRate = (qbEmp.billRate || qbEmp.costRate || 15).toFixed(2);
+      
+      validEmployees.push({
+        qbId: qbEmp.id,
+        firstName: firstName || displayName.split(' ')[0] || 'Unknown',
+        lastName: lastName || displayName.split(' ').slice(1).join(' ') || 'Employee',
+        displayName,
+        email: qbEmp.primaryEmailAddr?.address || null,
+        phone: qbEmp.primaryPhone?.freeFormNumber || null,
+        hourlyRate,
+        hireDate: qbEmp.hireDate ? new Date(qbEmp.hireDate) : null,
+      });
+    }
+
+    // Process in batches of 10
+    const BATCH_SIZE = 10;
+    for (let i = 0; i < validEmployees.length; i += BATCH_SIZE) {
+      const batch = validEmployees.slice(i, i + BATCH_SIZE);
+      
+      for (const emp of batch) {
+        try {
+          const existingByQbId = await db.query.employees.findFirst({
+            where: and(
+              eq(employees.workspaceId, workspaceId),
+              eq(employees.quickbooksEmployeeId, emp.qbId)
+            ),
+          });
+
+          if (existingByQbId) {
+            console.log(`[QB Import] Employee ${emp.displayName} already exists by QB ID, skipping`);
+            results.skipped++;
+            continue;
+          }
+
+          if (emp.email) {
+            const existingByEmail = await db.query.employees.findFirst({
+              where: and(
+                eq(employees.workspaceId, workspaceId),
+                eq(employees.email, emp.email)
+              ),
+            });
+            if (existingByEmail) {
+              await db.update(employees)
+                .set({ quickbooksEmployeeId: emp.qbId })
+                .where(eq(employees.id, existingByEmail.id));
+              results.imported++;
+              console.log(`[QB Import] Linked existing employee ${emp.displayName} to QB ID`);
+              continue;
+            }
+          }
+
+          await db.insert(employees).values({
+            workspaceId,
+            firstName: emp.firstName,
+            lastName: emp.lastName,
+            email: emp.email,
+            phone: emp.phone,
+            role: 'Field Staff',
+            hourlyRate: emp.hourlyRate,
+            hireDate: emp.hireDate,
+            isActive: true,
+            quickbooksEmployeeId: emp.qbId,
+          });
+
+          results.imported++;
+          console.log(`[QB Import] Imported employee: ${emp.firstName} ${emp.lastName}`);
+        } catch (error: any) {
+          results.errors.push(`${emp.displayName}: ${error.message}`);
+          results.failed++;
+        }
+      }
+    }
+
+    console.log(`[QB Import] Complete - Imported: ${results.imported}, Skipped: ${results.skipped}, Failed: ${results.failed}`);
+    return results;
   }
 }
 
