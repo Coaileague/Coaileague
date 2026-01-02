@@ -3,6 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { selectSidebarFamilies, type ModuleRoute } from "@/lib/sidebarModules";
 import { useQuery } from "@tanstack/react-query";
+import { HideInSimpleMode } from "@/components/SimpleMode";
 import { 
   Users, Activity, DollarSign, 
   FileText, Calendar, Clock, ArrowRight,
@@ -638,7 +639,8 @@ export default function Dashboard() {
         </div>
         </ResponsiveSection>
 
-        {/* Automation Value Metrics - Only show for workspace scope */}
+        {/* Automation Value Metrics - Only show for workspace scope (hidden in Simple Mode) */}
+        <HideInSimpleMode>
         {stats?.automation && (
           <ResponsiveSection>
             <div className="bg-gradient-to-br from-blue-600 to-indigo-600 from-blue-600 to-indigo-600 rounded-xl p-6 sm:p-8 mobile-compact-p text-white shadow-lg border-2 border-blue-500 border-blue-500">
@@ -728,6 +730,7 @@ export default function Dashboard() {
             </div>
           </ResponsiveSection>
         )}
+        </HideInSimpleMode>
 
         {/* Compliance Alerts Section */}
         <ComplianceAlerts />
