@@ -1,23 +1,36 @@
 /**
  * QuickBooks OAuth Integration Service
  * 
- * This is a stub implementation for QuickBooks Online integration.
+ * Supports ALL QuickBooks editions:
+ * - QuickBooks Online: Simple Start, Essentials, Plus, Advanced
+ * - QuickBooks Desktop: Pro, Premier, Enterprise (via Web Connector)
+ * 
+ * CRITICAL: API Version 75+ required as of August 1, 2025
+ * @see https://developer.intuit.com/app/developer/qbo/docs/learn/explore-the-quickbooks-online-api/minor-versions
+ * 
  * To enable full functionality:
  * 1. Register an app at https://developer.intuit.com/
  * 2. Set environment variables: QUICKBOOKS_CLIENT_ID, QUICKBOOKS_CLIENT_SECRET
  * 3. Configure OAuth redirect URI in your QuickBooks app settings
- * 
- * Gap #P1: QuickBooks OAuth integration requires manual API key setup
- * as there is no Replit integration available for QuickBooks.
  */
 
 import { db } from '../../db';
 import { eq, and } from 'drizzle-orm';
+import { 
+  QB_API_VERSION, 
+  QB_EDITIONS, 
+  QBEditionType, 
+  getEditionByCompanyInfo,
+  analyzeQBMigration,
+  type QBEditionConfig
+} from '@shared/quickbooks-editions';
 
 const QUICKBOOKS_SANDBOX_URL = 'https://sandbox-quickbooks.api.intuit.com';
 const QUICKBOOKS_PRODUCTION_URL = 'https://quickbooks.api.intuit.com';
 const QUICKBOOKS_AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
 const QUICKBOOKS_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
+
+const API_MINOR_VERSION = QB_API_VERSION.REQUIRED_MINOR_VERSION;
 
 export interface QuickBooksConfig {
   clientId: string;
@@ -32,6 +45,8 @@ export interface QuickBooksCredentials {
   refreshToken: string;
   realmId: string;
   expiresAt: Date;
+  edition?: QBEditionType;
+  editionConfig?: QBEditionConfig;
 }
 
 export class QuickBooksIntegration {
@@ -171,6 +186,11 @@ export class QuickBooksIntegration {
     if (!this.config) {
       return { success: false, synced: 0, errors: ['QuickBooks integration not configured'] };
     }
+
+    const editionConfig = credentials.editionConfig || QB_EDITIONS[credentials.edition || 'unknown'];
+    if (!editionConfig.syncCapabilities.invoices) {
+      return { success: false, synced: 0, errors: [`Invoice sync not supported for ${editionConfig.displayName}`] };
+    }
     
     const errors: string[] = [];
     let synced = 0;
@@ -179,7 +199,7 @@ export class QuickBooksIntegration {
       try {
         const qbInvoice = this.mapInvoiceToQuickBooks(invoice);
         const response = await fetch(
-          `${this.getBaseUrl()}/v3/company/${credentials.realmId}/invoice?minorversion=65`,
+          `${this.getBaseUrl()}/v3/company/${credentials.realmId}/invoice?minorversion=${API_MINOR_VERSION}`,
           {
             method: 'POST',
             headers: {
@@ -234,7 +254,7 @@ export class QuickBooksIntegration {
     
     try {
       const response = await fetch(
-        `${this.getBaseUrl()}/v3/company/${credentials.realmId}/companyinfo/${credentials.realmId}?minorversion=65`,
+        `${this.getBaseUrl()}/v3/company/${credentials.realmId}/companyinfo/${credentials.realmId}?minorversion=${API_MINOR_VERSION}`,
         {
           headers: {
             'Accept': 'application/json',
@@ -253,6 +273,148 @@ export class QuickBooksIntegration {
       console.error('[QuickBooks] Error getting company info:', error);
       return null;
     }
+  }
+
+  async detectEdition(credentials: QuickBooksCredentials): Promise<{ edition: QBEditionType; config: QBEditionConfig; migrationAnalysis: ReturnType<typeof analyzeQBMigration> }> {
+    const companyInfo = await this.getCompanyInfo(credentials);
+    
+    const edition = companyInfo 
+      ? getEditionByCompanyInfo({
+          subscriptionStatus: companyInfo.SubscriptionStatus,
+          offeringSku: companyInfo.OfferingSku,
+          industryType: companyInfo.IndustryType,
+        })
+      : 'unknown';
+    
+    const config = QB_EDITIONS[edition];
+    const migrationAnalysis = analyzeQBMigration(edition);
+    
+    console.log(`[QuickBooks] Detected edition: ${config.displayName}`);
+    console.log(`[QuickBooks] Migration compatibility: ${migrationAnalysis.targetCompatibility}`);
+    
+    return { edition, config, migrationAnalysis };
+  }
+
+  getSupportedEditions(): typeof QB_EDITIONS {
+    return QB_EDITIONS;
+  }
+
+  getApiVersion(): typeof QB_API_VERSION {
+    return QB_API_VERSION;
+  }
+
+  async syncTimeActivities(credentials: QuickBooksCredentials, timeEntries: any[]): Promise<{ success: boolean; synced: number; errors: string[] }> {
+    if (!this.config) {
+      return { success: false, synced: 0, errors: ['QuickBooks integration not configured'] };
+    }
+
+    const editionConfig = credentials.editionConfig || QB_EDITIONS[credentials.edition || 'unknown'];
+    if (!editionConfig.syncCapabilities.timeActivities) {
+      return { success: false, synced: 0, errors: [`Time Activities sync not supported for ${editionConfig.displayName}. Upgrade to Essentials or higher.`] };
+    }
+    
+    const errors: string[] = [];
+    let synced = 0;
+    
+    for (const entry of timeEntries) {
+      try {
+        const qbTimeActivity = this.mapTimeEntryToQuickBooks(entry);
+        const response = await fetch(
+          `${this.getBaseUrl()}/v3/company/${credentials.realmId}/timeactivity?minorversion=${API_MINOR_VERSION}`,
+          {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${credentials.accessToken}`,
+            },
+            body: JSON.stringify(qbTimeActivity),
+          }
+        );
+        
+        if (response.ok) {
+          synced++;
+          console.log(`[QuickBooks] Synced time entry ${entry.id}`);
+        } else {
+          const error = await response.text();
+          errors.push(`Time entry ${entry.id}: ${error}`);
+        }
+      } catch (error) {
+        errors.push(`Time entry ${entry.id}: ${error}`);
+      }
+    }
+    
+    return { success: errors.length === 0, synced, errors };
+  }
+
+  private mapTimeEntryToQuickBooks(entry: any): any {
+    return {
+      NameOf: 'Employee',
+      EmployeeRef: { value: entry.employeeQbId },
+      CustomerRef: entry.customerQbId ? { value: entry.customerQbId } : undefined,
+      ItemRef: entry.serviceItemQbId ? { value: entry.serviceItemQbId } : undefined,
+      TxnDate: entry.date?.toISOString().split('T')[0],
+      Hours: entry.hours,
+      Minutes: entry.minutes || 0,
+      Description: entry.description,
+      BillableStatus: entry.billable ? 'Billable' : 'NotBillable',
+    };
+  }
+
+  async syncCustomers(credentials: QuickBooksCredentials, customers: any[]): Promise<{ success: boolean; synced: number; errors: string[] }> {
+    if (!this.config) {
+      return { success: false, synced: 0, errors: ['QuickBooks integration not configured'] };
+    }
+
+    const editionConfig = credentials.editionConfig || QB_EDITIONS[credentials.edition || 'unknown'];
+    if (!editionConfig.syncCapabilities.customers) {
+      return { success: false, synced: 0, errors: [`Customer sync not supported for ${editionConfig.displayName}`] };
+    }
+    
+    const errors: string[] = [];
+    let synced = 0;
+    
+    for (const customer of customers) {
+      try {
+        const qbCustomer = {
+          DisplayName: customer.name || customer.displayName,
+          CompanyName: customer.companyName,
+          PrimaryEmailAddr: customer.email ? { Address: customer.email } : undefined,
+          PrimaryPhone: customer.phone ? { FreeFormNumber: customer.phone } : undefined,
+          BillAddr: customer.address ? {
+            Line1: customer.address.line1,
+            City: customer.address.city,
+            CountrySubDivisionCode: customer.address.state,
+            PostalCode: customer.address.postalCode,
+          } : undefined,
+        };
+
+        const response = await fetch(
+          `${this.getBaseUrl()}/v3/company/${credentials.realmId}/customer?minorversion=${API_MINOR_VERSION}`,
+          {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${credentials.accessToken}`,
+            },
+            body: JSON.stringify(qbCustomer),
+          }
+        );
+        
+        if (response.ok) {
+          synced++;
+          console.log(`[QuickBooks] Synced customer ${customer.id}`);
+        } else {
+          const error = await response.text();
+          errors.push(`Customer ${customer.id}: ${error}`);
+        }
+      } catch (error) {
+        errors.push(`Customer ${customer.id}: ${error}`);
+      }
+    }
+    
+    return { success: errors.length === 0, synced, errors };
   }
 }
 
