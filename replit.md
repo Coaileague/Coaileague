@@ -61,6 +61,7 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Go-Live Confidence Check:** GREEN/YELLOW/RED automation health status
 - **Resolution Inbox:** Exception management UI for operational visibility
 - **QuickBooks 99% Automation:** Invoice sync, identity mapping, exception triage
+- **Financial Watchdog:** Platform Hours vs Invoice Hours reconciliation with Trinity Verified badges, widget toggles for Simple/Full views, and automatic discrepancy alerts (>5% variance)
 - **Capability Evidence Matrix:** See `TRINITY_CAPABILITY_MATRIX.md` for verified vs roadmap features
 
 **Roadmap Features (Not Yet Active):**
