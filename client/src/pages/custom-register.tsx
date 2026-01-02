@@ -12,6 +12,7 @@ import { Loader2, Eye, EyeOff } from "lucide-react";
 import { useLocation } from "wouter";
 import { apiPost } from "@/lib/apiClient";
 import { navConfig } from "@/config/navigationConfig";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 
 const registerSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -37,6 +38,7 @@ export default function CustomRegister() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const { executeRecaptcha } = useRecaptcha({ action: 'register' });
 
   const form = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
@@ -52,11 +54,15 @@ export default function CustomRegister() {
   const onSubmit = async (data: RegisterFormData) => {
     setIsLoading(true);
     try {
+      // Get reCAPTCHA token (invisible, runs in background)
+      const recaptchaToken = await executeRecaptcha();
+      
       const response = await apiPost('auth.register', {
         firstName: data.firstName,
         lastName: data.lastName,
         email: data.email,
         password: data.password,
+        recaptchaToken,
       });
 
       toast({

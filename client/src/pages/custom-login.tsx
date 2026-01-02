@@ -15,6 +15,7 @@ import { queryClient } from "@/lib/queryClient";
 import { THEME } from "@/config/theme";
 import { CoAIleagueLogo } from "@/components/coailleague-logo";
 import { useUniversalAnimation } from "@/contexts/universal-animation-context";
+import { useRecaptcha } from "@/hooks/useRecaptcha";
 
 const REMEMBER_ME_KEY = "coaileague_remember_me";
 
@@ -58,6 +59,7 @@ export default function CustomLogin() {
   const [loginData, setLoginData] = useState<LoginResponse["user"] | null>(null);
   const [loadingDuration, setLoadingDuration] = useState(0);
   const animationContext = useUniversalAnimation();
+  const { executeRecaptcha } = useRecaptcha({ action: 'login' });
 
   const form = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -98,10 +100,13 @@ export default function CustomLogin() {
     }
 
     try {
+      // Get reCAPTCHA token (invisible, runs in background)
+      const recaptchaToken = await executeRecaptcha();
+      
       const response = await fetch("/api/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
+        body: JSON.stringify({ ...data, recaptchaToken }),
       });
 
       const endTime = Date.now();
