@@ -1,0 +1,105 @@
+Should be considered LOCKED / STABLE
+
+Do not refactor these now unless forced:
+
+QuickBooks integration logic
+
+Identity mapping & matching tiers
+
+Idempotency + duplicate prevention
+
+Billing / payroll orchestration
+
+Exception triage + approval gating
+
+These are now audited assets.
+
+Tag internally as something like:
+
+TRINITY_FINANCIAL_CORE_V1 (AUDITED)
+
+🟡 Optional / Strategic (not blockers)
+
+These are now product levers, not risk fixes:
+
+Value Ledger (ROI storytelling)
+
+Reconciliation UI tab (visualization)
+
+Employee fuzzy matching (onboarding comfort)
+
+Disabled modes (Guru, Business Pro, Dynamic Pricing)
+
+Important:
+Because they’re documented as disabled, they don’t count as gaps. That’s actually a strength.
+
+3) What I recommend you do next (very clear path)
+A. Convert this audit into 3 artifacts
+
+You already have the raw material.
+
+1️⃣ Internal Sign-Off Doc
+
+One page:
+
+“This system is production-ready as of <date>”
+
+What’s in scope
+
+What’s intentionally disabled
+
+Who approved it
+
+This prevents endless re-litigation later.
+
+2️⃣ Intuit Reviewer-Safe Summary
+
+A short version of this audit that says:
+
+“Trinity is an accounting automation platform with independent validation, reconciliation, and safe-halt controls. Payments are not processed by Trinity. All actions are tenant-scoped, idempotent, and auditable.”
+
+I can draft this verbatim if you want.
+
+3️⃣ Sales / Enterprise Readiness One-Pager
+
+Translate the matrix into buyer language:
+
+“What Trinity automates”
+
+“What Trinity verifies”
+
+“What Trinity prevents”
+
+“Where humans stay in control”
+
+This is how you sell trust, not features.
+
+B. Decide your next single build focus
+
+You should not build everything next. Pick one lane:
+
+Revenue lane: Value Ledger + ROI dashboards
+
+Enterprise lane: Reconciliation UI + audit exports
+
+Growth lane: Faster onboarding UX + doc import polish
+
+Platform lane: Leave it alone, market what’s built
+
+Trying to do all four slows momentum.
+
+Bottom line (important)
+
+You now have:
+
+A capability matrix
+
+An audit trail
+
+Verified integration safety
+
+Documented intentional constraints
+
+A platform that behaves like a financial co-pilot, not a script runner
+
+That puts Trinity in a very small category of systems.

@@ -77,6 +77,13 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Feature Registry Sync:** Auto-bumps sync version on every live patch deployment
 - **Integration Tests Added:** 4 tests for notification deduplication enforcement
 - **Capability Matrix Audit:** Full audit of 367+ actions, 7 domain subagents, QuickBooks integration
+- **TRINITY_FINANCIAL_CORE_V1 LOCKED:** Production sign-off artifacts created
+
+## Compliance Documentation
+- `docs/TRINITY_FINANCIAL_CORE_V1_SIGNOFF.md` - Internal sign-off with scope and approvals
+- `docs/INTUIT_REVIEWER_SUMMARY.md` - Intuit-safe summary for production key review
+- `docs/TRINITY_ENTERPRISE_ONEPAGER.md` - Enterprise sales positioning document
+- `TRINITY_CAPABILITY_MATRIX.md` - Full capability evidence matrix
 
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
