@@ -56,6 +56,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { WorkspaceLayout } from "@/components/workspace-layout";
 import { useUnsavedChangesWarning } from "@/hooks/use-unsaved-changes";
 import { SettingsCardSkeleton, PageHeaderSkeleton } from "@/components/loading-indicators/skeletons";
+import { SimpleModeToggle } from "@/components/SimpleModeToggle";
 
 // Settings section configuration for navigation
 const SETTINGS_SECTIONS = [
@@ -820,6 +821,9 @@ export default function Settings() {
 
         {/* Quick Settings Section */}
         <TabsContent value="quick" className="mt-6 space-y-6">
+          {/* Easy View Mode - Top Priority Setting */}
+          <SimpleModeToggle variant="labeled" />
+          
           <div className="grid gap-6 lg:grid-cols-2">
             {/* Quick Toggles Card */}
             <Card>
