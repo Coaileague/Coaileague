@@ -36,6 +36,11 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Cognitive Onboarding Service:** Third-party API integrations for automatic data extraction during organization setup, with OAuth2 and AI-powered field mapping.
 - **HRIS Integration Service:** Unified 8-provider HRIS integration with OAuth2, bidirectional data sync, AI-powered field mapping, conflict resolution, and AI Brain orchestration.
 
+**Notification Architecture:**
+- **Trinity-Exclusive Updates:** Trinity is the sole writer for "What's New" updates, preventing duplicate notifications
+- **UNS Fallback:** Universal Notification Service acts as fallback only, with 24-hour duplicate detection
+- **Feature Registry Sync:** Platform feature registry tracks sync version/timestamps for Trinity orchestration awareness
+
 **System Design Choices:**
 - **Modularity:** Extensive backend service modules and frontend routes.
 - **Type Safety:** 100% LSP clean.
