@@ -25,6 +25,7 @@ import { broadcastToAllClients, broadcastToWorkspace, broadcastNotificationToUse
 import { publishPlatformUpdate, platformEventBus } from '../platformEventBus';
 import { notificationStateManager } from '../notificationStateManager';
 import { UniversalNotificationEngine } from '../universalNotificationEngine';
+import { platformFeatureRegistry } from './platformFeatureRegistry';
 
 export type NotificationPriority = 'critical' | 'high' | 'normal' | 'low' | 'batch';
 export type DeliveryChannel = 'websocket' | 'push' | 'email' | 'in_app' | 'sms';
@@ -213,6 +214,10 @@ class TrinityNotificationBridge {
     }
 
     await this.logDeployment(patch);
+
+    // Refresh Trinity's feature registry sync on each deployment
+    const syncStatus = platformFeatureRegistry.refreshSync();
+    console.log(`[TrinityNotificationBridge] Feature registry synced: v${syncStatus.syncVersion}`);
 
     return this.sendNotification(payload);
   }
