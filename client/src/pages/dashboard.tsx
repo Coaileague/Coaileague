@@ -322,13 +322,21 @@ export default function Dashboard() {
   }
 
   const firstName = user?.firstName || user?.email?.split('@')[0] || 'User';
-  const totalEmployees = stats?.summary.activeEmployees || 0;
-  // CRITICAL FIX: Use correct field based on context - no fallbacks to prevent silent inconsistencies
-  // workspace.activeClients = workspace-specific count when in workspace context
-  // summary.totalCustomers = platform-wide count (always accurate after backend fix)
-  const totalClients = stats?.workspace?.activeClients ?? stats?.summary.totalCustomers ?? 0;
-  const totalRevenue = stats?.summary.monthlyRevenue.amount || 0;
-  const totalOrganizations = stats?.summary.totalWorkspaces || 0;
+  
+  // MULTI-TENANT FIX: Use workspace-scoped stats for regular users, platform-wide for staff
+  // Platform staff (no workspace context) see summary stats, regular users see their workspace stats
+  const isStaffViewer = isPlatformStaff && !stats?.workspace;
+  const totalEmployees = isStaffViewer 
+    ? (stats?.summary.activeEmployees || 0)
+    : (stats?.workspace?.activeEmployees ?? 0);
+  const totalClients = isStaffViewer
+    ? (stats?.summary.totalCustomers || 0)
+    : (stats?.workspace?.activeClients ?? 0);
+  const totalRevenue = stats?.summary.monthlyRevenue?.amount || 0;
+  // Regular users always have 1 organization (their own), platform staff see all
+  const totalOrganizations = isStaffViewer 
+    ? (stats?.summary.totalWorkspaces || 0)
+    : 1;
 
   // Show loading overlay while dashboard data is loading
   const isLoadingDashboard = isLoading || accessLoading;
