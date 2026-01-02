@@ -430,8 +430,43 @@ router.get("/api/auth/me", requireAuth, async (req, res) => {
       workspaceRole: workspaceRole, // RBAC: Include workspace role for permissions
       employeeId: employeeId,
       organizationalTitle: organizationalTitle,
+      simpleMode: freshUser.simpleMode ?? false, // Easy View display preference
     },
   });
+});
+
+// ============================================================================
+// Update User Display Preferences
+// ============================================================================
+
+const preferencesSchema = z.object({
+  simpleMode: z.boolean().optional(),
+});
+
+router.patch("/api/user/preferences", requireAuth, async (req, res) => {
+  try {
+    const sessionUser = req.user as User;
+    const data = preferencesSchema.parse(req.body);
+    
+    const updates: Record<string, any> = {};
+    if (data.simpleMode !== undefined) {
+      updates.simpleMode = data.simpleMode;
+    }
+    
+    if (Object.keys(updates).length === 0) {
+      return res.status(400).json({ message: "No valid preferences to update" });
+    }
+    
+    await db
+      .update(users)
+      .set(updates)
+      .where(eq(users.id, sessionUser.id));
+    
+    res.json({ message: "Preferences updated", ...updates });
+  } catch (error) {
+    console.error("Preferences update error:", error);
+    res.status(500).json({ message: "Failed to update preferences" });
+  }
 });
 
 // ============================================================================

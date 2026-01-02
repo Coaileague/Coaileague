@@ -76,6 +76,9 @@ export const users = pgTable("users", {
   mfaBackupCodes: text("mfa_backup_codes").array(), // Encrypted backup codes
   mfaLastUsedAt: timestamp("mfa_last_used_at"),
 
+  // Display Preferences
+  simpleMode: boolean("simple_mode").default(false), // Hide complex widgets/tables for easier interface
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
