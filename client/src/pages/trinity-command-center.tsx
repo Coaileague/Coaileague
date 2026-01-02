@@ -104,6 +104,7 @@ import { format, formatDistanceToNow } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isSupportStaff } from "@/components/support-staff-route";
+import { QuickBooksCompliancePanel } from "@/components/quickbooks-compliance-panel";
 
 // ============================================================================
 // TYPES
@@ -888,6 +889,13 @@ export default function TrinityCommandCenter() {
                     )}
                   </CardContent>
                 </Card>
+              </div>
+            )}
+            
+            {/* QuickBooks Compliance Telemetry - Guru Mode Only */}
+            {canUseChat && trinityMode === 'strategic_guru' && (
+              <div className="space-y-2">
+                <QuickBooksCompliancePanel />
               </div>
             )}
             

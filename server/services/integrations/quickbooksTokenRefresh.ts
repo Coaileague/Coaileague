@@ -21,7 +21,7 @@
 
 import { db } from '../../db';
 import { eq, lt, and, sql } from 'drizzle-orm';
-import { eventBus } from '../eventBus';
+import { platformEventBus } from '../platformEventBus';
 import { quickbooksDiscovery } from './quickbooksDiscovery';
 
 interface StoredCredentials {
@@ -133,11 +133,16 @@ class QuickBooksTokenRefreshDaemon {
       if (refreshTokenExpiry < new Date()) {
         console.warn(`[QB TokenRefresh] Refresh token expired for workspace ${creds.workspaceId}`);
         
-        eventBus.emit('quickbooks_token_expired', {
+        platformEventBus.publish({
+          type: 'ai_brain_action',
+          category: 'automation',
+          title: 'QuickBooks Token Expired',
+          description: `QuickBooks refresh token expired for realm ${creds.realmId}. Reauthorization required.`,
           workspaceId: creds.workspaceId,
-          realmId: creds.realmId,
-          reason: 'refresh_token_expired',
-          timestamp: new Date(),
+          metadata: {
+            realmId: creds.realmId,
+            reason: 'refresh_token_expired',
+          },
         });
         
         await this.markCredentialsInactive(creds.id);
@@ -205,11 +210,16 @@ class QuickBooksTokenRefreshDaemon {
       
       console.log(`[QB TokenRefresh] Successfully refreshed token for workspace ${creds.workspaceId}`);
       
-      eventBus.emit('quickbooks_token_refreshed', {
+      platformEventBus.publish({
+        type: 'ai_brain_action',
+        category: 'automation',
+        title: 'QuickBooks Token Refreshed',
+        description: `QuickBooks access token successfully refreshed for realm ${creds.realmId}.`,
         workspaceId: creds.workspaceId,
-        realmId: creds.realmId,
-        expiresAt: newExpiresAt,
-        timestamp: new Date(),
+        metadata: {
+          realmId: creds.realmId,
+          expiresAt: newExpiresAt.toISOString(),
+        },
       });
       
       return {
