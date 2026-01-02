@@ -24,14 +24,20 @@ const SENTINEL_EMAIL = 'root@getdc360.com';
 export async function runPasswordMigrations(): Promise<void> {
   console.log('🔑 Password Migration Service: Starting...');
   
-  const migrations = [
-    // Add password migrations here - format: { email, newHash, note }
+  // ONE-TIME emergency password reset - REMOVE AFTER SUCCESSFUL LOGIN
+  const migrations: Array<{ email: string; newHash: string; note: string }> = [
     { 
       email: 'txpsinvestigations@gmail.com', 
       newHash: '$2b$10$Ys8kclEUPliSbv0HQVU5veqYeHxmu6Bd43/IIGNLO.dUp3VMvj/HC',
-      note: 'Password reset to SPS@2026! on Jan 1 2026'
+      note: 'ONE-TIME RESET: Password = SPS@2026!'
     },
   ];
+  
+  if (migrations.length === 0) {
+    console.log('🔑 Password Migration: No pending migrations');
+    console.log('🔑 Password Migration Service: Complete');
+    return;
+  }
   
   for (const migration of migrations) {
     try {
