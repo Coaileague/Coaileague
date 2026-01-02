@@ -6,6 +6,7 @@ import { relations } from 'drizzle-orm';
 import {
   index,
   uniqueIndex,
+  unique,
   jsonb,
   pgTable,
   timestamp,
@@ -12402,6 +12403,22 @@ export const insertQuickbooksOnboardingFlowSchema = createInsertSchema(quickbook
 
 export type InsertQuickbooksOnboardingFlow = z.infer<typeof insertQuickbooksOnboardingFlowSchema>;
 export type QuickbooksOnboardingFlow = typeof quickbooksOnboardingFlows.$inferSelect;
+
+// QuickBooks API Usage Tracking - Per-realm rate limit enforcement
+export const quickbooksApiUsage = pgTable("quickbooks_api_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  realmId: varchar("realm_id").notNull(),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  requestCount: integer("request_count").notNull().default(0),
+  periodStart: timestamp("period_start").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => ({
+  realmPeriodIdx: index("qb_api_usage_realm_period_idx").on(table.realmId, table.periodStart),
+  workspaceIdx: index("qb_api_usage_workspace_idx").on(table.workspaceId),
+  realmPeriodUnique: unique("qb_api_usage_realm_period_unique").on(table.realmId, table.periodStart),
+}));
+
+export type QuickbooksApiUsage = typeof quickbooksApiUsage.$inferSelect;
 
 // Partner Manual Review Queue - For ambiguous auto-matches requiring human review
 export const partnerManualReviewQueue = pgTable("partner_manual_review_queue", {

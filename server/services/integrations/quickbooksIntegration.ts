@@ -24,11 +24,12 @@ import {
   analyzeQBMigration,
   type QBEditionConfig
 } from '@shared/quickbooks-editions';
+import { quickbooksDiscovery } from './quickbooksDiscovery';
+import { quickbooksRateLimiter } from './quickbooksRateLimiter';
+import { quotaEnforcementService } from './quotaEnforcementService';
 
 const QUICKBOOKS_SANDBOX_URL = 'https://sandbox-quickbooks.api.intuit.com';
 const QUICKBOOKS_PRODUCTION_URL = 'https://quickbooks.api.intuit.com';
-const QUICKBOOKS_AUTH_URL = 'https://appcenter.intuit.com/connect/oauth2';
-const QUICKBOOKS_TOKEN_URL = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
 
 const API_MINOR_VERSION = QB_API_VERSION.REQUIRED_MINOR_VERSION;
 
@@ -74,20 +75,22 @@ export class QuickBooksIntegration {
     return this.config !== null;
   }
   
-  getAuthorizationUrl(state: string): string {
+  async getAuthorizationUrl(state: string): Promise<string> {
     if (!this.config) {
       throw new Error('QuickBooks integration not configured. Set QUICKBOOKS_CLIENT_ID and QUICKBOOKS_CLIENT_SECRET.');
     }
     
+    const authEndpoint = await quickbooksDiscovery.getAuthorizationEndpoint(this.config.environment);
+    
     const params = new URLSearchParams({
       client_id: this.config.clientId,
       response_type: 'code',
-      scope: 'com.intuit.quickbooks.accounting',
+      scope: 'com.intuit.quickbooks.accounting openid profile email',
       redirect_uri: this.config.redirectUri,
       state,
     });
     
-    return `${QUICKBOOKS_AUTH_URL}?${params.toString()}`;
+    return `${authEndpoint}?${params.toString()}`;
   }
   
   async exchangeCodeForTokens(code: string, realmId: string): Promise<QuickBooksCredentials | null> {
@@ -96,9 +99,10 @@ export class QuickBooksIntegration {
     }
     
     try {
+      const tokenEndpoint = await quickbooksDiscovery.getTokenEndpoint(this.config.environment);
       const basicAuth = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString('base64');
       
-      const response = await fetch(QUICKBOOKS_TOKEN_URL, {
+      const response = await fetch(tokenEndpoint, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -140,9 +144,10 @@ export class QuickBooksIntegration {
     }
     
     try {
+      const tokenEndpoint = await quickbooksDiscovery.getTokenEndpoint(this.config.environment);
       const basicAuth = Buffer.from(`${this.config.clientId}:${this.config.clientSecret}`).toString('base64');
       
-      const response = await fetch(QUICKBOOKS_TOKEN_URL, {
+      const response = await fetch(tokenEndpoint, {
         method: 'POST',
         headers: {
           'Accept': 'application/json',
@@ -173,6 +178,64 @@ export class QuickBooksIntegration {
     } catch (error) {
       console.error('[QuickBooks] Error refreshing token:', error);
       return null;
+    }
+  }
+
+  async makeRateLimitedRequest<T>(
+    workspaceId: string,
+    realmId: string,
+    requestFn: () => Promise<T>,
+    priority: number = 0
+  ): Promise<{ success: boolean; data?: T; error?: string; rateLimited?: boolean; waitMs?: number }> {
+    const quotaCheck = await quotaEnforcementService.checkQuota(workspaceId, 'quickbooks_api', 1, realmId);
+    
+    if (!quotaCheck.allowed) {
+      return {
+        success: false,
+        error: quotaCheck.reason || 'QuickBooks quota exceeded',
+        rateLimited: true,
+        waitMs: quotaCheck.waitMs,
+      };
+    }
+    
+    const canProceed = await quickbooksRateLimiter.waitForSlot(
+      realmId,
+      this.config?.environment || 'sandbox',
+      priority,
+      30000
+    );
+    
+    if (!canProceed) {
+      return {
+        success: false,
+        error: 'Rate limit timeout - please try again later',
+        rateLimited: true,
+      };
+    }
+    
+    try {
+      const data = await requestFn();
+      quickbooksRateLimiter.completeRequest(realmId, this.config?.environment || 'sandbox', true);
+      
+      await quotaEnforcementService.recordQBApiUsage(workspaceId, realmId, 1);
+      
+      return { success: true, data };
+    } catch (error: any) {
+      quickbooksRateLimiter.completeRequest(realmId, this.config?.environment || 'sandbox', false);
+      
+      if (error.status === 429) {
+        quickbooksRateLimiter.recordThrottle(realmId, this.config?.environment || 'sandbox');
+        return {
+          success: false,
+          error: 'QuickBooks rate limit exceeded',
+          rateLimited: true,
+        };
+      }
+      
+      return {
+        success: false,
+        error: error.message,
+      };
     }
   }
   

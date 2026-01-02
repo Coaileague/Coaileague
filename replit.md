@@ -49,6 +49,12 @@ CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management p
 
 ### Integrations
 - **QuickBooks**: 7-step migration wizard + bidirectional sync (employees, clients, invoices)
+  - **Compliance Infrastructure (Jan 2026)**:
+    - Intuit Discovery Document for dynamic OAuth endpoint management
+    - Per-realm rate limiting (500 req/min production, 100 req/min sandbox)
+    - Persisted API usage tracking in `quickbooks_api_usage` table
+    - Proactive token refresh daemon (15 min before expiry)
+    - Unified quota enforcement with tier-based limits
 - **Stripe**: Real payments, subscriptions, invoicing, metered billing for overages
 - **Twilio SMS**: Schedule notifications, incident alerts, payroll confirmations
 - **Resend**: Email automation with per-email billing and templates
