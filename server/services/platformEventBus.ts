@@ -13,6 +13,7 @@ import { db } from '../db';
 import { platformUpdates, notifications, platformRoles, systemAuditLogs, employees } from '@shared/schema';
 import { eq, and, inArray, gte, isNull } from 'drizzle-orm';
 import { generatePlatformUpdate as aiGeneratePlatformUpdate } from './aiNotificationService';
+import { broadcastPlatformUpdateGlobal } from '../websocket';
 
 export type PlatformEventType = 
   | 'feature_released'
@@ -137,14 +138,10 @@ class PlatformEventBus {
 
     try {
       // 1. Store in What's New feed (persisted to database)
+      // Also broadcasts via broadcastPlatformUpdateGlobal for UNS
       await this.storeInWhatsNew(event);
 
-      // 2. Broadcast via WebSocket to all connected clients
-      if (this.wsHandler) {
-        this.wsHandler(event);
-      }
-
-      // 3. Create notifications for relevant users
+      // 2. Create notifications for relevant users
       await this.createNotifications(event);
 
       // 4. Notify all subscribers
@@ -195,13 +192,38 @@ class PlatformEventBus {
           version: event.version,
           visibility: event.visibility || 'all',
         },
+        skipBroadcast: true, // platformEventBus broadcasts after storing via broadcastPlatformUpdateGlobal
       });
       
       if (result) {
-        const scope = event.workspaceId ? `workspace:${event.workspaceId}` : 'global';
-        console.log(`[EventBus] AI-articulated update stored (${scope}): ${event.title} [${result.id}]`);
+        // Skip broadcast for duplicates - only broadcast NEW records
+        if (result.isDuplicate) {
+          console.log(`[EventBus] Duplicate detected, skipping broadcast: ${event.title}`);
+        } else {
+          const scope = event.workspaceId ? `workspace:${event.workspaceId}` : 'global';
+          console.log(`[EventBus] AI-articulated update stored (${scope}): ${event.title} [${result.id}]`);
+          
+          // Broadcast to UNS clients via broadcastPlatformUpdateGlobal
+          // Use the ENRICHED data from aiNotificationService (humanized title, AI-enhanced description)
+          broadcastPlatformUpdateGlobal({
+            id: result.id,
+            title: result.enrichedTitle || event.title,
+            description: result.enrichedDescription || event.description,
+            category: result.category || event.category,
+            priority: event.priority || 1,
+            learnMoreUrl: event.learnMoreUrl,
+            metadata: {
+              ...event.metadata,
+              sourceType: 'ai_brain',
+              eventType: event.type,
+              visibility: event.visibility || 'all',
+            },
+            workspaceId: event.workspaceId,
+            visibility: event.visibility || 'all',
+          });
+        }
       } else {
-        console.log(`[EventBus] Skipped duplicate/rate-limited update: ${event.title}`);
+        console.log(`[EventBus] Rate-limited update: ${event.title}`);
       }
     } catch (error) {
       console.error('[EventBus] Failed to store AI-articulated update:', error);
@@ -224,6 +246,19 @@ class PlatformEventBus {
           visibility: event.visibility || 'all',
         });
         console.log(`[EventBus] Fallback: Stored update directly: ${event.title}`);
+        
+        // Also broadcast fallback update so users still get real-time notification
+        broadcastPlatformUpdateGlobal({
+          id,
+          title: event.title,
+          description: event.description,
+          category: event.category,
+          priority: event.priority || 1,
+          learnMoreUrl: event.learnMoreUrl,
+          metadata: { ...event.metadata, sourceType: 'fallback' },
+          workspaceId: event.workspaceId,
+          visibility: event.visibility || 'all',
+        });
       } catch (fallbackError) {
         console.error('[EventBus] Fallback insert also failed:', fallbackError);
       }

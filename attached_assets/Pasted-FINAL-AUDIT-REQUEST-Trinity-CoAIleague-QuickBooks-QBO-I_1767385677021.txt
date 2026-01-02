@@ -1,0 +1,95 @@
+FINAL AUDIT REQUEST — Trinity/CoAIleague + QuickBooks (QBO) Integration & Onboarding Automation
+
+Objective: Validate we can onboard a brand-new org and have them operational immediately with Trinity acting as middleware automation engine, without duplicates, failures, or manual setup beyond minimal approvals. We target 99% automation / 1% human oversight (approval only when risk/ambiguity).
+
+Scope to audit (must include evidence):
+
+QBO OAuth & Tenant Isolation
+
+realm_id handling per org, token storage encryption, refresh flow reliability, revoke/reauth behavior, least privilege scopes.
+
+Identity Mapping (critical)
+
+Customer/Employee/Item mapping stored by realm_id using QBO IDs.
+
+Matching strategy for imported data (email/name/phone), ambiguity detection, and prevention of new duplicate QBO entities.
+
+Verify we NEVER rely on names only.
+
+Idempotency & Duplicate Prevention
+
+Platform idempotency ledger per org+realm+cycle_key, deterministic dedupe_key, stable line ordering.
+
+QBO requestId usage and retry safety.
+
+Validate reruns/retries cannot create duplicate invoices.
+
+Onboarding Migration Pipeline
+
+Ability to import past schedules (CSV) and/or upload docs (PDF/invoices/contracts) for AI extraction into canonical facts.
+
+Generate schedule templates + default assignments + policy profiles (rounding, breaks, OT) with confidence scoring.
+
+“Go-live checklist” / Resolution Inbox for the 1% cases (ambiguous mapping, missing item, rate uncertainty).
+
+Automation Workflow (End-to-End)
+
+schedule → time aggregation → billable calc → invoice payload → create draft → approval/hybrid → send.
+
+payroll hour aggregation/export workflow (as supported).
+
+Rate Limiting / Concurrency / Reliability
+
+realm-scoped throttling, backoff, queueing, retry classification, partial failure recovery.
+
+Error Handling + Observability
+
+structured logs, correlation IDs, metrics (success rate, retries, invoice failures), alerting.
+
+“Exception triage” flow that routes to Resolution Inbox with recommended action.
+
+Security & Compliance
+
+confirm we do NOT store card/bank info; confirm PII handling + redaction in logs; data retention.
+
+Required Deliverables:
+
+Audit report with findings + risk rating (Blocker / High / Medium / Low)
+
+End-to-end onboarding test script (“new org goes live in 30 minutes”)
+
+Integration test plan (happy path + failure cases)
+
+List of fixes with recommended implementation order
+
+Proof artifacts: screenshots/log snippets or test outputs showing idempotency + mapping correctness
+
+Test cases that must be verified:
+
+New org connects QBO → imports schedules → system maps to existing QBO Customers/Employees → generates invoice draft → sends (or routes to approval if risk).
+
+Same workflow reruns 2–3 times → no duplicate invoice created.
+
+Customer renamed in QBO → mapping still valid after sync/CDC/webhook update.
+
+Ambiguous client match → Resolution Inbox created and workflow pauses safely.
+
+Token expires mid-run → refresh and resume safely.
+
+Please treat this as “go-live readiness.” I want confirmation we can confidently market out-of-the-box automation without onboarding friction or QuickBooks duplication issues.
+
+Extra: “Acceptance criteria” (so Replit knows what “pass” means)
+
+Paste this after the message if you want it super strict:
+
+✅ New org can be live in <30 minutes with import + minimal mapping confirmations
+
+✅ Zero duplicate customers/employees created in QBO during import
+
+✅ Zero duplicate invoices across retries/reruns
+
+✅ Any ambiguity results in a single Resolution Inbox item, not silent failure
+
+✅ Logs clearly show each run’s cycle_key + request_id + invoice_id
+
+✅ Platform remains stable under multiple orgs running in parallel (realm throttling)

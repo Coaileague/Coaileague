@@ -60,6 +60,7 @@ interface AIInsightData {
   priority?: number;
   learnMoreUrl?: string;
   metadata?: Record<string, unknown>;
+  skipBroadcast?: boolean; // Set by platformEventBus to prevent double WebSocket broadcast
 }
 
 interface MaintenanceAlertData {
@@ -102,7 +103,16 @@ function generateIdempotencyKey(type: string, workspaceId: string | null, data: 
   return `ai-${type}-${workspaceId || "global"}-${datePrefix}-${hash}`;
 }
 
-export async function generatePlatformUpdate(data: AIInsightData): Promise<{ id: string } | null> {
+// Extended return type when skipBroadcast is true - includes enriched data for caller to broadcast
+export interface PlatformUpdateResult {
+  id: string;
+  enrichedTitle?: string;
+  enrichedDescription?: string;
+  category?: string;
+  isDuplicate?: boolean; // True if this was an existing record, caller should skip broadcast
+}
+
+export async function generatePlatformUpdate(data: AIInsightData): Promise<PlatformUpdateResult | null> {
   const workspaceKey = data.workspaceId || "global";
   
   if (!checkRateLimit(workspaceKey)) {
@@ -144,7 +154,7 @@ export async function generatePlatformUpdate(data: AIInsightData): Promise<{ id:
   
   if (existingByTitle.length > 0) {
     console.log(`[AINotification] Duplicate update detected (title match within 24h), skipping: ${humanizedTitle}`);
-    return { id: existingByTitle[0].id };
+    return { id: existingByTitle[0].id, isDuplicate: true };
   }
   
   // For Trinity events with unique executionId, generate unique key
@@ -204,22 +214,31 @@ SUMMARY:`;
     date: new Date(),
   }).returning({ id: platformUpdates.id });
   
-  console.log(`[AINotification] Created platform update: ${update.id} - ${humanizedTitle}`);
+  console.log(`[AINotification] Platform update created for: ${humanizedTitle}`);
   
   // Broadcast via WebSocket for real-time UNS updates
-  broadcastPlatformUpdateGlobal({
-    id: update.id,
-    title: humanizedTitle,
-    description: enhancedDescription,
-    category: data.category || "announcement",
-    priority: data.priority || 1,
-    learnMoreUrl: data.learnMoreUrl,
-    metadata: data.metadata,
-    workspaceId: data.workspaceId,
-    visibility: "all",
-  });
+  // SKIP if called from platformEventBus (it handles its own broadcast with enriched data)
+  if (!data.skipBroadcast) {
+    broadcastPlatformUpdateGlobal({
+      id: update.id,
+      title: humanizedTitle,
+      description: enhancedDescription,
+      category: data.category || "announcement",
+      priority: data.priority || 1,
+      learnMoreUrl: data.learnMoreUrl,
+      metadata: data.metadata,
+      workspaceId: data.workspaceId,
+      visibility: "all",
+    });
+  }
   
-  return update;
+  // Return enriched data when skipBroadcast is true so caller can broadcast with AI-enhanced content
+  return {
+    id: update.id,
+    enrichedTitle: humanizedTitle,
+    enrichedDescription: enhancedDescription,
+    category: (data.category || "announcement") as string,
+  };
 }
 
 export async function pushAIInsight(
