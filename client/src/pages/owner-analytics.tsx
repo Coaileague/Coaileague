@@ -8,6 +8,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
@@ -29,7 +31,12 @@ import {
   Clock,
   Crown,
   Shield,
-  Sparkles
+  Sparkles,
+  FileCheck,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  Scale
 } from "lucide-react";
 import { 
   AreaChart, 
@@ -124,6 +131,31 @@ interface TeamEngagementReport {
   recommendations: string[];
 }
 
+interface ReconciliationItem {
+  clientId: string;
+  clientName: string;
+  platformHours: number;
+  quickbooksHours: number;
+  discrepancyPercent: number;
+  status: 'verified' | 'discrepancy' | 'pending';
+  invoiceId?: string;
+  lastReconciled?: string;
+}
+
+interface ReconciliationData {
+  items: ReconciliationItem[];
+  summary: {
+    totalClients: number;
+    verifiedCount: number;
+    discrepancyCount: number;
+    pendingCount: number;
+    totalPlatformHours: number;
+    totalQuickbooksHours: number;
+    overallDiscrepancyPercent: number;
+  };
+  lastSync: string;
+}
+
 const CHART_COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(var(--accent))', 'hsl(var(--muted))'];
 
 export default function OwnerAnalytics() {
@@ -131,6 +163,13 @@ export default function OwnerAnalytics() {
   const { workspaceRole, isLoading: accessLoading } = useWorkspaceAccess();
   const [selectedPeriod, setSelectedPeriod] = useState('last_30_days');
   const [activeTab, setActiveTab] = useState('overview');
+  
+  const [showWidgets, setShowWidgets] = useState({
+    comparisonTable: true,
+    discrepancyChart: true,
+    verifiedBadges: true,
+    auditLog: true,
+  });
 
   const { data: overview, isLoading: overviewLoading } = useQuery<{ success: boolean; data: OwnerDashboardOverview }>({
     queryKey: ['/api/analytics/owner/overview', selectedPeriod],
@@ -145,6 +184,16 @@ export default function OwnerAnalytics() {
   const { data: team, isLoading: teamLoading } = useQuery<{ success: boolean; data: TeamEngagementReport }>({
     queryKey: ['/api/analytics/owner/team', selectedPeriod],
     enabled: isAuthenticated && activeTab === 'team',
+  });
+
+  const { data: reconciliation, isLoading: reconciliationLoading } = useQuery<{ success: boolean; data: ReconciliationData }>({
+    queryKey: ['/api/analytics/owner/reconciliation', selectedPeriod],
+    queryFn: async () => {
+      const res = await fetch(`/api/analytics/owner/reconciliation?period=${selectedPeriod}`);
+      if (!res.ok) throw new Error('Failed to fetch reconciliation data');
+      return res.json();
+    },
+    enabled: isAuthenticated && activeTab === 'reconciliation',
   });
 
   if (authLoading || !isAuthenticated || accessLoading) {
@@ -289,6 +338,10 @@ export default function OwnerAnalytics() {
             <TabsTrigger value="trends" data-testid="tab-trends">Trends</TabsTrigger>
             <TabsTrigger value="team" data-testid="tab-team">Team</TabsTrigger>
             <TabsTrigger value="features" data-testid="tab-features">Features</TabsTrigger>
+            <TabsTrigger value="reconciliation" data-testid="tab-reconciliation">
+              <Scale className="h-4 w-4 mr-1" />
+              Watchdog
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="space-y-6">
@@ -716,6 +769,245 @@ export default function OwnerAnalytics() {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>No Feature Data</AlertTitle>
                 <AlertDescription>No feature usage data available for the selected period.</AlertDescription>
+              </Alert>
+            )}
+          </TabsContent>
+
+          <TabsContent value="reconciliation" className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div>
+                <h2 className="text-lg font-semibold flex items-center gap-2">
+                  <FileCheck className="h-5 w-5 text-primary" />
+                  Financial Watchdog
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Platform Hours vs QuickBooks Hours reconciliation
+                </p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-sm">
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    const allOn = Object.values(showWidgets).every(v => v);
+                    setShowWidgets({
+                      comparisonTable: !allOn,
+                      discrepancyChart: !allOn,
+                      verifiedBadges: !allOn,
+                      auditLog: !allOn,
+                    });
+                  }} data-testid="button-toggle-all-widgets">
+                    {Object.values(showWidgets).every(v => v) ? (
+                      <><EyeOff className="h-4 w-4 mr-1" /> Simple View</>
+                    ) : (
+                      <><Eye className="h-4 w-4 mr-1" /> Full View</>
+                    )}
+                  </Button>
+                </div>
+                <Button variant="outline" size="sm" data-testid="button-refresh-reconciliation">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Sync Now
+                </Button>
+              </div>
+            </div>
+
+            <Card className="border-l-4 border-l-primary" data-testid="card-widget-toggles">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-sm font-medium">Widget Visibility</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-wrap gap-6">
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="toggle-comparison"
+                      checked={showWidgets.comparisonTable}
+                      onCheckedChange={(v) => setShowWidgets(prev => ({ ...prev, comparisonTable: v }))}
+                      data-testid="switch-comparison-table"
+                    />
+                    <label htmlFor="toggle-comparison" className="text-sm">Comparison Table</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="toggle-chart"
+                      checked={showWidgets.discrepancyChart}
+                      onCheckedChange={(v) => setShowWidgets(prev => ({ ...prev, discrepancyChart: v }))}
+                      data-testid="switch-discrepancy-chart"
+                    />
+                    <label htmlFor="toggle-chart" className="text-sm">Discrepancy Chart</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="toggle-badges"
+                      checked={showWidgets.verifiedBadges}
+                      onCheckedChange={(v) => setShowWidgets(prev => ({ ...prev, verifiedBadges: v }))}
+                      data-testid="switch-verified-badges"
+                    />
+                    <label htmlFor="toggle-badges" className="text-sm">Verified Badges</label>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Switch
+                      id="toggle-audit"
+                      checked={showWidgets.auditLog}
+                      onCheckedChange={(v) => setShowWidgets(prev => ({ ...prev, auditLog: v }))}
+                      data-testid="switch-audit-log"
+                    />
+                    <label htmlFor="toggle-audit" className="text-sm">Audit Log</label>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {reconciliationLoading ? (
+              <ResponsiveLoading message="Loading reconciliation data..." />
+            ) : reconciliation?.data ? (
+              <>
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <Card data-testid="card-verified-count">
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">Verified</CardTitle>
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-green-600">{reconciliation.data.summary.verifiedCount}</div>
+                      <div className="text-sm text-muted-foreground">invoices match</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card data-testid="card-discrepancy-count">
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">Discrepancies</CardTitle>
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold text-destructive">{reconciliation.data.summary.discrepancyCount}</div>
+                      <div className="text-sm text-muted-foreground">need review</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card data-testid="card-platform-hours">
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">Platform Hours</CardTitle>
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{formatNumber(reconciliation.data.summary.totalPlatformHours)}</div>
+                      <div className="text-sm text-muted-foreground">total tracked</div>
+                    </CardContent>
+                  </Card>
+
+                  <Card data-testid="card-qb-hours">
+                    <CardHeader className="flex flex-row items-center justify-between gap-2 pb-2">
+                      <CardTitle className="text-sm font-medium">QuickBooks Hours</CardTitle>
+                      <DollarSign className="h-4 w-4 text-muted-foreground" />
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-2xl font-bold">{formatNumber(reconciliation.data.summary.totalQuickbooksHours)}</div>
+                      <div className="text-sm text-muted-foreground">total invoiced</div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {showWidgets.comparisonTable && (
+                  <Card data-testid="card-comparison-table">
+                    <CardHeader>
+                      <CardTitle>Hours Comparison</CardTitle>
+                      <CardDescription>Side-by-side Platform vs QuickBooks hours by client</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Client</TableHead>
+                            <TableHead className="text-right">Platform Hours</TableHead>
+                            <TableHead className="text-right">QuickBooks Hours</TableHead>
+                            <TableHead className="text-right">Difference</TableHead>
+                            <TableHead>Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {reconciliation.data.items.map((item, i) => (
+                            <TableRow key={item.clientId} data-testid={`row-reconciliation-${i}`}>
+                              <TableCell className="font-medium">{item.clientName}</TableCell>
+                              <TableCell className="text-right">{item.platformHours.toFixed(1)}h</TableCell>
+                              <TableCell className="text-right">{item.quickbooksHours.toFixed(1)}h</TableCell>
+                              <TableCell className="text-right">
+                                <span className={Math.abs(item.discrepancyPercent) > 5 ? 'text-destructive font-medium' : ''}>
+                                  {item.discrepancyPercent >= 0 ? '+' : ''}{item.discrepancyPercent.toFixed(1)}%
+                                </span>
+                              </TableCell>
+                              <TableCell>
+                                {item.status === 'verified' && showWidgets.verifiedBadges && (
+                                  <Badge className="bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-100">
+                                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                                    Trinity Verified
+                                  </Badge>
+                                )}
+                                {item.status === 'discrepancy' && (
+                                  <Badge variant="destructive">
+                                    <AlertCircle className="h-3 w-3 mr-1" />
+                                    Discrepancy
+                                  </Badge>
+                                )}
+                                {item.status === 'pending' && (
+                                  <Badge variant="outline">Pending</Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {showWidgets.discrepancyChart && reconciliation.data.items.length > 0 && (
+                  <Card data-testid="card-discrepancy-chart">
+                    <CardHeader>
+                      <CardTitle>Discrepancy Overview</CardTitle>
+                      <CardDescription>Visual breakdown of hours variance by client</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="h-[300px]">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <BarChart data={reconciliation.data.items.slice(0, 10)} layout="vertical">
+                            <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                            <XAxis type="number" className="text-muted-foreground" />
+                            <YAxis dataKey="clientName" type="category" width={120} className="text-muted-foreground" />
+                            <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))' }} />
+                            <Bar dataKey="platformHours" name="Platform" fill="hsl(var(--primary))" />
+                            <Bar dataKey="quickbooksHours" name="QuickBooks" fill="hsl(var(--muted-foreground))" />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {showWidgets.auditLog && (
+                  <Card data-testid="card-audit-log">
+                    <CardHeader>
+                      <CardTitle>Reconciliation Audit Log</CardTitle>
+                      <CardDescription>Recent reconciliation checks for Intuit compliance</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-sm text-muted-foreground">
+                        Last sync: {reconciliation.data.lastSync ? new Date(reconciliation.data.lastSync).toLocaleString() : 'Never'}
+                      </div>
+                      <div className="mt-2 text-sm">
+                        All reconciliation checks are logged in the quickbooks_api_usage table for SOX compliance.
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            ) : (
+              <Alert>
+                <Info className="h-4 w-4" />
+                <AlertTitle>QuickBooks Not Connected</AlertTitle>
+                <AlertDescription>
+                  Connect your QuickBooks account to enable Financial Watchdog reconciliation.
+                  <Button variant="link" className="p-0 h-auto ml-1" asChild>
+                    <a href="/accounting-integrations">Connect QuickBooks</a>
+                  </Button>
+                </AlertDescription>
               </Alert>
             )}
           </TabsContent>

@@ -9,6 +9,10 @@ import { type AuthenticatedRequest } from '../rbac';
 import { businessOwnerAnalyticsService } from '../services/businessOwnerAnalyticsService';
 import { advancedUsageAnalyticsService } from '../services/advancedUsageAnalyticsService';
 import { z } from 'zod';
+import { db } from '../db';
+import { timeEntries, clients, invoices, quickbooksApiUsage } from '@shared/schema';
+import { eq, and, gte, lte, sum, sql } from 'drizzle-orm';
+import { trinityNotificationBridge } from '../services/ai-brain/trinityNotificationBridge';
 
 export const ownerAnalyticsRouter = Router();
 
@@ -334,6 +338,162 @@ ownerAnalyticsRouter.get('/full-report', requireOwnerRole, async (req: Authentic
     });
   } catch (error: any) {
     console.error('[OwnerAnalytics] Full report error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+ownerAnalyticsRouter.get('/reconciliation', requireOwnerRole, async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.workspaceId;
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Workspace ID required' });
+    }
+
+    const { period } = periodSchema.parse(req.query);
+    
+    const now = new Date();
+    let startDate: Date;
+    let endDate: Date = new Date();
+    
+    switch (period) {
+      case 'today':
+        startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59);
+        break;
+      case 'this_week':
+        const weekStart = new Date(now);
+        weekStart.setDate(now.getDate() - now.getDay());
+        weekStart.setHours(0, 0, 0, 0);
+        startDate = weekStart;
+        break;
+      case 'last_7_days':
+        startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case 'this_month':
+        startDate = new Date(now.getFullYear(), now.getMonth(), 1);
+        break;
+      case 'last_month':
+        startDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+        endDate = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
+        break;
+      case 'this_quarter':
+        const quarter = Math.floor(now.getMonth() / 3);
+        startDate = new Date(now.getFullYear(), quarter * 3, 1);
+        break;
+      case 'this_year':
+        startDate = new Date(now.getFullYear(), 0, 1);
+        break;
+      case 'last_30_days':
+      default:
+        startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+    }
+
+    const workspaceClients = await db.select()
+      .from(clients)
+      .where(eq(clients.workspaceId, workspaceId));
+
+    const platformHoursData = await db.select({
+      clientId: timeEntries.clientId,
+      totalHours: sql<number>`COALESCE(SUM(EXTRACT(EPOCH FROM (${timeEntries.endTime} - ${timeEntries.startTime})) / 3600), 0)`,
+    })
+      .from(timeEntries)
+      .where(and(
+        eq(timeEntries.workspaceId, workspaceId),
+        gte(timeEntries.startTime, startDate),
+        lte(timeEntries.startTime, endDate)
+      ))
+      .groupBy(timeEntries.clientId);
+
+    const invoiceData = await db.select({
+      clientId: invoices.clientId,
+      totalHours: sql<number>`COALESCE(SUM(${invoices.totalHours}), 0)`,
+    })
+      .from(invoices)
+      .where(and(
+        eq(invoices.workspaceId, workspaceId),
+        gte(invoices.createdAt, startDate),
+        lte(invoices.createdAt, endDate)
+      ))
+      .groupBy(invoices.clientId);
+
+    const platformHoursMap = new Map(platformHoursData.map(d => [d.clientId, Number(d.totalHours) || 0]));
+    const invoiceHoursMap = new Map(invoiceData.map(d => [d.clientId, Number(d.totalHours) || 0]));
+
+    const items = workspaceClients.map(client => {
+      const platformHours = platformHoursMap.get(client.id) || 0;
+      const quickbooksHours = invoiceHoursMap.get(client.id) || 0;
+      const discrepancyPercent = platformHours > 0 
+        ? ((quickbooksHours - platformHours) / platformHours) * 100 
+        : 0;
+      
+      let status: 'verified' | 'discrepancy' | 'pending' = 'pending';
+      if (platformHours > 0 && quickbooksHours > 0) {
+        status = Math.abs(discrepancyPercent) <= 5 ? 'verified' : 'discrepancy';
+      } else if (platformHours > 0 && quickbooksHours === 0) {
+        status = 'pending';
+      } else if (platformHours === 0 && quickbooksHours > 0) {
+        status = 'discrepancy';
+      }
+      
+      return {
+        clientId: client.id,
+        clientName: client.name,
+        platformHours,
+        quickbooksHours,
+        discrepancyPercent,
+        status,
+        lastReconciled: new Date().toISOString(),
+      };
+    }).filter(item => item.platformHours > 0 || item.quickbooksHours > 0);
+
+    const summary = {
+      totalClients: items.length,
+      verifiedCount: items.filter(i => i.status === 'verified').length,
+      discrepancyCount: items.filter(i => i.status === 'discrepancy').length,
+      pendingCount: items.filter(i => i.status === 'pending').length,
+      totalPlatformHours: items.reduce((sum, i) => sum + i.platformHours, 0),
+      totalQuickbooksHours: items.reduce((sum, i) => sum + i.quickbooksHours, 0),
+      overallDiscrepancyPercent: items.length > 0 
+        ? items.reduce((sum, i) => sum + i.discrepancyPercent, 0) / items.length 
+        : 0,
+    };
+
+    await db.insert(quickbooksApiUsage).values({
+      workspaceId,
+      endpoint: 'reconciliation_check',
+      method: 'GET',
+      responseStatus: 200,
+      requestTimestamp: new Date(),
+      metadata: { period, clientCount: items.length, discrepancyCount: summary.discrepancyCount },
+    }).catch(() => {});
+
+    if (summary.discrepancyCount > 0) {
+      const highDiscrepancies = items.filter(i => Math.abs(i.discrepancyPercent) > 5);
+      if (highDiscrepancies.length > 0) {
+        await trinityNotificationBridge.pushWhatsNew({
+          title: 'Hours Discrepancy Detected',
+          description: `${highDiscrepancies.length} client(s) have >5% variance between platform and invoiced hours. Review the Financial Watchdog tab.`,
+          category: 'announcement',
+          priority: 2,
+          visibility: 'admin',
+          badge: 'ALERT',
+          workspaceId,
+        }).catch(err => {
+          console.log('[Reconciliation] Duplicate alert suppressed or error:', err.message);
+        });
+      }
+    }
+
+    res.json({
+      success: true,
+      data: {
+        items,
+        summary,
+        lastSync: new Date().toISOString(),
+      }
+    });
+  } catch (error: any) {
+    console.error('[OwnerAnalytics] Reconciliation error:', error);
     res.status(500).json({ error: error.message });
   }
 });
