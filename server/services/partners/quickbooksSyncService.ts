@@ -955,6 +955,43 @@ export class QuickBooksSyncService {
       };
     }
 
+    // Fuzzy matching for employees (consistent with clients/contractors)
+    const fuzzyMatches = coaileagueEmployees.filter(e => {
+      const fullName = `${e.firstName} ${e.lastName}`;
+      return this.fuzzyNameMatch(fullName, qboEmployee.DisplayName) > 0.7;
+    });
+
+    if (fuzzyMatches.length === 1) {
+      return {
+        coaileagueEntityId: fuzzyMatches[0].id,
+        coaileagueEntityName: `${fuzzyMatches[0].firstName} ${fuzzyMatches[0].lastName}`,
+        coaileagueEmail: fuzzyMatches[0].email,
+        partnerEntityId: qboEmployee.Id,
+        partnerEntityName: qboEmployee.DisplayName,
+        partnerEmail: qboEmail,
+        confidence: 0.75,
+        matchType: 'name_fuzzy',
+      };
+    }
+
+    if (fuzzyMatches.length > 1) {
+      return {
+        coaileagueEntityId: fuzzyMatches[0].id,
+        coaileagueEntityName: `${fuzzyMatches[0].firstName} ${fuzzyMatches[0].lastName}`,
+        coaileagueEmail: fuzzyMatches[0].email,
+        partnerEntityId: qboEmployee.Id,
+        partnerEntityName: qboEmployee.DisplayName,
+        partnerEmail: qboEmail,
+        confidence: 0.5,
+        matchType: 'ambiguous',
+        ambiguousCandidates: fuzzyMatches.map(m => ({
+          id: m.id,
+          name: `${m.firstName} ${m.lastName}`,
+          email: m.email,
+        })),
+      };
+    }
+
     return {
       coaileagueEntityId: '',
       coaileagueEntityName: '',
