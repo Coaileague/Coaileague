@@ -17,7 +17,7 @@ import { db } from '../../db';
 import { workspaces, organizations } from '@shared/schema';
 import { eq, sql } from 'drizzle-orm';
 import { quickbooksRateLimiter, type RateLimitResult } from './quickbooksRateLimiter';
-import { eventBus } from '../eventBus';
+import { platformEventBus } from '../platformEventBus';
 
 export type QuotaType = 
   | 'quickbooks_api'
@@ -469,11 +469,14 @@ class QuotaEnforcementService {
     this.usageCache.set(workspaceId, cached);
     this.cacheTimestamps.set(workspaceId, Date.now());
     
-    eventBus.emit('quota_usage_recorded', {
+    // Emit quota usage event for Trinity awareness
+    platformEventBus.publish({
+      type: 'ai_brain_action',
+      category: 'automation',
+      title: 'Quota Usage Recorded',
+      description: `${quotaType} usage: ${amount} for workspace ${workspaceId}`,
       workspaceId,
-      quotaType,
-      amount,
-      timestamp: new Date(),
+      metadata: { quotaType, amount },
     });
   }
   
@@ -484,11 +487,14 @@ class QuotaEnforcementService {
   ): Promise<void> {
     await this.persistQBUsageIncrement(workspaceId, realmId, amount);
     
-    eventBus.emit('quota_usage_recorded', {
+    // Emit QB API usage event for Trinity awareness
+    platformEventBus.publish({
+      type: 'ai_brain_action',
+      category: 'automation',
+      title: 'QuickBooks API Usage',
+      description: `QB API usage: ${amount} request(s) for realm ${realmId}`,
       workspaceId,
-      quotaType: 'quickbooks_api',
-      amount,
-      timestamp: new Date(),
+      metadata: { quotaType: 'quickbooks_api', realmId, amount },
     });
   }
   
@@ -578,14 +584,19 @@ class QuotaEnforcementService {
     const percentage = (currentUsage / limit) * 100;
     
     if (percentage >= 90) {
-      eventBus.emit('quota_warning', {
+      platformEventBus.publish({
+        type: 'ai_brain_action',
+        category: 'automation',
+        title: percentage >= 100 ? 'Quota Exceeded' : 'Quota Warning',
+        description: `${quotaType} usage at ${Math.round(percentage)}% (${currentUsage}/${limit}). ${percentage >= 100 ? 'Limit exceeded!' : 'Approaching limit.'}`,
         workspaceId,
-        quotaType,
-        currentUsage,
-        limit,
-        percentage,
-        severity: percentage >= 100 ? 'critical' : 'warning',
-        timestamp: new Date(),
+        metadata: {
+          quotaType,
+          currentUsage,
+          limit,
+          percentage,
+          severity: percentage >= 100 ? 'critical' : 'warning',
+        },
       });
     }
   }

@@ -6,7 +6,9 @@ import { gustoService } from './services/partners/gusto';
 import { requireAuth } from './auth';
 import { db } from './db';
 import { partnerConnections, users, workspaces } from '@shared/schema';
-import { eq, and, or } from 'drizzle-orm';
+import { eq, and, or, sql, desc } from 'drizzle-orm';
+import { quickbooksRateLimiter } from './services/integrations/quickbooksRateLimiter';
+import { quickbooksTokenRefresh } from './services/integrations/quickbooksTokenRefresh';
 
 const router = Router();
 
@@ -1107,6 +1109,162 @@ router.post('/gusto/process-payroll', requireAuth, requireWorkspaceMembership(),
   } catch (error: any) {
     console.error('Process payroll error:', error);
     return res.status(500).json({ error: error.message || 'Failed to process payroll' });
+  }
+});
+
+// ============================================================================
+// QUICKBOOKS COMPLIANCE TELEMETRY (Guru Mode Dashboard)
+// ============================================================================
+
+/**
+ * GET /api/integrations/quickbooks/compliance-telemetry
+ * 
+ * Returns QuickBooks compliance metrics for Trinity Guru Mode:
+ * - Rate limit status (bucket fill gauge)
+ * - Token refresh daemon health
+ * - API usage history
+ * - Quota warnings
+ */
+router.get('/quickbooks/compliance-telemetry', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const realmId = req.query.realmId as string | undefined;
+    const environment = (req.query.environment as 'production' | 'sandbox') || 'production';
+    
+    // Get rate limit stats for specific realm or all realms (with null safety)
+    let rateLimitStats: any[] = [];
+    try {
+      if (realmId) {
+        const stats = quickbooksRateLimiter.getStats(realmId, environment);
+        if (stats) rateLimitStats = [stats];
+      } else {
+        rateLimitStats = quickbooksRateLimiter.getAllStats(environment) || [];
+      }
+    } catch (e) {
+      console.warn('[QB Telemetry] Could not fetch rate limit stats:', e);
+    }
+    
+    // Get token refresh daemon status
+    const tokenDaemonStatus = quickbooksTokenRefresh.getStatus();
+    
+    // Get recent API usage from database
+    let recentUsage: any[] = [];
+    try {
+      const usageResult = await db.execute(
+        sql`SELECT 
+          realm_id as "realmId",
+          request_count as "requestCount",
+          last_request_at as "lastRequestAt",
+          quota_warnings_sent as "quotaWarningsSent"
+        FROM quickbooks_api_usage
+        WHERE last_request_at > NOW() - INTERVAL '1 hour'
+        ORDER BY last_request_at DESC
+        LIMIT 20`
+      );
+      recentUsage = (usageResult.rows || []) as any[];
+    } catch (e) {
+      // Table may not exist in fresh deployments
+      console.warn('[QB Telemetry] Could not fetch API usage:', e);
+    }
+    
+    // Get active credentials count and health
+    let credentialsHealth: any[] = [];
+    try {
+      const credsResult = await db.execute(
+        sql`SELECT 
+          realm_id as "realmId",
+          is_active as "isActive",
+          expires_at as "expiresAt",
+          failed_attempts as "failedAttempts",
+          last_refreshed as "lastRefreshed"
+        FROM quickbooks_credentials
+        WHERE is_active = true`
+      );
+      credentialsHealth = (credsResult.rows || []).map((row: any) => ({
+        realmId: row.realmId,
+        isHealthy: row.failedAttempts === 0 && new Date(row.expiresAt) > new Date(),
+        expiresAt: row.expiresAt,
+        failedAttempts: row.failedAttempts,
+        lastRefreshed: row.lastRefreshed,
+      }));
+    } catch (e) {
+      console.warn('[QB Telemetry] Could not fetch credentials health:', e);
+    }
+    
+    // Calculate overall health score
+    const maxRequestsPerMinute = environment === 'production' ? 500 : 100;
+    const healthScore = rateLimitStats.reduce((acc, stat) => {
+      const usagePercent = ((maxRequestsPerMinute - stat.tokensRemaining) / maxRequestsPerMinute) * 100;
+      return acc + (stat.isThrottled ? 0 : 100 - usagePercent);
+    }, 0) / Math.max(rateLimitStats.length, 1);
+    
+    return res.json({
+      success: true,
+      telemetry: {
+        rateLimits: rateLimitStats.map(stat => ({
+          realmId: stat.realmId,
+          tokensRemaining: stat.tokensRemaining,
+          maxTokens: maxRequestsPerMinute,
+          usagePercent: ((maxRequestsPerMinute - stat.tokensRemaining) / maxRequestsPerMinute) * 100,
+          concurrentRequests: stat.concurrentRequests,
+          isThrottled: stat.isThrottled,
+          requestsLastMinute: stat.requestsLastMinute,
+        })),
+        tokenDaemon: {
+          isRunning: tokenDaemonStatus.isRunning,
+          cachedCredentials: tokenDaemonStatus.cachedCredentials,
+          health: tokenDaemonStatus.isRunning ? 'healthy' : 'stopped',
+        },
+        credentialsHealth,
+        recentUsage,
+        summary: {
+          activeRealms: rateLimitStats.length,
+          healthScore: Math.round(healthScore),
+          throttledRealms: rateLimitStats.filter(s => s.isThrottled).length,
+          totalRequestsLastHour: recentUsage.reduce((acc, u) => acc + (u.requestCount || 0), 0),
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error('QuickBooks telemetry error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch compliance telemetry' });
+  }
+});
+
+/**
+ * GET /api/integrations/quickbooks/usage-logs/:realmId
+ * 
+ * Returns detailed API usage logs for a specific realm (Support Override Menu)
+ */
+router.get('/quickbooks/usage-logs/:realmId', requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { realmId } = req.params;
+    const limit = parseInt(req.query.limit as string) || 50;
+    
+    if (!realmId) {
+      return res.status(400).json({ error: 'Realm ID required' });
+    }
+    
+    const usageResult = await db.execute(
+      sql`SELECT 
+        id,
+        realm_id as "realmId",
+        workspace_id as "workspaceId",
+        request_count as "requestCount",
+        period_start as "periodStart"
+      FROM quickbooks_api_usage
+      WHERE realm_id = ${realmId}
+      ORDER BY period_start DESC
+      LIMIT ${limit}`
+    );
+    
+    return res.json({
+      success: true,
+      logs: usageResult.rows || [],
+      realmId,
+    });
+  } catch (error: any) {
+    console.error('QuickBooks usage logs error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch usage logs' });
   }
 });
 
