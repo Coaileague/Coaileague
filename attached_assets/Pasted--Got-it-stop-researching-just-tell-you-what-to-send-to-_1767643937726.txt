@@ -1,0 +1,195 @@
+😂 Got it - stop researching, just tell you what to send to Replit.
+
+📋 SEND THIS TO REPLIT:
+QUICKBOOKS MIGRATION & ONBOARDING PIPELINE - Complete Gap Analysis & Fixes
+
+Run comprehensive diagnostic on the entire QuickBooks integration and new org onboarding flow. Identify ALL gaps, missing workflows, broken pipelines, and error states.
+
+AREAS TO AUDIT:
+
+1. QUICKBOOKS OAUTH FLOW
+   - Does /api/integrations/quickbooks/connect properly redirect to Intuit OAuth?
+   - Are tokens stored securely after callback?
+   - Do tokens refresh automatically when expired?
+   - What happens if user denies permission?
+   - What happens if OAuth fails mid-flow?
+   - Is there error recovery (retry mechanism)?
+
+2. QUICKBOOKS DATA DISCOVERY
+   - After OAuth success, does system fetch QB customers immediately?
+   - Does system fetch QB employees?
+   - Does system fetch QB chart of accounts?
+   - Does system fetch QB payroll items?
+   - Are results cached or fetched fresh each time?
+   - What if QB API rate limit is hit?
+   - What if QB returns 0 customers (new QB account)?
+
+3. MIGRATION WIZARD UI/UX
+   - Does smart selection UI actually exist in frontend?
+   - Can users check/uncheck QB customers to import?
+   - Can users check/uncheck QB employees to import?
+   - Does Gemini analysis show "recommended" vs "skip"?
+   - Is there a review/confirmation screen before import?
+   - Can users go back and change selections?
+
+4. DATA IMPORT EXECUTION
+   - Does employee import actually CREATE records in database?
+   - Does customer import create client records with qbCustomerId mapping?
+   - Are pay rates validated (employees without pay rates = error)?
+   - Are duplicate checks performed (don't import same employee twice)?
+   - Is import transactional (all or nothing, or partial success allowed)?
+   - What happens if 10/50 employees fail - does whole import rollback?
+
+5. ID MAPPING & BIDIRECTIONAL SYNC
+   - Are qbCustomerId and qbEmployeeId stored on CoAIleague records?
+   - Can system look up CoAIleague customer by QB ID?
+   - Can system look up CoAIleague employee by QB ID?
+   - When creating invoice in CoAIleague, does it find correct QB customer?
+   - When syncing to QB, does it use stored QB IDs?
+
+6. PRE-FLIGHT TESTING
+   - Before activating workspace, does system test invoice creation?
+   - Does system test QB sync with test data?
+   - Does system verify all mappings work?
+   - If pre-flight fails, what error message does user see?
+   - Can user retry or fix issues?
+
+7. NEW ORG ONBOARDING PIPELINE
+   - When user signs up, is workspace created automatically?
+   - Is onboarding checklist initialized?
+   - Does user get email with next steps?
+   - Is there a progress tracker (Step 1/5, 2/5, etc.)?
+   - Can user skip QB integration and add employees manually via CSV?
+   - What if user closes browser mid-onboarding - can they resume?
+
+8. ONBOARDING CHECKLIST STEPS
+   Expected flow:
+   1. ✅ Create account → Email verification
+   2. ✅ Create organization → Name, industry
+   3. ⚠️ Connect QuickBooks → OAuth flow
+   4. ⚠️ Import data → Smart selection wizard
+   5. ⚠️ Add sites/locations → GPS coordinates for geofencing
+   6. ⚠️ Configure settings → Pay periods, overtime rules
+   7. ⚠️ Invite team → Send manager/supervisor invites
+   8. ✅ Launch → Trinity activates
+
+   Which steps are ACTUALLY implemented vs just UI placeholders?
+
+9. ERROR STATES & RECOVERY
+   - If QB OAuth fails → Clear error message + retry button?
+   - If data import fails → Partial rollback or show which records failed?
+   - If QB disconnects later → How does user reconnect?
+   - If QB token expires → Auto-refresh or require re-auth?
+   - If webhook delivery fails → Retry mechanism?
+
+10. EDGE CASES
+    - User has QuickBooks but 0 customers (new business)
+    - User has QuickBooks but 0 employees (manual payroll)
+    - User disconnects QB mid-migration
+    - User imports employees but no pay rates exist in QB
+    - User tries to sync invoice but QB customer was deleted
+    - User changes employee pay rate in QB - does CoAIleague sync?
+
+11. WEBHOOKS (If Implemented)
+    - Are QB webhooks subscribed after successful OAuth?
+    - Do webhooks fire when QB data changes (customer added, employee updated)?
+    - Does CoAIleague listen and update local records?
+    - If webhook fails, is there fallback polling?
+
+12. MANUAL FALLBACK OPTIONS
+    - If QB integration completely fails, can user:
+      ✅ Upload employee CSV instead?
+      ✅ Manually add clients?
+      ✅ Skip QB and use CoAIleague standalone?
+    - Is there "Disconnect QuickBooks" option later if user wants to stop syncing?
+
+DIAGNOSTIC TASKS:
+
+Run these tests and report results:
+
+TEST 1: New User Signup → Onboarding
+1. Create new account (test email)
+2. Verify email link works
+3. Create workspace
+4. Check: Is onboarding pipeline initialized?
+5. Check: Does checklist show correct steps?
+6. Check: Can user proceed through steps?
+EXPECTED: Smooth flow from signup → ready to use platform
+ACTUAL: [Report what happens]
+
+TEST 2: QuickBooks OAuth Flow
+1. Click "Connect QuickBooks"
+2. Redirected to Intuit login?
+3. Authorize app
+4. Callback succeeds?
+5. Tokens stored in database?
+6. Check: Can system make QB API calls with stored tokens?
+EXPECTED: Successful OAuth, tokens persist, API calls work
+ACTUAL: [Report what happens]
+
+TEST 3: QuickBooks Data Import
+1. After OAuth, system fetches QB customers
+2. UI shows customer list with checkboxes
+3. User selects 5 customers to import
+4. Click "Import Selected"
+5. Check: Do 5 client records get created in database?
+6. Check: Does each have qbCustomerId stored?
+EXPECTED: 5 clients created with proper QB ID mapping
+ACTUAL: [Report what happens]
+
+TEST 4: Employee Import with Validation
+1. Fetch QB employees
+2. User selects 10 employees
+3. 2 employees have no pay rate in QB
+4. Click "Import Selected"
+5. Check: What happens to the 2 without pay rates?
+6. Check: Are other 8 imported successfully?
+EXPECTED: Clear error for 2, success for 8, user can fix and retry
+ACTUAL: [Report what happens]
+
+TEST 5: Invoice Sync to QuickBooks
+1. Create client invoice in CoAIleague
+2. Trigger QB sync
+3. Check: Does invoice appear in QuickBooks?
+4. Check: Is qbInvoiceId stored back in CoAIleague?
+5. Check: Does invoice match (amounts, line items)?
+EXPECTED: Invoice syncs correctly, IDs mapped bidirectionally
+ACTUAL: [Report what happens]
+
+TEST 6: Error Recovery
+1. Start QB OAuth flow
+2. Intentionally deny permission
+3. Check: Does user see clear error message?
+4. Check: Is there "Retry" button?
+5. Click retry, grant permission this time
+6. Check: Does flow complete successfully?
+EXPECTED: Graceful error handling with clear recovery path
+ACTUAL: [Report what happens]
+
+TEST 7: Workspace Resumption
+1. Start onboarding (Step 2 of 5)
+2. Close browser completely
+3. Re-login
+4. Check: Does user return to Step 2?
+5. Check: Is progress saved?
+EXPECTED: User can resume exactly where they left off
+ACTUAL: [Report what happens]
+
+REPORT FORMAT:
+
+For each test, provide:
+✅ PASS - Works as expected
+⚠️ PARTIAL - Works but has issues (describe)
+❌ FAIL - Broken (describe error)
+🚧 NOT IMPLEMENTED - Feature doesn't exist yet
+
+Provide specific errors, missing components, and recommendations for fixes.
+
+PRIORITIES:
+
+After diagnostic, categorize gaps as:
+🔴 CRITICAL - Blocks user from completing onboarding
+🟡 IMPORTANT - Causes poor UX but user can work around
+🟢 NICE-TO-HAVE - Polish/optimization
+
+List all gaps found and recommended fixes in priority order.
