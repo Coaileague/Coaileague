@@ -496,6 +496,356 @@ function PlatformRolesManager() {
   );
 }
 
+interface SupportSession {
+  id: string;
+  staffUserId: string;
+  staffEmail?: string;
+  staffName?: string;
+  targetOrgId: string;
+  targetOrgName?: string;
+  startedAt: string;
+  endedAt?: string;
+  reason: string;
+  status: 'active' | 'ended';
+  orgFrozen: boolean;
+  actionsCount: number;
+}
+
+interface SupportAuditLog {
+  id: string;
+  sessionId: string;
+  action: string;
+  severity: 'read' | 'write' | 'delete';
+  details: any;
+  createdAt: string;
+}
+
+function SupportSessionsManager() {
+  const { toast } = useToast();
+  const [selectedSession, setSelectedSession] = useState<SupportSession | null>(null);
+  const [showStartDialog, setShowStartDialog] = useState(false);
+  const [showAuditDialog, setShowAuditDialog] = useState(false);
+  const [newSessionReason, setNewSessionReason] = useState('');
+  const [selectedOrgId, setSelectedOrgId] = useState('');
+
+  const { data: activeSessions, isLoading: loadingSessions, refetch: refetchSessions } = useQuery<SupportSession[]>({
+    queryKey: ['/api/admin/support/sessions'],
+  });
+
+  const { data: workspaces } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ['/api/admin/platform/workspaces'],
+  });
+
+  const { data: auditLogsData, isLoading: loadingAudit } = useQuery<{ logs: SupportAuditLog[] }>({
+    queryKey: ['/api/admin/support/audit-logs', { sessionId: selectedSession?.id }],
+    enabled: !!selectedSession && showAuditDialog,
+  });
+  const auditLogs = auditLogsData?.logs;
+
+  const startSessionMutation = useMutation({
+    mutationFn: async ({ orgId, reason }: { orgId: string; reason: string }) => {
+      const response = await apiRequest('POST', '/api/admin/support/sessions/start', { orgId, reason });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Session Started', description: 'Cross-org support session is now active' });
+      refetchSessions();
+      setShowStartDialog(false);
+      setNewSessionReason('');
+      setSelectedOrgId('');
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const endSessionMutation = useMutation({
+    mutationFn: async (sessionId: string) => {
+      const response = await apiRequest('POST', '/api/admin/support/sessions/end', { sessionId });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Session Ended', description: 'Support session has been closed' });
+      refetchSessions();
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const freezeOrgMutation = useMutation({
+    mutationFn: async ({ sessionId, freeze }: { sessionId: string; freeze: boolean }) => {
+      const response = await apiRequest('POST', '/api/admin/support/sessions/freeze', { sessionId, freeze });
+      return response.json();
+    },
+    onSuccess: (_, { freeze }) => {
+      toast({
+        title: freeze ? 'Organization Frozen' : 'Organization Unfrozen',
+        description: freeze ? 'Regular users are now blocked' : 'Regular users can access again',
+      });
+      refetchSessions();
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    },
+  });
+
+  const getSeverityBadge = (severity: string) => {
+    switch (severity) {
+      case 'delete':
+        return <Badge variant="destructive">Delete</Badge>;
+      case 'write':
+        return <Badge variant="default" className="bg-amber-500">Write</Badge>;
+      case 'read':
+        return <Badge variant="secondary">Read</Badge>;
+      default:
+        return <Badge variant="outline">{severity}</Badge>;
+    }
+  };
+
+  if (loadingSessions) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  const activeSess = activeSessions?.filter(s => s.status === 'active') || [];
+  const endedSess = activeSessions?.filter(s => s.status === 'ended') || [];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
+        <div>
+          <h3 className="text-lg font-semibold">Cross-Org Support Sessions</h3>
+          <p className="text-sm text-muted-foreground">Manage platform staff access to organization data</p>
+        </div>
+        <Button
+          onClick={() => setShowStartDialog(true)}
+          data-testid="button-start-session"
+          className="w-full sm:w-auto"
+        >
+          <UserCog className="h-4 w-4 mr-2" />
+          Start Session
+        </Button>
+      </div>
+
+      {activeSess.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base">
+              <Activity className="h-4 w-4" />
+              Active Sessions
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {activeSess.map((session) => (
+                <div
+                  key={session.id}
+                  className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-lg border gap-3"
+                  data-testid={`session-row-${session.id}`}
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="font-medium truncate">{session.staffName || session.staffEmail}</span>
+                      <Badge variant="default" className="bg-emerald-500 shrink-0">Active</Badge>
+                      {session.orgFrozen && (
+                        <Badge variant="destructive" className="shrink-0">Org Frozen</Badge>
+                      )}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      <span className="font-medium">{session.targetOrgName}</span> - {session.reason}
+                    </div>
+                    <div className="text-xs text-muted-foreground mt-1">
+                      Started {formatDistanceToNow(new Date(session.startedAt))} ago
+                    </div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setSelectedSession(session);
+                        setShowAuditDialog(true);
+                      }}
+                      data-testid={`button-audit-${session.id}`}
+                    >
+                      Audit Log
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant={session.orgFrozen ? "secondary" : "outline"}
+                      onClick={() => freezeOrgMutation.mutate({ sessionId: session.id, freeze: !session.orgFrozen })}
+                      disabled={freezeOrgMutation.isPending}
+                      data-testid={`button-freeze-${session.id}`}
+                    >
+                      {session.orgFrozen ? 'Unfreeze' : 'Freeze Org'}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      onClick={() => endSessionMutation.mutate(session.id)}
+                      disabled={endSessionMutation.isPending}
+                      data-testid={`button-end-${session.id}`}
+                    >
+                      End Session
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {activeSess.length === 0 && (
+        <Card>
+          <CardContent className="py-8">
+            <div className="text-center text-muted-foreground">
+              <UserCog className="h-12 w-12 mx-auto mb-4 opacity-50" />
+              <p className="text-lg font-medium mb-2">No Active Sessions</p>
+              <p className="text-sm">Start a session to access another organization's data</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {endedSess.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Recent Sessions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[200px]">
+              <div className="space-y-2">
+                {endedSess.slice(0, 10).map((session) => (
+                  <div
+                    key={session.id}
+                    className="flex flex-col sm:flex-row sm:items-center justify-between p-2 rounded border text-sm gap-2"
+                    data-testid={`ended-session-${session.id}`}
+                  >
+                    <div className="flex-1 min-w-0">
+                      <span className="font-medium truncate">{session.staffName || session.staffEmail}</span>
+                      <span className="text-muted-foreground"> accessed </span>
+                      <span className="font-medium">{session.targetOrgName}</span>
+                    </div>
+                    <div className="flex items-center gap-2 text-muted-foreground shrink-0">
+                      <span>{session.actionsCount} actions</span>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => {
+                          setSelectedSession(session);
+                          setShowAuditDialog(true);
+                        }}
+                        data-testid={`button-view-audit-${session.id}`}
+                      >
+                        View
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      )}
+
+      <Dialog open={showStartDialog} onOpenChange={setShowStartDialog}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Start Support Session</DialogTitle>
+            <DialogDescription>
+              Create an audited session to access another organization's data
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Target Organization</Label>
+              <select
+                value={selectedOrgId}
+                onChange={(e) => setSelectedOrgId(e.target.value)}
+                className="w-full p-2 border rounded-md bg-background"
+                data-testid="select-org"
+              >
+                <option value="">Select organization...</option>
+                {workspaces?.map((ws) => (
+                  <option key={ws.id} value={ws.id}>{ws.name}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Reason for Access</Label>
+              <Input
+                placeholder="Support ticket #12345, user request, etc."
+                value={newSessionReason}
+                onChange={(e) => setNewSessionReason(e.target.value)}
+                data-testid="input-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button variant="outline" onClick={() => setShowStartDialog(false)} className="w-full sm:w-auto">
+              Cancel
+            </Button>
+            <Button
+              onClick={() => startSessionMutation.mutate({ orgId: selectedOrgId, reason: newSessionReason })}
+              disabled={!selectedOrgId || !newSessionReason || startSessionMutation.isPending}
+              data-testid="button-confirm-start"
+              className="w-full sm:w-auto"
+            >
+              {startSessionMutation.isPending ? 'Starting...' : 'Start Session'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={showAuditDialog} onOpenChange={setShowAuditDialog}>
+        <DialogContent className="max-w-2xl max-h-[80vh]">
+          <DialogHeader>
+            <DialogTitle>Session Audit Log</DialogTitle>
+            <DialogDescription>
+              All actions performed during this support session
+            </DialogDescription>
+          </DialogHeader>
+          <ScrollArea className="max-h-[50vh]">
+            {loadingAudit ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin w-6 h-6 border-4 border-primary border-t-transparent rounded-full" />
+              </div>
+            ) : auditLogs && auditLogs.length > 0 ? (
+              <div className="space-y-2">
+                {auditLogs.map((log) => (
+                  <div key={log.id} className="p-3 border rounded-lg text-sm" data-testid={`audit-log-${log.id}`}>
+                    <div className="flex flex-wrap items-center gap-2 mb-1">
+                      {getSeverityBadge(log.severity)}
+                      <span className="font-medium">{log.action}</span>
+                      <span className="text-xs text-muted-foreground ml-auto">
+                        {formatDistanceToNow(new Date(log.createdAt))} ago
+                      </span>
+                    </div>
+                    {log.details && (
+                      <pre className="text-xs bg-muted p-2 rounded mt-2 overflow-x-auto">
+                        {JSON.stringify(log.details, null, 2)}
+                      </pre>
+                    )}
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No actions recorded for this session
+              </div>
+            )}
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
 export default function PlatformAdmin() {
   const [showSettings, setShowSettings] = useState(false);
   const { toast } = useToast();
@@ -657,6 +1007,7 @@ export default function PlatformAdmin() {
           <TabsTrigger value="overview" data-testid="tab-overview">Overview</TabsTrigger>
           <TabsTrigger value="health" data-testid="tab-health">System Health</TabsTrigger>
           <TabsTrigger value="support" data-testid="tab-support">Support Metrics</TabsTrigger>
+          <TabsTrigger value="sessions" data-testid="tab-sessions">Support Sessions</TabsTrigger>
           <TabsTrigger value="revenue" data-testid="tab-revenue">Revenue</TabsTrigger>
           <TabsTrigger value="roles" data-testid="tab-roles">User Roles</TabsTrigger>
           <TabsTrigger value="onboarding" data-testid="tab-onboarding">Onboarding</TabsTrigger>
@@ -904,6 +1255,11 @@ export default function PlatformAdmin() {
 
         <TabsContent value="onboarding" className="space-y-4">
           <OnboardingVisibilityManager />
+        </TabsContent>
+
+        {/* Support Sessions Tab */}
+        <TabsContent value="sessions" className="space-y-4">
+          <SupportSessionsManager />
         </TabsContent>
       </Tabs>
 

@@ -18559,6 +18559,33 @@ Summary:`;
   // Platform staff must start a session before accessing org data
   // ============================================================================
 
+  // List all support sessions
+  app.get('/api/admin/support/sessions', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
+    try {
+      const sessions = await storage.getAllSupportSessions();
+      
+      // Enrich sessions with org names and staff info
+      const enrichedSessions = await Promise.all(sessions.map(async (session: any) => {
+        const workspace = await storage.getWorkspace(session.targetOrgId);
+        const staffUser = await storage.getUser(session.staffUserId);
+        const auditLogs = await storage.getSupportAuditLogs(session.id);
+        
+        return {
+          ...session,
+          targetOrgName: workspace?.name || 'Unknown',
+          staffEmail: staffUser?.email,
+          staffName: staffUser ? `${staffUser.firstName || ''} ${staffUser.lastName || ''}`.trim() : null,
+          actionsCount: auditLogs.length,
+        };
+      }));
+      
+      res.json(enrichedSessions);
+    } catch (error) {
+      console.error('[Support Sessions] List error:', error);
+      res.status(500).json({ message: 'Failed to list support sessions' });
+    }
+  });
+
   // Start a support session for a specific organization
   app.post('/api/admin/support/sessions/start', requirePlatformStaff, async (req: AuthenticatedRequest, res) => {
     try {
