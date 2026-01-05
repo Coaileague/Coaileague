@@ -4547,6 +4547,122 @@ export const insertPlatformRoleSchema = createInsertSchema(platformRoles).omit({
 export type InsertPlatformRole = z.infer<typeof insertPlatformRoleSchema>;
 export type PlatformRole = typeof platformRoles.$inferSelect;
 
+// Support Session Severity Enum
+export const supportActionSeverityEnum = pgEnum('support_action_severity', [
+  'read',    // View-only access
+  'write',   // Modifications that can be undone
+  'delete',  // Destructive actions (soft or hard delete)
+]);
+
+// Support Session Scope Enum
+export const supportSessionScopeEnum = pgEnum('support_session_scope', [
+  'view_data',           // Read-only access
+  'edit_user',           // Modify user data
+  'fix_trinity',         // Debug/reset Trinity
+  'billing_support',     // Billing adjustments
+  'data_export',         // Export org data
+  'emergency_rollback',  // Rollback to safe point
+  'full_control',        // Root admin complete access
+]);
+
+// Support Sessions - Track when support staff access an organization
+export const supportSessions = pgTable("support_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Who is providing support
+  adminUserId: varchar("admin_user_id").notNull().references(() => users.id),
+  adminEmail: varchar("admin_email").notNull(),
+  platformRole: platformRoleEnum("platform_role").notNull(),
+  
+  // Which org is being supported
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id),
+  workspaceName: varchar("workspace_name").notNull(),
+  
+  // Session metadata
+  ticketNumber: varchar("ticket_number", { length: 100 }), // Support ticket reference
+  justification: text("justification").notNull(), // Why accessing this org
+  scope: supportSessionScopeEnum("scope").array().default([]), // What they plan to do
+  
+  // Org lockout/freeze
+  isOrgFrozen: boolean("is_org_frozen").default(false), // If true, org users see maintenance overlay
+  freezeReason: text("freeze_reason"), // "Platform maintenance in progress"
+  
+  // Timing
+  startedAt: timestamp("started_at").defaultNow(),
+  endedAt: timestamp("ended_at"), // Null = active session
+  
+  // Actions taken during session (summary)
+  actionsSummary: jsonb("actions_summary").default([]), // Quick summary of what was done
+  
+  // IP and security
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("support_sessions_admin_idx").on(table.adminUserId),
+  index("support_sessions_workspace_idx").on(table.workspaceId),
+  index("support_sessions_active_idx").on(table.workspaceId, table.endedAt),
+]);
+
+export const insertSupportSessionSchema = createInsertSchema(supportSessions).omit({
+  id: true,
+  createdAt: true,
+  startedAt: true,
+});
+export type InsertSupportSession = z.infer<typeof insertSupportSessionSchema>;
+export type SupportSession = typeof supportSessions.$inferSelect;
+
+// Support Audit Log - Detailed immutable log of every support action
+export const supportAuditLogs = pgTable("support_audit_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Session context (if within a session)
+  sessionId: varchar("session_id").references(() => supportSessions.id),
+  
+  // Actor details
+  adminUserId: varchar("admin_user_id").notNull().references(() => users.id),
+  adminEmail: varchar("admin_email").notNull(),
+  platformRole: platformRoleEnum("platform_role").notNull(),
+  
+  // Target org
+  workspaceId: varchar("workspace_id").references(() => workspaces.id),
+  workspaceName: varchar("workspace_name"),
+  
+  // Action details
+  action: varchar("action", { length: 100 }).notNull(), // 'viewed_employee', 'edited_user', 'reset_trinity', etc.
+  targetResource: varchar("target_resource", { length: 100 }), // 'employee', 'schedule', 'trinity_memory', etc.
+  targetId: varchar("target_id"), // ID of the specific record
+  
+  // Before/after for writes
+  previousValue: jsonb("previous_value"),
+  newValue: jsonb("new_value"),
+  
+  // Severity and justification
+  severity: supportActionSeverityEnum("severity").notNull(),
+  justification: text("justification"), // Ticket # or reason
+  
+  // Security
+  ipAddress: varchar("ip_address"),
+  userAgent: text("user_agent"),
+  
+  // Immutable timestamp
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+}, (table) => [
+  index("support_audit_admin_idx").on(table.adminUserId),
+  index("support_audit_workspace_idx").on(table.workspaceId),
+  index("support_audit_session_idx").on(table.sessionId),
+  index("support_audit_severity_idx").on(table.severity),
+  index("support_audit_timestamp_idx").on(table.timestamp),
+]);
+
+export const insertSupportAuditLogSchema = createInsertSchema(supportAuditLogs).omit({
+  id: true,
+  timestamp: true,
+});
+export type InsertSupportAuditLog = z.infer<typeof insertSupportAuditLogSchema>;
+export type SupportAuditLog = typeof supportAuditLogs.$inferSelect;
+
 // System-wide audit log for platform operations
 export const systemAuditLogs = pgTable("system_audit_logs", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),

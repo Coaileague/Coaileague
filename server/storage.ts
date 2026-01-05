@@ -251,6 +251,12 @@ import {
   aiBrainActionLogs,
   type AiBrainActionLog,
   type InsertAiBrainActionLog,
+  supportSessions,
+  supportAuditLogs,
+  type SupportSession,
+  type InsertSupportSession,
+  type SupportAuditLog,
+  type InsertSupportAuditLog,
 } from "@shared/schema";
 import type { PaginatedResponse, ClientWithInvoiceCount } from "@shared/types";
 import type { ClientsQueryParams } from "@shared/validation/pagination";
@@ -936,6 +942,33 @@ export interface IStorage {
   getAiBrainActionLogsByWorkflow(workflowId: string): Promise<AiBrainActionLog[]>;
   updateAiBrainActionLog(id: string, data: Partial<InsertAiBrainActionLog>): Promise<AiBrainActionLog | undefined>;
   markAiBrainActionReviewed(id: string, reviewedBy: string, notes?: string): Promise<AiBrainActionLog | undefined>;
+
+  // ========================================================================
+  // SUPPORT SESSIONS - Cross-Org Administrative Access
+  // ========================================================================
+  createSupportSession(session: InsertSupportSession): Promise<SupportSession>;
+  getSupportSession(id: string): Promise<SupportSession | undefined>;
+  getActiveSupportSessionForWorkspace(workspaceId: string): Promise<SupportSession | undefined>;
+  getActiveSupportSessionByAdmin(adminUserId: string): Promise<SupportSession | undefined>;
+  endSupportSession(id: string, actionsSummary?: any[]): Promise<SupportSession | undefined>;
+  setOrgFrozen(workspaceId: string, frozen: boolean, reason?: string): Promise<boolean>;
+  isOrgFrozen(workspaceId: string): Promise<{ frozen: boolean; reason?: string; sessionId?: string }>;
+
+  // ========================================================================
+  // SUPPORT AUDIT LOG - Immutable Audit Trail for Support Actions
+  // ========================================================================
+  createSupportAuditLog(log: InsertSupportAuditLog): Promise<SupportAuditLog>;
+  getSupportAuditLogs(filters?: {
+    adminUserId?: string;
+    workspaceId?: string;
+    sessionId?: string;
+    severity?: string;
+    action?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<SupportAuditLog[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -7701,6 +7734,150 @@ export class DatabaseStorage implements IStorage {
       .where(eq(aiBrainActionLogs.id, id))
       .returning();
     return updated;
+  }
+
+  // ============================================================================
+  // SUPPORT SESSIONS - Cross-Org Administrative Access
+  // ============================================================================
+
+  async createSupportSession(session: InsertSupportSession): Promise<SupportSession> {
+    const [created] = await db.insert(supportSessions).values(session).returning();
+    return created;
+  }
+
+  async getSupportSession(id: string): Promise<SupportSession | undefined> {
+    const [session] = await db.select().from(supportSessions).where(eq(supportSessions.id, id));
+    return session;
+  }
+
+  async getActiveSupportSessionForWorkspace(workspaceId: string): Promise<SupportSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(supportSessions)
+      .where(
+        and(
+          eq(supportSessions.workspaceId, workspaceId),
+          isNull(supportSessions.endedAt)
+        )
+      )
+      .orderBy(desc(supportSessions.startedAt))
+      .limit(1);
+    return session;
+  }
+
+  async getActiveSupportSessionByAdmin(adminUserId: string): Promise<SupportSession | undefined> {
+    const [session] = await db
+      .select()
+      .from(supportSessions)
+      .where(
+        and(
+          eq(supportSessions.adminUserId, adminUserId),
+          isNull(supportSessions.endedAt)
+        )
+      )
+      .orderBy(desc(supportSessions.startedAt))
+      .limit(1);
+    return session;
+  }
+
+  async endSupportSession(id: string, actionsSummary?: any[]): Promise<SupportSession | undefined> {
+    const [updated] = await db
+      .update(supportSessions)
+      .set({
+        endedAt: new Date(),
+        actionsSummary: actionsSummary || [],
+        isOrgFrozen: false, // Auto-unfreeze when session ends
+      })
+      .where(eq(supportSessions.id, id))
+      .returning();
+    return updated;
+  }
+
+  async setOrgFrozen(workspaceId: string, frozen: boolean, reason?: string): Promise<boolean> {
+    const activeSession = await this.getActiveSupportSessionForWorkspace(workspaceId);
+    if (!activeSession) return false;
+    
+    await db
+      .update(supportSessions)
+      .set({
+        isOrgFrozen: frozen,
+        freezeReason: frozen ? reason : null,
+      })
+      .where(eq(supportSessions.id, activeSession.id));
+    return true;
+  }
+
+  async isOrgFrozen(workspaceId: string): Promise<{ frozen: boolean; reason?: string; sessionId?: string }> {
+    const activeSession = await this.getActiveSupportSessionForWorkspace(workspaceId);
+    if (!activeSession || !activeSession.isOrgFrozen) {
+      return { frozen: false };
+    }
+    return {
+      frozen: true,
+      reason: activeSession.freezeReason || 'Platform maintenance in progress',
+      sessionId: activeSession.id,
+    };
+  }
+
+  // ============================================================================
+  // SUPPORT AUDIT LOG - Immutable Audit Trail for Support Actions
+  // ============================================================================
+
+  async createSupportAuditLog(log: InsertSupportAuditLog): Promise<SupportAuditLog> {
+    const [created] = await db.insert(supportAuditLogs).values(log).returning();
+    return created;
+  }
+
+  async getSupportAuditLogs(filters?: {
+    adminUserId?: string;
+    workspaceId?: string;
+    sessionId?: string;
+    severity?: string;
+    action?: string;
+    startDate?: Date;
+    endDate?: Date;
+    limit?: number;
+    offset?: number;
+  }): Promise<SupportAuditLog[]> {
+    let query = db.select().from(supportAuditLogs).$dynamic();
+    const conditions: any[] = [];
+    
+    if (filters?.adminUserId) {
+      conditions.push(eq(supportAuditLogs.adminUserId, filters.adminUserId));
+    }
+    if (filters?.workspaceId) {
+      conditions.push(eq(supportAuditLogs.workspaceId, filters.workspaceId));
+    }
+    if (filters?.sessionId) {
+      conditions.push(eq(supportAuditLogs.sessionId, filters.sessionId));
+    }
+    if (filters?.severity) {
+      conditions.push(sql`${supportAuditLogs.severity} = ${filters.severity}`);
+    }
+    if (filters?.action) {
+      conditions.push(eq(supportAuditLogs.action, filters.action));
+    }
+    if (filters?.startDate) {
+      conditions.push(sql`${supportAuditLogs.timestamp} >= ${filters.startDate}`);
+    }
+    if (filters?.endDate) {
+      conditions.push(sql`${supportAuditLogs.timestamp} <= ${filters.endDate}`);
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
+    
+    query = query.orderBy(desc(supportAuditLogs.timestamp));
+    
+    if (filters?.limit) {
+      query = query.limit(filters.limit);
+    }
+    if (filters?.offset) {
+      query = query.offset(filters.offset);
+    }
+    
+    return await query;
   }
 }
 

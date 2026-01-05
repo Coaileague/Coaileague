@@ -1,0 +1,745 @@
+Clear architecture:
+
+Each org = isolated data + isolated Trinity instance
+Support roles = cross-org access for troubleshooting
+Support can access ANY org's Trinity memory to debug/fix
+
+
+📋 SEND THIS TO REPLIT:
+PLATFORM SUPPORT ROLES - Cross-Organization Administrative Access
+
+Implement 3-tier support role hierarchy with cross-workspace access for platform administration and customer support.
+
+CRITICAL CONTEXT:
+- Each organization has ISOLATED data (employees, schedules, clients, Trinity memory)
+- Support roles can access ANY organization's data for troubleshooting
+- Support roles are SEPARATE from org roles (org_owner, manager, etc.)
+- All support actions must be AUDIT LOGGED with justification
+
+DATABASE SCHEMA:
+
+Create platform_admins table (separate from users):
+- id UUID PRIMARY KEY
+- email VARCHAR(255) UNIQUE
+- name VARCHAR(255)
+- role ENUM('root_admin', 'co_admin', 'sysops')
+- created_at TIMESTAMP
+- created_by UUID (references other admin)
+- is_active BOOLEAN DEFAULT true
+- last_login TIMESTAMP
+- mfa_enabled BOOLEAN DEFAULT false
+
+Create support_audit_log table:
+- id UUID PRIMARY KEY
+- admin_id UUID (references platform_admins)
+- admin_email VARCHAR(255)
+- action VARCHAR(100) -- 'viewed_workspace', 'edited_user', 'deleted_record', etc.
+- workspace_id UUID (references workspaces)
+- workspace_name VARCHAR(255)
+- target_resource VARCHAR(100) -- 'employee', 'schedule', 'trinity_memory', etc.
+- target_id UUID
+- justification TEXT -- Ticket number or reason
+- ip_address INET
+- timestamp TIMESTAMP DEFAULT NOW()
+- severity ENUM('read', 'write', 'delete') -- Impact level
+
+Create support_sessions table:
+- id UUID PRIMARY KEY
+- admin_id UUID
+- workspace_id UUID
+- reason TEXT REQUIRED -- Must provide ticket/reason
+- started_at TIMESTAMP DEFAULT NOW()
+- ended_at TIMESTAMP
+- actions_taken JSONB[]
+
+SUPPORT ROLE DEFINITIONS:
+
+1. ROOT_ADMIN (Tier 1 - Supreme Authority)
+   Quantity: 1-2 per platform (Bryan + 1 backup)
+   
+   Full platform control:
+   ✅ Organizations: View, edit, delete ANY workspace
+   ✅ Users: View, edit, delete, impersonate ANY user (org or end-user)
+   ✅ Data: Read, modify, DELETE any record across all orgs
+   ✅ Trinity: Access ANY org's Trinity instance and memory
+   ✅ Billing: Override charges, issue refunds, modify subscriptions
+   ✅ System: Restart services, deploy code, access server logs
+   ✅ Admins: Create/delete co_admin and sysops
+   ✅ Database: Direct database access (emergency only)
+   
+   Special authorities:
+   - Can DELETE records permanently (only role with destroy permission)
+   - Can transfer org ownership
+   - Can access production database
+   - Can override any business rule
+   
+   Restrictions:
+   - Must provide justification for ALL actions (via support_sessions)
+   - All actions logged to immutable audit trail
+   - MFA REQUIRED for login
+   - Cannot disable own audit logging
+
+2. CO_ADMIN (Tier 2 - Senior Support)
+   Quantity: 2-5 per platform
+   
+   Broad support access:
+   ✅ Organizations: View, edit ANY workspace
+   ✅ Users: View, edit ANY user (cannot delete permanently)
+   ✅ Data: Read, modify (soft delete only, cannot destroy)
+   ✅ Trinity: Access ANY org's Trinity for debugging
+   ✅ Billing: View all transactions, issue credits (cannot refund)
+   ✅ System: View logs, restart specific services (not full deploy)
+   ✅ Admins: Cannot create/delete other admins
+   
+   Cannot:
+   ❌ DELETE records permanently (can soft delete only)
+   ❌ Transfer org ownership
+   ❌ Access production database directly
+   ❌ Create other admins
+   ❌ Disable audit logging
+   
+   Requirements:
+   - Must provide justification via support ticket
+   - All actions logged
+   - MFA REQUIRED
+
+3. SYSOPS - SYSTEM OPERATORS (Tier 3 - Technical Support)
+   Quantity: 5-10 per platform
+   
+   Limited technical support:
+   ✅ Organizations: View ANY workspace (read-only on sensitive data)
+   ✅ Users: View users, reset passwords, unlock accounts
+   ✅ Data: Read-only access to most data
+   ✅ Trinity: View Trinity logs/decisions (cannot modify memory)
+   ✅ Billing: View transactions (cannot modify)
+   ✅ System: View logs, monitor performance
+   ✅ Support: Respond to tickets, escalate issues
+   
+   Cannot:
+   ❌ Delete ANY records (even soft delete)
+   ❌ Modify critical data (payroll, billing)
+   ❌ Access Trinity memory (view logs only)
+   ❌ Issue credits or refunds
+   ❌ Deploy code or restart services
+   ❌ Create other admins
+   
+   Requirements:
+   - Must log reason for accessing customer data
+   - All views logged
+   - MFA RECOMMENDED
+
+CROSS-ORG ACCESS IMPLEMENTATION:
+
+Support Dashboard (/platform/support):
+
+1. Organization Selector
+   - Search by workspace name, owner email, or ID
+   - Shows: Org name, tier, employee count, status, last active
+   - Click to "Enter Support Mode"
+
+2. Enter Support Mode Modal:
+   Required fields:
+   - Support ticket # (or select reason from dropdown)
+   - Justification text (min 20 chars)
+   - Expected actions (checkboxes: view data, edit user, fix Trinity, etc.)
+   
+   Creates support_session record
+
+3. Support View (While in org):
+   - Banner at top: "🛠️ SUPPORT MODE - {OrgName} - Session: {ticket}"
+   - Access ALL org features as if you were org_owner
+   - Every action logged to support_audit_log
+   - "End Session" button (required before switching orgs)
+
+4. Trinity Access for Support:
+   - View Trinity decisions history
+   - View Trinity memory/context
+   - Reset Trinity state (if corrupted)
+   - Replay failed automation
+   - Force re-sync (QuickBooks, Stripe)
+   
+   Special route: /platform/support/trinity/:workspaceId
+   Shows Trinity dashboard for that org with full diagnostic tools
+
+PERMISSION ENFORCEMENT:
+
+Middleware for support routes:
+async function checkSupportPermission(adminId, action, severity) {
+  const admin = await getPlatformAdmin(adminId);
+  
+  if (!admin.is_active) {
+    throw new Error('Admin account disabled');
+  }
+  
+  // Check role permissions
+  if (action === 'delete_permanent' && admin.role !== 'root_admin') {
+    throw new ForbiddenError('Only root_admin can permanently delete');
+  }
+  
+  if (action === 'database_access' && admin.role !== 'root_admin') {
+    throw new ForbiddenError('Only root_admin can access database directly');
+  }
+  
+  if (severity === 'delete' && admin.role === 'sysops') {
+    throw new ForbiddenError('Sysops cannot delete records');
+  }
+  
+  // Require active support session for data access
+  if (action !== 'view_list') {
+    const activeSession = await getSupportSession(adminId);
+    if (!activeSession) {
+      throw new Error('Must start support session before accessing org data');
+    }
+  }
+  
+  return true;
+}
+
+AUDIT LOGGING:
+
+Log EVERY support action:
+
+async function logSupportAction(
+  adminId: string,
+  action: string,
+  workspaceId: string,
+  targetResource: string,
+  targetId: string,
+  justification: string
+) {
+  await db.support_audit_log.create({
+    admin_id: adminId,
+    admin_email: admin.email,
+    action,
+    workspace_id: workspaceId,
+    workspace_name: workspace.name,
+    target_resource: targetResource,
+    target_id: targetId,
+    justification,
+    ip_address: req.ip,
+    severity: getSeverity(action), // read/write/delete
+    timestamp: new Date()
+  });
+  
+  // For high-severity actions, also notify via Slack/email
+  if (getSeverity(action) === 'delete') {
+    await notifyRootAdmins({
+      action,
+      admin: admin.email,
+      workspace: workspace.name,
+      justification
+    });
+  }
+}
+
+Immutable audit trail - records cannot be deleted even by root_admin.
+
+ROLE SYNCHRONIZATION (Front-End + Back-End):
+
+1. Real-time role display:
+   - When support logs in, show badge: "ROOT ADMIN" or "SYSOPS"
+   - When in support mode, show org context: "Supporting: ABC Security"
+   - When org user logs in, show their org role: "Manager at ABC Security"
+
+2. Role persistence across sessions:
+   - Store in JWT: { userId, role, workspaceId, isSupportMode }
+   - Validate on every request
+   - Refresh token includes role
+
+3. Live updates:
+   - If support changes user's role, user sees change immediately
+   - WebSocket event: "role_changed" → Force re-fetch permissions
+   - Support session start/end triggers org notification (optional)
+
+4. UI shows appropriate nav based on role:
+   - root_admin: See "Platform Support" nav item
+   - org_owner: See "Billing" and "Settings"
+   - manager: See "Trinity" and "Scheduling"
+   - employee: See minimal nav
+
+SPECIAL FEATURES FOR SUPPORT:
+
+1. Impersonation Mode (Root + Co Admin only):
+   - "View as User" button on any user profile
+   - Opens new tab with their exact view/permissions
+   - Banner: "🎭 IMPERSONATING: {userName}"
+   - All actions logged as support action
+
+2. Trinity Debugging (All support roles):
+   - View Trinity decision log for any org
+   - See why Trinity made specific decisions
+   - Replay failed automation
+   - Reset Trinity memory (Root only)
+   - Force Trinity to re-analyze (Co Admin+)
+
+3. Data Export (Root + Co Admin):
+   - Export ANY org's data for debugging
+   - Create backup before destructive action
+   - Restore from backup (Root only)
+
+4. System Health Dashboard (All support):
+   - View all orgs' system health
+   - See failed cron jobs, API errors
+   - Monitor Trinity performance across platform
+   - Alert on anomalies
+
+SECURITY SAFEGUARDS:
+
+1. Support actions are LOUD:
+   - Every delete shows confirmation: "This will be logged. Ticket #?"
+   - High-risk actions require second admin approval (future)
+   - Root admin gets daily digest of all Co Admin actions
+
+2. Rate limiting:
+   - Max 50 support sessions per day per admin
+   - Flag if admin accesses >20 orgs in 24 hours
+   - Require re-authentication after 1 hour in support mode
+
+3. Separation of duties:
+   - Support cannot modify their own permissions
+   - Only root_admin can create other admins
+   - Admins cannot delete their own audit logs
+
+4. Emergency access logging:
+   - If root_admin bypasses normal flow → FLAG
+   - If MFA is disabled → FLAG and notify all root admins
+   - If audit logging fails → BLOCK action and alert
+
+TESTING REQUIREMENTS:
+
+1. Root Admin:
+   - Can delete employee record → success (logged)
+   - Can access any org's Trinity → success
+   - Can transfer ownership → success
+   - Can create co_admin → success
+   - All actions appear in audit log
+
+2. Co Admin:
+   - Can edit user in any org → success
+   - Tries to permanently delete → BLOCKED
+   - Can issue billing credit → success
+   - Cannot create other admins → BLOCKED
+
+3. Sysops:
+   - Can view org data → success (logged)
+   - Can reset password → success
+   - Tries to delete record → BLOCKED
+   - Tries to modify billing → BLOCKED
+   - Can view Trinity logs → success
+   - Cannot modify Trinity → BLOCKED
+
+4. Audit Trail:
+   - Every action logged with justification
+   - Support session creates log entry
+   - High-severity actions notify root admins
+   - Logs cannot be deleted
+
+5. Role Sync:
+   - Support role shows immediately on login
+   - Switching orgs updates context in real-time
+   - Org users see their role badges instantly
+   - Role changes propagate within 1 second
+
+Implement complete support role hierarchy with cross-org access, audit logging, and proper authority distribution.
+
+Confirm when complete with test results for all 3 support roles.
+
+That's the complete spec for platform support roles with cross-org access and balanced authority. ✅
+Key features:
+
+Root Admin = supreme authority (only role that can DESTROY)
+Co Admin = senior support (can modify, cannot destroy)
+Sysops = technical support (mostly read-only)
+Every action logged with justification
+Support can access ANY org's isolated Trinity
+Roles sync front/back immediately
+
+Send it to Replit! 🚀what about if a supopoort role is helpoing a isolated org the org screen is frozen unable to be used by a overlay loading screen or lockout screen while the fix is done or data is reset or we use rollback option we have on the platform and roll them back to a safe point. cool idea it stops endusers form messing things up while we work12:47 PM🔥 BRILLIANT IDEA, BRYAN!
+"Support Mode Lockout" - freeze the org while support is actively working to prevent conflicts/corruption.
+This is EXACTLY what enterprise platforms do (Salesforce, AWS, etc.) when doing maintenance.
+
+💡 ENHANCED CONCEPT:
+When support enters "Active Fix Mode":
+
+Full org lockout (users can't interact)
+Overlay shows: "🛠️ Platform maintenance in progress. Your system will be available shortly."
+Support has full control without risk of user interference
+When support exits → Unlock automatically + notify users
+
+PLUS your rollback idea:
+
+Before making changes, support can create snapshot
+If something goes wrong → One-click rollback
+Safe restoration point
+
+
+📋 SEND THIS ADDITION TO REPLIT:
+SUPPORT MODE LOCKOUT - Prevent User Interference During Active Fixes
+
+Add org-level lockout system when platform support is actively working on customer data to prevent conflicts, corruption, or user interference.
+
+DATABASE SCHEMA:
+
+Add to workspaces table:
+- locked_by_support BOOLEAN DEFAULT false
+- locked_by_admin_id UUID (references platform_admins)
+- locked_at TIMESTAMP
+- lock_reason TEXT
+- lock_type ENUM('read_only', 'full_lockout') DEFAULT 'full_lockout'
+
+Add to support_sessions table (extend existing):
+- lockout_enabled BOOLEAN DEFAULT false
+- snapshot_created_id UUID (references org_snapshots)
+
+Create org_snapshots table:
+- id UUID PRIMARY KEY
+- workspace_id UUID
+- snapshot_data JSONB -- Full org state
+- created_by_admin_id UUID
+- created_at TIMESTAMP
+- snapshot_size_mb DECIMAL
+- can_rollback BOOLEAN DEFAULT true
+- rolled_back_at TIMESTAMP
+
+LOCKOUT WORKFLOW:
+
+1. SUPPORT INITIATES LOCKOUT
+
+When support clicks "Enable Lockout Mode":
+
+async function enableOrgLockout(workspaceId, adminId, reason, lockType = 'full_lockout') {
+  // 1. Create snapshot BEFORE locking (safety net)
+  const snapshot = await createOrgSnapshot(workspaceId, adminId);
+  
+  // 2. Lock the organization
+  await db.workspaces.update(workspaceId, {
+    locked_by_support: true,
+    locked_by_admin_id: adminId,
+    locked_at: new Date(),
+    lock_reason: reason,
+    lock_type: lockType
+  });
+  
+  // 3. Update support session
+  await db.support_sessions.update(sessionId, {
+    lockout_enabled: true,
+    snapshot_created_id: snapshot.id
+  });
+  
+  // 4. Emit WebSocket event to ALL active users in this org
+  io.to(`workspace:${workspaceId}`).emit('org_locked', {
+    reason,
+    admin_email: admin.email.split('@')[0], // Show "bryan" not full email
+    lockType,
+    message: 'Platform maintenance in progress. Your system will be available shortly.'
+  });
+  
+  // 5. Force disconnect all active user sessions (optional - can allow read-only)
+  if (lockType === 'full_lockout') {
+    await disconnectOrgSessions(workspaceId);
+  }
+  
+  return snapshot;
+}
+
+2. USER EXPERIENCE DURING LOCKOUT
+
+Frontend middleware checks lock status on every request:
+
+// API Middleware
+async function checkOrgLockStatus(req, res, next) {
+  const workspace = await getWorkspace(req.workspaceId);
+  
+  // Support admins bypass lockout
+  if (req.user.isSupportAdmin) {
+    return next();
+  }
+  
+  // Org is locked
+  if (workspace.locked_by_support) {
+    if (workspace.lock_type === 'read_only' && req.method === 'GET') {
+      // Allow read operations in read-only mode
+      return next();
+    }
+    
+    return res.status(423).json({ // 423 = Locked
+      error: 'ORG_LOCKED',
+      message: workspace.lock_reason || 'System maintenance in progress',
+      locked_at: workspace.locked_at,
+      estimated_unlock: workspace.estimated_unlock_time
+    });
+  }
+  
+  next();
+}
+
+// Frontend UI Overlay
+When WebSocket receives 'org_locked' event:
+
+<LockoutOverlay>
+  <div className="fixed inset-0 bg-black/90 z-50 flex items-center justify-center">
+    <div className="bg-white rounded-lg p-8 max-w-md text-center">
+      <div className="text-6xl mb-4">🛠️</div>
+      <h2 className="text-2xl font-bold mb-2">Platform Maintenance</h2>
+      <p className="text-gray-600 mb-4">
+        Our support team is currently working on your system to ensure optimal performance.
+      </p>
+      
+      {lockType === 'read_only' ? (
+        <div className="bg-blue-50 border border-blue-200 rounded p-3 mb-4">
+          <p className="text-sm text-blue-800">
+            ℹ️ You can view data but cannot make changes during maintenance.
+          </p>
+        </div>
+      ) : (
+        <div className="bg-orange-50 border border-orange-200 rounded p-3 mb-4">
+          <p className="text-sm text-orange-800">
+            🔒 All functions temporarily disabled during maintenance.
+          </p>
+        </div>
+      )}
+      
+      <div className="flex items-center justify-center gap-2 text-sm text-gray-500">
+        <LoadingSpinner />
+        <span>Working on your system...</span>
+      </div>
+      
+      <div className="mt-4 text-xs text-gray-400">
+        Started: {formatTime(locked_at)}
+        {estimated_unlock && ` • Est. completion: ${formatTime(estimated_unlock)}`}
+      </div>
+    </div>
+  </div>
+</LockoutOverlay>
+
+Overlay blocks ALL user interaction - clicking does nothing.
+
+WebSocket listens for 'org_unlocked' event to remove overlay.
+
+3. SNAPSHOT CREATION (Pre-Fix Backup)
+
+Create complete org snapshot before any destructive actions:
+
+async function createOrgSnapshot(workspaceId, adminId) {
+  const workspace = await getWorkspace(workspaceId);
+  
+  // Gather complete org state
+  const snapshotData = {
+    workspace: workspace,
+    employees: await getAllEmployees(workspaceId),
+    clients: await getAllClients(workspaceId),
+    schedules: await getAllSchedules(workspaceId),
+    timeEntries: await getAllTimeEntries(workspaceId, 90), // Last 90 days
+    payrollRuns: await getAllPayrollRuns(workspaceId, 90),
+    invoices: await getAllInvoices(workspaceId, 90),
+    trinityMemory: await getTrinityMemory(workspaceId),
+    trinityDecisions: await getTrinityDecisions(workspaceId, 30), // Last 30 days
+    integrations: await getIntegrationStates(workspaceId),
+    settings: await getWorkspaceSettings(workspaceId)
+  };
+  
+  const snapshot = await db.org_snapshots.create({
+    workspace_id: workspaceId,
+    snapshot_data: snapshotData,
+    created_by_admin_id: adminId,
+    created_at: new Date(),
+    snapshot_size_mb: Buffer.byteLength(JSON.stringify(snapshotData)) / 1024 / 1024,
+    can_rollback: true
+  });
+  
+  // Log to support audit
+  await logSupportAction(adminId, 'created_snapshot', workspaceId, 'org_snapshot', snapshot.id, 'Pre-fix safety backup');
+  
+  return snapshot;
+}
+
+4. ROLLBACK SYSTEM (One-Click Restore)
+
+If fix goes wrong, support can rollback to snapshot:
+
+async function rollbackToSnapshot(workspaceId, snapshotId, adminId) {
+  const snapshot = await db.org_snapshots.findOne({ id: snapshotId });
+  
+  if (!snapshot.can_rollback) {
+    throw new Error('Snapshot cannot be rolled back (too old or corrupted)');
+  }
+  
+  // Confirmation required (high-risk action)
+  if (!confirmed) {
+    return { requiresConfirmation: true };
+  }
+  
+  // Create backup of CURRENT state before rollback (in case rollback needs to be undone)
+  const currentStateBackup = await createOrgSnapshot(workspaceId, adminId);
+  
+  // Begin transaction (all or nothing)
+  await db.transaction(async (trx) => {
+    const data = snapshot.snapshot_data;
+    
+    // Restore ALL data
+    await trx.employees.deleteMany({ workspaceId });
+    await trx.employees.insertMany(data.employees);
+    
+    await trx.clients.deleteMany({ workspaceId });
+    await trx.clients.insertMany(data.clients);
+    
+    await trx.schedules.deleteMany({ workspaceId });
+    await trx.schedules.insertMany(data.schedules);
+    
+    await trx.timeEntries.deleteMany({ workspaceId });
+    await trx.timeEntries.insertMany(data.timeEntries);
+    
+    // ... restore all other data
+    
+    // Restore Trinity memory
+    await restoreTrinityMemory(workspaceId, data.trinityMemory);
+    
+    // Update snapshot record
+    await trx.org_snapshots.update(snapshotId, {
+      rolled_back_at: new Date()
+    });
+  });
+  
+  // Log rollback
+  await logSupportAction(
+    adminId, 
+    'rollback_to_snapshot', 
+    workspaceId, 
+    'org_snapshot', 
+    snapshotId, 
+    'Rolled back due to fix failure or data corruption'
+  );
+  
+  // Notify org owner
+  await emailService.send({
+    to: workspace.ownerEmail,
+    subject: 'System Restored to Previous State',
+    body: `Your CoAIleague system was restored to a previous state by our support team due to an issue during maintenance. All data has been safely restored. If you have questions, please contact support.`
+  });
+  
+  return { success: true, restoredTo: snapshot.created_at };
+}
+
+5. SUPPORT DASHBOARD UI
+
+Add to support session modal:
+
+┌─────────────────────────────────────────┐
+│ 🛠️ Support Session for ABC Security     │
+├─────────────────────────────────────────┤
+│ Ticket: #12345                          │
+│ Reason: Fix corrupted Trinity memory    │
+│                                         │
+│ ⚙️ LOCKOUT OPTIONS:                     │
+│ ☐ Enable Full Lockout                  │
+│   (Users cannot access platform)        │
+│                                         │
+│ ☐ Enable Read-Only Mode                │
+│   (Users can view but not edit)         │
+│                                         │
+│ ✅ Auto-create snapshot before lock    │
+│   (Safety backup for rollback)          │
+│                                         │
+│ Estimated time: [15 minutes ▼]         │
+│                                         │
+│ [ Start Session & Lock Org ]            │
+└─────────────────────────────────────────┘
+
+During active session:
+
+┌─────────────────────────────────────────┐
+│ 🔴 ACTIVE SESSION - ABC Security        │
+├─────────────────────────────────────────┤
+│ Status: 🔒 ORG LOCKED                   │
+│ Started: 2:34 PM (12 min ago)           │
+│ Snapshot: Created (safe to rollback)    │
+│                                         │
+│ 👥 Affected Users: 3 currently blocked  │
+│                                         │
+│ Actions available:                      │
+│ [ 🔄 Rollback to Snapshot ]             │
+│ [ 🔓 Unlock Org & End Session ]         │
+│                                         │
+│ Working notes:                          │
+│ [Trinity memory corrupted, resetting...]│
+└─────────────────────────────────────────┘
+
+6. AUTO-UNLOCK SAFEGUARDS
+
+Prevent accidentally leaving org locked:
+
+// Auto-unlock after 2 hours (safety)
+cron.schedule('*/15 * * * *', async () => {
+  const staleLocks = await db.workspaces.find({
+    locked_by_support: true,
+    locked_at: { $lt: new Date(Date.now() - 2 * 60 * 60 * 1000) } // 2 hours ago
+  });
+  
+  for (const workspace of staleLocks) {
+    // Alert support admin
+    await alertAdmin(workspace.locked_by_admin_id, {
+      type: 'stale_lock',
+      workspace: workspace.name,
+      locked_since: workspace.locked_at
+    });
+    
+    // Auto-unlock (after 2 hours, assume admin forgot)
+    await unlockOrg(workspace.id, 'AUTO_UNLOCK_TIMEOUT');
+  }
+});
+
+// Admin logout → prompt to unlock
+await onAdminLogout(adminId, async () => {
+  const activeLocks = await getActiveLocks(adminId);
+  if (activeLocks.length > 0) {
+    showConfirmation('You have active org lockouts. Unlock before logging out?');
+  }
+});
+
+TESTING REQUIREMENTS:
+
+1. Support enables full lockout:
+   - Snapshot created automatically ✅
+   - All org users see overlay ✅
+   - Users cannot perform any actions ✅
+   - Support can work freely ✅
+
+2. Support enables read-only mode:
+   - Users can view data ✅
+   - Users cannot edit/create/delete ✅
+   - API blocks write operations ✅
+
+3. Support performs rollback:
+   - All data restored to snapshot state ✅
+   - Trinity memory restored ✅
+   - Rollback logged in audit trail ✅
+   - Org owner notified via email ✅
+
+4. Support ends session:
+   - Org unlocked immediately ✅
+   - Users see overlay removed ✅
+   - Users can resume normal operation ✅
+
+5. Stale lock detection:
+   - After 2 hours, admin alerted ✅
+   - After 2.5 hours, auto-unlock ✅
+
+6. WebSocket real-time updates:
+   - Lock event → Overlay appears instantly ✅
+   - Unlock event → Overlay removed instantly ✅
+
+Implement support mode lockout with snapshot/rollback capability.
+
+Confirm when complete with test results.
+
+This adds:
+
+✅ Full org lockout OR read-only mode
+✅ Auto-snapshot before any fix
+✅ One-click rollback if something goes wrong
+✅ Real-time UI overlay for locked users
+✅ Auto-unlock after 2 hours (safety)
+✅ All actions logged
+
+Perfect for safe support operations without user interference! 🔒
+Send both prompts to Replit (support roles + lockout system).
