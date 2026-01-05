@@ -1,0 +1,241 @@
+ROLE HIERARCHY FOR COAILEAGUE:
+TIER 1: OWNERSHIP
+
+org_owner (1 per org, undeletable, immutable except by system admins)
+
+Full platform access
+Billing/subscription control
+Can delete org
+Can promote/demote all roles
+Trinity + all automations
+
+
+co_owner (0-1 per org, assigned by owner)
+
+Access controlled by org_owner
+Can manage employees (but not delete critical data)
+Can view reports/files (but not destroy)
+Trinity + automations (if granted by owner)
+Cannot modify billing/subscription
+Cannot delete org
+
+
+
+TIER 2: MANAGEMENT
+
+manager (multiple allowed)
+
+Schedule creation/editing
+Payroll processing
+Client management
+Trinity access (AI scheduling, insights)
+Report generation
+Employee management (hire/terminate)
+Cannot access billing
+Cannot delete org
+
+
+
+TIER 3: SUPERVISION
+
+supervisor (multiple allowed)
+
+View employees in their area
+Approve timesheets
+Handle incidents
+Limited reporting (their team only)
+NO Trinity access
+NO payroll access
+Liaison between staff and management
+
+
+
+TIER 4: STAFF
+
+employee (field workers)
+
+Clock in/out
+View own schedule
+Submit incidents
+View own paystubs
+Update own profile
+NO access to other employees
+NO admin functions
+
+
+
+
+📋 SEND THIS TO REPLIT:
+ROLE-BASED ACCESS CONTROL (RBAC) - Implement Balanced Permission Hierarchy
+
+Create comprehensive role system with 5 distinct levels:
+
+DATABASE SCHEMA:
+
+Update users table:
+- Add `role` ENUM: 'org_owner', 'co_owner', 'manager', 'supervisor', 'employee'
+- Add `permissions` JSONB for granular feature toggles
+- Add `managed_by` UUID (for supervisors assigned to managers)
+- Add `is_system_protected` BOOLEAN (true for org_owner - prevents deletion)
+
+Create role_permissions table:
+- id, role, feature, can_view, can_create, can_edit, can_delete
+- Defines what each role can do with each feature
+
+ROLE DEFINITIONS:
+
+1. ORG_OWNER (Tier 1 - Full Control)
+   - Quantity: Exactly 1 per workspace (system enforced)
+   - Cannot be deleted (is_system_protected = true)
+   - Cannot change own role (except by platform support)
+   - Full platform access:
+     ✅ Billing: View, modify, upgrade, buy credits
+     ✅ Subscription: Suspend, cancel, change tier
+     ✅ Organization: Delete org, transfer ownership
+     ✅ Users: Create, edit, delete, change any role
+     ✅ Trinity: Full access to all AI features
+     ✅ All features: Unlimited access
+
+2. CO_OWNER (Tier 1 - Delegated Authority)
+   - Quantity: 0-1 per workspace (optional)
+   - Assigned by org_owner only
+   - Permissions controlled by org_owner via feature toggles
+   - Default permissions:
+     ✅ Users: Create, edit employees (cannot delete permanently)
+     ✅ Reports: View all, generate
+     ✅ Trinity: Access if enabled by owner
+     ✅ Scheduling: Full access
+     ✅ Payroll: Process if enabled by owner
+     ❌ Billing: Cannot modify
+     ❌ Subscription: Cannot change
+     ❌ Organization: Cannot delete org
+     ❌ Critical data: Cannot permanently destroy records
+   - Owner can grant/revoke specific permissions via UI
+
+3. MANAGER (Tier 2 - Operations)
+   - Quantity: Multiple allowed
+   - Assigned by owner or co_owner
+   - Permissions:
+     ✅ Scheduling: Create, edit, publish schedules
+     ✅ Payroll: Process payroll for their teams
+     ✅ Clients: Add, edit client information
+     ✅ Employees: Hire, terminate, edit employee data
+     ✅ Trinity: AI scheduling, profit optimization, insights
+     ✅ Reports: Generate for their scope
+     ✅ Incidents: View all, assign, resolve
+     ❌ Billing: No access
+     ❌ Subscription: No access
+     ❌ Organization: Cannot delete org
+     ❌ Other managers: Cannot edit other managers
+
+4. SUPERVISOR (Tier 3 - Team Lead)
+   - Quantity: Multiple allowed
+   - Assigned by manager or above
+   - Linked to specific manager (managed_by field)
+   - Permissions:
+     ✅ Timesheets: Approve/reject for their team
+     ✅ Incidents: Create, view their team's incidents
+     ✅ Schedule: View schedules for their team
+     ✅ Employees: View profiles for their team only
+     ✅ Reports: Limited to their team
+     ❌ Trinity: No AI access
+     ❌ Payroll: Cannot process
+     ❌ Hiring/Termination: Cannot modify employees
+     ❌ Clients: View only
+   - Acts as liaison between employees and management
+
+5. EMPLOYEE (Tier 4 - Field Staff)
+   - Quantity: Unlimited
+   - Standard field worker account
+   - Permissions:
+     ✅ Time tracking: Clock in/out with GPS
+     ✅ Schedule: View own schedule only
+     ✅ Incidents: Report incidents they witness
+     ✅ Profile: Update own contact info, certifications
+     ✅ Paystubs: View own pay history
+     ❌ Other employees: Cannot view
+     ❌ Clients: Cannot view details
+     ❌ Reports: Cannot generate
+     ❌ Admin functions: No access
+
+PERMISSION ENFORCEMENT:
+
+Middleware function for every API route:
+async function checkPermission(userId, action, resource) {
+  const user = await getUser(userId);
+  const hasPermission = await roleHasPermission(user.role, action, resource);
+  
+  if (!hasPermission) {
+    throw new ForbiddenError(`${user.role} cannot ${action} ${resource}`);
+  }
+  
+  // Special case: org_owner protected
+  if (resource === 'user' && targetUser.role === 'org_owner' && action === 'delete') {
+    throw new ForbiddenError('org_owner cannot be deleted');
+  }
+  
+  return true;
+}
+
+Apply to ALL routes requiring authorization.
+
+ROLE ASSIGNMENT RULES:
+
+1. org_owner: Set on workspace creation, cannot be changed
+2. co_owner: Only org_owner can assign
+3. manager: org_owner or co_owner can assign
+4. supervisor: manager+ can assign
+5. employee: Any manager+ can create
+
+ROLE HIERARCHY CHECKS:
+
+Users can only modify users BELOW them in hierarchy:
+- org_owner → can modify everyone
+- co_owner → can modify manager, supervisor, employee (if permission granted)
+- manager → can modify supervisor, employee
+- supervisor → cannot modify any users
+- employee → can only modify self (profile updates)
+
+UI IMPLEMENTATION:
+
+1. User management page shows role badges
+2. "Edit User" modal shows role dropdown (filtered by current user's permissions)
+3. org_owner sees "Transfer Ownership" button (with confirmation + email verification)
+4. co_owner permissions are toggleable by owner via checkboxes
+5. Supervisors see only their assigned team in employee list
+6. Employees see minimal navigation (schedule, time, profile)
+
+FEATURE TOGGLES FOR CO_OWNER:
+
+Owner can enable/disable for co_owner:
+- [ ] Access Trinity AI features
+- [ ] Process payroll
+- [ ] Modify billing (view only by default)
+- [ ] Delete employees permanently
+- [ ] Access financial reports
+- [ ] Manage integrations (QB, Stripe)
+
+AUDIT LOGGING:
+
+Log all role changes:
+- Who made the change
+- Target user
+- Old role → New role
+- Timestamp
+- IP address
+
+Critical for compliance and security.
+
+TESTING REQUIREMENTS:
+
+1. Create org → Verify exactly 1 org_owner created
+2. Attempt to delete org_owner → Should fail
+3. Attempt to change org_owner role without system admin → Should fail
+4. Assign co_owner → Verify limited permissions work
+5. Manager creates employee → Verify employee has correct minimal access
+6. Supervisor tries to access payroll → Should be blocked
+7. Employee tries to view other employees → Should be blocked
+
+Implement complete RBAC system with proper middleware enforcement on every route.
+
+Confirm when complete.

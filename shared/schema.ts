@@ -679,16 +679,19 @@ export const platformRoleEnum = pgEnum('platform_role', [
 ]);
 
 // Organization/Tenant Roles (Subscriber Companies - Tenant Level)
-// Org Owner → Org Admin → Department Manager → Supervisor → Staff
+// 5-Tier Hierarchy: Org Owner → Co-Owner → Manager → Supervisor → Employee
 // These roles manage THEIR OWN BUSINESS OPERATIONS within their tenant sandbox
 export const workspaceRoleEnum = pgEnum('workspace_role', [
-  'org_owner',          // Organization Owner - Top authority within tenant, full tenant control
-  'org_admin',          // Organization Admin - Day-to-day operations, user management, AI approvals
-  'department_manager', // Department Manager - Manages department tasks, staff, and reports
-  'supervisor',         // Supervisor - Team-level oversight, approves tasks and schedules
-  'staff',              // Staff/Employee - Frontline worker, executes tasks
-  'auditor',            // Auditor - Read-only access to finances, HR, and compliance
-  'contractor'          // Contractor - Limited access to specific tasks/projects only
+  'org_owner',          // Tier 1: Organization Owner - Top authority, full tenant control, billing, can delete org
+  'co_owner',           // Tier 1: Co-Owner - Delegated authority, access controlled by owner (0-1 per org)
+  'org_admin',          // Legacy: Maps to co_owner for backward compatibility
+  'manager',            // Tier 2: Manager - Schedule/payroll/client management, Trinity AI access
+  'department_manager', // Legacy: Maps to manager for backward compatibility
+  'supervisor',         // Tier 3: Supervisor - Team oversight, timesheet approval, no Trinity/payroll
+  'staff',              // Tier 4: Employee - Clock in/out, view own schedule/pay, basic access
+  'employee',           // Tier 4: Alias for staff
+  'auditor',            // Read-only access to finances, HR, and compliance
+  'contractor'          // Limited access to specific tasks/projects only
 ]);
 
 // ============================================================================

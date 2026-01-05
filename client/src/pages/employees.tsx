@@ -74,6 +74,8 @@ import { insertEmployeeSchema } from "@shared/schema";
 import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
+import { ROLE_LABELS, getRoleBadgeColor, normalizeRole } from "@/lib/roleHierarchy";
 import {
   Form,
   FormControl,
@@ -873,9 +875,12 @@ export default function Employees() {
                         <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
                           {employee.role || "Employee"}
                         </Badge>
-                        {(employee as any).organizationalTitle && (employee as any).organizationalTitle !== 'staff' && (
-                          <Badge variant="outline" className="text-[10px] h-5 px-1.5 capitalize">
-                            {(employee as any).organizationalTitle}
+                        {employee.workspaceRole && employee.workspaceRole !== 'staff' && employee.workspaceRole !== 'employee' && (
+                          <Badge 
+                            variant="outline" 
+                            className={`text-[10px] h-5 px-1.5 ${getRoleBadgeColor(employee.workspaceRole)}`}
+                          >
+                            {ROLE_LABELS[normalizeRole(employee.workspaceRole)] || employee.workspaceRole}
                           </Badge>
                         )}
                         {getOnboardingStatusBadge(employee.onboardingStatus ?? undefined)}
@@ -1066,172 +1071,16 @@ export default function Employees() {
           </DialogContent>
         </Dialog>
 
-        {/* Edit Employee Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent size="md">
-            <DialogHeader className="space-y-1.5 pb-2">
-              <DialogTitle className="text-base sm:text-lg">Edit Employee</DialogTitle>
-              <DialogDescription className="text-xs sm:text-sm">
-                Update employee details
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-3 py-2">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-firstName" className="text-xs">First Name *</Label>
-                  <Input 
-                    id="edit-firstName" 
-                    placeholder="John" 
-                    value={editFormData.firstName}
-                    onChange={(e) => setEditFormData({ ...editFormData, firstName: e.target.value })}
-                    data-testid="input-edit-firstName"
-                    className="h-9 text-sm"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-lastName" className="text-xs">Last Name *</Label>
-                  <Input 
-                    id="edit-lastName" 
-                    placeholder="Doe" 
-                    value={editFormData.lastName}
-                    onChange={(e) => setEditFormData({ ...editFormData, lastName: e.target.value })}
-                    data-testid="input-edit-lastName"
-                    className="h-9 text-sm"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-email" className="text-xs">Email *</Label>
-                  <Input 
-                    id="edit-email" 
-                    type="email" 
-                    placeholder="john@example.com" 
-                    value={editFormData.email}
-                    onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
-                    data-testid="input-edit-email"
-                    className="h-9 text-sm"
-                  />
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-phone" className="text-xs">Phone</Label>
-                  <Input 
-                    id="edit-phone" 
-                    placeholder="+1 (555) 123-4567" 
-                    value={editFormData.phone}
-                    onChange={(e) => setEditFormData({ ...editFormData, phone: e.target.value })}
-                    data-testid="input-edit-phone"
-                    className="h-9 text-sm"
-                  />
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-role" className="text-xs">Position</Label>
-                  <Select 
-                    value={editFormData.role} 
-                    onValueChange={(value) => setEditFormData({ ...editFormData, role: value })}
-                  >
-                    <SelectTrigger className="h-9 text-sm" data-testid="select-edit-position">
-                      <SelectValue placeholder="Select position" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="Security Guard">Security Guard</SelectItem>
-                      <SelectItem value="Security Officer">Security Officer</SelectItem>
-                      <SelectItem value="Security Supervisor">Security Supervisor</SelectItem>
-                      <SelectItem value="Plumber">Plumber</SelectItem>
-                      <SelectItem value="Electrician">Electrician</SelectItem>
-                      <SelectItem value="HVAC Technician">HVAC Technician</SelectItem>
-                      <SelectItem value="Cleaner">Cleaner</SelectItem>
-                      <SelectItem value="Janitor">Janitor</SelectItem>
-                      <SelectItem value="Housekeeper">Housekeeper</SelectItem>
-                      <SelectItem value="Maintenance Technician">Maintenance Technician</SelectItem>
-                      <SelectItem value="Landscaper">Landscaper</SelectItem>
-                      <SelectItem value="Carpenter">Carpenter</SelectItem>
-                      <SelectItem value="Painter">Painter</SelectItem>
-                      <SelectItem value="Welder">Welder</SelectItem>
-                      <SelectItem value="Pest Control">Pest Control</SelectItem>
-                      <SelectItem value="Pool Technician">Pool Technician</SelectItem>
-                      <SelectItem value="Locksmith">Locksmith</SelectItem>
-                      <SelectItem value="Handyman">Handyman</SelectItem>
-                      <SelectItem value="Caregiver">Caregiver</SelectItem>
-                      <SelectItem value="Nurse Aide">Nurse Aide</SelectItem>
-                      <SelectItem value="Driver">Driver</SelectItem>
-                      <SelectItem value="Warehouse Worker">Warehouse Worker</SelectItem>
-                      <SelectItem value="Forklift Operator">Forklift Operator</SelectItem>
-                      <SelectItem value="Server">Server</SelectItem>
-                      <SelectItem value="Cook">Cook</SelectItem>
-                      <SelectItem value="Dishwasher">Dishwasher</SelectItem>
-                      <SelectItem value="Bartender">Bartender</SelectItem>
-                      <SelectItem value="Host/Hostess">Host/Hostess</SelectItem>
-                      <SelectItem value="Cashier">Cashier</SelectItem>
-                      <SelectItem value="Sales Associate">Sales Associate</SelectItem>
-                      <SelectItem value="Customer Service Rep">Customer Service Rep</SelectItem>
-                      <SelectItem value="Receptionist">Receptionist</SelectItem>
-                      <SelectItem value="Administrative Assistant">Administrative Assistant</SelectItem>
-                      <SelectItem value="Office Manager">Office Manager</SelectItem>
-                      <SelectItem value="Team Lead">Team Lead</SelectItem>
-                      <SelectItem value="Shift Supervisor">Shift Supervisor</SelectItem>
-                      <SelectItem value="General Manager">General Manager</SelectItem>
-                      <SelectItem value="Other">Other</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="edit-organizationalTitle" className="text-xs">Org Title</Label>
-                  <Select 
-                    value={editFormData.organizationalTitle} 
-                    onValueChange={(value) => setEditFormData({ ...editFormData, organizationalTitle: value })}
-                  >
-                    <SelectTrigger className="h-9 text-sm" data-testid="select-edit-organizational-title">
-                      <SelectValue placeholder="Select title" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="staff">Staff</SelectItem>
-                      <SelectItem value="supervisor">Supervisor</SelectItem>
-                      <SelectItem value="manager">Manager</SelectItem>
-                      <SelectItem value="director">Director</SelectItem>
-                      <SelectItem value="owner">Owner</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="edit-hourlyRate" className="text-xs">Hourly Rate ($)</Label>
-                <Input 
-                  id="edit-hourlyRate" 
-                  type="number" 
-                  placeholder="25.00" 
-                  value={editFormData.hourlyRate}
-                  onChange={(e) => setEditFormData({ ...editFormData, hourlyRate: e.target.value })}
-                  data-testid="input-edit-hourlyRate"
-                  className="h-9 text-sm"
-                />
-              </div>
-            </div>
-            <DialogFooter className="flex-col sm:flex-row gap-2 pt-3">
-              <Button 
-                variant="outline" 
-                onClick={() => {
-                  setIsEditDialogOpen(false);
-                  setSelectedEmployee(null);
-                }}
-                className="w-full sm:w-auto h-9 text-sm"
-                data-testid="button-cancel-edit"
-              >
-                Cancel
-              </Button>
-              <Button 
-                onClick={handleEditSubmit}
-                disabled={editMutation.isPending}
-                data-testid="button-save-edit"
-                className="w-full sm:w-auto h-9 text-sm"
-              >
-                {editMutation.isPending ? "Saving..." : "Save Changes"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Enhanced Employee Edit Dialog with Role Management */}
+        <EmployeeEditDialog
+          employee={selectedEmployee}
+          open={isEditDialogOpen}
+          onOpenChange={(open) => {
+            setIsEditDialogOpen(open);
+            if (!open) setSelectedEmployee(null);
+          }}
+          currentUserRole={workspaceRole}
+        />
 
         {/* Delete Confirmation Dialog */}
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
