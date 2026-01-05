@@ -18568,7 +18568,7 @@ Summary:`;
       const enrichedSessions = await Promise.all(sessions.map(async (session: any) => {
         const workspace = await storage.getWorkspace(session.targetOrgId);
         const staffUser = await storage.getUser(session.staffUserId);
-        const auditLogs = await storage.getSupportAuditLogs(session.id);
+        const auditLogs = await storage.getSupportAuditLogs({ sessionId: session.id });
         
         return {
           ...session,
