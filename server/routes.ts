@@ -178,7 +178,7 @@ import {
 import { scheduleSmartAI, isScheduleSmartAvailable } from './services/scheduleSmartAI';
 import { seedAnchor } from './services/utils/scheduling';
 import { configRegistry } from './services/configRegistry';
-import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, attachWorkspaceId, attachWorkspaceIdOptional, hasPlatformWideAccess, type AuthenticatedRequest } from "./rbac";
+import { requireOwner, requireManager, requireManagerOrPlatformStaff, requireHRManager, requireSupervisor, requireEmployee, validateManagerAssignment, requirePlatformStaff, requirePlatformAdmin, requireWorkspaceRole, getUserPlatformRole, resolveWorkspaceForUser, attachWorkspaceId, attachWorkspaceIdOptional, hasPlatformWideAccess, type AuthenticatedRequest, checkOrgFrozen, attachSupportSessionContext, logSupportAction, type SupportSessionRequest } from "./rbac";
 import { requireStarter, requireProfessional, requireEnterprise } from "./tierGuards";
 import { clientsQuerySchema } from "../shared/validation/pagination";
 import bcrypt from 'bcryptjs';
