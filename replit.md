@@ -55,6 +55,7 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Trinity Command Center RBAC:** Chat interface restricted to support staff roles, org owners see Quick Actions.
 - **Spec-Driven Development:** Component registry with tier-based AI editing rules.
 - **Trinity Humanized Persona System:** Human-like AI communication patterns with a senior engineer persona.
+- **Platform Support Infrastructure:** 3-tier support hierarchy (root_admin, co_admin, sysops) with cross-org access via support sessions, org freeze capability, and immutable audit logging with severity levels.
 
 **Trinity Elite (Verified Capabilities):**
 - **Strategic Optimization Engine:** Employee scoring (0-100), client tiering, profit-first scheduling
@@ -71,6 +72,8 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - Self-Evolving Cognitive Architectures
 
 ## Recent Changes (January 2026)
+- **Platform Support Infrastructure:** 3-tier support hierarchy with cross-org access, org freeze capability, and immutable audit logging
+- **5-Tier Org RBAC Complete:** org_owner, co_owner, manager, supervisor, employee with EmployeeEditDialog role management
 - **Financial Watchdog Complete:** Platform Hours vs Invoice Hours reconciliation tab with Trinity Verified badges
 - **Widget Toggle System:** Simple/Full view modes for less technical users
 - **Notification Deduplication Fixed:** Trinity is exclusive writer for What's New, UNS is fallback only
