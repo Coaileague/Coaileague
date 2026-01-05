@@ -263,6 +263,24 @@ export function EmployeeEditDialog({
 
   const handleRoleChange = (newRole: WorkspaceRole) => {
     if (!employee?.id) return;
+    
+    // Security check: verify user has permission to modify this employee and assign this role
+    if (!canModify) {
+      toast({ title: "Permission Denied", description: "You cannot modify this employee's role", variant: "destructive" });
+      setPendingRole(null);
+      return;
+    }
+    if (!canAssignRole(currentUserRole, newRole)) {
+      toast({ title: "Permission Denied", description: "You cannot assign this role level", variant: "destructive" });
+      setPendingRole(null);
+      return;
+    }
+    if (isOwnerProtected) {
+      toast({ title: "Protected Role", description: "Organization Owner cannot be demoted", variant: "destructive" });
+      setPendingRole(null);
+      return;
+    }
+    
     const currentTier = normalizeRole(employee.workspaceRole);
     const newTier = normalizeRole(newRole);
     
@@ -276,6 +294,15 @@ export function EmployeeEditDialog({
 
   const confirmRoleChange = () => {
     if (!employee?.id || !pendingRole) return;
+    
+    // Re-validate permissions before making the API call
+    if (!canModify || !canAssignRole(currentUserRole, pendingRole) || isOwnerProtected) {
+      toast({ title: "Permission Denied", description: "You cannot perform this action", variant: "destructive" });
+      setPendingRole(null);
+      setConfirmAction(null);
+      return;
+    }
+    
     roleChangeMutation.mutate({ employeeId: employee.id, newRole: pendingRole });
   };
 
