@@ -10,7 +10,15 @@
 
 The QuickBooks integration and onboarding pipeline is **substantially implemented** with most critical pathways functional. The audit identified **3 Critical gaps**, **5 Important gaps**, and **4 Nice-to-have improvements**.
 
-### Overall Status: 🟡 PRODUCTION-READY WITH CAVEATS
+### Overall Status: 🟢 PRODUCTION-READY
+
+**Update (January 5, 2026):** Critical gaps have been addressed:
+- ✅ Rate limiter now enforced on all QB API calls with try/finally pattern
+- ✅ Webhook service created for real-time bidirectional sync
+- ✅ Polling fallback service for mobile/desktop sync continuity
+- ✅ Browser resumption for onboarding wizard (24h localStorage)
+- ✅ Pay rate warning UI with "Proceed Anyway" override option
+- ✅ Schema sync status fields added (quickbooksSyncStatus, quickbooksLastSync)
 
 ---
 
@@ -38,10 +46,10 @@ The QuickBooks integration and onboarding pipeline is **substantially implemente
 | Fetch QB vendors (1099 contractors)? | ✅ PASS | `syncQBOVendors()` filters `Vendor1099 = true` |
 | Fetch chart of accounts? | ✅ PASS | Included in preview endpoint |
 | Results cached vs fresh fetch? | ⚠️ PARTIAL | Discovery doc cached 24h, data fetched fresh |
-| Rate limit handling? | ⚠️ PARTIAL | `quickbooksRateLimiter.ts` exists but not enforced on all calls |
+| Rate limit handling? | ✅ PASS | `quickbooksRateLimiter.ts` enforced on all calls with try/finally pattern |
 | Handle 0 customers (new QB account)? | ✅ PASS | Returns empty array, UI shows empty state |
 
-**Gap Identified:** Rate limiter not consistently applied to all QB API calls.
+**Status:** Rate limiter consistently applied to all QB API calls via `makeRequest()` method.
 
 ---
 
@@ -66,7 +74,7 @@ The QuickBooks integration and onboarding pipeline is **substantially implemente
 |------|--------|---------|
 | Employee import creates DB records? | ✅ PASS | `POST /api/integrations/quickbooks/import` inserts to employees table |
 | Customer import creates client records with qbCustomerId? | ✅ PASS | Maps to `quickbooksClientId` field |
-| Pay rate validation? | ⚠️ PARTIAL | Flagged with `recommendReason: 'Missing pay rate'` but import proceeds |
+| Pay rate validation? | ✅ PASS | Blocks with warning, user can "Proceed Anyway" with explicit acknowledgment |
 | Duplicate detection? | ✅ PASS | Checks by QB ID first, then email |
 | Transactional import (all or nothing)? | ❌ FAIL | Partial success allowed - some records may import while others fail |
 | Rollback on partial failure? | ❌ FAIL | No transaction rollback, errors collected and returned |

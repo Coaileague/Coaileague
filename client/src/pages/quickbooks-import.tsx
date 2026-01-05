@@ -117,6 +117,50 @@ const STEPS: { id: WizardStep; label: string; icon: any }[] = [
   { id: 'confirm', label: 'Confirm', icon: Check },
 ];
 
+const WIZARD_STORAGE_KEY = 'qb_import_wizard_state';
+
+interface WizardPersistState {
+  currentStep: WizardStep;
+  selectedEmployees: QBOEmployee[];
+  selectedCustomers: QBOCustomer[];
+  payrollMappings: Record<string, string>;
+  workspaceId: string;
+  savedAt: string;
+}
+
+function loadPersistedState(workspaceId: string | undefined): Partial<WizardPersistState> | null {
+  if (!workspaceId) return null;
+  try {
+    const saved = localStorage.getItem(WIZARD_STORAGE_KEY);
+    if (!saved) return null;
+    const state = JSON.parse(saved) as WizardPersistState;
+    if (state.workspaceId !== workspaceId) return null;
+    const savedDate = new Date(state.savedAt);
+    const hoursSinceSave = (Date.now() - savedDate.getTime()) / (1000 * 60 * 60);
+    if (hoursSinceSave > 24) {
+      localStorage.removeItem(WIZARD_STORAGE_KEY);
+      return null;
+    }
+    return state;
+  } catch {
+    return null;
+  }
+}
+
+function saveWizardState(state: WizardPersistState): void {
+  try {
+    localStorage.setItem(WIZARD_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+  }
+}
+
+function clearWizardState(): void {
+  try {
+    localStorage.removeItem(WIZARD_STORAGE_KEY);
+  } catch {
+  }
+}
+
 export default function QuickBooksImportPage() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -127,10 +171,58 @@ export default function QuickBooksImportPage() {
   const [preflightTests, setPreflightTests] = useState<PreflightTest[]>([]);
   const [isRunningPreflight, setIsRunningPreflight] = useState(false);
   const [allTestsPassed, setAllTestsPassed] = useState(false);
+  const [payRateWarning, setPayRateWarning] = useState<{ employees: { qboId: string; displayName: string }[] } | null>(null);
+  const [allowMissingPayRates, setAllowMissingPayRates] = useState(false);
+  const [hasRestoredState, setHasRestoredState] = useState(false);
+  const [showResumePrompt, setShowResumePrompt] = useState(false);
+  const [savedState, setSavedState] = useState<Partial<WizardPersistState> | null>(null);
 
   const { data: workspace } = useQuery<{ id: string; orgCode: string }>({
     queryKey: ['/api/workspace'],
   });
+
+  useEffect(() => {
+    if (workspace?.id && !hasRestoredState) {
+      const persisted = loadPersistedState(workspace.id);
+      if (persisted && persisted.currentStep && persisted.currentStep !== 'connect' && persisted.currentStep !== 'complete') {
+        setSavedState(persisted);
+        setShowResumePrompt(true);
+      }
+      setHasRestoredState(true);
+    }
+  }, [workspace?.id, hasRestoredState]);
+
+  useEffect(() => {
+    if (workspace?.id && hasRestoredState && currentStep !== 'complete') {
+      saveWizardState({
+        currentStep,
+        selectedEmployees,
+        selectedCustomers,
+        payrollMappings,
+        workspaceId: workspace.id,
+        savedAt: new Date().toISOString(),
+      });
+    }
+  }, [currentStep, selectedEmployees, selectedCustomers, payrollMappings, workspace?.id, hasRestoredState]);
+
+  const handleResumeWizard = () => {
+    if (savedState) {
+      if (savedState.currentStep) setCurrentStep(savedState.currentStep);
+      if (savedState.selectedEmployees) setSelectedEmployees(savedState.selectedEmployees);
+      if (savedState.selectedCustomers) setSelectedCustomers(savedState.selectedCustomers);
+      if (savedState.payrollMappings) setPayrollMappings(savedState.payrollMappings);
+      toast({
+        title: 'Progress Restored',
+        description: 'Your previous migration progress has been restored.',
+      });
+    }
+    setShowResumePrompt(false);
+  };
+
+  const handleStartFresh = () => {
+    clearWizardState();
+    setShowResumePrompt(false);
+  };
 
   const { data: connectionStatus, isLoading: isLoadingConnection } = useQuery<ConnectionStatus>({
     queryKey: ['/api/integrations/connections', workspace?.id],
@@ -217,16 +309,26 @@ export default function QuickBooksImportPage() {
   });
 
   const importMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (options?: { forceAllowMissingPayRates?: boolean }) => {
       const res = await apiRequest('POST', '/api/integrations/quickbooks/import', {
         workspaceId: workspace?.id,
         selectedEmployees,
         selectedCustomers,
         payrollMappings,
+        allowMissingPayRates: options?.forceAllowMissingPayRates || allowMissingPayRates,
       });
-      return res.json();
+      const data = await res.json();
+      if (!res.ok) {
+        const error = new Error(data.message || data.error || 'Import failed') as any;
+        error.code = data.code;
+        error.employeesWithMissingPayRates = data.employeesWithMissingPayRates;
+        throw error;
+      }
+      return data;
     },
     onSuccess: (data) => {
+      setPayRateWarning(null);
+      clearWizardState();
       toast({
         title: 'Migration Complete',
         description: `Imported ${data.importedEmployees || 0} employees and ${data.importedClients || 0} clients`,
@@ -236,13 +338,27 @@ export default function QuickBooksImportPage() {
       setCurrentStep('complete');
     },
     onError: (error: any) => {
-      toast({
-        title: 'Import Failed',
-        description: error.message || 'Failed to import data',
-        variant: 'destructive',
-      });
+      if (error.code === 'MISSING_PAY_RATES' && error.employeesWithMissingPayRates) {
+        setPayRateWarning({ employees: error.employeesWithMissingPayRates });
+        toast({
+          title: 'Pay Rate Validation',
+          description: `${error.employeesWithMissingPayRates.length} employee(s) are missing pay rates. Review and confirm to proceed.`,
+          variant: 'destructive',
+        });
+      } else {
+        toast({
+          title: 'Import Failed',
+          description: error.message || 'Failed to import data',
+          variant: 'destructive',
+        });
+      }
     },
   });
+
+  const handleProceedWithMissingPayRates = () => {
+    setPayRateWarning(null);
+    importMutation.mutate({ forceAllowMissingPayRates: true });
+  };
 
   const runPreflightTests = async () => {
     setIsRunningPreflight(true);
@@ -357,6 +473,45 @@ export default function QuickBooksImportPage() {
 
   return (
     <div className="container max-w-4xl py-6 space-y-6">
+      {showResumePrompt && savedState && (
+        <div className="p-4 bg-blue-50 dark:bg-blue-950/30 rounded-lg border border-blue-200 dark:border-blue-800">
+          <div className="flex items-start gap-3">
+            <RefreshCw className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+            <div className="flex-1">
+              <p className="font-medium text-blue-700 dark:text-blue-300">
+                Resume Previous Migration?
+              </p>
+              <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+                You have an unfinished migration from a previous session. 
+                Would you like to continue where you left off?
+              </p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Step: {STEPS.find(s => s.id === savedState.currentStep)?.label || savedState.currentStep}
+                {savedState.selectedEmployees?.length ? ` • ${savedState.selectedEmployees.length} employees selected` : ''}
+                {savedState.selectedCustomers?.length ? ` • ${savedState.selectedCustomers.length} clients selected` : ''}
+              </p>
+              <div className="mt-3 flex gap-2">
+                <Button 
+                  size="sm" 
+                  onClick={handleResumeWizard}
+                  data-testid="button-resume-wizard"
+                >
+                  Resume Migration
+                </Button>
+                <Button 
+                  size="sm" 
+                  variant="outline"
+                  onClick={handleStartFresh}
+                  data-testid="button-start-fresh"
+                >
+                  Start Fresh
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-center gap-4">
         <Link href="/integrations">
           <Button variant="ghost" size="icon" data-testid="button-back">
@@ -919,6 +1074,57 @@ export default function QuickBooksImportPage() {
                 </div>
               </div>
             </div>
+
+            {payRateWarning && (
+              <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800">
+                <div className="flex items-start gap-3">
+                  <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
+                  <div className="flex-1">
+                    <p className="font-medium text-red-700 dark:text-red-300">
+                      {payRateWarning.employees.length} Employee(s) Missing Pay Rates
+                    </p>
+                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                      These employees will be imported without pay rates, which may cause payroll calculation errors:
+                    </p>
+                    <ul className="mt-2 text-sm text-red-600 dark:text-red-400 space-y-1 max-h-32 overflow-y-auto">
+                      {payRateWarning.employees.slice(0, 10).map((emp) => (
+                        <li key={emp.qboId} className="flex items-center gap-2">
+                          <AlertCircle className="h-3 w-3" />
+                          {emp.displayName}
+                        </li>
+                      ))}
+                      {payRateWarning.employees.length > 10 && (
+                        <li className="text-muted-foreground">
+                          ...and {payRateWarning.employees.length - 10} more
+                        </li>
+                      )}
+                    </ul>
+                    <div className="mt-3 flex gap-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={() => setPayRateWarning(null)}
+                        data-testid="button-cancel-import"
+                      >
+                        Cancel & Fix in QuickBooks
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="destructive"
+                        onClick={handleProceedWithMissingPayRates}
+                        disabled={importMutation.isPending}
+                        data-testid="button-proceed-anyway"
+                      >
+                        {importMutation.isPending ? (
+                          <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        ) : null}
+                        Proceed Anyway
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
           <CardFooter className="justify-between border-t pt-6">
             <Button variant="ghost" onClick={goBack}><ArrowLeft className="h-4 w-4 mr-2" /> Back</Button>

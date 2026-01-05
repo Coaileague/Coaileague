@@ -893,6 +893,8 @@ export const employees = pgTable("employees", {
   
   // QuickBooks Integration - External ID for payment routing
   quickbooksEmployeeId: varchar("quickbooks_employee_id"), // External QB employee ID for payroll sync
+  quickbooksSyncStatus: varchar("quickbooks_sync_status").default("pending"), // pending, synced, error, orphaned
+  quickbooksLastSync: timestamp("quickbooks_last_sync"), // Last successful sync timestamp
   
   // Payroll Information
   payType: varchar("pay_type").default("hourly"), // hourly, salary, commission, contractor
@@ -1643,6 +1645,8 @@ export const clients = pgTable("clients", {
   clientCode: varchar("client_code"),
   quickbooksClientId: varchar("quickbooks_client_id"), // External QB client ID for billing sync
   qboSyncToken: varchar("qbo_sync_token"), // QuickBooks sync token for change detection
+  quickbooksSyncStatus: varchar("quickbooks_sync_status").default("pending"), // pending, synced, error, orphaned
+  quickbooksLastSync: timestamp("quickbooks_last_sync"), // Last successful sync timestamp
 
   // Client information
   firstName: varchar("first_name").notNull(),

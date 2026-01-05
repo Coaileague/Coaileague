@@ -20,6 +20,7 @@ import { platformEventBus } from '../platformEventBus';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import { enhancedLLMJudge } from '../ai-brain/llmJudgeEnhanced';
 import { auditLogger } from '../audit-logger';
+import { quickbooksRateLimiter } from '../integrations/quickbooksRateLimiter';
 import crypto from 'crypto';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
@@ -139,26 +140,45 @@ export class QuickBooksSyncService {
     endpoint: string,
     realmId: string,
     accessToken: string,
-    body?: any
+    body?: any,
+    priority: number = 0
   ): Promise<T> {
-    const url = `${QBO_API_BASE}/${realmId}${endpoint}`;
-
-    const response = await fetch(url, {
-      method,
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Accept': 'application/json',
-        'Content-Type': 'application/json',
-      },
-      body: body ? JSON.stringify(body) : undefined,
-    });
-
-    if (!response.ok) {
-      const error = await response.text();
-      throw new Error(`QuickBooks API error (${response.status}): ${error}`);
+    const environment = (process.env.QUICKBOOKS_ENVIRONMENT as 'production' | 'sandbox') || 'production';
+    
+    const canProceed = await quickbooksRateLimiter.waitForSlot(realmId, environment, priority, 30000);
+    if (!canProceed) {
+      throw new Error('QuickBooks API rate limit exceeded - request timed out waiting for available slot');
     }
 
-    return await response.json();
+    const url = `${QBO_API_BASE}/${realmId}${endpoint}`;
+    let success = false;
+
+    try {
+      const response = await fetch(url, {
+        method,
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json',
+        },
+        body: body ? JSON.stringify(body) : undefined,
+      });
+
+      if (response.status === 429) {
+        quickbooksRateLimiter.recordThrottle(realmId, environment);
+        throw new Error('QuickBooks API rate limit exceeded (429) - backing off');
+      }
+
+      if (!response.ok) {
+        const error = await response.text();
+        throw new Error(`QuickBooks API error (${response.status}): ${error}`);
+      }
+
+      success = true;
+      return await response.json();
+    } finally {
+      quickbooksRateLimiter.completeRequest(realmId, environment, success);
+    }
   }
 
   private async queryWithPagination<T>(

@@ -406,17 +406,19 @@ router.get('/quickbooks/preview', requireAuth, requireWorkspaceMembership('query
 /**
  * POST /api/integrations/quickbooks/import
  * 
- * Import selected employees and customers from QuickBooks with duplicate detection
+ * Import selected employees and customers from QuickBooks with:
+ * - Transactional all-or-nothing import (rollback on failure)
+ * - Pay rate validation for employees
+ * - Robust duplicate detection
  */
 router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
   try {
-    const { workspaceId, selectedEmployees, selectedCustomers } = req.body;
+    const { workspaceId, selectedEmployees, selectedCustomers, allowMissingPayRates } = req.body;
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'Missing workspaceId' });
     }
 
-    // Validate arrays
     if (selectedEmployees && !Array.isArray(selectedEmployees)) {
       return res.status(400).json({ error: 'selectedEmployees must be an array' });
     }
@@ -424,7 +426,6 @@ router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), asy
       return res.status(400).json({ error: 'selectedCustomers must be an array' });
     }
 
-    // Find connection
     const [connection] = await db.select()
       .from(partnerConnections)
       .where(
@@ -440,165 +441,196 @@ router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), asy
       return res.status(404).json({ error: 'QuickBooks not connected' });
     }
 
+    const { employees: employeesTable, clients: clientsTable } = await import('@shared/schema');
+
+    const employeesWithMissingPayRates: { qboId: string; displayName: string }[] = [];
+    if (selectedEmployees && selectedEmployees.length > 0 && !allowMissingPayRates) {
+      for (const emp of selectedEmployees) {
+        const payRate = emp.payRate ? parseFloat(String(emp.payRate)) : null;
+        if (!payRate || payRate <= 0) {
+          employeesWithMissingPayRates.push({
+            qboId: String(emp.qboId || ''),
+            displayName: String(emp.displayName || 'Unknown'),
+          });
+        }
+      }
+      
+      if (employeesWithMissingPayRates.length > 0) {
+        return res.status(400).json({
+          error: 'Pay rate validation failed',
+          code: 'MISSING_PAY_RATES',
+          message: `${employeesWithMissingPayRates.length} employee(s) are missing pay rates. This will cause payroll calculation errors. You can either update pay rates in QuickBooks first, or proceed with "allowMissingPayRates: true" to import without rates.`,
+          employeesWithMissingPayRates,
+        });
+      }
+    }
+
+    const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
+    const orgCode = ws?.orgCode || 'ORG';
+    const prefix = orgCode.replace('ORG-', '');
+
+    const existingEmployees = await db.select()
+      .from(employeesTable)
+      .where(eq(employeesTable.workspaceId, workspaceId));
+    
+    const existingByQboIdEmp = new Map(
+      existingEmployees
+        .filter(e => e.partnerEmployeeId && e.partnerType === 'quickbooks')
+        .map(e => [e.partnerEmployeeId, e])
+    );
+    const existingByEmailEmp = new Map(
+      existingEmployees
+        .filter(e => e.email)
+        .map(e => [e.email!.toLowerCase(), e])
+    );
+
+    const existingClients = await db.select()
+      .from(clientsTable)
+      .where(eq(clientsTable.workspaceId, workspaceId));
+    
+    const existingByQboIdClient = new Map(
+      existingClients
+        .filter(c => c.partnerCustomerId && c.partnerType === 'quickbooks')
+        .map(c => [c.partnerCustomerId, c])
+    );
+    const existingByName = new Map(
+      existingClients.map(c => [c.name.toLowerCase(), c])
+    );
+
     let importedEmployees = 0;
     let skippedEmployees = 0;
     let importedClients = 0;
     let skippedClients = 0;
     const errors: string[] = [];
+    let empCounter = existingEmployees.length;
 
-    const { employees: employeesTable, clients: clientsTable } = await import('@shared/schema');
+    const employeesToInsert: any[] = [];
+    const clientsToInsert: any[] = [];
 
-    // Import employees with robust duplicate detection
     if (selectedEmployees && selectedEmployees.length > 0) {
-      // Get workspace for employee ID generation
-      const [ws] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
-      const orgCode = ws?.orgCode || 'ORG';
-      const prefix = orgCode.replace('ORG-', '');
-
-      // Pre-fetch existing employees for duplicate checking
-      const existingEmployees = await db.select()
-        .from(employeesTable)
-        .where(eq(employeesTable.workspaceId, workspaceId));
-      
-      const existingByQboId = new Map(
-        existingEmployees
-          .filter(e => e.partnerEmployeeId && e.partnerType === 'quickbooks')
-          .map(e => [e.partnerEmployeeId, e])
-      );
-      const existingByEmail = new Map(
-        existingEmployees
-          .filter(e => e.email)
-          .map(e => [e.email!.toLowerCase(), e])
-      );
-      
-      let empCounter = existingEmployees.length;
-
       for (const emp of selectedEmployees) {
-        try {
-          // Validate required fields
-          const qboId = String(emp.qboId || '').trim();
-          const displayName = String(emp.displayName || '').trim();
-          
-          if (!qboId || !displayName) {
-            errors.push(`Invalid employee data: missing qboId or displayName`);
-            continue;
-          }
-
-          // Check for duplicates by QuickBooks ID first (most reliable)
-          if (existingByQboId.has(qboId)) {
-            skippedEmployees++;
-            continue;
-          }
-
-          // Check for duplicates by email
-          const email = String(emp.email || '').trim().toLowerCase();
-          if (email && existingByEmail.has(email)) {
-            skippedEmployees++;
-            continue;
-          }
-
-          // Generate employee ID
-          empCounter++;
-          const empNum = String(empCounter).padStart(5, '0');
-
-          // Sanitize and insert
-          const firstName = String(emp.givenName || displayName.split(' ')[0] || 'Unknown').trim().slice(0, 100);
-          const lastName = String(emp.familyName || displayName.split(' ').slice(1).join(' ') || '').trim().slice(0, 100);
-          const phone = String(emp.phone || '').trim().slice(0, 20) || null;
-
-          // Get pay rate from employee data if available
-          const payRate = emp.payRate ? parseFloat(String(emp.payRate)) : null;
-          
-          await db.insert(employeesTable).values({
-            workspaceId,
-            firstName,
-            lastName,
-            email: email || null,
-            phone,
-            employeeId: `EMP-${prefix}-${empNum}`,
-            role: 'field_worker',
-            onboardingStatus: 'not_started',
-            status: 'active',
-            partnerEmployeeId: qboId,
-            partnerType: 'quickbooks',
-            quickbooksEmployeeId: qboId,
-            payRate: payRate ? String(payRate) : null,
-          });
-          
-          // Update our maps to prevent same-batch duplicates
-          existingByQboId.set(qboId, {} as any);
-          if (email) existingByEmail.set(email, {} as any);
-          
-          importedEmployees++;
-        } catch (err: any) {
-          errors.push(`Employee ${emp.displayName}: ${err.message}`);
+        const qboId = String(emp.qboId || '').trim();
+        const displayName = String(emp.displayName || '').trim();
+        
+        if (!qboId || !displayName) {
+          errors.push(`Invalid employee data: missing qboId or displayName`);
+          continue;
         }
+
+        if (existingByQboIdEmp.has(qboId)) {
+          skippedEmployees++;
+          continue;
+        }
+
+        const email = String(emp.email || '').trim().toLowerCase();
+        if (email && existingByEmailEmp.has(email)) {
+          skippedEmployees++;
+          continue;
+        }
+
+        empCounter++;
+        const empNum = String(empCounter).padStart(5, '0');
+
+        const firstName = String(emp.givenName || displayName.split(' ')[0] || 'Unknown').trim().slice(0, 100);
+        const lastName = String(emp.familyName || displayName.split(' ').slice(1).join(' ') || '').trim().slice(0, 100);
+        const phone = String(emp.phone || '').trim().slice(0, 20) || null;
+        const payRate = emp.payRate ? parseFloat(String(emp.payRate)) : null;
+        
+        employeesToInsert.push({
+          workspaceId,
+          firstName,
+          lastName,
+          email: email || null,
+          phone,
+          employeeId: `EMP-${prefix}-${empNum}`,
+          role: 'field_worker',
+          onboardingStatus: 'not_started',
+          status: 'active',
+          partnerEmployeeId: qboId,
+          partnerType: 'quickbooks',
+          quickbooksEmployeeId: qboId,
+          payRate: payRate ? String(payRate) : null,
+        });
+        
+        existingByQboIdEmp.set(qboId, {} as any);
+        if (email) existingByEmailEmp.set(email, {} as any);
+        
+        importedEmployees++;
       }
     }
 
-    // Import clients/customers with robust duplicate detection
     if (selectedCustomers && selectedCustomers.length > 0) {
-      // Pre-fetch existing clients for duplicate checking
-      const existingClients = await db.select()
-        .from(clientsTable)
-        .where(eq(clientsTable.workspaceId, workspaceId));
-      
-      const existingByQboId = new Map(
-        existingClients
-          .filter(c => c.partnerCustomerId && c.partnerType === 'quickbooks')
-          .map(c => [c.partnerCustomerId, c])
-      );
-      const existingByName = new Map(
-        existingClients.map(c => [c.name.toLowerCase(), c])
-      );
-
       for (const cust of selectedCustomers) {
-        try {
-          // Validate required fields
-          const qboId = String(cust.qboId || '').trim();
-          const companyName = String(cust.companyName || cust.displayName || '').trim();
-          
-          if (!qboId || !companyName) {
-            errors.push(`Invalid client data: missing qboId or name`);
-            continue;
-          }
-
-          // Check for duplicates by QuickBooks ID first
-          if (existingByQboId.has(qboId)) {
-            skippedClients++;
-            continue;
-          }
-
-          // Check for duplicates by name
-          if (existingByName.has(companyName.toLowerCase())) {
-            skippedClients++;
-            continue;
-          }
-
-          // Sanitize and insert
-          const email = String(cust.email || '').trim().slice(0, 255) || null;
-          const phone = String(cust.phone || '').trim().slice(0, 20) || null;
-
-          await db.insert(clientsTable).values({
-            workspaceId,
-            name: companyName.slice(0, 255),
-            email,
-            phone,
-            status: 'active',
-            partnerCustomerId: qboId,
-            partnerType: 'quickbooks',
-            quickbooksClientId: qboId,
-          });
-          
-          // Update maps to prevent same-batch duplicates
-          existingByQboId.set(qboId, {} as any);
-          existingByName.set(companyName.toLowerCase(), {} as any);
-          
-          importedClients++;
-        } catch (err: any) {
-          errors.push(`Client ${cust.displayName}: ${err.message}`);
+        const qboId = String(cust.qboId || '').trim();
+        const companyName = String(cust.companyName || cust.displayName || '').trim();
+        
+        if (!qboId || !companyName) {
+          errors.push(`Invalid client data: missing qboId or name`);
+          continue;
         }
+
+        if (existingByQboIdClient.has(qboId)) {
+          skippedClients++;
+          continue;
+        }
+
+        if (existingByName.has(companyName.toLowerCase())) {
+          skippedClients++;
+          continue;
+        }
+
+        const email = String(cust.email || '').trim().slice(0, 255) || null;
+        const phone = String(cust.phone || '').trim().slice(0, 20) || null;
+
+        clientsToInsert.push({
+          workspaceId,
+          name: companyName.slice(0, 255),
+          email,
+          phone,
+          status: 'active',
+          partnerCustomerId: qboId,
+          partnerType: 'quickbooks',
+          quickbooksClientId: qboId,
+        });
+        
+        existingByQboIdClient.set(qboId, {} as any);
+        existingByName.set(companyName.toLowerCase(), {} as any);
+        
+        importedClients++;
       }
+    }
+
+    if (employeesToInsert.length === 0 && clientsToInsert.length === 0) {
+      return res.json({
+        success: true,
+        importedEmployees: 0,
+        skippedEmployees,
+        importedClients: 0,
+        skippedClients,
+        totalEmployees: skippedEmployees,
+        totalClients: skippedClients,
+        message: 'All records were duplicates or invalid - no new records to import',
+      });
+    }
+
+    try {
+      await db.transaction(async (tx) => {
+        if (employeesToInsert.length > 0) {
+          await tx.insert(employeesTable).values(employeesToInsert);
+        }
+        if (clientsToInsert.length > 0) {
+          await tx.insert(clientsTable).values(clientsToInsert);
+        }
+      });
+    } catch (txError: any) {
+      console.error('QuickBooks import transaction failed, rolling back:', txError);
+      return res.status(500).json({
+        error: 'Import transaction failed - no records were imported',
+        code: 'TRANSACTION_FAILED',
+        message: txError.message,
+        attemptedEmployees: employeesToInsert.length,
+        attemptedClients: clientsToInsert.length,
+      });
     }
 
     return res.json({

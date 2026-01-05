@@ -72,6 +72,11 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - Self-Evolving Cognitive Architectures
 
 ## Recent Changes (January 2026)
+- **QuickBooks Bidirectional Sync Complete:** Webhook service + polling fallback for real-time sync across mobile/desktop
+- **Rate Limiter Enforcement:** All QB API calls now use try/finally pattern with proper slot management (500 req/min)
+- **Pay Rate Validation UI:** Blocking warning with "Proceed Anyway" override requiring explicit acknowledgment
+- **Browser Resumption:** Onboarding wizard state persisted to localStorage with 24h TTL
+- **Sync Status Schema:** Added quickbooksSyncStatus and quickbooksLastSync columns to employees and clients
 - **Platform Support Infrastructure:** 3-tier support hierarchy with cross-org access, org freeze capability, and immutable audit logging
 - **5-Tier Org RBAC Complete:** org_owner, co_owner, manager, supervisor, employee with EmployeeEditDialog role management
 - **Financial Watchdog Complete:** Platform Hours vs Invoice Hours reconciliation tab with Trinity Verified badges
@@ -86,6 +91,7 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - `docs/TRINITY_FINANCIAL_CORE_V1_SIGNOFF.md` - Internal sign-off with scope and approvals
 - `docs/INTUIT_REVIEWER_SUMMARY.md` - Intuit-safe summary for production key review
 - `docs/TRINITY_ENTERPRISE_ONEPAGER.md` - Enterprise sales positioning document
+- `docs/QUICKBOOKS_ONBOARDING_AUDIT.md` - Comprehensive QuickBooks integration audit
 - `TRINITY_CAPABILITY_MATRIX.md` - Full capability evidence matrix
 
 ## External Dependencies
