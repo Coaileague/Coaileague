@@ -24,7 +24,7 @@ import * as path from 'path';
 import cron from 'node-cron';
 import { db } from '../../db';
 import { aiGapFindings, aiWorkflowApprovals } from '@shared/schema';
-import { eq, and, desc, sql, inArray } from 'drizzle-orm';
+import { eq, and, desc, sql, inArray, gte } from 'drizzle-orm';
 import { trinityCodeOps, PatchOperation, PatchResult } from './trinityCodeOps';
 import { workflowApprovalService } from './workflowApprovalService';
 import { gapIntelligenceService } from './gapIntelligenceService';
@@ -1128,7 +1128,7 @@ class AutonomousFixPipelineService {
         .where(
           and(
             eq(aiGapFindings.status, 'open'),
-            sql`${aiGapFindings.confidence} >= ${this.config.autoApproveThreshold}`
+            gte(aiGapFindings.confidence, this.config.autoApproveThreshold)
           )
         )
         .orderBy(
