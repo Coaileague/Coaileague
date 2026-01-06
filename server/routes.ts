@@ -12855,7 +12855,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspaceId = req.workspaceId!;
       const userId = req.user.claims.sub;
       
-      const { email, firstName, lastName } = req.body;
+      const { email, firstName, lastName, role, workspaceRole } = req.body;
       
       if (!email || !firstName || !lastName) {
         return res.status(400).json({ message: "Email, first name, and last name are required" });
@@ -12872,6 +12872,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         email,
         firstName,
         lastName,
+        role: role || null, // Job title assigned by org
+        workspaceRole: workspaceRole || 'staff', // Permission level assigned by org
         inviteToken,
         expiresAt,
         sentBy: userId,
