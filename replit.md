@@ -72,6 +72,7 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - Self-Evolving Cognitive Architectures
 
 ## Recent Changes (January 2026)
+- **Employee Onboarding Pipeline Fixed:** Invite role/workspaceRole now flows through to employee creation, with getOnboardingInvite storage method and employee_created event emission
 - **QuickBooks Bidirectional Sync Complete:** Webhook service + polling fallback for real-time sync across mobile/desktop
 - **Rate Limiter Enforcement:** All QB API calls now use try/finally pattern with proper slot management (500 req/min)
 - **Pay Rate Validation UI:** Blocking warning with "Proceed Anyway" override requiring explicit acknowledgment
