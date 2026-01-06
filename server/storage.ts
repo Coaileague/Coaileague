@@ -420,6 +420,7 @@ export interface IStorage {
   
   // Onboarding Invite operations
   createOnboardingInvite(invite: InsertOnboardingInvite): Promise<OnboardingInvite>;
+  getOnboardingInvite(id: string): Promise<OnboardingInvite | undefined>;
   getOnboardingInviteByToken(token: string): Promise<OnboardingInvite | undefined>;
   getOnboardingInvitesByWorkspace(workspaceId: string): Promise<OnboardingInvite[]>;
   updateOnboardingInvite(id: string, data: Partial<InsertOnboardingInvite>): Promise<OnboardingInvite | undefined>;
@@ -1895,6 +1896,11 @@ export class DatabaseStorage implements IStorage {
     return newInvite;
   }
   
+  async getOnboardingInvite(id: string): Promise<OnboardingInvite | undefined> {
+    const [invite] = await db.select().from(onboardingInvites).where(eq(onboardingInvites.id, id));
+    return invite;
+  }
+
   async getOnboardingInviteByToken(token: string): Promise<OnboardingInvite | undefined> {
     const [invite] = await db.select().from(onboardingInvites).where(eq(onboardingInvites.inviteToken, token));
     return invite;

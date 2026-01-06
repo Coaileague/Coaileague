@@ -13367,7 +13367,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get or create employee record for this application
       let employeeId = application.employeeId;
       if (!employeeId) {
-        // Create placeholder employee (will be finalized when onboarding completes)
+        // Fetch invite to get role/workspaceRole assignment from org
+        let inviteRole: string | null = null;
+        let inviteWorkspaceRole: string | null = null;
+        if (application.inviteId) {
+          const invite = await storage.getOnboardingInvite(application.inviteId);
+          if (invite) {
+            inviteRole = invite.role || null; // Job title from invite
+            inviteWorkspaceRole = invite.workspaceRole || 'staff'; // Permission level from invite
+          }
+        }
+
+        // Create placeholder employee with role/workspaceRole from invite
         const employee = await storage.createEmployee({
           workspaceId,
           firstName: application.firstName,
@@ -13375,6 +13386,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           email: application.email,
           phone: application.phone,
           employeeNumber: application.employeeNumber,
+          role: inviteRole, // Job title from invite
+          workspaceRole: (inviteWorkspaceRole as any) || 'staff', // Permission level from invite
           onboardingStatus: 'in_progress',
         });
         employeeId = employee.id;
@@ -13382,6 +13395,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Link employee to application
         await storage.updateOnboardingApplication(applicationId, workspaceId, {
           employeeId,
+        });
+
+        // Emit employee_created event for EmployeeRoleSyncService
+        eventBus.emit('employee_created', { 
+          employeeId: employee.id, 
+          workspaceId, 
+          role: inviteRole,
+          workspaceRole: inviteWorkspaceRole,
+          source: 'onboarding_application',
         });
       }
 
