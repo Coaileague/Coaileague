@@ -142,15 +142,64 @@ incidentsRouter.get('/my-reports', ensureAuth, async (req: Request, res: Respons
   }
 });
 
+import { incidentRoutingService, type IncidentType, type IncidentSeverity } from '../services/incidentRoutingService';
+
+const VALID_INCIDENT_TYPES = ['safety_hazard', 'property_damage', 'theft', 'injury', 'harassment', 'unauthorized_access', 'equipment_failure', 'other'];
+const VALID_SEVERITIES = ['low', 'medium', 'high', 'critical'];
+const MAX_DESCRIPTION_LENGTH = 5000;
+const MAX_PHOTOS = 10;
+const MAX_LOCATION_LENGTH = 500;
+
 incidentsRouter.post('/', ensureAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id;
     const workspaceId = authReq.workspaceId || authReq.user?.currentWorkspaceId;
-    const { type, severity, description, location, timestamp } = req.body;
+    let { type, description, location, latitude, longitude, shiftId, photos, manualSeverity } = req.body;
     
     if (!userId || !workspaceId) {
       return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    if (description && typeof description === 'string' && description.length > MAX_DESCRIPTION_LENGTH) {
+      return res.status(400).json({ message: `Description exceeds maximum length of ${MAX_DESCRIPTION_LENGTH} characters` });
+    }
+
+    if (type && !VALID_INCIDENT_TYPES.includes(type)) {
+      type = 'other';
+    }
+
+    if (manualSeverity && !VALID_SEVERITIES.includes(manualSeverity)) {
+      manualSeverity = undefined;
+    }
+
+    if (latitude !== undefined) {
+      const lat = parseFloat(latitude);
+      if (isNaN(lat) || lat < -90 || lat > 90) {
+        return res.status(400).json({ message: 'Invalid latitude. Must be between -90 and 90' });
+      }
+      latitude = lat;
+    }
+
+    if (longitude !== undefined) {
+      const lng = parseFloat(longitude);
+      if (isNaN(lng) || lng < -180 || lng > 180) {
+        return res.status(400).json({ message: 'Invalid longitude. Must be between -180 and 180' });
+      }
+      longitude = lng;
+    }
+
+    if (photos && Array.isArray(photos)) {
+      if (photos.length > MAX_PHOTOS) {
+        return res.status(400).json({ message: `Maximum ${MAX_PHOTOS} photos allowed` });
+      }
+      photos = photos.filter((p: any) => typeof p === 'string' && p.length < 2000);
+    } else {
+      photos = undefined;
+    }
+
+    if (location && typeof location === 'string' && location.length > MAX_LOCATION_LENGTH) {
+      location = location.substring(0, MAX_LOCATION_LENGTH);
     }
 
     const employee = await storage.getEmployeeByUserId(userId, workspaceId);
@@ -158,28 +207,35 @@ incidentsRouter.post('/', ensureAuth, async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'Employee profile not found' });
     }
 
-    const incident = await storage.createSecurityIncident({
+    const routingResult = await incidentRoutingService.createAndRouteIncident({
       workspaceId,
       employeeId: employee.id,
-      type,
-      severity,
-      description,
-      location: location ? JSON.stringify(location) : null,
-      reportedAt: timestamp ? new Date(timestamp) : new Date(),
-      status: 'open',
+      type: (type || 'other') as IncidentType,
+      description: (description || 'No description provided').substring(0, MAX_DESCRIPTION_LENGTH),
+      location: location ? (typeof location === 'string' ? location : JSON.stringify(location)) : undefined,
+      latitude,
+      longitude,
+      shiftId: shiftId && typeof shiftId === 'string' ? shiftId : undefined,
+      photos,
+      manualSeverity: manualSeverity as IncidentSeverity | undefined,
     });
 
-    console.log('[MobileWorker] Security incident persisted:', { 
-      id: incident.id,
-      type, 
-      severity, 
-      employeeId: employee.id,
+    console.log('[MobileWorker] Incident routed:', { 
+      id: routingResult.incidentId,
+      severity: routingResult.severity,
+      supervisorNotified: routingResult.supervisorNotified,
+      managerNotified: routingResult.managerNotified,
       workspaceId,
     });
     
     res.json({
-      ...incident,
-      message: 'Incident reported successfully. Management has been notified.',
+      incidentId: routingResult.incidentId,
+      severity: routingResult.severity,
+      supervisorNotified: routingResult.supervisorNotified,
+      managerNotified: routingResult.managerNotified,
+      clientNotified: routingResult.clientNotified,
+      message: `Incident reported as ${routingResult.severity.toUpperCase()}. ${routingResult.managerNotified ? 'Manager has been alerted.' : 'Supervisor has been notified.'}`,
+      routingDetails: routingResult.routingDetails,
     });
   } catch (error) {
     console.error('[MobileWorker] Error creating incident:', error);

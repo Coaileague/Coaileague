@@ -141,6 +141,58 @@ router.post("/api/auth/register", async (req, res) => {
 });
 
 // ============================================================================
+// Email Verification
+// ============================================================================
+
+import { verifyEmailToken } from "./auth";
+
+router.post("/api/auth/verify-email", async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token || typeof token !== 'string') {
+      return res.status(400).json({ message: "Verification token required" });
+    }
+
+    const result = await verifyEmailToken(token);
+
+    if (!result.success) {
+      return res.status(400).json({ message: result.message || "Invalid or expired token" });
+    }
+
+    res.json({
+      message: "Email verified successfully",
+      verified: true,
+      userId: result.userId,
+    });
+  } catch (error) {
+    console.error("Email verification error:", error);
+    res.status(500).json({ message: "Verification failed" });
+  }
+});
+
+router.get("/api/auth/verify-email/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      return res.redirect("/?error=invalid_token");
+    }
+
+    const result = await verifyEmailToken(token);
+
+    if (!result.success) {
+      return res.redirect("/?error=expired_token");
+    }
+
+    res.redirect("/login?verified=true");
+  } catch (error) {
+    console.error("Email verification error:", error);
+    res.redirect("/?error=verification_failed");
+  }
+});
+
+// ============================================================================
 // Login
 // ============================================================================
 

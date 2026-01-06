@@ -25,12 +25,12 @@
 | 2. QuickBooks Integration | ✅ Production Ready | Minor: Invoice sync validation |
 | 3. RBAC | ✅ Implemented | Middleware applied across routes |
 | 4. Data Isolation | ✅ Strong | 1,578 workspace_id references in routes |
-| 5. File Uploads | ⚠️ Partial | Storage isolation per org needs audit |
+| 5. File Uploads | ✅ Implemented | Workspace isolation with fileStorageIsolationService |
 | 6. Time Tracking & GPS | ✅ Implemented | Haversine, geofence, violations logged |
 | 7. Scheduling | ✅ Implemented | Snapshots, rollback, publish flow complete |
-| 8. Payroll | ⚠️ Partial | Paystub generation needs validation |
+| 8. Payroll | ✅ Implemented | Paystub PDF/JSON generation with deductions |
 | 9. Billing & Invoicing | ✅ Implemented | QB sync, qbInvoiceId tracking |
-| 10. Incident Reporting | ⚠️ Partial | Auto-routing/severity calculation sparse |
+| 10. Incident Reporting | ✅ Implemented | Auto-routing, severity calculation, notifications |
 | 11. Trinity AI Orchestration | ✅ Robust | 367+ actions, 7 domain subagents |
 | 12. Credits & Billing | ✅ Implemented | AICreditGateway with tier classification |
 | 13. Support Mode | ✅ Implemented | Elevated sessions, freeze capability |
@@ -132,7 +132,7 @@
 
 ### 5. FILE UPLOADS & STORAGE
 
-**Implementation Status:** ⚠️ Partial
+**Implementation Status:** ✅ Implemented
 
 **What's Implemented:**
 - File upload routes with multer (`server/routes/chat-uploads.ts`)
@@ -140,14 +140,18 @@
 - Incident photo attachments
 - File sanitization (`server/lib/sanitization.ts`)
 - Calendar file imports (`server/routes/calendarRoutes.ts`)
+- **File Storage Isolation Service** (`server/services/fileStorageIsolationService.ts`)
+  - Workspace-based path construction: `workspaces/{workspaceId}/{category}/{filename}`
+  - Cross-workspace access prevention with validation
+  - Path traversal attack prevention
+  - File ownership verification before retrieval
+  - Audit logging for file operations
+  - Support for upload, download, delete, list operations
 
-**What Needs Audit:**
-- Per-org storage path isolation
-- File retrieval workspace ownership checks
-- File size/type validation enforcement
-- Cross-org file access prevention
-
-**Files:** `server/routes/chat-uploads.ts`, `server/lib/sanitization.ts`
+**Files:** 
+- `server/routes/chat-uploads.ts`
+- `server/lib/sanitization.ts`
+- `server/services/fileStorageIsolationService.ts`
 
 ---
 
@@ -196,7 +200,7 @@
 
 ### 8. PAYROLL PROCESSING
 
-**Implementation Status:** ⚠️ Partial
+**Implementation Status:** ✅ Implemented
 
 **What's Implemented:**
 - Payroll run with time entry aggregation
@@ -205,17 +209,24 @@
 - QuickBooks payroll sync integration
 - Payroll data workspace isolation
 - Payroll hours aggregation service
-
-**What Needs Validation:**
-- Paystub generation and PDF export
-- Paystub notification delivery
-- Gross/net pay calculation accuracy
-- Auto-resolution of exceptions
+- **Paystub generation service** (`server/services/paystubService.ts`)
+  - PDF export with formatted pay statements
+  - JSON mobile rendering endpoint
+  - Standard deductions: 12% federal, 6.2% SS, 1.45% Medicare, 5% state
+  - Overtime calculation at 1.5x rate
+  - Batch generation for managers
+- **Paystub API routes** (`server/routes/paystubRoutes.ts`)
+  - GET /api/paystubs/current - Employee current period
+  - GET /api/paystubs/:employeeId/:startDate/:endDate - Specific period
+  - GET /api/paystubs/.../pdf - PDF download
+  - POST /api/paystubs/batch - Manager batch generation
 
 **Files:**
 - `server/services/payrollAutomation.ts`
 - `server/services/automation/payrollHoursAggregator.ts`
 - `server/services/ai-brain/subagents/payrollSubagent.ts`
+- `server/services/paystubService.ts`
+- `server/routes/paystubRoutes.ts`
 
 ---
 
@@ -242,21 +253,29 @@
 
 ### 10. INCIDENT REPORTING
 
-**Implementation Status:** ⚠️ Partial
+**Implementation Status:** ✅ Implemented
 
 **What's Implemented:**
 - Incident creation and database storage
 - Photo attachment functionality
 - Incident workspace isolation
 - Role-based viewing restrictions
+- **Incident Routing Service** (`server/services/incidentRoutingService.ts`)
+  - Automatic severity calculation from keywords:
+    - CRITICAL: fire, weapon, gun, knife, medical emergency, active threat
+    - HIGH: theft, assault, break-in, injury, unconscious, blood
+    - MEDIUM: suspicious person, trespassing, disturbance, vandalism
+  - Type-based severity defaults (e.g., fire_safety → HIGH)
+  - Smart routing based on severity:
+    - LOW/MEDIUM: Supervisor notification
+    - HIGH: Manager + supervisor notification
+    - CRITICAL: All of above + client notification + SMS escalation
+  - GPS location capture for mobile reports
+  - Integration with mobile worker API (`/api/incidents`)
 
-**What Needs Implementation:**
-- Automatic severity calculation (Trinity or manual)
-- Auto-routing to correct supervisor
-- Critical incident SMS to manager
-- Enterprise client notification automation
-
-**Note:** No matches found for `incidentSeverity|criticalIncident|incidentRouting|autoRoute` patterns
+**Files:**
+- `server/services/incidentRoutingService.ts`
+- `server/routes/mobileWorkerRoutes.ts`
 
 ---
 

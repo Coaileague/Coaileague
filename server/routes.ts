@@ -117,6 +117,7 @@ import { onboardingRouter } from "./routes/onboardingRoutes";
 import { onboardingAssistantRouter } from "./routes/onboarding-assistant-routes";
 import { timesheetReportRouter } from "./routes/timesheetReportRoutes";
 import { timesheetInvoiceRouter } from "./routes/timesheetInvoiceRoutes";
+import paystubRouter from "./routes/paystubRoutes";
 import { advancedSchedulingRouter } from "./routes/advancedSchedulingRoutes";
 import { ownerAnalyticsRouter } from "./routes/ownerAnalytics";
 import serviceControlRouter from "./routes/service-control";
@@ -3294,6 +3295,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Register Timesheet Invoice routes (generate invoices from approved time entries)
   app.use("/api/timesheet-invoices", timesheetInvoiceRouter);
+  // Register Paystub routes (PDF generation, mobile-friendly pay statements)
+  app.use(paystubRouter);
 
   // Register Advanced Scheduling routes (recurring shifts, shift swapping)
   app.use("/api/scheduling", advancedSchedulingRouter);
