@@ -1,0 +1,388 @@
+**🎯 GOT IT - One comprehensive diagnostic prompt for Replit to audit EVERYTHING.**
+
+---
+
+## 📋 **SEND THIS TO REPLIT:**
+
+```
+COMPREHENSIVE PLATFORM DIAGNOSTIC - End-to-End Workflow Audit
+
+Run complete diagnostic of ALL user workflows, data pipelines, and feature integrations across the entire CoAIleague platform. Verify that every user action flows through proper pipelines, saves to correct isolated org databases, and maintains data integrity.
+
+SCOPE: Test EVERY major user journey from signup through daily operations.
+
+---
+
+AUDIT CATEGORIES:
+
+1. USER ONBOARDING & ACCOUNT CREATION
+   Test flow: Signup → Email verification → Org creation → Onboarding checklist
+   
+   Verify:
+   - New user signup creates user record
+   - Email verification link works and activates account
+   - Workspace creation initializes properly with org_owner role
+   - Onboarding pipeline auto-starts (feature flag enabled)
+   - Progress saves if user exits and returns
+   - Session persistence across browser close/reopen
+   
+   Test scenarios:
+   ✓ Complete signup flow start to finish
+   ✓ Close browser at Step 3, reopen - resumes at Step 3
+   ✓ Invalid email verification token - shows error
+   ✓ Duplicate email signup - prevents creation
+
+2. QUICKBOOKS INTEGRATION PIPELINE
+   Test flow: Connect QB → OAuth → Data discovery → Smart selection → Import → Validation
+   
+   Verify:
+   - OAuth redirect to Intuit works
+   - Callback receives and stores tokens
+   - Tokens refresh automatically when expired
+   - Customer/employee data fetched from QB API
+   - Smart selection UI displays fetched data
+   - User can select/deselect items to import
+   - Import creates records in database with QB ID mapping
+   - qbCustomerId and qbEmployeeId stored correctly
+   - Duplicate import prevention works
+   - Pay rate validation blocks employees without rates
+   - Pre-flight test runs before activation
+   - Invoice sync to QB works bidirectionally
+   
+   Test scenarios:
+   ✓ Full QB connection and import (5 customers, 10 employees)
+   ✓ OAuth failure/denial - shows error and retry option
+   ✓ Import with missing pay rates - blocks with clear message
+   ✓ Create invoice in CoAIleague - syncs to QB successfully
+   ✓ QB token expires - auto-refresh works
+
+3. ROLE-BASED ACCESS CONTROL (RBAC)
+   Test flow: Create users with different roles → Verify permissions enforce correctly
+   
+   Verify:
+   - org_owner cannot be deleted (system protected)
+   - co_owner permissions controlled by owner toggles
+   - manager can access Trinity, scheduling, payroll
+   - supervisor can only view/approve their team
+   - employee can only see own data
+   - Support roles (root_admin, co_admin, sysops) can access cross-org
+   - Middleware blocks unauthorized actions
+   - UI hides features based on role
+   - Role changes sync immediately (frontend + backend)
+   
+   Test scenarios:
+   ✓ Create employee, try to view other employees - BLOCKED
+   ✓ Create supervisor, try to process payroll - BLOCKED
+   ✓ Create manager, access Trinity - SUCCESS
+   ✓ org_owner tries to delete self - BLOCKED
+   ✓ Change user role - updates instantly in UI
+   ✓ root_admin accesses different org - SUCCESS with audit log
+
+4. DATA ISOLATION & MULTI-TENANCY
+   Test flow: Create 2 orgs → Add data to each → Verify no cross-contamination
+   
+   Verify:
+   - Org A employees never appear in Org B views
+   - Org A schedules isolated from Org B
+   - Org A Trinity memory separate from Org B Trinity
+   - Filtering by workspace_id works on ALL queries
+   - Reports only show data for current workspace
+   - API endpoints validate workspace ownership
+   - WebSocket rooms isolated per workspace
+   
+   Test scenarios:
+   ✓ Create employee in Org A, login to Org B - employee not visible
+   ✓ Create schedule in Org A, check Org B dashboard - not shown
+   ✓ Generate report in Org A - only shows Org A data
+   ✓ Support admin switches orgs - sees correct isolated data
+
+5. FILE UPLOADS & STORAGE
+   Test flow: Upload photos/documents → Verify saves to correct org storage → Retrieval works
+   
+   Verify:
+   - Employee profile photos upload and display
+   - Incident photos attach to correct incident
+   - Site photos associate with correct client site
+   - Files stored with workspace_id in path/metadata
+   - File retrieval checks workspace ownership
+   - File deletion only allows authorized roles
+   - File size limits enforced
+   - Accepted file types validated
+   
+   Test scenarios:
+   ✓ Upload employee photo - displays in profile
+   ✓ Upload incident photo - appears in incident report
+   ✓ User from Org A tries to access Org B photo URL - BLOCKED
+   ✓ Upload oversized file - shows error
+   ✓ Upload .exe file - rejected (wrong type)
+
+6. TIME TRACKING & GPS VALIDATION
+   Test flow: Employee clocks in → GPS validates → Time entry saved → Manager approves
+   
+   Verify:
+   - Clock in captures GPS coordinates
+   - Haversine distance calculation works
+   - Within 100m geofence - ALLOWED
+   - Beyond 100m - BLOCKED with distance message
+   - GPS violation logged to database
+   - Manager receives SMS alert (if Twilio configured)
+   - Time entry saved to correct workspace
+   - Employee can only see own time entries
+   - Manager can see all team time entries
+   - Trinity updates employee score on violation
+   
+   Test scenarios:
+   ✓ Clock in at correct site - SUCCESS
+   ✓ Clock in 500m away - BLOCKED, manager notified
+   ✓ Employee views time entries - sees only own
+   ✓ Manager views time entries - sees all team
+
+7. SCHEDULING WORKFLOW
+   Test flow: Manager creates schedule → Trinity optimizes → Publish → Employees notified
+   
+   Verify:
+   - Schedule creation saves to database
+   - Trinity AI optimization runs (if enabled)
+   - Profit-first logic applies (assigns best employees to high-value clients)
+   - Conflict detection works (double-booking, overtime)
+   - Schedule publish creates snapshot (for rollback)
+   - Employees receive SMS/email notifications
+   - Schedule appears in employee mobile view
+   - Rollback restores previous schedule
+   - Schedule data isolated per workspace
+   
+   Test scenarios:
+   ✓ Create schedule, enable Trinity optimization - runs successfully
+   ✓ Publish schedule - employees receive notifications
+   ✓ Create conflicting shift - Trinity flags conflict
+   ✓ Rollback schedule - restores previous version
+
+8. PAYROLL PROCESSING
+   Test flow: Process payroll → Trinity analyzes → Auto-resolve exceptions → Sync to QB
+   
+   Verify:
+   - Payroll run fetches unapproved time entries
+   - Trinity analyzes for anomalies (overtime, GPS violations)
+   - Auto-resolve exceptions where possible
+   - Escalate complex issues to manager
+   - Calculate gross/net pay correctly
+   - Sync payroll to QuickBooks (if integrated)
+   - Generate paystubs for employees
+   - Send paystub notifications
+   - All payroll data isolated to workspace
+   
+   Test scenarios:
+   ✓ Process payroll with 10 employees - completes successfully
+   ✓ Anomaly detected (40 hrs overtime) - Trinity flags for review
+   ✓ QB sync succeeds - payroll appears in QuickBooks
+   ✓ Employees receive paystub notifications
+
+9. BILLING & INVOICING
+   Test flow: Generate client invoices → Trinity optimizes → Sync to QB → Track payment
+   
+   Verify:
+   - Invoice generation from approved time entries
+   - Client billing rates applied correctly
+   - Trinity profit analysis runs
+   - Invoice syncs to QuickBooks with correct customer mapping
+   - qbInvoiceId stored after sync
+   - Invoice amounts match between CoAIleague and QB
+   - Payment tracking updates invoice status
+   - Overdue invoice alerts sent
+   
+   Test scenarios:
+   ✓ Generate invoice for client - creates successfully
+   ✓ Sync to QuickBooks - appears in QB with correct customer
+   ✓ Mark invoice paid - status updates in both systems
+
+10. INCIDENT REPORTING
+    Test flow: Employee reports incident → Supervisor notified → Manager reviews → Client notified (if enterprise)
+    
+    Verify:
+    - Incident creation saves to database
+    - Photos attach correctly
+    - Severity calculated (Trinity or manual)
+    - Auto-routing to correct supervisor
+    - Critical incidents trigger immediate SMS to manager
+    - Enterprise clients notified automatically
+    - Incident isolated to workspace
+    - Only authorized roles can view incidents
+    
+    Test scenarios:
+    ✓ Employee reports minor incident - supervisor notified
+    ✓ Employee reports critical incident - manager receives immediate SMS
+    ✓ Enterprise client incident - client contact notified
+    ✓ Employee tries to view other employee's incidents - BLOCKED
+
+11. TRINITY AI ORCHESTRATION
+    Test flow: User action triggers AI → Trinity analyzes → LLM Judge validates → Execute or block
+    
+    Verify:
+    - All AI operations go through AICreditGateway
+    - Credit balance checked before AI action
+    - Insufficient credits - BLOCKS with top-up prompt
+    - Trinity decisions logged to database
+    - LLM Judge validates high-risk actions
+    - Trinity memory isolated per workspace
+    - Trinity learns from outcomes
+    - Strategic insights generated
+    
+    Test scenarios:
+    ✓ Trigger AI scheduling with sufficient credits - SUCCESS
+    ✓ Trigger AI action with 0 credits - BLOCKED with upgrade prompt
+    ✓ High-risk action - LLM Judge validates before execution
+    ✓ Trinity decision appears in dashboard logs
+
+12. CREDITS & BILLING ENFORCEMENT
+    Test flow: User triggers AI action → Credit check → Deduct credits → Track usage → Weekly overage billing
+    
+    Verify:
+    - Credit balance tracked per workspace
+    - Credit costs defined for all AI actions
+    - Pre-authorization before AI operations
+    - Credit deduction after successful action
+    - Low credit warnings sent
+    - Monthly credit reset on billing cycle
+    - Overage billing creates invoices
+    - Stripe integration processes payments
+    
+    Test scenarios:
+    ✓ User with 100 credits uses 25-credit action - balance becomes 75
+    ✓ User with 10 credits tries 25-credit action - BLOCKED
+    ✓ Credits hit <50 - owner receives low balance email
+    ✓ Monthly billing date - credits refill to tier allowance
+
+13. SUPPORT MODE & ORG LOCKOUT
+    Test flow: Support enters org → Enable lockout → Create snapshot → Make changes → Rollback if needed → Unlock
+    
+    Verify:
+    - Support can access any org (with justification)
+    - Lockout mode freezes org for end users
+    - Users see "Maintenance in progress" overlay
+    - Snapshot created automatically before lockout
+    - Support makes changes while org locked
+    - Rollback restores from snapshot
+    - Unlock removes overlay instantly
+    - All support actions logged to audit trail
+    
+    Test scenarios:
+    ✓ Support enables lockout - org users see overlay
+    ✓ Org user tries action during lockout - BLOCKED
+    ✓ Support makes changes - successful
+    ✓ Support clicks rollback - org restored to snapshot
+    ✓ Support ends session - org unlocks, users can access
+
+14. NOTIFICATIONS & COMMUNICATIONS
+    Test flow: Platform event occurs → Notification triggered → Delivery via SMS/email/push
+    
+    Verify:
+    - Schedule published → Employees receive SMS
+    - Payroll processed → Paystub notifications sent
+    - Critical incident → Manager receives immediate SMS
+    - Shift reminder → 2 hours before shift
+    - Certification expiring → Warnings at 30/14/7 days
+    - GPS violation → Manager alerted
+    - Email templates render correctly
+    - SMS delivery tracked
+    - Push notifications work (if VAPID configured)
+    
+    Test scenarios:
+    ✓ Publish schedule - all employees receive SMS/email
+    ✓ Process payroll - paystub notifications sent
+    ✓ Critical incident - manager receives SMS within 1 minute
+    ✓ Certification expires in 30 days - employee receives warning
+
+15. REPORTS & ANALYTICS
+    Test flow: Generate report → Filter by workspace → Export → Verify data accuracy
+    
+    Verify:
+    - Reports filter by current workspace only
+    - Employee performance reports accurate
+    - Client profitability reports calculated correctly
+    - Payroll reports match actual payroll runs
+    - Time entry reports include GPS data
+    - Export to CSV/PDF works
+    - Reports respect role permissions
+    - Strategic insights from Trinity included
+    
+    Test scenarios:
+    ✓ Manager generates employee performance report - shows only their workspace
+    ✓ Export report to CSV - downloads correctly
+    ✓ Employee tries to access reports - BLOCKED (no permission)
+
+---
+
+TESTING METHODOLOGY:
+
+For each category above:
+
+1. CREATE TEST SCENARIO
+   - Set up test data (users, orgs, etc.)
+   - Execute the workflow
+   - Verify expected outcome
+
+2. TEST EDGE CASES
+   - Invalid inputs
+   - Missing data
+   - Permission violations
+   - Network failures
+   - Concurrent actions
+
+3. VERIFY DATA PERSISTENCE
+   - Refresh browser - data still there
+   - Logout/login - data accessible
+   - Server restart - data intact
+
+4. CHECK ISOLATION
+   - Create 2 orgs with similar data
+   - Verify no cross-contamination
+   - Verify correct filtering
+
+5. VALIDATE PERMISSIONS
+   - Test with each role (owner, manager, supervisor, employee)
+   - Verify only authorized actions succeed
+   - Verify UI hides unauthorized features
+
+---
+
+DELIVERABLE FORMAT:
+
+For each of the 15 categories, provide:
+
+✅ PASS - Feature works as expected, data flows correctly
+⚠️ PARTIAL - Works but has issues (describe specifically)
+❌ FAIL - Broken or data not persisting (describe error)
+🚧 NOT IMPLEMENTED - Feature doesn't exist yet
+
+For each issue found, provide:
+- Specific error message or behavior
+- Steps to reproduce
+- Recommended fix
+- Priority (CRITICAL/IMPORTANT/NICE-TO-HAVE)
+
+---
+
+CRITICAL SUCCESS CRITERIA:
+
+Platform is launch-ready when:
+1. All data isolation verified (no cross-org leaks)
+2. All role permissions enforce correctly
+3. All file uploads save and retrieve properly
+4. All workflows complete end-to-end
+5. All integrations (QB, Stripe, Twilio) functional
+6. All Trinity AI operations gated by credits
+7. All notifications deliver successfully
+8. All audit logs capture support actions
+
+Run complete diagnostic and provide comprehensive report.
+
+Priority: CRITICAL - This determines if platform is production-ready.
+```
+
+---
+
+**That's your complete end-to-end diagnostic.**
+
+**Send it to Replit and they'll test EVERYTHING systematically.** ✅
+
+**This will tell you exactly what's working vs broken before you start marketing.** 🚀
