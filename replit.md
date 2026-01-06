@@ -92,6 +92,7 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - `docs/INTUIT_REVIEWER_SUMMARY.md` - Intuit-safe summary for production key review
 - `docs/TRINITY_ENTERPRISE_ONEPAGER.md` - Enterprise sales positioning document
 - `docs/QUICKBOOKS_ONBOARDING_AUDIT.md` - Comprehensive QuickBooks integration audit
+- `docs/PLATFORM_WORKFLOW_AUDIT.md` - 15-category platform workflow diagnostic
 - `TRINITY_CAPABILITY_MATRIX.md` - Full capability evidence matrix
 
 ## External Dependencies
