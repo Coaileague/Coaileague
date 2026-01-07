@@ -440,10 +440,10 @@ class TrinityAutomationToggleService {
   }
 
   /**
-   * Get a single pending request from database
+   * Get a single pending request from database with workspace isolation
    */
-  async getPendingRequest(requestId: string): Promise<AutomationResult | undefined> {
-    return this.getRequestResult(requestId);
+  async getPendingRequest(requestId: string, workspaceId?: string): Promise<AutomationResult | undefined> {
+    return this.getRequestResult(requestId, workspaceId);
   }
 
   /**
@@ -510,11 +510,18 @@ class TrinityAutomationToggleService {
   }
 
   /**
-   * Get request result from database
+   * Get request result from database with optional workspace isolation
    */
-  private async getRequestResult(requestId: string): Promise<AutomationResult | undefined> {
+  private async getRequestResult(requestId: string, workspaceId?: string): Promise<AutomationResult | undefined> {
+    const whereClause = workspaceId 
+      ? and(
+          eq(trinityAutomationRequests.id, requestId),
+          eq(trinityAutomationRequests.workspaceId, workspaceId)
+        )
+      : eq(trinityAutomationRequests.id, requestId);
+
     const record = await db.query.trinityAutomationRequests.findFirst({
-      where: eq(trinityAutomationRequests.id, requestId),
+      where: whereClause,
     });
 
     if (!record) return undefined;
