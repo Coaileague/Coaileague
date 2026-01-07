@@ -1,10 +1,14 @@
 /**
- * CoAIleague Logo Mark - Polished modern logo design
- * Features: Gradient ring with AI neural network nodes
+ * CoAIleague Logo Mark - Trinity Bow/Knot Icon (Static)
+ * Features: Five-pointed interwoven ribbon knot with teal/cyan brand colors
  * Used in: Headers, dialogs, sheets, toasts, branded components
+ * 
+ * Note: This is a STATIC icon - no animation to maintain recognizability
+ * Colors: Uses brand teal/cyan gradient palette per design_guidelines.md
  */
 
 import { cn } from "@/lib/utils";
+import { useMemo } from "react";
 
 interface LogoMarkProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
@@ -20,72 +24,123 @@ const sizeMap = {
   xl: { width: 64, height: 64 },
 };
 
-export function LogoMark({ size = "md", className, animate = false }: LogoMarkProps) {
+let logoMarkIdCounter = 0;
+
+export function LogoMark({ size = "md", className }: LogoMarkProps) {
   const { width, height } = sizeMap[size];
+  
+  const ids = useMemo(() => {
+    const id = ++logoMarkIdCounter;
+    return {
+      tealGrad: `logoMark-tealGrad-${id}`,
+      cyanGrad: `logoMark-cyanGrad-${id}`,
+      coreGrad: `logoMark-coreGrad-${id}`,
+      glowFilter: `logoMark-glow-${id}`,
+    };
+  }, []);
   
   return (
     <svg
       width={width}
       height={height}
-      viewBox="0 0 48 48"
+      viewBox="0 0 200 200"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
-      className={cn(
-        "shrink-0",
-        animate && "animate-pulse",
-        className
-      )}
+      className={cn("shrink-0", className)}
     >
       <defs>
-        <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#2DD4BF" />
-          <stop offset="50%" stopColor="#06B6D4" />
-          <stop offset="100%" stopColor="#3B82F6" />
+        <linearGradient id={ids.tealGrad} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#2dd4bf" />
+          <stop offset="100%" stopColor="#06b6d4" />
         </linearGradient>
-        <linearGradient id="logoGradDark" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#5EEAD4" />
-          <stop offset="50%" stopColor="#22D3EE" />
-          <stop offset="100%" stopColor="#60A5FA" />
+        <linearGradient id={ids.cyanGrad} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#06b6d4" />
+          <stop offset="100%" stopColor="#3b82f6" />
         </linearGradient>
-        <filter id="glow" x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="1.5" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        <radialGradient id={ids.coreGrad} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="50%" stopColor="#22d3ee" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.4" />
+        </radialGradient>
+        <filter id={ids.glowFilter} x="-50%" y="-50%" width="200%" height="200%">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
         </filter>
       </defs>
       
-      <g filter="url(#glow)">
-        <circle 
-          cx="24" 
-          cy="24" 
-          r="20" 
-          stroke="url(#logoGrad)" 
-          strokeWidth="3"
-          fill="none"
-          opacity="0.9"
-        />
-        
-        <circle 
-          cx="24" 
-          cy="24" 
-          r="14" 
-          stroke="url(#logoGrad)" 
-          strokeWidth="2"
-          fill="none"
-          opacity="0.6"
-        />
-        
-        <circle cx="24" cy="10" r="3" fill="url(#logoGrad)" />
-        <circle cx="38" cy="24" r="3" fill="url(#logoGrad)" />
-        <circle cx="24" cy="38" r="3" fill="url(#logoGrad)" />
-        <circle cx="10" cy="24" r="3" fill="url(#logoGrad)" />
-        
-        <circle cx="24" cy="24" r="5" fill="url(#logoGrad)" />
-        
-        <line x1="24" y1="13" x2="24" y2="19" stroke="url(#logoGrad)" strokeWidth="1.5" opacity="0.7" />
-        <line x1="35" y1="24" x2="29" y2="24" stroke="url(#logoGrad)" strokeWidth="1.5" opacity="0.7" />
-        <line x1="24" y1="35" x2="24" y2="29" stroke="url(#logoGrad)" strokeWidth="1.5" opacity="0.7" />
-        <line x1="13" y1="24" x2="19" y2="24" stroke="url(#logoGrad)" strokeWidth="1.5" opacity="0.7" />
-      </g>
+      {/* Five-pointed interwoven ribbon knot - Trinity Symbol */}
+      {/* Petal 1 - Top (Teal) */}
+      <path 
+        d="M 100 100 Q 100 55 100 35 Q 105 55 100 100" 
+        fill={`url(#${ids.tealGrad})`} 
+        filter={`url(#${ids.glowFilter})`}
+        opacity="0.95"
+      />
+      <path 
+        d="M 100 35 Q 95 55 100 100 Q 100 55 100 35" 
+        fill={`url(#${ids.tealGrad})`} 
+        opacity="0.9"
+      />
+      
+      {/* Petal 2 - Top Right (Cyan) */}
+      <path 
+        d="M 100 100 Q 130 75 155 55 Q 130 80 100 100" 
+        fill={`url(#${ids.cyanGrad})`} 
+        filter={`url(#${ids.glowFilter})`}
+        opacity="0.95"
+      />
+      <path 
+        d="M 155 55 Q 125 80 100 100 Q 130 75 155 55" 
+        fill={`url(#${ids.cyanGrad})`} 
+        opacity="0.9"
+      />
+      
+      {/* Petal 3 - Bottom Right (Teal) */}
+      <path 
+        d="M 100 100 Q 140 115 160 145 Q 135 120 100 100" 
+        fill={`url(#${ids.tealGrad})`} 
+        filter={`url(#${ids.glowFilter})`}
+        opacity="0.95"
+      />
+      <path 
+        d="M 160 145 Q 130 115 100 100 Q 140 115 160 145" 
+        fill={`url(#${ids.tealGrad})`} 
+        opacity="0.9"
+      />
+      
+      {/* Petal 4 - Bottom Left (Cyan) */}
+      <path 
+        d="M 100 100 Q 60 115 40 145 Q 65 120 100 100" 
+        fill={`url(#${ids.cyanGrad})`} 
+        filter={`url(#${ids.glowFilter})`}
+        opacity="0.95"
+      />
+      <path 
+        d="M 40 145 Q 70 115 100 100 Q 60 115 40 145" 
+        fill={`url(#${ids.cyanGrad})`} 
+        opacity="0.9"
+      />
+      
+      {/* Petal 5 - Top Left (Teal) */}
+      <path 
+        d="M 100 100 Q 70 75 45 55 Q 70 80 100 100" 
+        fill={`url(#${ids.tealGrad})`} 
+        filter={`url(#${ids.glowFilter})`}
+        opacity="0.95"
+      />
+      <path 
+        d="M 45 55 Q 75 80 100 100 Q 70 75 45 55" 
+        fill={`url(#${ids.tealGrad})`} 
+        opacity="0.9"
+      />
+      
+      {/* Central crystalline core */}
+      <circle cx="100" cy="100" r="18" fill={`url(#${ids.coreGrad})`} filter={`url(#${ids.glowFilter})`}/>
+      <circle cx="100" cy="100" r="12" fill="#ffffff" opacity="0.9"/>
+      <circle cx="100" cy="100" r="6" fill="#22d3ee"/>
     </svg>
   );
 }
@@ -104,6 +159,7 @@ const wordmarkSizeMap = {
 
 export function LogoWordmark({ size = "md", className, showTagline = false }: LogoWordmarkProps) {
   const config = wordmarkSizeMap[size];
+  const wordGradId = useMemo(() => `wordGrad-${++logoMarkIdCounter}`, []);
   
   return (
     <svg
@@ -115,7 +171,7 @@ export function LogoWordmark({ size = "md", className, showTagline = false }: Lo
       className={cn("shrink-0", className)}
     >
       <defs>
-        <linearGradient id="wordGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+        <linearGradient id={wordGradId} x1="0%" y1="0%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="#14B8A6" />
           <stop offset="100%" stopColor="#0891B2" />
         </linearGradient>
@@ -128,9 +184,9 @@ export function LogoWordmark({ size = "md", className, showTagline = false }: Lo
         fontSize={config.fontSize}
         letterSpacing="-0.02em"
       >
-        <tspan fill="url(#wordGrad)">Co</tspan>
+        <tspan fill={`url(#${wordGradId})`}>Co</tspan>
         <tspan fill="currentColor" className="text-foreground">AI</tspan>
-        <tspan fill="url(#wordGrad)">league</tspan>
+        <tspan fill={`url(#${wordGradId})`}>league</tspan>
       </text>
       {showTagline && (
         <text
