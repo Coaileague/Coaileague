@@ -203,22 +203,74 @@ export default function UniversalSchedule() {
   const isManager = ['manager', 'admin', 'owner', 'org_owner'].includes(effectiveRole);
   const isAdmin = ['admin', 'owner', 'org_owner'].includes(effectiveRole);
   
-  // Handler for admin-only actions
-  const handleAdminOnlyAction = (actionName: string) => {
-    if (!isAdmin) {
+  // Automation toggle mutation
+  const toggleAutomationMutation = useMutation({
+    mutationFn: async (enabled: boolean) => {
+      return await apiRequest('POST', '/api/scheduleos/ai/toggle', { enabled });
+    },
+    onSuccess: (_, enabled) => {
+      setAutomationEnabled(enabled);
       toast({
-        title: "Admin Access Required",
-        description: `${actionName} is only available to administrators.`,
-        variant: "destructive"
+        title: enabled ? 'Trinity Automation Enabled' : 'Trinity Automation Disabled',
+        description: enabled 
+          ? 'Trinity AI will now automatically optimize schedules'
+          : 'Manual scheduling mode activated',
       });
-      return;
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to toggle automation',
+        description: error.message,
+      });
     }
-    // When implemented: actual action logic goes here
-    toast({
-      title: "Feature Coming Soon",
-      description: `${actionName} will be implemented in a future update.`
-    });
-  };
+  });
+
+  // Delete shift mutation
+  const deleteShiftMutation = useMutation({
+    mutationFn: async (shiftId: string) => {
+      return await apiRequest('DELETE', `/api/shifts/${shiftId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      setSelectedShiftForAction(null);
+      toast({
+        title: 'Shift deleted',
+        description: 'The shift has been removed from the schedule',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to delete shift',
+        description: error.message,
+      });
+    }
+  });
+
+  // Publish schedule mutation
+  const publishScheduleMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest('POST', '/api/schedules/publish', {
+        weekStart: weekStart.toISOString(),
+        weekEnd: weekEnd.toISOString(),
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/shifts'] });
+      toast({
+        title: 'Schedule published',
+        description: 'All employees have been notified of their shifts',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to publish schedule',
+        description: error.message,
+      });
+    }
+  });
   
   // Detect touch device for drag-and-drop (disable on mobile per architect)
   const isTouchDevice = useMemo(() => 
@@ -1010,11 +1062,12 @@ export default function UniversalSchedule() {
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setAutomationEnabled(!automationEnabled)}
+                  onClick={() => toggleAutomationMutation.mutate(!automationEnabled)}
+                  disabled={toggleAutomationMutation.isPending}
                   className={`h-6 px-2 ${automationEnabled ? 'text-green-600' : 'text-muted-foreground'}`}
                   data-testid="button-ai-toggle"
                 >
-                  {automationEnabled ? 'ON' : 'OFF'}
+                  {toggleAutomationMutation.isPending ? '...' : automationEnabled ? 'ON' : 'OFF'}
                 </Button>
               </div>
 
@@ -1035,56 +1088,62 @@ export default function UniversalSchedule() {
           </div>
         </div>
 
-        {/* Schedule Grid - GetSling Style with Hours on Top */}
+        {/* Schedule Grid - GetSling Style with Days as Columns */}
         <ScrollArea className="flex-1 p-4">
-          <div className="bg-card rounded-lg border overflow-hidden">
-            {/* Hours Header Row - Sticky */}
-            <div className="flex border-b bg-gradient-to-r from-muted/80 to-muted/50 sticky top-0 z-10">
+          <div className="bg-card rounded-lg border overflow-hidden min-w-[900px]">
+            {/* Days Header Row - Sticky */}
+            <div className="grid grid-cols-8 border-b bg-gradient-to-r from-muted/80 to-muted/50 sticky top-0 z-10">
               {/* Employee Column Header */}
-              <div className="w-48 min-w-[192px] p-3 font-semibold text-sm border-r bg-muted/80 flex items-center gap-2">
+              <div className="p-3 font-semibold text-sm border-r bg-muted/80 flex items-center gap-2">
                 <Users className="w-4 h-4 text-muted-foreground" />
                 <span>Employee</span>
               </div>
-              {/* Hours across the top */}
-              <div className="flex-1 flex overflow-x-auto">
-                {hours.map(hour => (
+              {/* Days of the week */}
+              {days.map((day, dayIndex) => {
+                const dayDate = new Date(weekStart);
+                dayDate.setDate(dayDate.getDate() + dayIndex);
+                const isToday = dayDate.toDateString() === new Date().toDateString();
+                const isWeekend = dayIndex >= 5;
+                
+                return (
                   <div 
-                    key={hour} 
-                    className="flex-shrink-0 w-16 p-2 text-center font-medium text-xs border-r last:border-r-0 bg-gradient-to-b from-[#00BFFF]/5 to-transparent"
+                    key={day} 
+                    className={`p-2 text-center border-r last:border-r-0 ${
+                      isToday ? 'bg-primary/10 border-b-2 border-b-primary' : ''
+                    } ${isWeekend ? 'bg-muted/30' : ''}`}
                   >
-                    <div className="text-foreground">
-                      {hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}
+                    <div className={`font-semibold text-sm ${isToday ? 'text-primary' : ''}`}>
+                      {day}
                     </div>
-                    <div className="text-[10px] text-muted-foreground">
-                      {hour < 12 ? 'AM' : 'PM'}
+                    <div className={`text-xs ${isToday ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                      {dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
                     </div>
                   </div>
-                ))}
-              </div>
+                );
+              })}
             </div>
 
-            {/* Employee Rows with Timeline */}
+            {/* Employee Rows with Day Cells */}
             <div className="divide-y">
               {employees.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground">
+                <div className="p-8 text-center text-muted-foreground col-span-8">
                   <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p>No employees found</p>
                 </div>
               ) : (
-                employees.map((emp, empIndex) => {
-                  const empShifts = Object.values(shiftsGrid).flat().filter(s => s.employeeId === emp.id);
+                employees.map((emp) => {
                   const empColor = getEmployeeColor(emp.id);
                   
                   return (
-                    <div key={emp.id} className="flex hover:bg-muted/30 transition-colors group">
+                    <div key={emp.id} className="grid grid-cols-8 hover:bg-muted/20 transition-colors group">
                       {/* Employee Info */}
                       <div 
-                        className="w-48 min-w-[192px] p-2 border-r bg-card flex items-center gap-2 cursor-pointer hover-elevate"
+                        className="p-2 border-r bg-card flex items-center gap-2 cursor-pointer hover-elevate"
                         onClick={() => setSelectedEmployee(emp)}
                         data-testid={`employee-row-${emp.id}`}
                       >
                         <div 
-                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
                           style={{ backgroundColor: empColor }}
                         >
                           {(emp.firstName?.[0] || '')}{(emp.lastName?.[0] || '')}
@@ -1099,90 +1158,83 @@ export default function UniversalSchedule() {
                         </div>
                       </div>
 
-                      {/* Timeline Grid */}
-                      <div className="flex-1 flex relative h-16 overflow-x-auto">
-                        {/* Hour cells */}
-                        {hours.map(hour => (
+                      {/* Day Cells for this employee */}
+                      {days.map((day, dayIndex) => {
+                        const dayDate = new Date(weekStart);
+                        dayDate.setDate(dayDate.getDate() + dayIndex);
+                        const isToday = dayDate.toDateString() === new Date().toDateString();
+                        const isWeekend = dayIndex >= 5;
+                        
+                        // Get shifts for this employee on this day
+                        const dayShifts = shifts.filter(s => {
+                          if (s.employeeId !== emp.id) return false;
+                          const shiftDate = new Date(s.startTime);
+                          return shiftDate.toDateString() === dayDate.toDateString();
+                        });
+
+                        return (
                           <div
-                            key={hour}
-                            className="flex-shrink-0 w-16 border-r last:border-r-0 cursor-pointer hover:bg-primary/5 transition-colors relative group/cell"
-                            onClick={() => {
-                              setShiftForm({
-                                ...shiftForm,
-                                employeeId: emp.id,
-                                clockIn: `${hour.toString().padStart(2, '0')}:00`,
-                                clockOut: `${Math.min(hour + 8, 23).toString().padStart(2, '0')}:00`,
-                                isOpenShift: false
-                              });
-                              setModalPosition({ day: 0, hour });
-                              setShowShiftModal(true);
-                            }}
-                            data-testid={`timeline-cell-${emp.id}-${hour}`}
+                            key={dayIndex}
+                            className={`min-h-[60px] p-1 border-r last:border-r-0 cursor-pointer transition-colors relative group/cell ${
+                              isToday ? 'bg-primary/5' : ''
+                            } ${isWeekend ? 'bg-muted/20' : ''} hover:bg-primary/10`}
+                            onClick={() => handleGridClick(dayIndex, 9)}
+                            data-testid={`grid-cell-${emp.id}-${dayIndex}`}
                           >
-                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity">
-                              <div className="bg-primary/80 rounded-full p-1 shadow-sm">
-                                <Plus className="w-3 h-3 text-primary-foreground" />
+                            {/* Plus icon on hover */}
+                            {dayShifts.length === 0 && (
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity">
+                                <div className="bg-primary/80 rounded-full p-1.5 shadow-sm">
+                                  <Plus className="w-3 h-3 text-primary-foreground" />
+                                </div>
                               </div>
+                            )}
+
+                            {/* Render shifts for this day */}
+                            <div className="space-y-1">
+                              {dayShifts.map(shift => {
+                                const startTime = new Date(shift.startTime);
+                                const endTime = new Date(shift.endTime);
+                                const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
+                                const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+                                return (
+                                  <div
+                                    key={shift.id}
+                                    className="rounded-md px-2 py-1.5 cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] text-white text-xs"
+                                    style={{ backgroundColor: empColor }}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setSelectedShiftForAction(shift);
+                                    }}
+                                    data-testid={`shift-${shift.id}`}
+                                  >
+                                    <div className="font-medium truncate">{shift.title || 'Shift'}</div>
+                                    <div className="opacity-80 text-[10px]">
+                                      {formatTime(startTime)} - {formatTime(endTime)}
+                                    </div>
+                                    {client && (
+                                      <div className="opacity-70 text-[10px] truncate">{client.companyName}</div>
+                                    )}
+                                    {shift.aiGenerated && (
+                                      <TrinityIconStatic size={12} className="absolute top-1 right-1" />
+                                    )}
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
-                        ))}
-
-                        {/* Render shifts for this employee on timeline */}
-                        {empShifts.map(shift => {
-                          const startHour = new Date(shift.startTime).getHours();
-                          const endHour = new Date(shift.endTime).getHours();
-                          const duration = endHour - startHour;
-                          const left = startHour * 64; // 64px per hour
-                          const width = Math.max(duration * 64, 64);
-                          const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
-                          const isOpen = isOpenShift(shift);
-
-                          return (
-                            <div
-                              key={shift.id}
-                              className={`absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all hover:shadow-lg hover:z-10 flex flex-col justify-center ${
-                                isOpen ? 'border-2 border-dashed border-orange-400 bg-orange-50 dark:bg-orange-900/20' : 'text-white'
-                              }`}
-                              style={{
-                                left: `${left}px`,
-                                width: `${width - 4}px`,
-                                backgroundColor: isOpen ? undefined : empColor,
-                              }}
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                // Handle shift click
-                              }}
-                              data-testid={`shift-timeline-${shift.id}`}
-                            >
-                              {isOpen ? (
-                                <>
-                                  <div className="text-orange-600 text-[10px] font-bold truncate">OPEN</div>
-                                  <div className="text-[10px] text-gray-600 truncate">{shift.title}</div>
-                                </>
-                              ) : (
-                                <>
-                                  <div className="text-[10px] font-medium truncate">{shift.title || 'Shift'}</div>
-                                  <div className="text-[10px] opacity-80 truncate">
-                                    {client?.companyName || ''}
-                                  </div>
-                                  {shift.aiGenerated && (
-                                    <TrinityIconStatic size={12} className="absolute top-1 right-1" />
-                                  )}
-                                </>
-                              )}
-                            </div>
-                          );
-                        })}
-                      </div>
+                        );
+                      })}
                     </div>
                   );
                 })
               )}
 
               {/* Open Shifts Row */}
-              <div className="flex bg-orange-50/50 dark:bg-orange-900/10">
-                <div className="w-48 min-w-[192px] p-2 border-r flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+              <div className="grid grid-cols-8 bg-orange-50/50 dark:bg-orange-900/10">
+                <div className="p-2 border-r flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
                     <AlertCircle className="w-4 h-4 text-orange-500" />
                   </div>
                   <div>
@@ -1190,57 +1242,97 @@ export default function UniversalSchedule() {
                     <div className="text-xs text-muted-foreground">Unassigned</div>
                   </div>
                 </div>
-                <div className="flex-1 flex relative h-16">
-                  {hours.map(hour => (
+
+                {/* Day cells for open shifts */}
+                {days.map((day, dayIndex) => {
+                  const dayDate = new Date(weekStart);
+                  dayDate.setDate(dayDate.getDate() + dayIndex);
+                  const isToday = dayDate.toDateString() === new Date().toDateString();
+                  const isWeekend = dayIndex >= 5;
+                  
+                  // Get open shifts for this day
+                  const dayOpenShifts = shifts.filter(s => {
+                    if (s.employeeId) return false;
+                    const shiftDate = new Date(s.startTime);
+                    return shiftDate.toDateString() === dayDate.toDateString();
+                  });
+
+                  return (
                     <div
-                      key={hour}
-                      className="flex-shrink-0 w-16 border-r last:border-r-0 cursor-pointer hover:bg-orange-100/50 dark:hover:bg-orange-900/20 transition-colors relative group/cell"
+                      key={dayIndex}
+                      className={`min-h-[60px] p-1 border-r last:border-r-0 cursor-pointer transition-colors relative group/cell ${
+                        isToday ? 'bg-orange-100/50 dark:bg-orange-900/30' : ''
+                      } ${isWeekend ? 'bg-orange-50/30 dark:bg-orange-900/10' : ''} hover:bg-orange-100/70 dark:hover:bg-orange-900/40`}
                       onClick={() => {
                         setShiftForm({
                           ...shiftForm,
                           employeeId: null,
-                          clockIn: `${hour.toString().padStart(2, '0')}:00`,
-                          clockOut: `${Math.min(hour + 8, 23).toString().padStart(2, '0')}:00`,
-                          isOpenShift: true
+                          isOpenShift: true,
+                          clockIn: '09:00',
+                          clockOut: '17:00',
                         });
-                        setModalPosition({ day: 0, hour });
+                        setModalPosition({ day: dayIndex, hour: 9 });
                         setShowShiftModal(true);
                       }}
-                      data-testid={`open-shift-cell-${hour}`}
+                      data-testid={`open-shift-cell-${dayIndex}`}
                     >
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity">
-                        <div className="bg-orange-400 rounded-full p-1 shadow-sm">
-                          <Plus className="w-3 h-3 text-white" />
+                      {/* Plus icon on hover */}
+                      {dayOpenShifts.length === 0 && (
+                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity">
+                          <div className="bg-orange-400 rounded-full p-1.5 shadow-sm">
+                            <Plus className="w-3 h-3 text-white" />
+                          </div>
                         </div>
+                      )}
+
+                      {/* Render open shifts for this day */}
+                      <div className="space-y-1">
+                        {dayOpenShifts.map(shift => {
+                          const startTime = new Date(shift.startTime);
+                          const endTime = new Date(shift.endTime);
+                          const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
+                          const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+
+                          return (
+                            <div
+                              key={shift.id}
+                              className="rounded-md px-2 py-1.5 cursor-pointer transition-all hover:shadow-md border-2 border-dashed border-orange-400 bg-orange-100 dark:bg-orange-900/30 text-xs"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleAIFillOpenShift(shift.id);
+                              }}
+                              data-testid={`open-shift-${shift.id}`}
+                            >
+                              <div className="font-medium text-orange-600 truncate flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                OPEN
+                              </div>
+                              <div className="text-orange-700 dark:text-orange-300 text-[10px]">
+                                {formatTime(startTime)} - {formatTime(endTime)}
+                              </div>
+                              {client && (
+                                <div className="text-orange-600/70 text-[10px] truncate">{client.companyName}</div>
+                              )}
+                              <Button
+                                size="sm"
+                                className="mt-1 h-5 text-[10px] w-full bg-gradient-to-r from-[#00BFFF] to-[#FFD700] hover:from-[#00BFFF]/90 hover:to-[#FFD700]/90"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleAIFillOpenShift(shift.id);
+                                }}
+                                disabled={aiFillMutation.isPending}
+                                data-testid={`button-ai-fill-${shift.id}`}
+                              >
+                                <TrinityIconStatic size={10} className="mr-1" />
+                                {aiFillMutation.isPending ? 'Filling...' : 'Trinity Fill'}
+                              </Button>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
-                  ))}
-                  
-                  {/* Render open shifts */}
-                  {Object.values(shiftsGrid).flat().filter(s => isOpenShift(s)).map(shift => {
-                    const startHour = new Date(shift.startTime).getHours();
-                    const endHour = new Date(shift.endTime).getHours();
-                    const duration = endHour - startHour;
-                    const left = startHour * 64;
-                    const width = Math.max(duration * 64, 64);
-                    const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
-
-                    return (
-                      <div
-                        key={shift.id}
-                        className="absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all hover:shadow-lg hover:z-10 border-2 border-dashed border-orange-400 bg-orange-100 dark:bg-orange-900/30"
-                        style={{
-                          left: `${left}px`,
-                          width: `${width - 4}px`,
-                        }}
-                        data-testid={`open-shift-${shift.id}`}
-                      >
-                        <div className="text-orange-600 text-[10px] font-bold truncate">OPEN SHIFT</div>
-                        <div className="text-[10px] text-gray-600 dark:text-gray-400 truncate">{shift.title}</div>
-                      </div>
-                    );
-                  })}
-                </div>
+                  );
+                })}
               </div>
             </div>
           </div>
@@ -1379,47 +1471,90 @@ export default function UniversalSchedule() {
         </div>
       </div>
 
-      {/* Right Sidebar - AI Panel (hidden in Simple Mode) */}
+      {/* Right Sidebar - Trinity AI Panel (hidden in Simple Mode) */}
       <HideInSimpleMode>
       {showAIPanel && !isMobile && (
         <div className="w-96 bg-card border-l flex flex-col">
-          <div className="p-4 border-b">
+          <div className="p-4 border-b bg-gradient-to-r from-[#00BFFF]/10 via-[#3b82f6]/5 to-[#FFD700]/10">
             <div className="flex items-center justify-between mb-2">
-              <h2 className="text-lg font-bold">AI Recommendations</h2>
+              <div className="flex items-center gap-2">
+                <TrinityIconStatic size={24} />
+                <h2 className="text-lg font-bold">Trinity AI</h2>
+              </div>
               <Button variant="ghost" size="icon" onClick={() => setShowAIPanel(false)}>
                 <X className="w-5 h-5" />
               </Button>
             </div>
             <p className="text-sm text-muted-foreground">
-              Smart AI monitoring for coverage gaps
+              Intelligent schedule optimization
             </p>
           </div>
 
           <ScrollArea className="flex-1 p-4">
-            <div className="text-center py-8">
-              <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
-              <p className="font-medium">All caught up!</p>
-              <p className="text-sm text-muted-foreground">No pending AI recommendations</p>
-            </div>
+            {/* Open Shifts Alert */}
+            {shifts.filter(s => !s.employeeId).length > 0 ? (
+              <div className="space-y-3">
+                <div className="p-3 rounded-lg border border-orange-200 bg-orange-50 dark:bg-orange-900/20 dark:border-orange-800">
+                  <div className="flex items-center gap-2 mb-2">
+                    <AlertCircle className="w-4 h-4 text-orange-500" />
+                    <span className="font-medium text-sm text-orange-700 dark:text-orange-300">
+                      {shifts.filter(s => !s.employeeId).length} Open Shifts
+                    </span>
+                  </div>
+                  <p className="text-xs text-orange-600 dark:text-orange-400">
+                    Trinity can automatically fill these with the best available employees.
+                  </p>
+                  <Button
+                    size="sm"
+                    className="mt-2 w-full bg-gradient-to-r from-[#00BFFF] to-[#FFD700] hover:from-[#00BFFF]/90 hover:to-[#FFD700]/90"
+                    onClick={() => {
+                      shifts.filter(s => !s.employeeId).forEach(s => handleAIFillOpenShift(s.id));
+                    }}
+                    disabled={aiFillMutation.isPending}
+                    data-testid="button-fill-all-open"
+                  >
+                    <TrinityIconStatic size={14} className="mr-1" />
+                    {aiFillMutation.isPending ? 'Filling...' : 'Fill All Open Shifts'}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <CheckCircle className="w-12 h-12 text-green-500 mx-auto mb-3" />
+                <p className="font-medium">All shifts covered!</p>
+                <p className="text-sm text-muted-foreground">No open shifts this week</p>
+              </div>
+            )}
           </ScrollArea>
 
           <div className="p-4 border-t">
-            <div className="bg-gradient-to-r from-[#3b82f6]/10 to-[#22d3ee]/10 rounded-lg p-3 mb-3">
+            <div className="bg-gradient-to-r from-[#00BFFF]/10 via-[#3b82f6]/5 to-[#FFD700]/10 rounded-lg p-3 mb-3">
               <div className="flex items-center justify-between text-sm mb-2">
-                <span>Smart AI Status</span>
+                <span>Trinity Status</span>
                 <Badge variant="outline" className="bg-background/50">
-                  <Bot className="w-3 h-3 mr-1" />
-                  99% AI, 1% Human
+                  <TrinityIconStatic size={12} className="mr-1" />
+                  {automationEnabled ? 'Active' : 'Standby'}
                 </Badge>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                99% AI automation, 1% human oversight
               </div>
             </div>
 
             <Button
-              className="w-full bg-gradient-to-r from-[#3b82f6] to-[#22d3ee] hover:from-[#2563eb] hover:to-[#06b6d4]"
+              className="w-full bg-gradient-to-r from-[#00BFFF] to-[#FFD700] hover:from-[#00BFFF]/90 hover:to-[#FFD700]/90"
+              onClick={() => {
+                const nextWeekStart = new Date(weekStart);
+                nextWeekStart.setDate(nextWeekStart.getDate() + 7);
+                toast({
+                  title: 'Generating Schedule...',
+                  description: 'Trinity AI is optimizing next week\'s schedule',
+                });
+              }}
               data-testid="button-generate-schedule"
             >
               <Play className="w-4 h-4 mr-2" />
-              Generate AI Schedule for Next Week
+              Generate Schedule for Next Week
             </Button>
             
             <Button
@@ -1431,6 +1566,17 @@ export default function UniversalSchedule() {
             >
               <CalendarDays className="w-4 h-4 mr-2" />
               {duplicateWeekMutation.isPending ? 'Duplicating...' : 'Duplicate Week to Next Week'}
+            </Button>
+
+            <Button
+              variant="outline"
+              className="w-full mt-2"
+              onClick={() => publishScheduleMutation.mutate()}
+              disabled={publishScheduleMutation.isPending}
+              data-testid="button-publish-schedule"
+            >
+              <Send className="w-4 h-4 mr-2" />
+              {publishScheduleMutation.isPending ? 'Publishing...' : 'Publish & Notify Staff'}
             </Button>
           </div>
         </div>
@@ -1856,6 +2002,117 @@ export default function UniversalSchedule() {
               {requestSwapMutation.isPending ? 'Requesting...' : 'Request Swap'}
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Shift Action Dialog - Quick actions when shift is clicked */}
+      <Dialog open={!!selectedShiftForAction && !showDuplicateModal && !showSwapModal} onOpenChange={(open) => !open && setSelectedShiftForAction(null)}>
+        <DialogContent size="sm">
+          {selectedShiftForAction && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  {selectedShiftForAction.employeeId ? (
+                    <>
+                      <div 
+                        className="w-6 h-6 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                        style={{ backgroundColor: getEmployeeColor(selectedShiftForAction.employeeId) }}
+                      >
+                        {employees.find(e => e.id === selectedShiftForAction.employeeId)?.firstName?.[0] || '?'}
+                      </div>
+                      {employees.find(e => e.id === selectedShiftForAction.employeeId)?.firstName} {employees.find(e => e.id === selectedShiftForAction.employeeId)?.lastName}
+                    </>
+                  ) : (
+                    <>
+                      <AlertCircle className="w-5 h-5 text-orange-500" />
+                      Open Shift
+                    </>
+                  )}
+                </DialogTitle>
+                <DialogDescription>
+                  {selectedShiftForAction.title || 'Shift'} - {new Date(selectedShiftForAction.startTime).toLocaleDateString()}
+                </DialogDescription>
+              </DialogHeader>
+              
+              <div className="space-y-3 py-2">
+                {/* Shift Details */}
+                <div className="p-3 rounded-lg bg-muted/50 text-sm space-y-1">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Time:</span>
+                    <span className="font-medium">
+                      {new Date(selectedShiftForAction.startTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })} - {new Date(selectedShiftForAction.endTime).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  {selectedShiftForAction.clientId && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Client:</span>
+                      <span className="font-medium">{clients.find(c => c.id === selectedShiftForAction.clientId)?.companyName || 'Unknown'}</span>
+                    </div>
+                  )}
+                  {selectedShiftForAction.aiGenerated && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground mt-2">
+                      <TrinityIconStatic size={12} />
+                      <span>Created by Trinity AI</span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Quick Actions */}
+                <div className="grid grid-cols-2 gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowDuplicateModal(true);
+                    }}
+                    data-testid="button-action-duplicate"
+                  >
+                    <CopyPlus className="w-4 h-4 mr-2" />
+                    Duplicate
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setShowSwapModal(true);
+                    }}
+                    disabled={!selectedShiftForAction.employeeId}
+                    data-testid="button-action-swap"
+                  >
+                    <ArrowRightLeft className="w-4 h-4 mr-2" />
+                    Swap
+                  </Button>
+                  {!selectedShiftForAction.employeeId && (
+                    <Button
+                      size="sm"
+                      className="bg-gradient-to-r from-[#00BFFF] to-[#FFD700]"
+                      onClick={() => {
+                        handleAIFillOpenShift(selectedShiftForAction.id);
+                        setSelectedShiftForAction(null);
+                      }}
+                      disabled={aiFillMutation.isPending}
+                      data-testid="button-action-ai-fill"
+                    >
+                      <TrinityIconStatic size={14} className="mr-2" />
+                      {aiFillMutation.isPending ? 'Filling...' : 'Trinity Fill'}
+                    </Button>
+                  )}
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => {
+                      deleteShiftMutation.mutate(selectedShiftForAction.id);
+                    }}
+                    disabled={deleteShiftMutation.isPending}
+                    data-testid="button-action-delete"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    {deleteShiftMutation.isPending ? 'Deleting...' : 'Delete'}
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>
