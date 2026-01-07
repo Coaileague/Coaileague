@@ -15,7 +15,6 @@ import { isTrinityAccessAllowed } from '@/config/trinity';
 
 export function FloatingTrinityButton() {
   const [location, setLocation] = useLocation();
-  const [isHovered, setIsHovered] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
   const [isClosed, setIsClosed] = useState(false);
   const [position, setPosition] = useState<{ x: number; y: number } | null>(null);
@@ -152,33 +151,18 @@ export function FloatingTrinityButton() {
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
       data-testid="button-floating-trinity"
-      className={`fixed bottom-24 right-6 z-50 group relative ${isDragging ? 'cursor-grabbing' : 'cursor-pointer md:cursor-pointer touch-none'}`}
+      className={`fixed bottom-6 right-6 z-40 group relative ${isDragging ? 'cursor-grabbing' : 'cursor-pointer md:cursor-pointer touch-none'}`}
       style={getPositionStyle()}
       aria-label="Open Trinity Chat - Drag to move on mobile"
     >
       <div 
-        className="relative flex items-center overflow-hidden bg-gradient-to-br from-[#00BFFF] via-[#3b82f6] to-[#FFD700] border border-blue-500/30 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover-elevate"
-        style={{ width: isHovered && !isDragging ? '11rem' : '4rem' }}
+        className="relative flex items-center justify-center bg-gradient-to-br from-[#00BFFF] via-[#3b82f6] to-[#FFD700] border border-blue-500/30 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 w-14 h-14 md:w-12 md:h-12"
       >
-        <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center">
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
-            <TrinityIconStatic size={24} />
-          </div>
+        <div className="w-8 h-8 md:w-7 md:h-7 flex items-center justify-center">
+          <TrinityIconStatic size={28} />
         </div>
-        
-        <div 
-          className={`hidden md:flex flex-col items-start pr-4 transition-opacity duration-300 whitespace-nowrap ${
-            isHovered && !isDragging ? 'opacity-100 delay-100' : 'opacity-0'
-          }`}
-        >
-          <span className="text-xs font-semibold text-white">Ask Trinity</span>
-          <span className="text-[10px] text-white/70">AI Assistant</span>
-        </div>
-        
-        <div className="absolute top-2 right-2 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse" />
+        <div className="absolute top-0.5 right-0.5 w-2.5 h-2.5 bg-emerald-400 rounded-full animate-pulse" />
       </div>
 
       <span

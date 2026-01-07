@@ -12,7 +12,7 @@
 
 import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
-import { Sparkles, Bot, Zap, Brain, Shield, Star } from 'lucide-react';
+import { Sparkles, Bot, Zap, Brain, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 type TrinityVariant = 'badge' | 'compact' | 'standard' | 'hero' | 'inline';
@@ -216,7 +216,7 @@ const TrinityMarketingHero = memo(function TrinityMarketingHero({
         </svg>
       </div>
       
-      {/* Sparkle decorations */}
+      {/* Sparkle decorations - using Sparkles icon instead of Star */}
       {showSparkles && variant !== 'badge' && sparklePositions.map((pos, i) => (
         <motion.div
           key={i}
@@ -239,7 +239,7 @@ const TrinityMarketingHero = memo(function TrinityMarketingHero({
             },
           } : {})}
         >
-          <Star className="w-2 h-2 text-yellow-300 fill-yellow-300" />
+          <Sparkles className="w-2 h-2 text-yellow-300" />
         </motion.div>
       ))}
     </motion.div>
