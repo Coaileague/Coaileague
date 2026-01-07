@@ -1,0 +1,211 @@
+AUTOMATED TESTING SUITE - End-to-End Platform Diagnostic
+
+Create and execute automated tests for all critical user workflows. Use browser automation (Playwright/Puppeteer) to simulate real user interactions and verify pipelines are working correctly.
+
+SETUP:
+
+Install testing dependencies:
+npm install --save-dev @playwright/test
+
+Create test user accounts in database:
+- test-owner@coaileague.com (org_owner role)
+- test-manager@coaileague.com (manager role)
+- test-employee@coaileague.com (employee role)
+
+Configure test environment:
+- Use Stripe TEST mode API keys
+- Point to staging/development database (NOT production)
+- Use test QuickBooks sandbox credentials
+
+AUTOMATED TEST SUITE:
+
+TEST 1: User Registration & Onboarding
+1. Navigate to /signup
+2. Fill registration form
+3. Submit form
+4. Check: Email verification sent?
+5. Click verification link
+6. Check: Redirected to onboarding?
+7. Complete workspace creation
+8. Check: Workspace created in database?
+9. Check: User assigned org_owner role?
+EXPECTED: Full signup flow completes without errors
+REPORT: Pass/Fail + screenshots of each step
+
+TEST 2: QuickBooks OAuth Flow
+1. Login as test-owner
+2. Navigate to /integrations
+3. Click "Connect QuickBooks"
+4. Check: Redirected to Intuit OAuth?
+5. Enter QB sandbox credentials
+6. Authorize app
+7. Check: Redirected back to CoAIleague?
+8. Check: QB access token stored in database?
+9. Check: Can make QB API call successfully?
+EXPECTED: OAuth completes, token stored, API accessible
+REPORT: Pass/Fail + network logs
+
+TEST 3: Employee Import from QuickBooks
+1. Navigate to /employees/import
+2. Click "Import from QuickBooks"
+3. Check: QB employee list displayed?
+4. Select 5 employees to import
+5. Click "Import Selected"
+6. Check: 5 employee records created in database?
+7. Check: Each has qbEmployeeId mapped?
+8. Navigate to /employees
+9. Check: Imported employees visible in list?
+EXPECTED: Employees imported with correct QB ID mapping
+REPORT: Pass/Fail + database records created
+
+TEST 4: Schedule Creation
+1. Navigate to /schedule
+2. Click "Create Shift"
+3. Fill shift form:
+   - Employee: [select imported employee]
+   - Client: [select test client]
+   - Date: Tomorrow
+   - Time: 7:00 PM - 3:00 AM
+4. Submit form
+5. Check: Shift appears on calendar?
+6. Check: Shift record created in database?
+7. Check: Employee receives notification?
+EXPECTED: Shift created and visible to employee
+REPORT: Pass/Fail + calendar screenshot
+
+TEST 5: Subscription Purchase Flow
+1. Navigate to /billing
+2. Click "Upgrade to Gold"
+3. Check: Stripe checkout opens?
+4. Fill test card: 4242 4242 4242 4242
+5. Complete checkout
+6. Check: Redirected back to platform?
+7. Check: Subscription status = "active" in database?
+8. Check: Stripe dashboard shows subscription?
+9. Check: Webhook received and processed?
+10. Check: User has access to Gold features?
+EXPECTED: Subscription activates immediately after payment
+REPORT: Pass/Fail + Stripe dashboard screenshot
+
+TEST 6: Credit Purchase Flow
+1. Navigate to /billing/credits
+2. Click "Buy 500 Credits - $50"
+3. Complete Stripe checkout (test card)
+4. Check: Redirected back?
+5. Check: Credit balance = 500 in database?
+6. Check: One-time payment in Stripe (not subscription)?
+7. Check: Credits available for immediate use?
+EXPECTED: Credits added to balance immediately
+REPORT: Pass/Fail + before/after balance
+
+TEST 7: Subscription Cancellation
+1. Navigate to /billing
+2. Click "Cancel Subscription"
+3. Check: Confirmation dialog appears?
+4. Confirm cancellation
+5. Check: Subscription status = "cancel_at_period_end"?
+6. Check: Access remains until period end?
+7. Check: Stripe subscription updated correctly?
+8. Check: Webhook processed?
+EXPECTED: Cancellation scheduled for period end
+REPORT: Pass/Fail + status in database
+
+TEST 8: Mobile Responsiveness
+1. Set viewport to 375x667 (iPhone)
+2. Navigate through:
+   - Dashboard
+   - Schedule
+   - Time Clock
+   - Employee List
+3. Check: All elements visible and usable?
+4. Check: No horizontal scroll?
+5. Check: Touch targets large enough (min 44px)?
+6. Check: Modals fit on screen?
+EXPECTED: Full functionality on mobile
+REPORT: Pass/Fail + mobile screenshots
+
+TEST 9: Trinity AI Interaction
+1. Navigate to Trinity chat
+2. Send message: "Show me this week's schedule"
+3. Check: Trinity responds with schedule data?
+4. Send message: "Optimize next week's schedule"
+5. Check: Trinity analyzes and suggests changes?
+6. Check: Response time < 5 seconds?
+EXPECTED: Trinity provides relevant, accurate responses
+REPORT: Pass/Fail + conversation screenshots
+
+TEST 10: Multi-Org Isolation
+1. Create two test workspaces (Org A, Org B)
+2. Add employee to Org A
+3. Login to Org B
+4. Check: Can Org B see Org A's employee? (Should be NO)
+5. Create schedule in Org A
+6. Login to Org B
+7. Check: Can Org B see Org A's schedule? (Should be NO)
+8. Check: Database queries properly filter by workspaceId?
+EXPECTED: Complete data isolation between orgs
+REPORT: Pass/Fail + any data leakage found
+
+PERFORMANCE TESTING:
+
+TEST 11: Load Time Benchmarks
+Measure page load times for:
+- Dashboard: < 2 seconds
+- Schedule (50 employees, 200 shifts): < 3 seconds
+- Employee List (500 employees): < 2 seconds
+- Trinity chat response: < 5 seconds
+REPORT: Actual load times + any bottlenecks
+
+TEST 12: Concurrent Users
+Simulate 50 users logged in simultaneously:
+- Creating shifts
+- Clocking in/out
+- Sending messages to Trinity
+Check: Does system remain responsive?
+REPORT: Response times under load + any errors
+
+ERROR HANDLING TESTING:
+
+TEST 13: Network Failures
+1. Simulate API timeout during schedule creation
+2. Check: Does UI show error message?
+3. Check: Can user retry?
+4. Check: No partial data corruption?
+EXPECTED: Graceful error handling with recovery option
+
+TEST 14: Invalid Data Handling
+1. Try to create shift with:
+   - End time before start time
+   - No employee selected
+   - Overlapping shifts for same employee
+2. Check: Does validation catch each error?
+3. Check: Clear error messages displayed?
+EXPECTED: All invalid inputs rejected with helpful messages
+
+FINAL REPORT FORMAT:
+
+Provide comprehensive test results:
+
+✅ PASSING TESTS: [list]
+❌ FAILING TESTS: [list with detailed error messages]
+⚠️ PARTIAL PASSES: [list with issues found]
+
+For each failing test:
+- What broke?
+- Error message/stack trace
+- Screenshots of failure
+- Database state after failure
+- Recommended fix
+
+CRITICAL BLOCKERS (must fix before launch):
+[List tests that absolutely must pass]
+
+MINOR ISSUES (can fix post-launch):
+[List nice-to-have improvements]
+
+OVERALL RECOMMENDATION:
+🟢 READY FOR LAUNCH - All critical tests pass
+🟡 LAUNCH WITH CAUTION - Some issues but non-critical
+🔴 NOT READY - Critical failures blocking launch
+
+Execute all tests and provide full diagnostic report.
