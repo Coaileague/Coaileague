@@ -1337,6 +1337,106 @@ billingRouter.get('/feature-states', async (req: AuthenticatedRequest, res: Resp
   }
 });
 
+// ============================================================================
+// STRIPE BILLING PORTAL & PRODUCTION READINESS
+// ============================================================================
+
+/**
+ * Create Stripe Billing Portal session for org self-service
+ * Allows orgs to manage payment methods, view invoices, cancel subscriptions
+ */
+billingRouter.post('/billing-portal', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.currentWorkspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { returnUrl } = z.object({
+      returnUrl: z.string().url(),
+    }).parse(req.body);
+
+    const { subscriptionManager } = await import('./services/billing/subscriptionManager');
+    const result = await subscriptionManager.createBillingPortalSession(workspaceId, returnUrl);
+
+    res.json({ success: true, url: result.url });
+  } catch (error: any) {
+    console.error('Failed to create billing portal session:', error);
+    res.status(400).json({ error: error.message });
+  }
+});
+
+/**
+ * Sync subscription state from Stripe (fallback if webhook missed)
+ */
+billingRouter.post('/subscription/sync', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const workspaceId = req.currentWorkspaceId;
+    if (!workspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const { subscriptionManager } = await import('./services/billing/subscriptionManager');
+    const result = await subscriptionManager.syncSubscriptionFromStripe(workspaceId);
+
+    res.json({ success: true, ...result });
+  } catch (error: any) {
+    console.error('Failed to sync subscription:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * Production readiness check (admin/support only)
+ * Returns status of all Stripe configuration requirements
+ */
+billingRouter.get('/production-readiness', async (req: AuthenticatedRequest, res: Response) => {
+  try {
+    const userId = req.user?.id || req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    // Check if user is support/admin role
+    const { users } = await import('@shared/schema');
+    const [user] = await db.select().from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+
+    const adminRoles = ['root_admin', 'deputy_admin', 'sysop'];
+    if (!user || !adminRoles.includes((user as any).platformRole || '')) {
+      return res.status(403).json({ error: 'Admin role required' });
+    }
+
+    const subscriptionManagerModule = await import('./services/billing/subscriptionManager');
+    const readiness = subscriptionManagerModule.SubscriptionManager.validateProductionReadiness();
+
+    // Add additional runtime checks
+    const runtimeChecks = [];
+
+    // Check if Stripe is initialized
+    try {
+      const stripeTest = new (await import('stripe')).default(process.env.STRIPE_SECRET_KEY!, {
+        apiVersion: '2025-09-30.clover' as any,
+      });
+      await stripeTest.balance.retrieve();
+      runtimeChecks.push({ name: 'Stripe API Connection', status: 'pass', message: 'Successfully connected' });
+    } catch (error: any) {
+      runtimeChecks.push({ name: 'Stripe API Connection', status: 'fail', message: error.message });
+    }
+
+    res.json({
+      ready: readiness.ready && runtimeChecks.every(c => c.status !== 'fail'),
+      configChecks: readiness.checks,
+      runtimeChecks,
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error('Failed to check production readiness:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 /**
  * Admin: Generate unlock code (support/admin only)
  */

@@ -617,6 +617,192 @@ export class SubscriptionManager {
         : null,
     };
   }
+
+  /**
+   * Create Stripe Billing Portal session for org self-service
+   * Allows orgs to manage payment methods, view invoices, cancel subscriptions
+   */
+  async createBillingPortalSession(workspaceId: string, returnUrl: string): Promise<{ url: string }> {
+    const [workspace] = await db.select()
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+
+    if (!workspace) {
+      throw new Error('Workspace not found');
+    }
+
+    if (!workspace.stripeCustomerId) {
+      throw new Error('No Stripe customer associated with this workspace');
+    }
+
+    const session = await stripe.billingPortal.sessions.create({
+      customer: workspace.stripeCustomerId,
+      return_url: returnUrl,
+    });
+
+    return { url: session.url };
+  }
+
+  /**
+   * Sync subscription state from Stripe (fallback if webhook missed)
+   * Called periodically or on-demand to ensure database matches Stripe
+   */
+  async syncSubscriptionFromStripe(workspaceId: string): Promise<{ synced: boolean; changes: string[] }> {
+    const [workspace] = await db.select()
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+
+    if (!workspace) {
+      throw new Error('Workspace not found');
+    }
+
+    const changes: string[] = [];
+
+    // If no Stripe subscription, check if there should be one
+    if (!workspace.stripeSubscriptionId && workspace.stripeCustomerId) {
+      // Look for active subscriptions for this customer
+      const subscriptions = await stripe.subscriptions.list({
+        customer: workspace.stripeCustomerId,
+        status: 'active',
+        limit: 1,
+      });
+
+      if (subscriptions.data.length > 0) {
+        const sub = subscriptions.data[0];
+        await db.update(workspaces)
+          .set({
+            stripeSubscriptionId: sub.id,
+            subscriptionStatus: 'active',
+            subscriptionTier: (sub.metadata.tier as SubscriptionTier) || workspace.subscriptionTier,
+            updatedAt: new Date(),
+          })
+          .where(eq(workspaces.id, workspaceId));
+        changes.push(`Found missing subscription: ${sub.id}`);
+      }
+    }
+
+    // If has Stripe subscription, verify it's in sync
+    if (workspace.stripeSubscriptionId) {
+      try {
+        const subscription = await stripe.subscriptions.retrieve(workspace.stripeSubscriptionId);
+        const stripeStatus = this.mapStripeStatus(subscription.status);
+        const stripeTier = (subscription.metadata.tier as SubscriptionTier) || workspace.subscriptionTier;
+
+        const updates: Partial<typeof workspace> = {};
+
+        if (workspace.subscriptionStatus !== stripeStatus) {
+          updates.subscriptionStatus = stripeStatus;
+          changes.push(`Status: ${workspace.subscriptionStatus} → ${stripeStatus}`);
+        }
+
+        if (workspace.subscriptionTier !== stripeTier) {
+          updates.subscriptionTier = stripeTier;
+          changes.push(`Tier: ${workspace.subscriptionTier} → ${stripeTier}`);
+        }
+
+        if (Object.keys(updates).length > 0) {
+          await db.update(workspaces)
+            .set({ ...updates, updatedAt: new Date() })
+            .where(eq(workspaces.id, workspaceId));
+        }
+      } catch (error: any) {
+        if (error.code === 'resource_missing') {
+          // Subscription was deleted in Stripe but we still have record
+          await db.update(workspaces)
+            .set({
+              stripeSubscriptionId: null,
+              subscriptionStatus: 'cancelled',
+              subscriptionTier: 'free',
+              updatedAt: new Date(),
+            })
+            .where(eq(workspaces.id, workspaceId));
+          changes.push('Subscription deleted in Stripe - reverted to free');
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    return { synced: true, changes };
+  }
+
+  /**
+   * Map Stripe subscription status to our internal status
+   */
+  private mapStripeStatus(stripeStatus: string): string {
+    const statusMap: Record<string, string> = {
+      active: 'active',
+      past_due: 'past_due',
+      canceled: 'cancelled',
+      unpaid: 'suspended',
+      incomplete: 'pending',
+      incomplete_expired: 'expired',
+      trialing: 'trial',
+      paused: 'paused',
+    };
+    return statusMap[stripeStatus] || 'unknown';
+  }
+
+  /**
+   * Validate Stripe configuration for production readiness
+   */
+  static validateProductionReadiness(): {
+    ready: boolean;
+    checks: Array<{ name: string; status: 'pass' | 'fail' | 'warn'; message: string }>;
+  } {
+    const checks: Array<{ name: string; status: 'pass' | 'fail' | 'warn'; message: string }> = [];
+
+    // Check API key
+    const apiKey = process.env.STRIPE_SECRET_KEY;
+    if (!apiKey) {
+      checks.push({ name: 'STRIPE_SECRET_KEY', status: 'fail', message: 'Not configured' });
+    } else if (apiKey.startsWith('sk_test_')) {
+      checks.push({ name: 'STRIPE_SECRET_KEY', status: 'warn', message: 'Using TEST mode key' });
+    } else if (apiKey.startsWith('sk_live_')) {
+      checks.push({ name: 'STRIPE_SECRET_KEY', status: 'pass', message: 'Using LIVE mode key' });
+    }
+
+    // Check publishable key
+    const pubKey = process.env.VITE_STRIPE_PUBLIC_KEY;
+    if (!pubKey) {
+      checks.push({ name: 'VITE_STRIPE_PUBLIC_KEY', status: 'fail', message: 'Not configured - frontend checkout will fail' });
+    } else if (pubKey.startsWith('pk_test_')) {
+      checks.push({ name: 'VITE_STRIPE_PUBLIC_KEY', status: 'warn', message: 'Using TEST mode key' });
+    } else if (pubKey.startsWith('pk_live_')) {
+      checks.push({ name: 'VITE_STRIPE_PUBLIC_KEY', status: 'pass', message: 'Using LIVE mode key' });
+    }
+
+    // Check webhook secret
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      checks.push({ name: 'STRIPE_WEBHOOK_SECRET', status: 'fail', message: 'CRITICAL: Not configured - webhooks cannot be verified' });
+    } else if (webhookSecret.startsWith('whsec_')) {
+      checks.push({ name: 'STRIPE_WEBHOOK_SECRET', status: 'pass', message: 'Configured' });
+    }
+
+    // Check price IDs
+    const priceIds = {
+      'Starter Monthly': process.env.STRIPE_STARTER_MONTHLY_PRICE_ID,
+      'Starter Yearly': process.env.STRIPE_STARTER_YEARLY_PRICE_ID,
+      'Professional Monthly': process.env.STRIPE_PROFESSIONAL_MONTHLY_PRICE_ID,
+      'Professional Yearly': process.env.STRIPE_PROFESSIONAL_YEARLY_PRICE_ID,
+      'Credits Addon': process.env.STRIPE_ADDON_CREDITS_PRICE_ID,
+    };
+
+    for (const [name, priceId] of Object.entries(priceIds)) {
+      if (!priceId) {
+        checks.push({ name: `Price: ${name}`, status: 'fail', message: 'Not configured' });
+      } else if (priceId.startsWith('price_')) {
+        checks.push({ name: `Price: ${name}`, status: 'pass', message: priceId.substring(0, 20) + '...' });
+      }
+    }
+
+    const ready = checks.every(c => c.status !== 'fail');
+
+    return { ready, checks };
+  }
 }
 
 export const subscriptionManager = new SubscriptionManager();
