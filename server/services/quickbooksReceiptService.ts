@@ -1,7 +1,7 @@
 /**
  * QUICKBOOKS RECEIPT SERVICE - Commit Confirmation & Payload Tracking
  * ====================================================================
- * Generates receipts for Trinity's QuickBooks commits:
+ * Generates receipts for Trinity's QuickBooks commits with database persistence:
  * - Invoice syncs
  * - Payroll time activity syncs
  * - Customer/Vendor syncs
@@ -12,15 +12,24 @@
  * - QuickBooks external IDs
  * - Trinity verification signatures
  * - Audit trail for org owners
+ * - Live sync via WebSocket/event bus
+ * 
+ * All receipts persisted in quickbooks_sync_receipts table with org isolation
  */
 
 import { db } from '../db';
+import { 
+  quickbooksSyncReceipts, 
+  InsertQuickbooksSyncReceipt,
+  QuickbooksSyncReceipt 
+} from '@shared/schema';
+import { eq, desc, and, sql } from 'drizzle-orm';
 import { platformEventBus } from './platformEventBus';
 
 export interface QuickBooksReceipt {
   receiptId: string;
   workspaceId: string;
-  syncType: 'invoice' | 'payroll' | 'customer' | 'vendor' | 'timeactivity';
+  syncType: 'invoice' | 'payroll' | 'customer' | 'vendor' | 'timeactivity' | 'employee';
   timestamp: Date;
   status: 'success' | 'partial' | 'failed';
   
@@ -55,8 +64,6 @@ export interface QuickBooksReceipt {
   viewInQuickBooksUrl?: string;
 }
 
-const receiptStore = new Map<string, QuickBooksReceipt>();
-
 class QuickBooksReceiptService {
   private static instance: QuickBooksReceiptService;
 
@@ -85,6 +92,9 @@ class QuickBooksReceiptService {
     return `trinity_qb_${Buffer.from(data).toString('base64').substring(0, 24)}`;
   }
 
+  /**
+   * Create invoice sync receipt - persisted to database
+   */
   async createInvoiceReceipt(params: {
     workspaceId: string;
     invoices: Array<{
@@ -142,7 +152,7 @@ class QuickBooksReceiptService {
       trinitySignature: this.generateSignature(receipt),
     };
 
-    receiptStore.set(receiptId, fullReceipt);
+    await this.persistReceipts(fullReceipt, params.invoices);
 
     await platformEventBus.publish({
       type: 'quickbooks_sync_receipt',
@@ -158,9 +168,14 @@ class QuickBooksReceiptService {
       },
     });
 
+    await this.broadcastReceiptUpdate(params.workspaceId, fullReceipt);
+
     return fullReceipt;
   }
 
+  /**
+   * Create payroll/time activity sync receipt - persisted to database
+   */
   async createPayrollReceipt(params: {
     workspaceId: string;
     payrollRunId: string;
@@ -221,7 +236,7 @@ class QuickBooksReceiptService {
       trinitySignature: this.generateSignature(receipt),
     };
 
-    receiptStore.set(receiptId, fullReceipt);
+    await this.persistPayrollReceipts(fullReceipt, params.entries, params.payrollRunId);
 
     await platformEventBus.publish({
       type: 'quickbooks_sync_receipt',
@@ -238,20 +253,236 @@ class QuickBooksReceiptService {
       },
     });
 
+    await this.broadcastReceiptUpdate(params.workspaceId, fullReceipt);
+
     return fullReceipt;
   }
 
-  getReceipt(receiptId: string): QuickBooksReceipt | undefined {
-    return receiptStore.get(receiptId);
+  /**
+   * Get a single receipt from database
+   */
+  async getReceipt(receiptId: string): Promise<QuickBooksReceipt | undefined> {
+    const receipts = await db.query.quickbooksSyncReceipts.findMany({
+      where: sql`${quickbooksSyncReceipts.trinitySignature} LIKE '%' || ${receiptId.substring(0, 20)} || '%'`,
+      limit: 1,
+    });
+
+    if (receipts.length === 0) return undefined;
+
+    return this.mapDbReceiptToQuickBooksReceipt(receipts);
   }
 
-  getRecentReceipts(workspaceId: string, limit = 10): QuickBooksReceipt[] {
-    return Array.from(receiptStore.values())
-      .filter(r => r.workspaceId === workspaceId)
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, limit);
+  /**
+   * Get recent receipts for a workspace from database
+   */
+  async getRecentReceipts(workspaceId: string, limit = 10): Promise<QuickBooksReceipt[]> {
+    const receipts = await db.query.quickbooksSyncReceipts.findMany({
+      where: eq(quickbooksSyncReceipts.workspaceId, workspaceId),
+      orderBy: desc(quickbooksSyncReceipts.syncedAt),
+      limit: limit * 10, // Get more to group by sync batch
+    });
+
+    const groupedReceipts = this.groupReceiptsByBatch(receipts);
+    return groupedReceipts.slice(0, limit);
   }
 
+  /**
+   * Get receipts by sync type for a workspace
+   */
+  async getReceiptsBySyncType(workspaceId: string, syncType: string, limit = 20): Promise<QuickbooksSyncReceipt[]> {
+    return db.query.quickbooksSyncReceipts.findMany({
+      where: and(
+        eq(quickbooksSyncReceipts.workspaceId, workspaceId),
+        eq(quickbooksSyncReceipts.syncType, syncType)
+      ),
+      orderBy: desc(quickbooksSyncReceipts.syncedAt),
+      limit,
+    });
+  }
+
+  /**
+   * Get sync statistics for a workspace
+   */
+  async getSyncStats(workspaceId: string): Promise<{
+    totalSyncs: number;
+    successfulSyncs: number;
+    failedSyncs: number;
+    totalAmount: number;
+    bySyncType: Record<string, { count: number; successRate: number }>;
+  }> {
+    const receipts = await db.query.quickbooksSyncReceipts.findMany({
+      where: eq(quickbooksSyncReceipts.workspaceId, workspaceId),
+    });
+
+    const stats = {
+      totalSyncs: receipts.length,
+      successfulSyncs: receipts.filter(r => r.success).length,
+      failedSyncs: receipts.filter(r => !r.success).length,
+      totalAmount: receipts.reduce((sum, r) => sum + parseFloat(r.amount || '0'), 0),
+      bySyncType: {} as Record<string, { count: number; successRate: number }>,
+    };
+
+    const typeGroups = receipts.reduce((acc, r) => {
+      if (!acc[r.syncType]) acc[r.syncType] = { total: 0, success: 0 };
+      acc[r.syncType].total++;
+      if (r.success) acc[r.syncType].success++;
+      return acc;
+    }, {} as Record<string, { total: number; success: number }>);
+
+    for (const [type, data] of Object.entries(typeGroups)) {
+      stats.bySyncType[type] = {
+        count: data.total,
+        successRate: data.total > 0 ? (data.success / data.total) * 100 : 0,
+      };
+    }
+
+    return stats;
+  }
+
+  /**
+   * Persist invoice receipts to database
+   */
+  private async persistReceipts(
+    receipt: QuickBooksReceipt, 
+    invoices: Array<{ id: string; amount: number; status: 'synced' | 'failed'; quickbooksId?: string; error?: string }>
+  ): Promise<void> {
+    const insertValues: InsertQuickbooksSyncReceipt[] = invoices.map(inv => ({
+      workspaceId: receipt.workspaceId,
+      syncType: 'invoice',
+      direction: 'outbound',
+      localEntityId: inv.id,
+      localEntityType: 'invoice',
+      quickbooksEntityId: inv.quickbooksId,
+      quickbooksEntityType: 'Invoice',
+      success: inv.status === 'synced',
+      amount: inv.amount.toString(),
+      description: `Invoice sync - ${inv.status}`,
+      quickbooksUrl: receipt.viewInQuickBooksUrl,
+      errorCode: inv.error ? 'SYNC_ERROR' : undefined,
+      errorMessage: inv.error,
+      trinityVerified: true,
+      trinitySignature: receipt.trinitySignature,
+      syncedAt: new Date(),
+    }));
+
+    if (insertValues.length > 0) {
+      await db.insert(quickbooksSyncReceipts).values(insertValues);
+    }
+  }
+
+  /**
+   * Persist payroll receipts to database
+   */
+  private async persistPayrollReceipts(
+    receipt: QuickBooksReceipt,
+    entries: Array<{ id: string; amount: number; status: 'synced' | 'failed'; quickbooksId?: string; error?: string }>,
+    payrollRunId: string
+  ): Promise<void> {
+    const insertValues: InsertQuickbooksSyncReceipt[] = entries.map(entry => ({
+      workspaceId: receipt.workspaceId,
+      syncType: 'timeactivity',
+      direction: 'outbound',
+      localEntityId: entry.id,
+      localEntityType: 'payrollRun',
+      quickbooksEntityId: entry.quickbooksId,
+      quickbooksEntityType: 'TimeActivity',
+      success: entry.status === 'synced',
+      amount: entry.amount.toString(),
+      description: `Payroll sync (run: ${payrollRunId}) - ${entry.status}`,
+      quickbooksUrl: receipt.viewInQuickBooksUrl,
+      errorCode: entry.error ? 'SYNC_ERROR' : undefined,
+      errorMessage: entry.error,
+      trinityVerified: true,
+      trinitySignature: receipt.trinitySignature,
+      syncedAt: new Date(),
+    }));
+
+    if (insertValues.length > 0) {
+      await db.insert(quickbooksSyncReceipts).values(insertValues);
+    }
+  }
+
+  /**
+   * Group database receipts by batch (same signature = same batch)
+   */
+  private groupReceiptsByBatch(receipts: QuickbooksSyncReceipt[]): QuickBooksReceipt[] {
+    const batches = new Map<string, QuickbooksSyncReceipt[]>();
+    
+    for (const r of receipts) {
+      const key = r.trinitySignature || r.id;
+      if (!batches.has(key)) batches.set(key, []);
+      batches.get(key)!.push(r);
+    }
+
+    return Array.from(batches.values()).map(batch => this.mapDbReceiptToQuickBooksReceipt(batch));
+  }
+
+  /**
+   * Convert database records to QuickBooksReceipt format
+   */
+  private mapDbReceiptToQuickBooksReceipt(records: QuickbooksSyncReceipt[]): QuickBooksReceipt {
+    const first = records[0];
+    const syncedRecords = records.filter(r => r.success);
+    const failedRecords = records.filter(r => !r.success);
+    const totalValue = records.reduce((sum, r) => sum + parseFloat(r.amount || '0'), 0);
+
+    return {
+      receiptId: first.trinitySignature?.split('_')[2] || first.id,
+      workspaceId: first.workspaceId,
+      syncType: first.syncType as QuickBooksReceipt['syncType'],
+      timestamp: first.syncedAt,
+      status: failedRecords.length === 0 ? 'success' : (syncedRecords.length > 0 ? 'partial' : 'failed'),
+      summary: {
+        totalRecords: records.length,
+        syncedRecords: syncedRecords.length,
+        failedRecords: failedRecords.length,
+        totalValue,
+      },
+      quickbooksDetails: {
+        externalIds: syncedRecords.map(r => ({
+          localId: r.localEntityId || '',
+          quickbooksId: r.quickbooksEntityId || '',
+          type: r.quickbooksEntityType || '',
+        })),
+      },
+      payload: {
+        items: records.map(r => ({
+          id: r.localEntityId || r.id,
+          name: r.description || '',
+          amount: parseFloat(r.amount || '0'),
+          status: r.success ? 'synced' : 'failed',
+          error: r.errorMessage || undefined,
+          quickbooksId: r.quickbooksEntityId || undefined,
+        })),
+      },
+      trinitySignature: first.trinitySignature || '',
+      viewInQuickBooksUrl: first.quickbooksUrl || undefined,
+    };
+  }
+
+  /**
+   * Broadcast receipt update via WebSocket for live sync
+   */
+  private async broadcastReceiptUpdate(workspaceId: string, receipt: QuickBooksReceipt): Promise<void> {
+    await platformEventBus.publish({
+      type: 'quickbooks_receipt_sync',
+      category: 'live_sync',
+      title: 'QuickBooks Receipt Updated',
+      description: `${receipt.syncType} sync ${receipt.status}`,
+      workspaceId,
+      metadata: {
+        syncType: 'receipt',
+        receiptId: receipt.receiptId,
+        status: receipt.status,
+        summary: receipt.summary,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+
+  /**
+   * Format receipt for display in UI
+   */
   formatReceiptForDisplay(receipt: QuickBooksReceipt): {
     title: string;
     status: string;
@@ -273,6 +504,7 @@ class QuickBooksReceiptService {
       timeactivity: 'Time Activity Sync',
       customer: 'Customer Sync',
       vendor: 'Vendor Sync',
+      employee: 'Employee Sync',
     };
 
     return {

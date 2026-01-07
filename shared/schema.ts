@@ -21851,3 +21851,214 @@ export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
 
 export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
 export type Testimonial = typeof testimonials.$inferSelect;
+
+// ============================================================================
+// TRINITY AUTOMATION ORCHESTRATION - Persistent Storage with Org Isolation
+// ============================================================================
+
+/**
+ * Trinity Automation Settings - Per-workspace automation feature toggles
+ * Enables org owners to control which features Trinity can automate
+ */
+export const trinityAutomationSettings = pgTable("trinity_automation_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }).unique(),
+  
+  // Feature toggles
+  schedulingEnabled: boolean("scheduling_enabled").default(false),
+  invoicingEnabled: boolean("invoicing_enabled").default(false),
+  payrollEnabled: boolean("payroll_enabled").default(false),
+  timeTrackingEnabled: boolean("time_tracking_enabled").default(false),
+  shiftMonitoringEnabled: boolean("shift_monitoring_enabled").default(false),
+  quickbooksSyncEnabled: boolean("quickbooks_sync_enabled").default(false),
+  
+  // Approval settings
+  requireApprovalForAll: boolean("require_approval_for_all").default(true),
+  autoApproveThreshold: decimal("auto_approve_threshold", { precision: 5, scale: 2 }).default("0.95"), // Confidence threshold
+  
+  // Notification preferences
+  notifyOnRequest: boolean("notify_on_request").default(true),
+  notifyOnComplete: boolean("notify_on_complete").default(true),
+  notifyOnError: boolean("notify_on_error").default(true),
+  
+  // Last modified tracking
+  lastModifiedBy: varchar("last_modified_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("tas_workspace_idx").on(table.workspaceId),
+]);
+
+export const insertTrinityAutomationSettingsSchema = createInsertSchema(trinityAutomationSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTrinityAutomationSettings = z.infer<typeof insertTrinityAutomationSettingsSchema>;
+export type TrinityAutomationSettings = typeof trinityAutomationSettings.$inferSelect;
+
+/**
+ * Trinity Automation Requests - Pending automation approval workflow
+ * Tracks: request → preview → approve/reject → execute
+ */
+export const trinityAutomationRequests = pgTable("trinity_automation_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Request details
+  feature: varchar("feature", { length: 50 }).notNull(), // scheduling, invoicing, payroll, etc.
+  requestedBy: varchar("requested_by").references(() => users.id, { onDelete: 'set null' }),
+  requestedAt: timestamp("requested_at").defaultNow().notNull(),
+  
+  // Context and preview
+  context: jsonb("context").default({}), // Feature-specific context
+  preview: jsonb("preview"), // Generated preview data
+  previewGeneratedAt: timestamp("preview_generated_at"),
+  
+  // Status tracking
+  status: varchar("status", { length: 30 }).default("pending").notNull(), // pending, approved, rejected, executing, completed, failed
+  
+  // Approval workflow
+  approvedBy: varchar("approved_by").references(() => users.id, { onDelete: 'set null' }),
+  approvedAt: timestamp("approved_at"),
+  rejectedBy: varchar("rejected_by").references(() => users.id, { onDelete: 'set null' }),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  
+  // Execution results
+  executionStartedAt: timestamp("execution_started_at"),
+  executionCompletedAt: timestamp("execution_completed_at"),
+  executionResult: jsonb("execution_result"),
+  errorMessage: text("error_message"),
+  
+  // Trinity signature for verification
+  trinitySignature: text("trinity_signature"),
+  
+  // Expiry (requests expire after 24 hours if not actioned)
+  expiresAt: timestamp("expires_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("tar_workspace_idx").on(table.workspaceId),
+  index("tar_status_idx").on(table.status),
+  index("tar_feature_idx").on(table.feature),
+  index("tar_workspace_status_idx").on(table.workspaceId, table.status),
+  index("tar_expires_idx").on(table.expiresAt),
+]);
+
+export const insertTrinityAutomationRequestSchema = createInsertSchema(trinityAutomationRequests).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTrinityAutomationRequest = z.infer<typeof insertTrinityAutomationRequestSchema>;
+export type TrinityAutomationRequest = typeof trinityAutomationRequests.$inferSelect;
+
+/**
+ * Trinity Automation Receipts - Completed automation execution records
+ * Immutable audit trail for all automated actions
+ */
+export const trinityAutomationReceipts = pgTable("trinity_automation_receipts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Link to original request
+  requestId: varchar("request_id").references(() => trinityAutomationRequests.id, { onDelete: 'set null' }),
+  
+  // Receipt details
+  feature: varchar("feature", { length: 50 }).notNull(),
+  action: varchar("action", { length: 100 }).notNull(), // e.g., "generate_schedule", "sync_invoices"
+  
+  // Execution summary
+  success: boolean("success").notNull(),
+  itemsProcessed: integer("items_processed").default(0),
+  itemsFailed: integer("items_failed").default(0),
+  summary: text("summary"),
+  
+  // Detailed results
+  details: jsonb("details").default({}),
+  
+  // Trinity verification
+  trinitySignature: text("trinity_signature"),
+  verifiedAt: timestamp("verified_at"),
+  
+  // Actors
+  initiatedBy: varchar("initiated_by").references(() => users.id, { onDelete: 'set null' }),
+  approvedBy: varchar("approved_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  executedAt: timestamp("executed_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("trcpt_workspace_idx").on(table.workspaceId),
+  index("trcpt_feature_idx").on(table.feature),
+  index("trcpt_request_idx").on(table.requestId),
+  index("trcpt_executed_idx").on(table.executedAt),
+  index("trcpt_workspace_executed_idx").on(table.workspaceId, table.executedAt),
+]);
+
+export const insertTrinityAutomationReceiptSchema = createInsertSchema(trinityAutomationReceipts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTrinityAutomationReceipt = z.infer<typeof insertTrinityAutomationReceiptSchema>;
+export type TrinityAutomationReceipt = typeof trinityAutomationReceipts.$inferSelect;
+
+/**
+ * QuickBooks Sync Receipts - Specialized receipts for QB sync operations
+ * Provides "View in QuickBooks" functionality and sync verification
+ */
+export const quickbooksSyncReceipts = pgTable("quickbooks_sync_receipts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Sync type
+  syncType: varchar("sync_type", { length: 30 }).notNull(), // invoice, payroll, customer, vendor, employee
+  direction: varchar("direction", { length: 20 }).default("outbound"), // outbound (to QB), inbound (from QB), bidirectional
+  
+  // Entity references
+  localEntityId: varchar("local_entity_id"), // Our invoice/payroll/employee ID
+  localEntityType: varchar("local_entity_type", { length: 50 }), // invoice, payrollRun, employee, client
+  quickbooksEntityId: varchar("quickbooks_entity_id"), // QB entity ID
+  quickbooksEntityType: varchar("quickbooks_entity_type", { length: 50 }), // Invoice, Bill, Customer, Vendor, Employee
+  
+  // Sync details
+  success: boolean("success").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }), // For financial syncs
+  description: text("description"),
+  
+  // QuickBooks URLs
+  quickbooksUrl: varchar("quickbooks_url", { length: 500 }), // Direct link to entity in QB
+  quickbooksSyncToken: varchar("quickbooks_sync_token"), // For change detection
+  
+  // Error handling
+  errorCode: varchar("error_code", { length: 50 }),
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").default(0),
+  
+  // Trinity verification
+  trinityVerified: boolean("trinity_verified").default(false),
+  trinitySignature: text("trinity_signature"),
+  
+  syncedAt: timestamp("synced_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("qbsr_workspace_idx").on(table.workspaceId),
+  index("qbsr_sync_type_idx").on(table.syncType),
+  index("qbsr_local_entity_idx").on(table.localEntityType, table.localEntityId),
+  index("qbsr_qb_entity_idx").on(table.quickbooksEntityType, table.quickbooksEntityId),
+  index("qbsr_synced_idx").on(table.syncedAt),
+  index("qbsr_workspace_type_idx").on(table.workspaceId, table.syncType),
+]);
+
+export const insertQuickbooksSyncReceiptSchema = createInsertSchema(quickbooksSyncReceipts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertQuickbooksSyncReceipt = z.infer<typeof insertQuickbooksSyncReceiptSchema>;
+export type QuickbooksSyncReceipt = typeof quickbooksSyncReceipts.$inferSelect;

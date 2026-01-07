@@ -1,7 +1,7 @@
 /**
  * TRINITY AUTOMATION TOGGLE SERVICE
  * ==================================
- * Manages per-feature automation toggles for organizations.
+ * Manages per-feature automation toggles for organizations with database persistence.
  * When enabled, Trinity autonomously handles the feature with approval flow:
  * 
  * 1. User/Org clicks "Automate" or requests Trinity
@@ -16,11 +16,26 @@
  * - payroll: Auto-process payroll runs
  * - time_tracking: Auto-approve timesheets
  * - shift_monitoring: Auto-replacement for NCNS/call-offs
+ * - quickbooks_sync: Bidirectional QuickBooks sync
+ * 
+ * All automation data persisted in:
+ * - trinity_automation_settings: Per-org feature toggles
+ * - trinity_automation_requests: Pending approvals workflow
+ * - trinity_automation_receipts: Completed automation audit trail
  */
 
 import { db } from '../../db';
-import { workspaces } from '@shared/schema';
-import { eq } from 'drizzle-orm';
+import { 
+  trinityAutomationSettings, 
+  trinityAutomationRequests, 
+  trinityAutomationReceipts,
+  TrinityAutomationSettings,
+  TrinityAutomationRequest,
+  TrinityAutomationReceipt,
+  InsertTrinityAutomationRequest,
+  InsertTrinityAutomationReceipt,
+} from '@shared/schema';
+import { eq, and, desc, lt, sql } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 
 export type AutomationFeature = 
@@ -38,6 +53,11 @@ export interface AutomationSettings {
   time_tracking: boolean;
   shift_monitoring: boolean;
   quickbooks_sync: boolean;
+  requireApprovalForAll?: boolean;
+  autoApproveThreshold?: number;
+  notifyOnRequest?: boolean;
+  notifyOnComplete?: boolean;
+  notifyOnError?: boolean;
 }
 
 export interface AutomationRequest {
@@ -50,7 +70,7 @@ export interface AutomationRequest {
 export interface AutomationResult {
   requestId: string;
   feature: AutomationFeature;
-  status: 'pending_approval' | 'approved' | 'rejected' | 'executed' | 'failed';
+  status: 'pending' | 'approved' | 'rejected' | 'executing' | 'completed' | 'failed';
   summary: string;
   details: any;
   preview: any;
@@ -92,14 +112,19 @@ const DEFAULT_SETTINGS: AutomationSettings = {
   time_tracking: false,
   shift_monitoring: true,
   quickbooks_sync: false,
+  requireApprovalForAll: true,
+  autoApproveThreshold: 0.95,
+  notifyOnRequest: true,
+  notifyOnComplete: true,
+  notifyOnError: true,
 };
-
-const pendingRequests = new Map<string, AutomationResult>();
 
 class TrinityAutomationToggleService {
   private static instance: TrinityAutomationToggleService;
 
-  private constructor() {}
+  private constructor() {
+    this.startExpiryCleanup();
+  }
 
   static getInstance(): TrinityAutomationToggleService {
     if (!this.instance) {
@@ -108,14 +133,29 @@ class TrinityAutomationToggleService {
     return this.instance;
   }
 
+  /**
+   * Get automation settings for a workspace from database
+   */
   async getSettings(workspaceId: string): Promise<AutomationSettings> {
     try {
-      const workspace = await db.query.workspaces.findFirst({
-        where: eq(workspaces.id, workspaceId),
+      const settings = await db.query.trinityAutomationSettings.findFirst({
+        where: eq(trinityAutomationSettings.workspaceId, workspaceId),
       });
 
-      if (workspace && (workspace as any).automationSettings) {
-        return { ...DEFAULT_SETTINGS, ...(workspace as any).automationSettings };
+      if (settings) {
+        return {
+          scheduling: settings.schedulingEnabled ?? false,
+          invoicing: settings.invoicingEnabled ?? false,
+          payroll: settings.payrollEnabled ?? false,
+          time_tracking: settings.timeTrackingEnabled ?? false,
+          shift_monitoring: settings.shiftMonitoringEnabled ?? false,
+          quickbooks_sync: settings.quickbooksSyncEnabled ?? false,
+          requireApprovalForAll: settings.requireApprovalForAll ?? true,
+          autoApproveThreshold: parseFloat(settings.autoApproveThreshold || '0.95'),
+          notifyOnRequest: settings.notifyOnRequest ?? true,
+          notifyOnComplete: settings.notifyOnComplete ?? true,
+          notifyOnError: settings.notifyOnError ?? true,
+        };
       }
 
       return { ...DEFAULT_SETTINGS };
@@ -125,14 +165,43 @@ class TrinityAutomationToggleService {
     }
   }
 
-  async updateSettings(workspaceId: string, settings: Partial<AutomationSettings>): Promise<AutomationSettings> {
+  /**
+   * Update automation settings for a workspace (persisted to database)
+   */
+  async updateSettings(workspaceId: string, settings: Partial<AutomationSettings>, modifiedBy?: string): Promise<AutomationSettings> {
     try {
-      const current = await this.getSettings(workspaceId);
-      const updated = { ...current, ...settings };
+      const existing = await db.query.trinityAutomationSettings.findFirst({
+        where: eq(trinityAutomationSettings.workspaceId, workspaceId),
+      });
 
-      await db.update(workspaces)
-        .set({ automationSettings: updated } as any)
-        .where(eq(workspaces.id, workspaceId));
+      const updateData = {
+        schedulingEnabled: settings.scheduling,
+        invoicingEnabled: settings.invoicing,
+        payrollEnabled: settings.payroll,
+        timeTrackingEnabled: settings.time_tracking,
+        shiftMonitoringEnabled: settings.shift_monitoring,
+        quickbooksSyncEnabled: settings.quickbooks_sync,
+        requireApprovalForAll: settings.requireApprovalForAll,
+        autoApproveThreshold: settings.autoApproveThreshold?.toString(),
+        notifyOnRequest: settings.notifyOnRequest,
+        notifyOnComplete: settings.notifyOnComplete,
+        notifyOnError: settings.notifyOnError,
+        lastModifiedBy: modifiedBy,
+        updatedAt: new Date(),
+      };
+
+      if (existing) {
+        await db.update(trinityAutomationSettings)
+          .set(updateData)
+          .where(eq(trinityAutomationSettings.workspaceId, workspaceId));
+      } else {
+        await db.insert(trinityAutomationSettings).values({
+          workspaceId,
+          ...updateData,
+        });
+      }
+
+      const updated = await this.getSettings(workspaceId);
 
       await platformEventBus.publish({
         type: 'automation_settings_updated',
@@ -143,6 +212,8 @@ class TrinityAutomationToggleService {
         metadata: { settings: updated },
       });
 
+      await this.broadcastSettingsUpdate(workspaceId, updated);
+
       return updated;
     } catch (error) {
       console.error('[TrinityToggle] Error updating settings:', error);
@@ -150,114 +221,309 @@ class TrinityAutomationToggleService {
     }
   }
 
+  /**
+   * Check if a specific feature is automated for a workspace
+   */
   async isFeatureAutomated(workspaceId: string, feature: AutomationFeature): Promise<boolean> {
     const settings = await this.getSettings(workspaceId);
     return settings[feature] ?? false;
   }
 
+  /**
+   * Request automation - creates pending request in database
+   */
   async requestAutomation(request: AutomationRequest): Promise<AutomationResult> {
-    const requestId = `auto_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-
     console.log(`[TrinityToggle] Automation requested: ${request.feature} for workspace ${request.workspaceId}`);
 
     const preview = await this.generatePreview(request);
+    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    const insertData: InsertTrinityAutomationRequest = {
+      workspaceId: request.workspaceId,
+      feature: request.feature,
+      requestedBy: request.requestedBy,
+      requestedAt: new Date(),
+      context: request.context,
+      preview: {
+        summary: preview.summary,
+        details: preview.details,
+        previewData: preview.previewData,
+        impact: preview.impact,
+      },
+      previewGeneratedAt: new Date(),
+      status: 'pending',
+      expiresAt,
+      trinitySignature: this.generateRequestSignature(request),
+    };
+
+    const [inserted] = await db.insert(trinityAutomationRequests)
+      .values(insertData)
+      .returning();
 
     const result: AutomationResult = {
-      requestId,
-      feature: request.feature,
-      status: 'pending_approval',
+      requestId: inserted.id,
+      feature: request.feature as AutomationFeature,
+      status: 'pending',
       summary: preview.summary,
       details: preview.details,
       preview: preview.previewData,
       estimatedImpact: preview.impact,
-      createdAt: new Date(),
+      createdAt: inserted.createdAt!,
     };
 
-    pendingRequests.set(requestId, result);
+    const settings = await this.getSettings(request.workspaceId);
+    if (settings.notifyOnRequest) {
+      await platformEventBus.publish({
+        type: 'automation_approval_requested',
+        category: 'automation',
+        title: `Trinity Automation: ${request.feature}`,
+        description: preview.summary,
+        workspaceId: request.workspaceId,
+        metadata: {
+          requestId: inserted.id,
+          feature: request.feature,
+          requestedBy: request.requestedBy,
+          requiresApproval: true,
+        },
+      });
+    }
 
-    await platformEventBus.publish({
-      type: 'automation_approval_requested',
-      category: 'automation',
-      title: `Trinity Automation: ${request.feature}`,
-      description: preview.summary,
-      workspaceId: request.workspaceId,
-      metadata: {
-        requestId,
-        feature: request.feature,
-        requestedBy: request.requestedBy,
-        requiresApproval: true,
-      },
-    });
+    await this.broadcastRequestUpdate(request.workspaceId, result);
 
     return result;
   }
 
+  /**
+   * Approve an automation request - updates database and executes
+   */
   async approveAutomation(requestId: string, approvedBy: string): Promise<AutomationResult> {
-    const request = pendingRequests.get(requestId);
+    const request = await db.query.trinityAutomationRequests.findFirst({
+      where: eq(trinityAutomationRequests.id, requestId),
+    });
+
     if (!request) {
       throw new Error('Automation request not found');
     }
 
-    request.status = 'approved';
-    request.approvedAt = new Date();
-    request.approvedBy = approvedBy;
+    if (request.status !== 'pending') {
+      throw new Error(`Request is already ${request.status}`);
+    }
+
+    await db.update(trinityAutomationRequests)
+      .set({
+        status: 'approved',
+        approvedBy,
+        approvedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(trinityAutomationRequests.id, requestId));
 
     console.log(`[TrinityToggle] Automation approved: ${requestId} by ${approvedBy}`);
 
     try {
-      const executionResult = await this.executeAutomation(request);
-      request.status = 'executed';
-      request.executedAt = new Date();
-      request.receipt = executionResult.receipt;
+      await db.update(trinityAutomationRequests)
+        .set({ status: 'executing', executionStartedAt: new Date() })
+        .where(eq(trinityAutomationRequests.id, requestId));
 
-      await platformEventBus.publish({
-        type: 'automation_executed',
-        category: 'automation',
-        title: `Trinity Completed: ${request.feature}`,
-        description: executionResult.receipt?.summary || 'Automation completed successfully',
-        metadata: {
-          requestId,
-          feature: request.feature,
-          receipt: executionResult.receipt,
-        },
-      });
+      const executionResult = await this.executeAutomation(request);
+
+      await db.update(trinityAutomationRequests)
+        .set({
+          status: 'completed',
+          executionCompletedAt: new Date(),
+          executionResult: executionResult.receipt,
+          updatedAt: new Date(),
+        })
+        .where(eq(trinityAutomationRequests.id, requestId));
+
+      const receiptInsert: InsertTrinityAutomationReceipt = {
+        workspaceId: request.workspaceId,
+        requestId,
+        feature: request.feature,
+        action: `${request.feature}_automation`,
+        success: true,
+        itemsProcessed: executionResult.receipt?.payload.recordsCreated || 0,
+        itemsFailed: 0,
+        summary: executionResult.receipt?.summary,
+        details: executionResult.receipt?.payload || {},
+        trinitySignature: executionResult.receipt?.trinitySignature,
+        verifiedAt: new Date(),
+        initiatedBy: request.requestedBy,
+        approvedBy,
+        executedAt: new Date(),
+      };
+
+      await db.insert(trinityAutomationReceipts).values(receiptInsert);
+
+      const settings = await this.getSettings(request.workspaceId);
+      if (settings.notifyOnComplete) {
+        await platformEventBus.publish({
+          type: 'automation_executed',
+          category: 'automation',
+          title: `Trinity Completed: ${request.feature}`,
+          description: executionResult.receipt?.summary || 'Automation completed successfully',
+          workspaceId: request.workspaceId,
+          metadata: {
+            requestId,
+            feature: request.feature,
+            receipt: executionResult.receipt,
+          },
+        });
+      }
+
+      const result = await this.getRequestResult(requestId);
+      await this.broadcastRequestUpdate(request.workspaceId, result!);
+      return result!;
 
     } catch (error: any) {
-      request.status = 'failed';
-      console.error(`[TrinityToggle] Automation execution failed:`, error);
-    }
+      await db.update(trinityAutomationRequests)
+        .set({
+          status: 'failed',
+          errorMessage: error.message,
+          executionCompletedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(trinityAutomationRequests.id, requestId));
 
-    return request;
+      const settings = await this.getSettings(request.workspaceId);
+      if (settings.notifyOnError) {
+        await platformEventBus.publish({
+          type: 'automation_failed',
+          category: 'automation',
+          title: `Trinity Failed: ${request.feature}`,
+          description: error.message,
+          workspaceId: request.workspaceId,
+          metadata: { requestId, error: error.message },
+        });
+      }
+
+      console.error(`[TrinityToggle] Automation execution failed:`, error);
+      const result = await this.getRequestResult(requestId);
+      return result!;
+    }
   }
 
+  /**
+   * Reject an automation request
+   */
   async rejectAutomation(requestId: string, rejectedBy: string, reason?: string): Promise<AutomationResult> {
-    const request = pendingRequests.get(requestId);
+    const request = await db.query.trinityAutomationRequests.findFirst({
+      where: eq(trinityAutomationRequests.id, requestId),
+    });
+
     if (!request) {
       throw new Error('Automation request not found');
     }
 
-    request.status = 'rejected';
+    await db.update(trinityAutomationRequests)
+      .set({
+        status: 'rejected',
+        rejectedBy,
+        rejectedAt: new Date(),
+        rejectionReason: reason,
+        updatedAt: new Date(),
+      })
+      .where(eq(trinityAutomationRequests.id, requestId));
 
     await platformEventBus.publish({
       type: 'automation_rejected',
       category: 'automation',
       title: `Trinity Automation Rejected`,
       description: reason || 'Automation request was rejected by org owner',
+      workspaceId: request.workspaceId,
       metadata: { requestId, rejectedBy, reason },
     });
 
-    return request;
+    const result = await this.getRequestResult(requestId);
+    await this.broadcastRequestUpdate(request.workspaceId, result!);
+    return result!;
   }
 
-  getPendingRequest(requestId: string): AutomationResult | undefined {
-    return pendingRequests.get(requestId);
+  /**
+   * Get a single pending request from database
+   */
+  async getPendingRequest(requestId: string): Promise<AutomationResult | undefined> {
+    return this.getRequestResult(requestId);
   }
 
-  getAllPendingRequests(workspaceId?: string): AutomationResult[] {
-    return Array.from(pendingRequests.values())
-      .filter(r => r.status === 'pending_approval');
+  /**
+   * Get all pending requests for a workspace from database
+   */
+  async getAllPendingRequests(workspaceId?: string): Promise<AutomationResult[]> {
+    const whereClause = workspaceId 
+      ? and(
+          eq(trinityAutomationRequests.status, 'pending'),
+          eq(trinityAutomationRequests.workspaceId, workspaceId)
+        )
+      : eq(trinityAutomationRequests.status, 'pending');
+
+    const requests = await db.query.trinityAutomationRequests.findMany({
+      where: whereClause,
+      orderBy: desc(trinityAutomationRequests.requestedAt),
+    });
+
+    return requests.map(r => this.mapToResult(r));
   }
 
+  /**
+   * Get automation history for a workspace
+   */
+  async getAutomationHistory(workspaceId: string, limit = 50): Promise<AutomationResult[]> {
+    const requests = await db.query.trinityAutomationRequests.findMany({
+      where: eq(trinityAutomationRequests.workspaceId, workspaceId),
+      orderBy: desc(trinityAutomationRequests.requestedAt),
+      limit,
+    });
+
+    return requests.map(r => this.mapToResult(r));
+  }
+
+  /**
+   * Get receipts for a workspace
+   */
+  async getReceipts(workspaceId: string, limit = 50): Promise<TrinityAutomationReceipt[]> {
+    return db.query.trinityAutomationReceipts.findMany({
+      where: eq(trinityAutomationReceipts.workspaceId, workspaceId),
+      orderBy: desc(trinityAutomationReceipts.executedAt),
+      limit,
+    });
+  }
+
+  /**
+   * Convert database record to AutomationResult
+   */
+  private mapToResult(record: TrinityAutomationRequest): AutomationResult {
+    const preview = record.preview as any || {};
+    return {
+      requestId: record.id,
+      feature: record.feature as AutomationFeature,
+      status: record.status as AutomationResult['status'],
+      summary: preview.summary || '',
+      details: preview.details || {},
+      preview: preview.previewData || {},
+      estimatedImpact: preview.impact,
+      createdAt: record.createdAt!,
+      approvedAt: record.approvedAt || undefined,
+      approvedBy: record.approvedBy || undefined,
+      executedAt: record.executionCompletedAt || undefined,
+    };
+  }
+
+  /**
+   * Get request result from database
+   */
+  private async getRequestResult(requestId: string): Promise<AutomationResult | undefined> {
+    const record = await db.query.trinityAutomationRequests.findFirst({
+      where: eq(trinityAutomationRequests.id, requestId),
+    });
+
+    if (!record) return undefined;
+    return this.mapToResult(record);
+  }
+
+  /**
+   * Generate preview for automation request
+   */
   private async generatePreview(request: AutomationRequest): Promise<{
     summary: string;
     details: any;
@@ -311,6 +577,34 @@ class TrinityAutomationToggleService {
           },
         };
 
+      case 'shift_monitoring':
+        return {
+          summary: 'Trinity will monitor shifts for late arrivals and no-shows, triggering auto-replacement',
+          details: {
+            shiftsMonitored: request.context.shiftCount || 0,
+            lateThreshold: request.context.lateThreshold || 15,
+          },
+          previewData: { type: 'monitoring_preview', data: request.context },
+          impact: {
+            recordsAffected: request.context.shiftCount || 0,
+            riskLevel: 'low',
+          },
+        };
+
+      case 'quickbooks_sync':
+        return {
+          summary: 'Trinity will sync data bidirectionally with QuickBooks',
+          details: {
+            syncType: request.context.syncType || 'full',
+            entities: request.context.entities || ['invoices', 'payments'],
+          },
+          previewData: { type: 'sync_preview', data: request.context },
+          impact: {
+            recordsAffected: request.context.recordCount || 0,
+            riskLevel: 'medium',
+          },
+        };
+
       default:
         return {
           summary: `Trinity will handle ${request.feature} automation`,
@@ -321,24 +615,49 @@ class TrinityAutomationToggleService {
     }
   }
 
-  private async executeAutomation(request: AutomationResult): Promise<{ receipt: AutomationReceipt }> {
+  /**
+   * Execute the automation
+   */
+  private async executeAutomation(request: TrinityAutomationRequest): Promise<{ receipt: AutomationReceipt }> {
     const receipt: AutomationReceipt = {
       receiptId: `rcpt_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      feature: request.feature,
+      feature: request.feature as AutomationFeature,
       timestamp: new Date(),
-      workspaceId: '',
+      workspaceId: request.workspaceId,
       summary: `${request.feature} automation completed successfully`,
       payload: {
-        recordsCreated: request.estimatedImpact?.recordsAffected || 0,
+        recordsCreated: (request.preview as any)?.impact?.recordsAffected || 0,
         recordsUpdated: 0,
         externalSyncs: [],
       },
-      trinitySignature: `trinity_${Date.now()}_verified`,
+      trinitySignature: this.generateReceiptSignature({
+        receiptId: `rcpt_${Date.now()}`,
+        feature: request.feature as AutomationFeature,
+        timestamp: new Date(),
+        workspaceId: request.workspaceId,
+        summary: `${request.feature} automation completed`,
+        payload: { recordsCreated: 0, recordsUpdated: 0, externalSyncs: [] },
+      }),
     };
 
     return { receipt };
   }
 
+  /**
+   * Generate signature for request verification
+   */
+  private generateRequestSignature(request: AutomationRequest): string {
+    const data = JSON.stringify({
+      workspaceId: request.workspaceId,
+      feature: request.feature,
+      timestamp: new Date().toISOString(),
+    });
+    return `trinity_req_${Buffer.from(data).toString('base64').substring(0, 24)}`;
+  }
+
+  /**
+   * Generate signature for receipt verification
+   */
   generateReceiptSignature(receipt: Omit<AutomationReceipt, 'trinitySignature'>): string {
     const data = JSON.stringify({
       receiptId: receipt.receiptId,
@@ -346,8 +665,69 @@ class TrinityAutomationToggleService {
       timestamp: receipt.timestamp.toISOString(),
       recordsCreated: receipt.payload.recordsCreated,
     });
-    
     return `trinity_${Buffer.from(data).toString('base64').substring(0, 32)}`;
+  }
+
+  /**
+   * Broadcast settings update via WebSocket for live sync
+   */
+  private async broadcastSettingsUpdate(workspaceId: string, settings: AutomationSettings): Promise<void> {
+    await platformEventBus.publish({
+      type: 'trinity_automation_settings_sync',
+      category: 'live_sync',
+      title: 'Settings Updated',
+      description: 'Automation settings synchronized',
+      workspaceId,
+      metadata: { 
+        syncType: 'settings',
+        settings,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+
+  /**
+   * Broadcast request update via WebSocket for live sync
+   */
+  private async broadcastRequestUpdate(workspaceId: string, result: AutomationResult): Promise<void> {
+    await platformEventBus.publish({
+      type: 'trinity_automation_request_sync',
+      category: 'live_sync',
+      title: 'Request Updated',
+      description: `Automation request ${result.status}`,
+      workspaceId,
+      metadata: {
+        syncType: 'request',
+        requestId: result.requestId,
+        status: result.status,
+        feature: result.feature,
+        timestamp: new Date().toISOString(),
+      },
+    });
+  }
+
+  /**
+   * Cleanup expired requests periodically
+   */
+  private startExpiryCleanup(): void {
+    setInterval(async () => {
+      try {
+        const now = new Date();
+        const expired = await db.update(trinityAutomationRequests)
+          .set({ status: 'failed', errorMessage: 'Request expired' })
+          .where(and(
+            eq(trinityAutomationRequests.status, 'pending'),
+            lt(trinityAutomationRequests.expiresAt, now)
+          ))
+          .returning();
+
+        if (expired.length > 0) {
+          console.log(`[TrinityToggle] Expired ${expired.length} automation requests`);
+        }
+      } catch (error) {
+        console.error('[TrinityToggle] Error cleaning up expired requests:', error);
+      }
+    }, 60 * 60 * 1000); // Every hour
   }
 }
 
