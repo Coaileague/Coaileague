@@ -9,7 +9,6 @@ import { Footer } from '@/components/footer';
 import { FTCDisclaimer } from '@/components/ftc-disclaimer';
 
 export default function Homepage() {
-  // Hide the pre-React loading screen on public pages
   useEffect(() => {
     const loader = document.getElementById('initial-loader');
     if (loader) {
@@ -25,213 +24,170 @@ export default function Homepage() {
       icon: Calendar,
       title: 'Autonomous Scheduling',
       subtitle: 'AI-Powered Staffing',
-      description: 'Automates workforce scheduling based on availability, skills, labor laws, and demand patterns. Reduces manual scheduling effort significantly.',
+      description: 'Automates workforce scheduling based on availability, skills, labor laws, and demand patterns.',
       stats: 'Up to 75% reduction in scheduling time',
-      color: 'blue',
+      color: 'teal',
       savings: 'Save up to 20+ hours per week'
     },
     {
       icon: DollarSign,
       title: 'Autonomous Payroll',
       subtitle: 'Integrates with Gusto & QuickBooks',
-      description: 'Syncs time entries, calculates wages, and processes payroll automatically through your existing Gusto or QuickBooks subscription. Minimizes manual data entry.',
+      description: 'Syncs time entries, calculates wages, and processes payroll automatically through your existing systems.',
       stats: 'High-accuracy payroll sync',
-      color: 'blue',
+      color: 'cyan',
       savings: 'Reduce payroll processing time'
     },
     {
       icon: FileText,
       title: 'Autonomous Invoicing',
       subtitle: 'Smart Client Billing',
-      description: 'Automatically generates and sends invoices to your end clients based on completed shifts and services. Tracks payments and sends reminders.',
+      description: 'Automatically generates and sends invoices based on completed shifts. Tracks payments and sends reminders.',
       stats: 'Faster payment collection',
-      color: 'purple',
+      color: 'blue',
       savings: 'Reduce billing delays'
     }
   ];
 
   return (
-    <div className="min-h-screen bg-background overflow-x-hidden w-full">
-      {/* Universal Header */}
+    <div className="min-h-screen bg-white overflow-x-hidden w-full">
       <UniversalHeader variant="public" />
 
-      {/* Hero Section - Enhanced */}
-      <section className="pt-8 sm:pt-16 md:pt-24 pb-8 sm:pb-16 md:pb-20 px-3 sm:px-6 bg-gradient-to-br from-slate-50 via-blue-50 to-blue-50 relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-1/2 h-full opacity-10 hidden md:block">
-          <div className="absolute top-20 right-20 w-72 h-72 bg-blue-500 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-20 right-40 w-96 h-96 bg-blue-500 rounded-full blur-3xl"></div>
+      {/* Hero Section - Fortune 500 Clean Design */}
+      <section className="pt-16 md:pt-24 pb-16 md:pb-20 px-4 sm:px-6 bg-gradient-to-b from-slate-50 to-white relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-1/2 h-full opacity-5 hidden md:block">
+          <div className="absolute top-32 right-32 w-96 h-96 bg-teal-500 rounded-full blur-3xl"></div>
         </div>
 
-        <div className="max-w-7xl mx-auto relative z-10 px-0">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 md:gap-12 items-center mobile-cols-1 mobile-gap-3">
-            {/* Left Column - Content */}
+        <div className="max-w-6xl mx-auto relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16 items-center">
+            {/* Left Column */}
             <div>
-              <div className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-100 to-blue-100 text-blue-700 px-3 sm:px-4 py-2 rounded-full text-xs sm:text-sm font-semibold mb-4 sm:mb-6 shadow-md">
-                <Cpu className="w-3 h-3 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">Powered by Trinity™ — Autonomous Workforce Intelligence</span>
-                <span className="sm:hidden">Trinity™ AI</span>
+              <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full text-xs font-medium mb-6 border border-slate-200">
+                <Cpu className="w-3.5 h-3.5 text-teal-600" />
+                <span>Powered by Trinity AI</span>
               </div>
-              <h1 className="text-xl sm:text-2xl md:text-5xl lg:text-6xl font-bold text-gray-900 mb-3 sm:mb-4 md:mb-6 leading-tight break-words">
+              
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-semibold text-slate-900 mb-5 leading-tight tracking-tight">
                 Automate Up to $100K+ in
                 <br />
-                <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 via-blue-600 to-blue-600">
-                  Admin Workloads
-                </span>
+                <span className="text-teal-600">Admin Workloads</span>
               </h1>
-              <p className="text-xs sm:text-sm md:text-lg lg:text-xl text-gray-700 mb-4 sm:mb-6 leading-relaxed">
-                Let <strong className="text-gray-900">Trinity™</strong> autonomously handle your scheduling, payroll processing, and client invoicing. 
-                <strong className="text-blue-600"> Reduce administrative overhead significantly.</strong>
+              
+              <p className="text-base md:text-lg text-slate-600 mb-8 leading-relaxed max-w-lg">
+                Let Trinity autonomously handle your scheduling, payroll processing, and client invoicing. 
+                <span className="text-slate-800 font-medium"> Reduce administrative overhead significantly.</span>
               </p>
               
-              {/* ROI Calculator Style Box */}
-              <div className="bg-gradient-to-br from-blue-50 to-blue-50 border-2 border-blue-200 rounded-xl p-4 sm:p-6 shadow-lg mb-6 sm:mb-8 w-full overflow-x-hidden">
-                <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                  <DollarSign className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600 shrink-0" />
-                  <span className="font-bold text-sm sm:text-base text-gray-900 truncate">Typical Annual Savings</span>
+              {/* Refined Stats Box */}
+              <div className="bg-white border border-slate-200 rounded-lg p-5 mb-8 shadow-sm">
+                <div className="flex items-center gap-2 mb-4">
+                  <DollarSign className="w-4 h-4 text-teal-600" />
+                  <span className="text-sm font-medium text-slate-700">Typical Annual Savings</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-                  <div className="min-w-0">
-                    <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1 break-words">Up to $140K</div>
-                    <div className="text-xs sm:text-sm text-gray-600 break-words">Potential labor cost reduction*</div>
-                    <div className="text-xs text-gray-500 mt-1 break-words">Varies by organization size</div>
+                <div className="grid grid-cols-2 gap-6">
+                  <div>
+                    <div className="text-2xl font-semibold text-slate-900 mb-0.5">Up to $140K</div>
+                    <div className="text-xs text-slate-500">Potential labor cost reduction*</div>
                   </div>
-                  <div className="min-w-0">
-                    <div className="text-2xl sm:text-3xl font-bold text-blue-600 mb-1 break-words">Up to $50K</div>
-                    <div className="text-xs sm:text-sm text-gray-600 break-words">Reduced overtime costs*</div>
-                    <div className="text-xs text-gray-500 mt-1 break-words">Smarter scheduling & allocation</div>
+                  <div>
+                    <div className="text-2xl font-semibold text-slate-900 mb-0.5">Up to $50K</div>
+                    <div className="text-xs text-slate-500">Reduced overtime costs*</div>
                   </div>
                 </div>
               </div>
 
-              <div className="flex flex-col sm:flex-row flex-wrap gap-3 sm:gap-4 mb-6 sm:mb-8 mobile-flex-col mobile-gap-3">
-                <Link href="/pricing" className="px-4 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-blue-600 text-white rounded-xl font-bold hover:from-blue-700 hover:to-blue-700 transition-all shadow-lg hover:shadow-xl flex items-center justify-center sm:justify-start gap-2 text-sm sm:text-base min-h-[44px]" data-testid="button-calculate-savings">
+              <div className="flex flex-col sm:flex-row gap-3 mb-8">
+                <Link href="/pricing" className="px-6 py-2.5 bg-teal-600 text-white rounded-md font-medium hover:bg-teal-700 transition-colors flex items-center justify-center gap-2 text-sm" data-testid="button-calculate-savings">
                   Calculate Savings
-                  <ArrowRight className="w-4 sm:w-5 h-4 sm:h-5 shrink-0" />
+                  <ArrowRight className="w-4 h-4" />
                 </Link>
-                <Link href="/support" className="px-4 sm:px-8 py-3 sm:py-4 bg-white text-gray-900 rounded-xl font-semibold hover:bg-gray-50 transition-all border-2 border-gray-200 flex items-center justify-center sm:justify-start gap-2 shadow-md text-sm sm:text-base min-h-[44px]" data-testid="button-see-demo">
-                  <MessageSquare className="w-4 sm:w-5 h-4 sm:h-5 shrink-0" />
+                <Link href="/support" className="px-6 py-2.5 bg-white text-slate-700 rounded-md font-medium hover:bg-slate-50 transition-colors border border-slate-200 flex items-center justify-center gap-2 text-sm" data-testid="button-see-demo">
+                  <MessageSquare className="w-4 h-4" />
                   Chat with AI
                 </Link>
               </div>
 
-              {/* Trust Indicators */}
-              <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-gray-200 mobile-flex-col mobile-gap-3">
+              {/* Trust Indicators - Minimal */}
+              <div className="flex flex-wrap items-center gap-6 pt-6 border-t border-slate-100">
                 <div className="flex items-center gap-2">
-                  <Cpu className="w-5 h-5 text-gray-600" />
-                  <span className="text-sm text-gray-700"><strong>Powered by Trinity™</strong></span>
+                  <Cpu className="w-4 h-4 text-slate-400" />
+                  <span className="text-xs text-slate-500">Powered by Trinity</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Shield className="w-5 h-5 text-gray-600" />
-                  <span className="text-sm text-gray-700"><strong>SOC 2</strong> Compliant</span>
+                  <Shield className="w-4 h-4 text-slate-400" />
+                  <span className="text-xs text-slate-500">SOC 2 Compliant</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-gray-600" />
-                  <span className="text-sm text-gray-700"><strong>99.9%</strong> Uptime</span>
+                  <Activity className="w-4 h-4 text-slate-400" />
+                  <span className="text-xs text-slate-500">99.9% Uptime</span>
                 </div>
               </div>
             </div>
 
-            {/* Right Column - Visual Demo */}
-            <div className="relative hidden sm:block">
-              <div className="absolute -top-6 -right-6 w-32 h-32 bg-gradient-to-br from-blue-400 to-blue-400 rounded-full opacity-20 blur-2xl"></div>
-              <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 p-4 md:p-6 relative max-w-full overflow-hidden">
-                <div className="flex items-center justify-between mb-4 pb-4 border-b border-gray-200 gap-2">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <Cpu className="w-5 h-5 text-blue-600 shrink-0" />
-                    <span className="font-bold text-gray-900 text-sm md:text-base truncate">Powered by Trinity™</span>
+            {/* Right Column - Refined Demo Card */}
+            <div className="relative hidden lg:block">
+              <div className="bg-white rounded-lg shadow-lg border border-slate-200 p-5 relative">
+                <div className="flex items-center justify-between mb-4 pb-3 border-b border-slate-100">
+                  <div className="flex items-center gap-2">
+                    <Cpu className="w-4 h-4 text-teal-600" />
+                    <span className="text-sm font-medium text-slate-800">Powered by Trinity</span>
                   </div>
-                  <div className="bg-blue-100 text-blue-700 px-2 md:px-3 py-1 rounded-full text-[10px] md:text-xs font-semibold flex items-center gap-1 shrink-0">
-                    <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-                    <span className="hidden md:inline">Neural Engine Active</span>
-                    <span className="md:hidden">Active</span>
+                  <div className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded text-xs font-medium flex items-center gap-1">
+                    <div className="w-1.5 h-1.5 bg-teal-500 rounded-full"></div>
+                    Active
                   </div>
                 </div>
                 
-                {/* Mini Schedule Preview - Responsive Grid */}
-                <div className="space-y-2 md:space-y-3">
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center text-white font-bold text-xs md:text-sm shadow-md shrink-0">
-                      SM
+                {/* Mini Schedule - Clean Grid */}
+                <div className="space-y-2">
+                  {[
+                    { initials: 'SM', shifts: [{ name: 'Tech Support', time: '9AM-5PM', color: 'bg-teal-500' }, { name: 'Field Ops', time: '1PM-9PM', color: 'bg-cyan-500' }] },
+                    { initials: 'JD', shifts: [{ name: 'Healthcare', time: '8AM-4PM', color: 'bg-teal-500' }, { name: 'Training', time: '10AM-2PM', color: 'bg-blue-500' }] },
+                    { initials: 'MD', shifts: [{ name: 'Security', time: '2PM-10PM', color: 'bg-cyan-500' }, { name: 'Admin', time: '9AM-5PM', color: 'bg-slate-600' }] },
+                  ].map((row, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <div className="w-9 h-9 bg-slate-100 rounded-md flex items-center justify-center text-slate-600 text-xs font-semibold shrink-0">
+                        {row.initials}
+                      </div>
+                      <div className="flex-1 grid grid-cols-4 gap-1.5">
+                        {row.shifts.map((shift, j) => (
+                          <div key={j} className={`${shift.color} text-white px-2 py-1.5 rounded text-[10px]`}>
+                            <div className="font-medium truncate">{shift.name}</div>
+                            <div className="opacity-80">{shift.time}</div>
+                          </div>
+                        ))}
+                        <div className="border border-dashed border-slate-200 rounded bg-slate-50 col-span-2"></div>
+                      </div>
                     </div>
-                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-1.5 md:gap-2 min-w-0">
-                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-2 md:p-3 rounded-lg shadow-md">
-                        <div className="text-[10px] md:text-xs font-semibold truncate">Tech Support</div>
-                        <div className="text-[9px] md:text-xs opacity-90 mt-0.5">9AM-5PM</div>
-                      </div>
-                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-2 md:p-3 rounded-lg shadow-md">
-                        <div className="text-[10px] md:text-xs font-semibold truncate">Field Ops</div>
-                        <div className="text-[9px] md:text-xs opacity-90 mt-0.5">1PM-9PM</div>
-                      </div>
-                      <div className="border-2 border-dashed border-gray-300 p-2 md:p-3 rounded-lg bg-gray-50 hidden md:block"></div>
-                      <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-2 md:p-3 rounded-lg shadow-md hidden md:block">
-                        <div className="text-[10px] md:text-xs font-semibold truncate">Emergency</div>
-                        <div className="text-[9px] md:text-xs opacity-90 mt-0.5">12AM-8AM</div>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 md:gap-3">
-                    <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center text-white font-bold text-xs md:text-sm shadow-md shrink-0">
-                      JD
-                    </div>
-                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-1.5 md:gap-2 min-w-0">
-                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-2 md:p-3 rounded-lg shadow-md">
-                        <div className="text-[10px] md:text-xs font-semibold truncate">Healthcare</div>
-                        <div className="text-[9px] md:text-xs opacity-90 mt-0.5">8AM-4PM</div>
-                      </div>
-                      <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-2 md:p-3 rounded-lg shadow-md">
-                        <div className="text-[10px] md:text-xs font-semibold truncate">Training</div>
-                        <div className="text-[9px] md:text-xs opacity-90 mt-0.5">10AM-2PM</div>
-                      </div>
-                      <div className="border-2 border-dashed border-gray-300 p-2 md:p-3 rounded-lg bg-gray-50 hidden md:block"></div>
-                      <div className="border-2 border-dashed border-gray-300 p-2 md:p-3 rounded-lg bg-gray-50 hidden md:block"></div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2 md:gap-3 hidden md:flex">
-                    <div className="w-10 h-10 md:w-14 md:h-14 bg-gradient-to-br from-purple-500 to-pink-600 rounded-lg flex items-center justify-center text-white font-bold text-xs md:text-sm shadow-md shrink-0">
-                      MD
-                    </div>
-                    <div className="flex-1 grid grid-cols-2 md:grid-cols-4 gap-1.5 md:gap-2 min-w-0">
-                      <div className="border-2 border-dashed border-gray-300 p-2 md:p-3 rounded-lg bg-gray-50"></div>
-                      <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white p-2 md:p-3 rounded-lg shadow-md">
-                        <div className="text-[10px] md:text-xs font-semibold truncate">Security</div>
-                        <div className="text-[9px] md:text-xs opacity-90 mt-0.5">2PM-10PM</div>
-                      </div>
-                      <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-2 md:p-3 rounded-lg shadow-md">
-                        <div className="text-[10px] md:text-xs font-semibold truncate">Admin</div>
-                        <div className="text-[9px] md:text-xs opacity-90 mt-0.5">9AM-5PM</div>
-                      </div>
-                      <div className="border-2 border-dashed border-gray-300 p-2 md:p-3 rounded-lg bg-gray-50"></div>
-                    </div>
-                  </div>
+                  ))}
                 </div>
 
-                <div className="mt-6 pt-4 border-t border-gray-200">
-                  <div className="bg-gradient-to-r from-blue-50 to-blue-50 border border-blue-200 rounded-lg p-3 mb-3">
+                <div className="mt-4 pt-3 border-t border-slate-100">
+                  <div className="bg-slate-50 border border-slate-200 rounded p-2.5 mb-3">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <Cpu className="w-4 h-4 text-blue-600" />
-                        <span className="text-sm font-semibold text-gray-700">AI Generated Schedule</span>
+                      <div className="flex items-center gap-1.5">
+                        <Cpu className="w-3.5 h-3.5 text-teal-600" />
+                        <span className="text-xs font-medium text-slate-600">AI Generated Schedule</span>
                       </div>
-                      <span className="text-xs font-bold text-blue-600">100% Automated</span>
+                      <span className="text-[10px] font-medium text-teal-600">100% Automated</span>
                     </div>
                   </div>
-                  <Link href="/support" className="block w-full px-6 py-3 bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-lg font-semibold text-sm hover:from-blue-600 hover:to-blue-700 transition-all flex items-center justify-center gap-2 shadow-lg hover:shadow-xl" data-testid="button-watch-demo">
-                    <MessageSquare className="w-4 h-4" />
-                    Experience Trinity™ Intelligence
+                  <Link href="/support" className="block w-full px-4 py-2 bg-teal-600 text-white rounded-md text-sm font-medium hover:bg-teal-700 transition-colors text-center" data-testid="button-watch-demo">
+                    Experience Trinity Intelligence
                   </Link>
                 </div>
               </div>
 
-              {/* Floating Stats Badge */}
-              <div className="absolute -bottom-6 -left-6 bg-white rounded-xl shadow-2xl border-2 border-blue-200 p-4">
+              {/* Floating Badge - Refined */}
+              <div className="absolute -bottom-4 -left-4 bg-white rounded-md shadow-lg border border-slate-200 px-4 py-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-blue-600 rounded-lg flex items-center justify-center">
-                    <DollarSign className="w-6 h-6 text-white" />
+                  <div className="w-10 h-10 bg-gradient-to-br from-teal-500 to-cyan-500 rounded-md flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-white" />
                   </div>
                   <div>
-                    <div className="text-2xl font-bold text-blue-600">Up to $190K</div>
-                    <div className="text-xs text-gray-500">Potential Annual Savings*</div>
+                    <div className="text-lg font-semibold text-slate-900">Up to $190K</div>
+                    <div className="text-[10px] text-slate-500">Potential Annual Savings*</div>
                   </div>
                 </div>
               </div>
@@ -240,144 +196,107 @@ export default function Homepage() {
         </div>
       </section>
 
-      {/* Autonomous Features - Enhanced */}
-      <section id="features" className="py-20 px-6 bg-white mobile-compact-p">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <div className="inline-flex items-center gap-2 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-700 px-4 py-2 rounded-full text-sm font-semibold mb-4 shadow-md">
-              <Cpu className="w-4 h-4" />
-              Powered by Trinity™ — Neural Workforce Engine
+      {/* Features Section - Fortune 500 Refined */}
+      <section id="features" className="py-16 md:py-20 px-4 sm:px-6 bg-white">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <div className="inline-flex items-center gap-2 bg-slate-100 text-slate-600 px-3 py-1.5 rounded-full text-xs font-medium mb-4 border border-slate-200">
+              <Cpu className="w-3.5 h-3.5 text-teal-600" />
+              Powered by Trinity Neural Engine
             </div>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
+            <h2 className="text-2xl md:text-3xl font-semibold text-slate-900 mb-4 tracking-tight">
               AI Automates Your Most Time-Consuming Tasks
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto mb-4">
-              <strong className="text-gray-900">Always-on automation</strong> that works 24/7, handling repetitive administrative work so your team can focus on higher-value activities.
-            </p>
-            <p className="text-lg text-blue-600 font-bold">
-              Reduce time spent on manual scheduling, payroll, and billing tasks
+            <p className="text-base text-slate-600 max-w-2xl mx-auto">
+              Always-on automation that works 24/7, handling repetitive administrative work so your team can focus on higher-value activities.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8 mb-16 mobile-cols-1 mobile-gap-4">
+          <div className="grid md:grid-cols-3 gap-6 mb-12">
             {autonomousFeatures.map((feature, idx) => (
-              <div key={idx} className="group bg-gradient-to-br from-white to-gray-50 rounded-2xl p-8 border-2 border-gray-200 hover:border-blue-300 hover:shadow-2xl transition-all relative overflow-hidden">
-                {/* Decorative gradient */}
-                <div className={`absolute top-0 right-0 w-32 h-32 opacity-10 blur-3xl ${
-                  feature.color === 'blue' ? 'bg-blue-500' :
-                  feature.color === 'green' ? 'bg-blue-500' :
-                  'bg-purple-500'
-                }`}></div>
-
-                <div className={`w-16 h-16 rounded-xl flex items-center justify-center mb-6 shadow-lg ${
-                  feature.color === 'blue' ? 'bg-gradient-to-br from-blue-500 to-blue-600' :
-                  feature.color === 'green' ? 'bg-gradient-to-br from-blue-500 to-blue-600' :
-                  'bg-gradient-to-br from-purple-500 to-purple-600'
+              <div key={idx} className="bg-white rounded-lg border border-slate-200 p-5 hover:border-slate-300 hover:shadow-md transition-all">
+                <div className={`w-10 h-10 rounded-md flex items-center justify-center mb-4 ${
+                  feature.color === 'teal' ? 'bg-teal-50 text-teal-600' :
+                  feature.color === 'cyan' ? 'bg-cyan-50 text-cyan-600' :
+                  'bg-blue-50 text-blue-600'
                 }`}>
-                  <feature.icon className="w-8 h-8 text-white" />
+                  <feature.icon className="w-5 h-5" />
                 </div>
                 
-                <div className="mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Cpu className="w-4 h-4 text-purple-600" />
-                    <div className="text-xs font-semibold text-purple-600 uppercase tracking-wider">AI-Powered</div>
+                <div className="mb-3">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Cpu className="w-3 h-3 text-slate-400" />
+                    <span className="text-[10px] font-medium text-slate-400 uppercase tracking-wider">AI-Powered</span>
                   </div>
-                  <h3 className="text-2xl font-bold text-gray-900 mb-3">{feature.title}</h3>
-                  <div className="text-sm text-gray-500 mb-3">{feature.subtitle}</div>
+                  <h3 className="text-lg font-semibold text-slate-900 mb-1">{feature.title}</h3>
+                  <p className="text-xs text-slate-500">{feature.subtitle}</p>
                 </div>
                 
-                <p className="text-gray-600 mb-6 leading-relaxed">{feature.description}</p>
+                <p className="text-sm text-slate-600 mb-4 leading-relaxed">{feature.description}</p>
                 
-                {/* Cost Reduction Highlight */}
-                <div className="bg-gradient-to-r from-blue-50 to-blue-50 border-2 border-blue-200 rounded-lg p-4 mb-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <DollarSign className="w-5 h-5 text-blue-600" />
-                    <span className="text-sm font-bold text-gray-900">Automates Administrative Work</span>
+                {/* Savings Highlight - Minimal */}
+                <div className="bg-slate-50 border border-slate-100 rounded-md p-3 mb-4">
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <DollarSign className="w-3.5 h-3.5 text-teal-600" />
+                    <span className="text-xs font-medium text-slate-700">Automates Administrative Work</span>
                   </div>
-                  <div className="text-xs text-gray-600 mb-1">
-                    {idx === 0 && "Automates tasks handled by scheduling coordinators"}
-                    {idx === 1 && "Automates payroll processing workflows"}
-                    {idx === 2 && "Automates invoice generation and tracking"}
-                  </div>
-                  <div className="text-lg font-bold text-blue-600">
+                  <div className="text-sm font-semibold text-teal-600">
                     {idx === 0 && "Up to $50K-$80K potential savings*"}
                     {idx === 1 && "Up to $45K-$65K potential savings*"}
                     {idx === 2 && "Up to $40K-$60K potential savings*"}
                   </div>
                 </div>
 
-                <div className="space-y-3 mb-6">
-                  <div className={`flex items-center gap-2 px-4 py-2 rounded-lg ${
-                    feature.color === 'blue' ? 'bg-blue-50' :
-                    feature.color === 'green' ? 'bg-blue-50' :
-                    'bg-purple-50'
-                  }`}>
-                    <CheckCircle className={`w-5 h-5 ${
-                      feature.color === 'blue' ? 'text-blue-600' :
-                      feature.color === 'green' ? 'text-blue-600' :
-                      'text-purple-600'
-                    }`} />
-                    <span className="text-sm font-semibold text-gray-700">{feature.savings}</span>
+                <div className="space-y-2 mb-4">
+                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                    <CheckCircle className="w-3.5 h-3.5 text-teal-500" />
+                    <span>{feature.savings}</span>
                   </div>
-                  <div className={`flex items-center gap-2 text-sm font-bold px-4 py-2 rounded-lg ${
-                    feature.color === 'blue' ? 'bg-blue-100 text-blue-700' :
-                    feature.color === 'green' ? 'bg-blue-100 text-blue-700' :
-                    'bg-purple-100 text-purple-700'
-                  }`}>
-                    <BarChart3 className="w-4 h-4" />
-                    {feature.stats}
+                  <div className="flex items-center gap-2 text-xs text-slate-600">
+                    <BarChart3 className="w-3.5 h-3.5 text-teal-500" />
+                    <span>{feature.stats}</span>
                   </div>
                 </div>
 
-                <Link href="/support" className={`block w-full px-4 py-3 rounded-lg font-semibold text-white transition-all shadow-md hover:shadow-xl flex items-center justify-center gap-2 ${
-                    feature.color === 'blue' ? 'bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700' :
-                    feature.color === 'green' ? 'bg-gradient-to-r from-blue-600 to-blue-600 hover:from-blue-700 hover:to-blue-700' :
-                    'bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-700 hover:to-pink-700'
-                  }`} data-testid={`button-demo-${feature.color}`}>
-                  Experience Trinity™ Live
-                  <MessageSquare className="w-4 h-4" />
+                <Link href="/support" className="block w-full px-4 py-2 bg-slate-900 text-white rounded-md text-sm font-medium hover:bg-slate-800 transition-colors text-center" data-testid={`button-demo-${feature.color}`}>
+                  Experience Trinity Live
                 </Link>
               </div>
             ))}
           </div>
 
-          {/* Total Savings Calculator */}
-          <div className="bg-gradient-to-br from-blue-500 via-blue-600 to-blue-600 rounded-2xl p-12 text-white text-center shadow-2xl">
-            <div className="max-w-3xl mx-auto">
-              <h3 className="text-3xl md:text-4xl font-bold mb-4">
+          {/* Total Savings - Refined Banner */}
+          <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-lg p-8 md:p-10 text-white">
+            <div className="max-w-4xl mx-auto text-center">
+              <h3 className="text-xl md:text-2xl font-semibold mb-2">
                 Potential Administrative Cost Reduction
               </h3>
-              <p className="text-xl text-blue-100 mb-8">
+              <p className="text-slate-400 text-sm mb-6">
                 Automate work equivalent to 3-5 full-time administrative roles*
               </p>
-              <div className="bg-white/20 backdrop-blur-sm rounded-xl p-8 border-2 border-white/30">
-                <div className="grid md:grid-cols-3 gap-6 mb-6 mobile-cols-1 mobile-gap-3">
-                  <div>
-                    <div className="text-5xl font-bold mb-2">Up to $155K</div>
-                    <div className="text-blue-100">Potential Labor Savings</div>
-                  </div>
-                  <div>
-                    <div className="text-5xl font-bold mb-2">Up to $35K</div>
-                    <div className="text-blue-100">Overhead Reduction</div>
-                  </div>
-                  <div>
-                    <div className="text-5xl font-bold mb-2">Up to $190K</div>
-                    <div className="text-blue-100">Total Potential Savings</div>
-                  </div>
+              <div className="grid grid-cols-3 gap-4 md:gap-8 mb-6">
+                <div>
+                  <div className="text-2xl md:text-3xl font-semibold mb-1">Up to $155K</div>
+                  <div className="text-xs text-slate-400">Potential Labor Savings</div>
                 </div>
-                <div className="text-sm text-blue-100 italic">
-                  * Estimates based on U.S. Bureau of Labor Statistics median wages: scheduler ($65K), payroll administrator ($58K), billing specialist ($52K) + 25% benefits. Actual results vary by organization size, industry, and implementation.
+                <div>
+                  <div className="text-2xl md:text-3xl font-semibold mb-1">Up to $35K</div>
+                  <div className="text-xs text-slate-400">Overhead Reduction</div>
+                </div>
+                <div>
+                  <div className="text-2xl md:text-3xl font-semibold text-teal-400 mb-1">Up to $190K</div>
+                  <div className="text-xs text-slate-400">Total Potential Savings</div>
                 </div>
               </div>
+              <p className="text-[10px] text-slate-500 max-w-2xl mx-auto">
+                * Estimates based on U.S. Bureau of Labor Statistics median wages: scheduler ($65K), payroll administrator ($58K), billing specialist ($52K) + 25% benefits. Actual results vary by organization size, industry, and implementation.
+              </p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* FTC Disclaimer */}
       <FTCDisclaimer />
-
-      {/* Footer */}
       <Footer variant="dark" />
     </div>
   );

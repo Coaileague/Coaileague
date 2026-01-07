@@ -1,15 +1,16 @@
 /**
- * Trinity Loading Overlay - Animated loading state with Trinity branding
+ * Trinity Loading Overlay - GetSling-style transition with Trinity branding
  * 
  * Features:
- * - Animated Trinity logo with pulsing/rotating effects
- * - Customizable loading messages
- * - Full-screen overlay or inline placement
- * - Smooth fade transitions
+ * - Animated filled Trinity triquetra logo (centered like GetSling)
+ * - Smooth fade/scale transitions
+ * - Full-screen overlay for screen changes and heavy loading
+ * - Brand-compliant teal/cyan/blue gradient palette
  */
 
-import { useEffect, useState, memo } from 'react';
+import { useEffect, useState, memo, useId } from 'react';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 interface TrinityLoadingOverlayProps {
   isLoading: boolean;
@@ -28,120 +29,118 @@ const LOADING_MESSAGES = [
   "Optimizing results...",
 ];
 
+/**
+ * Animated Trinity Triquetra Logo - GetSling-style animation
+ * Three filled loops with staggered fade/scale animations
+ */
 function AnimatedTrinityLogo({ size = 80, isAnimating = true }: { size?: number; isAnimating?: boolean }) {
-  const [rotation, setRotation] = useState(0);
-  const [pulse, setPulse] = useState(1);
-
-  useEffect(() => {
-    if (!isAnimating) return;
-    
-    const rotationInterval = setInterval(() => {
-      setRotation(r => (r + 2) % 360);
-    }, 50);
-
-    const pulseInterval = setInterval(() => {
-      setPulse(p => 0.85 + Math.sin(Date.now() / 500) * 0.15);
-    }, 50);
-
-    return () => {
-      clearInterval(rotationInterval);
-      clearInterval(pulseInterval);
-    };
-  }, [isAnimating]);
+  const reactId = useId();
+  
+  const ids = {
+    tealGrad: `trinity-loader-teal${reactId}`,
+    cyanGrad: `trinity-loader-cyan${reactId}`,
+    blueGrad: `trinity-loader-blue${reactId}`,
+    coreGrad: `trinity-loader-core${reactId}`,
+    glowFilter: `trinity-loader-glow${reactId}`,
+  };
 
   return (
     <svg 
       width={size} 
       height={size} 
       viewBox="0 0 100 100"
-      style={{ transform: `scale(${pulse})` }}
       className="transition-transform"
     >
       <defs>
-        <radialGradient id="loadingCore" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#FFFFE0">
-            <animate attributeName="stop-color" values="#FFFFE0;#00BFFF;#FFFFE0" dur="2s" repeatCount="indefinite" />
-          </stop>
-          <stop offset="50%" stopColor="#00BFFF">
-            <animate attributeName="stop-color" values="#00BFFF;#FFD700;#00BFFF" dur="2s" repeatCount="indefinite" />
-          </stop>
-          <stop offset="100%" stopColor="#006699" />
+        <linearGradient id={ids.tealGrad} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#2dd4bf" />
+          <stop offset="100%" stopColor="#14b8a6" />
+        </linearGradient>
+        <linearGradient id={ids.cyanGrad} x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#06b6d4" />
+          <stop offset="100%" stopColor="#22d3ee" />
+        </linearGradient>
+        <linearGradient id={ids.blueGrad} x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#0ea5e9" />
+        </linearGradient>
+        <radialGradient id={ids.coreGrad} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="60%" stopColor="#22d3ee" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.5" />
         </radialGradient>
-        <linearGradient id="loadingPetalGold" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FFD700" />
-          <stop offset="100%" stopColor="#FFA500" />
-        </linearGradient>
-        <linearGradient id="loadingPetalTeal" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#00BFFF" />
-          <stop offset="100%" stopColor="#008B8B" />
-        </linearGradient>
-        <filter id="loadingGlow">
-          <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+        <filter id={ids.glowFilter} x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="2" result="blur"/>
           <feMerge>
-            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="blur"/>
             <feMergeNode in="SourceGraphic"/>
           </feMerge>
         </filter>
       </defs>
       
-      <g style={{ transformOrigin: 'center', transform: `rotate(${rotation}deg)` }}>
-        {[0, 72, 144, 216, 288].map((angle, i) => (
-          <ellipse
-            key={i}
-            cx="50"
-            cy="26"
-            rx="9"
-            ry="24"
-            fill={`url(#loadingPetal${i % 2 === 0 ? 'Gold' : 'Teal'})`}
-            transform={`rotate(${angle} 50 50)`}
-            filter="url(#loadingGlow)"
-            opacity="0.9"
-          >
-            <animate 
-              attributeName="ry" 
-              values="24;28;24" 
-              dur={`${1.5 + i * 0.1}s`} 
-              repeatCount="indefinite" 
-            />
-          </ellipse>
-        ))}
-      </g>
-      
-      <circle 
-        cx="50" 
-        cy="50" 
-        r="14" 
-        fill="url(#loadingCore)" 
-        filter="url(#loadingGlow)"
+      {/* Loop 1 - Top (Teal) - with staggered animation */}
+      <path 
+        d="M 50 12 C 70 12, 82 30, 82 48 C 82 58, 72 70, 50 50 C 28 70, 18 58, 18 48 C 18 30, 30 12, 50 12 Z"
+        fill={`url(#${ids.tealGrad})`}
+        filter={`url(#${ids.glowFilter})`}
       >
-        <animate attributeName="r" values="14;16;14" dur="1s" repeatCount="indefinite" />
-      </circle>
-      
-      <circle 
-        cx="50" 
-        cy="50" 
-        r="7" 
-        fill="#FFFFE0" 
-        opacity="0.9"
-      >
-        <animate attributeName="opacity" values="0.9;0.5;0.9" dur="1.5s" repeatCount="indefinite" />
-      </circle>
-
-      {[0, 60, 120, 180, 240, 300].map((angle, i) => (
-        <circle
-          key={`particle-${i}`}
-          r="2"
-          fill={i % 2 === 0 ? '#FFD700' : '#00BFFF'}
-          opacity="0.6"
-        >
-          <animateMotion
-            dur={`${2 + i * 0.2}s`}
+        {isAnimating && (
+          <animate 
+            attributeName="opacity" 
+            values="0.4;0.95;0.4" 
+            dur="1.2s" 
             repeatCount="indefinite"
-            path={`M50,50 L${50 + 35 * Math.cos(angle * Math.PI / 180)},${50 + 35 * Math.sin(angle * Math.PI / 180)}`}
+            begin="0s"
           />
-          <animate attributeName="opacity" values="0.6;0.2;0.6" dur="1s" repeatCount="indefinite" />
-        </circle>
-      ))}
+        )}
+      </path>
+      
+      {/* Loop 2 - Bottom Left (Cyan) */}
+      <path 
+        d="M 22 80 C 10 68, 10 48, 22 36 C 32 26, 48 32, 50 50 C 42 64, 30 76, 22 80 C 32 92, 48 90, 50 78 Z"
+        fill={`url(#${ids.cyanGrad})`}
+        filter={`url(#${ids.glowFilter})`}
+      >
+        {isAnimating && (
+          <animate 
+            attributeName="opacity" 
+            values="0.4;0.95;0.4" 
+            dur="1.2s" 
+            repeatCount="indefinite"
+            begin="0.4s"
+          />
+        )}
+      </path>
+      
+      {/* Loop 3 - Bottom Right (Blue) */}
+      <path 
+        d="M 78 80 C 90 68, 90 48, 78 36 C 68 26, 52 32, 50 50 C 58 64, 70 76, 78 80 C 68 92, 52 90, 50 78 Z"
+        fill={`url(#${ids.blueGrad})`}
+        filter={`url(#${ids.glowFilter})`}
+      >
+        {isAnimating && (
+          <animate 
+            attributeName="opacity" 
+            values="0.4;0.95;0.4" 
+            dur="1.2s" 
+            repeatCount="indefinite"
+            begin="0.8s"
+          />
+        )}
+      </path>
+      
+      {/* Central core */}
+      <circle cx="50" cy="50" r="10" fill={`url(#${ids.coreGrad})`} filter={`url(#${ids.glowFilter})`}>
+        {isAnimating && (
+          <animate 
+            attributeName="r" 
+            values="8;12;8" 
+            dur="1.5s" 
+            repeatCount="indefinite"
+          />
+        )}
+      </circle>
+      <circle cx="50" cy="50" r="5" fill="#ffffff" opacity="0.95"/>
     </svg>
   );
 }
@@ -174,14 +173,69 @@ export const TrinityLoadingOverlay = memo(function TrinityLoadingOverlay({
     };
   }, [isLoading]);
 
-  if (!isLoading) return null;
-
-  const logoSize = size === 'sm' ? 48 : size === 'lg' ? 120 : 80;
+  const logoSize = size === 'sm' ? 56 : size === 'lg' ? 140 : 100;
   const displayMessage = message || LOADING_MESSAGES[messageIndex];
+
+  // Fullscreen variant uses AnimatePresence for smooth transitions
+  if (variant === 'fullscreen') {
+    return (
+      <AnimatePresence>
+        {isLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.3, ease: "easeInOut" }}
+            className={cn(
+              'fixed inset-0 z-[9999] flex flex-col items-center justify-center',
+              'bg-slate-100/95 dark:bg-slate-900/95 backdrop-blur-sm',
+              className
+            )}
+            data-testid="trinity-loading-overlay"
+          >
+            {/* Centered Trinity Logo with GetSling-style animation */}
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              transition={{ 
+                type: "spring", 
+                damping: 20, 
+                stiffness: 200,
+                delay: 0.1
+              }}
+            >
+              <AnimatedTrinityLogo size={logoSize} isAnimating={isLoading} />
+            </motion.div>
+            
+            {/* Message below logo */}
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2, duration: 0.3 }}
+              className="text-center space-y-2 mt-6"
+            >
+              <p className={cn(
+                'font-semibold bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 bg-clip-text text-transparent',
+                size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'
+              )}>
+                {displayMessage}{dots}
+              </p>
+              {subMessage && (
+                <p className="text-sm text-muted-foreground">{subMessage}</p>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    );
+  }
+
+  // Non-fullscreen variants
+  if (!isLoading) return null;
 
   const containerClasses = cn(
     'flex flex-col items-center justify-center gap-4',
-    variant === 'fullscreen' && 'fixed inset-0 z-50 bg-background/80 backdrop-blur-sm',
     variant === 'inline' && 'py-8',
     variant === 'card' && 'p-6 rounded-lg bg-card border',
     className
@@ -193,7 +247,7 @@ export const TrinityLoadingOverlay = memo(function TrinityLoadingOverlay({
       
       <div className="text-center space-y-1">
         <p className={cn(
-          'font-medium bg-gradient-to-r from-[#00BFFF] to-[#FFD700] bg-clip-text text-transparent',
+          'font-semibold bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 bg-clip-text text-transparent',
           size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'
         )}>
           {displayMessage}{dots}
@@ -207,7 +261,7 @@ export const TrinityLoadingOverlay = memo(function TrinityLoadingOverlay({
         {[0, 1, 2].map(i => (
           <div
             key={i}
-            className="w-2 h-2 rounded-full bg-gradient-to-r from-[#00BFFF] to-[#FFD700]"
+            className="w-2 h-2 rounded-full bg-gradient-to-r from-teal-500 to-cyan-500"
             style={{
               animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
             }}

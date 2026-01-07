@@ -1,4 +1,4 @@
-# CoAIleague Design System v4.0 - Polished New Age Design
+# CoAIleague Design System v5.0 - Fortune 500 Enterprise Design
 
 ## Enterprise Workforce Management Platform for Fortune 500
 
@@ -6,10 +6,11 @@
 
 ## Design Approach
 
-**System**: Modern new-age SaaS with dark sidebar and polished aesthetics
+**System**: Clean, minimal enterprise SaaS with refined proportions
 **Philosophy**: "OS"-branded modules (ScheduleOS, BillOS, TimeOS, etc.) delivering autonomous workforce intelligence
-**Visual Identity**: Dark navy sidebar + teal/cyan gradient accents + clean white content areas
+**Visual Identity**: Subtle slate grays + refined teal accents + clean white content areas
 **Mobile Strategy**: Equally polished native app experience with dark navigation
+**Key Principles**: Thin borders, subtle shadows, smaller border-radius, refined typography, ample whitespace
 
 ---
 
@@ -127,11 +128,14 @@
 **Nav Items**: Same styling as sidebar
 **User Profile**: bg-slate-800 card with gradient avatar
 
-### Cards & Panels
-**Base**: bg-card, rounded-xl, border, shadow-sm
-**Hover**: transition-all, hover:shadow-md, hover:border-primary/20
-**Header**: Flex with icon, title, badge, action
-**Content**: p-6 with consistent spacing
+### Cards & Panels (Fortune 500 Style)
+**Base**: bg-white, rounded-lg (NOT rounded-xl - more refined), border border-slate-200, shadow-sm
+**Hover**: transition-all, hover:shadow-md, hover:border-slate-300
+**Header**: Flex with icon, title, badge, action - minimal padding
+**Content**: p-5 (not p-6 or p-8 - tighter proportions)
+**Border-radius**: rounded-md or rounded-lg (never rounded-xl or rounded-2xl for professional look)
+**Shadows**: shadow-sm or shadow-md only (never shadow-lg, shadow-xl, shadow-2xl)
+**Borders**: Single pixel borders (border, not border-2)
 
 ### Buttons
 **Primary**: Default shadcn with gradient hover
