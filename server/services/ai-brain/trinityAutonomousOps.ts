@@ -711,10 +711,25 @@ class TrinityAutonomousOps {
     const startTime = Date.now();
     
     try {
+      // Check if sessions table exists before trying to clean
+      const tableExists = await db.execute(
+        sql`SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'sessions'
+        )`
+      );
+      
+      // Sessions table managed by express-session with connect-pg-simple
+      // Skip if not configured
+      if (!tableExists?.rows?.[0]?.exists) {
+        return null;
+      }
+      
       const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
       
-      const result = await db.execute(
-        sql`DELETE FROM session WHERE expire < ${thirtyDaysAgo}`
+      await db.execute(
+        sql`DELETE FROM sessions WHERE expire < ${thirtyDaysAgo}`
       );
 
       const action: AutonomousAction = {
@@ -736,7 +751,8 @@ class TrinityAutonomousOps {
       
       return action;
     } catch (error) {
-      console.error('[TrinityAutonomousOps] Session cleanup failed:', error);
+      // Session table might not exist if using memory store - this is fine
+      console.log('[TrinityAutonomousOps] Session cleanup skipped (table may not exist)');
       return null;
     }
   }

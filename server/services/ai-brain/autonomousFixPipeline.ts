@@ -1128,7 +1128,7 @@ class AutonomousFixPipelineService {
         .where(
           and(
             eq(aiGapFindings.status, 'open'),
-            gte(aiGapFindings.confidence, this.config.autoApproveThreshold)
+            gte(aiGapFindings.detectionConfidence, String(this.config.autoApproveThreshold))
           )
         )
         .orderBy(
@@ -1190,7 +1190,7 @@ class AutonomousFixPipelineService {
             // Mark finding as resolved
             await db
               .update(aiGapFindings)
-              .set({ status: 'resolved', resolvedAt: new Date() })
+              .set({ status: 'fixed', fixedAt: new Date() })
               .where(eq(aiGapFindings.id, finding.id));
           } else {
             results.errors.push(`${finding.id}: ${result.message}`);
