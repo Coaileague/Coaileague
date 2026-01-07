@@ -4,6 +4,7 @@ import { useLocation } from 'wouter';
 import { Helmet } from 'react-helmet-async';
 import { apiRequest, queryClient } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -49,10 +50,13 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { LogoMark } from '@/components/ui/logo-mark';
-import { TrinityAnimatedLogo, TrinityThinkingIndicator } from '@/components/ui/trinity-animated-logo';
 
-type ConversationMode = 'business' | 'personal' | 'integrated';
-type SpiritualGuidance = 'none' | 'general' | 'christian';
+import {
+  type ConversationMode,
+  type SpiritualGuidance,
+  TRINITY_MODES,
+  TRINITY_API_ENDPOINTS,
+} from '@/config/trinity';
 
 interface Message {
   id: string;
@@ -78,24 +82,6 @@ interface BuddySettings {
   proactiveInsights: boolean;
 }
 
-const MODE_COLORS = {
-  business: 'from-blue-500 to-cyan-500',
-  personal: 'from-emerald-500 to-teal-500',
-  integrated: 'from-purple-500 to-pink-500',
-};
-
-const MODE_ICONS = {
-  business: Briefcase,
-  personal: Heart,
-  integrated: Zap,
-};
-
-const MODE_LABELS = {
-  business: 'Business',
-  personal: 'Personal',
-  integrated: 'Integrated',
-};
-
 export default function TrinityChat() {
   const [message, setMessage] = useState('');
   const [mode, setMode] = useState<ConversationMode>('business');
@@ -105,6 +91,10 @@ export default function TrinityChat() {
   const [historyOpen, setHistoryOpen] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { user } = useAuth();
+  
+  // Personalization: extract user name for greeting
+  const userName = user?.firstName || user?.username || user?.email?.split('@')[0] || 'there';
 
   // Fetch BUDDY settings
   const { data: buddySettings, isLoading: settingsLoading } = useQuery<BuddySettings>({
@@ -155,7 +145,7 @@ export default function TrinityChat() {
       setMessages([]);
       toast({
         title: 'Mode Changed',
-        description: `Switched to ${MODE_LABELS[data.mode]} mode`,
+        description: `Switched to ${TRINITY_MODES[data.mode as ConversationMode].label} mode`,
       });
     },
   });
@@ -251,7 +241,7 @@ export default function TrinityChat() {
     }
   };
 
-  const ModeIcon = MODE_ICONS[mode];
+  const ModeIcon = TRINITY_MODES[mode].icon;
 
   return (
     <>
@@ -266,15 +256,17 @@ export default function TrinityChat() {
           {/* Header */}
           <div className="border-b p-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-2">
-              <TrinityAnimatedLogo size="md" state="idle" mode={mode} />
+              <LogoMark size="md" />
               <div>
                 <h1 className="text-base font-semibold flex items-center gap-2">
                   Trinity
                   <Badge variant="secondary">
-                    {MODE_LABELS[mode]}
+                    {TRINITY_MODES[mode].label}
                   </Badge>
                 </h1>
-                <p className="text-[10px] text-muted-foreground">AI Intelligence Partner</p>
+                <p className="text-[10px] text-muted-foreground">
+                  {userName !== 'there' ? `Ready to help, ${userName}` : 'AI Intelligence Partner'}
+                </p>
               </div>
             </div>
 
@@ -329,7 +321,7 @@ export default function TrinityChat() {
                     ) : historyData?.sessions?.length ? (
                       <div className="space-y-2">
                         {historyData.sessions.map((session) => {
-                          const SessionIcon = MODE_ICONS[session.mode];
+                          const SessionIcon = TRINITY_MODES[session.mode].icon;
                           return (
                             <Card
                               key={session.id}
@@ -341,7 +333,7 @@ export default function TrinityChat() {
                                 <div className="flex items-center gap-2 mb-1">
                                   <SessionIcon className="h-3 w-3" />
                                   <Badge variant="secondary" className="text-[10px]">
-                                    {MODE_LABELS[session.mode]}
+                                    {TRINITY_MODES[session.mode].label}
                                   </Badge>
                                   <span className="text-[10px] text-muted-foreground ml-auto">
                                     {formatDistanceToNow(new Date(session.lastActivityAt), { addSuffix: true })}
@@ -485,9 +477,11 @@ export default function TrinityChat() {
               {messages.length === 0 ? (
                 <div className="text-center py-16">
                   <div className="mx-auto w-16 h-16 flex items-center justify-center mb-4">
-                    <TrinityAnimatedLogo size="lg" state="idle" mode={mode} />
+                    <LogoMark size="xl" />
                   </div>
-                  <h2 className="text-xl font-semibold mb-2">Start a Conversation</h2>
+                  <h2 className="text-xl font-semibold mb-2">
+                    Hey {userName}, ready to chat?
+                  </h2>
                   <p className="text-muted-foreground max-w-md mx-auto">
                     {mode === 'business' && "Ask me about schedules, payroll, profits, or any business insight."}
                     {mode === 'personal' && "I'm here as your accountability partner. Let's work on your growth."}
@@ -501,8 +495,8 @@ export default function TrinityChat() {
                     className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {msg.role === 'assistant' && (
-                      <div className="shrink-0">
-                        <TrinityAnimatedLogo size="sm" state="idle" mode={mode} />
+                      <div className="shrink-0 w-8 h-8 flex items-center justify-center">
+                        <LogoMark size="sm" />
                       </div>
                     )}
                     <div
@@ -527,7 +521,9 @@ export default function TrinityChat() {
               )}
               {chatMutation.isPending && (
                 <div className="flex gap-3 justify-start items-center">
-                  <TrinityAnimatedLogo size="sm" state="thinking" mode={mode} />
+                  <div className="shrink-0 w-8 h-8 flex items-center justify-center animate-pulse">
+                    <LogoMark size="sm" />
+                  </div>
                   <div className="bg-muted rounded-lg px-3 py-2">
                     <p className="text-sm text-muted-foreground animate-pulse">Trinity is thinking...</p>
                   </div>

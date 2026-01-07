@@ -9,28 +9,36 @@
 import { Router, Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { trinityChatService, ConversationMode } from '../services/ai-brain/trinityChatService';
+import { attachWorkspaceId, AuthenticatedRequest } from '../rbac';
 
 const router = Router();
 
 // RBAC Middleware - Only allow org_owner, co_owner, manager (and platform staff)
 const requireTrinityAccess = (req: Request, res: Response, next: NextFunction) => {
-  if (!req.user) {
+  const authReq = req as AuthenticatedRequest;
+  
+  if (!authReq.user) {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
-  const user = req.user as any;
   const allowedOrgRoles = ['org_owner', 'co_owner', 'manager'];
-  const allowedPlatformRoles = ['root_admin', 'co_admin', 'sysops'];
+  const allowedPlatformRoles = ['root_admin', 'co_admin', 'sysops', 'deputy_admin'];
   
-  // Check all possible role fields from session
-  const orgRole = user.role || user.employeeRole || user.workspaceRole;
-  const platformRole = user.platformRole;
+  // Check workspaceRole from attachWorkspaceId middleware (req.workspaceRole)
+  // This is properly resolved from workspace ownership or employee record
+  const orgRole = authReq.workspaceRole;
+  const platformRole = authReq.platformRole || (authReq.user as any).platformRole;
   
   // Allow if user has an allowed org role OR platform role
-  const hasOrgAccess = allowedOrgRoles.includes(orgRole);
-  const hasPlatformAccess = allowedPlatformRoles.includes(platformRole);
+  const hasOrgAccess = orgRole && allowedOrgRoles.includes(orgRole);
+  const hasPlatformAccess = platformRole && allowedPlatformRoles.includes(platformRole);
   
   if (!hasOrgAccess && !hasPlatformAccess) {
+    console.log('[TrinityChat] Access denied:', {
+      userId: authReq.user.id,
+      workspaceRole: orgRole,
+      platformRole,
+    });
     return res.status(403).json({ 
       error: 'Access denied',
       message: 'Trinity Chat is available for org owners, co-owners, and managers only',
@@ -62,20 +70,20 @@ const updateSettingsSchema = z.object({
 });
 
 /**
- * POST /api/trinity/chat
+ * POST /api/trinity/chat/chat
  * Send a message to Trinity and get a response
  */
-router.post('/chat', requireTrinityAccess, async (req: Request, res: Response) => {
+router.post('/chat', attachWorkspaceId, requireTrinityAccess, async (req: Request, res: Response) => {
   try {
-
+    const authReq = req as AuthenticatedRequest;
     const parsed = chatSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: 'Invalid request', details: parsed.error.issues });
     }
 
     const { message, mode, sessionId } = parsed.data;
-    const userId = (req.user as any).id;
-    const workspaceId = (req.user as any).workspaceId;
+    const userId = authReq.user!.id;
+    const workspaceId = authReq.workspaceId;
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace context required' });
@@ -97,14 +105,14 @@ router.post('/chat', requireTrinityAccess, async (req: Request, res: Response) =
 });
 
 /**
- * GET /api/trinity/history
+ * GET /api/trinity/chat/history
  * Get user's conversation history
  */
-router.get('/history', requireTrinityAccess, async (req: Request, res: Response) => {
+router.get('/history', attachWorkspaceId, requireTrinityAccess, async (req: Request, res: Response) => {
   try {
-
-    const userId = (req.user as any).id;
-    const workspaceId = (req.user as any).workspaceId;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user!.id;
+    const workspaceId = authReq.workspaceId;
     const limit = parseInt(req.query.limit as string) || 20;
 
     if (!workspaceId) {
@@ -120,12 +128,11 @@ router.get('/history', requireTrinityAccess, async (req: Request, res: Response)
 });
 
 /**
- * GET /api/trinity/session/:sessionId/messages
+ * GET /api/trinity/chat/session/:sessionId/messages
  * Get messages for a specific session
  */
-router.get('/session/:sessionId/messages', requireTrinityAccess, async (req: Request, res: Response) => {
+router.get('/session/:sessionId/messages', attachWorkspaceId, requireTrinityAccess, async (req: Request, res: Response) => {
   try {
-
     const { sessionId } = req.params;
     const messages = await trinityChatService.getSessionMessages(sessionId);
     return res.json({ messages });
@@ -136,19 +143,19 @@ router.get('/session/:sessionId/messages', requireTrinityAccess, async (req: Req
 });
 
 /**
- * POST /api/trinity/mode
+ * POST /api/trinity/chat/mode
  * Switch conversation mode
  */
-router.post('/mode', requireTrinityAccess, async (req: Request, res: Response) => {
+router.post('/mode', attachWorkspaceId, requireTrinityAccess, async (req: Request, res: Response) => {
   try {
-
+    const authReq = req as AuthenticatedRequest;
     const { mode } = req.body;
     if (!['business', 'personal', 'integrated'].includes(mode)) {
       return res.status(400).json({ error: 'Invalid mode' });
     }
 
-    const userId = (req.user as any).id;
-    const workspaceId = (req.user as any).workspaceId;
+    const userId = authReq.user!.id;
+    const workspaceId = authReq.workspaceId;
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace context required' });
@@ -163,14 +170,14 @@ router.post('/mode', requireTrinityAccess, async (req: Request, res: Response) =
 });
 
 /**
- * GET /api/trinity/settings
+ * GET /api/trinity/chat/settings
  * Get BUDDY settings for current user
  */
-router.get('/settings', requireTrinityAccess, async (req: Request, res: Response) => {
+router.get('/settings', attachWorkspaceId, requireTrinityAccess, async (req: Request, res: Response) => {
   try {
-
-    const userId = (req.user as any).id;
-    const workspaceId = (req.user as any).workspaceId;
+    const authReq = req as AuthenticatedRequest;
+    const userId = authReq.user!.id;
+    const workspaceId = authReq.workspaceId;
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace context required' });
@@ -185,19 +192,19 @@ router.get('/settings', requireTrinityAccess, async (req: Request, res: Response
 });
 
 /**
- * PATCH /api/trinity/settings
+ * PATCH /api/trinity/chat/settings
  * Update BUDDY settings
  */
-router.patch('/settings', requireTrinityAccess, async (req: Request, res: Response) => {
+router.patch('/settings', attachWorkspaceId, requireTrinityAccess, async (req: Request, res: Response) => {
   try {
-
+    const authReq = req as AuthenticatedRequest;
     const parsed = updateSettingsSchema.safeParse(req.body);
     if (!parsed.success) {
       return res.status(400).json({ error: 'Invalid settings', details: parsed.error.issues });
     }
 
-    const userId = (req.user as any).id;
-    const workspaceId = (req.user as any).workspaceId;
+    const userId = authReq.user!.id;
+    const workspaceId = authReq.workspaceId;
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'Workspace context required' });

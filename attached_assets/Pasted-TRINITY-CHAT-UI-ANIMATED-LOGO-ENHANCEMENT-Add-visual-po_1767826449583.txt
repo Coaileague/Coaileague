@@ -1,0 +1,186 @@
+TRINITY CHAT UI - ANIMATED LOGO ENHANCEMENT
+
+Add visual polish to Trinity chat interface with animated inline logo that reacts during conversation (similar to Claude.ai's animated logo).
+
+REFERENCE:
+Visit https://coaileague.com and look at the custom star icon logo next to our company name in the header. This is the logo we want to use for Trinity.
+
+CURRENT ISSUE:
+Second attached image shows our current logo has a BLUE BACKGROUND that conflicts with the UI. The blue background is covering/blending with the star. This needs to be fixed - the logo should have a transparent background so only the star shows.
+
+REQUIREMENTS:
+
+1. ANIMATED TRINITY LOGO IN CHAT
+
+Location: Inline with Trinity's messages (like Claude.ai does with their logo)
+
+Visual behavior:
+┌────────────────────────────────────────┐
+│  ✨ Trinity                            │
+│  [Animated star logo here]            │
+│  Your overtime costs are $3,240...    │
+└────────────────────────────────────────┘
+
+Animation states:
+- IDLE: Gentle pulse/glow (slow breathing effect)
+- THINKING: Spinning or shimmering (while generating response)
+- RESPONDING: Smooth fade-in as text appears
+- COMPLETE: Returns to idle pulse
+
+2. LOGO FILE REQUIREMENTS
+
+Extract the star logo from our site header or use attached image.
+
+Fix the background issue:
+- Remove blue background completely
+- Make background TRANSPARENT (PNG with alpha channel)
+- Only the star icon should be visible
+- Star should work on any background color
+
+Create multiple sizes:
+- 48x48px (desktop chat)
+- 32x32px (mobile chat)
+- 24x24px (small UI elements)
+
+3. ANIMATION IMPLEMENTATION
+
+Use CSS animations (smooth, performant):
+```css
+/* Idle state - gentle pulse */
+@keyframes trinity-pulse {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+/* Thinking state - spin with glow */
+@keyframes trinity-thinking {
+  0% { 
+    transform: rotate(0deg);
+    filter: brightness(1);
+  }
+  50% {
+    filter: brightness(1.3);
+  }
+  100% { 
+    transform: rotate(360deg);
+    filter: brightness(1);
+  }
+}
+
+/* Apply animations */
+.trinity-logo {
+  width: 48px;
+  height: 48px;
+  animation: trinity-pulse 3s ease-in-out infinite;
+}
+
+.trinity-logo.thinking {
+  animation: trinity-thinking 2s linear infinite;
+}
+```
+
+4. CHAT MESSAGE LAYOUT
+
+Desktop:
+┌──────────────────────────────────────────┐
+│ [✨ 48px logo] Trinity                   │
+│                Your overtime costs are   │
+│                $3,240 this month...      │
+└──────────────────────────────────────────┘
+
+Mobile:
+┌────────────────────────────┐
+│ [✨ 32px] Trinity          │
+│           Your overtime    │
+│           costs are...     │
+└────────────────────────────┘
+
+Logo positioning:
+- Float left of Trinity's name
+- Vertically centered with first line of text
+- 8px margin-right for spacing
+- Consistent across all modes (Business/Personal/Integrated)
+
+5. MODE-SPECIFIC VISUAL ENHANCEMENTS (Optional)
+
+Color tint the star based on current mode:
+- Business Mode: Blue tint (#3B82F6)
+- Personal Mode: Green tint (#10B981)
+- Integrated Mode: Purple tint (#8B5CF6)
+
+Apply subtle CSS filter:
+```css
+.trinity-logo.business-mode {
+  filter: brightness(1.1) hue-rotate(200deg);
+}
+
+.trinity-logo.personal-mode {
+  filter: brightness(1.1) hue-rotate(140deg);
+}
+
+.trinity-logo.integrated-mode {
+  filter: brightness(1.1) hue-rotate(270deg);
+}
+```
+
+6. USER MESSAGE (No Logo)
+
+User messages should NOT have a logo - only Trinity's messages get the animated star.
+
+Layout:
+┌──────────────────────────────────────────┐
+│                              John Smith  │
+│              What's my overtime cost?    │
+└──────────────────────────────────────────┘
+
+7. THINKING INDICATOR
+
+While Trinity is generating response, show:
+┌──────────────────────────────────────────┐
+│ [✨ spinning logo] Trinity is thinking...│
+└──────────────────────────────────────────┘
+
+Text pulses gently while logo spins.
+
+8. PERFORMANCE CONSIDERATIONS
+
+- Use CSS animations (not JavaScript) for smoothness
+- Use transform and opacity (GPU-accelerated)
+- Avoid heavy filters that cause lag
+- Test on mobile devices for performance
+
+9. FALLBACK
+
+If logo fails to load:
+- Show text-based icon: "✨" (sparkles emoji)
+- Or show "T" in a circle as backup
+
+10. IMPLEMENTATION CHECKLIST
+
+✅ Extract star logo from site header
+✅ Remove blue background (make transparent PNG)
+✅ Create 48px, 32px, 24px versions
+✅ Add logo to Trinity message components
+✅ Implement idle pulse animation
+✅ Implement thinking/spinning animation
+✅ Apply mode-specific color tints (optional)
+✅ Test on desktop and mobile
+✅ Ensure smooth performance (60fps)
+
+DELIVERABLE:
+Trinity chat with animated inline logo that:
+- Pulses gently when idle
+- Spins when thinking
+- Has transparent background (no blue)
+- Looks polished and professional
+- Works smoothly on desktop and mobile
+
+This is a visual enhancement that makes Trinity feel more "alive" and premium - similar to Claude.ai's animated logo experience.
+
+Implement and provide screenshots of the animated logo in action.

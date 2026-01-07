@@ -46,6 +46,7 @@ import { useIsMobile, ResponsiveAppFrame } from "@/hooks/use-mobile";
 import { MobileBottomNav } from "@/components/mobile/MobileBottomNav";
 import { MobileQuickActionsFAB } from "@/components/mobile/MobileQuickActionsFAB";
 import { PWAInstallPrompt } from "@/components/mobile/PWAInstallPrompt";
+import { FloatingTrinityButton } from "@/components/floating-trinity-button";
 import { performLogout } from "@/lib/logoutHandler";
 import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
@@ -1574,6 +1575,8 @@ export default function App() {
                         {/* Mini HelpAI Chat Bubble - ONLY for guests (not logged in) */}
                         {/* Authenticated users access HelpDesk directly via main navigation */}
                         <FloatingSupportChat />
+                        {/* Floating Trinity Button - Persistent AI chat access (RBAC-gated) */}
+                        <FloatingTrinityButton />
                       </SeasonalThemeProvider>
                     </UniversalAnimationProvider>
                   </TooltipProvider>

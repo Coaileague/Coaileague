@@ -547,6 +547,18 @@ export const sidebarModules: SidebarModule[] = [
         isPrimary: false,
         order: 3,
       },
+      {
+        id: 'trinity-chat',
+        label: 'Trinity Chat',
+        href: '/trinity',
+        icon: Brain,
+        description: 'AI-powered conversational assistant with business insights',
+        capabilities: ['manage_workspace'],
+        familyId: 'intelligence',
+        isPrimary: true,
+        order: 0,
+        badge: 'AI',
+      },
     ],
   },
   {
