@@ -272,7 +272,7 @@ export default function TrinityChat() {
           <div className="border-b p-4 flex items-center justify-between gap-4">
             <div className="flex items-center gap-3">
               <div className={`p-2 rounded-lg bg-gradient-to-br ${MODE_COLORS[mode]}`}>
-                <LogoMark size={24} className="text-white" />
+                <LogoMark size="sm" className="text-white" />
               </div>
               <div>
                 <h1 className="text-lg font-semibold flex items-center gap-2">
