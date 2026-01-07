@@ -1,0 +1,886 @@
+SCHEDULE INTERFACE - Missing Critical Workforce Management Features
+
+Our current schedule is a basic calendar grid. GetSling (our competitor) has a fully integrated workforce management system built INTO the schedule view. We need feature parity.
+
+CONTEXT:
+We ARE the scheduling software. We're not integrating with external tools. Our schedule interface must be the central hub for ALL workforce operations - scheduling, time tracking, task management, communication, and reporting.
+
+MISSING FEATURES AUDIT (Compared to GetSling):
+
+---
+
+1. TOP TOOLBAR - CORE ACTIONS
+
+GetSling has action buttons across the top. We need:
+
+┌─────────────────────────────────────────────────────────────────┐
+│ [+ Create Shift] [📋 Tasks] [🕐 Time Clock] [💬 Messages]     │
+│ [📊 Reports] [👥 Availability] [🔄 Publish] [⚙️ Settings]      │
+└─────────────────────────────────────────────────────────────────┘
+
+EACH BUTTON:
+
+**[+ Create Shift]**
+- Opens shift creation modal
+- Quick assign: Employee, Client, Date, Time
+- Drag to calendar when done
+
+**[📋 Tasks]**
+- Opens task management panel
+- Assign tasks to employees
+- Track completion status
+- Link tasks to shifts (e.g., "Complete incident report after shift")
+
+**[🕐 Time Clock]**
+- Manager view of all clock in/out events
+- Approve/reject time entries
+- Flag discrepancies (late clock in, missed clock out)
+- GPS verification status
+
+**[💬 Messages]**
+- Team communication (like Slack, but built-in)
+- Send to individual, team, or all staff
+- Shift-specific messaging (discuss coverage, swap requests)
+- Announcement broadcasts
+
+**[📊 Reports]**
+- Quick access to:
+  * Labor cost report
+  * Hours worked summary
+  * Schedule adherence (who clocked in on time)
+  * Client billing summary
+  * Overtime tracking
+- Export to PDF/Excel
+
+**[👥 Availability]**
+- Employee availability calendar
+- See who's available to fill open shifts
+- Request time off
+- Manage blackout dates
+
+**[🔄 Publish]**
+- Publish schedule to employees (makes it visible)
+- Unpublished = draft mode (employees can't see yet)
+- Notify employees when published
+- Track who viewed their schedule
+
+**[⚙️ Settings]**
+- Schedule view preferences (day/week/month)
+- Shift templates
+- Auto-scheduling rules
+- Notification settings
+
+---
+
+2. LEFT SIDEBAR - FILTERS & EMPLOYEE LIST
+
+GetSling has robust filtering. We need:
+
+┌─────────────────────────────┐
+│ FILTERS                     │
+├─────────────────────────────┤
+│ 🔍 Search employees...      │
+│                             │
+│ 📍 Locations                │
+│ ☐ All Locations             │
+│ ☐ Downtown Branch           │
+│ ☐ Airport Site              │
+│ ☐ Warehouse District        │
+│                             │
+│ 👥 Positions                │
+│ ☐ All Positions             │
+│ ☐ Security Officer          │
+│ ☐ Supervisor                │
+│ ☐ Armed Guard               │
+│                             │
+│ 📊 Employee Status          │
+│ ☐ Active                    │
+│ ☐ On Leave                  │
+│ ☐ Part-Time                 │
+│                             │
+│ 🎯 Tags/Skills              │
+│ ☐ CPR Certified             │
+│ ☐ Bilingual                 │
+│ ☐ Armed License             │
+│                             │
+│ [Clear Filters]             │
+└─────────────────────────────┘
+
+Filters should:
+- Update schedule view in real-time
+- Be saveable (e.g., "Downtown Team" preset)
+- Show employee count for each filter
+
+---
+
+3. EMPLOYEE ROW - CONTEXTUAL ACTIONS
+
+GetSling shows employee info + quick actions per row. We need:
+
+Each employee row should show:
+
+[Photo] John Smith               [⋮ Actions]
+Security Officer | $18/hr
+🟢 Available | 32h scheduled
+
+Click [⋮ Actions] dropdown:
+- View Profile
+- Assign Shift
+- Send Message
+- View Availability
+- View Time Entries
+- Request Swap
+- Mark Unavailable
+
+Hover over employee shows:
+- Total hours this week
+- Next scheduled shift
+- Skills/certifications
+- Contact info
+
+---
+
+4. SHIFT BLOCKS - INTERACTIVE FEATURES
+
+GetSling shift blocks are clickable with actions. We need:
+
+Click on any shift block → Modal opens:
+
+┌─────────────────────────────────────┐
+│ SHIFT DETAILS                       │
+├─────────────────────────────────────┤
+│ Employee: John Smith                │
+│ Client: ABC Bank - Downtown         │
+│ Position: Armed Security            │
+│ Date: Jan 10, 2026                  │
+│ Time: 7:00 PM - 3:30 AM (8.5h)     │
+│ Pay Rate: $18/hr                    │
+│ Total Cost: $153.00                 │
+│                                     │
+│ Status: 🟢 Published                │
+│                                     │
+│ Notes: [Optional shift notes...]    │
+│                                     │
+│ ☐ Recurring shift (repeat weekly)  │
+│                                     │
+│ Actions:                            │
+│ [ Edit ] [ Copy ] [ Delete ]        │
+│ [ Request Swap ] [ Publish ]        │
+└─────────────────────────────────────┘
+
+Right-click shift block → Context menu:
+- Edit Shift
+- Copy Shift
+- Delete Shift
+- Assign to Different Employee
+- Mark as Critical (high priority)
+- Add Notes
+- Send Reminder
+
+---
+
+5. DRAG & DROP FUNCTIONALITY
+
+GetSling allows intuitive drag operations. We need:
+
+✅ Drag shift to different time → Update shift time
+✅ Drag shift to different employee → Reassign shift
+✅ Drag shift to different day → Reschedule shift
+✅ Drag edge of shift → Adjust start/end time
+✅ Drag from "Unassigned Shifts" panel → Create shift
+✅ Multi-select shifts (hold Shift key) → Bulk actions
+
+While dragging:
+- Show ghost preview of where shift will land
+- Highlight drop zones (green = valid, red = conflict)
+- Show calculated new time/cost
+- Auto-scroll if dragging near edge
+
+After drop:
+- Confirm modal: "Move shift to Tuesday 9am?"
+- Calculate cost difference if pay rate changes
+- Notify affected employee
+
+---
+
+6. UNASSIGNED SHIFTS PANEL
+
+GetSling has an "Open Shifts" section. We need:
+
+Add collapsible panel at bottom or side:
+
+┌─────────────────────────────────────┐
+│ 🔓 UNASSIGNED SHIFTS (12)          │
+├─────────────────────────────────────┤
+│ ABC Bank - 7pm-3am (Thu)           │
+│ No employee assigned               │
+│ [Assign] [Auto-Fill]               │
+│                                     │
+│ XYZ Corp - 6am-2pm (Fri)           │
+│ No employee assigned               │
+│ [Assign] [Auto-Fill]               │
+└─────────────────────────────────────┘
+
+Actions:
+- Click [Assign] → Choose employee from list
+- Click [Auto-Fill] → Trinity AI suggests best employee
+- Drag shift to employee row on calendar
+- Bulk assign multiple open shifts
+
+Show warning badge if shifts are unfilled within 48h
+
+---
+
+7. TIME CLOCK INTEGRATION IN SCHEDULE
+
+GetSling shows clock in/out status directly on schedule. We need:
+
+Shift blocks should show real-time status:
+
+🟢 CLOCKED IN (Green pulse)
+- "John Smith clocked in at 7:02 PM"
+- GPS verified at correct location
+
+⚪ SCHEDULED (White/default)
+- Shift starts in 2 hours
+- No clock in yet
+
+🔴 LATE/NO SHOW (Red)
+- Shift started 15 minutes ago
+- No clock in detected
+- Alert manager
+
+🟡 CLOCKED OUT (Yellow)
+- "John Smith clocked out at 3:28 AM"
+- Awaiting timesheet approval
+
+Add indicator icons to shift blocks:
+📍 GPS verified
+⚠️ Late clock in
+❌ Missed clock in
+✅ Approved time entry
+
+---
+
+8. SHIFT SWAP REQUESTS
+
+GetSling allows employees to request shift swaps. We need:
+
+Shift blocks with pending swap requests:
+- Show 🔄 icon on shift
+- Badge: "Swap Requested"
+- Hover shows: "Jane wants to swap with John"
+
+Manager approval workflow:
+- Click shift → See swap request details
+- [Approve] → Shifts switch automatically
+- [Deny] → Notify requester
+
+Employee can initiate:
+- From mobile app or web
+- Select shift → "Request Swap"
+- Choose employee to swap with
+- Manager gets notification
+
+---
+
+9. SCHEDULE TEMPLATES
+
+GetSling has reusable templates. We need:
+
+Create schedule templates:
+- "Standard Week" (Mon-Fri 9-5)
+- "Weekend Coverage" (Sat-Sun 24/7)
+- "Holiday Schedule" (reduced staff)
+
+Template actions:
+- Save current schedule as template
+- Apply template to future week
+- Templates auto-fill based on roles
+- Adjust after applying
+
+Template library:
+- Org-wide templates (all managers see)
+- Personal templates (manager-specific)
+- Industry templates (security patrol best practices)
+
+---
+
+10. MOBILE-OPTIMIZED SCHEDULE VIEW
+
+GetSling has excellent mobile UX. We need:
+
+Mobile schedule view (<768px):
+- Bottom navigation (not top toolbar)
+- Swipe between days (not scroll horizontally)
+- Tap shift → Bottom sheet (not modal)
+- Large touch targets (min 48px)
+- Quick actions menu (floating button)
+
+Mobile-specific features:
+- Push notifications (shift reminder, swap approved)
+- Native clock in/out button
+- Quick "Accept Shift" for offered shifts
+- Offline mode (view schedule without internet)
+
+---
+
+11. SCHEDULE CONFLICTS & ALERTS
+
+GetSling highlights scheduling issues. We need:
+
+Visual indicators on calendar:
+- ⚠️ OVERTIME WARNING (Employee exceeds 40h)
+- ❌ DOUBLE-BOOKED (Employee scheduled twice same time)
+- 🚫 MISSING CERTIFICATION (Employee assigned to armed shift without license)
+- 📅 CONSECUTIVE DAYS (Employee works 7+ days without break)
+- ⏰ INSUFFICIENT REST (Less than 8h between shifts)
+
+Conflict modal pops up when:
+- Trying to assign conflicting shift
+- Shows reason: "John already scheduled 7pm-3am at ABC Bank"
+- Options: [Override] [Cancel] [Assign to Someone Else]
+
+Daily conflict report:
+- Email to manager at 8am
+- Lists all scheduling issues
+- Requires acknowledgment before publishing
+
+---
+
+12. SCHEDULE PUBLISH WORKFLOW
+
+GetSling has draft/publish system. We need:
+
+Schedule states:
+1. DRAFT - Only managers see, editable
+2. PUBLISHED - Employees can view, locked unless unpublished
+3. ARCHIVED - Past schedules, read-only
+
+Publish button workflow:
+- Click [🔄 Publish]
+- Modal shows: "Publish schedule for Jan 5-11, 2026?"
+- Preview: "12 employees, 47 shifts, $8,450 labor cost"
+- Checkboxes:
+  ☐ Notify employees via SMS
+  ☐ Notify employees via email
+  ☐ Notify employees via app push
+- [Confirm Publish]
+
+After publish:
+- Employees receive notification
+- Schedule locked from editing (must unpublish first)
+- Track who viewed their schedule (read receipts)
+
+Unpublish option:
+- If major changes needed
+- Unpublish → Edit → Republish
+- Employees notified of changes
+
+---
+
+13. REPORTING WITHIN SCHEDULE INTERFACE
+
+GetSling embeds reports. We need:
+
+Quick stats bar above calendar:
+
+┌─────────────────────────────────────────────────────────┐
+│ WEEK SUMMARY: Jan 5-11, 2026                           │
+├─────────────────────────────────────────────────────────┤
+│ Total Hours: 342h | Labor Cost: $6,840                 │
+│ Avg Hours/Employee: 28.5h | Overtime: 12h              │
+│ Shifts Filled: 45/47 (96%) | Open Shifts: 2            │
+│ [View Detailed Report]                                  │
+└─────────────────────────────────────────────────────────┘
+
+Click [View Detailed Report] → Opens:
+- Hours by employee
+- Hours by client
+- Hours by position
+- Cost breakdown
+- Export to Excel/PDF
+
+Per-employee stats (hover over employee row):
+- Hours scheduled this week: 32h
+- Hours worked (actual): 31.5h
+- Difference: -0.5h (left early)
+- Gross pay: $576
+
+---
+
+14. TRINITY AI INTEGRATION IN SCHEDULE
+
+GetSling doesn't have AI. THIS IS OUR DIFFERENTIATOR.
+
+Add Trinity AI features:
+
+**✨ Auto-Schedule Button**
+- Click [🤖 Auto-Schedule]
+- Trinity analyzes:
+  * Employee availability
+  * Skills/certifications
+  * Client requirements
+  * Labor laws (max hours, rest periods)
+  * Cost optimization
+- Generates optimal schedule in seconds
+- Manager reviews and publishes
+
+**AI Insights Panel (collapsible sidebar):**
+┌─────────────────────────────────────┐
+│ 🤖 TRINITY INSIGHTS                │
+├─────────────────────────────────────┤
+│ ⚠️ Labor cost 12% over budget      │
+│    Recommendation: Reduce shifts   │
+│    at XYZ Corp (lower margin)      │
+│                                     │
+│ 💡 John Smith available Fri-Sun    │
+│    but unscheduled. Add shifts?    │
+│                                     │
+│ 🎯 Best coverage efficiency: 94%   │
+│    Industry avg: 87%                │
+│                                     │
+│ [Ask Trinity]                       │
+└─────────────────────────────────────┘
+
+Click [Ask Trinity] → Chat opens:
+- "Trinity, who's best for ABC Bank Friday night shift?"
+- "Trinity, optimize this week for profit"
+- "Trinity, why is Jane unscheduled?"
+
+---
+
+IMPLEMENTATION PRIORITIES:
+
+🔴 CRITICAL (Must have for launch):
+1. Top toolbar (Create Shift, Time Clock, Reports)
+2. Drag & drop functionality
+3. Shift detail modals
+4. Publish/Draft workflow
+5. Mobile optimization
+6. Conflict detection
+
+🟡 IMPORTANT (Add within 30 days post-launch):
+7. Filters & search
+8. Unassigned shifts panel
+9. Schedule templates
+10. Reporting integration
+11. Shift swap requests
+
+🟢 NICE-TO-HAVE (Add within 60 days):
+12. Tasks integration
+13. Messaging system
+14. Advanced Trinity AI features
+15. Availability management
+
+BUILD FEATURE PARITY WITH GETSLING + ADD TRINITY AI DIFFERENTIATION.
+
+Confirm when schedule interface redesign is complete with screenshots.
+
+That's your complete feature gap analysis. 🎯
+GetSling is YOUR competition. You need everything they have + Trinity AI on top.
+Send this to Replit and they'll build a REAL workforce management schedule interface. 💪See how neatly organized their schedule software is? i wnat this exact neat organized design with tool bar cards optimized for mobile aswell... suggestions so i can send to replit a full request11:17 AM🎯 PERFECT SCREENSHOT - This is their DASHBOARD, not just schedule.
+Let me break down EXACTLY what makes this so clean and how to replicate it:
+
+📋 SEND THIS TO REPLIT:
+DASHBOARD REDESIGN - Match GetSling's Clean, Card-Based Interface
+
+REFERENCE: GetSling Dashboard (see attached screenshot)
+
+Our current dashboard needs a complete visual overhaul to match industry-leading workforce management UX. GetSling's interface is the benchmark - clean, organized, card-based, mobile-optimized.
+
+WHAT MAKES GETSLING'S DESIGN WORK:
+
+1. VISUAL HIERARCHY
+   - Top navigation bar (dark blue): Global navigation
+   - Icon grid (white cards): Quick access to core features
+   - Content area (white): Main workspace with tabs
+
+2. CONSISTENT SPACING
+   - Even padding between all elements
+   - Generous whitespace (doesn't feel cramped)
+   - Cards aligned to grid system
+
+3. ICON-FIRST DESIGN
+   - Every feature has a clear icon + label
+   - Icons are simple, recognizable
+   - Consistent icon style (line icons, not filled)
+
+4. COLOR SYSTEM
+   - Primary blue (#1E88E5) for active elements
+   - White cards with subtle shadows
+   - Gray text for secondary info
+   - Red badges for notifications
+
+5. MOBILE OPTIMIZATION
+   - Cards stack on mobile (1 column)
+   - Touch-friendly sizes (min 80px per card)
+   - Bottom nav on mobile instead of top
+
+---
+
+EXACT LAYOUT TO BUILD:
+
+TOP NAVIGATION BAR:
+┌────────────────────────────────────────────────────────────────┐
+│ CoAIleague | Dashboard  Schedule  Tasks  Messages  Reports... │
+│                                           [User Menu] [Alerts] │
+└────────────────────────────────────────────────────────────────┘
+
+Specs:
+- Height: 56px
+- Background: #1565C0 (dark blue)
+- Text: White, 14px medium weight
+- Active tab: Lighter blue underline (#42A5F5)
+- Hover: Slight opacity change (0.8)
+- Fixed position (stays at top on scroll)
+
+---
+
+QUICK ACCESS CARD GRID:
+
+Below navigation, show icon cards in responsive grid:
+
+Desktop (>1024px): 8 cards per row
+Tablet (768-1024px): 4 cards per row
+Mobile (<768px): 2 cards per row
+
+┌─────────┬─────────┬─────────┬─────────┬─────────┬─────────┐
+│   📊    │   👥    │   📍    │   🗓️    │   👔    │   🔔    │
+│Dashboard│Employee │Location │Schedule │Position │ Alerts  │
+└─────────┴─────────┴─────────┴─────────┴─────────┴─────────┘
+┌─────────┬─────────┬─────────┬─────────┬─────────┬─────────┐
+│   💰    │   📈    │   ⚙️    │   🤖    │   📱    │   📋    │
+│ Billing │ Reports │Settings │ Trinity │Messages │  Tasks  │
+└─────────┴─────────┴─────────┴─────────┴─────────┴─────────┘
+
+Each card specs:
+- Width: 140px (desktop), 100% (mobile)
+- Height: 120px
+- Background: White (#FFFFFF)
+- Border: 1px solid #E0E0E0
+- Border-radius: 8px
+- Box-shadow: 0 1px 3px rgba(0,0,0,0.08)
+- Hover: Box-shadow: 0 4px 6px rgba(0,0,0,0.12), border: #42A5F5
+- Cursor: pointer
+- Transition: all 0.2s ease
+
+Card content:
+- Icon: 48px, centered, top padding 20px
+- Label: 14px, centered, bottom padding 16px
+- Color: #616161 (gray), hover: #1565C0 (blue)
+
+Icons to use (simple line style):
+- Dashboard: 📊 (bar chart)
+- Employees: 👥 (people)
+- Locations: 📍 (map pin)
+- Schedule: 🗓️ (calendar)
+- Positions: 👔 (briefcase)
+- Announcements: 🔔 (bell)
+- Labor Cost: 💰 (dollar)
+- Reports: 📈 (trending up)
+- Settings: ⚙️ (gear)
+- Trinity AI: 🤖 (robot - our differentiator)
+- Messages: 💬 (chat bubble)
+- Tasks: 📋 (clipboard)
+
+Use Lucide React icons library for consistency:
+import { BarChart3, Users, MapPin, Calendar, Briefcase, Bell, DollarSign, TrendingUp, Settings, Bot, MessageSquare, ClipboardList } from 'lucide-react'
+
+---
+
+CONTENT AREA (Below cards):
+
+GetSling shows recent activity with tabs. We need:
+
+┌────────────────────────────────────────────────────────────────┐
+│ RECENT ACTIVITY                                                │
+│ [Notifications] [Activity]                                     │
+├────────────────────────────────────────────────────────────────┤
+│                                                                │
+│ ☐ New shift assigned: John Smith → ABC Bank (Fri 7pm-3am)    │
+│    📍 Downtown Branch | 💰 $153                               │
+│    [View] [Edit]                                              │
+│                                                                │
+│ ☐ Timesheet pending: Jane Doe (32.5 hours)                   │
+│    ⚠️ Requires approval                                       │
+│    [Approve] [Review]                                         │
+│                                                                │
+│ ☐ Open shift: XYZ Corp needs coverage (Sat 9am-5pm)          │
+│    👥 3 available employees                                   │
+│    [Assign] [Auto-Fill]                                       │
+│                                                                │
+└────────────────────────────────────────────────────────────────┘
+
+Specs:
+- Background: White
+- Border: 1px solid #E0E0E0
+- Border-radius: 8px
+- Padding: 24px
+- Each item: 16px padding, hover background #F5F5F5
+- Checkbox for bulk actions
+- Action buttons: Small, blue, outlined
+
+---
+
+NOTIFICATION BADGE (Top right):
+
+Like GetSling's "Newsfeed 2" badge:
+
+- Position: Absolute, top-right of nav bar
+- Background: Red (#F44336)
+- Text: White, 12px bold
+- Border-radius: 12px (pill shape)
+- Padding: 4px 8px
+- Shows count of unread items
+- Animates on new notification (pulse effect)
+
+---
+
+MOBILE OPTIMIZATION:
+
+Transform layout for mobile (<768px):
+
+TOP:
+- Logo shrinks to icon only
+- Hamburger menu (☰) opens side drawer
+- Notification badge stays visible
+
+CARD GRID:
+- 2 columns instead of 8
+- Cards taller (140px height)
+- Larger icons (56px)
+- Larger touch targets
+
+BOTTOM NAVIGATION (Mobile only):
+┌─────────┬─────────┬─────────┬─────────┬─────────┐
+│   🏠    │   📅    │   🕐    │   💬    │   👤    │
+│  Home   │Schedule │  Clock  │Messages │ Profile │
+└─────────┴─────────┴─────────┴─────────┴─────────┘
+
+Bottom nav specs:
+- Fixed position at bottom
+- Height: 64px
+- Background: White
+- Border-top: 1px solid #E0E0E0
+- Active tab: Blue icon + blue label
+- Inactive: Gray icon + gray label
+
+---
+
+RESPONSIVE BREAKPOINTS:
+
+Mobile: < 768px
+- 2 column card grid
+- Bottom navigation
+- Hamburger menu
+- Stack content vertically
+
+Tablet: 768px - 1024px
+- 4 column card grid
+- Top navigation (no bottom nav)
+- Sidebar navigation (collapsible)
+
+Desktop: > 1024px
+- 8 column card grid
+- Full top navigation
+- Expanded sidebar (always visible)
+
+---
+
+COLOR PALETTE (Match GetSling):
+
+Primary Blue:
+- Main: #1565C0
+- Light: #42A5F5
+- Dark: #0D47A1
+
+Grays:
+- Text primary: #212121
+- Text secondary: #616161
+- Border: #E0E0E0
+- Background: #FAFAFA
+- Card background: #FFFFFF
+
+Accents:
+- Success: #4CAF50
+- Warning: #FF9800
+- Error: #F44336
+- Info: #2196F3
+
+Shadows:
+- Card: 0 1px 3px rgba(0,0,0,0.08)
+- Card hover: 0 4px 6px rgba(0,0,0,0.12)
+- Modal: 0 8px 16px rgba(0,0,0,0.16)
+
+---
+
+TYPOGRAPHY:
+
+Font family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif
+
+Sizes:
+- H1 (Page title): 28px, bold (700)
+- H2 (Section): 20px, semibold (600)
+- H3 (Subsection): 16px, semibold (600)
+- Body: 14px, regular (400)
+- Small: 12px, regular (400)
+- Button: 14px, medium (500)
+
+Line heights:
+- Headings: 1.2
+- Body: 1.5
+- Buttons: 1
+
+---
+
+INTERACTIONS & ANIMATIONS:
+
+Card hover:
+```css
+transition: all 0.2s ease;
+:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+  border-color: #42A5F5;
+}
+```
+
+Button hover:
+```css
+transition: background-color 0.15s ease;
+:hover {
+  background-color: #1976D2;
+}
+```
+
+Loading states:
+- Skeleton loaders (gray pulse animation)
+- Spinner for async actions
+- Progress bar for uploads/long operations
+
+Success feedback:
+- Green checkmark animation
+- Toast notification (top-right)
+- Auto-dismiss after 3 seconds
+
+---
+
+ACCESSIBILITY:
+
+✅ Keyboard navigation (tab through cards)
+✅ Focus indicators (blue outline on focus)
+✅ ARIA labels on icons ("Dashboard", "Schedule", etc.)
+✅ Alt text on images
+✅ Color contrast ratios meet WCAG AA (4.5:1 minimum)
+✅ Screen reader friendly (semantic HTML)
+
+---
+
+IMPLEMENTATION CHECKLIST:
+
+Phase 1 - Core Layout (Week 1):
+✅ Top navigation bar with tabs
+✅ Card grid layout (responsive)
+✅ Icon library integration (Lucide React)
+✅ Color system implementation
+✅ Typography system
+
+Phase 2 - Interactive Elements (Week 2):
+✅ Card click handlers
+✅ Notification badge with count
+✅ Recent activity feed
+✅ Tab switching
+✅ Mobile bottom navigation
+
+Phase 3 - Polish (Week 3):
+✅ Hover animations
+✅ Loading states
+✅ Toast notifications
+✅ Skeleton loaders
+✅ Mobile gestures (swipe)
+
+Phase 4 - Testing (Week 4):
+✅ Cross-browser testing
+✅ Mobile device testing
+✅ Accessibility audit
+✅ Performance optimization
+
+---
+
+EXACT CARDS TO BUILD:
+
+1. DASHBOARD
+   - Shows: Key metrics, recent activity, alerts
+   - Icon: BarChart3
+   - Route: /dashboard
+
+2. SCHEDULE
+   - Shows: Weekly/monthly calendar, shifts
+   - Icon: Calendar
+   - Route: /schedule
+
+3. EMPLOYEES
+   - Shows: Employee list, profiles, availability
+   - Icon: Users
+   - Route: /employees
+
+4. CLIENTS
+   - Shows: Client list, sites, contacts
+   - Icon: MapPin
+   - Route: /clients
+
+5. TIME CLOCK
+   - Shows: Clock in/out events, pending approvals
+   - Icon: Clock
+   - Route: /time-clock
+
+6. TASKS
+   - Shows: Task list, assignments, completion
+   - Icon: ClipboardList
+   - Route: /tasks
+
+7. MESSAGES
+   - Shows: Team chat, announcements
+   - Icon: MessageSquare
+   - Route: /messages
+
+8. REPORTS
+   - Shows: Labor cost, hours, billing reports
+   - Icon: TrendingUp
+   - Route: /reports
+
+9. TRINITY AI
+   - Shows: AI chat, insights, auto-scheduling
+   - Icon: Bot (OUR DIFFERENTIATOR)
+   - Route: /trinity
+
+10. BILLING
+    - Shows: Subscription, invoices, credits
+    - Icon: DollarSign
+    - Route: /billing
+
+11. SETTINGS
+    - Shows: Workspace settings, integrations
+    - Icon: Settings
+    - Route: /settings
+
+12. ALERTS
+    - Shows: System notifications, conflicts
+    - Icon: Bell
+    - Route: /alerts
+
+---
+
+BUILD THIS EXACT INTERFACE:
+
+Clean, card-based, mobile-optimized, industry-standard workforce management dashboard that matches GetSling's quality.
+
+Provide screenshots when complete showing:
+1. Desktop view (full card grid)
+2. Tablet view (4 column grid)
+3. Mobile view (2 column + bottom nav)
+4. Hover states
+5. Active/selected states
+
+This is our primary user interface. It must be perfect.
