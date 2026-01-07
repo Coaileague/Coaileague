@@ -386,7 +386,7 @@ IMPACT DESCRIPTION:
 CATEGORIZATION:
 - detailedCategory: One of: feature, service, bot_automation, bugfix, security, improvement, deprecation, hotpatch, integration, ui_update, backend_update, performance, documentation
 - sourceType: One of: system, ai_brain, support_staff, developer, automated_job, user_request, external_service
-- sourceName: Specific name like "Billing Automation", "Platform Action Hub", "Security Team", etc.
+- sourceName: ALWAYS use "Trinity" - Trinity is the AI assistant that communicates all updates to end users
 
 TECHNICAL DETAILS REQUIREMENTS:
 - For support staff and developers
@@ -438,7 +438,7 @@ Respond ONLY with valid JSON (no markdown, no explanations):
             impactDescription: parsed.impactDescription || this.analyzeImpact(change),
             detailedCategory: parsed.detailedCategory || this.mapToDetailedCategory(change.type),
             sourceType: parsed.sourceType || change.sourceType || 'system',
-            sourceName: parsed.sourceName || change.sourceName || 'AI Brain Platform Monitor',
+            sourceName: 'Trinity',
           };
         } catch (parseError) {
           console.error('[PlatformChangeMonitor] JSON parse error:', parseError);
@@ -634,7 +634,7 @@ Respond ONLY with valid JSON (no markdown, no explanations):
       impactDescription: this.analyzeImpact(change),
       detailedCategory: this.mapToDetailedCategory(change.type),
       sourceType: change.sourceType || 'system',
-      sourceName: change.sourceName || 'Trinity Platform Monitor',
+      sourceName: 'Trinity',
     };
   }
   

@@ -485,7 +485,7 @@ function mapToUNS(
       priority: update.category === 'security_patch' ? 'high' : 'info',
       category,
       subCategory: update.category,
-      serviceSource: update.metadata?.sourceName || 'Platform',
+      serviceSource: 'Trinity',
       statusTag: update.isViewed ? undefined : 'NEW',
       isRead: update.isViewed,
       isCleared, // Database flag, optimistic metadata, or pending clear
@@ -536,7 +536,7 @@ function mapToUNS(
       priority: alert.severity === 'critical' ? 'critical' : alert.severity === 'warning' ? 'high' : 'medium',
       category: 'system', // Maintenance alerts go to System tab (admin-only)
       subCategory: 'maintenance',
-      serviceSource: humanizeText(alert.serviceSource || 'System Operations'),
+      serviceSource: 'Trinity',
       statusTag: alert.isAcknowledged ? undefined : 'ACTION REQUIRED',
       isRead: alert.isAcknowledged || false,
       isCleared, // Database flag, optimistic metadata, or pending clear
@@ -587,8 +587,8 @@ function mapToUNS(
       || generateEndUserSummary(notif.message || '', notif.type)
       || humanizeText(notif.message || '');
     
-    // Humanize the service source name (e.g., "PayrollOps Lead" -> "Payroll Team")
-    const friendlySource = humanizeText(notif.metadata?.sourceName || notif.metadata?.subagent || 'Trinity AI');
+    // Always use Trinity as the source for end users
+    const friendlySource = 'Trinity';
     
     // clearedAt indicates user explicitly cleared this notification
     // Also check pending clear tracking for lifecycle guard
@@ -710,7 +710,7 @@ function mapToUNS(
       priority: finding.priority,
       category: findingCategory,
       subCategory: finding.subCategory || finding.category,
-      serviceSource: finding.serviceSource,
+      serviceSource: 'Trinity',
       statusTag: finding.isRead ? undefined : finding.statusTag,
       isRead: finding.isRead,
       isCleared,
