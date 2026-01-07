@@ -1032,6 +1032,7 @@ function AppContent() {
               <Route path="/workspace-onboarding" component={WorkspaceOnboarding} />
               <Route path="/trinity/command-center" component={TrinityCommandCenter} />
               <Route path="/trinity/self-edit" component={TrinitySelfEditGovernancePage} />
+              <Route path="/trinity" component={TrinityChat} /> {/* Trinity Chat Interface with BUDDY metacognition */}
               <Route path="/billing" component={Billing} />
               <Route path="/usage" component={UsageDashboard} />
               <Route path="/owner-analytics">
@@ -1363,6 +1364,7 @@ function AppContent() {
                 <Route path="/workspace-onboarding" component={WorkspaceOnboarding} />
                 <Route path="/trinity/command-center" component={TrinityCommandCenter} />
               <Route path="/trinity/self-edit" component={TrinitySelfEditGovernancePage} />
+                <Route path="/trinity" component={TrinityChat} /> {/* Trinity Chat Interface with BUDDY metacognition */}
                 <Route path="/ai/brain" component={AIBrainDashboard} />
                 <Route path="/ai/orchestration" component={OrchestrationDashboard} />
                 <Route path="/ai/workboard" component={WorkboardDashboard} />
