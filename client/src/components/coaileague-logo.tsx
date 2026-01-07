@@ -93,13 +93,13 @@ export function CoAIleagueLogo({
   // Unique ID for this component instance (SSR-safe)
   const iconId = useId();
 
-  // Icon-only mode - Trinity Bow/Knot (STATIC) with brand teal/cyan palette
+  // Icon-only mode - Trinity Triquetra (STATIC) with brand teal/cyan palette
   if (onlyIcon) {
     return (
       <svg
         width={scaledWidth}
         height={scaledHeight}
-        viewBox="0 0 200 200"
+        viewBox="0 0 100 100"
         fill="none"
         xmlns="http://www.w3.org/2000/svg"
         className={cn("transition-transform duration-200 max-w-full h-auto", className)}
@@ -109,37 +109,33 @@ export function CoAIleagueLogo({
             <stop offset="0%" stopColor="#2dd4bf" />
             <stop offset="100%" stopColor="#06b6d4" />
           </linearGradient>
-          <linearGradient id={`cyanGrad-${iconId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={`cyanGrad-${iconId}`} x1="0%" y1="100%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#06b6d4" />
-            <stop offset="100%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#22d3ee" />
+          </linearGradient>
+          <linearGradient id={`blueGrad-${iconId}`} x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#06b6d4" />
           </linearGradient>
           <radialGradient id={`coreGrad-${iconId}`} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="50%" stopColor="#22d3ee" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.4" />
+            <stop offset="60%" stopColor="#22d3ee" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.3" />
           </radialGradient>
-          <filter id={`glowFilter-${iconId}`} x="-50%" y="-50%" width="200%" height="200%">
-            <feGaussianBlur stdDeviation="2" result="blur"/>
+          <filter id={`glowFilter-${iconId}`} x="-20%" y="-20%" width="140%" height="140%">
+            <feGaussianBlur stdDeviation="1.5" result="blur"/>
             <feMerge>
               <feMergeNode in="blur"/>
               <feMergeNode in="SourceGraphic"/>
             </feMerge>
           </filter>
         </defs>
-        {/* Trinity Bow/Knot - Five-pointed interwoven ribbon with brand colors */}
-        <path d="M 100 100 Q 100 55 100 35 Q 105 55 100 100" fill={`url(#tealGrad-${iconId})`} filter={`url(#glowFilter-${iconId})`} opacity="0.95"/>
-        <path d="M 100 35 Q 95 55 100 100 Q 100 55 100 35" fill={`url(#tealGrad-${iconId})`} opacity="0.9"/>
-        <path d="M 100 100 Q 130 75 155 55 Q 130 80 100 100" fill={`url(#cyanGrad-${iconId})`} filter={`url(#glowFilter-${iconId})`} opacity="0.95"/>
-        <path d="M 155 55 Q 125 80 100 100 Q 130 75 155 55" fill={`url(#cyanGrad-${iconId})`} opacity="0.9"/>
-        <path d="M 100 100 Q 140 115 160 145 Q 135 120 100 100" fill={`url(#tealGrad-${iconId})`} filter={`url(#glowFilter-${iconId})`} opacity="0.95"/>
-        <path d="M 160 145 Q 130 115 100 100 Q 140 115 160 145" fill={`url(#tealGrad-${iconId})`} opacity="0.9"/>
-        <path d="M 100 100 Q 60 115 40 145 Q 65 120 100 100" fill={`url(#cyanGrad-${iconId})`} filter={`url(#glowFilter-${iconId})`} opacity="0.95"/>
-        <path d="M 40 145 Q 70 115 100 100 Q 60 115 40 145" fill={`url(#cyanGrad-${iconId})`} opacity="0.9"/>
-        <path d="M 100 100 Q 70 75 45 55 Q 70 80 100 100" fill={`url(#tealGrad-${iconId})`} filter={`url(#glowFilter-${iconId})`} opacity="0.95"/>
-        <path d="M 45 55 Q 75 80 100 100 Q 70 75 45 55" fill={`url(#tealGrad-${iconId})`} opacity="0.9"/>
-        <circle cx="100" cy="100" r="18" fill={`url(#coreGrad-${iconId})`} filter={`url(#glowFilter-${iconId})`}/>
-        <circle cx="100" cy="100" r="12" fill="#ffffff" opacity="0.9"/>
-        <circle cx="100" cy="100" r="6" fill="#22d3ee"/>
+        {/* Trinity Triquetra - Three interlocking loops */}
+        <path d="M 50 15 C 65 15, 75 30, 75 45 C 75 55, 65 65, 50 50 C 35 65, 25 55, 25 45 C 25 30, 35 15, 50 15 Z" fill="none" stroke={`url(#tealGrad-${iconId})`} strokeWidth="6" strokeLinecap="round" filter={`url(#glowFilter-${iconId})`}/>
+        <path d="M 25 75 C 15 65, 15 50, 25 40 C 32 32, 45 35, 50 50 C 45 60, 35 70, 25 75 C 30 85, 45 85, 50 75 Z" fill="none" stroke={`url(#cyanGrad-${iconId})`} strokeWidth="6" strokeLinecap="round" filter={`url(#glowFilter-${iconId})`}/>
+        <path d="M 75 75 C 85 65, 85 50, 75 40 C 68 32, 55 35, 50 50 C 55 60, 65 70, 75 75 C 70 85, 55 85, 50 75 Z" fill="none" stroke={`url(#blueGrad-${iconId})`} strokeWidth="6" strokeLinecap="round" filter={`url(#glowFilter-${iconId})`}/>
+        <circle cx="50" cy="50" r="8" fill={`url(#coreGrad-${iconId})`} filter={`url(#glowFilter-${iconId})`}/>
+        <circle cx="50" cy="50" r="4" fill="#ffffff" opacity="0.95"/>
       </svg>
     );
   }
@@ -161,31 +157,33 @@ export function CoAIleagueLogo({
         </linearGradient>
       </defs>
 
-      {/* Trinity Bow/Knot Icon (Static) with brand colors */}
-      <g transform="translate(2, 5) scale(0.2)">
+      {/* Trinity Triquetra Icon (Static) with brand colors */}
+      <g transform="translate(5, 5) scale(0.4)">
         <defs>
           <linearGradient id={`tealGradFull-${iconId}`} x1="0%" y1="0%" x2="100%" y2="100%">
             <stop offset="0%" stopColor="#2dd4bf" />
             <stop offset="100%" stopColor="#06b6d4" />
           </linearGradient>
-          <linearGradient id={`cyanGradFull-${iconId}`} x1="0%" y1="0%" x2="100%" y2="100%">
+          <linearGradient id={`cyanGradFull-${iconId}`} x1="0%" y1="100%" x2="100%" y2="0%">
             <stop offset="0%" stopColor="#06b6d4" />
-            <stop offset="100%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#22d3ee" />
+          </linearGradient>
+          <linearGradient id={`blueGradFull-${iconId}`} x1="100%" y1="0%" x2="0%" y2="100%">
+            <stop offset="0%" stopColor="#3b82f6" />
+            <stop offset="100%" stopColor="#06b6d4" />
           </linearGradient>
           <radialGradient id={`coreGradFull-${iconId}`} cx="50%" cy="50%" r="50%">
             <stop offset="0%" stopColor="#ffffff" />
-            <stop offset="50%" stopColor="#22d3ee" stopOpacity="0.9" />
-            <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.4" />
+            <stop offset="60%" stopColor="#22d3ee" stopOpacity="0.8" />
+            <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.3" />
           </radialGradient>
         </defs>
-        <path d="M 100 100 Q 100 55 100 35 Q 105 55 100 100" fill={`url(#tealGradFull-${iconId})`} opacity="0.95"/>
-        <path d="M 100 100 Q 130 75 155 55 Q 130 80 100 100" fill={`url(#cyanGradFull-${iconId})`} opacity="0.95"/>
-        <path d="M 100 100 Q 140 115 160 145 Q 135 120 100 100" fill={`url(#tealGradFull-${iconId})`} opacity="0.95"/>
-        <path d="M 100 100 Q 60 115 40 145 Q 65 120 100 100" fill={`url(#cyanGradFull-${iconId})`} opacity="0.95"/>
-        <path d="M 100 100 Q 70 75 45 55 Q 70 80 100 100" fill={`url(#tealGradFull-${iconId})`} opacity="0.95"/>
-        <circle cx="100" cy="100" r="18" fill={`url(#coreGradFull-${iconId})`}/>
-        <circle cx="100" cy="100" r="12" fill="#ffffff" opacity="0.9"/>
-        <circle cx="100" cy="100" r="6" fill="#22d3ee"/>
+        {/* Trinity Triquetra - Three interlocking loops */}
+        <path d="M 50 15 C 65 15, 75 30, 75 45 C 75 55, 65 65, 50 50 C 35 65, 25 55, 25 45 C 25 30, 35 15, 50 15 Z" fill="none" stroke={`url(#tealGradFull-${iconId})`} strokeWidth="6" strokeLinecap="round"/>
+        <path d="M 25 75 C 15 65, 15 50, 25 40 C 32 32, 45 35, 50 50 C 45 60, 35 70, 25 75 C 30 85, 45 85, 50 75 Z" fill="none" stroke={`url(#cyanGradFull-${iconId})`} strokeWidth="6" strokeLinecap="round"/>
+        <path d="M 75 75 C 85 65, 85 50, 75 40 C 68 32, 55 35, 50 50 C 55 60, 65 70, 75 75 C 70 85, 55 85, 50 75 Z" fill="none" stroke={`url(#blueGradFull-${iconId})`} strokeWidth="6" strokeLinecap="round"/>
+        <circle cx="50" cy="50" r="8" fill={`url(#coreGradFull-${iconId})`}/>
+        <circle cx="50" cy="50" r="4" fill="#ffffff" opacity="0.95"/>
       </g>
 
       {/* Wordmark */}

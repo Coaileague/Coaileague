@@ -1,6 +1,6 @@
 /**
- * CoAIleague Logo Mark - Trinity Bow/Knot Icon (Static)
- * Features: Five-pointed interwoven ribbon knot with teal/cyan brand colors
+ * CoAIleague Logo Mark - Trinity Triquetra Icon (Static)
+ * Features: Classic Celtic Trinity knot with three interlocking loops
  * Used in: Headers, dialogs, sheets, toasts, branded components
  * 
  * Note: This is a STATIC icon - no animation to maintain recognizability
@@ -31,6 +31,7 @@ export function LogoMark({ size = "md", className }: LogoMarkProps) {
   const ids = {
     tealGrad: `logoMark-tealGrad${reactId}`,
     cyanGrad: `logoMark-cyanGrad${reactId}`,
+    blueGrad: `logoMark-blueGrad${reactId}`,
     coreGrad: `logoMark-coreGrad${reactId}`,
     glowFilter: `logoMark-glow${reactId}`,
   };
@@ -39,7 +40,7 @@ export function LogoMark({ size = "md", className }: LogoMarkProps) {
     <svg
       width={width}
       height={height}
-      viewBox="0 0 200 200"
+      viewBox="0 0 100 100"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={cn("shrink-0", className)}
@@ -49,17 +50,21 @@ export function LogoMark({ size = "md", className }: LogoMarkProps) {
           <stop offset="0%" stopColor="#2dd4bf" />
           <stop offset="100%" stopColor="#06b6d4" />
         </linearGradient>
-        <linearGradient id={ids.cyanGrad} x1="0%" y1="0%" x2="100%" y2="100%">
+        <linearGradient id={ids.cyanGrad} x1="0%" y1="100%" x2="100%" y2="0%">
           <stop offset="0%" stopColor="#06b6d4" />
-          <stop offset="100%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#22d3ee" />
+        </linearGradient>
+        <linearGradient id={ids.blueGrad} x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#06b6d4" />
         </linearGradient>
         <radialGradient id={ids.coreGrad} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="50%" stopColor="#22d3ee" stopOpacity="0.9" />
-          <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.4" />
+          <stop offset="60%" stopColor="#22d3ee" stopOpacity="0.8" />
+          <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.3" />
         </radialGradient>
-        <filter id={ids.glowFilter} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2" result="blur"/>
+        <filter id={ids.glowFilter} x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="1.5" result="blur"/>
           <feMerge>
             <feMergeNode in="blur"/>
             <feMergeNode in="SourceGraphic"/>
@@ -67,76 +72,54 @@ export function LogoMark({ size = "md", className }: LogoMarkProps) {
         </filter>
       </defs>
       
-      {/* Five-pointed interwoven ribbon knot - Trinity Symbol */}
-      {/* Petal 1 - Top (Teal) */}
+      {/* Trinity Triquetra - Three interlocking loops */}
+      {/* Each loop is a teardrop/vesica shape that weaves over and under */}
+      
+      {/* Loop 1 - Top (Teal) */}
       <path 
-        d="M 100 100 Q 100 55 100 35 Q 105 55 100 100" 
-        fill={`url(#${ids.tealGrad})`} 
+        d="M 50 15 
+           C 65 15, 75 30, 75 45
+           C 75 55, 65 65, 50 50
+           C 35 65, 25 55, 25 45
+           C 25 30, 35 15, 50 15 Z"
+        fill="none"
+        stroke={`url(#${ids.tealGrad})`}
+        strokeWidth="6"
+        strokeLinecap="round"
         filter={`url(#${ids.glowFilter})`}
-        opacity="0.95"
-      />
-      <path 
-        d="M 100 35 Q 95 55 100 100 Q 100 55 100 35" 
-        fill={`url(#${ids.tealGrad})`} 
-        opacity="0.9"
       />
       
-      {/* Petal 2 - Top Right (Cyan) */}
+      {/* Loop 2 - Bottom Left (Cyan) */}
       <path 
-        d="M 100 100 Q 130 75 155 55 Q 130 80 100 100" 
-        fill={`url(#${ids.cyanGrad})`} 
+        d="M 25 75 
+           C 15 65, 15 50, 25 40
+           C 32 32, 45 35, 50 50
+           C 45 60, 35 70, 25 75
+           C 30 85, 45 85, 50 75 Z"
+        fill="none"
+        stroke={`url(#${ids.cyanGrad})`}
+        strokeWidth="6"
+        strokeLinecap="round"
         filter={`url(#${ids.glowFilter})`}
-        opacity="0.95"
-      />
-      <path 
-        d="M 155 55 Q 125 80 100 100 Q 130 75 155 55" 
-        fill={`url(#${ids.cyanGrad})`} 
-        opacity="0.9"
       />
       
-      {/* Petal 3 - Bottom Right (Teal) */}
+      {/* Loop 3 - Bottom Right (Blue) */}
       <path 
-        d="M 100 100 Q 140 115 160 145 Q 135 120 100 100" 
-        fill={`url(#${ids.tealGrad})`} 
+        d="M 75 75 
+           C 85 65, 85 50, 75 40
+           C 68 32, 55 35, 50 50
+           C 55 60, 65 70, 75 75
+           C 70 85, 55 85, 50 75 Z"
+        fill="none"
+        stroke={`url(#${ids.blueGrad})`}
+        strokeWidth="6"
+        strokeLinecap="round"
         filter={`url(#${ids.glowFilter})`}
-        opacity="0.95"
-      />
-      <path 
-        d="M 160 145 Q 130 115 100 100 Q 140 115 160 145" 
-        fill={`url(#${ids.tealGrad})`} 
-        opacity="0.9"
       />
       
-      {/* Petal 4 - Bottom Left (Cyan) */}
-      <path 
-        d="M 100 100 Q 60 115 40 145 Q 65 120 100 100" 
-        fill={`url(#${ids.cyanGrad})`} 
-        filter={`url(#${ids.glowFilter})`}
-        opacity="0.95"
-      />
-      <path 
-        d="M 40 145 Q 70 115 100 100 Q 60 115 40 145" 
-        fill={`url(#${ids.cyanGrad})`} 
-        opacity="0.9"
-      />
-      
-      {/* Petal 5 - Top Left (Teal) */}
-      <path 
-        d="M 100 100 Q 70 75 45 55 Q 70 80 100 100" 
-        fill={`url(#${ids.tealGrad})`} 
-        filter={`url(#${ids.glowFilter})`}
-        opacity="0.95"
-      />
-      <path 
-        d="M 45 55 Q 75 80 100 100 Q 70 75 45 55" 
-        fill={`url(#${ids.tealGrad})`} 
-        opacity="0.9"
-      />
-      
-      {/* Central crystalline core */}
-      <circle cx="100" cy="100" r="18" fill={`url(#${ids.coreGrad})`} filter={`url(#${ids.glowFilter})`}/>
-      <circle cx="100" cy="100" r="12" fill="#ffffff" opacity="0.9"/>
-      <circle cx="100" cy="100" r="6" fill="#22d3ee"/>
+      {/* Central nexus point */}
+      <circle cx="50" cy="50" r="8" fill={`url(#${ids.coreGrad})`} filter={`url(#${ids.glowFilter})`}/>
+      <circle cx="50" cy="50" r="4" fill="#ffffff" opacity="0.95"/>
     </svg>
   );
 }
