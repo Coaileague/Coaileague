@@ -115,7 +115,7 @@ export default function Contact() {
 
         {/* Support Channels Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 mb-8 sm:mb-16">
-          <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4" data-testid="card-email-support">
+          <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4" data-testid="card-email-support">
             <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-md bg-violet-50 dark:bg-violet-950/50 flex items-center justify-center">
               <Mail className="h-5 w-5 sm:h-6 sm:w-6 text-violet-600" />
             </div>
@@ -139,7 +139,7 @@ export default function Contact() {
             </div>
           </Card>
 
-          <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4" data-testid="card-live-chat">
+          <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md p-4 sm:p-6 space-y-3 sm:space-y-4" data-testid="card-live-chat">
             <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-md bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center">
               <MessageSquare className="h-5 w-5 sm:h-6 sm:w-6 text-indigo-600" />
             </div>
@@ -169,8 +169,8 @@ export default function Contact() {
         </div>
 
         {/* Support Tiers */}
-        <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-md mb-16" data-testid="card-support-tiers">
-          <div className="p-8 space-y-6">
+        <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md mb-16" data-testid="card-support-tiers">
+          <div className="p-5 space-y-6">
             <div className="text-center space-y-2">
               <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Enterprise Support Tiers</h2>
               <p className="text-sm text-gray-500">
@@ -393,7 +393,7 @@ export default function Contact() {
                 </form>
               </>
             ) : (
-              <Card className="bg-violet-50 dark:bg-violet-950/30 border-2 border-violet-200 dark:border-violet-800 shadow-md p-8 space-y-6" data-testid="card-success">
+              <Card className="bg-violet-50 dark:bg-violet-950/30 border border-violet-200 dark:border-violet-800 shadow-md p-5 space-y-6" data-testid="card-success">
                 <div className="flex items-center gap-4">
                   <div className="h-16 w-16 rounded-full bg-violet-100 dark:bg-violet-900/50 flex items-center justify-center">
                     <CheckCircle2 className="h-8 w-8 text-violet-600" />
@@ -468,7 +468,7 @@ export default function Contact() {
           </div>
 
           <div className="space-y-6">
-            <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-md p-6 space-y-4">
+            <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md p-6 space-y-4">
               <div className="flex items-center gap-3">
                 <Clock className="h-5 w-5 text-violet-600" />
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">Business Hours</h3>
@@ -490,7 +490,7 @@ export default function Contact() {
               </div>
             </Card>
 
-            <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-md p-6 space-y-4">
+            <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md p-6 space-y-4">
               <div className="flex items-center gap-3">
                 <Globe className="h-5 w-5 text-indigo-600" />
                 <h3 className="font-semibold text-gray-900 dark:text-gray-100">Online Business</h3>
@@ -512,7 +512,7 @@ export default function Contact() {
               </div>
             </Card>
 
-            <Card className="bg-white dark:bg-gray-900 border-2 border-gray-200 dark:border-gray-700 shadow-md p-6 space-y-2">
+            <Card className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 shadow-md p-6 space-y-2">
               <div className="flex items-center gap-2 mb-2">
                 <div className="h-10 w-10 rounded-md bg-violet-50 dark:bg-violet-950/50 flex items-center justify-center">
                   <Building2 className="h-5 w-5 text-violet-600" />

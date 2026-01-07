@@ -546,21 +546,21 @@ export default function ROICalculator() {
         <div className="mt-16 max-w-4xl mx-auto">
           <h2 className="text-2xl font-bold text-white text-center mb-8">Why Security Companies Choose CoAIleague</h2>
           <div className="grid md:grid-cols-3 gap-6">
-            <div className="bg-white/5 backdrop-blur rounded-xl p-6 border border-white/10">
+            <div className="bg-white/5 backdrop-blur rounded-lg p-6 border border-white/10">
               <Brain className="w-10 h-10 text-primary mb-4" />
               <h3 className="text-lg font-semibold text-white mb-2">AI-Powered Scheduling</h3>
               <p className="text-slate-400 text-sm">
                 Trinity AI creates optimal schedules in seconds, matching the right guards to the right sites.
               </p>
             </div>
-            <div className="bg-white/5 backdrop-blur rounded-xl p-6 border border-white/10">
+            <div className="bg-white/5 backdrop-blur rounded-lg p-6 border border-white/10">
               <BarChart3 className="w-10 h-10 text-primary mb-4" />
               <h3 className="text-lg font-semibold text-white mb-2">GPS Time Tracking</h3>
               <p className="text-slate-400 text-sm">
                 Geofenced clock-in/out with real-time verification. No more buddy punching or timesheet fraud.
               </p>
             </div>
-            <div className="bg-white/5 backdrop-blur rounded-xl p-6 border border-white/10">
+            <div className="bg-white/5 backdrop-blur rounded-lg p-6 border border-white/10">
               <Shield className="w-10 h-10 text-primary mb-4" />
               <h3 className="text-lg font-semibold text-white mb-2">50-State Compliance</h3>
               <p className="text-slate-400 text-sm">

@@ -187,16 +187,16 @@ export default function Diagnostics() {
   }
 
   return authLoading ? (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full">
       <PageHeaderSkeleton />
       <SearchPanelSkeleton />
     </div>
   ) : (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center gap-3 mb-2">
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-lg shadow-purple-500/30">
+          <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center shadow-md shadow-purple-500/30">
             <Terminal className="h-6 w-6 text-white" />
           </div>
           <div>

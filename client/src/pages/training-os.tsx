@@ -178,7 +178,7 @@ export default function LearningManagement() {
   const isAdmin = (user as any)?.workspaceRole === "org_owner" || (user as any)?.platformRole === "root_admin";
 
   return (authLoading || coursesLoading) ? (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full">
       <PageHeaderSkeleton />
       <div className="mb-6">
         <MetricsCardsSkeleton count={3} columns={3} />
@@ -186,12 +186,12 @@ export default function LearningManagement() {
       <CourseCardSkeleton count={6} />
     </div>
   ) : (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full">
       {/* Header */}
       <div className="mb-6">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+            <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-md shadow-blue-500/30">
               <GraduationCap className="h-6 w-6 text-white" />
             </div>
             <div>

@@ -63,13 +63,13 @@ export default function AdminUsage() {
   const profitMargin = ((monthlyRevenue - totalMonthlyCost) / monthlyRevenue) * 100;
 
   return (
-    <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full h-full overflow-auto">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto w-full">
+    <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full h-full overflow-auto">
+      <div className="p-4 sm:p-6 lg:p-5 max-w-7xl mx-auto w-full">
         <div className="space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-blue-900 to-indigo-800 flex items-center justify-center shadow-lg shadow-blue-900/30 p-2">
+              <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-lg bg-gradient-to-br from-blue-900 to-indigo-800 flex items-center justify-center shadow-md shadow-blue-900/30 p-2">
                 <WFLogoCompact size={28} />
               </div>
               <div>

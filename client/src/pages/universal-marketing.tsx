@@ -117,7 +117,7 @@ export default function UniversalMarketing() {
               <h2 className="text-2xl md:text-3xl font-bold text-center mb-12">AI-Powered Capabilities</h2>
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mobile-cols-1 mobile-gap-4">
                 {MARKETING.landing.features.map((feature) => (
-                  <Card key={feature.title} className="hover:shadow-lg transition-shadow">
+                  <Card key={feature.title} className="hover:shadow-md transition-shadow">
                     <CardHeader>
                       <CardTitle className="text-lg">{feature.title}</CardTitle>
                       <CardDescription>{feature.description}</CardDescription>
@@ -299,7 +299,7 @@ export default function UniversalMarketing() {
       )}
 
       {/* Navigation Buttons */}
-      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-2 bg-white dark:bg-slate-900 rounded-lg shadow-lg p-2 border">
+      <div className="fixed bottom-6 left-1/2 -translate-x-1/2 flex gap-2 bg-white dark:bg-slate-900 rounded-lg shadow-md p-2 border">
         <Button
           variant={section === 'landing' ? 'default' : 'ghost'}
           size="sm"

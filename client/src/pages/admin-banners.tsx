@@ -119,7 +119,7 @@ export default function AdminBannersPage() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-xl bg-gradient-to-br from-orange-900 to-red-800 flex items-center justify-center shadow-lg shadow-orange-900/30 p-2">
+          <div className="h-14 w-14 sm:h-12 sm:w-12 rounded-lg bg-gradient-to-br from-orange-900 to-red-800 flex items-center justify-center shadow-md shadow-orange-900/30 p-2">
             <Megaphone size={28} className="text-white" />
           </div>
           <div>

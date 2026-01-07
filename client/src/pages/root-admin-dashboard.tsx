@@ -280,7 +280,7 @@ export default function RootAdminDashboard() {
         {/* Branded Header - Compact on mobile, full on desktop */}
         <div className="sm:mb-6">
           {/* Mobile Header - Very compact */}
-          <div className="sm:hidden relative overflow-hidden rounded-lg bg-white/80 backdrop-blur-sm p-3 border-2 border-gray-200 shadow-md">
+          <div className="sm:hidden relative overflow-hidden rounded-lg bg-white/80 backdrop-blur-sm p-3 border border-gray-200 shadow-md">
             <div className="flex items-center justify-between gap-2">
               <div className="flex-1 min-w-0">
                 <h1 className="text-base font-bold text-gray-900 truncate">
@@ -296,7 +296,7 @@ export default function RootAdminDashboard() {
           </div>
 
           {/* Desktop Header - Centered Layout */}
-          <div className="hidden sm:block relative overflow-hidden rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-3 sm:p-4 border-2 border-gray-200 dark:border-slate-700 shadow-md">
+          <div className="hidden sm:block relative overflow-hidden rounded-xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-sm p-3 sm:p-4 border border-gray-200 dark:border-slate-700 shadow-md">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between lg:grid lg:grid-cols-[1fr_auto_1fr] lg:items-center">
               {/* Logo and Title - Centered on Large Screens */}
               <div className="flex items-start gap-3 lg:col-start-2 lg:flex-col lg:items-center lg:text-center">
@@ -372,7 +372,7 @@ export default function RootAdminDashboard() {
         {/* Desktop: 2-Column Grid | Mobile: Stacked */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
           {/* Quick Access Menu - Organized by Categories (Registry-Based) */}
-          <Card className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-2 border-slate-200 dark:border-slate-700 shadow-md">
+          <Card className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border border-slate-200 dark:border-slate-700 shadow-md">
             <CardContent className="p-3 sm:p-4">
               <div className="flex items-center justify-center gap-2 mb-3 lg:flex-col lg:gap-1">
                 <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-blue-600 dark:text-blue-400 shrink-0" />
@@ -391,7 +391,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 border-2 border-gray-200"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 border border-gray-200"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -423,7 +423,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 border-2 border-gray-200"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 border border-gray-200"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -455,7 +455,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 border-2 border-gray-200"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 border border-gray-200"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -487,7 +487,7 @@ export default function RootAdminDashboard() {
                           key={action.id}
                           variant="outline"
                           size="sm"
-                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 border-2 border-gray-200"
+                          className="flex-col h-auto min-h-[56px] px-2 py-2 gap-1 hover-elevate whitespace-nowrap bg-gray-50 border border-gray-200"
                           onClick={(e) => {
                             if (action.isHashAnchor) {
                               e.preventDefault();
@@ -510,7 +510,7 @@ export default function RootAdminDashboard() {
           </Card>
 
           {/* 🔐 ADMIN CONTROLS - User & Workspace Management */}
-          <Card className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border-2 border-slate-200 dark:border-slate-700 shadow-md">
+          <Card className="bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-sm border border-slate-200 dark:border-slate-700 shadow-md">
             <CardHeader className="pb-3 pt-3 px-4">
               <CardTitle className="flex items-center justify-center gap-2 text-base lg:flex-col lg:gap-1">
                 <ShieldAlert className="h-4 w-4 text-red-500 dark:text-red-400" />

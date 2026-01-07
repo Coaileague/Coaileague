@@ -160,7 +160,7 @@ export default function Support() {
       {/* Top Bar - Modern Trinity Branding */}
       <nav className="fixed top-0 left-0 right-0 z-50 h-16 bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between px-6">
         <div className="flex items-center gap-3">
-          <div className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-violet-500/20">
+          <div className="relative w-10 h-10 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-md shadow-violet-500/20">
             <TrinityRedesign mode="IDLE" size={28} mini={true} />
           </div>
           <div className="flex flex-col">
@@ -242,7 +242,7 @@ export default function Support() {
             <div className="p-6" onClick={() => window.location.href = "/support/tickets"}>
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div className="flex items-start gap-4">
-                  <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-lg shadow-violet-500/20">
+                  <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center flex-shrink-0 shadow-md shadow-violet-500/20">
                     <LifeBuoy className="h-6 w-6 text-white" />
                   </div>
                   <div className="space-y-2">
@@ -280,7 +280,7 @@ export default function Support() {
           <div className="p-6">
             <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
+                <div className="h-10 w-10 rounded-lg bg-emerald-500/10 flex items-center justify-center">
                   <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                 </div>
                 <div>
@@ -318,7 +318,7 @@ export default function Support() {
             {resourceCategories.map((category) => (
               <Card
                 key={category.title}
-                className="bg-card border border-border p-6 space-y-4 hover:border-violet-300 dark:hover:border-violet-700 hover-elevate active-elevate-2 transition-all duration-200 cursor-pointer"
+                className="bg-card border border-border p-5 space-y-4 hover:border-violet-300 dark:hover:border-violet-700 hover-elevate active-elevate-2 transition-all duration-200 cursor-pointer"
                 data-testid={`card-resource-${category.title.toLowerCase().replace(/\s+/g, "-")}`}
                 onClick={() => {
                   if (category.title === "Documentation") {
@@ -333,7 +333,7 @@ export default function Support() {
                   }
                 }}
               >
-                <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30 flex items-center justify-center">
+                <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-violet-100 to-indigo-100 dark:from-violet-900/30 dark:to-indigo-900/30 flex items-center justify-center">
                   <category.icon className="h-6 w-6 text-violet-600 dark:text-violet-400" />
                 </div>
                 <div className="space-y-2">

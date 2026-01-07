@@ -250,12 +250,12 @@ export default function CustomLogin() {
           >
             {/* White Login Card */}
             <div 
-              className="rounded-2xl max-sm:p-6"
+              className="rounded-lg max-sm:p-6"
               style={{
                 background: THEME.pages.login.card.bg,
-                padding: THEME.pages.login.card.padding,
-                borderRadius: THEME.pages.login.card.borderRadius,
-                boxShadow: THEME.pages.login.card.shadow
+                padding: '1.25rem', // Tighter padding p-5 equivalent
+                borderRadius: '0.5rem', // rounded-lg equivalent
+                boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' // shadow-md equivalent
               }}
             >
           {/* Login Header - Minimal */}
