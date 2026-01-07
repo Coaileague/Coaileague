@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useId } from "react";
 import { getCurrentHoliday } from "@/config/mascotConfig";
 
 interface CoAIleagueLogoProps {
@@ -50,24 +50,24 @@ export function CoAIleagueLogo({
     return () => clearInterval(interval);
   }, [isChristmas]);
 
-  // Christmas glow colors - alternating per letter for A and I
-  // Uses 4 phases for smooth transitions: red/green, green/gold, gold/red, red/green...
+  // Brand-safe seasonal glow colors using teal/cyan palette variations
+  // Maintains brand compliance during all seasons
   const christmasGlowA = useMemo(() => {
     const colors = [
-      { color: '#dc2626', glow: 'drop-shadow(0 0 6px #dc2626) drop-shadow(0 0 12px #dc262650)' }, // Red
-      { color: '#16a34a', glow: 'drop-shadow(0 0 6px #16a34a) drop-shadow(0 0 12px #16a34a50)' }, // Green
-      { color: '#eab308', glow: 'drop-shadow(0 0 6px #eab308) drop-shadow(0 0 12px #eab30850)' }, // Gold
-      { color: '#dc2626', glow: 'drop-shadow(0 0 6px #dc2626) drop-shadow(0 0 12px #dc262650)' }, // Red
+      { color: '#2dd4bf', glow: 'drop-shadow(0 0 6px #2dd4bf) drop-shadow(0 0 12px #2dd4bf50)' }, // Teal-400
+      { color: '#06b6d4', glow: 'drop-shadow(0 0 6px #06b6d4) drop-shadow(0 0 12px #06b6d450)' }, // Cyan-500
+      { color: '#3b82f6', glow: 'drop-shadow(0 0 6px #3b82f6) drop-shadow(0 0 12px #3b82f650)' }, // Blue-500
+      { color: '#22d3ee', glow: 'drop-shadow(0 0 6px #22d3ee) drop-shadow(0 0 12px #22d3ee50)' }, // Cyan-400
     ];
     return colors[glowPhase];
   }, [glowPhase]);
 
   const christmasGlowI = useMemo(() => {
     const colors = [
-      { color: '#16a34a', glow: 'drop-shadow(0 0 6px #16a34a) drop-shadow(0 0 12px #16a34a50)' }, // Green
-      { color: '#eab308', glow: 'drop-shadow(0 0 6px #eab308) drop-shadow(0 0 12px #eab30850)' }, // Gold
-      { color: '#dc2626', glow: 'drop-shadow(0 0 6px #dc2626) drop-shadow(0 0 12px #dc262650)' }, // Red
-      { color: '#16a34a', glow: 'drop-shadow(0 0 6px #16a34a) drop-shadow(0 0 12px #16a34a50)' }, // Green
+      { color: '#06b6d4', glow: 'drop-shadow(0 0 6px #06b6d4) drop-shadow(0 0 12px #06b6d450)' }, // Cyan-500
+      { color: '#3b82f6', glow: 'drop-shadow(0 0 6px #3b82f6) drop-shadow(0 0 12px #3b82f650)' }, // Blue-500
+      { color: '#2dd4bf', glow: 'drop-shadow(0 0 6px #2dd4bf) drop-shadow(0 0 12px #2dd4bf50)' }, // Teal-400
+      { color: '#06b6d4', glow: 'drop-shadow(0 0 6px #06b6d4) drop-shadow(0 0 12px #06b6d450)' }, // Cyan-500
     ];
     return colors[glowPhase];
   }, [glowPhase]);
@@ -90,8 +90,8 @@ export function CoAIleagueLogo({
     textSecondary: isDark ? "#94A3B8" : "#64748B", // slate-400 / slate-500
   };
 
-  // Unique ID for this component instance
-  const iconId = useMemo(() => Math.random().toString(36).substr(2, 9), []);
+  // Unique ID for this component instance (SSR-safe)
+  const iconId = useId();
 
   // Icon-only mode - Trinity Bow/Knot (STATIC) with brand teal/cyan palette
   if (onlyIcon) {

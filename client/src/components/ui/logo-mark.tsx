@@ -8,7 +8,7 @@
  */
 
 import { cn } from "@/lib/utils";
-import { useMemo } from "react";
+import { useId } from "react";
 
 interface LogoMarkProps {
   size?: "xs" | "sm" | "md" | "lg" | "xl";
@@ -24,20 +24,16 @@ const sizeMap = {
   xl: { width: 64, height: 64 },
 };
 
-let logoMarkIdCounter = 0;
-
 export function LogoMark({ size = "md", className }: LogoMarkProps) {
   const { width, height } = sizeMap[size];
+  const reactId = useId();
   
-  const ids = useMemo(() => {
-    const id = ++logoMarkIdCounter;
-    return {
-      tealGrad: `logoMark-tealGrad-${id}`,
-      cyanGrad: `logoMark-cyanGrad-${id}`,
-      coreGrad: `logoMark-coreGrad-${id}`,
-      glowFilter: `logoMark-glow-${id}`,
-    };
-  }, []);
+  const ids = {
+    tealGrad: `logoMark-tealGrad${reactId}`,
+    cyanGrad: `logoMark-cyanGrad${reactId}`,
+    coreGrad: `logoMark-coreGrad${reactId}`,
+    glowFilter: `logoMark-glow${reactId}`,
+  };
   
   return (
     <svg
@@ -159,7 +155,8 @@ const wordmarkSizeMap = {
 
 export function LogoWordmark({ size = "md", className, showTagline = false }: LogoWordmarkProps) {
   const config = wordmarkSizeMap[size];
-  const wordGradId = useMemo(() => `wordGrad-${++logoMarkIdCounter}`, []);
+  const reactId = useId();
+  const wordGradId = `wordGrad${reactId}`;
   
   return (
     <svg
