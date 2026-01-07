@@ -1686,6 +1686,25 @@ export const clients = pgTable("clients", {
   pocEmail: varchar("poc_email"), // POC email address
   pocTitle: varchar("poc_title"), // POC job title
 
+  // ============================================================================
+  // AGENCY / SUBCONTRACT HIERARCHY
+  // For security companies that subcontract from larger agencies
+  // ============================================================================
+  
+  // Parent Agency (who you subcontract from)
+  parentAgencyId: varchar("parent_agency_id"), // References another client who is the parent agency
+  isAgency: boolean("is_agency").default(false), // True if this client is an agency you subcontract from
+  
+  // Agency billing references
+  agencyClientNumber: varchar("agency_client_number"), // Their internal client number for you
+  agencyPONumber: varchar("agency_po_number"), // Their purchase order number
+  agencyContractNumber: varchar("agency_contract_number"), // Their contract number
+  
+  // Agency's end-client reference (for pass-through billing)
+  agencyEndClientName: varchar("agency_end_client_name"), // The agency's customer name
+  agencyEndClientId: varchar("agency_end_client_id"), // The agency's customer ID in their system
+  agencyBillingInstructions: text("agency_billing_instructions"), // Special agency billing requirements
+  
   // Scheduling preferences (for Trinity auto-scheduling)
   preferredEmployees: text("preferred_employees").array(), // Array of preferred employee IDs
   requiredCertifications: text("required_certifications").array(), // Required certs for this site
@@ -2800,6 +2819,25 @@ export const invoices = pgTable("invoices", {
   // Additional details
   notes: text("notes"),
 
+  // ============================================================================
+  // EXTERNAL / AGENCY INVOICE REFERENCES
+  // For subcontracting - track both your invoice # and the agency's reference #
+  // ============================================================================
+  
+  // Agency/External References (for subcontract billing)
+  externalInvoiceNumber: varchar("external_invoice_number"), // Agency's required invoice number format
+  agencyPONumber: varchar("agency_po_number"), // Agency's PO number to reference
+  agencyReferenceNumber: varchar("agency_reference_number"), // Any other agency reference
+  externalClientId: varchar("external_client_id"), // Agency's client ID for their system
+  
+  // QuickBooks Integration
+  quickbooksInvoiceId: varchar("quickbooks_invoice_id"), // QuickBooks Invoice ID after sync
+  quickbooksSyncStatus: varchar("quickbooks_sync_status").default("pending"), // pending, synced, error
+  quickbooksLastSync: timestamp("quickbooks_last_sync"),
+  
+  // Service reference (link to billing service)
+  primaryServiceId: varchar("primary_service_id"), // Primary service type for this invoice
+
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 }, (table) => [
@@ -2809,6 +2847,8 @@ export const invoices = pgTable("invoices", {
   index("invoices_due_date_idx").on(table.dueDate),
   index("invoices_workspace_status_idx").on(table.workspaceId, table.status),
   index("invoices_created_at_idx").on(table.createdAt),
+  index("invoices_qb_id_idx").on(table.quickbooksInvoiceId),
+  index("invoices_external_num_idx").on(table.externalInvoiceNumber),
 ]);
 
 export const insertInvoiceSchema = createInsertSchema(invoices).omit({
@@ -22062,3 +22102,185 @@ export const insertQuickbooksSyncReceiptSchema = createInsertSchema(quickbooksSy
 
 export type InsertQuickbooksSyncReceipt = z.infer<typeof insertQuickbooksSyncReceiptSchema>;
 export type QuickbooksSyncReceipt = typeof quickbooksSyncReceipts.$inferSelect;
+
+// ============================================================================
+// SECURITY GUARD BUSINESS - SERVICE TYPES & AGENCY BILLING
+// ============================================================================
+
+/**
+ * Service Types - Armed/Unarmed guard categories with different rates
+ * Supports sub-services and industry-specific billing structures
+ */
+export const serviceTypeEnum = pgEnum('service_type', [
+  'armed_guard',
+  'unarmed_guard', 
+  'patrol',
+  'surveillance',
+  'escort',
+  'event_security',
+  'executive_protection',
+  'loss_prevention',
+  'alarm_response',
+  'fire_watch',
+  'access_control',
+  'concierge',
+  'custom'
+]);
+
+export const billingServices = pgTable("billing_services", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Service identification
+  serviceCode: varchar("service_code", { length: 50 }).notNull(), // e.g., "ARM-01", "UNARM-01"
+  serviceName: varchar("service_name", { length: 200 }).notNull(), // e.g., "Armed Security Officer"
+  serviceType: serviceTypeEnum("service_type").default("unarmed_guard"),
+  
+  // Service categorization
+  isArmed: boolean("is_armed").default(false), // Quick filter for armed/unarmed
+  category: varchar("category", { length: 100 }), // "Security", "Patrol", "Investigation"
+  subCategory: varchar("sub_category", { length: 100 }), // More specific grouping
+  
+  // Description
+  description: text("description"),
+  
+  // Billing rates
+  defaultHourlyRate: decimal("default_hourly_rate", { precision: 10, scale: 2 }).notNull(),
+  overtimeRate: decimal("overtime_rate", { precision: 10, scale: 2 }), // Optional override
+  holidayRate: decimal("holiday_rate", { precision: 10, scale: 2 }), // Optional override
+  minimumHours: decimal("minimum_hours", { precision: 5, scale: 2 }).default("4.00"), // Minimum billable hours
+  
+  // Pay rates (what you pay employees for this service)
+  defaultPayRate: decimal("default_pay_rate", { precision: 10, scale: 2 }),
+  
+  // QuickBooks mapping
+  quickbooksItemId: varchar("quickbooks_item_id"), // QB Service/Item ID
+  quickbooksItemName: varchar("quickbooks_item_name"), // QB display name
+  
+  // Certifications required for this service
+  requiredCertifications: text("required_certifications").array(),
+  
+  // Status
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0), // Display order
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("bs_workspace_idx").on(table.workspaceId),
+  index("bs_service_code_idx").on(table.workspaceId, table.serviceCode),
+  index("bs_type_idx").on(table.serviceType),
+  index("bs_armed_idx").on(table.isArmed),
+  index("bs_qb_item_idx").on(table.quickbooksItemId),
+]);
+
+export const insertBillingServiceSchema = createInsertSchema(billingServices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertBillingService = z.infer<typeof insertBillingServiceSchema>;
+export type BillingService = typeof billingServices.$inferSelect;
+
+/**
+ * Client-Service Assignments - Maps which services are billable to which clients
+ * Supports client-specific rate overrides
+ */
+export const clientServiceAssignments = pgTable("client_service_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  serviceId: varchar("service_id").notNull().references(() => billingServices.id, { onDelete: 'cascade' }),
+  
+  // Client-specific rate overrides (null = use service defaults)
+  clientHourlyRate: decimal("client_hourly_rate", { precision: 10, scale: 2 }),
+  clientOvertimeRate: decimal("client_overtime_rate", { precision: 10, scale: 2 }),
+  clientHolidayRate: decimal("client_holiday_rate", { precision: 10, scale: 2 }),
+  
+  // Contract details
+  contractStartDate: timestamp("contract_start_date"),
+  contractEndDate: timestamp("contract_end_date"),
+  minimumHoursPerWeek: decimal("minimum_hours_per_week", { precision: 5, scale: 2 }),
+  
+  // Notes specific to this client-service combo
+  specialInstructions: text("special_instructions"),
+  
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("csa_workspace_idx").on(table.workspaceId),
+  index("csa_client_idx").on(table.clientId),
+  index("csa_service_idx").on(table.serviceId),
+  index("csa_client_service_idx").on(table.clientId, table.serviceId),
+]);
+
+export const insertClientServiceAssignmentSchema = createInsertSchema(clientServiceAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertClientServiceAssignment = z.infer<typeof insertClientServiceAssignmentSchema>;
+export type ClientServiceAssignment = typeof clientServiceAssignments.$inferSelect;
+
+/**
+ * Trinity Correction Memory - Learn from billing corrections per org
+ * Persistent storage for Trinity to improve accuracy over time
+ */
+export const trinityCorrectionMemory = pgTable("trinity_correction_memory", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // What was corrected
+  correctionType: varchar("correction_type", { length: 50 }).notNull(), // invoice, payroll, schedule, client_mapping
+  entityType: varchar("entity_type", { length: 50 }).notNull(), // invoice, payrollRun, shift, client
+  entityId: varchar("entity_id"), // ID of the corrected entity
+  
+  // The correction details
+  fieldCorrected: varchar("field_corrected", { length: 100 }), // e.g., "hourlyRate", "serviceId", "clientReference"
+  originalValue: text("original_value"), // What Trinity generated
+  correctedValue: text("corrected_value"), // What the user corrected it to
+  
+  // Context for learning
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: 'set null' }),
+  serviceId: varchar("service_id").references(() => billingServices.id, { onDelete: 'set null' }),
+  employeeId: varchar("employee_id").references(() => employees.id, { onDelete: 'set null' }),
+  
+  // Pattern recognition
+  pattern: text("pattern"), // Extracted pattern for future matching
+  confidence: decimal("confidence", { precision: 5, scale: 2 }).default("0.00"), // How confident Trinity is in this correction
+  appliedCount: integer("applied_count").default(0), // How many times this correction has been auto-applied
+  
+  // Who made the correction
+  correctedBy: varchar("corrected_by").references(() => users.id, { onDelete: 'set null' }),
+  correctedAt: timestamp("corrected_at").defaultNow(),
+  
+  // Learning feedback
+  wasHelpful: boolean("was_helpful"), // User feedback on auto-corrections
+  userFeedback: text("user_feedback"),
+  
+  // Expiry (old corrections become less relevant)
+  expiresAt: timestamp("expires_at"), // Optional expiry for seasonal patterns
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("tcm_workspace_idx").on(table.workspaceId),
+  index("tcm_correction_type_idx").on(table.correctionType),
+  index("tcm_client_idx").on(table.clientId),
+  index("tcm_service_idx").on(table.serviceId),
+  index("tcm_workspace_type_idx").on(table.workspaceId, table.correctionType),
+  index("tcm_applied_count_idx").on(table.appliedCount),
+]);
+
+export const insertTrinityCorrectionMemorySchema = createInsertSchema(trinityCorrectionMemory).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTrinityCorrectionMemory = z.infer<typeof insertTrinityCorrectionMemorySchema>;
+export type TrinityCorrectionMemory = typeof trinityCorrectionMemory.$inferSelect;
