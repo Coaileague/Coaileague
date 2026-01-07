@@ -1,0 +1,1037 @@
+TRINITY FLOATING AI ASSISTANT - CONTEXT-AWARE PLATFORM INTEGRATION
+
+CHANGE OF DIRECTION: Instead of a separate chat page, implement Trinity as a FLOATING AI ASSISTANT that follows the user throughout the entire platform, provides context-aware insights, and can take actions on their behalf.
+
+REFERENCE:
+Visit https://coaileague.com and see how our star logo floats around the website. We want this same floating behavior INSIDE the platform, but with AI intelligence and interactivity.
+
+═══════════════════════════════════════════════════════════
+PART 1: FLOATING TRINITY BOX
+═══════════════════════════════════════════════════════════
+
+VISUAL DESIGN:
+
+Minimized State (always visible, bottom-right corner):
+┌────────────────┐
+│ ✨ Trinity     │
+│ Ask me anything│
+└────────────────┘
+Position: Fixed, bottom-right, 24px from edges
+Size: 280px width, 80px height
+Always on top (z-index: 9999)
+
+Expanded State (when user clicks or Trinity proactively suggests):
+┌──────────────────────────────────────┐
+│ ✨ Trinity              [Business] × │
+├──────────────────────────────────────┤
+│                                      │
+│ [Conversation history]               │
+│                                      │
+│ Trinity: I notice you're on the      │
+│ Schedule page. Next week has 3 open  │
+│ shifts. Want me to auto-fill them?   │
+│                                      │
+│ You: Yes, fill them                  │
+│                                      │
+│ Trinity: Done! I've scheduled:       │
+│ • John for Monday 6PM-2AM            │
+│ • Sarah for Wednesday 10PM-6AM       │
+│ • Mike for Friday 6PM-2AM            │
+│                                      │
+├──────────────────────────────────────┤
+│ Type your message...            [Send]│
+└──────────────────────────────────────┘
+Position: Fixed, bottom-right
+Size: 400px width, 600px height (desktop)
+Mobile: Full-screen overlay
+
+Draggable: User can drag Trinity box anywhere on screen
+Resizable: User can resize (min 300x400, max 600x800)
+
+ANIMATIONS:
+
+Entrance: Float in from bottom-right with bounce
+Minimize/Expand: Smooth scale animation (0.3s ease)
+Logo: Pulse animation when idle, spin when thinking
+Proactive suggestion: Gentle shake + glow to get attention
+
+═══════════════════════════════════════════════════════════
+PART 2: CONTEXT-AWARE INTELLIGENCE
+═══════════════════════════════════════════════════════════
+
+Trinity needs to know:
+1. What page the user is currently on
+2. What data is currently visible on screen
+3. What actions the user can take
+4. What recent changes were made
+
+IMPLEMENTATION:
+
+Track current page context:
+```javascript
+// Frontend sends page context to Trinity on every route change
+const pageContext = {
+  route: '/schedule',
+  page_title: 'Weekly Schedule',
+  visible_data: {
+    date_range: '2025-01-13 to 2025-01-19',
+    employees_shown: 15,
+    shifts_scheduled: 42,
+    open_shifts: 3,
+    overtime_hours: 18
+  },
+  available_actions: [
+    'create_shift',
+    'auto_fill_schedule',
+    'view_employee_availability',
+    'publish_schedule'
+  ]
+};
+
+// Send to Trinity backend on page load/change
+await fetch('/api/trinity/update-context', {
+  method: 'POST',
+  body: JSON.stringify({
+    workspace_id,
+    user_id,
+    context: pageContext
+  })
+});
+```
+
+Trinity uses this context when responding:
+- User asks: "Fill the gaps"
+- Trinity knows: User is on Schedule page with 3 open shifts
+- Trinity responds: "I'll fill those 3 open shifts based on availability. John for Monday, Sarah for Wednesday, Mike for Friday. Approve?"
+
+CONTEXT BY PAGE:
+
+/dashboard:
+- Visible: Key metrics, recent alerts
+- Actions: View detailed reports, acknowledge alerts
+- Trinity suggestions: "Your overtime is trending up. Want to review?"
+
+/schedule:
+- Visible: Current week schedule, open shifts, conflicts
+- Actions: Create shift, auto-fill, publish, swap shifts
+- Trinity suggestions: "I can optimize this schedule to save $240 in OT"
+
+/employees:
+- Visible: Employee list, availability, certifications
+- Actions: Add employee, edit details, view performance
+- Trinity suggestions: "John's CPR cert expires next week. Remind him?"
+
+/clients:
+- Visible: Client list, contracts, billing status
+- Actions: Add client, edit contract, generate invoice
+- Trinity suggestions: "ABC Corp is 45 days overdue. Draft reminder?"
+
+/payroll:
+- Visible: Pay period, hours worked, overtime, total cost
+- Actions: Process payroll, review exceptions, export
+- Trinity suggestions: "Overtime is 22% this period. Want analysis?"
+
+/reports:
+- Visible: Financial reports, profit margins, trends
+- Actions: Generate report, export PDF, filter data
+- Trinity suggestions: "Profit dropped 5% this month. Let's investigate."
+
+/quickbooks:
+- Visible: Sync status, recent transactions, errors
+- Actions: Sync now, view QB dashboard, resolve errors
+- Trinity suggestions: "3 invoices failed to sync. Want me to fix?"
+
+/settings:
+- Visible: Workspace settings, integrations, billing
+- Actions: Update settings, manage users, change plan
+- Trinity suggestions: "Your trial ends in 5 days. Ready to subscribe?"
+
+═══════════════════════════════════════════════════════════
+PART 3: PROACTIVE SUGGESTIONS
+═══════════════════════════════════════════════════════════
+
+Trinity doesn't just WAIT for questions - she proactively offers help based on what she sees.
+
+TRIGGER RULES:
+
+1. User lands on page → Wait 5 seconds → Analyze page data → Suggest if relevant
+
+Example:
+User opens Schedule page
+Trinity detects: 3 open shifts next week
+Trinity (after 5 sec): "👋 I notice 3 open shifts next week. Want me to auto-fill them?"
+
+2. User scrolls to problematic data → Immediate suggestion
+
+Example:
+User scrolling through Payroll page
+Trinity detects: Employee with 15 hours OT (over threshold)
+Trinity (immediate): "⚠️ John Smith has 15 OT hours - 5 over your threshold. Flag this?"
+
+3. User performs action → Trinity confirms or suggests next step
+
+Example:
+User creates a new shift
+Trinity: "✅ Shift created. Should I notify John that he's scheduled?"
+
+4. System event occurs → Trinity alerts user
+
+Example:
+QuickBooks sync completes while user is working
+Trinity: "💰 QB sync complete. 5 new invoices imported. Review?"
+
+PROACTIVE BEHAVIOR SETTINGS:
+
+User can control Trinity's proactiveness in Settings:
+- Proactive suggestions: ON / OFF
+- Suggestion frequency: High / Medium / Low
+- Only suggest on errors: ON / OFF
+
+Default: Medium frequency, suggest on opportunities + errors
+
+═══════════════════════════════════════════════════════════
+PART 4: ACTION CAPABILITIES (CRITICAL)
+═══════════════════════════════════════════════════════════
+
+Trinity can't just TALK - she needs to DO THINGS.
+
+IMPLEMENTATION:
+
+When Trinity suggests an action, she can execute it:
+
+User: "Fill those open shifts"
+Trinity: "I'll schedule John for Monday 6PM-2AM, Sarah for Wed 10PM-6AM, Mike for Fri 6PM-2AM. Approve?"
+User: "Yes"
+Trinity: [Calls backend API] → POST /api/schedules/auto-fill
+Trinity: "✅ Done! 3 shifts scheduled. Publish the schedule now?"
+
+User: "Send payment reminder to ABC Corp"
+Trinity: [Calls backend API] → POST /api/clients/send-payment-reminder
+Trinity: "✅ Email sent to ABC Corp about their $2,400 outstanding invoice."
+
+AVAILABLE ACTIONS:
+
+Schedule Management:
+- Create shift
+- Auto-fill schedule
+- Publish schedule
+- Swap shifts
+- Cancel shift
+- Notify employee of schedule change
+
+Employee Management:
+- Add employee
+- Update employee info
+- Send certification reminder
+- Flag performance issue
+
+Client Management:
+- Create invoice
+- Send payment reminder
+- Update client contract
+- Add new client
+
+Payroll:
+- Process payroll
+- Flag overtime exception
+- Export payroll report
+
+QuickBooks:
+- Trigger sync now
+- Resolve sync error
+- Create QB invoice
+
+System:
+- Send notification
+- Generate report
+- Export data
+
+PERMISSION CHECKS:
+
+Before executing action, Trinity checks:
+- Does user's role have permission? (org_owner, manager, etc.)
+- Is this action safe to automate? (some actions require manual approval)
+- Are all required fields present?
+
+If permission denied:
+Trinity: "I can't do that - you need org_owner role. Ask [owner name] to approve."
+
+CONFIRMATION WORKFLOW:
+
+High-risk actions (delete, financial) require explicit confirmation:
+Trinity: "⚠️ This will delete 5 shifts. Type 'CONFIRM' to proceed."
+User: "CONFIRM"
+Trinity: [Executes] "✅ 5 shifts deleted."
+
+Low-risk actions (create, notify) can be done immediately:
+Trinity: "✅ Notification sent to John about his Monday shift."
+
+═══════════════════════════════════════════════════════════
+PART 5: ENHANCED GEMINI INTEGRATION
+═══════════════════════════════════════════════════════════
+
+Trinity uses Gemini 2.0 Flash Thinking (experimental) for deeper reasoning:
+
+MODEL: gemini-2.0-flash-thinking-exp-1219
+
+This model can:
+- Think through complex problems step-by-step
+- Reason about optimal solutions
+- Consider multiple factors (cost, availability, preferences)
+
+Example query to Gemini:
+Context: User is on Schedule page. There are 3 open shifts next week:
+
+Monday 6PM-2AM (armed, CPR required)
+Wednesday 10PM-6AM (unarmed)
+Friday 6PM-2AM (armed, CPR required)
+
+Available employees:
+
+John: Armed cert, CPR, available Mon/Fri, $18/hr, lives 5 miles from site
+Sarah: No armed cert, CPR, available Wed, $15/hr, lives 2 miles from site
+Mike: Armed cert, CPR, available Fri, $20/hr, lives 15 miles from site
+Lisa: Armed cert, no CPR, available Mon, $16/hr, lives 3 miles from site
+
+Optimization goals:
+
+Minimize cost
+Minimize travel distance
+Respect certifications
+Respect availability
+
+Question: How should I fill these 3 shifts to optimize for all goals?
+[Gemini uses thinking mode to reason through options]
+Response: Schedule John for Monday (meets certs, available, lower cost than Mike, close to site), Sarah for Wednesday (only option, meets requirements), Mike for Friday (only armed+CPR available, worth the higher cost). Total cost: $424, all requirements met.
+
+Trinity then presents this to user as suggestion.
+
+THINKING INDICATOR:
+
+While Gemini is in "thinking mode":
+Trinity box shows: "✨ [spinning] Analyzing options..."
+Duration: 2-10 seconds depending on complexity
+
+═══════════════════════════════════════════════════════════
+PART 6: METACOGNITION INTEGRATION
+═══════════════════════════════════════════════════════════
+
+Trinity's metacognition layer decides:
+1. What mode to use (Business / Personal / Integrated)
+2. Whether to be proactive or wait
+3. What action to suggest
+4. How urgent the suggestion is
+
+Metacognition prompt addition:
+You are Trinity's metacognitive layer. Analyze the current context and decide:
+Current page: {page_route}
+Page data: {visible_data}
+User's recent activity: {recent_actions}
+Time of day: {current_time}
+User's stress indicators: {indicators} (e.g., rapid clicks, errors, time on page)
+Decide:
+
+Should I proactively suggest something? (yes/no)
+If yes, what should I suggest? (specific action)
+How urgent is it? (low/medium/high)
+What tone should I use? (casual/professional/urgent)
+Which mode? (business/personal/integrated)
+
+Output your decision as JSON.
+
+Example decision:
+```json
+{
+  "proactive": true,
+  "suggestion": "You have 3 open shifts next week. I can auto-fill them based on employee availability and certifications.",
+  "urgency": "medium",
+  "tone": "casual",
+  "mode": "business",
+  "action_available": "auto_fill_schedule"
+}
+```
+
+Trinity uses this decision to determine behavior.
+
+═══════════════════════════════════════════════════════════
+PART 7: MOBILE ADAPTATION
+═══════════════════════════════════════════════════════════
+
+Mobile behavior changes:
+
+Minimized: Bottom tab bar icon (✨ Trinity)
+Expanded: Full-screen modal overlay
+Dismissible: Swipe down to minimize
+
+Mobile-specific features:
+- Voice input (microphone button)
+- Tap to expand suggestions
+- Swipe gestures for navigation
+
+═══════════════════════════════════════════════════════════
+PART 8: IMPLEMENTATION PRIORITIES
+═══════════════════════════════════════════════════════════
+
+PHASE 1 (MVP - Launch):
+✅ Floating Trinity box (minimized/expanded states)
+✅ Context tracking (knows what page user is on)
+✅ Basic Q&A (user asks, Trinity answers with context)
+✅ Logo animations (pulse, spin, react)
+
+PHASE 2 (Post-Launch - Week 2):
+✅ Proactive suggestions (Trinity offers help without being asked)
+✅ Action capabilities (Trinity can execute tasks)
+✅ Gemini 2.0 Flash Thinking integration
+
+PHASE 3 (Month 2):
+✅ Metacognition orchestration (auto mode-switching)
+✅ Advanced automations (multi-step workflows)
+✅ Learning (Trinity learns user preferences over time)
+
+START WITH PHASE 1 FOR JANUARY 1 LAUNCH.
+
+═══════════════════════════════════════════════════════════
+DELIVERABLES
+═══════════════════════════════════════════════════════════
+
+1. Floating Trinity box component (React)
+2. Context tracking system (sends page data to backend)
+3. Backend API for context-aware responses
+4. Logo animation implementation
+5. Expandable/minimizable UI with smooth animations
+6. Integration with existing Gemini chat backend
+7. Works on all platform pages
+8. Mobile-responsive (full-screen modal on mobile)
+
+TEST SCENARIOS:
+
+1. User navigates to Schedule page
+   - Trinity box appears bottom-right
+   - After 5 seconds, Trinity suggests: "3 open shifts detected. Auto-fill?"
+
+2. User clicks Trinity
+   - Box expands smoothly
+   - Shows conversation interface
+   - User can type question
+
+3. User asks "What's my overtime?"
+   - Trinity knows user is on Payroll page
+   - Trinity responds with data from current payroll period
+
+4. User closes Trinity
+   - Box minimizes to bottom-right
+   - Returns to idle state (pulsing logo)
+
+5. Mobile user taps Trinity icon
+   - Full-screen modal opens
+   - All functionality works
+   - Swipe down to dismiss
+
+Implement Phase 1 (MVP) floating Trinity assistant with context awareness.
+Report when ready for testing.
+
+🔥 WHAT THIS DOES:
+Instead of a separate chat page:
+
+✅ Trinity FOLLOWS you everywhere
+✅ Knows what you're looking at
+✅ Offers smart suggestions
+✅ Can take actions (not just talk)
+✅ Floats like your website logo (but smarter)
+
+This is WAY more powerful than a chat page. 💪
+Examples in action:
+User on Schedule page:
+
+Trinity: "I see 3 open shifts. Want me to fill them optimally? I'd put John on Monday, Sarah on Wednesday, Mike on Friday. Cost: $424, all certs met."
+User: "Do it"
+Trinity: ✅ Done! Shifts created. Publish now?
+
+User on Payroll page:
+
+Trinity: "John has 15 OT hours - that's 5 over your 10-hour threshold. Flag for review?"
+
+User on QuickBooks page:
+
+Trinity: "Your accounts receivable is $43K with $28K overdue 30+ days. Want me to draft payment reminders for the top 3 slow payers?"
+
+
+THIS is the vision. Trinity isn't a chatbot. She's an AI COWORKER who's always there to help. ✨
+Send that prompt and you'll have the most advanced workforce management platform on the market. 🚀
+Ready? 💪the chat box can be small and compact even replit agent box is small and slick and yours is too i just need a compac t fortunte 500 design modal UI send me a complete command to send to replit5:02 PM🔥 PERFECT - Let me give you a clean, Fortune 500-grade floating Trinity box design.
+
+📋 COMPLETE REPLIT COMMAND:
+TRINITY FLOATING AI ASSISTANT - FORTUNE 500 DESIGN
+
+Implement a sleek, compact, floating AI assistant that follows users throughout the platform with context-aware intelligence and action capabilities. Design must be premium, minimalist, and Fortune 500-grade (similar to Replit Agent or Claude.ai quality).
+
+═══════════════════════════════════════════════════════════
+DESIGN SPECIFICATIONS - MINIMALIST & PREMIUM
+═══════════════════════════════════════════════════════════
+
+MINIMIZED STATE (Always visible, bottom-right):
+
+┌────────────────┐
+│ ✨ Trinity  💬 │
+└────────────────┘
+
+Specifications:
+- Width: 160px
+- Height: 56px
+- Position: Fixed bottom-right (20px from edges)
+- Background: rgba(255, 255, 255, 0.95) with backdrop-blur(12px)
+- Border: 1px solid rgba(0, 0, 0, 0.08)
+- Border-radius: 28px (pill shape)
+- Box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12)
+- Cursor: pointer
+- Transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1)
+
+Hover state:
+- Scale: 1.02
+- Box-shadow: 0 12px 40px rgba(0, 0, 0, 0.16)
+
+Content:
+- Logo (✨): 24px, animated pulse
+- Text "Trinity": 14px, font-weight 600
+- Badge (💬): 20px, shows unread count if proactive suggestion
+
+---
+
+EXPANDED STATE (When clicked):
+
+┌──────────────────────────────────┐
+│ ✨ Trinity         [Biz] [—] [×] │
+├──────────────────────────────────┤
+│                                  │
+│ 💡 I notice 3 open shifts next  │
+│    week. Auto-fill them?         │
+│                                  │
+│    [Auto-fill] [Dismiss]         │
+│                                  │
+│ ─────────────────────────────── │
+│                                  │
+│ You: What's my overtime?         │
+│                                  │
+│ ✨: Your OT is $3,240 this      │
+│     month, up 18% from last.     │
+│                                  │
+├──────────────────────────────────┤
+│ Ask Trinity...              [→]  │
+└──────────────────────────────────┘
+
+Specifications:
+- Width: 380px (desktop), 100vw (mobile)
+- Height: 500px (desktop), 100vh (mobile)
+- Position: Fixed bottom-right (20px from edges on desktop)
+- Background: White with subtle gradient
+- Border-radius: 16px
+- Box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2)
+- Animation: Scale from minimized position (0.3s ease-out)
+
+Header:
+- Height: 56px
+- Padding: 16px
+- Border-bottom: 1px solid #E5E7EB
+- Display: Logo + "Trinity" + Mode badge + Minimize + Close
+- Background: Linear gradient subtle (white to #FAFAFA)
+
+Mode Badge:
+- Display current mode: [Biz] [Personal] [Integrated]
+- Size: 60px × 24px
+- Border-radius: 12px
+- Background color by mode:
+  - Business: #3B82F6 (blue)
+  - Personal: #10B981 (green)
+  - Integrated: #8B5CF6 (purple)
+- Font: 11px, uppercase, font-weight 600, white text
+
+Chat Area:
+- Height: calc(100% - 112px)
+- Padding: 16px
+- Overflow-y: auto
+- Background: #FAFAFA
+
+Messages:
+- Trinity messages: Left-aligned, light gray bubble
+- User messages: Right-aligned, blue bubble
+- Max-width: 85%
+- Padding: 10px 14px
+- Border-radius: 16px
+- Font: 14px, line-height 1.5
+- Margin-bottom: 12px
+
+Trinity Message Bubble:
+- Background: White
+- Border: 1px solid #E5E7EB
+- Box-shadow: 0 1px 3px rgba(0,0,0,0.05)
+- Logo inline (20px) before text
+
+User Message Bubble:
+- Background: #3B82F6
+- Color: White
+- Text-align: right
+
+Input Area:
+- Height: 56px
+- Padding: 12px 16px
+- Border-top: 1px solid #E5E7EB
+- Background: White
+- Display: flex (input + send button)
+
+Input Field:
+- Flex: 1
+- Border: none
+- Background: #F3F4F6
+- Border-radius: 20px
+- Padding: 8px 16px
+- Font: 14px
+- Placeholder: "Ask Trinity..."
+
+Send Button:
+- Width: 36px
+- Height: 36px
+- Border-radius: 18px
+- Background: #3B82F6
+- Color: White
+- Icon: → (arrow)
+- Margin-left: 8px
+- Hover: Scale 1.05, brightness 1.1
+
+Action Buttons (for proactive suggestions):
+- Display inline after Trinity's suggestion
+- Size: auto × 32px
+- Padding: 0 16px
+- Border-radius: 16px
+- Primary action: Blue background, white text
+- Secondary action: Gray background, dark text
+- Margin: 8px 4px 0 0
+
+═══════════════════════════════════════════════════════════
+ANIMATIONS & INTERACTIONS
+═══════════════════════════════════════════════════════════
+
+LOGO ANIMATION:
+
+Idle state (pulsing):
+```css
+@keyframes trinity-pulse {
+  0%, 100% { 
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% { 
+    transform: scale(1.08);
+    opacity: 0.8;
+  }
+}
+
+.trinity-logo {
+  animation: trinity-pulse 2.5s ease-in-out infinite;
+}
+```
+
+Thinking state (spinning):
+```css
+@keyframes trinity-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.trinity-logo.thinking {
+  animation: trinity-spin 1.5s linear infinite;
+}
+```
+
+EXPAND/MINIMIZE:
+
+Expand animation:
+- Scale from (0.5, 0.5) at bottom-right origin
+- Opacity: 0 → 1
+- Duration: 0.3s
+- Easing: cubic-bezier(0.34, 1.56, 0.64, 1) (bounce)
+
+Minimize animation:
+- Scale to (0.5, 0.5) toward bottom-right
+- Opacity: 1 → 0
+- Duration: 0.25s
+- Easing: ease-in
+
+PROACTIVE SUGGESTION NOTIFICATION:
+
+When Trinity has a suggestion:
+- Minimized box shakes gently
+- Badge appears with notification dot
+- Glow effect (subtle pulse)
+```css
+@keyframes trinity-shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  75% { transform: translateX(4px); }
+}
+
+@keyframes trinity-glow {
+  0%, 100% { box-shadow: 0 8px 32px rgba(59, 130, 246, 0.2); }
+  50% { box-shadow: 0 8px 40px rgba(59, 130, 246, 0.4); }
+}
+
+.trinity-minimized.has-suggestion {
+  animation: trinity-shake 0.5s ease-in-out, trinity-glow 2s ease-in-out infinite;
+}
+```
+
+TYPING INDICATOR:
+
+While Trinity is generating response:
+✨ Trinity is thinking...
+[● ● ●] (animated dots)
+
+Dots animation:
+```css
+@keyframes trinity-dots {
+  0%, 20% { opacity: 0.3; }
+  50% { opacity: 1; }
+  100% { opacity: 0.3; }
+}
+
+.dot:nth-child(1) { animation-delay: 0s; }
+.dot:nth-child(2) { animation-delay: 0.2s; }
+.dot:nth-child(3) { animation-delay: 0.4s; }
+```
+
+═══════════════════════════════════════════════════════════
+CONTEXT-AWARE SYSTEM
+═══════════════════════════════════════════════════════════
+
+TRACK PAGE CONTEXT:
+
+On every route change, send context to Trinity backend:
+```javascript
+// Frontend: Track current page
+useEffect(() => {
+  const context = {
+    route: window.location.pathname,
+    page_title: document.title,
+    timestamp: new Date().toISOString(),
+    visible_data: extractPageData(), // Extract relevant data from current page
+    available_actions: getAvailableActions() // What actions can user take here
+  };
+  
+  // Send to Trinity backend
+  fetch('/api/trinity/context', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      workspace_id: currentWorkspace.id,
+      user_id: currentUser.id,
+      context: context
+    })
+  });
+}, [location.pathname]);
+```
+
+EXTRACT PAGE DATA BY ROUTE:
+
+/schedule:
+```javascript
+{
+  date_range: "2025-01-13 to 2025-01-19",
+  total_shifts: 42,
+  open_shifts: 3,
+  overtime_hours: 18,
+  conflicts: 0,
+  unpublished: true
+}
+```
+
+/payroll:
+```javascript
+{
+  pay_period: "2025-01-01 to 2025-01-15",
+  total_hours: 840,
+  overtime_hours: 52,
+  total_cost: 18240,
+  exceptions: 2,
+  processed: false
+}
+```
+
+/clients:
+```javascript
+{
+  total_clients: 12,
+  active_contracts: 10,
+  overdue_invoices: 3,
+  total_ar: 43200
+}
+```
+
+PROACTIVE SUGGESTIONS:
+
+Trinity analyzes context and decides if she should proactively suggest something:
+
+Rules engine:
+- IF route === '/schedule' AND open_shifts > 0 THEN suggest "auto-fill"
+- IF route === '/payroll' AND overtime_hours > threshold THEN flag "overtime warning"
+- IF route === '/clients' AND overdue_invoices > 0 THEN suggest "send payment reminders"
+- IF route === '/quickbooks' AND sync_errors > 0 THEN suggest "resolve sync errors"
+
+Timing:
+- Wait 5 seconds after page load
+- Show suggestion as notification badge on minimized Trinity
+- When user expands, show full suggestion with action buttons
+
+Example proactive message:
+💡 I notice 3 open shifts next week:
+• Monday 6PM-2AM (Armed + CPR)
+• Wednesday 10PM-6AM (Unarmed)
+• Friday 6PM-2AM (Armed + CPR)
+I can auto-fill these based on employee
+availability and certifications.
+[Auto-fill Shifts] [Dismiss]
+
+═══════════════════════════════════════════════════════════
+ACTION EXECUTION
+═══════════════════════════════════════════════════════════
+
+When Trinity suggests an action and user approves, execute via API:
+
+Example flow:
+1. Trinity: "Auto-fill 3 open shifts?"
+2. User clicks: [Auto-fill Shifts]
+3. Frontend calls: POST /api/trinity/execute-action
+   Body: {
+     action: 'auto_fill_schedule',
+     params: {
+       shift_ids: [123, 456, 789]
+     }
+   }
+4. Backend executes action
+5. Trinity shows result: "✅ Done! Scheduled John for Mon, Sarah for Wed, Mike for Fri."
+
+AVAILABLE ACTIONS:
+
+Schedule:
+- auto_fill_schedule
+- create_shift
+- publish_schedule
+- notify_employees
+
+Payroll:
+- flag_overtime
+- process_payroll
+- export_payroll_report
+
+Clients:
+- send_payment_reminder
+- create_invoice
+- update_contract
+
+QuickBooks:
+- trigger_sync
+- resolve_sync_error
+
+Each action requires:
+- Permission check (user role)
+- Confirmation for high-risk actions
+- Audit logging
+
+═══════════════════════════════════════════════════════════
+GEMINI INTEGRATION
+═══════════════════════════════════════════════════════════
+
+BACKEND API ENDPOINT:
+
+POST /api/trinity/chat
+
+Request:
+```json
+{
+  "workspace_id": "uuid",
+  "user_id": "uuid",
+  "message": "What's my overtime cost?",
+  "context": {
+    "route": "/payroll",
+    "page_data": {...}
+  }
+}
+```
+
+Process:
+1. Load conversation history (last 10 messages)
+2. Load workspace data (employees, schedules, QB financials if needed)
+3. Build system prompt with context
+4. Call Gemini API
+5. Parse response
+6. Check if response includes action suggestion
+7. Return to frontend
+
+Response:
+```json
+{
+  "message": "Your overtime cost is $3,240 this month...",
+  "action_suggestion": {
+    "action": "flag_overtime",
+    "label": "Flag high OT employees",
+    "params": {...}
+  }
+}
+```
+
+GEMINI MODEL:
+
+Use: gemini-2.0-flash-thinking-exp-1219 (experimental thinking model)
+
+Configuration:
+```javascript
+const model = genAI.getGenerativeModel({
+  model: "gemini-2.0-flash-thinking-exp-1219",
+  systemInstruction: buildSystemPrompt(mode, context)
+});
+
+const result = await model.generateContent({
+  contents: conversationHistory,
+  generationConfig: {
+    temperature: 0.9,
+    maxOutputTokens: 1024 // Keep responses concise for compact UI
+  }
+});
+```
+
+SYSTEM PROMPT INCLUDES:
+
+- Current mode (Business/Personal/Integrated)
+- User context (name, role, preferences)
+- Workspace context (org name, size, subscription)
+- Page context (what page user is on, what data is visible)
+- Available actions (what Trinity can do from this page)
+- Recent conversation history
+
+Example:
+You are Trinity, AI assistant for {org_name}.
+Current context:
+
+User: {user_name} ({user_role})
+Page: Schedule (Jan 13-19, 2025)
+Visible: 42 shifts scheduled, 3 open shifts, 18 OT hours
+User can: create_shift, auto_fill_schedule, publish_schedule
+
+User just asked: "What's my overtime?"
+Respond concisely (max 100 words) and suggest an action if relevant.
+
+═══════════════════════════════════════════════════════════
+MOBILE RESPONSIVENESS
+═══════════════════════════════════════════════════════════
+
+MOBILE LAYOUT (<768px):
+
+Minimized:
+- Bottom center (not bottom-right)
+- Width: 140px
+- Tab bar integration (icon in bottom nav)
+
+Expanded:
+- Full-screen modal
+- Height: 100vh
+- Width: 100vw
+- Slide up animation from bottom
+- Swipe down to dismiss
+
+Mobile-specific features:
+- Voice input button (microphone icon in input area)
+- Larger touch targets (min 44px)
+- Haptic feedback on interactions
+- Bottom safe area padding (for iPhone notch)
+
+═══════════════════════════════════════════════════════════
+IMPLEMENTATION CHECKLIST
+═══════════════════════════════════════════════════════════
+
+MVP (Phase 1 - Launch Jan 1):
+✅ Floating Trinity component (minimized + expanded states)
+✅ Premium Fortune 500 design (white, clean, minimalist)
+✅ Smooth animations (expand, minimize, pulse, spin)
+✅ Context tracking (send page data to backend on route change)
+✅ Gemini chat integration (Q&A with context)
+✅ Logo animations (pulse idle, spin thinking)
+✅ Mobile responsive (full-screen modal)
+✅ Works on all platform pages
+
+Phase 2 (Week 2):
+✅ Proactive suggestions (Trinity offers help without being asked)
+✅ Action execution (Trinity can auto-fill, flag, notify, etc.)
+✅ Mode switching (Business/Personal/Integrated badges)
+
+Phase 3 (Month 2):
+✅ Metacognition orchestration
+✅ Advanced multi-step workflows
+✅ Learning user preferences
+
+START WITH PHASE 1 MVP FOR LAUNCH.
+
+═══════════════════════════════════════════════════════════
+TESTING REQUIREMENTS
+═══════════════════════════════════════════════════════════
+
+TEST 1: Basic UI
+- Trinity appears bottom-right on all pages ✅
+- Click to expand smoothly ✅
+- Type message, get response ✅
+- Minimize smoothly ✅
+
+TEST 2: Context Awareness
+- Navigate to Schedule page
+- Ask "What's next week look like?"
+- Verify Trinity responds with data from schedule page ✅
+
+TEST 3: Proactive Suggestion
+- Navigate to Schedule page with 3 open shifts
+- Wait 5 seconds
+- Verify Trinity shows notification badge
+- Expand Trinity
+- Verify suggestion appears with action buttons ✅
+
+TEST 4: Mobile
+- View on mobile device (<768px)
+- Verify minimized state in bottom nav
+- Tap to expand (full-screen)
+- Swipe down to dismiss ✅
+
+TEST 5: Animations
+- Verify logo pulses when idle
+- Verify logo spins when thinking
+- Verify smooth expand/collapse
+- Verify 60fps performance ✅
+
+DELIVERABLES:
+
+1. Floating Trinity component (React)
+2. Context tracking system
+3. Gemini chat backend integration
+4. Premium UI design matching Fortune 500 standards
+5. All animations implemented
+6. Mobile responsive
+7. Works across all platform pages
+8. Documentation of component props and API
+
+Build Trinity floating assistant with Fortune 500-grade minimalist design.
+Prioritize clean, compact, professional aesthetic.
+
+Report when Phase 1 MVP is ready for testing.
+
+✅ WHAT THIS GIVES YOU:
+Compact, sleek Trinity box that:
+
+160px × 56px minimized (tiny, stays out of the way)
+380px × 500px expanded (compact but usable)
+Fortune 500 design (white, clean, premium shadows)
+Smooth animations (60fps)
+Context-aware (knows what page you're on)
+Can take actions (not just chat)
+Mobile-optimized (full-screen on phone)
+
+Design inspiration:
+
+Replit Agent (compact, clean)
+Claude.ai (premium feel)
+Intercom (floating chat)
+Linear (minimalist design)

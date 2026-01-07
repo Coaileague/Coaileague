@@ -3318,7 +3318,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/trinity/control-console", trinityControlConsoleRouter); // Trinity Control Console
   app.use("/api/trinity", empireRouter); // Empire Mode routes
   app.use("/api/trinity/notifications", trinityNotificationRouter); // Trinity Notification Bridge
-  app.use("/api/trinity/chat", trinityChatRouter); // Trinity Chat Interface with BUDDY metacognition
+  app.use("/api/trinity/chat", requireAuth, trinityChatRouter); // Trinity Chat Interface with BUDDY metacognition
   app.use("/api/resilience", resilienceRouter); // Fortune 500-grade resilience APIs
   app.use("/api/quick-fixes", quickFixRouter); // Quick Fix System
   app.use("/api/experience", experienceRoutes); // Experience Enhancement Routes
