@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Building2, Users, ArrowRight, Loader2, Shield, CreditCard, Clock } from "lucide-react";

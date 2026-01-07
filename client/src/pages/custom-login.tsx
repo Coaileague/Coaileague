@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { THEME } from "@/config/theme";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 import { useUniversalAnimation } from "@/contexts/universal-animation-context";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
 

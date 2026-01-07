@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Lock, Eye, EyeOff, CheckCircle2, XCircle, ArrowLeft, Check } from "lucide-react";
 import { Link, useLocation } from "wouter";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 
 const resetPasswordSchema = z.object({
   password: z.string()

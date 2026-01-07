@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Loader2, Receipt, DollarSign, TrendingUp } from "lucide-react";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 
 interface Paycheck {
   id: string;

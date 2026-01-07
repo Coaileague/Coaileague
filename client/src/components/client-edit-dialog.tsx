@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Loader2, Building2 } from "lucide-react";
-import { CoAIleagueLogo } from "./coailleague-logo";
+import { CoAIleagueLogo } from "./coaileague-logo";
 
 interface Client {
   id: string;

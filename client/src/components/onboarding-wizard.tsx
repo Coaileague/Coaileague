@@ -8,7 +8,7 @@ import { ArrowRight, ArrowLeft, X, CheckCircle2, Sparkles, MessageSquare, Calend
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { Link } from "wouter";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";

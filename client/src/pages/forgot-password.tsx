@@ -9,7 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { Loader2, Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 
 const forgotPasswordSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
