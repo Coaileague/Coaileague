@@ -971,11 +971,22 @@ automationRouter.get('/compliance/recent', async (req: any, res: Response) => {
 // ============================================================================
 
 // RBAC helper for automation endpoints
-const AUTOMATION_ADMIN_ROLES = ['org_owner', 'org_admin', 'root_admin', 'platform_admin'];
+const AUTOMATION_ADMIN_ROLES = ['org_owner', 'org_admin', 'root_admin', 'platform_admin', 'department_manager'];
 
-function isAutomationAdmin(user: any): boolean {
-  if (!user) return false;
-  const role = user.workspaceRole || user.platformRole;
+/**
+ * Check if user has automation admin permissions
+ * Dynamically resolves workspace role to handle promoted users
+ */
+async function isAutomationAdmin(userId: string, workspaceId: string): Promise<boolean> {
+  if (!userId || !workspaceId) return false;
+  
+  // Import resolveWorkspaceForUser dynamically to avoid circular deps
+  const { resolveWorkspaceForUser } = await import('../rbac');
+  
+  // Resolve the user's actual role for this workspace (checks ownership + employee record)
+  const { role } = await resolveWorkspaceForUser(userId, workspaceId);
+  
+  if (!role) return false;
   return AUTOMATION_ADMIN_ROLES.includes(role);
 }
 
@@ -999,11 +1010,18 @@ const photoValidationSchema = z.object({
  */
 automationRouter.get('/shift-monitoring/status', async (req: any, res: Response) => {
   try {
+    const workspaceId = req.query.workspaceId || req.user?.currentWorkspaceId;
+    
     if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'workspaceId is required' });
+    }
 
-    if (!isAutomationAdmin(req.user)) {
+    const hasPermission = await isAutomationAdmin(req.user.id, workspaceId);
+    if (!hasPermission) {
       return res.status(403).json({ error: 'Requires org admin or owner role' });
     }
 
@@ -1021,11 +1039,18 @@ automationRouter.get('/shift-monitoring/status', async (req: any, res: Response)
  */
 automationRouter.post('/shift-monitoring/start', async (req: any, res: Response) => {
   try {
+    const workspaceId = req.body.workspaceId || req.user?.currentWorkspaceId;
+    
     if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'workspaceId is required' });
+    }
 
-    if (!isAutomationAdmin(req.user)) {
+    const hasPermission = await isAutomationAdmin(req.user.id, workspaceId);
+    if (!hasPermission) {
       return res.status(403).json({ error: 'Requires org admin or owner role' });
     }
 
@@ -1043,11 +1068,18 @@ automationRouter.post('/shift-monitoring/start', async (req: any, res: Response)
  */
 automationRouter.post('/shift-monitoring/stop', async (req: any, res: Response) => {
   try {
+    const workspaceId = req.body.workspaceId || req.user?.currentWorkspaceId;
+    
     if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'workspaceId is required' });
+    }
 
-    if (!isAutomationAdmin(req.user)) {
+    const hasPermission = await isAutomationAdmin(req.user.id, workspaceId);
+    if (!hasPermission) {
       return res.status(403).json({ error: 'Requires org admin or owner role' });
     }
 
@@ -1065,11 +1097,18 @@ automationRouter.post('/shift-monitoring/stop', async (req: any, res: Response) 
  */
 automationRouter.post('/shift-monitoring/run-cycle', async (req: any, res: Response) => {
   try {
-    if (!req.user || !req.user.currentWorkspaceId) {
+    const workspaceId = req.body.workspaceId || req.user?.currentWorkspaceId;
+    
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'workspaceId is required' });
+    }
 
-    if (!isAutomationAdmin(req.user)) {
+    const hasPermission = await isAutomationAdmin(req.user.id, workspaceId);
+    if (!hasPermission) {
       return res.status(403).json({ error: 'Requires org admin or owner role' });
     }
 
@@ -1109,17 +1148,27 @@ automationRouter.get('/trinity/settings', async (req: any, res: Response) => {
  */
 automationRouter.patch('/trinity/settings', async (req: any, res: Response) => {
   try {
-    if (!req.user || !req.user.currentWorkspaceId) {
+    // Accept workspaceId from body for proper org isolation
+    const workspaceId = req.body.workspaceId || req.user?.currentWorkspaceId;
+    
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'workspaceId is required' });
+    }
 
-    if (!isAutomationAdmin(req.user)) {
+    // Dynamically check if user has admin permissions for this workspace
+    const hasPermission = await isAutomationAdmin(req.user.id, workspaceId);
+    if (!hasPermission) {
       return res.status(403).json({ error: 'Only org owners/admins can update automation settings' });
     }
 
     const settings = await trinityAutomationToggle.updateSettings(
-      req.user.currentWorkspaceId,
-      req.body
+      workspaceId,
+      req.body,
+      req.user.id
     );
     return res.json(settings);
   } catch (error) {
@@ -1168,11 +1217,18 @@ automationRouter.post('/trinity/request', async (req: any, res: Response) => {
  */
 automationRouter.post('/trinity/approve/:requestId', async (req: any, res: Response) => {
   try {
-    if (!req.user || !req.user.currentWorkspaceId) {
+    const workspaceId = req.body.workspaceId || req.user?.currentWorkspaceId;
+    
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'workspaceId is required' });
+    }
 
-    if (!isAutomationAdmin(req.user)) {
+    const hasPermission = await isAutomationAdmin(req.user.id, workspaceId);
+    if (!hasPermission) {
       return res.status(403).json({ error: 'Only org owners/admins can approve automation' });
     }
 
@@ -1194,11 +1250,18 @@ automationRouter.post('/trinity/approve/:requestId', async (req: any, res: Respo
  */
 automationRouter.post('/trinity/reject/:requestId', async (req: any, res: Response) => {
   try {
-    if (!req.user || !req.user.currentWorkspaceId) {
+    const workspaceId = req.body.workspaceId || req.user?.currentWorkspaceId;
+    
+    if (!req.user) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
+    
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'workspaceId is required' });
+    }
 
-    if (!isAutomationAdmin(req.user)) {
+    const hasPermission = await isAutomationAdmin(req.user.id, workspaceId);
+    if (!hasPermission) {
       return res.status(403).json({ error: 'Only org owners/admins can reject automation' });
     }
 
