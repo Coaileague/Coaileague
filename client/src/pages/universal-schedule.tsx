@@ -195,7 +195,7 @@ export default function UniversalSchedule() {
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const { employee: currentEmployee } = useEmployee();
-  const { workspaceRole, platformRole } = useWorkspaceAccess();
+  const { workspaceRole, platformRole, workspaceId } = useWorkspaceAccess();
   
   // RBAC permissions - prefer workspaceRole, fallback to platformRole
   // This ensures users with platformRole set (but workspaceRole null) retain access
@@ -206,7 +206,8 @@ export default function UniversalSchedule() {
   // Automation toggle mutation
   const toggleAutomationMutation = useMutation({
     mutationFn: async (enabled: boolean) => {
-      return await apiRequest('POST', '/api/scheduleos/ai/toggle', { enabled });
+      if (!workspaceId) throw new Error('Workspace ID is required');
+      return await apiRequest('POST', '/api/scheduleos/ai/toggle', { enabled, workspaceId });
     },
     onSuccess: (_, enabled) => {
       setAutomationEnabled(enabled);
@@ -1092,35 +1093,58 @@ export default function UniversalSchedule() {
         <ScrollArea className="flex-1 p-4">
           <div className="bg-card rounded-lg border overflow-hidden min-w-[900px]">
             {/* Days Header Row - Sticky */}
-            <div className="grid grid-cols-8 border-b bg-gradient-to-r from-muted/80 to-muted/50 sticky top-0 z-10">
-              {/* Employee Column Header */}
-              <div className="p-3 font-semibold text-sm border-r bg-muted/80 flex items-center gap-2">
-                <Users className="w-4 h-4 text-muted-foreground" />
-                <span>Employee</span>
+            <div className="sticky top-0 z-10 bg-card">
+              {/* Main day headers */}
+              <div className="grid grid-cols-8 border-b bg-gradient-to-r from-muted/80 to-muted/50">
+                {/* Employee Column Header */}
+                <div className="p-3 font-semibold text-sm border-r bg-muted/80 flex items-center gap-2">
+                  <Users className="w-4 h-4 text-muted-foreground" />
+                  <span>Employee</span>
+                </div>
+                {/* Days of the week */}
+                {days.map((day, dayIndex) => {
+                  const dayDate = new Date(weekStart);
+                  dayDate.setDate(dayDate.getDate() + dayIndex);
+                  const isToday = dayDate.toDateString() === new Date().toDateString();
+                  const isWeekend = dayIndex >= 5;
+                  
+                  return (
+                    <div 
+                      key={day} 
+                      className={`p-2 text-center border-r last:border-r-0 ${
+                        isToday ? 'bg-primary/10 border-b-2 border-b-primary' : ''
+                      } ${isWeekend ? 'bg-muted/30' : ''}`}
+                    >
+                      <div className={`font-semibold text-sm ${isToday ? 'text-primary' : ''}`}>
+                        {day}
+                      </div>
+                      <div className={`text-xs ${isToday ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+                        {dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-              {/* Days of the week */}
-              {days.map((day, dayIndex) => {
-                const dayDate = new Date(weekStart);
-                dayDate.setDate(dayDate.getDate() + dayIndex);
-                const isToday = dayDate.toDateString() === new Date().toDateString();
-                const isWeekend = dayIndex >= 5;
-                
-                return (
-                  <div 
-                    key={day} 
-                    className={`p-2 text-center border-r last:border-r-0 ${
-                      isToday ? 'bg-primary/10 border-b-2 border-b-primary' : ''
-                    } ${isWeekend ? 'bg-muted/30' : ''}`}
-                  >
-                    <div className={`font-semibold text-sm ${isToday ? 'text-primary' : ''}`}>
-                      {day}
+              
+              {/* Hour markers row - compact time indicators */}
+              <div className="grid grid-cols-8 border-b bg-muted/20">
+                <div className="border-r" /> {/* Empty cell under Employee column */}
+                {days.map((day, dayIndex) => {
+                  const isWeekend = dayIndex >= 5;
+                  return (
+                    <div 
+                      key={`hours-${dayIndex}`}
+                      className={`flex items-center justify-between px-1 py-0.5 border-r last:border-r-0 text-[9px] text-muted-foreground ${isWeekend ? 'bg-muted/10' : ''}`}
+                    >
+                      <span>12AM</span>
+                      <span>6AM</span>
+                      <span>12PM</span>
+                      <span>6PM</span>
+                      <span>12AM</span>
                     </div>
-                    <div className={`text-xs ${isToday ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                      {dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
 
             {/* Employee Rows with Day Cells */}
@@ -1636,13 +1660,23 @@ export default function UniversalSchedule() {
             <div className="grid grid-cols-2 gap-2">
               <div className="space-y-1.5">
                 <Label htmlFor="position" className="text-sm">Position *</Label>
-                <Input
-                  id="position"
-                  value={shiftForm.position}
-                  onChange={(e) => setShiftForm(prev => ({ ...prev, position: e.target.value }))}
-                  placeholder="Role"
-                  data-testid="input-position"
-                />
+                <Select value={shiftForm.position} onValueChange={(value) =>
+                  setShiftForm(prev => ({ ...prev, position: value }))
+                }>
+                  <SelectTrigger id="position" data-testid="select-position">
+                    <SelectValue placeholder="Select position" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="armed_guard">Armed Security Officer</SelectItem>
+                    <SelectItem value="unarmed_guard">Unarmed Security Officer</SelectItem>
+                    <SelectItem value="patrol_officer">Patrol Officer</SelectItem>
+                    <SelectItem value="site_supervisor">Site Supervisor</SelectItem>
+                    <SelectItem value="access_control">Access Control</SelectItem>
+                    <SelectItem value="concierge">Concierge Security</SelectItem>
+                    <SelectItem value="event_security">Event Security</SelectItem>
+                    <SelectItem value="mobile_patrol">Mobile Patrol</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="client" className="text-sm">Client</Label>
@@ -1663,16 +1697,39 @@ export default function UniversalSchedule() {
               </div>
             </div>
 
-            {/* Location */}
+            {/* Location - Dropdown based on selected client or common locations */}
             <div className="space-y-1.5">
               <Label htmlFor="location" className="text-sm">Location</Label>
-              <Input
-                id="location"
-                value={shiftForm.location}
-                onChange={(e) => setShiftForm(prev => ({ ...prev, location: e.target.value }))}
-                placeholder="Area/Site"
-                data-testid="input-location"
-              />
+              <Select value={shiftForm.location} onValueChange={(value) =>
+                setShiftForm(prev => ({ ...prev, location: value }))
+              }>
+                <SelectTrigger id="location" data-testid="select-location">
+                  <SelectValue placeholder="Select location" />
+                </SelectTrigger>
+                <SelectContent>
+                  {shiftForm.clientId && clients.find(c => c.id === shiftForm.clientId) ? (
+                    <>
+                      <SelectItem value={clients.find(c => c.id === shiftForm.clientId)?.companyName || 'main'}>
+                        {clients.find(c => c.id === shiftForm.clientId)?.companyName} - Main Site
+                      </SelectItem>
+                      <SelectItem value="front_entrance">Front Entrance</SelectItem>
+                      <SelectItem value="back_entrance">Back Entrance</SelectItem>
+                      <SelectItem value="lobby">Lobby</SelectItem>
+                      <SelectItem value="parking">Parking Area</SelectItem>
+                      <SelectItem value="roving">Roving Patrol</SelectItem>
+                    </>
+                  ) : (
+                    <>
+                      <SelectItem value="main_site">Main Site</SelectItem>
+                      <SelectItem value="front_entrance">Front Entrance</SelectItem>
+                      <SelectItem value="back_entrance">Back Entrance</SelectItem>
+                      <SelectItem value="lobby">Lobby</SelectItem>
+                      <SelectItem value="parking">Parking Area</SelectItem>
+                      <SelectItem value="roving">Roving Patrol</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             {/* Clock In/Out - Compact */}
