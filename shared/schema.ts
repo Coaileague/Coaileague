@@ -19235,6 +19235,9 @@ export const trinityConversationSessions = pgTable("trinity_conversation_session
   userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
   workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'set null' }),
   
+  // Trinity conversation mode (BUDDY metacognition system)
+  mode: varchar("mode", { length: 20 }).default("business"), // 'business' | 'personal' | 'integrated'
+  
   sessionState: varchar("session_state", { length: 30 }).default("active"),
   
   contextMemory: jsonb("context_memory").default(sql`'{}'::jsonb`),
@@ -22295,3 +22298,107 @@ export const insertTrinityCorrectionMemorySchema = createInsertSchema(trinityCor
 
 export type InsertTrinityCorrectionMemory = z.infer<typeof insertTrinityCorrectionMemorySchema>;
 export type TrinityCorrectionMemory = typeof trinityCorrectionMemory.$inferSelect;
+
+/**
+ * TRINITY BUDDY SETTINGS
+ * ======================
+ * Per-user BUDDY (Personal Development) mode configuration.
+ * Controls how Trinity interacts with users in personal/coaching mode.
+ * 
+ * Features:
+ * - Personal development mode toggle
+ * - Spiritual guidance preference (none/general/christian)
+ * - Accountability tracking preferences
+ * - Metacognition depth settings
+ */
+export const trinityBuddySettings = pgTable("trinity_buddy_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Personal Development Mode
+  personalDevelopmentEnabled: boolean("personal_development_enabled").default(false),
+  
+  // Spiritual guidance preference
+  spiritualGuidance: varchar("spiritual_guidance", { length: 20 }).default("none"), // 'none' | 'general' | 'christian'
+  
+  // Accountability settings
+  accountabilityLevel: varchar("accountability_level", { length: 20 }).default("balanced"), // 'gentle' | 'balanced' | 'challenging'
+  weeklyCheckInEnabled: boolean("weekly_check_in_enabled").default(false),
+  checkInDay: varchar("check_in_day", { length: 10 }).default("friday"), // day of week
+  checkInTime: varchar("check_in_time", { length: 10 }).default("17:00"), // HH:MM format
+  
+  // Metacognition preferences
+  showThoughtProcess: boolean("show_thought_process").default(true), // Show Trinity's reasoning
+  proactiveInsights: boolean("proactive_insights").default(true), // Trinity brings up observations
+  memoryRecallDepth: varchar("memory_recall_depth", { length: 20 }).default("moderate"), // 'minimal' | 'moderate' | 'deep'
+  
+  // Personal goals (Trinity tracks and references these)
+  personalGoals: jsonb("personal_goals").default(sql`'[]'::jsonb`), // Array of { goal, deadline, progress }
+  
+  // Conversation preferences
+  preferredCommunicationStyle: varchar("preferred_communication_style", { length: 20 }).default("direct"), // 'direct' | 'supportive' | 'challenging'
+  allowPersonalQuestions: boolean("allow_personal_questions").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("trinity_buddy_settings_user_idx").on(table.userId),
+  index("trinity_buddy_settings_workspace_idx").on(table.workspaceId),
+  uniqueIndex("trinity_buddy_settings_user_workspace_idx").on(table.userId, table.workspaceId),
+]);
+
+export const insertTrinityBuddySettingsSchema = createInsertSchema(trinityBuddySettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTrinityBuddySettings = z.infer<typeof insertTrinityBuddySettingsSchema>;
+export type TrinityBuddySettings = typeof trinityBuddySettings.$inferSelect;
+
+/**
+ * TRINITY METACOGNITION LOG
+ * =========================
+ * Tracks Trinity's self-awareness moments and pattern recognitions across conversations.
+ * This creates "consciousness continuity" - Trinity remembers insights about users over time.
+ */
+export const trinityMetacognitionLog = pgTable("trinity_metacognition_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  sessionId: varchar("session_id").references(() => trinityConversationSessions.id, { onDelete: 'set null' }),
+  
+  // What Trinity noticed
+  insightType: varchar("insight_type", { length: 30 }).notNull(), // 'pattern' | 'emotion' | 'behavior' | 'contradiction' | 'growth' | 'struggle'
+  insightContent: text("insight_content").notNull(), // The actual observation
+  insightConfidence: decimal("insight_confidence", { precision: 3, scale: 2 }).default("0.80"),
+  
+  // Context from when insight was generated
+  triggerContext: text("trigger_context"), // What user said/did that triggered this insight
+  relatedTopics: text("related_topics").array().default(sql`'{}'`),
+  
+  // Whether Trinity has mentioned this to the user
+  surfacedToUser: boolean("surfaced_to_user").default(false),
+  surfacedAt: timestamp("surfaced_at"),
+  userReaction: varchar("user_reaction", { length: 30 }), // 'acknowledged' | 'rejected' | 'appreciated' | 'ignored'
+  
+  // Decay/relevance
+  relevanceScore: decimal("relevance_score", { precision: 3, scale: 2 }).default("1.00"), // Decreases over time
+  lastRelevantAt: timestamp("last_relevant_at").defaultNow(),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => [
+  index("trinity_metacognition_user_idx").on(table.userId),
+  index("trinity_metacognition_workspace_idx").on(table.workspaceId),
+  index("trinity_metacognition_type_idx").on(table.insightType),
+  index("trinity_metacognition_relevance_idx").on(table.relevanceScore),
+]);
+
+export const insertTrinityMetacognitionLogSchema = createInsertSchema(trinityMetacognitionLog).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTrinityMetacognitionLog = z.infer<typeof insertTrinityMetacognitionLogSchema>;
+export type TrinityMetacognitionLog = typeof trinityMetacognitionLog.$inferSelect;
