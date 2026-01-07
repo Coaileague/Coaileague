@@ -30800,10 +30800,10 @@ app.post("/api/onboarding/initialize-trinity", requireAuth, async (req, res) => 
 app.get("/api/onboarding/status", requireAuth, async (req, res) => {
   try {
     const user = req.user as any;
-    const workspaceId = req.query.workspaceId as string || user.activeWorkspaceId;
+    const workspaceId = (req as any).workspaceId || req.query.workspaceId as string || user.activeWorkspaceId || user.defaultWorkspaceId;
     
     if (!workspaceId) {
-      return res.status(400).json({ error: "Workspace ID required" });
+      return res.json({ status: 'not_started' });
     }
     
     const { onboardingOrchestrator } = await import('./services/ai-brain/subagents/onboardingOrchestrator');
@@ -36141,7 +36141,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       
       const workspaceId = req.user?.workspaceId;
       if (!workspaceId) {
-        return res.status(400).json({ error: "Workspace ID required" });
+        return res.json({ status: 'not_started' });
       }
 
       // Get active overlays (non-terminal phases)
