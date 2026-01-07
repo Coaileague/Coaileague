@@ -12,7 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { MessageSquare, ArrowRight, ArrowLeft, CheckCircle2, Sparkles, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from "wouter";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 
 export default function AICommunicationsOnboarding() {
   const { user } = useAuth();

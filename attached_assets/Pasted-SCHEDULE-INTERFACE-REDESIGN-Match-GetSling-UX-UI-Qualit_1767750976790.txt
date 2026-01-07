@@ -1,0 +1,250 @@
+SCHEDULE INTERFACE REDESIGN - Match GetSling UX/UI Quality
+
+Current schedule interface is too sparse and lacks visual hierarchy. Redesign to match industry-leading workforce scheduling UX (GetSling, Deputy, When I Work).
+
+REFERENCE COMPARISON:
+- Current CoAIleague: Mostly empty white grid, poor information density
+- Target (GetSling): Color-coded shifts, employee photos, compact layout, rich context
+
+DESIGN REQUIREMENTS:
+
+1. LAYOUT STRUCTURE
+
+Left Sidebar (Employee List):
+┌─────────────────────────────────────┐
+│ [Photo] John Smith                  │
+│         Security Officer            │
+│         Central Region              │
+│         ⚪ Available  💰 $18/hr     │
+├─────────────────────────────────────┤
+│ [Photo] Jane Doe                    │
+│         Supervisor                  │
+│         North Region                │
+│         🟢 On Shift  💰 $22/hr      │
+└─────────────────────────────────────┘
+
+- Width: 240px fixed
+- Each employee row: 80px height
+- Show: Photo (48px), Name (bold), Role, Region, Status badge, Pay rate
+- Sticky on scroll (always visible)
+- Sort options: Name, Role, Region, Availability
+
+Main Calendar Grid:
+- Columns = 24 hours (or 12 hours if day/night split)
+- Each hour = 60px width minimum
+- Rows = Employees (match left sidebar height)
+- Horizontal scroll for time (keep employee names sticky)
+- Timezone indicator (top right)
+
+2. SHIFT BLOCK DESIGN
+
+When employee is scheduled:
+┌─────────────────────────────────┐
+│ 7:00 PM - 3:30 AM              │
+│ ABC Bank - Downtown            │
+│ Armed Security                 │
+└─────────────────────────────────┘
+
+Shift block styling:
+- Height: Fills row (with 4px margin top/bottom)
+- Width: Proportional to duration (8.5 hour shift = 510px)
+- Border-radius: 6px
+- Box-shadow: 0 1px 3px rgba(0,0,0,0.1)
+- Cursor: pointer (click to edit)
+- Hover: Slight lift effect (shadow increases)
+
+Text inside shift block:
+- Line 1: Time range (14px, bold)
+- Line 2: Client/Site name (13px, medium)
+- Line 3: Position/role (12px, regular)
+- Padding: 8px 12px
+- Text truncates with ellipsis if too long
+
+3. COLOR CODING SYSTEM
+
+Implement status-based colors:
+
+🟢 SCHEDULED (Green) - rgb(34, 197, 94)
+- Shift is confirmed and active
+- Employee accepted
+- No conflicts
+
+🟡 PENDING (Yellow/Tan) - rgb(234, 179, 8)
+- Awaiting employee confirmation
+- Requested time off
+- Needs manager approval
+
+🔴 CONFLICT (Red) - rgb(239, 68, 68)
+- Overtime violation
+- Double-booked employee
+- Missing required certification
+- Scheduling conflict
+
+🔵 PUBLISHED (Blue) - rgb(59, 130, 246)
+- Schedule published to employee
+- Not yet started
+
+⚪ COMPLETED (Gray) - rgb(156, 163, 175)
+- Shift finished
+- Historical data
+
+🟣 UNPUBLISHED (Purple) - rgb(168, 85, 247)
+- Draft schedule
+- Not visible to employees yet
+
+Each color has:
+- Background: Color at 10% opacity
+- Border-left: 4px solid (full color)
+- Text: Color at 90% darkness
+
+4. RESPONSIVE MOBILE OPTIMIZATION
+
+Desktop (>1024px):
+- Full week view (7 days)
+- Left sidebar visible
+- All shift details shown
+
+Tablet (768px - 1024px):
+- 3-4 day view
+- Collapsible sidebar (hamburger menu)
+- Shift details on tap/hover
+
+Mobile (<768px):
+- Single day view (swipe to change days)
+- Bottom sheet for employee list
+- Shift details in modal on tap
+- Date picker at top
+- Larger touch targets (min 44px)
+
+Modal Design (Mobile):
+┌─────────────────────────────────────┐
+│  ×                    SHIFT DETAILS │
+├─────────────────────────────────────┤
+│  [Photo] John Smith                 │
+│  Security Officer                   │
+│                                     │
+│  📍 ABC Bank - Downtown             │
+│  🕐 7:00 PM - 3:30 AM (8.5 hrs)    │
+│  💰 $18/hr = $153.00               │
+│                                     │
+│  Status: 🟢 Scheduled               │
+│                                     │
+│  [ Edit Shift ]  [ Cancel Shift ]  │
+└─────────────────────────────────────┘
+
+- Slide up from bottom (not center overlay)
+- Swipe down to dismiss
+- Max height: 70vh
+- Rounded top corners: 16px
+
+5. VISUAL ENHANCEMENTS
+
+Empty State (No shifts scheduled):
+Don't show blank grid. Instead:
+┌─────────────────────────────────────┐
+│         📅                          │
+│    No shifts scheduled              │
+│    for this week                    │
+│                                     │
+│    [ + Create Schedule ]            │
+│    [ 🤖 Auto-Schedule with Trinity ]│
+└─────────────────────────────────────┘
+
+Time Axis (Top of calendar):
+- Hour labels: 6 AM, 7 AM, 8 AM...
+- Current time indicator: Red vertical line
+- Subtle grid lines every hour (rgba(0,0,0,0.05))
+
+Employee Status Badges:
+- 🟢 On Shift (green dot + text)
+- ⚪ Available (white dot + text)
+- 🔴 Unavailable (red dot + text)
+- 🟡 On Break (yellow dot + text)
+
+6. INTERACTION PATTERNS
+
+Drag & Drop:
+- Drag shift block to different time → Update shift time
+- Drag shift to different employee → Reassign shift
+- Drag edge of shift block → Adjust duration
+- Show preview while dragging (translucent)
+
+Right-Click Context Menu:
+- Edit Shift
+- Duplicate Shift
+- Cancel Shift
+- Assign to Different Employee
+- View Employee Profile
+
+Bulk Actions:
+- Select multiple shifts (checkbox on each)
+- Toolbar appears: "3 shifts selected - [ Copy ] [ Delete ] [ Publish ]"
+
+7. PERFORMANCE OPTIMIZATIONS
+
+For large schedules (50+ employees, 1000+ shifts):
+- Virtual scrolling (only render visible rows)
+- Lazy load employee photos
+- Debounce drag operations
+- Cache shift data (don't refetch on every interaction)
+- Use CSS transforms for smooth animations
+- Compress time into 30-min blocks if needed
+
+8. TRINITY AI INTEGRATION INDICATORS
+
+Show when Trinity made scheduling decisions:
+- Small ✨ icon on AI-generated shifts
+- Tooltip: "Trinity optimized this shift based on profitability"
+- Highlight efficiency gains (green border if profit optimized)
+
+9. ACCESSIBILITY
+
+- ARIA labels on all interactive elements
+- Keyboard navigation (tab through shifts, arrow keys to move)
+- High contrast mode support
+- Screen reader friendly (announce shift details)
+- Focus indicators (blue outline on keyboard focus)
+
+10. CSS/STYLING DETAILS
+
+Use these specific values for polish:
+
+Typography:
+- Font family: Inter, system-ui, sans-serif
+- Headers: 16px bold (600 weight)
+- Shift time: 14px bold
+- Shift details: 13px regular (400 weight)
+- Small text: 12px
+
+Spacing:
+- Grid gap: 1px (subtle separation)
+- Shift block margin: 4px vertical, 2px horizontal
+- Padding inside blocks: 8px 12px
+- Section padding: 16px
+
+Shadows:
+- Card shadow: 0 1px 3px rgba(0,0,0,0.1)
+- Hover shadow: 0 4px 6px rgba(0,0,0,0.1)
+- Modal shadow: 0 20px 25px rgba(0,0,0,0.15)
+
+Transitions:
+- All interactions: transition: all 0.2s ease
+- Smooth scroll: scroll-behavior: smooth
+- Drag preview: opacity: 0.6
+
+IMPLEMENTATION CHECKLIST:
+
+✅ Redesign left sidebar with employee cards
+✅ Implement color-coded shift blocks
+✅ Add drag & drop functionality
+✅ Create mobile-optimized modals
+✅ Add current time indicator
+✅ Implement virtual scrolling for performance
+✅ Add Trinity AI indicators
+✅ Responsive breakpoints (mobile, tablet, desktop)
+✅ Empty states and loading states
+✅ Accessibility (keyboard nav, ARIA)
+
+Build this schedule interface to match or exceed GetSling/Deputy quality.
+
+Confirm when redesign is complete and provide screenshots of new interface.

@@ -66,7 +66,7 @@ import {
 } from "@/components/ui/select";
 import type { Invoice, Client, TimeEntry } from "@shared/schema";
 import { WorkspaceLayout } from "@/components/workspace-layout";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 
 export default function Invoices() {
   const { toast } = useToast();

@@ -5,7 +5,7 @@
 
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 import { Mail, Phone, MapPin } from "lucide-react";
 
 interface FooterProps {

@@ -27,7 +27,7 @@ import { Card } from "@/components/ui/card";
 import { ESignature } from "./ESignature";
 import { DocumentUpload } from "./DocumentUpload";
 import { Loader2 } from "lucide-react";
-import { CoAIleagueLogo } from "./coailleague-logo";
+import { CoAIleagueLogo } from "./coaileague-logo";
 
 export interface FormField {
   id: string;

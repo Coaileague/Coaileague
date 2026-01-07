@@ -19,7 +19,7 @@ import {
   PartyPopper,
   Loader2
 } from 'lucide-react';
-import { CoAIleagueLogo } from '@/components/coailleague-logo';
+import { CoAIleagueLogo } from '@/components/coaileague-logo';
 
 interface OnboardingTask {
   id: string;

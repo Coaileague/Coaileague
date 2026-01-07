@@ -10,7 +10,7 @@ import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Menu, LogOut, LayoutDashboard, Mail } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 import { performLogout } from "@/lib/logoutHandler";
 import { NotificationsPopover } from "@/components/notifications-popover";
 import { AISearchTrigger } from "@/components/ai-search";

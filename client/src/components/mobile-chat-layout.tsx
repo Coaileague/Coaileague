@@ -11,7 +11,7 @@ import { Send, ChevronLeft, Home } from "lucide-react";
 import { useLocation } from "wouter";
 import { SupportCommandDrawer } from "./support-command-drawer";
 import { MobileUserActionSheet } from "./mobile-user-action-sheet";
-import { CoAIleagueLogo } from "./coailleague-logo";
+import { CoAIleagueLogo } from "./coaileague-logo";
 import { StaffNameDisplay } from "./staff-name-display";
 import { MessageTextWithIcons } from "./message-text-with-icons";
 import type { ChatMessage } from "@shared/schema";

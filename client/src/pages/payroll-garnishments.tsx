@@ -17,7 +17,7 @@ import { Trash2, Plus, AlertTriangle, CheckCircle, AlertCircle, Scale } from "lu
 import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { garnishmentTypesConfig, priorityConfig, payrollMessages } from "@/config/payrollConfig";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 
 const garnishmentSchema = z.object({
   employeeId: z.string().min(1, "Employee required"),

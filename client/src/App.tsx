@@ -51,7 +51,7 @@ import { performLogout } from "@/lib/logoutHandler";
 import { useTransition } from "@/contexts/transition-context";
 import { showLogoutTransition } from "@/lib/transition-utils";
 import { LoadingScreen } from "@/components/LoadingScreen";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 import NotFound from "@/pages/not-found";
 import OwnerAnalytics from "@/pages/owner-analytics";
 import RootAdminDashboard from "@/pages/root-admin-dashboard";

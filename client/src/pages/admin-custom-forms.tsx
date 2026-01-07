@@ -23,7 +23,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Plus, Edit, Trash2, FileText, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { CoAIleagueLogo } from "@/components/coailleague-logo";
+import { CoAIleagueLogo } from "@/components/coaileague-logo";
 import type { CustomForm } from "@shared/schema";
 
 interface FormField {
