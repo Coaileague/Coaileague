@@ -59,7 +59,7 @@ const STAFF_COMMAND_GROUPS = [
     ]
   },
   {
-    category: "AI Assistant",
+    category: "Ask Trinity",
     icon: Brain,
     commands: [
       {

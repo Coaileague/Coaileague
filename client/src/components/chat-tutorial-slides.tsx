@@ -29,7 +29,7 @@ const tutorialSlides: TutorialSlide[] = [
       { symbol: "👑 Crown + WF Logo", meaning: "Platform Staff (Root Admin) - Highest authority" },
       { symbol: "⚡ Lightning + WF Logo", meaning: "Deputy Admin - Senior support staff" },
       { symbol: "🛡️ Shield + WF Logo", meaning: "Support Staff - Here to help you" },
-      { symbol: "🤖 Robot Icon", meaning: "HelpAI AI Assistant - Automated help" },
+      { symbol: "🤖 Robot Icon", meaning: "Trinity AI - Automated help" },
       { symbol: "👤 User Icon", meaning: "Regular User/Customer - That's you!" },
     ]
   },

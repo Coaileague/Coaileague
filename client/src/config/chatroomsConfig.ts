@@ -103,8 +103,8 @@ export const ROOM_TYPES: Record<RoomType, RoomTypeConfig> = {
   },
   dm_bot: {
     type: 'dm_bot',
-    label: 'AI Assistant',
-    description: 'AI-powered help',
+    label: 'Ask Trinity',
+    description: 'Trinity AI-powered help',
     icon: Bot,
     color: 'text-teal-400',
     bgColor: 'bg-teal-500/10',

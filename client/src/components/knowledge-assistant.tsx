@@ -80,13 +80,13 @@ export function KnowledgeAssistant() {
 
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      {/* Ask AI Assistant */}
+      {/* Ask Trinity */}
       <Card data-testid="card-knowledge-assistant">
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
-              <CardTitle>AI Knowledge Assistant</CardTitle>
+              <CardTitle>Trinity Knowledge Assistant</CardTitle>
             </div>
             <Badge variant="outline" className="gap-1">
               <Book className="h-3 w-3" />

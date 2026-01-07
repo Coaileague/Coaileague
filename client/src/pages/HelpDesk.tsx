@@ -2324,7 +2324,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                             {selectedUserId.startsWith('helpbot') ? 'HelpAI Bot' : 'System Bot'}
                           </h3>
                           <Badge variant="secondary" className="bg-blue-500/20 text-blue-700 border-blue-500/30 mt-1">
-                            System-Generated AI Assistant
+                            Trinity AI System
                           </Badge>
                         </div>
                       </div>

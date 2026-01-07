@@ -43,6 +43,7 @@ import type { Shift, Employee, Client, ShiftOrder, RecurringShiftPattern, ShiftS
 import ScheduleMobileFirst from '@/pages/schedule-mobile-first';
 import { WorkspaceLayout } from '@/components/workspace-layout';
 import { HideInSimpleMode } from "@/components/SimpleMode";
+import { AskTrinityButton, TrinityIconStatic } from '@/components/trinity-button';
 
 // Post order template data (will be pre-created in database)
 const POST_ORDER_TEMPLATES = [
@@ -981,39 +982,31 @@ export default function UniversalSchedule() {
                   </PopoverContent>
                 </Popover>
 
-                {/* AI Assistant - preserved */}
-                <Button
+                {/* Ask Trinity Button */}
+                <AskTrinityButton
                   onClick={() => setShowAIPanel(!showAIPanel)}
-                  className="bg-gradient-to-r from-[#3b82f6] to-[#22d3ee] hover:from-[#2563eb] hover:to-[#06b6d4]"
                   size="sm"
-                  data-testid="button-ai-assistant"
-                >
-                  <Bot className="w-4 h-4 mr-2" />
-                  AI Assistant
-                </Button>
+                  data-testid="button-ask-trinity"
+                />
               </div>
             ) : (
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Employee view - minimal toolbar */}
-                <Button
+                <AskTrinityButton
                   onClick={() => setShowAIPanel(!showAIPanel)}
-                  className="bg-gradient-to-r from-[#3b82f6] to-[#22d3ee] hover:from-[#2563eb] hover:to-[#06b6d4]"
                   size="sm"
-                  data-testid="button-ai-assistant"
-                >
-                  <Bot className="w-4 h-4 mr-2" />
-                  AI Assistant
-                </Button>
+                  data-testid="button-ask-trinity"
+                />
               </div>
             )}
           </div>
 
-          {/* AI Status Bar */}
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-[#3b82f6]/10 to-[#22d3ee]/10 rounded-lg border border-[#3b82f6]/20">
+          {/* Trinity Status Bar */}
+          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-[#00BFFF]/10 via-[#3b82f6]/10 to-[#FFD700]/10 rounded-lg border border-[#00BFFF]/20">
             <div className="flex items-center gap-4 flex-wrap">
               <div className="flex items-center gap-2">
-                <Bot className="w-5 h-5" style={{ color: '#3b82f6' }} />
-                <span className="font-medium text-sm">AI Automation</span>
+                <TrinityIconStatic size={20} />
+                <span className="font-medium text-sm">Trinity Automation</span>
                 <Button
                   variant="ghost"
                   size="sm"
@@ -1042,24 +1035,227 @@ export default function UniversalSchedule() {
           </div>
         </div>
 
-        {/* Schedule Grid */}
+        {/* Schedule Grid - GetSling Style with Hours on Top */}
         <ScrollArea className="flex-1 p-4">
-          <div className="bg-card rounded-lg border overflow-hidden min-w-[800px]">
-            {/* Days Header */}
-            <div className="grid grid-cols-8 border-b bg-muted/50">
-              <div className="p-3 font-medium text-sm text-muted-foreground border-r">
-                Time
+          <div className="bg-card rounded-lg border overflow-hidden">
+            {/* Hours Header Row - Sticky */}
+            <div className="flex border-b bg-gradient-to-r from-muted/80 to-muted/50 sticky top-0 z-10">
+              {/* Employee Column Header */}
+              <div className="w-48 min-w-[192px] p-3 font-semibold text-sm border-r bg-muted/80 flex items-center gap-2">
+                <Users className="w-4 h-4 text-muted-foreground" />
+                <span>Employee</span>
               </div>
-              {days.map(day => (
-                <div key={day} className="p-3 text-center font-medium text-sm border-r last:border-r-0">
-                  {day}
-                </div>
-              ))}
+              {/* Hours across the top */}
+              <div className="flex-1 flex overflow-x-auto">
+                {hours.map(hour => (
+                  <div 
+                    key={hour} 
+                    className="flex-shrink-0 w-16 p-2 text-center font-medium text-xs border-r last:border-r-0 bg-gradient-to-b from-[#00BFFF]/5 to-transparent"
+                  >
+                    <div className="text-foreground">
+                      {hour === 0 ? '12' : hour > 12 ? hour - 12 : hour}
+                    </div>
+                    <div className="text-[10px] text-muted-foreground">
+                      {hour < 12 ? 'AM' : 'PM'}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* Grid Content */}
+            {/* Employee Rows with Timeline */}
+            <div className="divide-y">
+              {employees.length === 0 ? (
+                <div className="p-8 text-center text-muted-foreground">
+                  <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>No employees found</p>
+                </div>
+              ) : (
+                employees.map((emp, empIndex) => {
+                  const empShifts = Object.values(shiftsGrid).flat().filter(s => s.employeeId === emp.id);
+                  const empColor = getEmployeeColor(emp.id);
+                  
+                  return (
+                    <div key={emp.id} className="flex hover:bg-muted/30 transition-colors group">
+                      {/* Employee Info */}
+                      <div 
+                        className="w-48 min-w-[192px] p-2 border-r bg-card flex items-center gap-2 cursor-pointer hover-elevate"
+                        onClick={() => setSelectedEmployee(emp)}
+                        data-testid={`employee-row-${emp.id}`}
+                      >
+                        <div 
+                          className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                          style={{ backgroundColor: empColor }}
+                        >
+                          {(emp.firstName?.[0] || '')}{(emp.lastName?.[0] || '')}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <div className="font-medium text-sm truncate">
+                            {emp.firstName} {emp.lastName}
+                          </div>
+                          <div className="text-xs text-muted-foreground truncate">
+                            {(emp as any).position || 'Employee'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Timeline Grid */}
+                      <div className="flex-1 flex relative h-16 overflow-x-auto">
+                        {/* Hour cells */}
+                        {hours.map(hour => (
+                          <div
+                            key={hour}
+                            className="flex-shrink-0 w-16 border-r last:border-r-0 cursor-pointer hover:bg-primary/5 transition-colors relative group/cell"
+                            onClick={() => {
+                              setShiftForm({
+                                ...shiftForm,
+                                employeeId: emp.id,
+                                clockIn: `${hour.toString().padStart(2, '0')}:00`,
+                                clockOut: `${Math.min(hour + 8, 23).toString().padStart(2, '0')}:00`,
+                                isOpenShift: false
+                              });
+                              setModalPosition({ day: 0, hour });
+                              setShowShiftModal(true);
+                            }}
+                            data-testid={`timeline-cell-${emp.id}-${hour}`}
+                          >
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity">
+                              <div className="bg-primary/80 rounded-full p-1 shadow-sm">
+                                <Plus className="w-3 h-3 text-primary-foreground" />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+
+                        {/* Render shifts for this employee on timeline */}
+                        {empShifts.map(shift => {
+                          const startHour = new Date(shift.startTime).getHours();
+                          const endHour = new Date(shift.endTime).getHours();
+                          const duration = endHour - startHour;
+                          const left = startHour * 64; // 64px per hour
+                          const width = Math.max(duration * 64, 64);
+                          const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
+                          const isOpen = isOpenShift(shift);
+
+                          return (
+                            <div
+                              key={shift.id}
+                              className={`absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all hover:shadow-lg hover:z-10 flex flex-col justify-center ${
+                                isOpen ? 'border-2 border-dashed border-orange-400 bg-orange-50 dark:bg-orange-900/20' : 'text-white'
+                              }`}
+                              style={{
+                                left: `${left}px`,
+                                width: `${width - 4}px`,
+                                backgroundColor: isOpen ? undefined : empColor,
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                // Handle shift click
+                              }}
+                              data-testid={`shift-timeline-${shift.id}`}
+                            >
+                              {isOpen ? (
+                                <>
+                                  <div className="text-orange-600 text-[10px] font-bold truncate">OPEN</div>
+                                  <div className="text-[10px] text-gray-600 truncate">{shift.title}</div>
+                                </>
+                              ) : (
+                                <>
+                                  <div className="text-[10px] font-medium truncate">{shift.title || 'Shift'}</div>
+                                  <div className="text-[10px] opacity-80 truncate">
+                                    {client?.companyName || ''}
+                                  </div>
+                                  {shift.aiGenerated && (
+                                    <TrinityIconStatic size={12} className="absolute top-1 right-1" />
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+
+              {/* Open Shifts Row */}
+              <div className="flex bg-orange-50/50 dark:bg-orange-900/10">
+                <div className="w-48 min-w-[192px] p-2 border-r flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center">
+                    <AlertCircle className="w-4 h-4 text-orange-500" />
+                  </div>
+                  <div>
+                    <div className="font-medium text-sm text-orange-600 dark:text-orange-400">Open Shifts</div>
+                    <div className="text-xs text-muted-foreground">Unassigned</div>
+                  </div>
+                </div>
+                <div className="flex-1 flex relative h-16">
+                  {hours.map(hour => (
+                    <div
+                      key={hour}
+                      className="flex-shrink-0 w-16 border-r last:border-r-0 cursor-pointer hover:bg-orange-100/50 dark:hover:bg-orange-900/20 transition-colors relative group/cell"
+                      onClick={() => {
+                        setShiftForm({
+                          ...shiftForm,
+                          employeeId: null,
+                          clockIn: `${hour.toString().padStart(2, '0')}:00`,
+                          clockOut: `${Math.min(hour + 8, 23).toString().padStart(2, '0')}:00`,
+                          isOpenShift: true
+                        });
+                        setModalPosition({ day: 0, hour });
+                        setShowShiftModal(true);
+                      }}
+                      data-testid={`open-shift-cell-${hour}`}
+                    >
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity">
+                        <div className="bg-orange-400 rounded-full p-1 shadow-sm">
+                          <Plus className="w-3 h-3 text-white" />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Render open shifts */}
+                  {Object.values(shiftsGrid).flat().filter(s => isOpenShift(s)).map(shift => {
+                    const startHour = new Date(shift.startTime).getHours();
+                    const endHour = new Date(shift.endTime).getHours();
+                    const duration = endHour - startHour;
+                    const left = startHour * 64;
+                    const width = Math.max(duration * 64, 64);
+                    const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
+
+                    return (
+                      <div
+                        key={shift.id}
+                        className="absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all hover:shadow-lg hover:z-10 border-2 border-dashed border-orange-400 bg-orange-100 dark:bg-orange-900/30"
+                        style={{
+                          left: `${left}px`,
+                          width: `${width - 4}px`,
+                        }}
+                        data-testid={`open-shift-${shift.id}`}
+                      >
+                        <div className="text-orange-600 text-[10px] font-bold truncate">OPEN SHIFT</div>
+                        <div className="text-[10px] text-gray-600 dark:text-gray-400 truncate">{shift.title}</div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          </div>
+        </ScrollArea>
+
+        {/* Legacy Grid Hidden - Kept for Reference */}
+        <div className="hidden">
+          <div className="bg-card rounded-lg border overflow-hidden min-w-[800px]">
+            <div className="grid grid-cols-8 border-b bg-muted/50">
+              <div className="p-3 font-medium text-sm text-muted-foreground border-r">Time</div>
+              {days.map(day => (
+                <div key={day} className="p-3 text-center font-medium text-sm border-r last:border-r-0">{day}</div>
+              ))}
+            </div>
             <div className="grid grid-cols-8">
-              {/* Time Column */}
               <div className="border-r">
                 {hours.map(hour => (
                   <div key={hour} className="h-16 border-b p-2 text-xs text-muted-foreground">
@@ -1067,27 +1263,15 @@ export default function UniversalSchedule() {
                   </div>
                 ))}
               </div>
-
-              {/* Day Columns with Shifts */}
               {days.map((day, dayIndex) => (
                 <div key={day} className="relative border-r last:border-r-0">
-                  {/* Hour grid lines with plus icons */}
                   {hours.map(hour => (
-                    <DroppableSlot
-                      key={hour}
-                      day={dayIndex}
-                      hour={hour}
-                      onClick={() => handleGridClick(dayIndex, hour)}
-                    >
+                    <DroppableSlot key={hour} day={dayIndex} hour={hour} onClick={() => handleGridClick(dayIndex, hour)}>
                       <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <div className="bg-primary rounded-full p-1">
-                          <Plus className="w-4 h-4 text-primary-foreground" />
-                        </div>
+                        <div className="bg-primary rounded-full p-1"><Plus className="w-4 h-4 text-primary-foreground" /></div>
                       </div>
                     </DroppableSlot>
                   ))}
-
-                  {/* Shifts - render all shifts for this day */}
                   {Object.entries(shiftsGrid)
                     .filter(([key]) => key.startsWith(`${dayIndex}-`))
                     .flatMap(([_, dayShifts]) => dayShifts)
@@ -1192,7 +1376,7 @@ export default function UniversalSchedule() {
               ))}
             </div>
           </div>
-        </ScrollArea>
+        </div>
       </div>
 
       {/* Right Sidebar - AI Panel (hidden in Simple Mode) */}
