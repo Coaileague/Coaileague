@@ -224,6 +224,13 @@ export const workspaces = pgTable("workspaces", {
   designatedApproverId: varchar("designated_approver_id").references(() => users.id), // User who approves automated actions
   automationApprovalMode: varchar("automation_approval_mode").default("designated"), // 'designated' | 'owner_only' | 'any_manager'
   automationConsentAccepted: boolean("automation_consent_accepted").default(false), // Org accepted AI copilot terms
+  
+  // ============================================================================
+  // VIEW MODE SETTINGS - Pro View vs Easy/Simple Mode
+  // Controls UI complexity per org (can be overridden per employee)
+  // ============================================================================
+  defaultViewMode: varchar("default_view_mode").default("auto"), // 'auto' | 'simple' | 'pro'
+  forceSimpleMode: boolean("force_simple_mode").default(false), // If true, all users see simple mode
   automationConsentAcceptedAt: timestamp("automation_consent_accepted_at"),
   automationConsentAcceptedBy: varchar("automation_consent_accepted_by"), // User ID who accepted
 
@@ -929,6 +936,10 @@ export const employees = pgTable("employees", {
   rating: decimal("rating", { precision: 2, scale: 1 }).default("4.0"), // 0.0-5.0 star rating
   availabilityPercentage: integer("availability_percentage").default(90), // 0-100 percentage
   overtimeHoursThisWeek: decimal("overtime_hours_this_week", { precision: 5, scale: 2 }).default("0.00"),
+
+  // View Mode Preference (per-employee override for this workspace)
+  viewModePreference: varchar("view_mode_preference").default("inherit"), // 'inherit' | 'simple' | 'pro'
+  viewModeUpdatedAt: timestamp("view_mode_updated_at"), // When preference was last changed
 
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
