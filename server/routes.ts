@@ -9039,7 +9039,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ============================================================================
   
   // Toggle SmartSchedule AI (Managers/Admins only) - Persists to DB
-  app.post('/api/scheduleos/ai/toggle', isAuthenticated, requireManager, async (req: any, res) => {
+  app.post('/api/scheduleos/ai/toggle', requireManager, async (req: any, res) => {
     try {
       const { enabled, workspaceId } = req.body;
       const userId = req.user.claims.sub;
