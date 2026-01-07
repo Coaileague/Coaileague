@@ -373,7 +373,7 @@ export default function TrinityChat() {
                     <Settings className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-sm p-4">
+                <DialogContent size="sm" className="p-4">
                   <DialogHeader className="pb-2 space-y-0">
                     <DialogTitle className="text-sm flex items-center gap-2">
                       <Brain className="h-4 w-4" />

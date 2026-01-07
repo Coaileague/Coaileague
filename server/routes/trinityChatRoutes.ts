@@ -12,19 +12,25 @@ import { trinityChatService, ConversationMode } from '../services/ai-brain/trini
 
 const router = Router();
 
-// RBAC Middleware - Only allow org_owner, co_owner, manager
+// RBAC Middleware - Only allow org_owner, co_owner, manager (and platform staff)
 const requireTrinityAccess = (req: Request, res: Response, next: NextFunction) => {
   if (!req.user) {
     return res.status(401).json({ error: 'Authentication required' });
   }
 
   const user = req.user as any;
-  const allowedRoles = ['org_owner', 'co_owner', 'manager', 'root_admin', 'co_admin', 'sysops'];
+  const allowedOrgRoles = ['org_owner', 'co_owner', 'manager'];
+  const allowedPlatformRoles = ['root_admin', 'co_admin', 'sysops'];
   
-  // Check employee role if available
-  const userRole = user.role || user.employeeRole || user.workspaceRole;
+  // Check all possible role fields from session
+  const orgRole = user.role || user.employeeRole || user.workspaceRole;
+  const platformRole = user.platformRole;
   
-  if (!allowedRoles.includes(userRole)) {
+  // Allow if user has an allowed org role OR platform role
+  const hasOrgAccess = allowedOrgRoles.includes(orgRole);
+  const hasPlatformAccess = allowedPlatformRoles.includes(platformRole);
+  
+  if (!hasOrgAccess && !hasPlatformAccess) {
     return res.status(403).json({ 
       error: 'Access denied',
       message: 'Trinity Chat is available for org owners, co-owners, and managers only',

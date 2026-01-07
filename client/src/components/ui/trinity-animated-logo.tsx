@@ -1,11 +1,11 @@
 /**
- * Trinity Animated Logo - Chat Interface Star Icon
- * Features: Animated star/sparkle icon with pulse and spin states
- * Used in: Trinity chat messages, thinking indicators
+ * Trinity Animated Logo - Chat Interface Bow/Knot Icon
+ * Features: Animated ribbon bow with pulse and spin states
+ * Uses the authentic 5-petal interwoven ribbon knot design
  * 
  * Animation States:
  * - idle: Gentle pulse/glow (slow breathing effect)
- * - thinking: Spinning/shimmering while generating response
+ * - thinking: Spinning while generating response
  * - responding: Smooth fade-in as text appears
  */
 
@@ -29,9 +29,9 @@ const sizeMap = {
 };
 
 const modeColors = {
-  business: { primary: "#3B82F6", secondary: "#0EA5E9" },
-  personal: { primary: "#10B981", secondary: "#14B8A6" },
-  integrated: { primary: "#8B5CF6", secondary: "#A855F7" },
+  business: { gold: "#FFD700", teal: "#00BFFF", core: "#00BFFF" },
+  personal: { gold: "#10B981", teal: "#14B8A6", core: "#10B981" },
+  integrated: { gold: "#A855F7", teal: "#8B5CF6", core: "#8B5CF6" },
 };
 
 export function TrinityAnimatedLogo({ 
@@ -45,9 +45,10 @@ export function TrinityAnimatedLogo({
   const reactId = useId();
   
   const ids = {
-    mainGrad: `trinity-main${reactId}`,
-    glowFilter: `trinity-glow${reactId}`,
-    sparkleGrad: `trinity-sparkle${reactId}`,
+    core: `trinity-core${reactId}`,
+    ribbonGold: `ribbon-gold${reactId}`,
+    ribbonTeal: `ribbon-teal${reactId}`,
+    glow: `trinity-glow${reactId}`,
   };
 
   const animationClass = {
@@ -60,50 +61,76 @@ export function TrinityAnimatedLogo({
     <svg
       width={width}
       height={height}
-      viewBox="0 0 48 48"
+      viewBox="0 0 100 100"
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={cn("shrink-0 transition-all", animationClass, className)}
     >
       <defs>
-        <linearGradient id={ids.mainGrad} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor={colors.primary} />
-          <stop offset="100%" stopColor={colors.secondary} />
+        <radialGradient id={ids.core} cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#FFFFE0" />
+          <stop offset="50%" stopColor={colors.core} />
+          <stop offset="100%" stopColor="#006699" />
+        </radialGradient>
+        <linearGradient id={ids.ribbonGold} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={colors.gold} />
+          <stop offset="100%" stopColor="#FFA500" />
         </linearGradient>
-        <linearGradient id={ids.sparkleGrad} x1="50%" y1="0%" x2="50%" y2="100%">
-          <stop offset="0%" stopColor="#ffffff" stopOpacity="0.9" />
-          <stop offset="100%" stopColor={colors.primary} stopOpacity="0.5" />
+        <linearGradient id={ids.ribbonTeal} x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor={colors.teal} />
+          <stop offset="100%" stopColor="#008B8B" />
         </linearGradient>
-        <filter id={ids.glowFilter} x="-30%" y="-30%" width="160%" height="160%">
-          <feGaussianBlur stdDeviation="1.5" result="blur"/>
+        <filter id={ids.glow}>
+          <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
           <feMerge>
-            <feMergeNode in="blur"/>
+            <feMergeNode in="coloredBlur"/>
             <feMergeNode in="SourceGraphic"/>
           </feMerge>
         </filter>
       </defs>
       
-      {/* 4-Point Star Shape - Modern sparkle design */}
-      <path 
-        d="M24 4 L28 18 L42 24 L28 30 L24 44 L20 30 L6 24 L20 18 Z"
-        fill={`url(#${ids.mainGrad})`}
-        filter={`url(#${ids.glowFilter})`}
+      {/* Interwoven ribbon knot - 5 curved ribbon petals */}
+      {[0, 72, 144, 216, 288].map((angle, i) => (
+        <g key={i} transform={`rotate(${angle} 50 50)`}>
+          {/* Ribbon petal with curved path for knot effect */}
+          <path
+            d="M50,50 Q42,30 50,15 Q58,30 50,50"
+            fill="none"
+            stroke={`url(#${i % 2 === 0 ? ids.ribbonGold : ids.ribbonTeal})`}
+            strokeWidth="6"
+            strokeLinecap="round"
+            filter={`url(#${ids.glow})`}
+            opacity="0.95"
+          />
+          {/* Outer ribbon arc for interwoven effect */}
+          <path
+            d="M45,45 Q35,25 50,12 Q65,25 55,45"
+            fill="none"
+            stroke={`url(#${i % 2 === 0 ? ids.ribbonTeal : ids.ribbonGold})`}
+            strokeWidth="3"
+            strokeLinecap="round"
+            opacity="0.7"
+          />
+        </g>
+      ))}
+      
+      {/* Central knot core */}
+      <circle 
+        cx="50" 
+        cy="50" 
+        r="10" 
+        fill={`url(#${ids.core})`}
+        filter={`url(#${ids.glow})`}
       />
       
-      {/* Inner highlight star */}
-      <path 
-        d="M24 10 L26 20 L36 24 L26 28 L24 38 L22 28 L12 24 L22 20 Z"
-        fill={`url(#${ids.sparkleGrad})`}
-        opacity="0.6"
+      {/* Inner glow */}
+      <circle 
+        cx="50" 
+        cy="50" 
+        r="5" 
+        fill="#FFFFE0" 
+        opacity="0.9"
       />
-      
-      {/* Central bright core */}
-      <circle cx="24" cy="24" r="4" fill="#ffffff" opacity="0.9"/>
-      <circle cx="24" cy="24" r="2" fill={colors.primary} opacity="0.5"/>
-      
-      {/* Small accent sparkles */}
-      <circle cx="36" cy="12" r="1.5" fill={colors.secondary} opacity="0.7"/>
-      <circle cx="12" cy="36" r="1" fill={colors.primary} opacity="0.5"/>
     </svg>
   );
 }
