@@ -2076,6 +2076,44 @@ export default function TimeTracking() {
                       <Download className="w-4 h-4 mr-2" />
                       Export Overtime
                     </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const data = generateReportData('exceptions');
+                        downloadCSV(data, `exceptions-report-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+                        toast({ title: 'Report Downloaded', description: 'Exceptions report exported to CSV' });
+                      }}
+                      data-testid="button-export-exceptions"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export Exceptions
+                    </Button>
+                    <Button
+                      className="bg-gradient-to-r from-green-600 to-emerald-600 text-white hover:from-green-700 hover:to-emerald-700"
+                      onClick={async () => {
+                        try {
+                          const response = await fetch(`/api/payroll/export/csv?startDate=${format(gridWeekStart, 'yyyy-MM-dd')}&endDate=${format(gridWeekEnd, 'yyyy-MM-dd')}`);
+                          if (!response.ok) throw new Error('Export failed');
+                          const blob = await response.blob();
+                          const url = window.URL.createObjectURL(blob);
+                          const a = document.createElement('a');
+                          a.href = url;
+                          a.download = `quickbooks-payroll-${format(new Date(), 'yyyy-MM-dd')}.csv`;
+                          document.body.appendChild(a);
+                          a.click();
+                          window.URL.revokeObjectURL(url);
+                          document.body.removeChild(a);
+                          toast({ title: 'QuickBooks Export Ready', description: 'Payroll data exported for QuickBooks import' });
+                          trinity.success('Payroll data exported successfully! You can now import this into QuickBooks.', 'QuickBooks Export');
+                        } catch (error) {
+                          toast({ title: 'Export Failed', description: 'Failed to export payroll data', variant: 'destructive' });
+                        }
+                      }}
+                      data-testid="button-export-quickbooks"
+                    >
+                      <FileSpreadsheet className="w-4 h-4 mr-2" />
+                      QuickBooks Payroll Export
+                    </Button>
                   </div>
                 </div>
               </div>
