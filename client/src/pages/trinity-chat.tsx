@@ -49,6 +49,7 @@ import {
 } from 'lucide-react';
 import { format, formatDistanceToNow } from 'date-fns';
 import { LogoMark } from '@/components/ui/logo-mark';
+import { TrinityAnimatedLogo, TrinityThinkingIndicator } from '@/components/ui/trinity-animated-logo';
 
 type ConversationMode = 'business' | 'personal' | 'integrated';
 type SpiritualGuidance = 'none' | 'general' | 'christian';
@@ -184,6 +185,14 @@ export default function TrinityChat() {
         description: 'Your preferences have been saved',
       });
     },
+    onError: (error: any) => {
+      console.error('[TrinityChat] Settings update error:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to update settings',
+        variant: 'destructive',
+      });
+    },
   });
 
   // Scroll to bottom on new messages
@@ -269,19 +278,17 @@ export default function TrinityChat() {
         {/* Main Chat Area */}
         <div className="flex-1 flex flex-col">
           {/* Header */}
-          <div className="border-b p-4 flex items-center justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <div className={`p-2 rounded-lg bg-gradient-to-br ${MODE_COLORS[mode]}`}>
-                <LogoMark size="sm" className="text-white" />
-              </div>
+          <div className="border-b p-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <TrinityAnimatedLogo size="md" state="idle" mode={mode} />
               <div>
-                <h1 className="text-lg font-semibold flex items-center gap-2">
+                <h1 className="text-base font-semibold flex items-center gap-2">
                   Trinity
-                  <Badge variant="secondary" className="text-xs">
+                  <Badge variant="secondary">
                     {MODE_LABELS[mode]}
                   </Badge>
                 </h1>
-                <p className="text-xs text-muted-foreground">Your AI Intelligence Partner</p>
+                <p className="text-[10px] text-muted-foreground">AI Intelligence Partner</p>
               </div>
             </div>
 
@@ -380,71 +387,58 @@ export default function TrinityChat() {
                     <Settings className="h-4 w-4" />
                   </Button>
                 </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                      <Brain className="h-5 w-5" />
+                <DialogContent className="max-w-sm p-4">
+                  <DialogHeader className="pb-2">
+                    <DialogTitle className="text-base flex items-center gap-2">
+                      <Brain className="h-4 w-4" />
                       Trinity Settings
                     </DialogTitle>
-                    <DialogDescription>Configure your Trinity experience</DialogDescription>
                   </DialogHeader>
 
-                  <div className="space-y-6 py-4">
+                  <div className="space-y-3">
                     {/* Personal Development Toggle */}
-                    <div className="flex items-center justify-between">
-                      <div className="space-y-0.5">
-                        <Label>Personal Development Mode</Label>
-                        <p className="text-xs text-muted-foreground">Enable coaching and accountability</p>
-                      </div>
+                    <div className="flex items-center justify-between gap-2">
+                      <Label className="text-sm">Personal Development</Label>
                       <Switch
                         checked={buddySettings?.personalDevelopmentEnabled || false}
                         onCheckedChange={(checked) =>
                           settingsMutation.mutate({ personalDevelopmentEnabled: checked })
                         }
+                        disabled={settingsMutation.isPending}
                         data-testid="switch-personal-development"
                       />
                     </div>
 
-                    <Separator />
-
                     {/* Spiritual Guidance (only if personal development enabled) */}
                     {buddySettings?.personalDevelopmentEnabled && (
                       <>
-                        <div className="space-y-3">
-                          <Label>Spiritual Guidance</Label>
+                        <Separator className="my-2" />
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Spiritual Guidance</Label>
                           <RadioGroup
                             value={buddySettings?.spiritualGuidance || 'none'}
                             onValueChange={(value) =>
                               settingsMutation.mutate({ spiritualGuidance: value as SpiritualGuidance })
                             }
-                            className="space-y-2"
+                            className="grid grid-cols-3 gap-1"
                           >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="none" id="spiritual-none" />
-                              <Label htmlFor="spiritual-none" className="font-normal">
-                                None - Secular coaching only
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="general" id="spiritual-general" />
-                              <Label htmlFor="spiritual-general" className="font-normal">
-                                General - Universal values and purpose
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="christian" id="spiritual-christian" />
-                              <Label htmlFor="spiritual-christian" className="font-normal">
-                                Christian - Biblical wisdom and prayer
-                              </Label>
-                            </div>
+                            <Label htmlFor="spiritual-none" className="flex items-center gap-1 text-xs cursor-pointer px-2 py-1.5 rounded border hover:bg-muted [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/5">
+                              <RadioGroupItem value="none" id="spiritual-none" className="sr-only" />
+                              None
+                            </Label>
+                            <Label htmlFor="spiritual-general" className="flex items-center gap-1 text-xs cursor-pointer px-2 py-1.5 rounded border hover:bg-muted [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/5">
+                              <RadioGroupItem value="general" id="spiritual-general" className="sr-only" />
+                              General
+                            </Label>
+                            <Label htmlFor="spiritual-christian" className="flex items-center gap-1 text-xs cursor-pointer px-2 py-1.5 rounded border hover:bg-muted [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/5">
+                              <RadioGroupItem value="christian" id="spiritual-christian" className="sr-only" />
+                              Christian
+                            </Label>
                           </RadioGroup>
                         </div>
 
-                        <Separator />
-
-                        {/* Accountability Level */}
-                        <div className="space-y-3">
-                          <Label>Accountability Level</Label>
+                        <div className="space-y-2">
+                          <Label className="text-xs text-muted-foreground">Accountability Level</Label>
                           <RadioGroup
                             value={buddySettings?.accountabilityLevel || 'balanced'}
                             onValueChange={(value) =>
@@ -452,54 +446,40 @@ export default function TrinityChat() {
                                 accountabilityLevel: value as 'gentle' | 'balanced' | 'challenging',
                               })
                             }
-                            className="space-y-2"
+                            className="grid grid-cols-3 gap-1"
                           >
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="gentle" id="acc-gentle" />
-                              <Label htmlFor="acc-gentle" className="font-normal">
-                                Gentle - Supportive and encouraging
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="balanced" id="acc-balanced" />
-                              <Label htmlFor="acc-balanced" className="font-normal">
-                                Balanced - Encouragement with honest challenge
-                              </Label>
-                            </div>
-                            <div className="flex items-center space-x-2">
-                              <RadioGroupItem value="challenging" id="acc-challenging" />
-                              <Label htmlFor="acc-challenging" className="font-normal">
-                                Challenging - Direct tough love feedback
-                              </Label>
-                            </div>
+                            <Label htmlFor="acc-gentle" className="flex items-center gap-1 text-xs cursor-pointer px-2 py-1.5 rounded border hover:bg-muted [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/5">
+                              <RadioGroupItem value="gentle" id="acc-gentle" className="sr-only" />
+                              Gentle
+                            </Label>
+                            <Label htmlFor="acc-balanced" className="flex items-center gap-1 text-xs cursor-pointer px-2 py-1.5 rounded border hover:bg-muted [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/5">
+                              <RadioGroupItem value="balanced" id="acc-balanced" className="sr-only" />
+                              Balanced
+                            </Label>
+                            <Label htmlFor="acc-challenging" className="flex items-center gap-1 text-xs cursor-pointer px-2 py-1.5 rounded border hover:bg-muted [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:bg-primary/5">
+                              <RadioGroupItem value="challenging" id="acc-challenging" className="sr-only" />
+                              Challenging
+                            </Label>
                           </RadioGroup>
                         </div>
                       </>
                     )}
 
-                    <Separator />
+                    <Separator className="my-2" />
 
                     {/* Metacognition Settings */}
-                    <div className="space-y-4">
-                      <Label className="text-sm font-medium">Metacognition</Label>
-
+                    <div className="space-y-2">
+                      <Label className="text-xs text-muted-foreground">Metacognition</Label>
                       <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label className="text-sm font-normal">Show Thought Process</Label>
-                          <p className="text-xs text-muted-foreground">See Trinity's reasoning</p>
-                        </div>
+                        <Label className="text-sm font-normal">Show Reasoning</Label>
                         <Switch
                           checked={buddySettings?.showThoughtProcess ?? true}
                           onCheckedChange={(checked) => settingsMutation.mutate({ showThoughtProcess: checked })}
                           data-testid="switch-thought-process"
                         />
                       </div>
-
                       <div className="flex items-center justify-between">
-                        <div className="space-y-0.5">
-                          <Label className="text-sm font-normal">Proactive Insights</Label>
-                          <p className="text-xs text-muted-foreground">Trinity brings up observations</p>
-                        </div>
+                        <Label className="text-sm font-normal">Proactive Insights</Label>
                         <Switch
                           checked={buddySettings?.proactiveInsights ?? true}
                           onCheckedChange={(checked) => settingsMutation.mutate({ proactiveInsights: checked })}
@@ -518,8 +498,8 @@ export default function TrinityChat() {
             <div className="max-w-3xl mx-auto space-y-4">
               {messages.length === 0 ? (
                 <div className="text-center py-16">
-                  <div className={`mx-auto w-16 h-16 rounded-2xl bg-gradient-to-br ${MODE_COLORS[mode]} flex items-center justify-center mb-4`}>
-                    <Sparkles className="h-8 w-8 text-white" />
+                  <div className="mx-auto w-16 h-16 flex items-center justify-center mb-4">
+                    <TrinityAnimatedLogo size="lg" state="idle" mode={mode} />
                   </div>
                   <h2 className="text-xl font-semibold mb-2">Start a Conversation</h2>
                   <p className="text-muted-foreground max-w-md mx-auto">
@@ -535,8 +515,8 @@ export default function TrinityChat() {
                     className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     {msg.role === 'assistant' && (
-                      <div className={`shrink-0 w-8 h-8 rounded-full bg-gradient-to-br ${MODE_COLORS[mode]} flex items-center justify-center`}>
-                        <Bot className="h-4 w-4 text-white" />
+                      <div className="shrink-0">
+                        <TrinityAnimatedLogo size="sm" state="idle" mode={mode} />
                       </div>
                     )}
                     <div
@@ -560,12 +540,10 @@ export default function TrinityChat() {
                 ))
               )}
               {chatMutation.isPending && (
-                <div className="flex gap-3 justify-start">
-                  <div className={`shrink-0 w-8 h-8 rounded-full bg-gradient-to-br ${MODE_COLORS[mode]} flex items-center justify-center`}>
-                    <Loader2 className="h-4 w-4 text-white animate-spin" />
-                  </div>
-                  <div className="bg-muted rounded-lg p-3">
-                    <p className="text-sm text-muted-foreground">Trinity is thinking...</p>
+                <div className="flex gap-3 justify-start items-center">
+                  <TrinityAnimatedLogo size="sm" state="thinking" mode={mode} />
+                  <div className="bg-muted rounded-lg px-3 py-2">
+                    <p className="text-sm text-muted-foreground animate-pulse">Trinity is thinking...</p>
                   </div>
                 </div>
               )}
