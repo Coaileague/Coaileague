@@ -29,7 +29,8 @@ import {
   Clock, Play, Square, Calendar, Users, Edit2, Check, X, Bell, History,
   MapPin, Camera, LogOut, LogIn, Download, Filter, ChevronDown, ChevronLeft, ChevronRight,
   AlertCircle, CheckCircle, XCircle, Eye, Shield, Coffee, PlayCircle, Menu, Home, ArrowLeft,
-  LayoutGrid, List, CheckSquare, AlertTriangle, Loader2
+  LayoutGrid, List, CheckSquare, AlertTriangle, Loader2, BarChart2, FileText, DollarSign,
+  TrendingUp, AlertOctagon, FileSpreadsheet
 } from "lucide-react";
 import { format, formatDistanceToNow, parseISO, startOfWeek, endOfWeek, subDays } from "date-fns";
 import type { Employee, Client, TimeEntry, Shift } from "@shared/schema";
@@ -722,6 +723,118 @@ export default function TimeTracking() {
     },
   });
 
+  // Helper function to generate CSV data
+  const generateReportData = (reportType: 'labor' | 'overtime' | 'exceptions') => {
+    const weekStart = new Date(gridWeekStart);
+    const weekEnd = new Date(gridWeekEnd);
+    weekEnd.setHours(23, 59, 59, 999);
+    
+    const weekEntries = timeEntries.filter(e => {
+      const entryDate = new Date(e.clockIn);
+      return entryDate >= weekStart && entryDate <= weekEnd;
+    });
+
+    if (reportType === 'labor') {
+      const headers = ['Employee Name', 'Position', 'Total Hours', 'Regular Hours', 'Overtime Hours', 'Estimated Pay'];
+      const rows = gridEmployees.map(emp => {
+        const weekTotal = getEmployeeWeekTotal(emp.id);
+        const regular = Math.min(weekTotal.total, 40);
+        const overtime = Math.max(0, weekTotal.total - 40);
+        const estPay = (regular * 18) + (overtime * 27);
+        return [
+          `${emp.firstName} ${emp.lastName}`,
+          emp.workspaceRole || 'Employee',
+          weekTotal.total.toFixed(2),
+          regular.toFixed(2),
+          overtime.toFixed(2),
+          estPay.toFixed(2)
+        ].join(',');
+      });
+      return [headers.join(','), ...rows].join('\n');
+    } else if (reportType === 'overtime') {
+      const headers = ['Employee Name', 'Total Hours', 'Overtime Hours', 'Overtime Cost (1.5x)'];
+      const rows = gridEmployees.filter(emp => getEmployeeWeekTotal(emp.id).total > 40).map(emp => {
+        const weekTotal = getEmployeeWeekTotal(emp.id);
+        const overtime = weekTotal.total - 40;
+        return [
+          `${emp.firstName} ${emp.lastName}`,
+          weekTotal.total.toFixed(2),
+          overtime.toFixed(2),
+          (overtime * 27).toFixed(2)
+        ].join(',');
+      });
+      return [headers.join(','), ...rows].join('\n');
+    } else {
+      const headers = ['Date', 'Employee', 'Exception Type', 'Details'];
+      const exceptionRows: string[] = [];
+      
+      // Late Clock-Ins
+      weekEntries.filter(e => {
+        const shift = shifts.find(s => s.id === e.shiftId);
+        if (!shift) return false;
+        const clockIn = new Date(e.clockIn);
+        const shiftStart = new Date(shift.startTime);
+        return (clockIn.getTime() - shiftStart.getTime()) > 5 * 60 * 1000;
+      }).forEach(e => {
+        const emp = employees.find(emp => emp.id === e.employeeId);
+        exceptionRows.push([
+          format(new Date(e.clockIn), 'yyyy-MM-dd'),
+          `${emp?.firstName} ${emp?.lastName}`,
+          'Late Clock-In',
+          `Clocked in at ${format(new Date(e.clockIn), 'h:mm a')}`
+        ].join(','));
+      });
+      
+      // Flagged/Rejected Entries
+      weekEntries.filter(e => e.status === 'rejected' || e.status === 'flagged').forEach(e => {
+        const emp = employees.find(emp => emp.id === e.employeeId);
+        exceptionRows.push([
+          format(new Date(e.clockIn), 'yyyy-MM-dd'),
+          `${emp?.firstName} ${emp?.lastName}`,
+          'Flagged Entry',
+          `Status: ${e.status}`
+        ].join(','));
+      });
+      
+      // Missing Clock-Outs (older than 12 hours)
+      weekEntries.filter(e => !e.clockOut && new Date(e.clockIn) < new Date(Date.now() - 12 * 60 * 60 * 1000)).forEach(e => {
+        const emp = employees.find(emp => emp.id === e.employeeId);
+        exceptionRows.push([
+          format(new Date(e.clockIn), 'yyyy-MM-dd'),
+          `${emp?.firstName} ${emp?.lastName}`,
+          'Missing Clock-Out',
+          `Clocked in at ${format(new Date(e.clockIn), 'h:mm a')} - never clocked out`
+        ].join(','));
+      });
+      
+      // Pending Approvals
+      weekEntries.filter(e => e.status === 'pending').forEach(e => {
+        const emp = employees.find(emp => emp.id === e.employeeId);
+        exceptionRows.push([
+          format(new Date(e.clockIn), 'yyyy-MM-dd'),
+          `${emp?.firstName} ${emp?.lastName}`,
+          'Pending Approval',
+          `${e.totalHours ? parseFloat(e.totalHours.toString()).toFixed(2) : 0}h awaiting approval`
+        ].join(','));
+      });
+      
+      return [headers.join(','), ...exceptionRows].join('\n');
+    }
+  };
+
+  // Helper function to download CSV file
+  const downloadCSV = (data: string, filename: string) => {
+    const blob = new Blob([data], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', filename);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   if (!isAuthenticated) {
     return null;
   }
@@ -834,6 +947,19 @@ export default function TimeTracking() {
                       {pendingApprovals}
                     </span>
                   )}
+                </Button>
+              )}
+              {canApprove && (
+                <Button
+                  variant="ghost"
+                  onClick={() => setView('reports')}
+                  className={`px-4 py-2 rounded-lg font-medium transition-colors text-white hover:bg-white hover:bg-opacity-20 ${
+                    view === 'reports' ? 'bg-white bg-opacity-20' : ''
+                  }`}
+                  data-testid="button-nav-reports"
+                >
+                  <BarChart2 className="w-4 h-4 mr-2" />
+                  Reports
                 </Button>
               )}
             </div>
@@ -1914,11 +2040,304 @@ export default function TimeTracking() {
               </div>
             </div>
           )}
+
+          {/* Reports View */}
+          {view === 'reports' && canApprove && (
+            <div className="space-y-6">
+              {/* Report Header */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
+                <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                  <div>
+                    <h2 className="text-xl font-bold text-gray-900">Time & Attendance Reports</h2>
+                    <p className="text-sm text-gray-600">Generate reports for labor cost, overtime, and exceptions</p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const data = generateReportData('labor');
+                        downloadCSV(data, `labor-report-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+                        toast({ title: 'Report Downloaded', description: 'Labor cost report exported to CSV' });
+                      }}
+                      data-testid="button-export-labor"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export Labor Report
+                    </Button>
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const data = generateReportData('overtime');
+                        downloadCSV(data, `overtime-report-${format(new Date(), 'yyyy-MM-dd')}.csv`);
+                        toast({ title: 'Report Downloaded', description: 'Overtime report exported to CSV' });
+                      }}
+                      data-testid="button-export-overtime"
+                    >
+                      <Download className="w-4 h-4 mr-2" />
+                      Export Overtime
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Report Cards */}
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Labor Cost Summary */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <DollarSign className="w-5 h-5 text-green-600" />
+                    </div>
+                    <h3 className="font-bold text-gray-900">Labor Cost</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Total Hours (Week)</span>
+                      <span className="font-bold text-gray-900" data-testid="text-report-total-hours">
+                        {timeEntries.filter(e => {
+                          const entryDate = new Date(e.clockIn);
+                          return entryDate >= gridWeekStart && entryDate <= gridWeekEnd;
+                        }).reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0).toFixed(1)}h
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Regular Hours</span>
+                      <span className="font-medium text-gray-900" data-testid="text-report-regular-hours">
+                        {Math.min(
+                          timeEntries.filter(e => {
+                            const entryDate = new Date(e.clockIn);
+                            return entryDate >= gridWeekStart && entryDate <= gridWeekEnd;
+                          }).reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0),
+                          40 * gridEmployees.length
+                        ).toFixed(1)}h
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-gray-600">Overtime Hours</span>
+                      <span className="font-medium text-orange-600" data-testid="text-report-overtime-hours">
+                        {Math.max(0, 
+                          timeEntries.filter(e => {
+                            const entryDate = new Date(e.clockIn);
+                            return entryDate >= gridWeekStart && entryDate <= gridWeekEnd;
+                          }).reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0) - (40 * gridEmployees.length)
+                        ).toFixed(1)}h
+                      </span>
+                    </div>
+                    <div className="pt-2 border-t">
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium text-gray-700">Est. Labor Cost</span>
+                        <span className="text-lg font-bold text-green-600" data-testid="text-report-labor-cost">
+                          ${(timeEntries.filter(e => {
+                            const entryDate = new Date(e.clockIn);
+                            return entryDate >= gridWeekStart && entryDate <= gridWeekEnd;
+                          }).reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0) * 18).toFixed(2)}
+                        </span>
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">Based on avg $18/hr</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Overtime Summary */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-orange-100 rounded-lg">
+                      <TrendingUp className="w-5 h-5 text-orange-600" />
+                    </div>
+                    <h3 className="font-bold text-gray-900">Overtime Analysis</h3>
+                  </div>
+                  <div className="space-y-3">
+                    {gridEmployees.map(emp => {
+                      const weekTotal = getEmployeeWeekTotal(emp.id);
+                      const isOvertime = weekTotal.total > 40;
+                      if (!isOvertime) return null;
+                      return (
+                        <div key={emp.id} className="flex items-center justify-between p-2 bg-orange-50 rounded-lg" data-testid={`overtime-employee-${emp.id}`}>
+                          <div className="flex items-center gap-2">
+                            <div className="w-7 h-7 bg-gradient-to-br from-orange-500 to-red-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                              {emp.firstName?.[0]}{emp.lastName?.[0]}
+                            </div>
+                            <span className="text-sm font-medium text-gray-900">{emp.firstName} {emp.lastName}</span>
+                          </div>
+                          <span className="text-sm font-bold text-orange-600">
+                            +{(weekTotal.total - 40).toFixed(1)}h OT
+                          </span>
+                        </div>
+                      );
+                    })}
+                    {gridEmployees.every(emp => getEmployeeWeekTotal(emp.id).total <= 40) && (
+                      <div className="text-center py-4 text-gray-500">
+                        <TrendingUp className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">No overtime this week</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Exceptions Summary */}
+                <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="p-2 bg-red-100 rounded-lg">
+                      <AlertOctagon className="w-5 h-5 text-red-600" />
+                    </div>
+                    <h3 className="font-bold text-gray-900">Exceptions</h3>
+                  </div>
+                  <div className="space-y-3">
+                    <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-yellow-500" />
+                        <span className="text-sm text-gray-700">Late Clock-Ins</span>
+                      </div>
+                      <span className="font-bold text-yellow-600" data-testid="text-exception-late-clockins">
+                        {timeEntries.filter(e => {
+                          const shift = shifts.find(s => s.id === e.shiftId);
+                          if (!shift) return false;
+                          const clockIn = new Date(e.clockIn);
+                          const shiftStart = new Date(shift.startTime);
+                          return (clockIn.getTime() - shiftStart.getTime()) > 5 * 60 * 1000;
+                        }).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="w-4 h-4 text-red-500" />
+                        <span className="text-sm text-gray-700">Flagged Entries</span>
+                      </div>
+                      <span className="font-bold text-red-600" data-testid="text-exception-flagged">
+                        {timeEntries.filter(e => e.status === 'rejected' || e.status === 'flagged').length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <PlayCircle className="w-4 h-4 text-blue-500" />
+                        <span className="text-sm text-gray-700">Missing Clock-Outs</span>
+                      </div>
+                      <span className="font-bold text-blue-600" data-testid="text-exception-missing-clockouts">
+                        {timeEntries.filter(e => !e.clockOut && new Date(e.clockIn) < new Date(Date.now() - 12 * 60 * 60 * 1000)).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between items-center p-2 bg-gray-50 rounded-lg">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle className="w-4 h-4 text-purple-500" />
+                        <span className="text-sm text-gray-700">Pending Approvals</span>
+                      </div>
+                      <span className="font-bold text-purple-600" data-testid="text-exception-pending">
+                        {pendingApprovals}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Detailed Employee Report Table */}
+              <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                <div className="p-4 lg:p-6 border-b border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <FileSpreadsheet className="w-5 h-5 text-blue-600" />
+                      <h3 className="font-bold text-gray-900">Employee Weekly Summary</h3>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      Week of {format(gridWeekStart, 'MMM d')} - {format(gridWeekEnd, 'MMM d, yyyy')}
+                    </div>
+                  </div>
+                </div>
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead className="bg-gray-50 border-b border-gray-200">
+                      <tr>
+                        <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase">Employee</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Total Hours</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Regular</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Overtime</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Status</th>
+                        <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase">Est. Pay</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {gridEmployees.map(emp => {
+                        const weekTotal = getEmployeeWeekTotal(emp.id);
+                        const regularHours = Math.min(weekTotal.total, 40);
+                        const overtimeHours = Math.max(0, weekTotal.total - 40);
+                        const estPay = (regularHours * 18) + (overtimeHours * 27);
+                        
+                        return (
+                          <tr key={emp.id} className="hover:bg-gray-50" data-testid={`report-row-${emp.id}`}>
+                            <td className="px-4 py-3">
+                              <div className="flex items-center gap-3">
+                                <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                                  {emp.firstName?.[0]}{emp.lastName?.[0]}
+                                </div>
+                                <div>
+                                  <p className="font-medium text-gray-900 text-sm">{emp.firstName} {emp.lastName}</p>
+                                  <p className="text-xs text-gray-500 capitalize">{emp.workspaceRole || 'Employee'}</p>
+                                </div>
+                              </div>
+                            </td>
+                            <td className="px-4 py-3 text-center font-bold text-gray-900">
+                              {weekTotal.total.toFixed(1)}h
+                            </td>
+                            <td className="px-4 py-3 text-center text-gray-700">
+                              {regularHours.toFixed(1)}h
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {overtimeHours > 0 ? (
+                                <span className="text-orange-600 font-medium">{overtimeHours.toFixed(1)}h</span>
+                              ) : (
+                                <span className="text-gray-400">-</span>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center">
+                              {weekTotal.hasPending ? (
+                                <Badge variant="secondary">Pending</Badge>
+                              ) : weekTotal.entries.some(e => e.status === 'rejected' || e.status === 'flagged') ? (
+                                <Badge variant="destructive">Issue</Badge>
+                              ) : weekTotal.entries.length > 0 ? (
+                                <Badge variant="default">Approved</Badge>
+                              ) : (
+                                <Badge variant="outline">No Hours</Badge>
+                              )}
+                            </td>
+                            <td className="px-4 py-3 text-center font-bold text-green-600">
+                              ${estPay.toFixed(2)}
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                    <tfoot className="bg-gray-100">
+                      <tr>
+                        <td className="px-4 py-3 font-bold text-gray-900">Totals</td>
+                        <td className="px-4 py-3 text-center font-bold text-gray-900">
+                          {gridEmployees.reduce((sum, emp) => sum + getEmployeeWeekTotal(emp.id).total, 0).toFixed(1)}h
+                        </td>
+                        <td className="px-4 py-3 text-center font-bold text-gray-900">
+                          {gridEmployees.reduce((sum, emp) => sum + Math.min(getEmployeeWeekTotal(emp.id).total, 40), 0).toFixed(1)}h
+                        </td>
+                        <td className="px-4 py-3 text-center font-bold text-orange-600">
+                          {gridEmployees.reduce((sum, emp) => sum + Math.max(0, getEmployeeWeekTotal(emp.id).total - 40), 0).toFixed(1)}h
+                        </td>
+                        <td className="px-4 py-3"></td>
+                        <td className="px-4 py-3 text-center font-bold text-green-600">
+                          ${gridEmployees.reduce((sum, emp) => {
+                            const weekTotal = getEmployeeWeekTotal(emp.id);
+                            const regularHours = Math.min(weekTotal.total, 40);
+                            const overtimeHours = Math.max(0, weekTotal.total - 40);
+                            return sum + (regularHours * 18) + (overtimeHours * 27);
+                          }, 0).toFixed(2)}
+                        </td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Mobile Bottom Navigation */}
         <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 z-30">
-          <div className="grid grid-cols-3 h-16">
+          <div className={`grid h-16 ${canApprove ? 'grid-cols-4' : 'grid-cols-2'}`}>
             <button
               onClick={() => setView('clock')}
               className={`flex flex-col items-center justify-center ${
@@ -1940,21 +2359,33 @@ export default function TimeTracking() {
               <span className="text-xs">Timesheet</span>
             </button>
             {canApprove && (
-              <button
-                onClick={() => setView('approvals')}
-                className={`flex flex-col items-center justify-center relative ${
-                  view === 'approvals' ? 'text-blue-600' : 'text-gray-600'
-                }`}
-                data-testid="button-mobile-nav-approvals"
-              >
-                <CheckCircle className="w-5 h-5 mb-1" />
-                <span className="text-xs">Approve</span>
-                {pendingApprovals > 0 && (
-                  <span className="absolute top-1 right-6 w-4 h-4 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                    {pendingApprovals}
-                  </span>
-                )}
-              </button>
+              <>
+                <button
+                  onClick={() => setView('approvals')}
+                  className={`flex flex-col items-center justify-center relative ${
+                    view === 'approvals' ? 'text-blue-600' : 'text-gray-600'
+                  }`}
+                  data-testid="button-mobile-nav-approvals"
+                >
+                  <CheckCircle className="w-5 h-5 mb-1" />
+                  <span className="text-xs">Approve</span>
+                  {pendingApprovals > 0 && (
+                    <span className="absolute top-1 right-3 w-4 h-4 bg-orange-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
+                      {pendingApprovals}
+                    </span>
+                  )}
+                </button>
+                <button
+                  onClick={() => setView('reports')}
+                  className={`flex flex-col items-center justify-center ${
+                    view === 'reports' ? 'text-blue-600' : 'text-gray-600'
+                  }`}
+                  data-testid="button-mobile-nav-reports"
+                >
+                  <BarChart2 className="w-5 h-5 mb-1" />
+                  <span className="text-xs">Reports</span>
+                </button>
+              </>
             )}
           </div>
         </div>
