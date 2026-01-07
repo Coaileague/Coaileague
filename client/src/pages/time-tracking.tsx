@@ -24,10 +24,12 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Clock, Play, Square, Calendar, Users, Edit2, Check, X, Bell, History,
-  MapPin, Camera, LogOut, LogIn, Download, Filter, ChevronDown,
-  AlertCircle, CheckCircle, XCircle, Eye, Shield, Coffee, PlayCircle, Menu, Home, ArrowLeft
+  MapPin, Camera, LogOut, LogIn, Download, Filter, ChevronDown, ChevronLeft, ChevronRight,
+  AlertCircle, CheckCircle, XCircle, Eye, Shield, Coffee, PlayCircle, Menu, Home, ArrowLeft,
+  LayoutGrid, List, CheckSquare, AlertTriangle, Loader2
 } from "lucide-react";
 import { format, formatDistanceToNow, parseISO, startOfWeek, endOfWeek, subDays } from "date-fns";
 import type { Employee, Client, TimeEntry, Shift } from "@shared/schema";
@@ -75,6 +77,12 @@ export default function TimeTracking() {
   const [sortBy, setSortBy] = useState<string>("date-desc");
   const [dateRange, setDateRange] = useState<string>("week");
   const [selectedEntry, setSelectedEntry] = useState<TimeEntry | null>(null);
+  
+  // GetSling-style weekly grid state
+  const [timesheetViewMode, setTimesheetViewMode] = useState<'list' | 'grid'>('grid');
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [selectedDayDetail, setSelectedDayDetail] = useState<{ employee: Employee; date: Date; entries: TimeEntry[] } | null>(null);
+  const [bulkSelectedEmployees, setBulkSelectedEmployees] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
@@ -579,6 +587,141 @@ export default function TimeTracking() {
   const pendingApprovals = timeEntries.filter((e: TimeEntry) => e.status === 'pending').length;
   const canApprove = workspaceRole === 'org_owner' || workspaceRole === 'org_admin' || workspaceRole === 'department_manager' || workspaceRole === 'supervisor';
 
+  // GetSling-style weekly grid calculations
+  const gridWeekStart = useMemo(() => {
+    const now = new Date();
+    const start = startOfWeek(now);
+    start.setDate(start.getDate() + (weekOffset * 7));
+    return start;
+  }, [weekOffset]);
+
+  const gridWeekEnd = useMemo(() => {
+    const end = new Date(gridWeekStart);
+    end.setDate(end.getDate() + 6);
+    return end;
+  }, [gridWeekStart]);
+
+  const gridDays = useMemo(() => {
+    const days = [];
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(gridWeekStart);
+      d.setDate(d.getDate() + i);
+      days.push(d);
+    }
+    return days;
+  }, [gridWeekStart]);
+
+  // RBAC-filtered employees for grid view - staff only see themselves
+  const gridEmployees = useMemo(() => {
+    if (workspaceRole === 'staff' && currentEmployee) {
+      return employees.filter(e => e.id === currentEmployee.id);
+    }
+    // Managers see all employees, optionally filtered by filterEmployee
+    if (filterEmployee && filterEmployee !== 'all') {
+      return employees.filter(e => e.id === filterEmployee);
+    }
+    return employees;
+  }, [employees, workspaceRole, currentEmployee, filterEmployee]);
+
+  // Get employee hours for a specific day - uses RBAC-filtered timeEntries
+  const getEmployeeDayData = (employeeId: string, date: Date) => {
+    const dayStart = new Date(date);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(date);
+    dayEnd.setHours(23, 59, 59, 999);
+
+    // Use timeEntries (RBAC-filtered) instead of allTimeEntries
+    const dayEntries = timeEntries.filter(entry => {
+      if (entry.employeeId !== employeeId) return false;
+      const entryDate = new Date(entry.clockIn);
+      return entryDate >= dayStart && entryDate <= dayEnd;
+    });
+
+    const totalHours = dayEntries.reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0);
+    const hasActive = dayEntries.some(e => !e.clockOut);
+    const hasPending = dayEntries.some(e => e.status === 'pending');
+    const hasFlagged = dayEntries.some(e => e.status === 'flagged' || e.status === 'rejected');
+    const allApproved = dayEntries.length > 0 && dayEntries.every(e => e.status === 'approved');
+    const hasLateClockIn = dayEntries.some(e => {
+      const shift = shifts.find(s => s.id === e.shiftId);
+      if (!shift) return false;
+      const shiftStart = new Date(shift.startTime);
+      const clockIn = new Date(e.clockIn);
+      return (clockIn.getTime() - shiftStart.getTime()) > 5 * 60 * 1000; // > 5 mins late
+    });
+
+    return { totalHours, entries: dayEntries, hasActive, hasPending, hasFlagged, allApproved, hasLateClockIn };
+  };
+
+  // Get weekly total for an employee - uses RBAC-filtered timeEntries
+  const getEmployeeWeekTotal = (employeeId: string) => {
+    const weekStart = new Date(gridWeekStart);
+    const weekEnd = new Date(gridWeekEnd);
+    weekEnd.setHours(23, 59, 59, 999);
+
+    // Use timeEntries (RBAC-filtered) instead of allTimeEntries
+    const weekEntries = timeEntries.filter(entry => {
+      if (entry.employeeId !== employeeId) return false;
+      const entryDate = new Date(entry.clockIn);
+      return entryDate >= weekStart && entryDate <= weekEnd;
+    });
+
+    const total = weekEntries.reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0);
+    const hasPending = weekEntries.some(e => e.status === 'pending');
+    return { total, hasPending, entries: weekEntries };
+  };
+
+  // Toggle bulk selection - uses gridEmployees (RBAC-filtered)
+  const toggleBulkSelect = (employeeId: string) => {
+    const newSet = new Set(bulkSelectedEmployees);
+    if (newSet.has(employeeId)) {
+      newSet.delete(employeeId);
+    } else {
+      newSet.add(employeeId);
+    }
+    setBulkSelectedEmployees(newSet);
+  };
+
+  // Select all employees - uses gridEmployees (RBAC-filtered)
+  const selectAllEmployees = () => {
+    if (bulkSelectedEmployees.size === gridEmployees.length) {
+      setBulkSelectedEmployees(new Set());
+    } else {
+      setBulkSelectedEmployees(new Set(gridEmployees.map(e => e.id)));
+    }
+  };
+
+  // Bulk approve mutation - uses RBAC-filtered timeEntries
+  const bulkApproveMutation = useMutation({
+    mutationFn: async (employeeIds: string[]) => {
+      const weekStart = new Date(gridWeekStart);
+      const weekEnd = new Date(gridWeekEnd);
+      weekEnd.setHours(23, 59, 59, 999);
+
+      // Use timeEntries (RBAC-filtered) instead of allTimeEntries
+      const entriesToApprove = timeEntries.filter(entry => {
+        if (!employeeIds.includes(entry.employeeId)) return false;
+        if (entry.status !== 'pending') return false;
+        const entryDate = new Date(entry.clockIn);
+        return entryDate >= weekStart && entryDate <= weekEnd;
+      });
+
+      // Approve each entry
+      for (const entry of entriesToApprove) {
+        await apiPost('timeEntries.approve', { timeEntryId: entry.id });
+      }
+      return entriesToApprove.length;
+    },
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.timeEntries.all });
+      trinity.success(`Successfully approved ${count} time entries!`, "Bulk Approval Complete");
+      setBulkSelectedEmployees(new Set());
+    },
+    onError: (error: any) => {
+      trinity.error(error.message || "Failed to approve entries", "Bulk Approval Failed");
+    },
+  });
+
   if (!isAuthenticated) {
     return null;
   }
@@ -851,12 +994,12 @@ export default function TimeTracking() {
                 </div>
               </div>
 
-              {/* Team Status (for managers) */}
+              {/* Team Status (for managers) - uses gridEmployees for RBAC */}
               {(workspaceRole === 'org_owner' || workspaceRole === 'org_admin' || workspaceRole === 'department_manager' || workspaceRole === 'supervisor') && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 lg:p-6">
                   <h3 className="text-lg font-bold text-gray-900 mb-4">Team Status</h3>
                   <div className="space-y-3">
-                    {employees.map((emp: Employee) => {
+                    {gridEmployees.map((emp: Employee) => {
                       const empActiveEntry = timeEntries.find((e: TimeEntry) => 
                         e.employeeId === emp.id && !e.clockOut
                       );
@@ -914,31 +1057,85 @@ export default function TimeTracking() {
           {/* Timesheet View */}
           {view === 'timesheet' && (
             <div className="space-y-4">
-              {/* Weekly Summary Card */}
+              {/* Weekly Summary Card with Week Navigation */}
               <div className="bg-gradient-to-r from-blue-600 to-indigo-700 rounded-xl shadow-lg p-6 text-white">
                 <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-                  <div>
-                    <h2 className="text-2xl font-bold mb-2">Weekly Timesheet Summary</h2>
-                    <p className="text-blue-100">
-                      {format(startOfWeek(new Date()), 'MMM d')} - {format(endOfWeek(new Date()), 'MMM d, yyyy')}
-                    </p>
+                  <div className="flex items-center gap-4">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setWeekOffset(weekOffset - 1)}
+                      className="text-white hover:bg-white hover:bg-opacity-20"
+                      data-testid="button-prev-week"
+                    >
+                      <ChevronLeft className="w-5 h-5" />
+                    </Button>
+                    <div className="text-center">
+                      <h2 className="text-2xl font-bold mb-1">Weekly Timesheets</h2>
+                      <p className="text-blue-100">
+                        {format(gridWeekStart, 'MMM d')} - {format(gridWeekEnd, 'MMM d, yyyy')}
+                      </p>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setWeekOffset(weekOffset + 1)}
+                      className="text-white hover:bg-white hover:bg-opacity-20"
+                      data-testid="button-next-week"
+                    >
+                      <ChevronRight className="w-5 h-5" />
+                    </Button>
+                    {weekOffset !== 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setWeekOffset(0)}
+                        className="text-white hover:bg-white hover:bg-opacity-20 ml-2"
+                        data-testid="button-today-week"
+                      >
+                        Today
+                      </Button>
+                    )}
                   </div>
-                  <div className="flex flex-wrap gap-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    {/* View Mode Toggle */}
+                    <div className="flex items-center bg-white bg-opacity-20 rounded-lg p-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setTimesheetViewMode('grid')}
+                        className={`px-3 py-1 rounded ${timesheetViewMode === 'grid' ? 'bg-white text-blue-600' : 'text-white'}`}
+                        data-testid="button-view-grid"
+                      >
+                        <LayoutGrid className="w-4 h-4 mr-1" />
+                        Grid
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setTimesheetViewMode('list')}
+                        className={`px-3 py-1 rounded ${timesheetViewMode === 'list' ? 'bg-white text-blue-600' : 'text-white'}`}
+                        data-testid="button-view-list"
+                      >
+                        <List className="w-4 h-4 mr-1" />
+                        List
+                      </Button>
+                    </div>
                     <a
-                      href={`/api/timesheets/export/csv?startDate=${startOfWeek(new Date()).toISOString()}&endDate=${endOfWeek(new Date()).toISOString()}`}
+                      href={`/api/timesheets/export/csv?startDate=${gridWeekStart.toISOString()}&endDate=${gridWeekEnd.toISOString()}`}
                       className="inline-flex items-center px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors"
                       data-testid="button-export-csv"
                     >
                       <Download className="w-4 h-4 mr-2" />
-                      Export CSV
+                      CSV
                     </a>
                     <a
-                      href={`/api/timesheets/export/pdf?startDate=${startOfWeek(new Date()).toISOString()}&endDate=${endOfWeek(new Date()).toISOString()}`}
+                      href={`/api/timesheets/export/pdf?startDate=${gridWeekStart.toISOString()}&endDate=${gridWeekEnd.toISOString()}`}
                       className="inline-flex items-center px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg transition-colors"
                       data-testid="button-export-pdf"
                     >
                       <Download className="w-4 h-4 mr-2" />
-                      Export PDF
+                      PDF
                     </a>
                   </div>
                 </div>
@@ -947,33 +1144,236 @@ export default function TimeTracking() {
                   <div className="bg-white bg-opacity-10 rounded-lg p-4">
                     <p className="text-sm text-blue-100 mb-1">Total Hours</p>
                     <p className="text-3xl font-bold">
-                      {filteredTimeEntries.reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0).toFixed(1)}h
+                      {employees.reduce((sum, emp) => sum + getEmployeeWeekTotal(emp.id).total, 0).toFixed(1)}h
                     </p>
                   </div>
                   <div className="bg-white bg-opacity-10 rounded-lg p-4">
                     <p className="text-sm text-blue-100 mb-1">Regular Hours</p>
                     <p className="text-3xl font-bold">
-                      {Math.min(40, filteredTimeEntries.reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0)).toFixed(1)}h
+                      {Math.min(employees.length * 40, employees.reduce((sum, emp) => sum + getEmployeeWeekTotal(emp.id).total, 0)).toFixed(1)}h
                     </p>
                   </div>
                   <div className="bg-white bg-opacity-10 rounded-lg p-4">
                     <p className="text-sm text-blue-100 mb-1">Overtime Hours</p>
                     <p className="text-3xl font-bold">
-                      {Math.max(0, filteredTimeEntries.reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0) - 40).toFixed(1)}h
+                      {employees.reduce((sum, emp) => sum + Math.max(0, getEmployeeWeekTotal(emp.id).total - 40), 0).toFixed(1)}h
                     </p>
                   </div>
                   <div className="bg-white bg-opacity-10 rounded-lg p-4">
-                    <p className="text-sm text-blue-100 mb-1">Entries</p>
-                    <p className="text-3xl font-bold">{filteredTimeEntries.length}</p>
+                    <p className="text-sm text-blue-100 mb-1">Employees</p>
+                    <p className="text-3xl font-bold">{employees.length}</p>
                   </div>
                   <div className="bg-white bg-opacity-10 rounded-lg p-4">
-                    <p className="text-sm text-blue-100 mb-1">Approved</p>
+                    <p className="text-sm text-blue-100 mb-1">Pending</p>
                     <p className="text-3xl font-bold">
-                      {filteredTimeEntries.filter(e => e.status === 'approved').length}
+                      {employees.reduce((sum, emp) => sum + (getEmployeeWeekTotal(emp.id).hasPending ? 1 : 0), 0)}
                     </p>
                   </div>
                 </div>
               </div>
+
+              {/* GetSling-style Weekly Grid View */}
+              {timesheetViewMode === 'grid' && (
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                  {/* Bulk Actions Bar */}
+                  {canApprove && bulkSelectedEmployees.size > 0 && (
+                    <div className="bg-blue-50 border-b border-blue-200 p-3 flex items-center justify-between">
+                      <span className="text-sm font-medium text-blue-800">
+                        {bulkSelectedEmployees.size} employee{bulkSelectedEmployees.size > 1 ? 's' : ''} selected
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="sm"
+                          onClick={() => bulkApproveMutation.mutate(Array.from(bulkSelectedEmployees))}
+                          disabled={bulkApproveMutation.isPending}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                          data-testid="button-bulk-approve"
+                        >
+                          {bulkApproveMutation.isPending ? (
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          ) : (
+                            <CheckSquare className="w-4 h-4 mr-2" />
+                          )}
+                          Approve All Selected
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setBulkSelectedEmployees(new Set())}
+                          data-testid="button-clear-selection"
+                        >
+                          Clear
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Grid Table */}
+                  <div className="overflow-x-auto">
+                    <table className="w-full min-w-[800px]">
+                      <thead className="bg-gray-50 border-b border-gray-200">
+                        <tr>
+                          {canApprove && (
+                            <th className="px-3 py-3 text-left w-10">
+                              <Checkbox
+                                checked={bulkSelectedEmployees.size === gridEmployees.length && gridEmployees.length > 0}
+                                onCheckedChange={selectAllEmployees}
+                                data-testid="checkbox-select-all"
+                              />
+                            </th>
+                          )}
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-600 uppercase min-w-[180px]">Employee</th>
+                          {gridDays.map((day, idx) => {
+                            const isToday = day.toDateString() === new Date().toDateString();
+                            const isWeekend = idx >= 5;
+                            return (
+                              <th 
+                                key={idx} 
+                                className={`px-2 py-3 text-center text-xs font-medium uppercase min-w-[80px] ${
+                                  isToday ? 'bg-blue-100 text-blue-800' : 
+                                  isWeekend ? 'bg-gray-100 text-gray-500' : 
+                                  'text-gray-600'
+                                }`}
+                              >
+                                <div>{format(day, 'EEE')}</div>
+                                <div className="text-sm font-bold">{format(day, 'd')}</div>
+                              </th>
+                            );
+                          })}
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase bg-gray-100 min-w-[80px]">Total</th>
+                          <th className="px-4 py-3 text-center text-xs font-medium text-gray-600 uppercase min-w-[100px]">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-200">
+                        {gridEmployees.map((emp) => {
+                          const weekData = getEmployeeWeekTotal(emp.id);
+                          const isSelected = bulkSelectedEmployees.has(emp.id);
+                          const isOvertime = weekData.total > 40;
+
+                          return (
+                            <tr key={emp.id} className={`hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''}`} data-testid={`timesheet-row-${emp.id}`}>
+                              {canApprove && (
+                                <td className="px-3 py-3">
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleBulkSelect(emp.id)}
+                                    data-testid={`checkbox-employee-${emp.id}`}
+                                  />
+                                </td>
+                              )}
+                              <td className="px-4 py-3">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                                    {emp.firstName?.[0]}{emp.lastName?.[0]}
+                                  </div>
+                                  <div>
+                                    <p className="font-medium text-gray-900 text-sm">{emp.firstName} {emp.lastName}</p>
+                                    <p className="text-xs text-gray-500 capitalize">{emp.workspaceRole || 'Employee'}</p>
+                                  </div>
+                                </div>
+                              </td>
+                              {gridDays.map((day, idx) => {
+                                const dayData = getEmployeeDayData(emp.id, day);
+                                const isToday = day.toDateString() === new Date().toDateString();
+                                const isWeekend = idx >= 5;
+
+                                return (
+                                  <td 
+                                    key={idx} 
+                                    className={`px-2 py-3 text-center cursor-pointer hover-elevate transition-colors ${
+                                      isToday ? 'bg-blue-50' : isWeekend ? 'bg-gray-50' : ''
+                                    }`}
+                                    onClick={() => {
+                                      if (dayData.entries.length > 0) {
+                                        setSelectedDayDetail({ employee: emp, date: day, entries: dayData.entries });
+                                      }
+                                    }}
+                                    data-testid={`cell-${emp.id}-${format(day, 'yyyy-MM-dd')}`}
+                                  >
+                                    {dayData.entries.length > 0 ? (
+                                      <div className="flex flex-col items-center gap-1">
+                                        <span className="font-bold text-gray-900 text-sm">{dayData.totalHours.toFixed(1)}h</span>
+                                        <div className="flex items-center gap-0.5">
+                                          {dayData.allApproved && <CheckCircle className="w-3.5 h-3.5 text-green-500" />}
+                                          {dayData.hasPending && <Clock className="w-3.5 h-3.5 text-orange-500" />}
+                                          {dayData.hasFlagged && <AlertTriangle className="w-3.5 h-3.5 text-red-500" />}
+                                          {dayData.hasActive && <PlayCircle className="w-3.5 h-3.5 text-blue-500 animate-pulse" />}
+                                          {dayData.hasLateClockIn && <AlertCircle className="w-3.5 h-3.5 text-yellow-500" />}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <span className="text-gray-300">-</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                              <td className={`px-4 py-3 text-center font-bold ${isOvertime ? 'text-red-600' : 'text-gray-900'}`}>
+                                {weekData.total.toFixed(1)}h
+                                {isOvertime && (
+                                  <Badge variant="destructive" className="ml-1 text-xs">OT</Badge>
+                                )}
+                              </td>
+                              <td className="px-4 py-3 text-center">
+                                {weekData.hasPending && canApprove ? (
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      const pendingEntries = weekData.entries.filter(e => e.status === 'pending');
+                                      pendingEntries.forEach(entry => approveMutation.mutate(entry.id));
+                                    }}
+                                    disabled={approveMutation.isPending}
+                                    className="text-xs"
+                                    data-testid={`button-approve-week-${emp.id}`}
+                                  >
+                                    Approve
+                                  </Button>
+                                ) : weekData.entries.length > 0 ? (
+                                  <Badge variant="secondary" className="text-xs">
+                                    {weekData.entries.every(e => e.status === 'approved') ? 'Approved' : 'Review'}
+                                  </Badge>
+                                ) : (
+                                  <span className="text-gray-400 text-xs">-</span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* Legend */}
+                  <div className="bg-gray-50 border-t border-gray-200 px-4 py-3">
+                    <div className="flex flex-wrap items-center gap-4 text-xs text-gray-600">
+                      <div className="flex items-center gap-1">
+                        <CheckCircle className="w-3.5 h-3.5 text-green-500" />
+                        <span>Approved</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-orange-500" />
+                        <span>Pending</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <PlayCircle className="w-3.5 h-3.5 text-blue-500" />
+                        <span>Active</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <AlertTriangle className="w-3.5 h-3.5 text-red-500" />
+                        <span>Flagged</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 text-yellow-500" />
+                        <span>Late Clock In</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* List View (Original) */}
+              {timesheetViewMode === 'list' && (
+                <>
 
               {/* Filters */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -1148,6 +1548,168 @@ export default function TimeTracking() {
                   })}
                 </div>
               </div>
+                </>
+              )}
+
+              {/* Day Detail Modal */}
+              <Dialog open={!!selectedDayDetail} onOpenChange={() => setSelectedDayDetail(null)}>
+                <DialogContent className="max-w-2xl">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                        {selectedDayDetail?.employee?.firstName?.[0]}{selectedDayDetail?.employee?.lastName?.[0]}
+                      </div>
+                      <div>
+                        <div>{selectedDayDetail?.employee?.firstName} {selectedDayDetail?.employee?.lastName}</div>
+                        <div className="text-sm font-normal text-gray-500">
+                          {selectedDayDetail?.date && format(selectedDayDetail.date, 'EEEE, MMMM d, yyyy')}
+                        </div>
+                      </div>
+                    </DialogTitle>
+                    <DialogDescription className="sr-only">
+                      Time entries for {selectedDayDetail?.employee?.firstName} {selectedDayDetail?.employee?.lastName} on {selectedDayDetail?.date && format(selectedDayDetail.date, 'MMMM d, yyyy')}
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-4 mt-4">
+                    {selectedDayDetail?.entries.map((entry, idx) => {
+                      const shift = shifts.find(s => s.id === entry.shiftId);
+                      const client = clients.find(c => c.id === entry.clientId);
+                      const clockInTime = new Date(entry.clockIn);
+                      const clockOutTime = entry.clockOut ? new Date(entry.clockOut) : null;
+
+                      return (
+                        <div key={entry.id} className="border rounded-lg p-4 space-y-3">
+                          {/* Entry Header */}
+                          <div className="flex items-center justify-between">
+                            <Badge 
+                              variant={entry.status === 'approved' ? 'default' : entry.status === 'rejected' ? 'destructive' : 'secondary'}
+                            >
+                              {entry.status || 'Pending'}
+                            </Badge>
+                            <span className="text-lg font-bold">
+                              {entry.totalHours ? parseFloat(entry.totalHours.toString()).toFixed(2) : '0.00'}h
+                            </span>
+                          </div>
+
+                          {/* Scheduled vs Actual */}
+                          {shift && (
+                            <div className="bg-gray-50 rounded-lg p-3 text-sm">
+                              <p className="text-gray-600">
+                                <span className="font-medium">Scheduled:</span> {format(new Date(shift.startTime), 'h:mm a')} - {format(new Date(shift.endTime), 'h:mm a')}
+                              </p>
+                            </div>
+                          )}
+
+                          {/* Clock In/Out Details */}
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <p className="text-xs text-gray-500 uppercase font-medium">Clock In</p>
+                              <p className="font-bold">{format(clockInTime, 'h:mm a')}</p>
+                              {entry.clockInGpsLatitude && (
+                                <div className="flex items-center gap-1 text-xs text-green-600">
+                                  <MapPin className="w-3 h-3" />
+                                  <span>GPS Verified</span>
+                                </div>
+                              )}
+                              {entry.clockInPhotoUrl && (
+                                <div className="flex items-center gap-1 text-xs text-blue-600">
+                                  <Camera className="w-3 h-3" />
+                                  <span>Photo Verified</span>
+                                </div>
+                              )}
+                            </div>
+                            <div className="space-y-1">
+                              <p className="text-xs text-gray-500 uppercase font-medium">Clock Out</p>
+                              {clockOutTime ? (
+                                <>
+                                  <p className="font-bold">{format(clockOutTime, 'h:mm a')}</p>
+                                  {entry.clockOutGpsLatitude && (
+                                    <div className="flex items-center gap-1 text-xs text-green-600">
+                                      <MapPin className="w-3 h-3" />
+                                      <span>GPS Verified</span>
+                                    </div>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-orange-600 font-medium">Still Active</p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Client Info */}
+                          {client && (
+                            <div className="flex items-center gap-2 text-sm text-gray-600">
+                              <Users className="w-4 h-4" />
+                              <span>{client.companyName}</span>
+                            </div>
+                          )}
+
+                          {/* Notes */}
+                          {entry.notes && (
+                            <div className="text-sm text-gray-600 italic bg-gray-50 rounded p-2">
+                              {entry.notes}
+                            </div>
+                          )}
+
+                          {/* Actions */}
+                          {canApprove && entry.status === 'pending' && (
+                            <div className="flex gap-2 pt-2 border-t">
+                              <Button
+                                size="sm"
+                                onClick={() => {
+                                  approveMutation.mutate(entry.id);
+                                }}
+                                disabled={approveMutation.isPending}
+                                className="bg-green-600 hover:bg-green-700 text-white"
+                                data-testid={`button-approve-day-${entry.id}`}
+                              >
+                                <CheckCircle className="w-4 h-4 mr-1" />
+                                Approve
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setRejectingEntryId(entry.id);
+                                  setRejectDialogOpen(true);
+                                  setSelectedDayDetail(null);
+                                }}
+                                data-testid={`button-flag-day-${entry.id}`}
+                              >
+                                <AlertTriangle className="w-4 h-4 mr-1" />
+                                Flag Issue
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setSelectedEntry(entry);
+                                  setSelectedDayDetail(null);
+                                }}
+                                data-testid={`button-edit-day-${entry.id}`}
+                              >
+                                <Edit2 className="w-4 h-4 mr-1" />
+                                Edit
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Summary */}
+                    {selectedDayDetail && selectedDayDetail.entries.length > 0 && (
+                      <div className="bg-blue-50 rounded-lg p-4 flex items-center justify-between">
+                        <span className="font-medium text-blue-800">Day Total</span>
+                        <span className="text-2xl font-bold text-blue-900">
+                          {selectedDayDetail.entries.reduce((sum, e) => sum + (e.totalHours ? parseFloat(e.totalHours.toString()) : 0), 0).toFixed(2)}h
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
             </div>
           )}
 
