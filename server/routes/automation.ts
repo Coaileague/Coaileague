@@ -1326,12 +1326,12 @@ automationRouter.post('/photo/submit', async (req: any, res: Response) => {
 });
 
 // ============================================================================
-// QUICKBOOKS RECEIPTS
+// QUICKBOOKS RECEIPTS (Database Persisted)
 // ============================================================================
 
 /**
  * GET /api/automation/quickbooks/receipts
- * Get recent QuickBooks sync receipts for workspace
+ * Get recent QuickBooks sync receipts for workspace (from database)
  */
 automationRouter.get('/quickbooks/receipts', async (req: any, res: Response) => {
   try {
@@ -1340,7 +1340,7 @@ automationRouter.get('/quickbooks/receipts', async (req: any, res: Response) => 
     }
 
     const limit = parseInt(req.query.limit as string) || 10;
-    const receipts = quickbooksReceiptService.getRecentReceipts(
+    const receipts = await quickbooksReceiptService.getRecentReceipts(
       req.user.currentWorkspaceId,
       limit
     );
@@ -1357,15 +1357,18 @@ automationRouter.get('/quickbooks/receipts', async (req: any, res: Response) => 
 
 /**
  * GET /api/automation/quickbooks/receipts/:receiptId
- * Get specific QuickBooks sync receipt
+ * Get specific QuickBooks sync receipt (from database with workspace isolation)
  */
 automationRouter.get('/quickbooks/receipts/:receiptId', async (req: any, res: Response) => {
   try {
-    if (!req.user) {
+    if (!req.user || !req.user.currentWorkspaceId) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
 
-    const receipt = quickbooksReceiptService.getReceipt(req.params.receiptId);
+    const receipt = await quickbooksReceiptService.getReceipt(
+      req.params.receiptId,
+      req.user.currentWorkspaceId
+    );
     if (!receipt) {
       return res.status(404).json({ error: 'Receipt not found' });
     }
@@ -1377,5 +1380,137 @@ automationRouter.get('/quickbooks/receipts/:receiptId', async (req: any, res: Re
   } catch (error) {
     console.error('QuickBooks receipt error:', error);
     return res.status(500).json({ error: 'Failed to get receipt' });
+  }
+});
+
+/**
+ * GET /api/automation/quickbooks/stats
+ * Get QuickBooks sync statistics for workspace
+ */
+automationRouter.get('/quickbooks/stats', async (req: any, res: Response) => {
+  try {
+    if (!req.user || !req.user.currentWorkspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const stats = await quickbooksReceiptService.getSyncStats(req.user.currentWorkspaceId);
+    return res.json(stats);
+  } catch (error) {
+    console.error('QuickBooks stats error:', error);
+    return res.status(500).json({ error: 'Failed to get sync stats' });
+  }
+});
+
+// ============================================================================
+// TRINITY AUTOMATION SETTINGS & HISTORY (Database Persisted)
+// ============================================================================
+
+/**
+ * GET /api/automation/trinity/settings
+ * Get automation settings for workspace
+ */
+automationRouter.get('/trinity/settings', async (req: any, res: Response) => {
+  try {
+    if (!req.user || !req.user.currentWorkspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const settings = await trinityAutomationToggle.getSettings(req.user.currentWorkspaceId);
+    return res.json({ settings });
+  } catch (error) {
+    console.error('Trinity settings error:', error);
+    return res.status(500).json({ error: 'Failed to get automation settings' });
+  }
+});
+
+/**
+ * GET /api/automation/trinity/history
+ * Get automation request history for workspace
+ */
+automationRouter.get('/trinity/history', async (req: any, res: Response) => {
+  try {
+    if (!req.user || !req.user.currentWorkspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const limit = parseInt(req.query.limit as string) || 50;
+    const history = await trinityAutomationToggle.getAutomationHistory(
+      req.user.currentWorkspaceId,
+      limit
+    );
+
+    return res.json({ history });
+  } catch (error) {
+    console.error('Trinity history error:', error);
+    return res.status(500).json({ error: 'Failed to get automation history' });
+  }
+});
+
+/**
+ * GET /api/automation/trinity/pending
+ * Get pending automation requests for workspace
+ */
+automationRouter.get('/trinity/pending', async (req: any, res: Response) => {
+  try {
+    if (!req.user || !req.user.currentWorkspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const pending = await trinityAutomationToggle.getAllPendingRequests(
+      req.user.currentWorkspaceId
+    );
+
+    return res.json({ pending, count: pending.length });
+  } catch (error) {
+    console.error('Trinity pending error:', error);
+    return res.status(500).json({ error: 'Failed to get pending requests' });
+  }
+});
+
+/**
+ * GET /api/automation/trinity/receipts
+ * Get automation receipts for workspace
+ */
+automationRouter.get('/trinity/receipts', async (req: any, res: Response) => {
+  try {
+    if (!req.user || !req.user.currentWorkspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const limit = parseInt(req.query.limit as string) || 50;
+    const receipts = await trinityAutomationToggle.getReceipts(
+      req.user.currentWorkspaceId,
+      limit
+    );
+
+    return res.json({ receipts });
+  } catch (error) {
+    console.error('Trinity receipts error:', error);
+    return res.status(500).json({ error: 'Failed to get automation receipts' });
+  }
+});
+
+/**
+ * GET /api/automation/trinity/requests/:requestId
+ * Get specific automation request (with workspace isolation)
+ */
+automationRouter.get('/trinity/requests/:requestId', async (req: any, res: Response) => {
+  try {
+    if (!req.user || !req.user.currentWorkspaceId) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+
+    const request = await trinityAutomationToggle.getPendingRequest(
+      req.params.requestId,
+      req.user.currentWorkspaceId
+    );
+    if (!request) {
+      return res.status(404).json({ error: 'Request not found' });
+    }
+
+    return res.json({ request });
+  } catch (error) {
+    console.error('Trinity request error:', error);
+    return res.status(500).json({ error: 'Failed to get automation request' });
   }
 });

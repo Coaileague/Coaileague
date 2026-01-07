@@ -259,12 +259,15 @@ class QuickBooksReceiptService {
   }
 
   /**
-   * Get a single receipt from database
+   * Get a single receipt from database with workspace isolation
    */
-  async getReceipt(receiptId: string): Promise<QuickBooksReceipt | undefined> {
+  async getReceipt(receiptId: string, workspaceId: string): Promise<QuickBooksReceipt | undefined> {
     const receipts = await db.query.quickbooksSyncReceipts.findMany({
-      where: sql`${quickbooksSyncReceipts.trinitySignature} LIKE '%' || ${receiptId.substring(0, 20)} || '%'`,
-      limit: 1,
+      where: and(
+        eq(quickbooksSyncReceipts.workspaceId, workspaceId),
+        sql`${quickbooksSyncReceipts.trinitySignature} LIKE '%' || ${receiptId.substring(0, 20)} || '%'`
+      ),
+      limit: 10,
     });
 
     if (receipts.length === 0) return undefined;
