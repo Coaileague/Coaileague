@@ -1,0 +1,222 @@
+STRIPE PAYMENT PIPELINE & SUBSCRIPTION WORKFLOW - Production Readiness Audit
+
+We need comprehensive verification that our Stripe integration is production-ready for live payments across all organizations on the platform.
+
+CRITICAL VERIFICATION CHECKLIST:
+
+1. PRICING CONFIGURATION
+   - Verify all Stripe Price IDs are correctly mapped to our service tiers
+   - Confirm pricing logic matches our business model:
+     * Unarmed patrol tier pricing
+     * Armed patrol tier pricing  
+     * Credit purchase packages
+   - Check that prices are set to correct currency (USD)
+   - Verify tax calculation is configured (if applicable)
+
+2. SUBSCRIPTION WORKFLOWS PER ORG
+   Each organization must be able to independently:
+   
+   A. Purchase Subscription:
+      - Select tier (Unarmed/Armed, Bronze/Silver/Gold)
+      - Complete checkout flow
+      - Receive confirmation
+      - Access features immediately after payment
+   
+   B. Upgrade Subscription:
+      - Move from lower to higher tier
+      - Prorated billing calculated correctly
+      - Immediate access to upgraded features
+      - Stripe subscription updated in real-time
+   
+   C. Downgrade Subscription:
+      - Move from higher to lower tier
+      - Changes take effect at end of billing period
+      - No immediate charge/refund (unless configured)
+   
+   D. Renew Subscription:
+      - Automatic renewal on billing date
+      - Payment method charged successfully
+      - Subscription continues without interruption
+      - Webhook processes renewal event
+   
+   E. Cancel Subscription:
+      - Org can cancel anytime
+      - Access continues until end of billing period
+      - No future charges
+      - Cancellation reflected in Stripe dashboard
+   
+   F. Purchase Credits (Add-on):
+      - One-time payment for credit package
+      - Credits added to org balance immediately
+      - No recurring charge for credits
+
+3. MULTI-TENANT ISOLATION
+   CRITICAL: Verify that actions by one organization do NOT affect others:
+   - Org A canceling subscription ≠ Org B losing access
+   - Org A purchasing credits ≠ Org B seeing balance change
+   - Each org has isolated Stripe Customer ID
+   - Each org's payment methods stored separately
+   - Billing is completely independent per organization
+
+4. WEBHOOK CONFIGURATION
+   Verify these Stripe webhooks are listening and processing correctly:
+   
+   ✅ checkout.session.completed → Activate subscription/credits
+   ✅ customer.subscription.updated → Handle upgrades/downgrades
+   ✅ customer.subscription.deleted → Handle cancellations
+   ✅ invoice.payment_succeeded → Confirm renewal payment
+   ✅ invoice.payment_failed → Alert org owner, retry payment
+   ✅ customer.subscription.trial_will_end → Send reminder (if using trials)
+   
+   For each webhook:
+   - Is the endpoint URL correct?
+   - Is the webhook secret configured?
+   - Are webhook events being logged?
+   - Is retry logic in place if webhook fails?
+
+5. PAYMENT METHOD HANDLING
+   - Can orgs add/remove payment methods?
+   - Is default payment method set correctly?
+   - Are card declines handled gracefully (error message + retry)?
+   - Is 3D Secure (SCA) enabled for European cards?
+
+6. STRIPE CUSTOMER MANAGEMENT
+   - Does each org create a unique Stripe Customer on signup?
+   - Is stripeCustomerId stored in our database?
+   - Can we look up org by Stripe Customer ID?
+   - Are customer emails syncing to Stripe (for receipts)?
+
+7. SUBSCRIPTION STATE SYNC
+   - Is org's subscription status always in sync with Stripe?
+   - If Stripe says "active," does org have access?
+   - If Stripe says "canceled," is org access revoked?
+   - What happens if webhook is missed? Is there fallback polling?
+
+8. CREDIT BALANCE MANAGEMENT
+   - When org purchases credits, does balance update in database?
+   - Are credits deducted correctly when used (e.g., sending SMS)?
+   - Can org view credit balance and transaction history?
+   - What happens if credits run out mid-operation?
+
+9. BILLING PORTAL ACCESS
+   - Can orgs access Stripe's customer portal to:
+     * Update payment method
+     * View invoices
+     * Download receipts
+     * Cancel subscription
+   - Is portal session created securely?
+   - Does portal redirect back to CoAIleague after actions?
+
+10. TEST MODE VS LIVE MODE
+    Current Status Check:
+    - Are we currently in Test Mode or Live Mode?
+    - Are test Price IDs being used, or live Price IDs?
+    - Is the webhook endpoint pointing to production URL?
+    - Is the Stripe secret key (sk_live_xxx) configured in production env?
+    
+    CRITICAL: If bank account is connected in Live Mode, we should be using:
+    - Live API keys (not test keys)
+    - Live Price IDs (not test prices)
+    - Live webhook endpoint
+    - Production domain for redirects
+
+11. PRODUCTION READINESS BLOCKERS
+    Identify any remaining issues:
+    - Missing webhook handlers?
+    - Pricing misconfigurations?
+    - Database schema missing Stripe fields?
+    - Error handling gaps (payment failures, network timeouts)?
+    - UI bugs in checkout flow?
+
+12. COMPLIANCE & SECURITY
+    - Are payment card details NEVER stored in our database?
+    - Is all payment processing handled by Stripe hosted pages or Elements?
+    - Are Stripe API keys stored in environment variables (not hardcoded)?
+    - Is webhook signature verification implemented (prevent spoofing)?
+    - Are PCI compliance requirements met?
+
+TESTING REQUIREMENTS:
+
+Run these end-to-end tests IN TEST MODE first:
+
+TEST 1: New Subscription Purchase
+1. Create test org
+2. Select subscription tier
+3. Enter test card (4242 4242 4242 4242)
+4. Complete checkout
+5. Verify: Org has active subscription in database
+6. Verify: Stripe dashboard shows active subscription
+7. Verify: Org can access subscribed features
+
+TEST 2: Upgrade Subscription
+1. Start with Bronze tier
+2. Upgrade to Gold tier
+3. Verify: Prorated charge calculated
+4. Verify: Immediate access to Gold features
+5. Verify: Stripe subscription updated
+
+TEST 3: Cancel Subscription
+1. Click "Cancel Subscription"
+2. Verify: Confirmation dialog appears
+3. Confirm cancellation
+4. Verify: Access continues until period end
+5. Verify: Stripe subscription shows "cancel_at_period_end"
+6. After period ends, verify: Access revoked
+
+TEST 4: Purchase Credits
+1. Click "Buy Credits"
+2. Select credit package ($50 = 500 credits)
+3. Complete checkout
+4. Verify: Credits added to org balance immediately
+5. Verify: One-time payment in Stripe (not subscription)
+
+TEST 5: Payment Failure
+1. Use test card that declines (4000 0000 0000 0002)
+2. Attempt subscription purchase
+3. Verify: Clear error message shown
+4. Verify: User can retry with different card
+5. Verify: No partial data corruption
+
+TEST 6: Webhook Failure Recovery
+1. Temporarily break webhook endpoint (return 500 error)
+2. Complete a subscription purchase
+3. Verify: Stripe retries webhook
+4. Fix webhook endpoint
+5. Verify: Subscription eventually activates
+
+After all tests PASS in Test Mode, repeat in Live Mode with real card (small amount, then refund).
+
+FINAL GO/NO-GO DECISION:
+
+We are ready to take live payments if ALL of these are TRUE:
+✅ All 6 tests above pass in Test Mode
+✅ Webhooks are configured and processing events
+✅ Live API keys are configured in production
+✅ Live Price IDs are mapped correctly
+✅ Bank account is connected in Stripe Live Mode
+✅ No critical bugs in payment flows
+✅ Multi-tenant isolation verified (orgs don't interfere)
+✅ Payment failures handled gracefully
+✅ Compliance requirements met (PCI, data security)
+
+If ANY of the above are ❌, we are NOT ready for live payments.
+
+DELIVERABLE:
+
+Provide a detailed report with:
+1. ✅ PASS / ❌ FAIL for each item above
+2. Screenshots of successful test transactions
+3. List of any blockers preventing live payments
+4. Estimated time to fix any issues found
+5. Explicit GO or NO-GO recommendation
+
+This is the final gate before we can accept real money from customers.
+
+That's your comprehensive payment readiness audit. ✅
+Key additions I made:
+
+Multi-tenant isolation checks (critical for SaaS)
+Webhook verification (most common failure point)
+Test Mode vs Live Mode clarity
+Specific test scenarios to run
+Go/No-Go decision criteria
