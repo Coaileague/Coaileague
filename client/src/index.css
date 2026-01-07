@@ -3777,52 +3777,34 @@ html, body {
 }
 
 /* ============================================================================
-   FORTUNE 500 ENTERPRISE DESIGN REFINEMENTS
-   Thinner borders, subtler shadows, smaller radii, refined proportions
+   FORTUNE 500 ENTERPRISE DESIGN - OPT-IN UTILITY CLASSES
+   Use these scoped classes to apply enterprise styling where needed
    ============================================================================ */
 
-/* Global radius refinements - prefer smaller radii */
-.rounded-2xl { border-radius: 0.5rem !important; }
-.rounded-3xl { border-radius: 0.75rem !important; }
-
-/* Reduce heavy shadows globally */
-.shadow-2xl { box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1) !important; }
-.shadow-xl { box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.08) !important; }
-.shadow-lg { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.06) !important; }
-
-/* Reduce border thickness globally - border-2 becomes border */
-.border-2 { border-width: 1px !important; }
-
-/* Fortune 500 refined padding on cards */
-.p-8 { padding: 1.25rem !important; }
-.p-12 { padding: 1.75rem !important; }
-
-/* Refined text sizing for enterprise feel */
-.text-5xl { font-size: 2rem !important; line-height: 2.25rem !important; }
-.text-4xl { font-size: 1.75rem !important; line-height: 2rem !important; }
-.text-3xl { font-size: 1.5rem !important; line-height: 1.75rem !important; }
-
-/* Icon sizes in cards - slightly smaller for refined look */
-.w-16.h-16 { width: 2.5rem !important; height: 2.5rem !important; }
-.w-12.h-12 { width: 2rem !important; height: 2rem !important; }
-
-/* Fortune 500 color refinements */
-.bg-gradient-to-br.from-violet-50,
-.bg-gradient-to-br.from-purple-50,
-.bg-gradient-to-br.from-indigo-50 {
-  background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%) !important;
+/* Enterprise-refined card styling - apply to containers that need tighter proportions */
+.enterprise-card {
+  border-radius: 0.5rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  border-width: 1px;
 }
 
-/* Enterprise button refinements - thinner, more refined */
-.px-8 { padding-left: 1.5rem !important; padding-right: 1.5rem !important; }
-.py-4 { padding-top: 0.625rem !important; padding-bottom: 0.625rem !important; }
+/* Enterprise-refined section - tighter padding for dense layouts */
+.enterprise-section {
+  padding: 1.25rem;
+}
 
-/* Mobile Fortune 500 refinements */
 @media (max-width: 768px) {
-  .shadow-2xl, .shadow-xl { box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06) !important; }
-  .p-8 { padding: 1rem !important; }
-  .p-12 { padding: 1.25rem !important; }
-  .text-5xl { font-size: 1.5rem !important; line-height: 1.75rem !important; }
-  .text-4xl { font-size: 1.25rem !important; line-height: 1.5rem !important; }
-  .text-3xl { font-size: 1.125rem !important; line-height: 1.375rem !important; }
+  .enterprise-section {
+    padding: 1rem;
+  }
+}
+
+/* Enterprise subtle shadow - for refined elevation */
+.shadow-enterprise {
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.06), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+}
+
+/* Enterprise border - thin, subtle */
+.border-enterprise {
+  border-width: 1px;
 }
