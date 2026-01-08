@@ -6629,6 +6629,9 @@ export type ServiceIncidentReport = typeof serviceIncidentReports.$inferSelect;
 // Lead Management - Prospect database for sales outreach
 export const leads = pgTable("leads", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Multi-tenant isolation
+  organizationId: varchar("organization_id"),
 
   // Company information
   companyName: varchar("company_name").notNull(),
@@ -6794,6 +6797,9 @@ export type EmailSend = typeof emailSends.$inferSelect;
 // Deals/Opportunities - Sales pipeline management
 export const deals = pgTable("deals", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Multi-tenant isolation
+  organizationId: varchar("organization_id"),
 
   // Deal identification
   dealName: varchar("deal_name").notNull(),

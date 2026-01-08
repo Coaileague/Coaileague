@@ -85,13 +85,22 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: any) {
 
   router.get("/availability/:contractorId", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = (req as any).workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+      
       const { contractorId } = req.params;
-      const { startDate, endDate } = req.query;
 
-      let query = db.select().from(flexAvailability)
-        .where(eq(flexAvailability.contractorId, contractorId));
+      const [contractor] = await db.select()
+        .from(flexContractors)
+        .where(and(eq(flexContractors.id, contractorId), eq(flexContractors.workspaceId, workspaceId)));
+      
+      if (!contractor) return res.status(404).json({ error: "Contractor not found" });
 
-      const availability = await query.orderBy(flexAvailability.availableDate);
+      const availability = await db.select()
+        .from(flexAvailability)
+        .where(eq(flexAvailability.contractorId, contractorId))
+        .orderBy(flexAvailability.availableDate);
+
       res.json({ success: true, data: availability });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -100,7 +109,16 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: any) {
 
   router.post("/availability", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = (req as any).workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+      
       const { contractorId, dates } = req.body;
+
+      const [contractor] = await db.select()
+        .from(flexContractors)
+        .where(and(eq(flexContractors.id, contractorId), eq(flexContractors.workspaceId, workspaceId)));
+      
+      if (!contractor) return res.status(403).json({ error: "Contractor not in your workspace" });
 
       const values = dates.map((d: any) => ({
         contractorId,
@@ -119,7 +137,21 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: any) {
 
   router.delete("/availability/:id", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = (req as any).workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+      
       const { id } = req.params;
+      
+      const [avail] = await db.select({
+        availability: flexAvailability,
+        contractor: flexContractors
+      })
+      .from(flexAvailability)
+      .innerJoin(flexContractors, eq(flexAvailability.contractorId, flexContractors.id))
+      .where(and(eq(flexAvailability.id, id), eq(flexContractors.workspaceId, workspaceId)));
+      
+      if (!avail) return res.status(404).json({ error: "Availability not found" });
+      
       await db.delete(flexAvailability).where(eq(flexAvailability.id, id));
       res.json({ success: true });
     } catch (error: any) {
@@ -216,7 +248,16 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: any) {
 
   router.get("/gigs/:gigId/applications", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = (req as any).workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+      
       const { gigId } = req.params;
+
+      const [gig] = await db.select()
+        .from(flexGigs)
+        .where(and(eq(flexGigs.id, gigId), eq(flexGigs.workspaceId, workspaceId)));
+      
+      if (!gig) return res.status(404).json({ error: "Gig not found" });
 
       const applications = await db.select({
         application: flexGigApplications,
@@ -237,8 +278,23 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: any) {
 
   router.post("/gigs/:gigId/apply", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = (req as any).workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+      
       const { gigId } = req.params;
       const { contractorId, message } = req.body;
+
+      const [gig] = await db.select()
+        .from(flexGigs)
+        .where(and(eq(flexGigs.id, gigId), eq(flexGigs.workspaceId, workspaceId)));
+      
+      if (!gig) return res.status(404).json({ error: "Gig not found" });
+
+      const [contractor] = await db.select()
+        .from(flexContractors)
+        .where(and(eq(flexContractors.id, contractorId), eq(flexContractors.workspaceId, workspaceId)));
+      
+      if (!contractor) return res.status(403).json({ error: "Contractor not in workspace" });
 
       const [application] = await db.insert(flexGigApplications).values({
         gigId,
@@ -248,7 +304,7 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: any) {
 
       await db.update(flexGigs)
         .set({ applicationsCount: sql`${flexGigs.applicationsCount} + 1` })
-        .where(eq(flexGigs.id, gigId));
+        .where(and(eq(flexGigs.id, gigId), eq(flexGigs.workspaceId, workspaceId)));
 
       res.json({ success: true, data: application });
     } catch (error: any) {
@@ -258,9 +314,22 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: any) {
 
   router.patch("/applications/:id/review", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = (req as any).workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+      
       const { id } = req.params;
       const { status } = req.body;
       const userId = (req.user as any)?.id;
+
+      const [appWithGig] = await db.select({
+        application: flexGigApplications,
+        gig: flexGigs
+      })
+      .from(flexGigApplications)
+      .innerJoin(flexGigs, eq(flexGigApplications.gigId, flexGigs.id))
+      .where(and(eq(flexGigApplications.id, id), eq(flexGigs.workspaceId, workspaceId)));
+      
+      if (!appWithGig) return res.status(404).json({ error: "Application not found" });
 
       const [updated] = await db.update(flexGigApplications)
         .set({ status, reviewedAt: new Date(), reviewedBy: userId })
@@ -268,12 +337,9 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: any) {
         .returning();
 
       if (status === 'accepted') {
-        const [app] = await db.select().from(flexGigApplications).where(eq(flexGigApplications.id, id));
-        if (app) {
-          await db.update(flexGigs)
-            .set({ status: 'assigned', assignedContractorId: app.contractorId, assignedAt: new Date() })
-            .where(eq(flexGigs.id, app.gigId));
-        }
+        await db.update(flexGigs)
+          .set({ status: 'assigned', assignedContractorId: appWithGig.application.contractorId, assignedAt: new Date() })
+          .where(and(eq(flexGigs.id, appWithGig.application.gigId), eq(flexGigs.workspaceId, workspaceId)));
       }
 
       res.json({ success: true, data: updated });
@@ -286,8 +352,23 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: any) {
 
   router.post("/gigs/:gigId/rate", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = (req as any).workspaceId;
+      if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
+      
       const { gigId } = req.params;
       const { contractorId, ratingByWorkspace, contractorRating, contractorComment, ratingByContractor, workspaceRating, workspaceComment } = req.body;
+
+      const [gig] = await db.select()
+        .from(flexGigs)
+        .where(and(eq(flexGigs.id, gigId), eq(flexGigs.workspaceId, workspaceId)));
+      
+      if (!gig) return res.status(404).json({ error: "Gig not found" });
+
+      const [contractor] = await db.select()
+        .from(flexContractors)
+        .where(and(eq(flexContractors.id, contractorId), eq(flexContractors.workspaceId, workspaceId)));
+      
+      if (!contractor) return res.status(403).json({ error: "Contractor not in workspace" });
 
       const existing = await db.select().from(flexGigRatings)
         .where(and(eq(flexGigRatings.gigId, gigId), eq(flexGigRatings.contractorId, contractorId)));
@@ -328,7 +409,7 @@ export function registerFlexStaffingRoutes(app: Express, requireAuth: any) {
         
         await db.update(flexContractors)
           .set({ ratingAverage: String(avg.toFixed(2)), totalRatings: validRatings.length })
-          .where(eq(flexContractors.id, contractorId));
+          .where(and(eq(flexContractors.id, contractorId), eq(flexContractors.workspaceId, workspaceId)));
       }
     } catch (error: any) {
       res.status(500).json({ error: error.message });

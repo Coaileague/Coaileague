@@ -2,28 +2,43 @@ import type { Express } from 'express';
 import { Router, Request, Response } from 'express';
 import { db } from '../db';
 import { leads, leadActivities, deals, users } from '@shared/schema';
-import { eq, and, desc, sql, like, or, asc } from 'drizzle-orm';
+import { eq, and, desc, sql } from 'drizzle-orm';
 import '../types';
 
 export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
   const router = Router();
 
-  // ==================== LEADS ====================
+  const getWorkspaceId = (req: Request): string | null => {
+    return (req as any).workspaceId || null;
+  };
+
+  const requireWorkspace = (req: Request, res: Response): string | null => {
+    const workspaceId = getWorkspaceId(req);
+    if (!workspaceId) {
+      res.status(400).json({ error: "Workspace context required" });
+      return null;
+    }
+    return workspaceId;
+  };
 
   router.get("/", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
       const { status, industry, assignedTo, limit = 100 } = req.query;
       
-      let conditions: any[] = [];
+      let conditions: any[] = [eq(leads.organizationId, workspaceId)];
       if (status) conditions.push(eq(leads.leadStatus, status as string));
       if (industry) conditions.push(eq(leads.industry, industry as string));
       if (assignedTo) conditions.push(eq(leads.assignedTo, assignedTo as string));
 
-      const query = conditions.length > 0
-        ? db.select().from(leads).where(and(...conditions)).orderBy(desc(leads.createdAt)).limit(Number(limit))
-        : db.select().from(leads).orderBy(desc(leads.createdAt)).limit(Number(limit));
+      const result = await db.select()
+        .from(leads)
+        .where(and(...conditions))
+        .orderBy(desc(leads.createdAt))
+        .limit(Number(limit));
 
-      const result = await query;
       res.json({ success: true, data: result });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -32,9 +47,15 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
 
   router.get("/:id", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
       const { id } = req.params;
 
-      const [lead] = await db.select().from(leads).where(eq(leads.id, id));
+      const [lead] = await db.select()
+        .from(leads)
+        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
+      
       if (!lead) return res.status(404).json({ error: "Lead not found" });
 
       const activities = await db.select({
@@ -43,7 +64,7 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
       })
       .from(leadActivities)
       .leftJoin(users, eq(leadActivities.userId, users.id))
-      .where(eq(leadActivities.leadId, id))
+      .where(and(eq(leadActivities.leadId, id), eq(leadActivities.workspaceId, workspaceId)))
       .orderBy(desc(leadActivities.createdAt));
 
       res.json({ success: true, data: { lead, activities } });
@@ -54,8 +75,10 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
 
   router.post("/", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
       const userId = (req.user as any)?.id;
-      const workspaceId = (req as any).workspaceId;
       
       const { 
         companyName, industry, companyWebsite, estimatedEmployees,
@@ -64,6 +87,7 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
       } = req.body;
 
       const [lead] = await db.insert(leads).values({
+        organizationId: workspaceId,
         companyName,
         industry,
         companyWebsite,
@@ -81,16 +105,14 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
         assignedTo: assignedTo || userId
       }).returning();
 
-      if (workspaceId) {
-        await db.insert(leadActivities).values({
-          leadId: lead.id,
-          userId,
-          workspaceId,
-          activityType: 'status_change',
-          description: 'Lead created',
-          newStatus: lead.leadStatus
-        });
-      }
+      await db.insert(leadActivities).values({
+        leadId: lead.id,
+        userId,
+        workspaceId,
+        activityType: 'status_change',
+        description: 'Lead created',
+        newStatus: lead.leadStatus
+      });
 
       res.json({ success: true, data: lead });
     } catch (error: any) {
@@ -100,12 +122,17 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
 
   router.patch("/:id", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
       const { id } = req.params;
       const userId = (req.user as any)?.id;
-      const workspaceId = (req as any).workspaceId;
       const updates = req.body;
 
-      const [existing] = await db.select().from(leads).where(eq(leads.id, id));
+      const [existing] = await db.select()
+        .from(leads)
+        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
+      
       if (!existing) return res.status(404).json({ error: "Lead not found" });
 
       if (updates.estimatedValue) updates.estimatedValue = String(updates.estimatedValue);
@@ -113,10 +140,10 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
 
       const [updated] = await db.update(leads)
         .set(updates)
-        .where(eq(leads.id, id))
+        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)))
         .returning();
 
-      if (workspaceId && updates.leadStatus && updates.leadStatus !== existing.leadStatus) {
+      if (updates.leadStatus && updates.leadStatus !== existing.leadStatus) {
         await db.insert(leadActivities).values({
           leadId: id,
           userId,
@@ -136,25 +163,33 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
 
   router.delete("/:id", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
       const { id } = req.params;
-      await db.delete(leads).where(eq(leads.id, id));
+      await db.delete(leads)
+        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
+      
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
     }
   });
 
-  // ==================== LEAD ACTIVITIES ====================
-
   router.post("/:id/activity", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
       const { id } = req.params;
       const userId = (req.user as any)?.id;
-      const workspaceId = (req as any).workspaceId;
-
-      if (!workspaceId) return res.status(400).json({ error: "Workspace required" });
-
       const { activityType, description } = req.body;
+
+      const [lead] = await db.select()
+        .from(leads)
+        .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
+      
+      if (!lead) return res.status(404).json({ error: "Lead not found" });
 
       const [activity] = await db.insert(leadActivities).values({
         leadId: id,
@@ -167,7 +202,7 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
       if (activityType === 'email_sent' || activityType === 'call') {
         await db.update(leads)
           .set({ lastContactedAt: new Date(), updatedAt: new Date() })
-          .where(eq(leads.id, id));
+          .where(and(eq(leads.id, id), eq(leads.organizationId, workspaceId)));
       }
 
       res.json({ success: true, data: activity });
@@ -176,22 +211,24 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
     }
   });
 
-  // ==================== DEALS ====================
-
   router.get("/deals", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
       const { stage, status, ownerId, limit = 50 } = req.query;
       
-      let conditions: any[] = [];
+      let conditions: any[] = [eq(deals.organizationId, workspaceId)];
       if (stage) conditions.push(eq(deals.stage, stage as string));
       if (status) conditions.push(eq(deals.status, status as string));
       if (ownerId) conditions.push(eq(deals.ownerId, ownerId as string));
 
-      const query = conditions.length > 0
-        ? db.select().from(deals).where(and(...conditions)).orderBy(desc(deals.createdAt)).limit(Number(limit))
-        : db.select().from(deals).orderBy(desc(deals.createdAt)).limit(Number(limit));
+      const result = await db.select()
+        .from(deals)
+        .where(and(...conditions))
+        .orderBy(desc(deals.createdAt))
+        .limit(Number(limit));
 
-      const result = await query;
       res.json({ success: true, data: result });
     } catch (error: any) {
       res.status(500).json({ error: error.message });
@@ -200,6 +237,9 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
 
   router.post("/deals", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
       const userId = (req.user as any)?.id;
       
       const { 
@@ -208,6 +248,7 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
       } = req.body;
 
       const [deal] = await db.insert(deals).values({
+        organizationId: workspaceId,
         dealName,
         companyName,
         leadId,
@@ -228,17 +269,19 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
 
   router.patch("/deals/:id", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
       const { id } = req.params;
       const updates = req.body;
 
       if (updates.estimatedValue) updates.estimatedValue = String(updates.estimatedValue);
       updates.updatedAt = new Date();
-
       if (updates.status === 'won') updates.actualCloseDate = new Date();
 
       const [updated] = await db.update(deals)
         .set(updates)
-        .where(eq(deals.id, id))
+        .where(and(eq(deals.id, id), eq(deals.organizationId, workspaceId)))
         .returning();
 
       res.json({ success: true, data: updated });
@@ -247,17 +290,18 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
     }
   });
 
-  // ==================== PIPELINE STATS ====================
-
   router.get("/pipeline/stats", requireAuth, async (req: Request, res: Response) => {
     try {
+      const workspaceId = requireWorkspace(req, res);
+      if (!workspaceId) return;
+
       const pipelineStats = await db.select({
         stage: deals.stage,
         count: sql<number>`count(*)::int`,
         totalValue: sql<number>`coalesce(sum(${deals.estimatedValue}::numeric), 0)::numeric`
       })
       .from(deals)
-      .where(eq(deals.status, 'active'))
+      .where(and(eq(deals.status, 'active'), eq(deals.organizationId, workspaceId)))
       .groupBy(deals.stage);
 
       const leadStats = await db.select({
@@ -265,6 +309,7 @@ export function registerLeadCrmRoutes(app: Express, requireAuth: any) {
         count: sql<number>`count(*)::int`
       })
       .from(leads)
+      .where(eq(leads.organizationId, workspaceId))
       .groupBy(leads.leadStatus);
 
       res.json({ 
