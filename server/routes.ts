@@ -115,6 +115,10 @@ import uacpRouter from "./routes/uacpRoutes"; // Universal Access Control Panel 
 import { integrationRoutes, partnerRoutes } from "./routes/integrationManagementRoutes"; // Workspace Integration & Partner Management
 import bugRemediationRouter from "./routes/bugRemediation"; // Bug Report AI Analysis & Auto-Fix
 import { onboardingRouter } from "./routes/onboardingRoutes";
+import { registerFlexStaffingRoutes } from "./routes/flexStaffingRoutes";
+import { registerDocumentLibraryRoutes } from "./routes/documentLibraryRoutes";
+import { registerExternalEmailRoutes } from "./routes/externalEmailRoutes";
+import { registerLeadCrmRoutes } from "./routes/leadCrmRoutes";
 import { onboardingAssistantRouter } from "./routes/onboarding-assistant-routes";
 import { timesheetReportRouter } from "./routes/timesheetReportRoutes";
 import { timesheetInvoiceRouter } from "./routes/timesheetInvoiceRoutes";
@@ -3325,6 +3329,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/device", deviceLoaderRouter); // Universal Device Loader
   app.use("/api/vqa", requireAuth, vqaRouter); // Visual QA (AI Brain Eyes)
   app.use("/api/uacp", requireAuth, uacpRouter); // Universal Access Control Panel (UACP)
+  
+  // ============================================================================
+  // NEW FEATURE ROUTES: SALES CRM, DOCUMENTS, FLEX STAFFING, EXTERNAL EMAIL
+  // ============================================================================
+  registerLeadCrmRoutes(app, requireAuth);
+  registerDocumentLibraryRoutes(app, requireAuth);
+  registerFlexStaffingRoutes(app, requireAuth);
+  registerExternalEmailRoutes(app, requireAuth);
   app.use("/api/workspace/integrations", requireAuth, integrationRoutes); // Workspace Integration Management
   app.use("/api/admin/partners", requirePlatformStaff, partnerRoutes); // Partner Catalog Management (Support Roles)
   app.use("/api/hris", hrisRouter); // HRIS Integration Routes - per-route auth, callback must be public for OAuth

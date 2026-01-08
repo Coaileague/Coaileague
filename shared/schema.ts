@@ -19,6 +19,8 @@ import {
   pgEnum,
   check,
   foreignKey,
+  date,
+  time,
 } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
