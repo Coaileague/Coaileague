@@ -1,0 +1,1208 @@
+COAILEAGUE PLATFORM - COMPLETE FEATURE SET IMPLEMENTATION
+
+Implement three critical missing features that will make CoAIleague the most comprehensive workforce management platform for service-based businesses: (1) Sales CRM with Document Management & E-Signature, (2) Flex Staffing Pool for contractor management, (3) External Email System with Trinity AI enhancement.
+
+These features address the top pain points security companies face: finding new clients, managing temporary staffing needs, and professional communication.
+
+This is the FINAL major feature addition before January 1st launch. Prioritize getting ALL features working over perfection. We can refine post-launch.
+
+═══════════════════════════════════════════════════════════
+FEATURE 1: SALES CRM + DOCUMENT LIBRARY + E-SIGNATURE
+═══════════════════════════════════════════════════════════
+
+PROBLEM: Security companies pay for multiple tools (CRM, DocuSign, document storage) and still struggle to manage sales pipeline and client documentation.
+
+SOLUTION: All-in-one sales and document management system built into CoAIleague.
+
+---
+
+PART 1A: SALES CRM (LEADS & PIPELINE)
+
+DATABASE SCHEMA:
+
+CREATE TABLE leads (
+  id UUID PRIMARY KEY,
+  workspace_id UUID NOT NULL,
+  created_by UUID REFERENCES users(id),
+  company_name VARCHAR(255),
+  contact_name VARCHAR(255),
+  email VARCHAR(255),
+  phone VARCHAR(50),
+  address TEXT,
+  source VARCHAR(100), -- 'referral', 'website', 'cold_call', 'networking'
+  status ENUM('cold_lead', 'contacted', 'meeting_scheduled', 'proposal_sent', 'contract_sent', 'won', 'lost') DEFAULT 'cold_lead',
+  estimated_value DECIMAL(10,2),
+  notes TEXT,
+  next_follow_up_date DATE,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  won_at TIMESTAMP,
+  lost_reason TEXT,
+  INDEX idx_workspace_status (workspace_id, status)
+);
+
+CREATE TABLE lead_activities (
+  id UUID PRIMARY KEY,
+  lead_id UUID REFERENCES leads(id),
+  user_id UUID REFERENCES users(id),
+  activity_type ENUM('note', 'email_sent', 'call', 'meeting', 'proposal_sent', 'contract_sent', 'status_change'),
+  description TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+UI IMPLEMENTATION:
+
+Route: /sales or /crm
+
+Main View - Sales Pipeline (Kanban Board):
+┌────────────────────────────────────────────────────────────┐
+│  Sales Pipeline                           [+ Add Lead]     │
+├────────────────────────────────────────────────────────────┤
+│ Cold Lead │ Contacted │ Proposal │ Contract │ Won │ Lost  │
+│    (12)   │    (8)    │   (5)    │   (3)    │ (24)│  (7)  │
+├───────────┼───────────┼──────────┼──────────┼─────┼───────┤
+│           │           │          │          │     │       │
+│ [Card]    │ [Card]    │ [Card]   │ [Card]   │     │       │
+│ ABC Corp  │ XYZ Inc   │ Metro    │ Downtown │     │       │
+│ $5K/mo    │ $3K/mo    │ $8K/mo   │ $12K/mo  │     │       │
+│ Follow up │ Meeting   │ Waiting  │ Waiting  │     │       │
+│ Jan 15    │ tomorrow  │ decision │ signature│     │       │
+│           │           │          │          │     │       │
+└───────────┴───────────┴──────────┴──────────┴─────┴───────┘
+
+Features:
+- Drag-and-drop cards between columns (updates status)
+- Click card to view details
+- Color coding: Overdue follow-ups = red, Due today = yellow
+- Total estimated value shown per column
+- Filter by source, user, date range
+
+Lead Detail Modal:
+┌──────────────────────────────────────────┐
+│ ABC Corp                             [×] │
+├──────────────────────────────────────────┤
+│ Contact: John Smith                      │
+│ Email: john@abccorp.com                  │
+│ Phone: (555) 123-4567                    │
+│ Status: Proposal Sent                    │
+│ Value: $5,000/month                      │
+│ Source: Referral                         │
+│                                          │
+│ Next Follow-Up: Jan 15, 2026             │
+│                                          │
+│ Notes:                                   │
+│ Met at networking event. Interested in   │
+│ armed guards for 3 locations.            │
+│                                          │
+│ Activity Timeline:                       │
+│ • Jan 10: Proposal sent via email        │
+│ • Jan 8: Meeting scheduled               │
+│ • Jan 5: Initial contact call            │
+│                                          │
+│ [Add Note] [Send Email] [Move to Won]   │
+│ [Schedule Follow-Up] [Generate Proposal] │
+└──────────────────────────────────────────┘
+
+Add Lead Form:
+- Company name (required)
+- Contact name (required)
+- Email (required)
+- Phone
+- Address
+- Source (dropdown)
+- Estimated monthly value
+- Initial notes
+- Next follow-up date
+
+TRINITY INTEGRATION:
+
+Proactive suggestions:
+- "You have 3 follow-ups due today. Start with ABC Corp (highest value)?"
+- "Metro Security hasn't responded in 7 days. Send a follow-up email?"
+- "You moved 5 leads to 'Won' this month. Your close rate is 38% - up from 25% last month!"
+
+Trinity can:
+- Draft follow-up emails
+- Suggest when to follow up (based on time since last contact)
+- Prioritize leads by value and likelihood to close
+- Remind about scheduled follow-ups
+
+---
+
+PART 1B: DOCUMENT LIBRARY (ORG-ISOLATED STORAGE)
+
+DATABASE SCHEMA:
+
+CREATE TABLE documents (
+  id UUID PRIMARY KEY,
+  workspace_id UUID NOT NULL,
+  uploaded_by UUID REFERENCES users(id),
+  category ENUM('client_contract', 'employee_handbook', 'sop', 'training_material', 'form', 'proposal', 'shared'),
+  file_name VARCHAR(255),
+  file_path TEXT, -- S3/storage path
+  file_size_bytes BIGINT,
+  file_type VARCHAR(50), -- 'pdf', 'docx', 'jpg', etc.
+  requires_signature BOOLEAN DEFAULT false,
+  version INT DEFAULT 1,
+  replaces_document_id UUID REFERENCES documents(id), -- For versioning
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  INDEX idx_workspace_category (workspace_id, category)
+);
+
+CREATE TABLE document_access (
+  id UUID PRIMARY KEY,
+  document_id UUID REFERENCES documents(id),
+  user_id UUID REFERENCES users(id),
+  viewed_at TIMESTAMP,
+  signed_at TIMESTAMP,
+  ip_address INET,
+  INDEX idx_document_user (document_id, user_id)
+);
+
+CREATE TABLE document_signatures (
+  id UUID PRIMARY KEY,
+  document_id UUID REFERENCES documents(id),
+  signer_user_id UUID REFERENCES users(id), -- If internal user
+  signer_email VARCHAR(255), -- If external (client)
+  signer_name VARCHAR(255),
+  signature_data TEXT, -- Base64 signature image or typed name
+  signed_at TIMESTAMP DEFAULT NOW(),
+  ip_address INET,
+  user_agent TEXT
+);
+
+FILE STORAGE:
+
+Use existing file upload system or implement S3/Cloudflare R2:
+- Store files in: /workspaces/{workspace_id}/documents/{category}/{file_name}
+- Generate signed URLs for secure access
+- Files are org-isolated (workspace_id in path)
+
+UI IMPLEMENTATION:
+
+Route: /documents
+
+Main View - Document Library:
+┌────────────────────────────────────────────────────────┐
+│ Documents                              [+ Upload]      │
+├────────────────────────────────────────────────────────┤
+│ Filters: [All Categories ▼] [Search...]               │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│ 📁 Client Contracts (12)                              │
+│   • ABC Corp - Service Agreement (Signed) [View]      │
+│   • XYZ Inc - Service Agreement (Pending) [View]      │
+│   • Metro Security - NDA (Signed) [View]              │
+│                                                        │
+│ 📁 Employee Handbooks (3)                             │
+│   • Employee Handbook 2026 v2.1 (24 signed) [View]    │
+│   • Safety Manual [View]                              │
+│                                                        │
+│ 📁 Standard Operating Procedures (8)                  │
+│   • Armed Guard SOP [View]                            │
+│   • Incident Reporting Procedure [View]               │
+│                                                        │
+│ 📁 Forms (15)                                         │
+│   • W-4 Form [View]                                   │
+│   • I-9 Form [View]                                   │
+│   • Direct Deposit Authorization [View]               │
+│                                                        │
+│ 📁 Proposals (7)                                      │
+│   • ABC Corp Proposal 2026 [View]                     │
+│                                                        │
+│ 📁 Shared Documents (5)                               │
+│   • Company Policies [View]                           │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+
+Upload Document Modal:
+┌────────────────────────────────────┐
+│ Upload Document                [×] │
+├────────────────────────────────────┤
+│ Category: [Client Contracts ▼]    │
+│                                    │
+│ [Drag file here or click to browse]│
+│                                    │
+│ Requires signature:                │
+│ ☐ This document needs signatures   │
+│                                    │
+│ If checked, who needs to sign:     │
+│ ☐ All employees                    │
+│ ☐ Specific users: [Select... ▼]   │
+│ ☐ External signer (client/vendor)  │
+│   Email: ___________________       │
+│   Name: ____________________       │
+│                                    │
+│ Notes (optional): __________       │
+│                                    │
+│          [Cancel] [Upload]         │
+└────────────────────────────────────┘
+
+Document View Page:
+┌────────────────────────────────────────────────────────┐
+│ ← Back to Documents                                    │
+├────────────────────────────────────────────────────────┤
+│ Employee Handbook 2026 v2.1                            │
+│ Uploaded: Jan 1, 2026 by Bryan Smith                  │
+│ Category: Employee Handbooks                           │
+│ Size: 2.4 MB                                           │
+│                                                        │
+│ [📄 PDF Preview shown here]                           │
+│                                                        │
+│ Signature Status:                                      │
+│ ✅ John Smith - Signed Jan 2, 2026                    │
+│ ✅ Sarah Jones - Signed Jan 3, 2026                   │
+│ ⏳ Mike Davis - Pending                               │
+│                                                        │
+│ [Download] [Print] [Request Signatures] [Delete]      │
+└────────────────────────────────────────────────────────┘
+
+Employee View (When Signature Required):
+┌────────────────────────────────────────────────────────┐
+│ Action Required: Sign Employee Handbook                │
+├────────────────────────────────────────────────────────┤
+│ You have been asked to review and sign:                │
+│                                                        │
+│ Employee Handbook 2026 v2.1                            │
+│                                                        │
+│ [📄 PDF Preview]                                       │
+│                                                        │
+│ ☐ I have read and agree to this document              │
+│                                                        │
+│ Sign below:                                            │
+│ ┌──────────────────────────────────┐                 │
+│ │ [Canvas for signature drawing]   │                 │
+│ │ Or type name: ________________   │                 │
+│ └──────────────────────────────────┘                 │
+│                                                        │
+│ [Clear] [Sign Document]                               │
+└────────────────────────────────────────────────────────┘
+
+Signature saved with:
+- Timestamp
+- IP address
+- User agent
+- Creates legally binding audit trail
+
+---
+
+PART 1C: E-SIGNATURE SYSTEM (BUILT-IN)
+
+FEATURES:
+
+Internal Signatures (employees signing handbooks, SOPs):
+- Upload document
+- Mark "requires signature"
+- Select who needs to sign (all employees, specific roles, individuals)
+- System notifies users
+- Users view document → Sign (draw or type)
+- Signature saved with audit trail
+- Org owner sees completion status
+
+External Signatures (clients signing contracts):
+- Upload contract
+- Click "Send for Signature"
+- Enter client email and name
+- System sends email: "ABC Security has sent you a document to sign"
+- Client clicks link (no login required)
+- Client views document
+- Client signs (draw or type)
+- System notifies org owner: "John Smith signed Service Agreement"
+- Signed document stored in Documents library
+
+Legally Binding Requirements:
+- Timestamp (when signed)
+- IP address (where signed from)
+- User agent (what device)
+- Signature image or typed name
+- Email verification (for external signers)
+- Audit log (who sent, who signed, when)
+
+Templates (Pre-loaded):
+- Security Service Agreement (customizable)
+- Non-Disclosure Agreement (NDA)
+- Site-Specific Addendum
+- W9 Request Form
+- Employee Handbook Acknowledgment
+- Direct Deposit Authorization
+- Emergency Contact Form
+
+Users can:
+- Use template as-is
+- Customize template (add company logo, edit terms)
+- Upload own document
+
+Cost Savings:
+- DocuSign: $25-40/month
+- PandaDoc: $19-49/month
+- HelloSign: $15-25/month
+- CoAIleague: $0 (included)
+
+TRINITY INTEGRATION:
+
+- "ABC Corp contract was sent 5 days ago and hasn't been signed. Send a reminder?"
+- "You have 3 employees who haven't signed the updated handbook. Remind them?"
+- "New employee Mike starts Monday. Send him the employee handbook for signature?"
+
+═══════════════════════════════════════════════════════════
+FEATURE 2: FLEX STAFFING POOL (CONTRACTOR MARKETPLACE)
+═══════════════════════════════════════════════════════════
+
+PROBLEM: Security companies constantly need extra guards for one-time events, short assignments, or when regular staff isn't available. Finding contractors means calling dozens of people.
+
+SOLUTION: Built-in contractor marketplace where orgs maintain a "flex pool" of pre-vetted contractors who mark availability and apply for gigs.
+
+---
+
+DATABASE SCHEMA:
+
+CREATE TABLE flex_contractors (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id), -- Contractor is still a user
+  workspace_id UUID NOT NULL, -- Which org invited them
+  hourly_rate DECIMAL(10,2),
+  certifications JSONB, -- ['armed', 'cpr', 'first_aid']
+  bio TEXT,
+  rating_average DECIMAL(3,2), -- Average rating from completed gigs
+  total_gigs_completed INT DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(user_id, workspace_id) -- Contractor can be in multiple orgs' pools
+);
+
+CREATE TABLE flex_availability (
+  id UUID PRIMARY KEY,
+  contractor_id UUID REFERENCES flex_contractors(id),
+  available_date DATE,
+  available_start_time TIME,
+  available_end_time TIME,
+  INDEX idx_contractor_date (contractor_id, available_date)
+);
+
+CREATE TABLE flex_gigs (
+  id UUID PRIMARY KEY,
+  workspace_id UUID NOT NULL,
+  created_by UUID REFERENCES users(id),
+  title VARCHAR(255),
+  description TEXT,
+  gig_date DATE,
+  start_time TIME,
+  end_time TIME,
+  location_name VARCHAR(255),
+  location_address TEXT,
+  requirements JSONB, -- ['armed', 'cpr']
+  pay_rate DECIMAL(10,2),
+  status ENUM('open', 'assigned', 'in_progress', 'completed', 'cancelled') DEFAULT 'open',
+  assigned_contractor_id UUID REFERENCES flex_contractors(id),
+  created_at TIMESTAMP DEFAULT NOW(),
+  assigned_at TIMESTAMP,
+  completed_at TIMESTAMP,
+  INDEX idx_workspace_status (workspace_id, status)
+);
+
+CREATE TABLE flex_gig_applications (
+  id UUID PRIMARY KEY,
+  gig_id UUID REFERENCES flex_gigs(id),
+  contractor_id UUID REFERENCES flex_contractors(id),
+  message TEXT, -- Why they're a good fit
+  status ENUM('pending', 'accepted', 'rejected') DEFAULT 'pending',
+  applied_at TIMESTAMP DEFAULT NOW(),
+  UNIQUE(gig_id, contractor_id)
+);
+
+CREATE TABLE flex_gig_ratings (
+  id UUID PRIMARY KEY,
+  gig_id UUID REFERENCES flex_gigs(id),
+  contractor_id UUID REFERENCES flex_contractors(id),
+  rated_by_workspace BOOLEAN, -- true if org rating contractor
+  rated_by_contractor BOOLEAN, -- true if contractor rating org
+  rating INT CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+---
+
+UI IMPLEMENTATION:
+
+Route: /flex-staffing
+
+MAIN VIEW - FLEX STAFFING DASHBOARD:
+
+┌────────────────────────────────────────────────────────┐
+│ Flex Staffing                [+ Post Gig] [+ Add Contractor]│
+├────────────────────────────────────────────────────────┤
+│ Tabs: [Gigs] [Contractor Pool] [History]              │
+├────────────────────────────────────────────────────────┤
+│ OPEN GIGS (3)                                          │
+│                                                        │
+│ ┌────────────────────────────────────────────┐        │
+│ │ Downtown Concert - Security               │        │
+│ │ Jan 18, 2026 • 6PM - 2AM                  │        │
+│ │ Requirements: Armed, CPR                   │        │
+│ │ Pay: $25/hr                                │        │
+│ │ Applications: 5 [View]                     │        │
+│ └────────────────────────────────────────────┘        │
+│                                                        │
+│ ┌────────────────────────────────────────────┐        │
+│ │ Construction Site Overnight               │        │
+│ │ Jan 20-22, 2026 • 10PM - 6AM             │        │
+│ │ Requirements: None                         │        │
+│ │ Pay: $20/hr                                │        │
+│ │ Applications: 2 [View]                     │        │
+│ └────────────────────────────────────────────┘        │
+│                                                        │
+│ ASSIGNED GIGS (1)                                      │
+│                                                        │
+│ ┌────────────────────────────────────────────┐        │
+│ │ Retail Store Event                        │        │
+│ │ Jan 15, 2026 • 4PM - 10PM                 │        │
+│ │ Assigned to: John Smith ⭐4.8             │        │
+│ └────────────────────────────────────────────┘        │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+
+POST GIG FORM:
+
+┌────────────────────────────────────┐
+│ Post Flex Gig                  [×] │
+├────────────────────────────────────┤
+│ Title: Downtown Concert Security   │
+│                                    │
+│ Date: Jan 18, 2026                 │
+│ Start Time: 6:00 PM                │
+│ End Time: 2:00 AM                  │
+│                                    │
+│ Location:                          │
+│ Name: Metro Concert Venue          │
+│ Address: 123 Main St, City, State  │
+│                                    │
+│ Requirements: (check all that apply)│
+│ ☑ Armed certification              │
+│ ☑ CPR certification                │
+│ ☐ First Aid                        │
+│ ☐ Security Guard License           │
+│                                    │
+│ Pay Rate: $25.00 per hour          │
+│                                    │
+│ Description:                       │
+│ Need 1 armed guard for concert...  │
+│                                    │
+│ Notify: ☑ All available contractors│
+│         ☐ Preferred contractors only│
+│                                    │
+│      [Cancel] [Post Gig]           │
+└────────────────────────────────────┘
+
+After posting:
+- System finds contractors who:
+  - Are in your Flex Pool
+  - Have required certifications
+  - Marked available on that date/time
+- Sends notification: "New gig available: Jan 18, 6PM-2AM, $25/hr"
+
+CONTRACTOR POOL TAB:
+
+┌────────────────────────────────────────────────────────┐
+│ Your Contractor Pool (12)                              │
+├────────────────────────────────────────────────────────┤
+│ [Search contractors...] [Filter: All ▼]               │
+├────────────────────────────────────────────────────────┤
+│                                                        │
+│ ┌──────────────────────────────────────────┐          │
+│ │ 👤 John Smith                    ⭐4.8  │          │
+│ │ Hourly Rate: $22/hr                     │          │
+│ │ Certifications: Armed, CPR, First Aid    │          │
+│ │ Completed Gigs: 24                      │          │
+│ │ Available: Jan 15, 18, 20-25            │          │
+│ │ [View Profile] [Mark Preferred]         │          │
+│ └──────────────────────────────────────────┘          │
+│                                                        │
+│ ┌──────────────────────────────────────────┐          │
+│ │ 👤 Sarah Jones                   ⭐4.9  │          │
+│ │ Hourly Rate: $20/hr                     │          │
+│ │ Certifications: CPR                     │          │
+│ │ Completed Gigs: 15                      │          │
+│ │ Available: Jan 16-20                    │          │
+│ │ [View Profile]                          │          │
+│ └──────────────────────────────────────────┘          │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+
+ADD CONTRACTOR:
+
+Option 1: Invite by email
+- Enter email
+- Contractor receives invite link
+- Contractor creates profile
+- Contractor joins your Flex Pool
+
+Option 2: Add existing employee
+- Select from employee list
+- Convert to Flex Contractor status
+- They can now apply for gigs
+
+CONTRACTOR VIEW (THEIR DASHBOARD):
+
+Route: /flex-gigs (contractors see this instead of main dashboard)
+
+┌────────────────────────────────────────────────────────┐
+│ Available Gigs                 [My Applications]       │
+├────────────────────────────────────────────────────────┤
+│ ┌────────────────────────────────────────────┐        │
+│ │ Downtown Concert Security             $25/hr│        │
+│ │ ABC Security Company                       │        │
+│ │ Jan 18, 2026 • 6PM - 2AM                  │        │
+│ │ Requirements: Armed ✅, CPR ✅             │        │
+│ │ [Apply for This Gig]                       │        │
+│ └────────────────────────────────────────────┘        │
+│                                                        │
+│ ┌────────────────────────────────────────────┐        │
+│ │ Construction Site Overnight           $20/hr│        │
+│ │ XYZ Security Inc                           │        │
+│ │ Jan 20-22, 2026 • 10PM - 6AM              │        │
+│ │ Requirements: None                         │        │
+│ │ [Apply for This Gig]                       │        │
+│ └────────────────────────────────────────────┘        │
+│                                                        │
+│ MY UPCOMING GIGS (1)                                   │
+│                                                        │
+│ ┌────────────────────────────────────────────┐        │
+│ │ Retail Store Event                    $22/hr│        │
+│ │ ABC Security Company                       │        │
+│ │ Jan 15, 2026 • 4PM - 10PM                 │        │
+│ │ Status: Confirmed                          │        │
+│ │ [View Details] [Get Directions]            │        │
+│ └────────────────────────────────────────────┘        │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+
+CONTRACTOR PROFILE (SET AVAILABILITY):
+
+┌────────────────────────────────────┐
+│ My Profile                         │
+├────────────────────────────────────┤
+│ Hourly Rate: $22.00                │
+│                                    │
+│ Certifications:                    │
+│ ☑ Armed Security                   │
+│ ☑ CPR                              │
+│ ☑ First Aid                        │
+│ ☐ Security Guard License           │
+│                                    │
+│ Bio:                               │
+│ 5 years experience in armed        │
+│ security for events and retail...  │
+│                                    │
+│ Availability Calendar:             │
+│ [Calendar widget showing Jan 2026] │
+│ Click dates to mark available      │
+│                                    │
+│ Organizations I work with:         │
+│ • ABC Security (⭐4.8)             │
+│ • XYZ Security Inc (⭐4.9)         │
+│                                    │
+│ [Save Profile]                     │
+└────────────────────────────────────┘
+
+GIG WORKFLOW:
+
+1. Org posts gig
+2. Contractors see gig, apply
+3. Org reviews applications, selects contractor
+4. Contractor notified: "You've been assigned to Downtown Concert gig"
+5. Contractor works gig (clocks in/out via CoAIleague GPS)
+6. Gig completed
+7. Both rate each other (org rates contractor, contractor rates org)
+8. Payment processed (via platform or manually by org)
+
+RATING SYSTEM:
+
+After gig completion, both parties prompted to rate:
+
+Org Rating Contractor:
+┌────────────────────────────────────┐
+│ Rate John Smith                    │
+├────────────────────────────────────┤
+│ How was John's performance?        │
+│ ⭐⭐⭐⭐⭐ (5 stars)              │
+│                                    │
+│ Comments (optional):               │
+│ John arrived on time, professional,│
+│ handled situation well.            │
+│                                    │
+│ [Submit Rating]                    │
+└────────────────────────────────────┘
+
+Contractor Rating Org:
+┌────────────────────────────────────┐
+│ Rate ABC Security Company          │
+├────────────────────────────────────┤
+│ How was your experience?           │
+│ ⭐⭐⭐⭐⭐ (5 stars)              │
+│                                    │
+│ Comments (optional):               │
+│ Great communication, paid on time. │
+│                                    │
+│ [Submit Rating]                    │
+└────────────────────────────────────┘
+
+Ratings build reputation:
+- Contractors with higher ratings get more gigs
+- Orgs with higher ratings attract better contractors
+
+TRINITY INTEGRATION:
+
+- "You have an open shift Friday and no employees available. Post it as a Flex gig?"
+- "5 contractors applied for your Downtown Concert gig. John has the highest rating (4.9) and has Armed + CPR. Recommend assigning him?"
+- "Your contractor Sarah has completed 15 gigs with perfect 5-star ratings. Mark her as preferred?"
+
+═══════════════════════════════════════════════════════════
+FEATURE 3: EXTERNAL EMAIL + TRINITY AI ENHANCEMENT
+═══════════════════════════════════════════════════════════
+
+PROBLEM: Orgs need to send professional emails to clients, prospects, and vendors. Current internal email system only works for internal users. Also, writing professional emails is time-consuming.
+
+SOLUTION: External email capability (via SendGrid/Resend) + Trinity AI email enhancement (rewrites emails for clarity, professionalism, persuasion).
+
+---
+
+PART 3A: EXTERNAL EMAIL SENDING
+
+BACKEND SETUP:
+
+Integrate with transactional email service:
+
+Option 1: SendGrid (recommended)
+- Free: 100 emails/day
+- Paid: $15/month for 40,000 emails
+- API: Simple REST API
+- Features: Tracking (opens/clicks), templates, scheduling
+
+Option 2: Resend (newer, simpler)
+- Free: 100 emails/day
+- Paid: $10/month for 50,000 emails
+- Developer-friendly API
+- Modern, clean interface
+
+Option 3: AWS SES (cheapest, more complex)
+- $0.10 per 1,000 emails
+- Requires AWS account setup
+- More technical configuration
+
+RECOMMENDATION: Start with SendGrid (easiest, best balance of features/price)
+
+IMPLEMENTATION:
+
+Install SendGrid SDK:
+```bash
+npm install @sendgrid/mail
+```
+
+Backend API:
+```javascript
+const sgMail = require('@sendgrid/mail');
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
+
+POST /api/email/send-external
+
+async function sendExternalEmail(req, res) {
+  const { workspace_id, from_email, to_email, subject, body, user_id } = req.body;
+  
+  // Verify workspace owns the "from" email domain
+  const workspace = await getWorkspace(workspace_id);
+  if (!workspace.verified_email_domain) {
+    return res.status(400).json({ error: 'Email domain not verified' });
+  }
+  
+  const msg = {
+    to: to_email,
+    from: from_email, // e.g., support@abc-security.com
+    subject: subject,
+    html: body
+  };
+  
+  try {
+    await sgMail.send(msg);
+    
+    // Log email sent
+    await db.emails_sent.create({
+      workspace_id,
+      user_id,
+      to_email,
+      subject,
+      body,
+      sent_at: new Date()
+    });
+    
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to send email' });
+  }
+}
+```
+
+EMAIL DOMAIN VERIFICATION:
+
+For org to send FROM their own domain (e.g., support@abc-security.com):
+
+1. Org provides domain: abc-security.com
+2. Platform shows DNS records to add:
+   - SPF record
+   - DKIM record
+   - CNAME for domain verification
+3. Org adds records to their DNS (or their IT person does)
+4. Platform verifies records
+5. Once verified, org can send from any @abc-security.com email
+
+Until verified:
+- Org sends from: noreply@coaileague.com (platform domain)
+- Reply-To: set to org's email
+
+---
+
+PART 3B: EMAIL COMPOSE UI (REDESIGNED)
+
+Route: /email/compose
+
+NEW EMAIL COMPOSE INTERFACE:
+
+┌──────────────────────────────────────────────────────┐
+│ ✉️ Compose Email                              [—] [×]│
+├──────────────────────────────────────────────────────┤
+│ From: support@abc-security.com               ▼      │
+│                                                      │
+│ To: john@potential-client.com                       │
+│     [+ Cc] [+ Bcc]                                  │
+│                                                      │
+│ Subject: Security Services Proposal                 │
+│                                                      │
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│ Hi John,                                            │
+│                                                      │
+│ [Rich text editor - user types here]                │
+│                                                      │
+│                                                      │
+│                                                      │
+│                                                      │
+│                                                      │
+├──────────────────────────────────────────────────────┤
+│ 📎 Attach Files: [Browse...]                        │
+│                                                      │
+│ ✨ Trinity AI:                                       │
+│ [Enhance with Trinity] [Check for Errors]           │
+│ [Make More Professional] [Make Friendlier]          │
+│                                                      │
+│                        [Save Draft] [Send] ▼        │
+│                                  [Schedule Send]    │
+└──────────────────────────────────────────────────────┘
+
+FEATURES:
+
+Rich Text Editor:
+- Bold, italic, underline
+- Bullet lists, numbered lists
+- Links
+- Font size, alignment
+- Inline images (optional)
+
+From Dropdown:
+- Show verified email addresses for this org
+- Default: support@[org-domain].com
+- Fallback: noreply@coaileague.com (Reply-To: org email)
+
+To Field:
+- Autocomplete from:
+  - Leads (from CRM)
+  - Clients (from client list)
+  - Recently emailed contacts
+- Can type any email
+
+Attachments:
+- Click to browse files
+- Max 10MB per attachment
+- Show file name + size
+- Remove button (X)
+
+Trinity AI Buttons:
+- **Enhance with Trinity**: Full rewrite for clarity/professionalism
+- **Check for Errors**: Grammar, spelling, tone issues
+- **Make More Professional**: Adjust tone to formal
+- **Make Friendlier**: Adjust tone to casual
+
+Save Draft:
+- Auto-save every 30 seconds
+- Manual save button
+- Drafts stored in /email/drafts
+
+Send Options:
+- Send Now (default)
+- Schedule Send (pick date/time)
+
+---
+
+PART 3C: TRINITY AI EMAIL ENHANCEMENT
+
+CORE FEATURE: Trinity rewrites emails to make them better.
+
+IMPLEMENTATION:
+
+User clicks "✨ Enhance with Trinity":
+
+Frontend:
+```javascript
+async function enhanceEmail() {
+  const originalEmail = emailEditor.getContent();
+  
+  // Show loading state
+  showLoading("Trinity is enhancing your email...");
+  
+  const response = await fetch('/api/trinity/enhance-email', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      workspace_id: currentWorkspace.id,
+      original_text: originalEmail,
+      context: {
+        recipient_type: 'potential_client', // or 'client', 'vendor', 'employee'
+        purpose: 'follow_up' // or 'introduction', 'proposal', 'reminder'
+      }
+    })
+  });
+  
+  const { enhanced_text, suggestions } = await response.json();
+  
+  // Show before/after comparison
+  showComparisonModal(originalEmail, enhanced_text, suggestions);
+}
+```
+
+Backend:
+```javascript
+POST /api/trinity/enhance-email
+
+async function enhanceEmail(req, res) {
+  const { original_text, context } = req.body;
+  
+  const prompt = `You are Trinity, an AI assistant helping a security company owner write a professional email.
+
+Context:
+- Recipient: ${context.recipient_type}
+- Purpose: ${context.purpose}
+
+Original email:
+${original_text}
+
+Rewrite this email to be:
+1. More professional and polished
+2. Clear and concise
+3. Persuasive and engaging
+4. Grammatically correct
+5. Appropriate tone for the context
+
+Keep the same core message but improve the writing quality.
+
+Return JSON:
+{
+  "enhanced_text": "rewritten email",
+  "suggestions": ["what you changed and why", "another improvement made"]
+}`;
+
+  const response = await gemini.generateContent({
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.8,
+      maxOutputTokens: 1024
+    }
+  });
+  
+  const result = JSON.parse(response.text());
+  res.json(result);
+}
+```
+
+COMPARISON MODAL:
+
+┌──────────────────────────────────────────────────────┐
+│ Trinity Enhanced Your Email                      [×] │
+├──────────────────────────────────────────────────────┤
+│                                                      │
+│ ORIGINAL:                                            │
+│ ┌──────────────────────────────────────────────┐   │
+│ │ Hey John, just wanted to check if you're     │   │
+│ │ still interested in our services. Let me     │   │
+│ │ know!                                         │   │
+│ └──────────────────────────────────────────────┘   │
+│                                                      │
+│ TRINITY'S VERSION:                                   │
+│ ┌──────────────────────────────────────────────┐   │
+│ │ Hi John,                                      │   │
+│ │                                               │   │
+│ │ I wanted to follow up on our conversation     │   │
+│ │ last week regarding security services for     │   │
+│ │ your facility.                                │   │
+│ │                                               │   │
+│ │ Based on what you shared, I believe our      │   │
+│ │ armed security team would be an excellent     │   │
+│ │ fit for your needs. We have immediate         │   │
+│ │ availability and can provide references from  │   │
+│ │ similar clients.                              │   │
+│ │                                               │   │
+│ │ Would you be available for a brief call this  │   │
+│ │ week to discuss next steps?                   │   │
+│ │                                               │   │
+│ │ Best regards,                                 │   │
+│ │ [Your name]                                   │   │
+│ └──────────────────────────────────────────────┘   │
+│                                                      │
+│ WHAT TRINITY CHANGED:                                │
+│ • More professional greeting and tone                │
+│ • Added specific context (last week's conversation)  │
+│ • Included value proposition (armed security team)   │
+│ • Clear call-to-action (schedule call)              │
+│ • Professional closing                              │
+│                                                      │
+│           [Keep Original] [Use Trinity's Version]    │
+└──────────────────────────────────────────────────────┘
+
+User clicks "Use Trinity's Version":
+- Email editor content replaced with enhanced version
+- User can still edit further if needed
+- Then sends when ready
+
+OTHER TRINITY EMAIL FEATURES:
+
+1. **Check for Errors**:
+   - Grammar mistakes
+   - Spelling errors
+   - Tone issues ("This sounds too aggressive")
+   - Missing information ("You mentioned a proposal but didn't attach it")
+
+2. **Subject Line Suggestions**:
+   User types generic subject: "Follow up"
+   Trinity suggests: "Security Services Proposal - ABC Corp Follow-Up"
+
+3. **Tone Adjustment**:
+   - "Make More Professional": Formal language, remove casual phrases
+   - "Make Friendlier": Warmer tone, less corporate
+
+4. **Length Adjustment**:
+   - "Make Shorter": Condense to key points (for busy executives)
+   - "Add More Detail": Expand with additional context
+
+5. **Recipient-Specific Optimization**:
+   Trinity checks recipient type:
+   - If client: Professional, value-focused
+   - If prospect: Persuasive, clear CTA
+   - If vendor: Direct, transactional
+   - If employee: Clear, supportive
+
+TRINITY IN EMAIL LIST:
+
+When viewing sent emails, Trinity can analyze patterns:
+- "Your response rate to follow-up emails is 45%. Want tips to improve?"
+- "Clients respond best to your emails sent Tuesday mornings. Schedule more then?"
+- "Your proposal emails average 3 days to get a response. That's 2 days faster than industry average!"
+
+---
+
+PART 3D: EMAIL TRACKING (OPTIONAL BUT VALUABLE)
+
+SendGrid provides tracking for:
+- Opens (did they open the email?)
+- Clicks (did they click links?)
+- Bounces (did email fail to deliver?)
+
+Display in sent emails list:
+┌────────────────────────────────────────────────────────┐
+│ Sent Emails                                            │
+├────────────────────────────────────────────────────────┤
+│ To: john@potential-client.com                          │
+│ Subject: Security Services Proposal                    │
+│ Sent: Jan 10, 2026 at 2:34 PM                         │
+│ Status: ✅ Opened (Jan 10 at 3:12 PM)                 │
+│                                                        │
+│ To: sarah@xyz-corp.com                                 │
+│ Subject: Follow-Up: Your Security Needs                │
+│ Sent: Jan 8, 2026 at 10:15 AM                         │
+│ Status: ⏳ Not yet opened                             │
+│                                                        │
+└────────────────────────────────────────────────────────┘
+
+Trinity integration:
+- "John opened your proposal email 3 times. He's interested - follow up now!"
+- "Sarah hasn't opened your email in 3 days. Try a different subject line?"
+
+═══════════════════════════════════════════════════════════
+IMPLEMENTATION PRIORITIES & TIMELINE
+═══════════════════════════════════════════════════════════
+
+YOU SAID: "Let's get it all working and go live!"
+
+REALISTIC TIMELINE:
+
+WEEK 1 (Now - Jan 8):
+✅ Trinity Floating Assistant (PRIORITY 1 - already sent)
+✅ Document Library (PRIORITY 2 - relatively simple)
+- File upload/storage
+- Basic categorization
+- View/download
+
+WEEK 2 (Jan 9-15):
+✅ E-Signature System (PRIORITY 3)
+- Internal signatures (employees sign handbooks)
+- External signatures (clients sign contracts)
+- Audit trail
+
+✅ External Email (PRIORITY 4)
+- SendGrid integration
+- Basic compose UI
+- Send external emails
+
+WEEK 3 (Jan 16-22):
+✅ Trinity Email Enhancement (PRIORITY 5)
+- Rewrite emails with AI
+- Before/after comparison
+- Multiple enhancement options
+
+✅ Sales CRM (PRIORITY 6)
+- Leads pipeline (Kanban)
+- Lead detail view
+- Basic activity tracking
+
+WEEK 4 (Jan 23-29):
+✅ Flex Staffing Pool (PRIORITY 7 - most complex)
+- Contractor profiles
+- Post gigs
+- Applications
+- Ratings
+
+POST-LAUNCH (Feb+):
+- Polish and refinements
+- User feedback integration
+- Advanced features
+
+LAUNCH PLAN:
+
+January 1st Soft Launch:
+- Trinity Floating Assistant ✅
+- Basic Document Library ✅
+- Core platform features (scheduling, payroll, QB) ✅
+
+January 15th Feature Update:
+- E-Signature System
+- External Email with Trinity AI
+- Sales CRM
+
+February 1st Major Update:
+- Flex Staffing Pool
+- Full document management
+- Advanced Trinity capabilities
+
+COMPROMISE IF NEEDED:
+
+If full implementation by Jan 1 is too aggressive:
+- Ship Trinity + Document Library (core value)
+- Other features in phases post-launch
+- Better to launch working product than delay for perfection
+
+═══════════════════════════════════════════════════════════
+TESTING REQUIREMENTS
+═══════════════════════════════════════════════════════════
+
+FOR EACH FEATURE, TEST:
+
+Document Library:
+✅ Upload document (PDF, DOCX, images)
+✅ Categorize correctly
+✅ View document (preview or download)
+✅ Require signature
+✅ Employee signs document
+✅ Signature saved with audit trail
+✅ Org-isolated (Org A can't see Org B's documents)
+
+E-Signature:
+✅ Send contract to client email
+✅ Client receives email with link
+✅ Client can view and sign (no login required)
+✅ Signature saved with timestamp, IP, user agent
+✅ Org notified when signed
+✅ Signed document stored correctly
+
+External Email:
+✅ Compose email to external recipient
+✅ Email delivers successfully
+✅ Recipient receives from correct "From" address
+✅ Attachments work
+✅ Trinity enhance rewrites email
+✅ Before/after comparison shows
+✅ Sent emails logged
+
+Sales CRM:
+✅ Add lead
+✅ Drag lead between pipeline stages
+✅ Lead detail view shows
+✅ Add activity note
+✅ Schedule follow-up
+✅ Trinity reminds about follow-ups
+
+Flex Staffing:
+✅ Post gig
+✅ Contractors see gig notification
+✅ Contractor applies
+✅ Org reviews applications
+✅ Org assigns contractor
+✅ Contractor clocks in/out for gig
+✅ Both rate each other after completion
+✅ Ratings update averages
+
+═══════════════════════════════════════════════════════════
+FINAL DELIVERABLES
+═══════════════════════════════════════════════════════════
+
+Provide when complete:
+
+FEATURE 1: Sales & Documents
+✅ Document library (/documents route)
+✅ File upload/storage system
+✅ E-signature capability (internal + external)
+✅ Document templates (service agreement, NDA, etc.)
+✅ Sales CRM (/sales route)
+✅ Lead pipeline (Kanban board)
+✅ Lead management (add, edit, track)
+✅ Activity tracking
+✅ Trinity integration for all of above
+
+FEATURE 2: Flex Staffing
+✅ Contractor profiles (/flex-staffing route)
+✅ Post gigs interface
+✅ Contractor application system
+✅ Assignment workflow
+✅ Rating system (bidirectional)
+✅ Availability calendar
+✅ Trinity integration
+
+FEATURE 3: External Email
+✅ Email compose UI (/email/compose route)
+✅ SendGrid integration (or alternative)
+✅ External email sending
+✅ Email domain verification setup
+✅ Trinity AI email enhancement
+✅ Before/after comparison modal
+✅ Sent emails tracking
+✅ Trinity integration
+
+DOCUMENTATION:
+- Setup guide for email domain verification
+- User guide for each feature
+- API documentation for integrations
+
+This is the FINAL major feature set before launch.
+Prioritize getting working implementations over perfection.
+We can refine post-launch based on user feedback.
+
+Build all three feature sets and report progress weekly.
+
+Let's ship this and dominate the market. 🚀

@@ -22402,3 +22402,418 @@ export const insertTrinityMetacognitionLogSchema = createInsertSchema(trinityMet
 
 export type InsertTrinityMetacognitionLog = z.infer<typeof insertTrinityMetacognitionLogSchema>;
 export type TrinityMetacognitionLog = typeof trinityMetacognitionLog.$inferSelect;
+
+// ============================================================================
+// SALES CRM ENHANCEMENTS - Lead Activities & Document Library
+// ============================================================================
+
+/**
+ * Lead Activities - Activity log for lead interactions
+ */
+export const leadActivities = pgTable("lead_activities", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  leadId: varchar("lead_id").notNull().references(() => leads.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  activityType: varchar("activity_type", { length: 50 }).notNull(), // 'note', 'email_sent', 'call', 'meeting', 'proposal_sent', 'contract_sent', 'status_change'
+  description: text("description"),
+  previousStatus: varchar("previous_status", { length: 30 }),
+  newStatus: varchar("new_status", { length: 30 }),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("lead_activities_lead_idx").on(table.leadId),
+  index("lead_activities_user_idx").on(table.userId),
+  index("lead_activities_workspace_idx").on(table.workspaceId),
+  index("lead_activities_type_idx").on(table.activityType),
+  index("lead_activities_created_idx").on(table.createdAt),
+]);
+
+export const insertLeadActivitySchema = createInsertSchema(leadActivities).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertLeadActivity = z.infer<typeof insertLeadActivitySchema>;
+export type LeadActivity = typeof leadActivities.$inferSelect;
+
+/**
+ * Org Documents - Organization-wide document library
+ */
+export const orgDocuments = pgTable("org_documents", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  uploadedBy: varchar("uploaded_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  category: varchar("category", { length: 50 }).notNull(), // 'client_contract', 'employee_handbook', 'sop', 'training_material', 'form', 'proposal', 'shared'
+  fileName: varchar("file_name").notNull(),
+  filePath: text("file_path").notNull(), // Storage path
+  fileSizeBytes: integer("file_size_bytes"),
+  fileType: varchar("file_type", { length: 50 }), // 'pdf', 'docx', 'jpg', etc.
+  
+  description: text("description"),
+  requiresSignature: boolean("requires_signature").default(false),
+  version: integer("version").default(1),
+  replacesDocumentId: varchar("replaces_document_id"),
+  
+  // Signature tracking
+  signatureRequired: varchar("signature_required", { length: 30 }), // 'all_employees', 'specific_users', 'external'
+  totalSignaturesRequired: integer("total_signatures_required").default(0),
+  signaturesCompleted: integer("signatures_completed").default(0),
+  
+  isActive: boolean("is_active").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("org_documents_workspace_idx").on(table.workspaceId),
+  index("org_documents_category_idx").on(table.category),
+  index("org_documents_uploaded_by_idx").on(table.uploadedBy),
+  index("org_documents_requires_sig_idx").on(table.requiresSignature),
+]);
+
+export const insertOrgDocumentSchema = createInsertSchema(orgDocuments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertOrgDocument = z.infer<typeof insertOrgDocumentSchema>;
+export type OrgDocument = typeof orgDocuments.$inferSelect;
+
+/**
+ * Org Document Access - Track document views
+ */
+export const orgDocumentAccess = pgTable("org_document_access", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").notNull().references(() => orgDocuments.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").references(() => users.id, { onDelete: 'set null' }),
+  
+  viewedAt: timestamp("viewed_at").defaultNow(),
+  signedAt: timestamp("signed_at"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+}, (table) => [
+  index("org_doc_access_document_idx").on(table.documentId),
+  index("org_doc_access_user_idx").on(table.userId),
+]);
+
+export const insertOrgDocumentAccessSchema = createInsertSchema(orgDocumentAccess).omit({
+  id: true,
+});
+
+export type InsertOrgDocumentAccess = z.infer<typeof insertOrgDocumentAccessSchema>;
+export type OrgDocumentAccess = typeof orgDocumentAccess.$inferSelect;
+
+/**
+ * Org Document Signatures - E-signature records
+ */
+export const orgDocumentSignatures = pgTable("org_document_signatures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  documentId: varchar("document_id").notNull().references(() => orgDocuments.id, { onDelete: 'cascade' }),
+  
+  // Internal or external signer
+  signerUserId: varchar("signer_user_id").references(() => users.id, { onDelete: 'set null' }),
+  signerEmail: varchar("signer_email"),
+  signerName: varchar("signer_name"),
+  
+  signatureData: text("signature_data"), // Base64 signature image or typed name
+  signatureType: varchar("signature_type", { length: 20 }), // 'drawn', 'typed'
+  
+  signedAt: timestamp("signed_at").defaultNow().notNull(),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  
+  // External signer verification
+  verificationToken: varchar("verification_token"),
+  verifiedAt: timestamp("verified_at"),
+}, (table) => [
+  index("org_doc_sig_document_idx").on(table.documentId),
+  index("org_doc_sig_user_idx").on(table.signerUserId),
+  index("org_doc_sig_email_idx").on(table.signerEmail),
+]);
+
+export const insertOrgDocumentSignatureSchema = createInsertSchema(orgDocumentSignatures).omit({
+  id: true,
+  signedAt: true,
+});
+
+export type InsertOrgDocumentSignature = z.infer<typeof insertOrgDocumentSignatureSchema>;
+export type OrgDocumentSignature = typeof orgDocumentSignatures.$inferSelect;
+
+// ============================================================================
+// FLEX STAFFING POOL - Contractor Marketplace
+// ============================================================================
+
+/**
+ * Flex Contractors - Pre-vetted contractor pool per workspace
+ */
+export const flexContractors = pgTable("flex_contractors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  hourlyRate: decimal("hourly_rate", { precision: 10, scale: 2 }),
+  certifications: jsonb("certifications").default(sql`'[]'::jsonb`), // ['armed', 'cpr', 'first_aid']
+  bio: text("bio"),
+  
+  ratingAverage: decimal("rating_average", { precision: 3, scale: 2 }).default("0.00"),
+  totalGigsCompleted: integer("total_gigs_completed").default(0),
+  totalRatings: integer("total_ratings").default(0),
+  
+  isPreferred: boolean("is_preferred").default(false),
+  isActive: boolean("is_active").default(true),
+  
+  inviteToken: varchar("invite_token"),
+  invitedAt: timestamp("invited_at"),
+  acceptedAt: timestamp("accepted_at"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("flex_contractors_user_idx").on(table.userId),
+  index("flex_contractors_workspace_idx").on(table.workspaceId),
+  index("flex_contractors_active_idx").on(table.isActive),
+  index("flex_contractors_rating_idx").on(table.ratingAverage),
+  uniqueIndex("flex_contractors_user_workspace_idx").on(table.userId, table.workspaceId),
+]);
+
+export const insertFlexContractorSchema = createInsertSchema(flexContractors).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertFlexContractor = z.infer<typeof insertFlexContractorSchema>;
+export type FlexContractor = typeof flexContractors.$inferSelect;
+
+/**
+ * Flex Availability - Contractor available dates/times
+ */
+export const flexAvailability = pgTable("flex_availability", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractorId: varchar("contractor_id").notNull().references(() => flexContractors.id, { onDelete: 'cascade' }),
+  
+  availableDate: date("available_date").notNull(),
+  availableStartTime: time("available_start_time"),
+  availableEndTime: time("available_end_time"),
+  isAllDay: boolean("is_all_day").default(true),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("flex_availability_contractor_idx").on(table.contractorId),
+  index("flex_availability_date_idx").on(table.availableDate),
+]);
+
+export const insertFlexAvailabilitySchema = createInsertSchema(flexAvailability).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertFlexAvailability = z.infer<typeof insertFlexAvailabilitySchema>;
+export type FlexAvailability = typeof flexAvailability.$inferSelect;
+
+/**
+ * Flex Gigs - Posted gig opportunities
+ */
+export const flexGigs = pgTable("flex_gigs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  createdBy: varchar("created_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  title: varchar("title").notNull(),
+  description: text("description"),
+  
+  gigDate: date("gig_date").notNull(),
+  startTime: time("start_time").notNull(),
+  endTime: time("end_time").notNull(),
+  
+  locationName: varchar("location_name"),
+  locationAddress: text("location_address"),
+  
+  requirements: jsonb("requirements").default(sql`'[]'::jsonb`), // ['armed', 'cpr']
+  payRate: decimal("pay_rate", { precision: 10, scale: 2 }).notNull(),
+  
+  status: varchar("status", { length: 30 }).default("open"), // 'open', 'assigned', 'in_progress', 'completed', 'cancelled'
+  
+  assignedContractorId: varchar("assigned_contractor_id").references(() => flexContractors.id, { onDelete: 'set null' }),
+  assignedAt: timestamp("assigned_at"),
+  completedAt: timestamp("completed_at"),
+  
+  notifyAll: boolean("notify_all").default(true),
+  applicationsCount: integer("applications_count").default(0),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("flex_gigs_workspace_idx").on(table.workspaceId),
+  index("flex_gigs_status_idx").on(table.status),
+  index("flex_gigs_date_idx").on(table.gigDate),
+  index("flex_gigs_assigned_idx").on(table.assignedContractorId),
+]);
+
+export const insertFlexGigSchema = createInsertSchema(flexGigs).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  applicationsCount: true,
+});
+
+export type InsertFlexGig = z.infer<typeof insertFlexGigSchema>;
+export type FlexGig = typeof flexGigs.$inferSelect;
+
+/**
+ * Flex Gig Applications - Contractor applications for gigs
+ */
+export const flexGigApplications = pgTable("flex_gig_applications", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  gigId: varchar("gig_id").notNull().references(() => flexGigs.id, { onDelete: 'cascade' }),
+  contractorId: varchar("contractor_id").notNull().references(() => flexContractors.id, { onDelete: 'cascade' }),
+  
+  message: text("message"),
+  status: varchar("status", { length: 20 }).default("pending"), // 'pending', 'accepted', 'rejected'
+  
+  appliedAt: timestamp("applied_at").defaultNow().notNull(),
+  reviewedAt: timestamp("reviewed_at"),
+  reviewedBy: varchar("reviewed_by").references(() => users.id, { onDelete: 'set null' }),
+}, (table) => [
+  index("flex_gig_apps_gig_idx").on(table.gigId),
+  index("flex_gig_apps_contractor_idx").on(table.contractorId),
+  index("flex_gig_apps_status_idx").on(table.status),
+  uniqueIndex("flex_gig_apps_unique_idx").on(table.gigId, table.contractorId),
+]);
+
+export const insertFlexGigApplicationSchema = createInsertSchema(flexGigApplications).omit({
+  id: true,
+  appliedAt: true,
+});
+
+export type InsertFlexGigApplication = z.infer<typeof insertFlexGigApplicationSchema>;
+export type FlexGigApplication = typeof flexGigApplications.$inferSelect;
+
+/**
+ * Flex Gig Ratings - Two-way rating system
+ */
+export const flexGigRatings = pgTable("flex_gig_ratings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  gigId: varchar("gig_id").notNull().references(() => flexGigs.id, { onDelete: 'cascade' }),
+  contractorId: varchar("contractor_id").notNull().references(() => flexContractors.id, { onDelete: 'cascade' }),
+  
+  ratedByWorkspace: boolean("rated_by_workspace").default(false), // Org rating contractor
+  ratedByContractor: boolean("rated_by_contractor").default(false), // Contractor rating org
+  
+  // Org's rating of contractor
+  contractorRating: integer("contractor_rating"), // 1-5
+  contractorComment: text("contractor_comment"),
+  
+  // Contractor's rating of org
+  workspaceRating: integer("workspace_rating"), // 1-5
+  workspaceComment: text("workspace_comment"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("flex_gig_ratings_gig_idx").on(table.gigId),
+  index("flex_gig_ratings_contractor_idx").on(table.contractorId),
+  uniqueIndex("flex_gig_ratings_unique_idx").on(table.gigId, table.contractorId),
+]);
+
+export const insertFlexGigRatingSchema = createInsertSchema(flexGigRatings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertFlexGigRating = z.infer<typeof insertFlexGigRatingSchema>;
+export type FlexGigRating = typeof flexGigRatings.$inferSelect;
+
+// ============================================================================
+// EXTERNAL EMAIL SYSTEM
+// ============================================================================
+
+/**
+ * External Emails Sent - Track all external email communications
+ */
+export const externalEmailsSent = pgTable("external_emails_sent", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  sentBy: varchar("sent_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  fromEmail: varchar("from_email").notNull(),
+  toEmail: varchar("to_email").notNull(),
+  ccEmails: text("cc_emails").array(),
+  bccEmails: text("bcc_emails").array(),
+  
+  subject: varchar("subject").notNull(),
+  bodyHtml: text("body_html").notNull(),
+  bodyText: text("body_text"),
+  
+  // Context - what triggered this email
+  emailType: varchar("email_type", { length: 50 }), // 'manual', 'lead_followup', 'proposal', 'contract', 'signature_request', 'invoice'
+  relatedEntityType: varchar("related_entity_type", { length: 50 }), // 'lead', 'client', 'employee', 'document'
+  relatedEntityId: varchar("related_entity_id"),
+  
+  // Trinity enhancement
+  enhancedByTrinity: boolean("enhanced_by_trinity").default(false),
+  originalBody: text("original_body"), // Before Trinity enhancement
+  
+  // Delivery tracking
+  status: varchar("status", { length: 30 }).default("pending"), // 'pending', 'sent', 'delivered', 'opened', 'clicked', 'bounced', 'failed'
+  externalMessageId: varchar("external_message_id"), // From email provider (Resend)
+  errorMessage: text("error_message"),
+  
+  sentAt: timestamp("sent_at"),
+  deliveredAt: timestamp("delivered_at"),
+  openedAt: timestamp("opened_at"),
+  
+  // Scheduling
+  scheduledFor: timestamp("scheduled_for"),
+  isDraft: boolean("is_draft").default(false),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("external_emails_workspace_idx").on(table.workspaceId),
+  index("external_emails_sent_by_idx").on(table.sentBy),
+  index("external_emails_status_idx").on(table.status),
+  index("external_emails_type_idx").on(table.emailType),
+  index("external_emails_created_idx").on(table.createdAt),
+]);
+
+export const insertExternalEmailSentSchema = createInsertSchema(externalEmailsSent).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertExternalEmailSent = z.infer<typeof insertExternalEmailSentSchema>;
+export type ExternalEmailSent = typeof externalEmailsSent.$inferSelect;
+
+/**
+ * Email Drafts - Saved email drafts with auto-save
+ */
+export const emailDrafts = pgTable("email_drafts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: 'cascade' }),
+  
+  toEmail: varchar("to_email"),
+  ccEmails: text("cc_emails").array(),
+  subject: varchar("subject"),
+  bodyHtml: text("body_html"),
+  
+  relatedEntityType: varchar("related_entity_type", { length: 50 }),
+  relatedEntityId: varchar("related_entity_id"),
+  
+  lastAutoSavedAt: timestamp("last_auto_saved_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("email_drafts_workspace_idx").on(table.workspaceId),
+  index("email_drafts_user_idx").on(table.userId),
+]);
+
+export const insertEmailDraftSchema = createInsertSchema(emailDrafts).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEmailDraft = z.infer<typeof insertEmailDraftSchema>;
+export type EmailDraft = typeof emailDrafts.$inferSelect;
