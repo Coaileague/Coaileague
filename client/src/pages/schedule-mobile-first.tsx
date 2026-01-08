@@ -376,25 +376,23 @@ export default function ScheduleMobileFirst() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Header with Week Navigation */}
-      <div className="bg-gradient-to-r from-primary/10 to-primary/5 border-b p-3 sm:p-4">
-        <div className="flex items-center justify-between mb-3">
+      {/* Header with Week Navigation - Fortune 500 Compact Design */}
+      <div className="border-b border-border/40 bg-background">
+        {/* Week Navigation Row */}
+        <div className="flex items-center justify-between px-3 py-2">
           <Button
             variant="ghost"
             size="icon"
             onClick={handlePreviousWeek}
-            className="h-9 w-9"
+            className="h-8 w-8"
             data-testid="button-prev-week"
           >
-            <ChevronLeft className="h-5 w-5" />
+            <ChevronLeft className="h-4 w-4" />
           </Button>
           
           <div className="text-center">
-            <div className="font-bold text-base sm:text-lg">
+            <div className="font-semibold text-sm">
               {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Week of {format(weekStart, 'MMMM yyyy')}
             </div>
           </div>
           
@@ -402,39 +400,35 @@ export default function ScheduleMobileFirst() {
             variant="ghost"
             size="icon"
             onClick={handleNextWeek}
-            className="h-9 w-9"
+            className="h-8 w-8"
             data-testid="button-next-week"
           >
-            <ChevronRight className="h-5 w-5" />
+            <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Quick Stats */}
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="bg-card rounded-xl p-3 shadow-sm">
-            <div className="text-2xl sm:text-3xl font-bold text-primary">
-              {stats?.totalShifts || 0}
-            </div>
-            <div className="text-xs sm:text-sm text-muted-foreground font-medium">Shifts</div>
+        {/* Quick Stats - Compact Inline Format (GetSling style) */}
+        <div className="flex items-center justify-center gap-4 px-3 py-1.5 text-xs border-t border-border/30 bg-muted/30">
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-primary">{stats?.totalShifts || 0}</span>
+            <span className="text-muted-foreground">Shifts</span>
           </div>
-          <div className="bg-card rounded-xl p-3 shadow-sm">
-            <div className="text-2xl sm:text-3xl font-bold text-green-600">
-              {stats?.totalHours?.toFixed(0) || 0}
-            </div>
-            <div className="text-xs sm:text-sm text-muted-foreground font-medium">Hours</div>
+          <span className="text-border">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-green-600">{stats?.totalHours?.toFixed(0) || 0}</span>
+            <span className="text-muted-foreground">Hours</span>
           </div>
-          <div className="bg-card rounded-xl p-3 shadow-sm">
-            <div className="text-2xl sm:text-3xl font-bold text-amber-600">
-              {pendingShifts.length}
-            </div>
-            <div className="text-xs sm:text-sm text-muted-foreground font-medium">Pending</div>
+          <span className="text-border">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="font-bold text-amber-600">{pendingShifts.length}</span>
+            <span className="text-muted-foreground">Pending</span>
           </div>
         </div>
       </div>
 
-      {/* Day Selector - Optimized for mobile touch */}
-      <div className="bg-card border-b overflow-x-auto px-2 py-3">
-        <div className="flex gap-2 min-w-max justify-between px-1">
+      {/* Day Selector - Fortune 500 Compact Pills (GetSling style) */}
+      <div className="border-b border-border/40 overflow-x-auto">
+        <div className="flex min-w-max px-2 py-1.5">
           {weekDays.map((day) => {
             const isSelected = format(day, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
             const dayIsToday = isToday(day);
@@ -446,21 +440,21 @@ export default function ScheduleMobileFirst() {
               <button
                 key={day.toISOString()}
                 onClick={() => setSelectedDate(day)}
-                className={`flex flex-col items-center py-2 px-3 rounded-xl min-w-[48px] min-h-[64px] transition-all ${
+                className={`flex flex-col items-center py-1 px-2 mx-0.5 rounded-md min-w-[40px] transition-colors ${
                   isSelected
-                    ? 'bg-primary text-primary-foreground shadow-lg scale-105'
+                    ? 'bg-primary text-primary-foreground'
                     : dayIsToday
-                    ? 'bg-primary/20 text-primary'
-                    : 'hover:bg-muted active:bg-muted/80'
+                    ? 'bg-primary/15 text-primary'
+                    : 'hover:bg-muted/60 active:bg-muted'
                 }`}
                 data-testid={`day-tab-${format(day, 'yyyy-MM-dd')}`}
               >
-                <span className="text-xs font-semibold uppercase tracking-wide">
+                <span className="text-[10px] font-medium uppercase opacity-80">
                   {format(day, 'EEE')}
                 </span>
-                <span className="text-xl font-bold">{format(day, 'd')}</span>
+                <span className="text-sm font-bold leading-tight">{format(day, 'd')}</span>
                 {dayShiftCount > 0 && (
-                  <div className={`w-2 h-2 rounded-full mt-1 ${
+                  <div className={`w-1 h-1 rounded-full mt-0.5 ${
                     isSelected ? 'bg-primary-foreground' : 'bg-primary'
                   }`} />
                 )}
@@ -470,88 +464,88 @@ export default function ScheduleMobileFirst() {
         </div>
       </div>
 
-      {/* View Toggle - My Schedule / Full Schedule */}
-      <div className="bg-card border-b px-3 py-3">
+      {/* View Toggle - Compact Segmented Control */}
+      <div className="border-b border-border/40 px-3 py-1.5">
         <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'my' | 'full')}>
-          <TabsList className="w-full grid grid-cols-2 h-11">
-            <TabsTrigger value="my" className="text-sm gap-2 min-h-[40px]" data-testid="tab-my-schedule">
-              <CalendarDays className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">My Schedule</span>
+          <TabsList className="w-full grid grid-cols-2 h-8">
+            <TabsTrigger value="my" className="text-xs gap-1.5 h-7" data-testid="tab-my-schedule">
+              <CalendarDays className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>My Schedule</span>
             </TabsTrigger>
-            <TabsTrigger value="full" className="text-sm gap-2 min-h-[40px]" data-testid="tab-full-schedule">
-              <Users className="w-4 h-4 flex-shrink-0" />
-              <span className="truncate">Full Schedule</span>
+            <TabsTrigger value="full" className="text-xs gap-1.5 h-7" data-testid="tab-full-schedule">
+              <Users className="w-3.5 h-3.5 flex-shrink-0" />
+              <span>Full Schedule</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      {/* Quick Actions - Essential for all, advanced for managers */}
-      <div className="bg-muted/50 border-b px-3 py-3">
-        <div className="flex gap-2 overflow-x-auto pb-1">
+      {/* Quick Actions - Compact Horizontal Scroll */}
+      <div className="border-b border-border/40 px-2 py-1.5 bg-muted/20">
+        <div className="flex gap-1.5 overflow-x-auto">
           {/* Manager-only actions */}
           {isManagerOrSupervisor && (
             <>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => setShowApprovals(true)}
-                className="flex-shrink-0 gap-1.5"
+                className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
                 data-testid="button-approvals"
               >
-                <Clock className="h-4 w-4 text-amber-600" />
+                <Clock className="h-3.5 w-3.5 text-amber-600" />
                 Approvals
                 {pendingShifts.length > 0 && (
-                  <Badge variant="destructive" className="ml-1 text-xs px-1.5">
+                  <Badge variant="destructive" className="ml-0.5 text-[10px] px-1 h-4">
                     {pendingShifts.length}
                   </Badge>
                 )}
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => setShowTemplates(true)}
-                className="flex-shrink-0 gap-1.5"
+                className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
                 data-testid="button-templates"
               >
-                <LayoutTemplate className="h-4 w-4 text-purple-600" />
+                <LayoutTemplate className="h-3.5 w-3.5 text-purple-600" />
                 Templates
               </Button>
               <Button
-                variant="outline"
+                variant="ghost"
                 size="sm"
                 onClick={() => setShowReports(true)}
-                className="flex-shrink-0 gap-1.5"
+                className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
                 data-testid="button-reports"
               >
-                <BarChart3 className="h-4 w-4 text-blue-600" />
+                <BarChart3 className="h-3.5 w-3.5 text-blue-600" />
                 Reports
               </Button>
             </>
           )}
           {/* Actions for all users */}
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => {
               setSwapShift(null);
               setShowSwaps(true);
             }}
-            className="flex-shrink-0 gap-1.5"
+            className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
             data-testid="button-swaps"
           >
-            <ArrowRightLeft className="h-4 w-4 text-cyan-600" />
+            <ArrowRightLeft className="h-3.5 w-3.5 text-cyan-600" />
             Swaps
           </Button>
           <Button
-            variant="outline"
+            variant="ghost"
             size="sm"
             onClick={() => setShowCalendarSync(true)}
-            className="flex-shrink-0 gap-1.5"
+            className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
             data-testid="button-calendar-sync"
           >
-            <Download className="h-4 w-4 text-indigo-600" />
-            Calendar
+            <Download className="h-3.5 w-3.5 text-indigo-600" />
+            Export
           </Button>
           {/* Trinity for managers only */}
           {isManagerOrSupervisor && (
