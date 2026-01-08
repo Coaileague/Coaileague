@@ -36,6 +36,7 @@ import { WeekStatsBar } from '@/components/schedule/WeekStatsBar';
 import { ConflictAlerts } from '@/components/schedule/ConflictAlerts';
 import { TrinityInsightsPanel } from '@/components/schedule/TrinityInsightsPanel';
 import { AskTrinityButton } from '@/components/trinity-button';
+import { TrinityLoadingSpinner } from '@/components/trinity-loading-overlay';
 import type { Shift, Employee, Client } from '@shared/schema';
 
 export default function ScheduleMobileFirst() {
@@ -594,9 +595,11 @@ export default function ScheduleMobileFirst() {
       <ScrollArea className="flex-1">
         <div className="px-3 py-3 space-y-3 pb-28">
           {shiftsLoading || (viewMode === 'my' && !currentEmployee?.id) ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-3" />
-              <div>{shiftsLoading ? 'Loading shifts...' : 'Loading your schedule...'}</div>
+            <div className="text-center py-8 text-muted-foreground">
+              <TrinityLoadingSpinner size={48} className="mx-auto mb-3" />
+              <div className="text-sm font-medium bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 bg-clip-text text-transparent">
+                {shiftsLoading ? 'Loading shifts...' : 'Loading your schedule...'}
+              </div>
             </div>
           ) : viewMode === 'my' && dayShifts.length === 0 ? (
             <Card className="p-6">
@@ -705,42 +708,38 @@ export default function ScheduleMobileFirst() {
         </div>
       </ScrollArea>
 
-      {/* FABs */}
+      {/* FABs - Compact, positioned above bottom nav (56px + safe margin), 44px min touch target */}
       {canEdit && (
-        <>
+        <div className="fixed bottom-20 right-3 z-40 flex flex-col gap-2">
           {/* AI Schedule Generation FAB */}
-          <div className="fixed bottom-24 right-4 z-40">
-            <Button
-              size="icon"
-              className="h-14 w-14 rounded-full shadow-lg bg-gradient-to-br from-purple-600 to-blue-600"
-              onClick={() => {
-                toast({
-                  title: "AI Generation",
-                  description: "AI schedule generation will be integrated here",
-                });
-              }}
-              data-testid="fab-ai-generate"
-            >
-              <Sparkles className="h-6 w-6" />
-            </Button>
-          </div>
+          <Button
+            size="icon"
+            className="h-11 w-11 rounded-full shadow-md bg-gradient-to-br from-purple-600 to-blue-600"
+            onClick={() => {
+              toast({
+                title: "AI Generation",
+                description: "AI schedule generation will be integrated here",
+              });
+            }}
+            data-testid="fab-ai-generate"
+          >
+            <Sparkles className="h-5 w-5" />
+          </Button>
 
           {/* Add Shift FAB */}
-          <div className="fixed bottom-8 right-4 z-40">
-            <Button
-              size="icon"
-              className="h-14 w-14 rounded-full shadow-lg"
-              onClick={() => {
-                setSelectedEmployee(undefined);
-                setEditingShift(undefined);
-                setSheetOpen(true);
-              }}
-              data-testid="fab-add-shift"
-            >
-              <Plus className="h-6 w-6" />
-            </Button>
-          </div>
-        </>
+          <Button
+            size="icon"
+            className="h-11 w-11 rounded-full shadow-md"
+            onClick={() => {
+              setSelectedEmployee(undefined);
+              setEditingShift(undefined);
+              setSheetOpen(true);
+            }}
+            data-testid="fab-add-shift"
+          >
+            <Plus className="h-5 w-5" />
+          </Button>
+        </div>
       )}
 
       {/* Shift Detail Sheet - Tap to view - keyed by shift ID for fresh render */}
