@@ -26,70 +26,57 @@ function TrinityIcon({ size = 16, className }: { size?: number; className?: stri
       className={cn("flex-shrink-0", className)}
     >
       <defs>
-        <radialGradient id="trinityCore" cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#FFFFE0" />
-          <stop offset="50%" stopColor="#00BFFF" />
-          <stop offset="100%" stopColor="#006699" />
+        <linearGradient id="trinityTealGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#2dd4bf" />
+          <stop offset="100%" stopColor="#14b8a6" />
+        </linearGradient>
+        <linearGradient id="trinityCyanGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%" stopColor="#06b6d4" />
+          <stop offset="100%" stopColor="#22d3ee" />
+        </linearGradient>
+        <linearGradient id="trinityBlueGrad" x1="100%" y1="0%" x2="0%" y2="100%">
+          <stop offset="0%" stopColor="#3b82f6" />
+          <stop offset="100%" stopColor="#0ea5e9" />
+        </linearGradient>
+        <radialGradient id="trinityCoreGrad" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="60%" stopColor="#22d3ee" stopOpacity="0.9" />
+          <stop offset="100%" stopColor="#2dd4bf" stopOpacity="0.5" />
         </radialGradient>
-        <linearGradient id="ribbonGold" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#FFD700" />
-          <stop offset="100%" stopColor="#FFA500" />
-        </linearGradient>
-        <linearGradient id="ribbonTeal" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#00BFFF" />
-          <stop offset="100%" stopColor="#008B8B" />
-        </linearGradient>
-        <filter id="glow">
-          <feGaussianBlur stdDeviation="1.5" result="coloredBlur"/>
+        <filter id="trinityGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="1.5" result="blur"/>
           <feMerge>
-            <feMergeNode in="coloredBlur"/>
+            <feMergeNode in="blur"/>
             <feMergeNode in="SourceGraphic"/>
           </feMerge>
         </filter>
       </defs>
       
-      {/* Interwoven ribbon knot - 5 curved ribbon petals */}
-      {[0, 72, 144, 216, 288].map((angle, i) => (
-        <g key={i} transform={`rotate(${angle} 50 50)`}>
-          {/* Ribbon petal with curved path for knot effect */}
-          <path
-            d="M50,50 Q42,30 50,15 Q58,30 50,50"
-            fill="none"
-            stroke={`url(#ribbon${i % 2 === 0 ? 'Gold' : 'Teal'})`}
-            strokeWidth="6"
-            strokeLinecap="round"
-            filter="url(#glow)"
-            opacity="0.95"
-          />
-          {/* Outer ribbon arc for interwoven effect */}
-          <path
-            d="M45,45 Q35,25 50,12 Q65,25 55,45"
-            fill="none"
-            stroke={`url(#ribbon${i % 2 === 0 ? 'Teal' : 'Gold'})`}
-            strokeWidth="3"
-            strokeLinecap="round"
-            opacity="0.7"
-          />
-        </g>
-      ))}
-      
-      {/* Central knot core */}
-      <circle 
-        cx="50" 
-        cy="50" 
-        r="10" 
-        fill="url(#trinityCore)" 
-        filter="url(#glow)"
+      {/* Trinity Triquetra - 3 interlocking loops */}
+      {/* Loop 1 - Top (Teal) */}
+      <path 
+        d="M 50 12 C 70 12, 82 30, 82 48 C 82 58, 72 70, 50 50 C 28 70, 18 58, 18 48 C 18 30, 30 12, 50 12 Z"
+        fill="url(#trinityTealGrad)"
+        filter="url(#trinityGlow)"
       />
       
-      {/* Inner glow */}
-      <circle 
-        cx="50" 
-        cy="50" 
-        r="5" 
-        fill="#FFFFE0" 
-        opacity="0.9"
+      {/* Loop 2 - Bottom Left (Cyan) */}
+      <path 
+        d="M 22 80 C 10 68, 10 48, 22 36 C 32 26, 48 32, 50 50 C 42 64, 30 76, 22 80 C 32 92, 48 90, 50 78 Z"
+        fill="url(#trinityCyanGrad)"
+        filter="url(#trinityGlow)"
       />
+      
+      {/* Loop 3 - Bottom Right (Blue) */}
+      <path 
+        d="M 78 80 C 90 68, 90 48, 78 36 C 68 26, 52 32, 50 50 C 58 64, 70 76, 78 80 C 68 92, 52 90, 50 78 Z"
+        fill="url(#trinityBlueGrad)"
+        filter="url(#trinityGlow)"
+      />
+      
+      {/* Central core */}
+      <circle cx="50" cy="50" r="10" fill="url(#trinityCoreGrad)" filter="url(#trinityGlow)" />
+      <circle cx="50" cy="50" r="5" fill="#ffffff" opacity="0.95"/>
     </svg>
   );
 }

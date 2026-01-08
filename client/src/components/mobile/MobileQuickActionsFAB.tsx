@@ -82,9 +82,7 @@ export function MobileQuickActionsFAB() {
 
   const clockMutation = useMutation({
     mutationFn: async (action: 'in' | 'out') => {
-      return apiRequest(`/api/time-tracking/clock-${action}`, {
-        method: 'POST',
-      });
+      return apiRequest('POST', `/api/time-tracking/clock-${action}`);
     },
     onSuccess: (_, action) => {
       queryClient.invalidateQueries({ queryKey: ['/api/time-tracking/clock-status'] });

@@ -55,10 +55,17 @@ import { CoAIleagueLogo } from "@/components/coaileague-logo";
 // Lazy-loaded seasonal effects (heavy component)
 const SeasonalEffectsLayer = lazy(() => import("@/components/effects/SeasonalEffectsLayer"));
 
-// Page loading fallback
+// Page loading fallback - Trinity branded
+const TrinityLoadingSpinner = lazy(() => import("@/components/trinity-loading-overlay").then(m => ({ default: m.TrinityLoadingSpinner })));
+
 const PageLoader = () => (
-  <div className="flex items-center justify-center h-full min-h-[200px]">
-    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-2">
+    <Suspense fallback={<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />}>
+      <TrinityLoadingSpinner size={40} />
+    </Suspense>
+    <span className="text-xs font-medium bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 bg-clip-text text-transparent">
+      Loading...
+    </span>
   </div>
 );
 
