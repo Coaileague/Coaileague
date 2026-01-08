@@ -18,7 +18,7 @@ import {
   DrawerTitle,
   DrawerDescription,
 } from '@/components/ui/drawer';
-import { ModalGuard, useModalGuard, MobileSheetHandle } from '@/components/ui/modal-guard';
+import { ModalGuard, ModalGuardContent, useModalGuard, MobileSheetHandle } from '@/components/ui/modal-guard';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import {
   Form,
