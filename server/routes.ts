@@ -29156,8 +29156,31 @@ Respond with valid JSON array only.`
         return res.status(401).json({ message: 'Unauthorized' });
       }
       
-      // Verify room exists
-      const room = await storage.getOrganizationChatRoom(roomId);
+      // Verify room exists - check both organization chat rooms and support rooms
+      let room: any = await storage.getOrganizationChatRoom(roomId);
+      let isSupportRoom = false;
+      
+      if (!room) {
+        // Check support rooms (includes platform-wide HelpDesk)
+        const [supportRoom] = await db
+          .select()
+          .from(supportRooms)
+          .where(eq(supportRooms.id, roomId))
+          .limit(1);
+        
+        if (supportRoom) {
+          room = {
+            id: supportRoom.id,
+            roomName: supportRoom.name,
+            slug: supportRoom.slug,
+            workspaceId: supportRoom.workspaceId,
+            status: supportRoom.status,
+            conversationId: supportRoom.conversationId,
+          };
+          isSupportRoom = true;
+        }
+      }
+      
       if (!room) {
         return res.status(404).json({ message: "Room not found" });
       }
@@ -29168,8 +29191,11 @@ Respond with valid JSON array only.`
       const platformRole = (req.user as any)?.platformRole;
       const isSupportStaff = userRole === 'platform_admin' || userRole === 'support_staff' || platformRole === 'root_admin' || platformRole === 'platform_admin' || platformRole === 'support_staff';
       
-      if (!isSupportStaff && room.workspaceId !== workspaceId) {
-        return res.status(403).json({ message: "Access denied" });
+      // Platform-wide support rooms (workspaceId === null) are accessible to everyone
+      if (!isSupportRoom || room.workspaceId !== null) {
+        if (!isSupportStaff && room.workspaceId !== workspaceId) {
+          return res.status(403).json({ message: "Access denied" });
+        }
       }
       
       // Room join is handled by WebSocket connection
@@ -29178,14 +29204,13 @@ Respond with valid JSON array only.`
         success: true,
         message: "You can now connect to this room via WebSocket",
         roomId: room.id,
-        conversationId: room.id,
+        conversationId: room.conversationId || room.id,
       });
     } catch (error: any) {
       console.error("Error joining room:", error);
       res.status(500).json({ message: "Failed to join room" });
     }
   });
-  
   // POST /api/comm-os/rooms/:id/leave - Leave a chat room
   app.post('/api/comm-os/rooms/:id/leave', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
