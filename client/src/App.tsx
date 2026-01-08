@@ -152,6 +152,10 @@ import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import Expenses from "@/pages/expenses";
 import ExpenseApprovals from "@/pages/expense-approvals";
+import SalesCRM from "@/pages/sales-crm";
+import DocumentLibrary from "@/pages/document-library";
+import FlexStaffing from "@/pages/flex-staffing";
+import ExternalEmail from "@/pages/external-email";
 import I9Compliance from "@/pages/i9-compliance";
 import ComplianceReports from "@/pages/compliance-reports";
 import Policies from "@/pages/policies";
@@ -1012,6 +1016,10 @@ function AppContent() {
               <Route path="/daily-schedule"><Redirect to="/schedule" /></Route>
               <Route path="/workflow-approvals" component={WorkflowApprovals} />
               <Route path="/sales" component={WorkspaceSales} />
+              <Route path="/sales-crm" component={SalesCRM} />
+              <Route path="/document-library" component={DocumentLibrary} />
+              <Route path="/flex-staffing" component={FlexStaffing} />
+              <Route path="/external-email" component={ExternalEmail} />
               <Route path="/time-tracking" component={TimeTracking} />
               <Route path="/employees" component={Employees} />
               <Route path="/quickbooks-import" component={QuickBooksImport} />
