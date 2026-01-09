@@ -53,7 +53,7 @@ import {
   Mic,
   Command,
 } from 'lucide-react';
-import { TrinityAnimatedLogo } from '@/components/ui/trinity-animated-logo';
+import { TrinityRedesign } from '@/components/trinity-redesign';
 import { TrinityAgentPanel } from '@/components/trinity';
 import { useTrinityState } from '@/hooks/use-trinity-state';
 
@@ -236,10 +236,9 @@ function ConfidenceIndicator({ level }: { level: ConfidenceLevel }) {
   );
 }
 
-// Thinking visualization component with animated Trinity logo
+// Thinking visualization component with animated Trinity mascot
 function ThinkingVisualization({ steps, mode }: { steps: ThinkingStep[]; mode: ConversationMode }) {
-  // Map conversation mode to TrinityAnimatedLogo mode
-  const logoMode = mode === 'business' ? 'business' : mode === 'personal' ? 'personal' : 'integrated';
+  // Using TrinityRedesign with THINKING mode for active processing visualization
   
   // Get current active step for the substage display
   const currentStep = steps.find(s => s.status === 'processing') || steps[steps.length - 1];
@@ -254,8 +253,8 @@ function ThinkingVisualization({ steps, mode }: { steps: ThinkingStep[]; mode: C
     >
       {/* Animated Trinity Avatar */}
       <div className="shrink-0">
-        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-2 ring-primary/20">
-          <TrinityAnimatedLogo size="sm" state="thinking" mode={logoMode} />
+        <div className="w-10 h-10 flex items-center justify-center overflow-visible">
+          <TrinityRedesign size={36} mini mode="THINKING" />
         </div>
       </div>
       
@@ -726,8 +725,8 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-4 pb-2 shrink-0">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-background border flex items-center justify-center overflow-visible">
-                  <TrinityAnimatedLogo size="sm" state="idle" />
+                <div className="w-10 h-10 flex items-center justify-center overflow-visible">
+                  <TrinityRedesign size={36} mini mode={chatMutation.isPending ? "THINKING" : "IDLE"} />
                 </div>
                 <div>
                   <h1 className="font-semibold text-sm">Trinity 2.0</h1>
@@ -790,11 +789,11 @@ function TrinityModal({ onClose }: TrinityModalProps) {
               <ScrollArea className="flex-1 px-4" ref={scrollRef}>
                 {messages.length === 0 && !isThinking && (
                   <div className="flex flex-col items-center justify-center h-full text-center py-8">
-                    <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${modeConfig.colors.gradient}/20 flex items-center justify-center mb-4 ring-2 ring-primary/10`}>
-                      <TrinityAnimatedLogo 
-                        size="lg" 
-                        state="idle" 
-                        mode={mode === 'business' ? 'business' : mode === 'personal' ? 'personal' : 'integrated'} 
+                    <div className="w-20 h-20 flex items-center justify-center mb-4 overflow-visible">
+                      <TrinityRedesign 
+                        size={72} 
+                        mini
+                        mode="IDLE"
                       />
                     </div>
                     <h3 className="font-semibold text-lg mb-2">Ask Trinity Anything</h3>
@@ -814,12 +813,11 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                       {/* Trinity Avatar for assistant messages */}
                       {msg.role === 'assistant' && (
                         <div className="shrink-0">
-                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-1 ring-primary/20">
-                            <TrinityAnimatedLogo 
-                              size="sm" 
-                              state="responding" 
-                              mode={mode === 'business' ? 'business' : mode === 'personal' ? 'personal' : 'integrated'} 
-                              className="scale-75"
+                          <div className="w-8 h-8 flex items-center justify-center overflow-visible">
+                            <TrinityRedesign 
+                              size={28} 
+                              mini
+                              mode="IDLE"
                             />
                           </div>
                         </div>
@@ -914,8 +912,8 @@ function TrinityModal({ onClose }: TrinityModalProps) {
         onClick={() => setIsMinimized(false)}
         data-testid="trinity-modal-minimized"
       >
-        <div className="w-14 h-14 rounded-full bg-background border flex items-center justify-center shadow-lg overflow-visible">
-          <TrinityAnimatedLogo size="sm" state="idle" />
+        <div className="w-14 h-14 flex items-center justify-center overflow-visible">
+          <TrinityRedesign size={48} mini mode="IDLE" />
           {messages.length > 0 && (
             <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground rounded-full text-xs flex items-center justify-center">
               {messages.length}
@@ -942,8 +940,8 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             onMouseDown={handleMouseDown}
           >
             <GripHorizontal className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div className="w-10 h-10 rounded-full bg-background border flex items-center justify-center shrink-0 overflow-visible">
-              <TrinityAnimatedLogo size="sm" state={chatMutation.isPending ? "thinking" : "idle"} />
+            <div className="w-10 h-10 flex items-center justify-center shrink-0 overflow-visible">
+              <TrinityRedesign size={36} mini mode={chatMutation.isPending ? "THINKING" : "IDLE"} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -1011,11 +1009,11 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             <ScrollArea className="h-[300px] px-4 pt-3" ref={scrollRef}>
               {messages.length === 0 && !isThinking && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${modeConfig.colors.gradient}/20 flex items-center justify-center mb-3 ring-2 ring-primary/10`}>
-                    <TrinityAnimatedLogo 
-                      size="md" 
-                      state="idle" 
-                      mode={mode === 'business' ? 'business' : mode === 'personal' ? 'personal' : 'integrated'} 
+                  <div className="w-14 h-14 flex items-center justify-center mb-3 overflow-visible">
+                    <TrinityRedesign 
+                      size={48} 
+                      mini
+                      mode="IDLE"
                     />
                   </div>
                   <h3 className="font-semibold mb-1">Ask Trinity Anything</h3>
@@ -1033,12 +1031,11 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                     {/* Trinity Avatar for assistant messages */}
                     {msg.role === 'assistant' && (
                       <div className="shrink-0">
-                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-1 ring-primary/20">
-                          <TrinityAnimatedLogo 
-                            size="sm" 
-                            state="responding" 
-                            mode={mode === 'business' ? 'business' : mode === 'personal' ? 'personal' : 'integrated'} 
-                            className="scale-[0.65]"
+                        <div className="w-7 h-7 flex items-center justify-center overflow-visible">
+                          <TrinityRedesign 
+                            size={24} 
+                            mini
+                            mode="IDLE"
                           />
                         </div>
                       </div>
