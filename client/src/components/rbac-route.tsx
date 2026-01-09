@@ -221,7 +221,11 @@ export function RBACRoute({
       if (typeof window !== 'undefined') {
         window.location.href = navConfig.auth.login;
       }
-      return null;
+      return (
+        <div className="h-screen flex items-center justify-center bg-background">
+          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" aria-label="Redirecting" />
+        </div>
+      );
     }
     
     if (!showDeniedCard) {

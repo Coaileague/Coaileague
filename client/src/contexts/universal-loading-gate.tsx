@@ -19,13 +19,18 @@ const UniversalLoadingGateContext = createContext<UniversalLoadingGateContextVal
 
 const PUBLIC_ROUTES = new Set([
   "/",
+  "/homepage",
   "/login",
   "/register",
+  "/forgot-password",
+  "/reset-password",
   "/pricing",
+  "/trinity-features",
   "/contact",
   "/support",
   "/terms",
   "/privacy",
+  "/helpdesk",
   "/chat",
   "/mobile-chat",
   "/live-chat",
