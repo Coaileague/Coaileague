@@ -32,6 +32,7 @@ import { PaymentEnforcementProvider } from "@/hooks/use-payment-enforcement";
 import { ProtectedRoute } from "@/components/protected-route";
 import { LeaderRoute } from "@/components/leader-route";
 import { OwnerRoute } from "@/components/owner-route";
+import { RBACRoute } from "@/components/rbac-route";
 import { PlatformAdminRoute } from "@/components/platform-admin-route";
 import { DemoBanner } from "@/components/demo-banner";
 import { AISystemStatusBanner } from "@/components/ai-system-status-banner";
@@ -966,7 +967,7 @@ function AppContent() {
         <Route path="/helpdesk" component={HelpDesk} /> {/* Universal responsive helpdesk (works on desktop + mobile) */}
         <Route path="/chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
         <Route path="/mobile-chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
-        <Route path="/trinity" component={TrinityChat} /> {/* Trinity Chat Interface with BUDDY metacognition */}
+        {/* Trinity Chat moved to authenticated routes - requires org_owner, co_owner, manager, or platform staff */}
         <Route path="/live-chat"><Redirect to="/helpdesk" /></Route>
         
         <Route path="/helpdesk5"><Redirect to="/helpdesk" /></Route>
@@ -1075,7 +1076,11 @@ function AppContent() {
               <Route path="/workspace-onboarding" component={WorkspaceOnboarding} />
               <Route path="/trinity/command-center" component={TrinityCommandCenter} />
               <Route path="/trinity/self-edit" component={TrinitySelfEditGovernancePage} />
-              <Route path="/trinity" component={TrinityChat} /> {/* Trinity Chat Interface with BUDDY metacognition */}
+              <Route path="/trinity">
+                <RBACRoute require={["owner", "leader"]}>
+                  <TrinityChat />
+                </RBACRoute>
+              </Route>
               <Route path="/billing" component={Billing} />
               <Route path="/usage" component={UsageDashboard} />
               <Route path="/owner-analytics">
@@ -1411,7 +1416,11 @@ function AppContent() {
                 <Route path="/workspace-onboarding" component={WorkspaceOnboarding} />
                 <Route path="/trinity/command-center" component={TrinityCommandCenter} />
               <Route path="/trinity/self-edit" component={TrinitySelfEditGovernancePage} />
-                <Route path="/trinity" component={TrinityChat} /> {/* Trinity Chat Interface with BUDDY metacognition */}
+                <Route path="/trinity">
+                  <RBACRoute require={["owner", "leader"]}>
+                    <TrinityChat />
+                  </RBACRoute>
+                </Route>
                 <Route path="/ai/brain" component={AIBrainDashboard} />
                 <Route path="/ai/orchestration" component={OrchestrationDashboard} />
                 <Route path="/ai/workboard" component={WorkboardDashboard} />

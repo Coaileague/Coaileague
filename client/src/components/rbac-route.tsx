@@ -12,6 +12,7 @@
  */
 
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -188,9 +189,12 @@ export function RBACRoute({
   showDeniedCard = true,
   loadingComponent
 }: RBACRouteProps) {
-  const { user, isAuthenticated, isLoading } = useAuth();
+  const { user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { workspaceRole, platformRole, isLoading: workspaceLoading } = useWorkspaceAccess();
   const { isLoadingBlocked } = useUniversalLoadingGate();
   const [, navigate] = useLocation();
+  
+  const isLoading = authLoading || workspaceLoading;
   
   if (isLoading && !isLoadingBlocked) {
     if (loadingComponent) {
@@ -203,7 +207,14 @@ export function RBACRoute({
     );
   }
   
-  const result = checkAccess(require, user, isAuthenticated);
+  // Merge workspace access roles with user object for role checking
+  const userWithRoles = {
+    ...user,
+    workspaceRole: workspaceRole || (user as any)?.workspaceRole,
+    platformRole: platformRole || (user as any)?.platformRole,
+  };
+  
+  const result = checkAccess(require, userWithRoles, isAuthenticated);
   
   if (!result.hasAccess) {
     if (!isAuthenticated && !isLoadingBlocked) {

@@ -24,7 +24,7 @@ export function FloatingTrinityButton() {
   const dragStart = useRef({ x: 0, y: 0 });
   const hasMoved = useRef(false);
 
-  const { workspaceRole, isPlatformStaff, isLoading } = useWorkspaceAccess();
+  const { workspaceRole, platformRole, isLoading } = useWorkspaceAccess();
 
   useEffect(() => {
     const savedPosition = localStorage.getItem('trinity-button-position');
@@ -128,7 +128,7 @@ export function FloatingTrinityButton() {
 
   if (isLoading) return null;
 
-  const platformRole = isPlatformStaff ? 'root_admin' : undefined;
+  // Pass actual roles for accurate access check
   if (!isTrinityAccessAllowed(workspaceRole, platformRole)) {
     return null;
   }

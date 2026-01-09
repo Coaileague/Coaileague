@@ -116,8 +116,10 @@ export const TRINITY_API_ENDPOINTS = {
 };
 
 export const TRINITY_ALLOWED_ROLES = {
-  orgRoles: ['org_owner', 'co_owner', 'manager'] as const,
-  platformRoles: ['root_admin', 'co_admin', 'sysops'] as const,
+  // Match actual workspace roles from useWorkspaceAccess
+  orgRoles: ['org_owner', 'co_owner', 'org_admin', 'manager', 'department_manager'] as const,
+  // Match ALL platform staff roles from useWorkspaceAccess
+  platformRoles: ['root_admin', 'co_admin', 'deputy_admin', 'sysops', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'] as const,
 };
 
 export const TRINITY_FEATURE_FLAGS = {
