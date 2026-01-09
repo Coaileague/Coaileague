@@ -54,6 +54,7 @@ import {
   Command,
 } from 'lucide-react';
 import { TrinityIconStatic } from '@/components/trinity-button';
+import { TrinityAnimatedLogo } from '@/components/ui/trinity-animated-logo';
 
 // Mobile UI Modes
 type MobileMode = 'peek' | 'split' | 'immersive';
@@ -234,42 +235,95 @@ function ConfidenceIndicator({ level }: { level: ConfidenceLevel }) {
   );
 }
 
-// Thinking visualization component
-function ThinkingVisualization({ steps }: { steps: ThinkingStep[] }) {
+// Thinking visualization component with animated Trinity logo
+function ThinkingVisualization({ steps, mode }: { steps: ThinkingStep[]; mode: ConversationMode }) {
+  // Map conversation mode to TrinityAnimatedLogo mode
+  const logoMode = mode === 'business' ? 'business' : mode === 'personal' ? 'personal' : 'integrated';
+  
+  // Get current active step for the substage display
+  const currentStep = steps.find(s => s.status === 'processing') || steps[steps.length - 1];
+  const completedCount = steps.filter(s => s.status === 'complete').length;
+  const progress = (completedCount / steps.length) * 100;
+  
   return (
-    <div className="bg-muted/50 rounded-lg p-3 space-y-2">
-      <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground">
-        <Brain className="h-4 w-4 animate-pulse" />
-        <span>Trinity is thinking...</span>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="flex gap-3"
+    >
+      {/* Animated Trinity Avatar */}
+      <div className="shrink-0">
+        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-2 ring-primary/20">
+          <TrinityAnimatedLogo size="sm" state="thinking" mode={logoMode} />
+        </div>
       </div>
-      <div className="space-y-1.5 pl-6">
-        {steps.map((step, idx) => (
-          <motion.div
-            key={step.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: idx * 0.1 }}
-            className="flex items-center gap-2 text-sm"
-          >
-            {step.status === 'complete' && (
-              <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
-            )}
-            {step.status === 'processing' && (
-              <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
-            )}
-            {step.status === 'pending' && (
-              <div className="h-3.5 w-3.5 rounded-full border border-muted-foreground/30" />
-            )}
-            <span className={step.status === 'complete' ? 'text-muted-foreground' : ''}>
-              {step.label}
+      
+      {/* Thinking Content */}
+      <div className="flex-1 space-y-2">
+        {/* Header with animated text */}
+        <div className="bg-muted rounded-2xl rounded-tl-sm px-4 py-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-medium">Trinity</span>
+            <span className="inline-flex items-center gap-1 text-xs text-primary animate-pulse">
+              <Brain className="h-3 w-3" />
+              <span className="thinking-dots">Thinking</span>
             </span>
-            {step.detail && (
-              <span className="text-xs text-muted-foreground">({step.detail})</span>
-            )}
-          </motion.div>
-        ))}
+          </div>
+          
+          {/* Current substage */}
+          {currentStep && (
+            <motion.p
+              key={currentStep.id}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-sm text-muted-foreground"
+            >
+              {currentStep.label}...
+            </motion.p>
+          )}
+          
+          {/* Progress bar */}
+          <div className="h-1 bg-muted-foreground/10 rounded-full overflow-hidden">
+            <motion.div
+              className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full"
+              initial={{ width: 0 }}
+              animate={{ width: `${progress}%` }}
+              transition={{ duration: 0.3 }}
+            />
+          </div>
+        </div>
+        
+        {/* Step indicators */}
+        <div className="flex items-center gap-3 px-1">
+          {steps.map((step, idx) => (
+            <motion.div
+              key={step.id}
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: idx * 0.1 }}
+              className="flex items-center gap-1.5"
+            >
+              {step.status === 'complete' && (
+                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+              )}
+              {step.status === 'processing' && (
+                <Loader2 className="h-3.5 w-3.5 text-primary animate-spin" />
+              )}
+              {step.status === 'pending' && (
+                <div className="h-3.5 w-3.5 rounded-full border-2 border-muted-foreground/20" />
+              )}
+              <span className={`text-xs ${
+                step.status === 'complete' ? 'text-emerald-600 dark:text-emerald-400' :
+                step.status === 'processing' ? 'text-foreground font-medium' :
+                'text-muted-foreground'
+              }`}>
+                {step.label.split(' ')[0]}
+              </span>
+            </motion.div>
+          ))}
+        </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 
@@ -712,8 +766,12 @@ function TrinityModal({ onClose }: TrinityModalProps) {
               <ScrollArea className="flex-1 px-4" ref={scrollRef}>
                 {messages.length === 0 && !isThinking && (
                   <div className="flex flex-col items-center justify-center h-full text-center py-8">
-                    <div className={`w-16 h-16 rounded-full bg-gradient-to-br ${modeConfig.colors.gradient}/20 flex items-center justify-center mb-4`}>
-                      <Sparkles className={`h-8 w-8 ${modeConfig.colors.text}`} />
+                    <div className={`w-20 h-20 rounded-full bg-gradient-to-br ${modeConfig.colors.gradient}/20 flex items-center justify-center mb-4 ring-2 ring-primary/10`}>
+                      <TrinityAnimatedLogo 
+                        size="lg" 
+                        state="idle" 
+                        mode={mode === 'business' ? 'business' : mode === 'personal' ? 'personal' : 'integrated'} 
+                      />
                     </div>
                     <h3 className="font-semibold text-lg mb-2">Ask Trinity Anything</h3>
                     <p className="text-sm text-muted-foreground max-w-xs">
@@ -727,14 +785,27 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                   {messages.map((msg) => (
                     <div
                       key={msg.id}
-                      className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                      className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
-                      <div className="max-w-[85%] space-y-1">
+                      {/* Trinity Avatar for assistant messages */}
+                      {msg.role === 'assistant' && (
+                        <div className="shrink-0">
+                          <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-1 ring-primary/20">
+                            <TrinityAnimatedLogo 
+                              size="sm" 
+                              state="responding" 
+                              mode={mode === 'business' ? 'business' : mode === 'personal' ? 'personal' : 'integrated'} 
+                              className="scale-75"
+                            />
+                          </div>
+                        </div>
+                      )}
+                      <div className={`max-w-[80%] space-y-1 ${msg.role === 'user' ? '' : ''}`}>
                         <div
-                          className={`rounded-2xl px-4 py-2 ${
+                          className={`rounded-2xl px-4 py-2.5 ${
                             msg.role === 'user'
-                              ? `bg-gradient-to-r ${modeConfig.colors.gradient} text-white`
-                              : 'bg-muted'
+                              ? `bg-gradient-to-r ${modeConfig.colors.gradient} text-white rounded-br-sm`
+                              : 'bg-muted rounded-tl-sm'
                           }`}
                         >
                           <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
@@ -745,7 +816,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                       </div>
                     </div>
                   ))}
-                  {isThinking && <ThinkingVisualization steps={thinkingSteps} />}
+                  {isThinking && <ThinkingVisualization steps={thinkingSteps} mode={mode} />}
                 </div>
               </ScrollArea>
             )}
@@ -897,8 +968,12 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             <ScrollArea className="h-[300px] px-4 pt-3" ref={scrollRef}>
               {messages.length === 0 && !isThinking && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
-                  <div className={`w-12 h-12 rounded-full bg-gradient-to-br ${modeConfig.colors.gradient}/20 flex items-center justify-center mb-3`}>
-                    <Sparkles className={`h-6 w-6 ${modeConfig.colors.text}`} />
+                  <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${modeConfig.colors.gradient}/20 flex items-center justify-center mb-3 ring-2 ring-primary/10`}>
+                    <TrinityAnimatedLogo 
+                      size="md" 
+                      state="idle" 
+                      mode={mode === 'business' ? 'business' : mode === 'personal' ? 'personal' : 'integrated'} 
+                    />
                   </div>
                   <h3 className="font-semibold mb-1">Ask Trinity Anything</h3>
                   <p className="text-xs text-muted-foreground">
@@ -910,14 +985,27 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                 {messages.map((msg) => (
                   <div
                     key={msg.id}
-                    className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                    className={`flex gap-2.5 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
-                    <div className="max-w-[85%] space-y-1">
+                    {/* Trinity Avatar for assistant messages */}
+                    {msg.role === 'assistant' && (
+                      <div className="shrink-0">
+                        <div className="w-7 h-7 rounded-full bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center ring-1 ring-primary/20">
+                          <TrinityAnimatedLogo 
+                            size="sm" 
+                            state="responding" 
+                            mode={mode === 'business' ? 'business' : mode === 'personal' ? 'personal' : 'integrated'} 
+                            className="scale-[0.65]"
+                          />
+                        </div>
+                      </div>
+                    )}
+                    <div className="max-w-[80%] space-y-1">
                       <div
                         className={`rounded-xl px-3 py-2 ${
                           msg.role === 'user'
-                            ? `bg-gradient-to-r ${modeConfig.colors.gradient} text-white`
-                            : 'bg-muted'
+                            ? `bg-gradient-to-r ${modeConfig.colors.gradient} text-white rounded-br-sm`
+                            : 'bg-muted rounded-tl-sm'
                         }`}
                       >
                         <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
@@ -928,7 +1016,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                     </div>
                   </div>
                 ))}
-                {isThinking && <ThinkingVisualization steps={thinkingSteps} />}
+                {isThinking && <ThinkingVisualization steps={thinkingSteps} mode={mode} />}
               </div>
             </ScrollArea>
 

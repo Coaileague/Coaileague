@@ -692,6 +692,49 @@ html, body {
   will-change: transform, opacity;
 }
 
+/* Thinking dots animation - three dots that fade in sequence */
+@keyframes dotFade1 {
+  0%, 20%, 100% { opacity: 0.2; }
+  40% { opacity: 1; }
+}
+@keyframes dotFade2 {
+  0%, 40%, 100% { opacity: 0.2; }
+  60% { opacity: 1; }
+}
+@keyframes dotFade3 {
+  0%, 60%, 100% { opacity: 0.2; }
+  80% { opacity: 1; }
+}
+
+.thinking-dots {
+  display: inline-flex;
+  gap: 2px;
+  align-items: center;
+}
+.thinking-dots::after {
+  content: '...';
+  display: inline-block;
+  letter-spacing: 1px;
+  background: linear-gradient(90deg, 
+    hsl(var(--primary)) 0%, 
+    hsl(var(--primary)) 33%, 
+    hsl(var(--primary) / 0.3) 33%, 
+    hsl(var(--primary) / 0.3) 66%,
+    hsl(var(--primary) / 0.3) 66%,
+    hsl(var(--primary) / 0.3) 100%
+  );
+  background-size: 300% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: dotSlide 1.5s ease-in-out infinite;
+}
+@keyframes dotSlide {
+  0%, 100% { background-position: 200% 0; }
+  33% { background-position: 100% 0; }
+  66% { background-position: 0% 0; }
+}
+
 /* ============================================================================
    ANIMATED WORD LOGO - Google Doodle-style seasonal animations
    ============================================================================ */
