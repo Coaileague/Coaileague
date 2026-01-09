@@ -361,7 +361,7 @@ export default function Chatrooms() {
       setLocation('/helpdesk');
     } else {
       // Navigate to individual chat room by ID
-      setLocation(`/chat/${roomId}`);
+      setLocation(`/helpdesk/${roomId}`);
     }
   };
 

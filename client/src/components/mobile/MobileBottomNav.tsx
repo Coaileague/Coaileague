@@ -130,7 +130,7 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
     { icon: Home, label: "Home", href: "/dashboard" },
     { icon: Clock, label: "Clock", href: "/time-tracking" },
     { icon: Calendar, label: "Schedule", href: "/schedule" },
-    { icon: MessageSquare, label: "Chat", href: "/chat" },
+    { icon: MessageSquare, label: "Rooms", href: "/chatrooms" },
   ];
   
   // Items moved to More menu

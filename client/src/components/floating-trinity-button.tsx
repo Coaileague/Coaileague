@@ -152,7 +152,7 @@ export function FloatingTrinityButton() {
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       data-testid="button-floating-trinity"
-      className={`fixed bottom-6 right-6 z-40 group relative ${isDragging ? 'cursor-grabbing' : 'cursor-pointer md:cursor-pointer touch-none'}`}
+      className={`fixed bottom-36 md:bottom-6 right-6 z-40 group relative ${isDragging ? 'cursor-grabbing' : 'cursor-pointer md:cursor-pointer touch-none'}`}
       style={getPositionStyle()}
       aria-label="Open Trinity Chat - Drag to move on mobile"
     >

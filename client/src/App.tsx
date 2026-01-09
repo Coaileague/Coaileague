@@ -391,7 +391,7 @@ function MascotRenderer() {
   // PUBLIC ROUTES for showcase mode detection
   const PUBLIC_ROUTES = useMemo(() => new Set([
     "/", "/login", "/register", "/pricing", "/contact", "/support",
-    "/terms", "/privacy", "/chat", "/mobile-chat", "/live-chat",
+    "/terms", "/privacy", "/helpdesk", "/chat", "/mobile-chat", "/live-chat",
     "/helpdesk5", "/support/chat", "/trinity-features"
   ]), []);
   
@@ -906,7 +906,7 @@ function AppContent() {
   // Check if on mobile chat, HelpDesk, or desktop live-chat - use window.location instead of useLocation() hook
   // to avoid React Hooks issues with conditional rendering
   const isMobileChat = window.location.pathname === '/mobile-chat';
-  const isHelpDesk = window.location.pathname === '/chat' || window.location.pathname.startsWith('/chat');
+  const isHelpDesk = window.location.pathname === '/helpdesk' || window.location.pathname.startsWith('/helpdesk');
   
   // CRITICAL: Public routes that should render IMMEDIATELY without waiting for auth loading
   const PUBLIC_ROUTES = new Set([
@@ -921,6 +921,7 @@ function AppContent() {
     "/support",
     "/terms",
     "/privacy",
+    "/helpdesk",
     "/chat",
     "/mobile-chat",
     "/live-chat",
@@ -959,14 +960,15 @@ function AppContent() {
         <Route path="/support" component={Support} />
         <Route path="/terms" component={TermsOfService} />
         <Route path="/privacy" component={PrivacyPolicy} />
-        {/* Consolidated chat routes - ONE UNIVERSAL CHAT */}
-        <Route path="/chat" component={HelpDesk} /> {/* Universal responsive chat with Gemini AI (works on desktop + mobile) */}
-        <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
+        {/* Consolidated chat routes - /helpdesk for support, /chatrooms for discovery */}
+        <Route path="/helpdesk" component={HelpDesk} /> {/* Universal responsive helpdesk (works on desktop + mobile) */}
+        <Route path="/chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
+        <Route path="/mobile-chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
         <Route path="/trinity" component={TrinityChat} /> {/* Trinity Chat Interface with BUDDY metacognition */}
-        <Route path="/live-chat"><Redirect to="/chat" /></Route>
+        <Route path="/live-chat"><Redirect to="/helpdesk" /></Route>
         
-        <Route path="/helpdesk5"><Redirect to="/chat" /></Route>
-        <Route path="/support/chat"><Redirect to="/chat" /></Route>
+        <Route path="/helpdesk5"><Redirect to="/helpdesk" /></Route>
+        <Route path="/support/chat"><Redirect to="/helpdesk" /></Route>
         <Route path="/onboarding/start" component={OnboardingStart} />
         <Route path="/onboarding/:token" component={OnboardingPage} />
         <Route path="/create-org" component={CreateOrg} />
@@ -1221,22 +1223,23 @@ function AppContent() {
               <Route path="/contact" component={Contact} />
               <Route path="/terms" component={TermsOfService} />
               <Route path="/privacy" component={PrivacyPolicy} />
-              {/* Consolidated Chat Routes - ONE UNIVERSAL CHAT via HelpDesk */}
-              <Route path="/chat" component={HelpDesk} /> {/* Universal responsive chat with Gemini AI (works on desktop + mobile) */}
-              <Route path="/chat/:roomId">
+              {/* Consolidated Chat Routes - /helpdesk for support, /chatrooms for discovery */}
+              <Route path="/helpdesk" component={HelpDesk} /> {/* Universal responsive helpdesk (works on desktop + mobile) */}
+              <Route path="/helpdesk/:roomId">
                 {(params) => <HelpDesk key={params.roomId} roomId={params.roomId} />}
               </Route> {/* Individual chat room by ID - key forces remount */}
-              <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
-              <Route path="/chatrooms" component={Chatrooms} /> {/* Organization chatroom discovery and bulk join */}
+              <Route path="/chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
+              <Route path="/mobile-chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
+              <Route path="/chatrooms" component={Chatrooms} /> {/* Organization chatroom discovery + Helpdesk link */}
               <Route path="/chatroom"><Redirect to="/chatrooms" /></Route> {/* Redirect singular to plural */}
               <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route> {/* Redirect support chatrooms to unified page */}
               <Route path="/inbox" component={InboxPage} /> {/* Internal email system */}
               <Route path="/helpai-orchestration" component={HelpAIOrchestration} /> {/* HelpAI Orchestration System */}
               
-              {/* Redirect legacy chat routes to unified /chat */}
-              <Route path="/support/chat"><Redirect to="/chat" /></Route>
-              <Route path="/live-chat"><Redirect to="/chat" /></Route>
-              <Route path="/helpdesk5"><Redirect to="/chat" /></Route>
+              {/* Redirect legacy chat routes to /helpdesk */}
+              <Route path="/support/chat"><Redirect to="/helpdesk" /></Route>
+              <Route path="/live-chat"><Redirect to="/helpdesk" /></Route>
+              <Route path="/helpdesk5"><Redirect to="/helpdesk" /></Route>
               <Route path="/support" component={Support} />
               
               {/* Error pages */}
@@ -1552,18 +1555,19 @@ function AppContent() {
                 <Route path="/contact" component={Contact} />
                 <Route path="/terms" component={TermsOfService} />
                 <Route path="/privacy" component={PrivacyPolicy} />
-                {/* Consolidated Chat Routes - ONE UNIVERSAL CHAT via HelpAI Orchestration */}
-                <Route path="/chat" component={HelpAIOrchestration} /> {/* HelpAI Orchestration - Universal chat and AI brain */}
-                <Route path="/chat/:roomId">
+                {/* Consolidated Chat Routes - /helpdesk for support, /chatrooms for discovery */}
+                <Route path="/helpdesk" component={HelpDesk} /> {/* Universal responsive helpdesk (works on desktop + mobile) */}
+                <Route path="/helpdesk/:roomId">
                   {(params) => <HelpDesk key={params.roomId} roomId={params.roomId} />}
                 </Route> {/* Individual chat room by ID - key forces remount */}
-                <Route path="/mobile-chat"><Redirect to="/chat" /></Route> {/* Redirect to universal chat */}
+                <Route path="/chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
+                <Route path="/mobile-chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
                 <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route> {/* Redirect support chatrooms to unified page */}
                 
-                {/* Redirect legacy chat routes to unified /chat */}
-                <Route path="/support/chat"><Redirect to="/chat" /></Route>
-                <Route path="/live-chat"><Redirect to="/chat" /></Route>
-                <Route path="/helpdesk5"><Redirect to="/chat" /></Route>
+                {/* Redirect legacy chat routes to /helpdesk */}
+                <Route path="/support/chat"><Redirect to="/helpdesk" /></Route>
+                <Route path="/live-chat"><Redirect to="/helpdesk" /></Route>
+                <Route path="/helpdesk5"><Redirect to="/helpdesk" /></Route>
                 <Route path="/support" component={Support} />
                 
                 {/* Error pages */}
