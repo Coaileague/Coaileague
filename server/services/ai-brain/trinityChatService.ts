@@ -38,6 +38,7 @@ import { trinityMemoryService } from './trinityMemoryService';
 import { trinitySelfAwarenessService } from './trinitySelfAwarenessService';
 import { trinityThoughtEngine } from './trinityThoughtEngine';
 import { TRINITY_PERSONA, PERSONA_SYSTEM_INSTRUCTION } from './trinityPersona';
+import { trinityContentGuardrails, GuardrailStatus } from './trinityContentGuardrails';
 
 // ============================================================================
 // TYPES
@@ -342,6 +343,26 @@ class TrinityChatService {
    */
   async chat(request: ChatRequest): Promise<ChatResponse> {
     const { userId, workspaceId, message, mode, sessionId } = request;
+
+    // GUARDRAILS: Check content safety and chat access
+    const guardrailResult = await this.checkContentGuardrails(workspaceId, userId, message);
+    if (guardrailResult.blocked) {
+      // Return guardrail response without processing the message
+      const session = sessionId 
+        ? await this.getSession(sessionId)
+        : await this.getOrCreateSession(userId, workspaceId, mode);
+      
+      return {
+        sessionId: session?.id || 'blocked',
+        response: guardrailResult.response || 'This request cannot be processed.',
+        mode,
+        metadata: {
+          guardrailTriggered: true,
+          canUseChat: guardrailResult.status.canUseChat,
+          warningsRemaining: guardrailResult.status.warningsRemaining,
+        },
+      };
+    }
 
     // Get or create session
     const session = sessionId 
@@ -751,6 +772,25 @@ class TrinityChatService {
     } catch (error) {
       console.error('[TrinityChatService] Generation error:', error);
       return "I'm having trouble processing that right now. Let me try again - could you rephrase your question?";
+    }
+  }
+
+  /**
+   * Check content guardrails for safety and abuse prevention
+   */
+  private async checkContentGuardrails(
+    workspaceId: string,
+    userId: string,
+    message: string
+  ): Promise<{ blocked: boolean; response?: string; status: GuardrailStatus }> {
+    try {
+      return await trinityContentGuardrails.handleMessage(message, workspaceId, userId);
+    } catch (error) {
+      console.error('[TrinityChatService] Guardrail check failed:', error);
+      return {
+        blocked: false,
+        status: { canUseChat: true, violationCount: 0, warningsRemaining: 2 },
+      };
     }
   }
 
