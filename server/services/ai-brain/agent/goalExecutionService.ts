@@ -19,6 +19,8 @@ import { trinityThoughtEngine } from '../trinityThoughtEngine';
 import { trinityAgentParityLayer } from '../trinityAgentParityLayer';
 import { selfReflectionEngine } from '../selfReflectionEngine';
 import { goalMetricsService, RiskAnalysis, StakeholderImpact } from './goalMetricsService';
+import { stateVerificationService, VerificationResult } from './stateVerificationService';
+import { alternativeStrategyService, AlternativeStrategy } from './alternativeStrategyService';
 import { db } from '../../../db';
 import { platformEventBus } from '../../platformEventBus';
 import crypto from 'crypto';
@@ -343,6 +345,31 @@ class GoalExecutionService {
             });
             
             if (stepResult.success) {
+              // STATE VERIFICATION - Verify action actually succeeded in DB
+              if (stepResult.change?.id) {
+                const verification = await stateVerificationService.verifyActionResult({
+                  type: step.action,
+                  targetId: stepResult.change.id,
+                  expectedOutcome: step.parameters || {},
+                  workspaceId: context.workspaceId
+                });
+
+                if (!verification.verified) {
+                  await this.streamToUI(context.conversationId, {
+                    type: 'THINKING_STEP',
+                    data: { 
+                      status: 'warning',
+                      message: `Verification warning: ${verification.discrepancy?.map(d => d.field).join(', ')}`
+                    }
+                  });
+
+                  if (verification.needsRollback) {
+                    learnings.push(`Verification failed for ${step.action}: state mismatch`);
+                    break;
+                  }
+                }
+              }
+
               stepsCompleted++;
               
               await this.streamToUI(context.conversationId, {
@@ -376,6 +403,49 @@ class GoalExecutionService {
                 }
               });
             } else {
+              // ALTERNATIVE STRATEGY - Generate alternatives on failure
+              await this.streamToUI(context.conversationId, {
+                type: 'THINKING_STEP',
+                data: { 
+                  status: 'active',
+                  message: `Generating alternative strategies for failed step...`
+                }
+              });
+
+              const alternatives = await alternativeStrategyService.generateAlternatives(
+                {
+                  type: step.action,
+                  parameters: step.parameters || {},
+                  error: stepResult.error || 'Unknown error',
+                  attemptNumber: attempts
+                },
+                {
+                  workspaceId: context.workspaceId,
+                  goal: goal.description,
+                  constraints: goal.constraints,
+                  previousAttempts: learnings
+                }
+              );
+
+              if (alternatives.length > 0 && alternatives[0].probability > 0.5) {
+                // Try the best alternative
+                const bestAlt = alternatives[0];
+                await this.streamToUI(context.conversationId, {
+                  type: 'THINKING_STEP',
+                  data: { 
+                    status: 'active',
+                    message: `Trying alternative: ${bestAlt.description} (${Math.round(bestAlt.probability * 100)}% success probability)`
+                  }
+                });
+
+                const altResult = await this.performAction(bestAlt.action, bestAlt.parameters, context);
+                if (altResult.success) {
+                  stepsCompleted++;
+                  learnings.push(`Alternative strategy succeeded: ${bestAlt.description}`);
+                  continue;
+                }
+              }
+
               // Record learning from failure
               learnings.push(`Step failed: ${step.description} - ${stepResult.error}`);
               
