@@ -1,4 +1,5 @@
-import { createContext, useContext, useMemo, ReactNode } from 'react';
+import { createContext, useContext, useMemo, ReactNode, useState, useEffect } from 'react';
+import { useLocation } from 'wouter';
 
 /**
  * UniversalLoadingGate - SINGLE SOURCE OF TRUTH for loading visibility
@@ -43,7 +44,18 @@ const PUBLIC_ROUTES = new Set([
 ]);
 
 export function UniversalLoadingGateProvider({ children }: { children: ReactNode }) {
-  const currentPath = typeof window !== 'undefined' ? window.location.pathname : '';
+  // Use wouter's useLocation to properly react to route changes
+  const [location] = useLocation();
+  
+  // Also track via window.location for SSR safety and initial render
+  const [currentPath, setCurrentPath] = useState(() => 
+    typeof window !== 'undefined' ? window.location.pathname : '/'
+  );
+  
+  // Sync with wouter location changes
+  useEffect(() => {
+    setCurrentPath(location);
+  }, [location]);
   
   // Check if current route is public
   const isPublicRoute = PUBLIC_ROUTES.has(currentPath) || 

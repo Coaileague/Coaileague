@@ -1621,7 +1621,9 @@ export default function App() {
                         <SimpleModeProvider>
                         <ResponsiveAppFrame>
                           <ChatroomNotificationListener />
-                          <PaymentEnforcementProvider><AppContent /></PaymentEnforcementProvider>
+                          <Suspense fallback={<PageLoader />}>
+                            <PaymentEnforcementProvider><AppContent /></PaymentEnforcementProvider>
+                          </Suspense>
                           <ReenableChatButton />
                           <Toaster />
                           <TrinityAnnouncementDisplay position="bottom-right" />
