@@ -890,7 +890,7 @@ function AppUtilityCluster({ setLocation }: any) {
 
 function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const isMobile = useIsMobile();
 
@@ -907,14 +907,15 @@ function AppContent() {
     }
   }, [onboardingStatus]);
 
-  // Check if on mobile chat, HelpDesk, or desktop live-chat - use window.location instead of useLocation() hook
-  // to avoid React Hooks issues with conditional rendering
-  const isMobileChat = window.location.pathname === '/mobile-chat';
-  const isHelpDesk = window.location.pathname === '/helpdesk' || window.location.pathname.startsWith('/helpdesk');
+  // Use wouter location for route checks to ensure reactivity
+  const currentPath = location;
+  const isMobileChat = currentPath === '/mobile-chat';
+  const isHelpDesk = currentPath === '/helpdesk' || currentPath.startsWith('/helpdesk');
   
   // CRITICAL: Public routes that should render IMMEDIATELY without waiting for auth loading
   const PUBLIC_ROUTES = new Set([
     "/",
+    "/homepage",
     "/login",
     "/register",
     "/forgot-password",
@@ -936,7 +937,6 @@ function AppContent() {
     "/error-500",
   ]);
   
-  const currentPath = window.location.pathname;
   const isPublicRoute = PUBLIC_ROUTES.has(currentPath) || 
                         currentPath.startsWith("/onboarding/") ||
                         currentPath.startsWith("/pay-invoice/") ||
