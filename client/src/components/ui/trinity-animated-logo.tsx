@@ -65,6 +65,9 @@ export function TrinityAnimatedLogo({
       fill="none"
       xmlns="http://www.w3.org/2000/svg"
       className={cn("shrink-0 transition-all", animationClass, className)}
+      aria-hidden="true"
+      focusable="false"
+      role="img"
     >
       <defs>
         <radialGradient id={ids.core} cx="50%" cy="50%" r="50%">
