@@ -1619,6 +1619,7 @@ export default function App() {
                     <UniversalAnimationProvider>
                       <SeasonalThemeProvider>
                         <SimpleModeProvider>
+                        <TrinityModalProvider>
                         <ResponsiveAppFrame>
                           <ChatroomNotificationListener />
                           <Suspense fallback={<PageLoader />}>
@@ -1628,7 +1629,6 @@ export default function App() {
                           <Toaster />
                           <TrinityAnnouncementDisplay position="bottom-right" />
                         </ResponsiveAppFrame>
-                        </SimpleModeProvider>
                         {/* Seasonal effects layer - snowfall, ornaments, etc. - lazy loaded */}
                         <Suspense fallback={null}>
                           <SeasonalEffectsLayer />
@@ -1646,10 +1646,10 @@ export default function App() {
                         <Suspense fallback={null}>
                           <FloatingSupportChat />
                         </Suspense>
-                        {/* Trinity Modal Provider + Floating Button - Opens chat modal instead of navigating */}
-                        <TrinityModalProvider>
-                          <FloatingTrinityButton />
+                        {/* Floating Trinity Button - Inside TrinityModalProvider */}
+                        <FloatingTrinityButton />
                         </TrinityModalProvider>
+                        </SimpleModeProvider>
                       </SeasonalThemeProvider>
                     </UniversalAnimationProvider>
                   </TooltipProvider>
