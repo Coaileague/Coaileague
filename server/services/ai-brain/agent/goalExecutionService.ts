@@ -18,6 +18,7 @@ import { planningFrameworkService, ExecutionPlan, PlanStep } from '../planningFr
 import { trinityThoughtEngine } from '../trinityThoughtEngine';
 import { trinityAgentParityLayer } from '../trinityAgentParityLayer';
 import { selfReflectionEngine } from '../selfReflectionEngine';
+import { goalMetricsService, RiskAnalysis, StakeholderImpact } from './goalMetricsService';
 import { db } from '../../../db';
 import { platformEventBus } from '../../platformEventBus';
 import crypto from 'crypto';
@@ -70,7 +71,7 @@ export interface ReversibleAction {
 }
 
 export interface StreamEvent {
-  type: 'THINKING_STEP' | 'PROGRESS' | 'CONFIDENCE' | 'ERROR' | 'BUSINESS_IMPACT' | 'COST_UPDATE' | 'UNDO_ACTION';
+  type: 'THINKING_STEP' | 'PROGRESS' | 'CONFIDENCE' | 'ERROR' | 'BUSINESS_IMPACT' | 'COST_UPDATE' | 'UNDO_ACTION' | 'RISK_ANALYSIS' | 'STAKEHOLDER_IMPACT' | 'ITERATION_PATH';
   data: any;
   timestamp: number;
 }
@@ -159,8 +160,12 @@ class GoalExecutionService {
     let finalConfidence = 0;
     const changes: ChangeRecord[] = [];
     const reversibleActions: ReversibleAction[] = [];
+    const learnings: string[] = [];
     
     this.activeExecutions.set(executionId, goal);
+    
+    // START METRICS TRACKING
+    goalMetricsService.startGoalTracking(executionId, goal.description);
     
     await this.streamToUI(context.conversationId, {
       type: 'THINKING_STEP',
@@ -169,6 +174,9 @@ class GoalExecutionService {
         message: `Starting goal execution: ${goal.description}`
       }
     });
+
+    // Note: Pre-execution risk analysis moved to after plan generation
+    // so we have actual proposed changes to analyze
 
     try {
       while (!success && attempts < this.maxAttempts) {
@@ -216,7 +224,66 @@ class GoalExecutionService {
             }
           });
 
-          // STEP 2: Calculate business impact
+          // STEP 2: Extract proposed changes from plan for risk/impact analysis
+          const proposedChanges = this.extractProposedChanges(plan);
+
+          // STEP 2.1: Pre-execution risk analysis with REAL plan data
+          try {
+            const riskAnalysis = await goalMetricsService.analyzePreExecutionRisks(
+              context.workspaceId,
+              goal.description,
+              proposedChanges
+            );
+            
+            await this.streamToUI(context.conversationId, {
+              type: 'RISK_ANALYSIS',
+              data: riskAnalysis
+            });
+
+            // Block if there are critical risks
+            if (riskAnalysis.blockers.length > 0) {
+              await this.streamToUI(context.conversationId, {
+                type: 'ERROR',
+                data: { 
+                  message: `Blocked: ${riskAnalysis.blockers.map(b => b.message).join(', ')}`,
+                  blockers: riskAnalysis.blockers
+                }
+              });
+              
+              await goalMetricsService.completeGoalTracking(executionId, false, 0, ['Blocked by pre-execution risk analysis']);
+              
+              return {
+                success: false,
+                attempts,
+                executionId,
+                stepsCompleted: 0,
+                stepsTotal,
+                finalConfidence: 0,
+                summary: `Blocked by risks: ${riskAnalysis.blockers.map(b => b.message).join(', ')}`,
+                durationMs: Date.now() - startTime,
+                changes: [],
+                reversibleActions: []
+              };
+            }
+          } catch (error) {
+            console.error('[GoalExecutionService] Risk analysis failed:', error);
+          }
+
+          // STEP 2.2: Calculate stakeholder impact with REAL plan data
+          try {
+            const stakeholderImpact = await goalMetricsService.calculateStakeholderImpact(
+              context.workspaceId,
+              proposedChanges
+            );
+            await this.streamToUI(context.conversationId, {
+              type: 'STAKEHOLDER_IMPACT',
+              data: stakeholderImpact
+            });
+          } catch (error) {
+            console.error('[GoalExecutionService] Stakeholder impact calculation failed:', error);
+          }
+
+          // STEP 2.3: Calculate business impact
           const impact = await this.calculateBusinessImpact(plan, context);
           await this.streamToUI(context.conversationId, {
             type: 'BUSINESS_IMPACT',
@@ -243,7 +310,37 @@ class GoalExecutionService {
               }
             });
 
+            const stepConfidenceBefore = finalConfidence;
             const stepResult = await this.executeStep(step, context);
+            
+            // Get ACTUAL confidence from parity layer (not arbitrary +0.1)
+            const stepConfidenceAfter = await trinityAgentParityLayer.assessConfidence(executionId)
+              .catch(() => stepConfidenceBefore + (stepResult.success ? 0.05 : 0));
+            
+            // Update running confidence
+            if (stepResult.success) {
+              finalConfidence = Math.min(1.0, stepConfidenceAfter);
+            }
+            
+            // RECORD ITERATION STEP with REAL confidence values
+            goalMetricsService.recordIterationStep(executionId, {
+              attemptNumber: attempts,
+              action: step.action,
+              input: step.parameters || {},
+              output: stepResult.success ? { completed: true } : undefined,
+              success: stepResult.success,
+              error: stepResult.error,
+              confidenceBefore: stepConfidenceBefore,
+              confidenceAfter: stepConfidenceAfter,
+              reason: step.description
+            });
+
+            // Stream iteration path to UI
+            const iterationPath = goalMetricsService.getIterationPath(executionId);
+            await this.streamToUI(context.conversationId, {
+              type: 'ITERATION_PATH',
+              data: iterationPath
+            });
             
             if (stepResult.success) {
               stepsCompleted++;
@@ -279,6 +376,9 @@ class GoalExecutionService {
                 }
               });
             } else {
+              // Record learning from failure
+              learnings.push(`Step failed: ${step.description} - ${stepResult.error}`);
+              
               await this.streamToUI(context.conversationId, {
                 type: 'THINKING_STEP',
                 data: { 
@@ -351,6 +451,21 @@ class GoalExecutionService {
       const summary = success 
         ? `Successfully completed "${goal.description}" in ${attempts} attempt(s)`
         : `Unable to complete "${goal.description}" after ${attempts} attempts`;
+
+      // Add learnings from success/failure
+      if (success) {
+        learnings.push(`Goal achieved in ${attempts} attempt(s) with ${stepsCompleted} steps`);
+      } else {
+        learnings.push(`Goal failed after ${attempts} attempts, completed ${stepsCompleted}/${stepsTotal} steps`);
+      }
+
+      // COMPLETE METRICS TRACKING
+      await goalMetricsService.completeGoalTracking(
+        executionId,
+        success,
+        finalConfidence,
+        learnings
+      );
 
       await this.streamToUI(context.conversationId, {
         type: 'THINKING_STEP',
@@ -553,6 +668,92 @@ class GoalExecutionService {
     if (action.includes('notification') || action.includes('email')) return 'notification';
     if (action.includes('file') || action.includes('export')) return 'file';
     return 'api_call';
+  }
+
+  /**
+   * Extract proposed changes from execution plan for risk/impact analysis
+   * This parses plan steps to identify what shifts, employees, clients will be affected
+   */
+  private extractProposedChanges(plan: ExecutionPlan): {
+    shiftsToCreate?: any[];
+    shiftsToModify?: { shiftId: string; changes: any }[];
+    shiftsToDelete?: string[];
+    employeeAssignments?: { employeeId: string; hours: number }[];
+  } {
+    const shiftsToCreate: any[] = [];
+    const shiftsToModify: { shiftId: string; changes: any }[] = [];
+    const shiftsToDelete: string[] = [];
+    const employeeAssignments: Map<string, number> = new Map();
+
+    for (const step of plan.steps) {
+      const params = step.parameters || {};
+      const action = step.action.toLowerCase();
+
+      // Extract shift creation
+      if (action.includes('create') && action.includes('shift')) {
+        if (params.startTime && params.endTime) {
+          const hours = (new Date(params.endTime).getTime() - new Date(params.startTime).getTime()) / (1000 * 60 * 60);
+          shiftsToCreate.push({
+            startTime: params.startTime,
+            endTime: params.endTime,
+            assignedEmployeeId: params.employeeId || params.assignedEmployeeId,
+            clientId: params.clientId,
+          });
+          
+          if (params.employeeId || params.assignedEmployeeId) {
+            const empId = params.employeeId || params.assignedEmployeeId;
+            employeeAssignments.set(empId, (employeeAssignments.get(empId) || 0) + hours);
+          }
+        }
+      }
+
+      // Extract shift modifications
+      if (action.includes('update') || action.includes('modify')) {
+        if (params.shiftId) {
+          shiftsToModify.push({
+            shiftId: params.shiftId,
+            changes: {
+              startTime: params.startTime,
+              endTime: params.endTime,
+              assignedEmployeeId: params.employeeId || params.assignedEmployeeId,
+            },
+          });
+        }
+      }
+
+      // Extract shift deletions
+      if (action.includes('delete') || action.includes('remove')) {
+        if (params.shiftId) {
+          shiftsToDelete.push(params.shiftId);
+        }
+      }
+
+      // Extract employee assignments
+      if (action.includes('assign') && params.employeeId && params.hours) {
+        employeeAssignments.set(
+          params.employeeId,
+          (employeeAssignments.get(params.employeeId) || 0) + params.hours
+        );
+      }
+
+      // Handle scheduling actions with duration
+      if (action.includes('schedule') && params.employeeId) {
+        const hours = params.hours || params.duration || 8; // Default 8 hour shift
+        employeeAssignments.set(
+          params.employeeId,
+          (employeeAssignments.get(params.employeeId) || 0) + hours
+        );
+      }
+    }
+
+    return {
+      shiftsToCreate: shiftsToCreate.length > 0 ? shiftsToCreate : undefined,
+      shiftsToModify: shiftsToModify.length > 0 ? shiftsToModify : undefined,
+      shiftsToDelete: shiftsToDelete.length > 0 ? shiftsToDelete : undefined,
+      employeeAssignments: employeeAssignments.size > 0 
+        ? Array.from(employeeAssignments.entries()).map(([employeeId, hours]) => ({ employeeId, hours }))
+        : undefined,
+    };
   }
 
   /**
