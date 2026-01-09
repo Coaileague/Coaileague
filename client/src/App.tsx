@@ -1606,8 +1606,8 @@ function AppContent() {
 
 export default function App() {
   return (
-    <GlobalErrorBoundary>
-      <QueryClientProvider client={queryClient}>
+    <QueryClientProvider client={queryClient}>
+      <GlobalErrorBoundary>
         <ServiceHealthProvider>
           <ForceRefreshProvider>
           <UniversalLoadingGateProvider>
@@ -1660,7 +1660,7 @@ export default function App() {
           </UniversalLoadingGateProvider>
         </ForceRefreshProvider>
         </ServiceHealthProvider>
-      </QueryClientProvider>
-    </GlobalErrorBoundary>
+      </GlobalErrorBoundary>
+    </QueryClientProvider>
   );
 }
