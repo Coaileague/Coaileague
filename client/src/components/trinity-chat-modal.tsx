@@ -53,7 +53,6 @@ import {
   Mic,
   Command,
 } from 'lucide-react';
-import { TrinityIconStatic } from '@/components/trinity-button';
 import { TrinityAnimatedLogo } from '@/components/ui/trinity-animated-logo';
 import { TrinityAgentPanel } from '@/components/trinity';
 import { useTrinityState } from '@/hooks/use-trinity-state';
@@ -558,20 +557,21 @@ function TrinityModal({ onClose }: TrinityModalProps) {
         mode,
       };
 
-      const response = await apiRequest('/api/trinity/chat/chat', {
-        method: 'POST',
-        body: JSON.stringify({
-          message,
-          mode,
-          pageContext,
-          conversationId,
-          conversationHistory: messages.slice(-10).map(m => ({
-            role: m.role,
-            content: m.content
-          })),
-        }),
+      const response = await apiRequest('POST', '/api/trinity/chat/chat', {
+        message,
+        mode,
+        sessionId: conversationId,
+        pageContext,
+        conversationHistory: messages.slice(-10).map(m => ({
+          role: m.role,
+          content: m.content
+        })),
       });
-      return response;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || errorData.message || 'Failed to send message');
+      }
+      return response.json();
     },
     onSuccess: (data: any) => {
       agentState.stopExecution();
@@ -726,8 +726,8 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             {/* Header */}
             <div className="flex items-center justify-between px-4 pb-2 shrink-0">
               <div className="flex items-center gap-3">
-                <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${modeConfig.colors.gradient} flex items-center justify-center`}>
-                  <TrinityIconStatic size={24} />
+                <div className="w-10 h-10 rounded-full bg-background border flex items-center justify-center overflow-visible">
+                  <TrinityAnimatedLogo size="sm" state="idle" />
                 </div>
                 <div>
                   <h1 className="font-semibold text-sm">Trinity 2.0</h1>
@@ -914,8 +914,8 @@ function TrinityModal({ onClose }: TrinityModalProps) {
         onClick={() => setIsMinimized(false)}
         data-testid="trinity-modal-minimized"
       >
-        <div className={`w-14 h-14 rounded-full bg-gradient-to-br ${modeConfig.colors.gradient} flex items-center justify-center shadow-lg border border-white/20`}>
-          <TrinityIconStatic size={28} />
+        <div className="w-14 h-14 rounded-full bg-background border flex items-center justify-center shadow-lg overflow-visible">
+          <TrinityAnimatedLogo size="sm" state="idle" />
           {messages.length > 0 && (
             <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground rounded-full text-xs flex items-center justify-center">
               {messages.length}
@@ -942,8 +942,8 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             onMouseDown={handleMouseDown}
           >
             <GripHorizontal className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div className={`w-10 h-10 rounded-full bg-gradient-to-br ${modeConfig.colors.gradient} flex items-center justify-center shrink-0`}>
-              <TrinityIconStatic size={24} />
+            <div className="w-10 h-10 rounded-full bg-background border flex items-center justify-center shrink-0 overflow-visible">
+              <TrinityAnimatedLogo size="sm" state={chatMutation.isPending ? "thinking" : "idle"} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">

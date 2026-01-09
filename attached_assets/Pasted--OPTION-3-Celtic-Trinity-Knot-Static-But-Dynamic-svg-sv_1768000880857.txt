@@ -1,0 +1,84 @@
+ OPTION 3: Celtic Trinity Knot (Static But Dynamic)
+svg<svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- 5-fold Celtic weave pattern -->
+  <g id="trinity-weave" stroke-width="4" stroke-linecap="round">
+    <!-- Outer pentagonal weave -->
+    <path d="M 32 8 L 54 22 L 48 48 L 16 48 L 10 22 Z" 
+          stroke="url(#weave-gradient-1)" 
+          fill="none"
+          opacity="0.8"/>
+    
+    <!-- Inner pentagonal weave (offset) -->
+    <path d="M 32 14 L 48 26 L 44 44 L 20 44 L 16 26 Z" 
+          stroke="url(#weave-gradient-2)" 
+          fill="none"
+          opacity="0.6"/>
+    
+    <!-- Interlaced ribbons -->
+    <path d="M 32 8 Q 40 20 32 32" stroke="url(#ribbon-1)" fill="none"/>
+    <path d="M 54 22 Q 42 28 32 32" stroke="url(#ribbon-2)" fill="none"/>
+    <path d="M 48 48 Q 38 40 32 32" stroke="url(#ribbon-3)" fill="none"/>
+    <path d="M 16 48 Q 26 40 32 32" stroke="url(#ribbon-4)" fill="none"/>
+    <path d="M 10 22 Q 22 28 32 32" stroke="url(#ribbon-5)" fill="none"/>
+    
+    <!-- Center nexus -->
+    <circle cx="32" cy="32" r="6" fill="url(#center-nexus)" stroke="none">
+      <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite"/>
+    </circle>
+    
+    <!-- Energy points at vertices -->
+    <circle cx="32" cy="8" r="3" fill="#60a5fa">
+      <animate attributeName="r" values="3;4;3" dur="1.5s" repeatCount="indefinite"/>
+    </circle>
+    <circle cx="54" cy="22" r="3" fill="#8b5cf6">
+      <animate attributeName="r" values="3;4;3" dur="1.5s" repeatCount="indefinite" begin="0.3s"/>
+    </circle>
+    <circle cx="48" cy="48" r="3" fill="#22d3ee">
+      <animate attributeName="r" values="3;4;3" dur="1.5s" repeatCount="indefinite" begin="0.6s"/>
+    </circle>
+    <circle cx="16" cy="48" r="3" fill="#a78bfa">
+      <animate attributeName="r" values="3;4;3" dur="1.5s" repeatCount="indefinite" begin="0.9s"/>
+    </circle>
+    <circle cx="10" cy="22" r="3" fill="#818cf8">
+      <animate attributeName="r" values="3;4;3" dur="1.5s" repeatCount="indefinite" begin="1.2s"/>
+    </circle>
+  </g>
+  
+  <defs>
+    <linearGradient id="weave-gradient-1" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="50%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#06b6d4"/>
+    </linearGradient>
+    <linearGradient id="weave-gradient-2" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#a78bfa"/>
+      <stop offset="50%" style="stop-color:#60a5fa"/>
+      <stop offset="100%" style="stop-color:#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="ribbon-1">
+      <stop offset="0%" style="stop-color:#3b82f6"/>
+      <stop offset="100%" style="stop-color:#60a5fa"/>
+    </linearGradient>
+    <linearGradient id="ribbon-2">
+      <stop offset="0%" style="stop-color:#8b5cf6"/>
+      <stop offset="100%" style="stop-color:#a78bfa"/>
+    </linearGradient>
+    <linearGradient id="ribbon-3">
+      <stop offset="0%" style="stop-color:#06b6d4"/>
+      <stop offset="100%" style="stop-color:#22d3ee"/>
+    </linearGradient>
+    <linearGradient id="ribbon-4">
+      <stop offset="0%" style="stop-color:#6366f1"/>
+      <stop offset="100%" style="stop-color:#818cf8"/>
+    </linearGradient>
+    <linearGradient id="ribbon-5">
+      <stop offset="0%" style="stop-color:#7c3aed"/>
+      <stop offset="100%" style="stop-color:#a78bfa"/>
+    </linearGradient>
+    <radialGradient id="center-nexus">
+      <stop offset="0%" style="stop-color:#ffffff"/>
+      <stop offset="50%" style="stop-color:#60a5fa"/>
+      <stop offset="100%" style="stop-color:#3b82f6"/>
+    </radialGradient>
+  </defs>
+</svg>
