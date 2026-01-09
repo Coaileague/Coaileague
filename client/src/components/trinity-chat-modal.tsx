@@ -8,7 +8,7 @@
  * - Preserves page context so Trinity can advise on current view
  */
 
-import { useState, useRef, useEffect, useCallback, createContext, useContext } from 'react';
+import { useState, useRef, useEffect, useCallback, createContext, useContext, useMemo } from 'react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,6 +20,7 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
+import { isPublicRoute } from '@/config/trinity';
 import {
   X,
   Send,
@@ -63,16 +64,38 @@ export function useTrinityModal() {
 export function TrinityModalProvider({ children }: { children: React.ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<Message[]>([]);
+  const { user, isLoading: authLoading } = useAuth();
+  const [location] = useLocation();
+  const prevUserRef = useRef<typeof user>(undefined);
 
   const openModal = useCallback(() => setIsOpen(true), []);
   const closeModal = useCallback(() => setIsOpen(false), []);
   const toggleModal = useCallback(() => setIsOpen(prev => !prev), []);
   const clearMessages = useCallback(() => setMessages([]), []);
 
+  // Clear state on logout - detect when user becomes null
+  useEffect(() => {
+    if (prevUserRef.current && !user && !authLoading) {
+      // User logged out - clear Trinity state
+      setIsOpen(false);
+      setMessages([]);
+    }
+    prevUserRef.current = user;
+  }, [user, authLoading]);
+
+  // Check if modal should render based on auth and route
+  const shouldRenderModal = useMemo(() => {
+    // Don't render modal for unauthenticated users
+    if (!user) return false;
+    // Don't render modal on public routes (landing, login, pricing, etc.)
+    if (isPublicRoute(location)) return false;
+    return true;
+  }, [user, location]);
+
   return (
     <TrinityModalContext.Provider value={{ isOpen, openModal, closeModal, toggleModal, messages, setMessages, clearMessages }}>
       {children}
-      {isOpen && <TrinityModal onClose={closeModal} />}
+      {isOpen && shouldRenderModal && <TrinityModal onClose={closeModal} />}
     </TrinityModalContext.Provider>
   );
 }

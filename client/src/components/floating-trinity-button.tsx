@@ -11,7 +11,7 @@ import { useLocation } from 'wouter';
 import { X } from 'lucide-react';
 import { TrinityIconStatic } from '@/components/trinity-button';
 import { useWorkspaceAccess } from '@/hooks/useWorkspaceAccess';
-import { isTrinityAccessAllowed } from '@/config/trinity';
+import { isTrinityAccessAllowed, isPublicRoute } from '@/config/trinity';
 import { useTrinityModal } from '@/components/trinity-chat-modal';
 
 export function FloatingTrinityButton() {
@@ -141,8 +141,8 @@ export function FloatingTrinityButton() {
     return null;
   }
 
-  const excludedPaths = ['/login', '/register', '/onboarding', '/landing', '/'];
-  if (excludedPaths.some(path => location === path || location.startsWith('/onboarding'))) {
+  // Hide on all public/marketing routes - Trinity is platform-only
+  if (isPublicRoute(location)) {
     return null;
   }
 

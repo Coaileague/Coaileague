@@ -1,0 +1,273 @@
+REPLIT AGENT INSTRUCTIONS: Lock Down Trinity Security
+PRIORITY: CRITICAL - Must be completed before beta launch
+OBJECTIVE: Restrict Trinity modal access to authenticated, paying organization users on platform pages only.
+
+PHASE 1: Route Protection (Highest Priority)
+Create: /utils/trinityRouteGuard.js
+
+Function: isSecureRoute(pathname)
+Returns: boolean
+
+Allowed routes (Trinity accessible):
+✅ /dashboard/*
+✅ /schedules/*
+✅ /clients/*
+✅ /guards/*
+✅ /reports/*
+✅ /billing/*
+✅ /settings/*
+✅ /jobs/*
+
+Blocked routes (Trinity NOT accessible):
+❌ / (landing)
+❌ /login
+❌ /signup
+❌ /pricing
+❌ /features
+❌ /about
+❌ /contact
+❌ /demo
+❌ Any public marketing pages
+
+Implementation:
+const isSecureRoute = (pathname) => {
+  const protectedPrefixes = ['/dashboard', '/schedules', '/clients', '/guards', '/reports', '/billing', '/settings', '/jobs'];
+  const publicRoutes = ['/', '/login', '/signup', '/pricing', '/features', '/about', '/contact', '/demo'];
+  
+  // Exact match for public routes
+  if (publicRoutes.includes(pathname)) return false;
+  
+  // Check if starts with protected prefix
+  return protectedPrefixes.some(prefix => pathname.startsWith(prefix));
+};
+
+PHASE 2: Authentication Gating
+Update: /components/FloatingTrinityButton.jsx
+
+Add checks before rendering:
+
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/router';
+import { isSecureRoute } from '@/utils/trinityRouteGuard';
+
+const FloatingTrinityButton = () => {
+  const { user, isAuthenticated } = useAuth();
+  const router = useRouter();
+  
+  // Don't render if not authenticated
+  if (!isAuthenticated) return null;
+  
+  // Don't render on public routes
+  if (!isSecureRoute(router.pathname)) return null;
+  
+  // Rest of component...
+};
+
+PHASE 3: Paid Organization Check
+Update: /context/AuthContext.jsx or create /hooks/useOrgStatus.js
+
+Add organization payment status:
+
+const useOrgStatus = () => {
+  const { user } = useAuth();
+  const [orgStatus, setOrgStatus] = useState(null);
+  
+  useEffect(() => {
+    if (!user?.organizationId) return;
+    
+    // Check if org has active subscription
+    const checkOrgStatus = async () => {
+      const status = await fetch(`/api/organizations/${user.organizationId}/status`);
+      const data = await status.json();
+      setOrgStatus(data);
+    };
+    
+    checkOrgStatus();
+  }, [user]);
+  
+  return {
+    isPaid: orgStatus?.subscriptionStatus === 'active',
+    isTrialActive: orgStatus?.trialEndsAt > new Date(),
+    hasTrinityAccess: orgStatus?.features?.includes('trinity_ai')
+  };
+};
+
+Then in FloatingTrinityButton:
+
+const { isPaid, isTrialActive, hasTrinityAccess } = useOrgStatus();
+
+// Don't render if org isn't paid or on trial
+if (!isPaid && !isTrialActive) return null;
+
+// Don't render if Trinity not in their plan
+if (!hasTrinityAccess) return null;
+
+PHASE 4: Auto-Unmount on Logout
+Update: /context/TrinityModalContext.jsx
+
+Add logout listener:
+
+import { useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
+
+const TrinityModalProvider = ({ children }) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const [messages, setMessages] = useState([]);
+  const { isAuthenticated } = useAuth();
+  
+  // Clear state on logout
+  useEffect(() => {
+    if (!isAuthenticated) {
+      setIsOpen(false);
+      setMessages([]);
+      // Clear any persisted chat history
+      localStorage.removeItem('trinity_chat_history');
+    }
+  }, [isAuthenticated]);
+  
+  // Rest of provider...
+};
+
+PHASE 5: API Security Enforcement
+Update: /api/trinity/chat.js or your Trinity endpoint
+
+Add authentication + org verification:
+
+export default async function handler(req, res) {
+  // 1. Verify session/token
+  const session = await getSession(req, res);
+  if (!session?.user) {
+    return res.status(401).json({ error: 'Unauthorized' });
+  }
+  
+  // 2. Verify org subscription
+  const org = await db.organizations.findUnique({
+    where: { id: session.user.organizationId }
+  });
+  
+  if (!org || org.subscriptionStatus !== 'active') {
+    return res.status(403).json({ 
+      error: 'Trinity AI requires an active subscription',
+      upgradeUrl: '/pricing'
+    });
+  }
+  
+  // 3. Verify Trinity is in org's plan
+  if (!org.features.includes('trinity_ai')) {
+    return res.status(403).json({ 
+      error: 'Trinity AI not included in your plan',
+      upgradeUrl: '/pricing?feature=trinity'
+    });
+  }
+  
+  // 4. Rate limiting per org
+  const rateLimitKey = `trinity_calls:${org.id}`;
+  const callCount = await redis.incr(rateLimitKey);
+  if (callCount === 1) {
+    await redis.expire(rateLimitKey, 3600); // 1 hour window
+  }
+  if (callCount > org.trinityCallLimit) {
+    return res.status(429).json({ 
+      error: 'Trinity call limit reached',
+      resetAt: new Date(Date.now() + 3600000)
+    });
+  }
+  
+  // 5. Log usage for billing
+  await db.trinityUsage.create({
+    data: {
+      organizationId: org.id,
+      userId: session.user.id,
+      timestamp: new Date(),
+      tokensUsed: 0 // Will update after response
+    }
+  });
+  
+  // NOW process Trinity request...
+  const trinityResponse = await callGeminiAPI(req.body.message);
+  
+  // Update token usage
+  await db.trinityUsage.update({
+    where: { id: usageLog.id },
+    data: { tokensUsed: trinityResponse.tokensUsed }
+  });
+  
+  return res.json(trinityResponse);
+}
+
+PHASE 6: Provider Placement Restriction
+Update: /pages/_app.js or your root layout
+
+WRONG (current):
+<TrinityModalProvider>
+  <Component {...pageProps} /> {/* Provider wraps everything */}
+</TrinityModalProvider>
+
+RIGHT (new):
+<AuthProvider>
+  <Component {...pageProps} />
+  {/* Trinity only available inside auth context */}
+  <ConditionalTrinityProvider />
+</AuthProvider>
+
+Create: /components/ConditionalTrinityProvider.jsx
+
+const ConditionalTrinityProvider = () => {
+  const { isAuthenticated } = useAuth();
+  const router = useRouter();
+  
+  // Only render provider on secure routes for authenticated users
+  if (!isAuthenticated || !isSecureRoute(router.pathname)) {
+    return null;
+  }
+  
+  return (
+    <TrinityModalProvider>
+      <FloatingTrinityButton />
+      <TrinityModal />
+    </TrinityModalProvider>
+  );
+};
+
+PHASE 7: Graceful Degradation Messages
+If user tries to access Trinity but doesn't have permission:
+
+const FloatingTrinityButton = () => {
+  const { isPaid, isTrialActive } = useOrgStatus();
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  
+  const handleClick = () => {
+    if (!isPaid && !isTrialActive) {
+      setShowUpgradeModal(true);
+      return;
+    }
+    openTrinityModal();
+  };
+  
+  return (
+    <>
+      <button onClick={handleClick}>Ask Trinity</button>
+      
+      {showUpgradeModal && (
+        <UpgradeModal>
+          <h3>Trinity AI Requires Subscription</h3>
+          <p>Upgrade to access Trinity AI assistant</p>
+          <Link href="/pricing">View Plans</Link>
+        </UpgradeModal>
+      )}
+    </>
+  );
+};
+
+Testing Checklist
+After implementation, verify:
+✅ Unauthenticated user on landing page: NO Trinity button
+✅ Authenticated user on landing page: NO Trinity button (public route)
+✅ Authenticated user on /dashboard: YES Trinity button (if paid)
+✅ Authenticated user with expired subscription: NO Trinity button
+✅ User logs out while modal open: Modal closes, state clears
+✅ Direct API call without auth token: Returns 401
+✅ API call from unpaid org: Returns 403 with upgrade message
+✅ Rate limit enforcement: Blocks after X calls per hour
+
+IMPLEMENT ALL 7 PHASES. This is launch-blocking security.

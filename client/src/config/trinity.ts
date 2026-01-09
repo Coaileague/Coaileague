@@ -127,6 +127,76 @@ export const TRINITY_FEATURE_FLAGS = {
   metacognitionEnabled: true,
 };
 
+/**
+ * PUBLIC ROUTES - Trinity modal should NOT appear on these paths
+ * These are marketing, auth, and publicly accessible pages
+ */
+export const TRINITY_PUBLIC_ROUTES = [
+  '/',
+  '/login',
+  '/register',
+  '/signup',
+  '/pricing',
+  '/features',
+  '/about',
+  '/contact',
+  '/compare',
+  '/landing',
+  '/onboarding',
+  '/onboarding-start',
+  '/forgot-password',
+  '/reset-password',
+  '/privacy-policy',
+  '/terms-of-service',
+  '/roi-calculator',
+  '/universal-marketing',
+  '/category-platform',
+  '/category-growth',
+  '/category-operations',
+  '/category-communication',
+  '/pay-invoice',
+  '/client-portal',
+  '/custom-login',
+  '/custom-register',
+] as const;
+
+/**
+ * Check if the current route is a public/marketing route
+ * where Trinity should NOT appear
+ */
+export function isPublicRoute(path: string): boolean {
+  // Normalize path: remove query string and hash, trim trailing slashes
+  const normalizedPath = path.split('?')[0].split('#')[0].replace(/\/+$/, '') || '/';
+  
+  // Exact matches
+  if (TRINITY_PUBLIC_ROUTES.includes(normalizedPath as typeof TRINITY_PUBLIC_ROUTES[number])) {
+    return true;
+  }
+  
+  // Prefix matches for dynamic public routes
+  const publicPrefixes = [
+    '/onboarding',
+    '/pay-invoice',
+    '/client-portal',
+    '/custom-login',
+    '/custom-register',
+    '/reset-password',
+    '/forgot-password',
+  ];
+  
+  return publicPrefixes.some(prefix => normalizedPath.startsWith(prefix));
+}
+
+/**
+ * Check if Trinity should be available on the current route
+ * Requires authenticated user on a non-public platform page
+ */
+export function isTrinityRouteAllowed(path: string, isAuthenticated: boolean): boolean {
+  if (!isAuthenticated) return false;
+  if (isPublicRoute(path)) return false;
+  return true;
+}
+
 export function isTrinityAccessAllowed(
   orgRole?: string,
   platformRole?: string

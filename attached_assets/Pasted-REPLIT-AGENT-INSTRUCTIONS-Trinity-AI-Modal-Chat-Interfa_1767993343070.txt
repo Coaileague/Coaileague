@@ -1,0 +1,80 @@
+REPLIT AGENT INSTRUCTIONS: Trinity AI Modal Chat Interface (Platform Pages Only)
+OBJECTIVE: Create a floating modal popup for Trinity AI that ONLY appears on internal platform pages (dashboard, schedules, clients, reports, etc.) - NOT on public/marketing pages.
+SCOPE RESTRICTION:
+
+✅ Trinity modal available: Dashboard, schedules, clients, reports, settings, ANY authenticated platform page
+❌ Trinity modal NOT available: Landing page, login, signup, pricing, marketing pages, public routes
+
+CURRENT PROBLEM:
+
+"Ask Trinity" button currently navigates users away from their work
+Users lose unsaved data when redirected to chat UI
+Need Trinity available contextually while working, but ONLY inside platform
+
+NEW IMPLEMENTATION:
+1. Create Trinity Chat Modal Component
+Create: /components/platform/TrinityModal.jsx
+
+Requirements:
+- Full-screen overlay with semi-transparent backdrop
+- Centered modal window (max-width: 600px, height: 70vh)
+- Chat interface matching existing Trinity UI
+- Close button (X) in top-right
+- ESC key closes modal
+- Click outside closes it
+- Smooth fade-in animation
+- Mobile responsive
+2. Conditional Rendering Logic
+Trinity modal should ONLY render when:
+1. User is authenticated (logged in)
+2. User is on a protected/platform route
+3. NOT on public routes (/login, /signup, /, /pricing, etc.)
+
+Add route checking:
+- Check if current path starts with /dashboard, /app, /platform (whatever your protected route prefix is)
+- OR check authentication state + route protection
+3. Update Platform Layout
+Add TrinityModal to platform-specific layout:
+
+File: /layouts/PlatformLayout.jsx or /layouts/DashboardLayout.jsx
+- Import and include <TrinityModal /> in this layout ONLY
+- NOT in public layout or marketing layout
+- Modal available across all platform pages but contained to authenticated space
+4. "Ask Trinity" Button Placement
+Locate all "Ask Trinity" buttons in PLATFORM pages:
+- Keep buttons in dashboard nav, sidebars, toolbars
+- Remove any "Ask Trinity" buttons from public pages
+- Update onClick to trigger modal instead of navigation
+5. State Management
+Create platform-scoped state for Trinity modal:
+- isTrinityModalOpen (boolean)
+- trinityMessages (array)
+- State should be scoped to platform context, not global
+- Use React Context or state management within platform layout
+6. Integration Points
+Files to modify:
+1. Create: /components/platform/TrinityModal.jsx
+2. Modify: /layouts/PlatformLayout.jsx (add <TrinityModal />)
+3. Modify: Platform navigation components with "Ask Trinity" buttons
+4. Create: /context/TrinityModalContext.jsx (for state management within platform)
+7. User Experience Flow (Platform Users Only)
+1. User logged in, working on schedule/client/report
+2. Clicks "Ask Trinity" from platform nav/toolbar
+3. Modal overlays current page
+4. User chats with Trinity without losing work
+5. Closes modal, continues exactly where they left off
+6. If user logs out or navigates to public page, modal state clears
+8. Security Considerations
+- Modal component should check auth state before rendering
+- Trinity API calls should verify user session/token
+- No Trinity access for unauthenticated users
+- Modal unmounts completely on logout
+9. Technical Implementation
+- Use React Portal for modal rendering
+- Disable background scroll when modal open
+- Preserve form data on current page
+- Use existing Trinity API integration
+- Add loading states for AI responses
+- Focus trap inside modal
+REFERENCE DESIGN: Like Intercom chat widget - available throughout platform for logged-in users, but not on public marketing site.
+PRIORITY: HIGH - Critical UX improvement for platform users without exposing Trinity to public.
