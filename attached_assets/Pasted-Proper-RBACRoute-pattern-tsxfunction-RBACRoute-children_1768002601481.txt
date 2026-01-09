@@ -1,0 +1,153 @@
+Proper RBACRoute pattern:tsxfunction RBACRoute({ children, requiredPermission, publicPath = false }) {
+  const { user, isAuthenticated, isLoading } = useAuth();
+  
+  // 1. Show loading spinner during auth check
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Spinner /> {/* Or TrinityRedesign with loading animation */}
+      </div>
+    );
+  }
+  
+  // 2. Public paths render immediately (no auth needed)
+  if (publicPath) {
+    return children;
+  }
+  
+  // 3. Not authenticated? Redirect to login
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+  
+  // 4. Check permission
+  if (requiredPermission && !hasPermission(user, requiredPermission)) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <Alert variant="destructive">
+          <AlertTitle>Access Denied</AlertTitle>
+          <AlertDescription>
+            You don't have permission to view this page.
+          </AlertDescription>
+        </Alert>
+      </div>
+    );
+  }
+  
+  // 5. All checks passed - render children
+  return children;
+}🎯 KEY CHANGES NEEDED1. Never Return null or false from Route Guards
+tsx// ❌ BAD - Causes blank screen
+if (isLoading) return null;
+if (!user) return false;
+
+// ✅ GOOD - Shows something
+if (isLoading) return <LoadingScreen />;
+if (!user) return <Navigate to="/login" />;2. Public Routes Should Bypass Auth
+tsx// Mark public routes explicitly
+<RBACRoute publicPath={true}>
+  <LandingPage />
+</RBACRoute>
+
+<RBACRoute publicPath={true}>
+  <LoginPage />
+</RBACRoute>
+
+// Protected routes require auth
+<RBACRoute requiredPermission="view_dashboard">
+  <Dashboard />
+</RBACRoute>3. Loading States Must Be Visible
+tsx// Show branded loading screen
+function LoadingScreen() {
+  return (
+    <div className="flex items-center justify-center h-screen bg-gradient-to-br from-blue-50 to-indigo-50">
+      <div className="text-center space-y-4">
+        <CelticTrinityKnot className="w-16 h-16 mx-auto animate-pulse" />
+        <p className="text-muted-foreground">Loading CoAIleague...</p>
+      </div>
+    </div>
+  );
+}4. Auth Provider Must Load Before Routes
+tsx// ❌ BAD - Routes mount before auth ready
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>  {/* Auth initializing... */}
+        <Routes>      {/* Routes trying to check auth before ready */}
+          <Route path="/" element={<RBACRoute>...</RBACRoute>} />
+        </Routes>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
+
+// ✅ GOOD - Wait for auth before mounting routes
+function App() {
+  return (
+    <BrowserRouter>
+      <AuthProvider>
+        <AppRoutes /> {/* Only mounts after AuthProvider ready */}
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
+
+function AppRoutes() {
+  const { isLoading } = useAuth();
+  
+  if (isLoading) return <LoadingScreen />;
+  
+  return (
+    <Routes>
+      <Route path="/" element={<RBACRoute>...</RBACRoute>} />
+    </Routes>
+  );
+}🐛 WEBSOCKET ERROR (Secondary Issue)The WebSocket error is probably:
+ERR_CONNECTION_REFUSED on ws://localhost:5000Why:
+
+Frontend trying to connect to ws://localhost:5000
+But Replit proxy means external access uses different URL
+WebSocket needs wss:// not ws:// in production
+Fix:
+typescript// ❌ BAD - Hardcoded
+const ws = new WebSocket('ws://localhost:5000');
+
+// ✅ GOOD - Environment aware
+const wsUrl = process.env.NODE_ENV === 'production' 
+  ? `wss://${window.location.host}`  // Uses current domain
+  : 'ws://localhost:5000';           // Dev mode
+
+const ws = new WebSocket(wsUrl);📋 WHAT REPLIT SHOULD CHECK1. RBACRoute Component
+bash# Find it
+grep -r "RBACRoute" --include="*.tsx" --include="*.ts"
+
+# Check what it returns when auth fails
+cat /path/to/RBACRoute.tsx2. AuthProvider Loading State
+tsx// Make sure this exists and is TRUE during initial load
+const [isLoading, setIsLoading] = useState(true);
+
+// And gets set to false after auth check completes
+useEffect(() => {
+  checkAuth().finally(() => setIsLoading(false));
+}, []);3. Root App.tsx Structure
+tsx// Should be:
+<AuthProvider>
+  {isLoading ? <LoadingScreen /> : <Routes />}
+</AuthProvider>
+
+// Not:
+<AuthProvider>
+  <Routes /> {/* This causes blank screen during load */}
+</AuthProvider>🎯 EXPECTED BEHAVIOR AFTER FIXUser visits landing page:
+1. Shows loading screen (0.5s)
+2. Auth check completes
+3. Landing page renders (user not logged in - that's OK)
+4. Everything worksUser visits protected route:
+1. Shows loading screen (0.5s)
+2. Auth check completes
+3. No user → Redirect to /login
+4. User logs in → Redirect back to protected route
+5. Everything worksCurrent broken behavior:
+1. Blank screen (forever)
+2. Nothing happens
+3. Console shows errors

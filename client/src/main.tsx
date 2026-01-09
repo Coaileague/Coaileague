@@ -1,7 +1,11 @@
+console.log('[CoAIleague] main.tsx loading...');
+
 import { createRoot } from "react-dom/client";
 import { HelmetProvider } from 'react-helmet-async';
 import App from "./App";
 import "./index.css";
+
+console.log('[CoAIleague] Imports complete, mounting React app...');
 
 // Suppress Vite HMR WebSocket errors in development (harmless dev-only warnings in Replit)
 if (import.meta.env.DEV) {
@@ -38,24 +42,20 @@ createRoot(document.getElementById("root")!).render(
   </HelmetProvider>
 );
 
-// Force clear old service workers and caches on version mismatch
-const APP_VERSION = 'v1.0.3';
-if ('serviceWorker' in navigator) {
+// Service Worker registration - PRODUCTION ONLY
+// In development, the service worker can intercept Vite's module requests and cause blank screens
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  const APP_VERSION = 'v1.0.3';
   window.addEventListener('load', async () => {
     try {
-      // First, unregister any existing service workers to force fresh registration
       const registrations = await navigator.serviceWorker.getRegistrations();
       for (const registration of registrations) {
-        // Check if this is an outdated service worker by forcing update check
         await registration.update();
-        
-        // If there's a waiting worker, activate it immediately
         if (registration.waiting) {
           registration.waiting.postMessage({ type: 'SKIP_WAITING' });
         }
       }
       
-      // Clear all caches to ensure fresh content
       if ('caches' in window) {
         const cacheNames = await caches.keys();
         const oldCaches = cacheNames.filter(name => !name.includes(APP_VERSION.replace('v', '')));
@@ -65,11 +65,9 @@ if ('serviceWorker' in navigator) {
         }));
       }
       
-      // Register the service worker with cache-busting query param
       const registration = await navigator.serviceWorker.register(`/service-worker.js?v=${APP_VERSION}`);
       console.log('[CoAIleague] Service Worker registered', registration.scope);
       
-      // Listen for updates
       registration.addEventListener('updatefound', () => {
         const newWorker = registration.installing;
         if (newWorker) {
@@ -82,10 +80,17 @@ if ('serviceWorker' in navigator) {
         }
       });
       
-      // Check for updates periodically
       setInterval(() => registration.update(), 60000);
     } catch (error) {
       console.error('[CoAIleague] Service Worker setup failed', error);
+    }
+  });
+} else if (import.meta.env.DEV && 'serviceWorker' in navigator) {
+  // In development, unregister any existing service workers to prevent interference
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    for (const registration of registrations) {
+      registration.unregister();
+      console.log('[CoAIleague] Dev mode: Unregistered service worker');
     }
   });
 }

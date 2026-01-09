@@ -70,14 +70,31 @@
   </head>
   <body>
     <style>
-      /* AGGRESSIVE: Block ALL loading screens and overlays */
-      #initial-loader { display: none !important; visibility: hidden !important; opacity: 0 !important; position: fixed !important; z-index: -9999 !important; }
-      [id*="loader"] { display: none !important; visibility: hidden !important; opacity: 0 !important; }
-      [class*="loader"] { display: none !important; visibility: hidden !important; opacity: 0 !important; }
-      [class*="loading"] { display: none !important; visibility: hidden !important; opacity: 0 !important; }
+      /* Target ONLY legacy loader overlay - do NOT use wildcards that hide React components */
+      #initial-loader,
+      [data-legacy-loader="true"] { 
+        display: none !important; 
+        visibility: hidden !important; 
+        opacity: 0 !important; 
+        position: fixed !important; 
+        z-index: -9999 !important; 
+      }
     </style>
-    <div id="root"></div>
+    <div id="root">
+      <!-- Fallback content visible only if React fails to mount -->
+      <div id="fallback-content" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;font-family:system-ui,-apple-system,sans-serif;">
+        <div style="font-size:24px;font-weight:600;color:#333;margin-bottom:16px;">CoAIleague</div>
+        <div style="color:#666;font-size:14px;">Loading application...</div>
+        <div id="js-check" style="display:none;color:green;margin-top:8px;font-size:12px;">JavaScript is running</div>
+      </div>
+    </div>
     <script>
+      console.log('[DEBUG] HTML script block executing - JS is working');
+      
+      // Show JS is working indicator
+      var jsCheck = document.getElementById('js-check');
+      if (jsCheck) jsCheck.style.display = 'block';
+      
       // Suppress Vite HMR WebSocket errors BEFORE any modules load (development-only)
       
       // Patch WebSocket constructor to prevent "localhost:undefined" errors
@@ -114,14 +131,16 @@
         }
       }, true); // Use capture phase to catch before any other handlers
 
-      // Ensure no overlay blocks rendering
+      // Ensure only legacy loader overlays are hidden (do NOT hide React components)
       window.addEventListener('DOMContentLoaded', function() {
-        document.querySelectorAll('[id*="loader"], [class*="loader"], [class*="loading"]').forEach(el => {
+        var legacyLoader = document.getElementById('initial-loader');
+        if (legacyLoader) {
+          legacyLoader.style.display = 'none';
+          legacyLoader.style.visibility = 'hidden';
+        }
+        document.querySelectorAll('[data-legacy-loader="true"]').forEach(function(el) {
           el.style.display = 'none';
           el.style.visibility = 'hidden';
-          el.style.opacity = '0';
-          el.style.pointerEvents = 'none';
-          el.style.zIndex = '-9999';
         });
       });
     </script>

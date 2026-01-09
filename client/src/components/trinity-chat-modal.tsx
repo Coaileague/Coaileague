@@ -53,7 +53,7 @@ import {
   Mic,
   Command,
 } from 'lucide-react';
-import { TrinityRedesign } from '@/components/trinity-redesign';
+import TrinityRedesign from '@/components/trinity-redesign';
 import { TrinityAgentPanel } from '@/components/trinity';
 import { useTrinityState } from '@/hooks/use-trinity-state';
 

@@ -752,4 +752,7 @@ const TrinityRedesign = memo(function TrinityRedesign({
   );
 });
 
+// Named export for explicit imports
+export { TrinityRedesign };
+// Default export for convenience
 export default TrinityRedesign;

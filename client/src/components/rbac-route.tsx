@@ -196,7 +196,13 @@ export function RBACRoute({
   
   const isLoading = authLoading || workspaceLoading;
   
-  if (isLoading && !isLoadingBlocked) {
+  // CRITICAL FIX: On public routes (isLoadingBlocked=true), always render children
+  // This allows unauthenticated users to see the homepage and other public pages
+  if (isLoadingBlocked) {
+    return <>{children}</>;
+  }
+  
+  if (isLoading) {
     if (loadingComponent) {
       return <>{loadingComponent}</>;
     }
@@ -217,7 +223,8 @@ export function RBACRoute({
   const result = checkAccess(require, userWithRoles, isAuthenticated);
   
   if (!result.hasAccess) {
-    if (!isAuthenticated && !isLoadingBlocked) {
+    // Not authenticated - redirect to login
+    if (!isAuthenticated) {
       if (typeof window !== 'undefined') {
         window.location.href = navConfig.auth.login;
       }
