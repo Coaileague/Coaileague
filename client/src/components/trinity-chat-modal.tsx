@@ -631,24 +631,15 @@ function TrinityModal({ onClose }: TrinityModalProps) {
     };
 
     return (
-      <AnimatePresence>
-        <motion.div
-          initial={{ y: '100%' }}
-          animate={{ y: 0 }}
-          exit={{ y: '100%' }}
-          transition={{ type: 'spring', damping: 25, stiffness: 300 }}
-          className="fixed inset-x-0 bottom-0 z-[100]"
-          style={{ height: heightMap[mobileMode] }}
+      <div
+        className="fixed inset-x-0 bottom-0 z-[100] pointer-events-none"
+        style={{ height: heightMap[mobileMode] }}
+      >
+        <div
+          className={`h-full bg-background rounded-t-3xl shadow-2xl border-t flex flex-col pointer-events-auto ${
+            mobileMode === 'immersive' ? 'rounded-none' : ''
+          }`}
         >
-          <motion.div
-            drag="y"
-            dragConstraints={{ top: 0, bottom: 0 }}
-            dragElastic={0.2}
-            onDragEnd={handleDragEnd}
-            className={`h-full bg-background rounded-t-3xl shadow-2xl border-t flex flex-col ${
-              mobileMode === 'immersive' ? 'rounded-none' : ''
-            }`}
-          >
             {/* Drag Handle */}
             <div className="flex justify-center py-2 shrink-0">
               <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
@@ -793,9 +784,8 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                 <span>Swipe up/down to resize</span>
               </div>
             </div>
-          </motion.div>
-        </motion.div>
-      </AnimatePresence>
+        </div>
+      </div>
     );
   }
 
@@ -822,20 +812,9 @@ function TrinityModal({ onClose }: TrinityModalProps) {
     );
   }
 
-  // DESKTOP - Full floating window
+  // DESKTOP - Full floating window (no blocking backdrop)
   return (
-    <>
-      <div
-        className="fixed inset-0 bg-black/20 z-[99]"
-        onClick={onClose}
-        data-testid="trinity-modal-backdrop"
-      />
-      <motion.div
-        initial={{ scale: 0.95, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        transition={{ type: 'spring', damping: 20, stiffness: 300 }}
-      >
-        <Card
+    <Card
           className={`fixed z-[100] w-[420px] shadow-2xl border-2 ${modeConfig.colors.badge.replace('bg-', 'border-').split(' ')[0]}/30`}
           style={{
             left: position.x,
@@ -983,8 +962,6 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             </div>
           </CardContent>
         </Card>
-      </motion.div>
-    </>
   );
 }
 

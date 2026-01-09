@@ -1,0 +1,208 @@
+REPLIT AGENT PROMPT: Trinity Thinking Visualization
+TASK: Add animated thinking states to Trinity chat interface
+
+OBJECTIVE: Implement visual thinking indicators similar to Replit Agent's interface, using Trinity's existing animated logo.
+
+REFERENCE BEHAVIOR:
+- Replit Agent shows "🧠 Thinking..." with animated brain icon
+- Replit Agent shows "⚡ Working..." with animated sparkle icon
+- Icons animate while AI is processing
+- Status changes based on what Agent is doing
+
+TRINITY IMPLEMENTATION:
+
+1. LOCATE EXISTING TRINITY LOGO
+Question: Do we have an animated Trinity logo/icon in the project?
+Check these locations:
+- /public/trinity-logo.svg or .gif
+- /public/images/trinity/
+- /assets/trinity/
+- /components/TrinityLogo.jsx
+
+If animated logo exists: Use it
+If static logo exists: Make it animate (pulse, glow, rotate)
+If no logo exists: Create simple animated icon
+
+2. CREATE THINKING STATE COMPONENT
+
+File: /components/trinity/ThinkingIndicator.jsx
+
+Requirements:
+- Shows animated Trinity logo
+- Displays current thinking stage
+- Smooth transitions between states
+- Match Claude/Replit style
+
+States to support:
+- "Thinking..." (analyzing request)
+- "Reading data..." (querying database)
+- "Finding guards..." (searching employees)
+- "Creating shift..." (executing action)
+- "Done!" (completion state)
+
+3. INTEGRATE INTO TRINITY CHAT
+
+Update: /components/TrinityModal.jsx or wherever chat messages render
+
+When Trinity is processing:
+- Show ThinkingIndicator at bottom of chat
+- Animate Trinity logo (pulse/glow effect)
+- Display current thinking stage
+- Hide when response complete
+
+4. ANIMATION SPECIFICATIONS
+
+Trinity Logo Animation:
+- Subtle pulse effect (scale 1.0 → 1.05 → 1.0)
+- Soft glow around logo (0-10px blur)
+- Color shift (primary → accent → primary)
+- Duration: 2s infinite loop
+- Easing: cubic-bezier(0.4, 0, 0.2, 1)
+
+Thinking Text Animation:
+- Fade in when stage changes
+- Ellipsis animation ("Thinking" → "Thinking." → "Thinking.." → "Thinking...")
+- Color matches Trinity brand
+
+5. VISUAL DESIGN
+
+Match this structure:
+
+┌─────────────────────────────────┐
+│ [Trinity Logo] Thinking...      │ ← Animated
+│ Analyzing your request          │ ← Substage
+└─────────────────────────────────┘
+
+Desktop style:
+- Inline with chat messages
+- Subtle background (rgba)
+- Rounded corners
+- Shadow effect
+
+Mobile style:
+- Fixed to bottom of chat area
+- Slightly larger for visibility
+- Haptic feedback on state change
+
+6. CODE EXAMPLE STRUCTURE
+
+<ThinkingIndicator 
+  stage="thinking" 
+  substage="Analyzing your request"
+  animated={true}
+/>
+
+Stages:
+- thinking: General processing
+- querying: Database access
+- analyzing: Data analysis
+- executing: Running action
+- complete: Done (brief, then hide)
+
+7. INTEGRATION POINTS
+
+Update Trinity API response handler:
+- When request sent → Show "Thinking..."
+- When streaming starts → Show "Responding..."
+- When tool called → Show "Reading data..." or "Creating shift..."
+- When complete → Brief "Done!" then hide
+
+8. ACCESSIBILITY
+
+Requirements:
+- aria-live="polite" for screen readers
+- Announce stage changes
+- Keyboard focus management
+- Reduced motion support (prefers-reduced-motion)
+
+9. PERFORMANCE
+
+Requirements:
+- Use CSS animations (not JS loops)
+- GPU acceleration (transform/opacity only)
+- Lazy load heavy animations
+- Cancel animations when not visible
+
+QUESTIONS FOR YOU TO ANSWER:
+
+1. Do we have an existing Trinity logo file? If yes, what's the path?
+2. Is the logo static or already animated?
+3. What are Trinity's brand colors? (for glow/pulse effects)
+4. Should thinking states be inline with messages or fixed position?
+
+DELIVERABLES:
+
+1. ThinkingIndicator component
+2. Trinity logo animation (create if needed)
+3. Integration into TrinityModal
+4. Smooth state transitions
+5. Mobile + desktop responsive
+6. Accessibility support
+
+PRIORITY: HIGH - This makes Trinity feel responsive and alive
+
+REFERENCE: 
+- Claude's animated logo during thinking
+- Replit Agent's thinking states
+- Smooth, professional animations
+- Not distracting, but informative
+
+FOLLOW-UP QUESTIONS TO ASK REPLIT
+If Replit Agent doesn't answer automatically, ask:
+Question 1:
+Do we have a Trinity logo or icon in this project? 
+Search for files containing "trinity" and "logo" or "icon" in:
+- /public directory
+- /assets directory  
+- /components directory
+Show me all matches.
+Question 2:
+Show me where Trinity chat messages are currently rendered.
+I need to add a thinking indicator component that shows when Trinity is processing.
+Question 3:
+What animation library are we using in this project?
+- Framer Motion?
+- React Spring?
+- CSS animations only?
+- Tailwind animate utilities?
+
+I need this to animate Trinity's thinking state.
+
+IF NO TRINITY LOGO EXISTS
+Quick animated icon option:
+jsxconst TrinityIcon = ({ isAnimating }) => (
+  <svg 
+    className={`trinity-icon ${isAnimating ? 'animate' : ''}`}
+    viewBox="0 0 24 24"
+    width="24"
+    height="24"
+  >
+    {/* Stylized "T" or brain icon */}
+    <path 
+      d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"
+      fill="currentColor"
+    />
+  </svg>
+);
+
+// CSS
+.trinity-icon.animate {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+IMPLEMENTATION ESTIMATE
+
+With existing logo: 2-3 hours
+Need to create logo: 4-5 hours
+Full integration + polish: 6-8 hours total
