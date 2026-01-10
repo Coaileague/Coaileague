@@ -35,16 +35,25 @@ html, body {
 #root {
   visibility: visible !important;
   opacity: 1 !important;
-}
-
-/* Hide fallback content ONLY when React has mounted (detected by presence of rendered content) */
-#root:not(:empty) > #fallback-content {
-  display: none !important;
+  min-height: 100vh;
+  min-height: 100dvh; /* Dynamic viewport height for mobile */
 }
 
 /* Ensure main app content is visible */
 #root > * {
   visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Ensure background is visible - prevents black screen on mobile */
+html, body, #root {
+  background-color: white;
+}
+
+/* In dark mode, use dark background */
+.dark html, .dark body, .dark #root,
+html.dark, html.dark body, html.dark #root {
+  background-color: hsl(222.2 84% 4.9%);
 }
 
 /* ============================================================================
