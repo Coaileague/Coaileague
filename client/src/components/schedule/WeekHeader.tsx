@@ -60,31 +60,31 @@ export function WeekHeader({ weekStart, onPreviousWeek, onNextWeek, stats, isLoa
         <div className="flex gap-3 px-4 pb-4">
           <StatCard
             label="Hours"
-            value={isLoadingStats ? "..." : stats?.totalHours.toFixed(1) || "0"}
+            value={isLoadingStats ? "..." : (stats?.totalHours ?? 0).toFixed(1)}
             icon={<Clock className="h-4 w-4" />}
             testId="stat-hours"
           />
           <StatCard
             label="Cost"
-            value={isLoadingStats ? "..." : `$${(stats?.totalCost || 0).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`}
+            value={isLoadingStats ? "..." : `$${(stats?.totalCost ?? 0).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })}`}
             icon={<DollarSign className="h-4 w-4" />}
             variant="success"
-            subtext={stats ? `${Math.round((stats.totalCost / 15000) * 100)}% of budget` : undefined}
+            subtext={stats ? `${Math.round(((stats.totalCost ?? 0) / 15000) * 100)}% of budget` : undefined}
             testId="stat-cost"
           />
           <StatCard
             label="Overtime"
-            value={isLoadingStats ? "..." : stats?.overtimeHours.toFixed(1) || "0"}
+            value={isLoadingStats ? "..." : (stats?.overtimeHours ?? 0).toFixed(1)}
             icon={<AlertTriangle className="h-4 w-4" />}
-            variant={stats && stats.overtimeHours > 0 ? "warning" : "default"}
+            variant={stats && (stats.overtimeHours ?? 0) > 0 ? "warning" : "default"}
             subtext="hrs"
             testId="stat-overtime"
           />
           <StatCard
             label="Open"
-            value={isLoadingStats ? "..." : String(stats?.openShifts || 0)}
+            value={isLoadingStats ? "..." : String(stats?.openShifts ?? 0)}
             icon={<Calendar className="h-4 w-4" />}
-            variant={stats && stats.openShifts > 0 ? "danger" : "default"}
+            variant={stats && (stats.openShifts ?? 0) > 0 ? "danger" : "default"}
             subtext="shifts"
             testId="stat-open-shifts"
           />

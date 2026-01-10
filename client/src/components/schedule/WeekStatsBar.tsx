@@ -71,8 +71,8 @@ export function WeekStatsBar({
     );
   }
 
-  const hasOvertimeWarning = calculatedStats.overtimeHours > 0;
-  const hasOpenShiftWarning = calculatedStats.openShifts > 0;
+  const hasOvertimeWarning = (calculatedStats?.overtimeHours ?? 0) > 0;
+  const hasOpenShiftWarning = (calculatedStats?.openShifts ?? 0) > 0;
 
   return (
     <Card className="p-4 bg-card/50" data-testid="week-stats-bar">
@@ -86,7 +86,7 @@ export function WeekStatsBar({
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm">
-              <strong>{calculatedStats.totalHours.toFixed(1)}h</strong>
+              <strong>{(calculatedStats?.totalHours ?? 0).toFixed(1)}h</strong>
               <span className="text-muted-foreground ml-1">Total Hours</span>
             </span>
           </div>
@@ -102,7 +102,7 @@ export function WeekStatsBar({
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-muted-foreground" />
             <span className="text-sm">
-              <strong>{calculatedStats.avgHoursPerEmployee.toFixed(1)}h</strong>
+              <strong>{(calculatedStats?.avgHoursPerEmployee ?? 0).toFixed(1)}h</strong>
               <span className="text-muted-foreground ml-1">Avg/Employee</span>
             </span>
           </div>
@@ -111,7 +111,7 @@ export function WeekStatsBar({
             <TrendingUp className={`w-4 h-4 ${hasOvertimeWarning ? 'text-amber-500' : 'text-muted-foreground'}`} />
             <span className="text-sm">
               <strong className={hasOvertimeWarning ? 'text-amber-500' : ''}>
-                {calculatedStats.overtimeHours.toFixed(1)}h
+                {(calculatedStats?.overtimeHours ?? 0).toFixed(1)}h
               </strong>
               <span className="text-muted-foreground ml-1">Overtime</span>
             </span>
@@ -125,14 +125,14 @@ export function WeekStatsBar({
 
           <div className="flex items-center gap-2">
             <span className="text-sm">
-              <strong>{calculatedStats.shiftsFilled}/{calculatedStats.totalShifts}</strong>
+              <strong>{calculatedStats?.shiftsFilled ?? 0}/{calculatedStats?.totalShifts ?? 0}</strong>
               <span className="text-muted-foreground ml-1">
-                ({calculatedStats.fillRate.toFixed(0)}%) Filled
+                ({(calculatedStats?.fillRate ?? 0).toFixed(0)}%) Filled
               </span>
             </span>
             {hasOpenShiftWarning && (
               <Badge variant="destructive" className="text-xs">
-                {calculatedStats.openShifts} Open
+                {calculatedStats?.openShifts ?? 0} Open
               </Badge>
             )}
           </div>
