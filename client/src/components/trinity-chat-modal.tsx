@@ -59,7 +59,7 @@ import {
   Mic,
   Command,
 } from 'lucide-react';
-import { TrinityAnimatedLogo } from '@/components/ui/trinity-animated-logo';
+import { ColorfulCelticKnot } from '@/components/ui/colorful-celtic-knot';
 import { TrinityAgentPanel } from '@/components/trinity';
 import { useTrinityState } from '@/hooks/use-trinity-state';
 
@@ -276,7 +276,7 @@ function ThinkingVisualization({ steps, mode }: { steps: ThinkingStep[]; mode: C
       {/* Animated Trinity Avatar - SVG for crisp rendering */}
       <div className="shrink-0">
         <div className="w-10 h-10 flex items-center justify-center">
-          <TrinityAnimatedLogo size="md" state="thinking" mode={mode} />
+          <ColorfulCelticKnot size="md" animated state="thinking" animationSpeed="fast" />
         </div>
       </div>
       
@@ -782,7 +782,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             <div className="flex items-center justify-between px-4 pb-2 shrink-0" style={{ touchAction: 'manipulation' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 flex items-center justify-center">
-                  <TrinityAnimatedLogo size="md" state={chatMutation.isPending ? "thinking" : "idle"} mode={mode} />
+                  <ColorfulCelticKnot size="md" animated state={chatMutation.isPending ? "thinking" : "idle"} animationSpeed={chatMutation.isPending ? "fast" : "slow"} />
                 </div>
                 <div>
                   <h1 className="font-semibold text-sm">{TRINITY_BRANDING.displayName}</h1>
@@ -846,7 +846,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                 {messages.length === 0 && !isThinking && (
                   <div className="flex flex-col items-center justify-center h-full text-center py-8">
                     <div className="w-20 h-20 flex items-center justify-center mb-4">
-                      <TrinityAnimatedLogo size="lg" state="idle" mode={mode} />
+                      <ColorfulCelticKnot size="xl" animated state="idle" animationSpeed="slow" />
                     </div>
                     <h3 className="font-semibold text-lg mb-2">Ask Trinity Anything</h3>
                     <p className="text-sm text-muted-foreground max-w-xs">
@@ -866,7 +866,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                       {msg.role === 'assistant' && (
                         <div className="shrink-0">
                           <div className="w-8 h-8 flex items-center justify-center">
-                            <TrinityAnimatedLogo size="sm" state="idle" mode={mode} />
+                            <ColorfulCelticKnot size="sm" animated state="idle" animationSpeed="slow" />
                           </div>
                         </div>
                       )}
@@ -961,7 +961,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
         data-testid="trinity-modal-minimized"
       >
         <div className="w-14 h-14 flex items-center justify-center">
-          <TrinityAnimatedLogo size="lg" state="idle" mode={mode} />
+          <ColorfulCelticKnot size="xl" animated state="idle" animationSpeed="slow" />
           {messages.length > 0 && (
             <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground rounded-full text-xs flex items-center justify-center">
               {messages.length}
@@ -989,7 +989,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
           >
             <GripHorizontal className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="w-10 h-10 flex items-center justify-center shrink-0">
-              <TrinityAnimatedLogo size="md" state={chatMutation.isPending ? "thinking" : "idle"} mode={mode} />
+              <ColorfulCelticKnot size="md" animated state={chatMutation.isPending ? "thinking" : "idle"} animationSpeed={chatMutation.isPending ? "fast" : "slow"} />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -1058,7 +1058,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
               {messages.length === 0 && !isThinking && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <div className="w-14 h-14 flex items-center justify-center mb-3">
-                    <TrinityAnimatedLogo size="lg" state="idle" mode={mode} />
+                    <ColorfulCelticKnot size="xl" animated state="idle" animationSpeed="slow" />
                   </div>
                   <h3 className="font-semibold mb-1">Ask Trinity Anything</h3>
                   <p className="text-xs text-muted-foreground">
@@ -1076,7 +1076,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                     {msg.role === 'assistant' && (
                       <div className="shrink-0">
                         <div className="w-7 h-7 flex items-center justify-center">
-                          <TrinityAnimatedLogo size="sm" state="idle" mode={mode} />
+                          <ColorfulCelticKnot size="sm" animated state="idle" animationSpeed="slow" />
                         </div>
                       </div>
                     )}
