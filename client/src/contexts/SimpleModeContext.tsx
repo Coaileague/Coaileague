@@ -43,10 +43,7 @@ export function SimpleModeProvider({ children }: { children: ReactNode }) {
   // Mutation to update view mode preference
   const updatePreferenceMutation = useMutation({
     mutationFn: async (params: { simpleMode?: boolean; viewModePreference?: ViewModePreference }) => {
-      return apiRequest('/api/user/preferences', {
-        method: 'PATCH',
-        body: JSON.stringify(params),
-      });
+      return apiRequest('PATCH', '/api/user/preferences', params);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/me'] });

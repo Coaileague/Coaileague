@@ -37,6 +37,7 @@ import { ConflictAlerts } from '@/components/schedule/ConflictAlerts';
 import { TrinityInsightsPanel } from '@/components/schedule/TrinityInsightsPanel';
 import { AskTrinityButton } from '@/components/trinity-button';
 import { TrinityLoadingSpinner } from '@/components/trinity-loading-overlay';
+import { useSimpleMode } from '@/contexts/SimpleModeContext';
 import type { Shift, Employee, Client } from '@shared/schema';
 
 export default function ScheduleMobileFirst() {
@@ -45,6 +46,7 @@ export default function ScheduleMobileFirst() {
   const isMobile = useIsMobile();
   const { workspaceRole } = useWorkspaceAccess();
   const { employee: currentEmployee } = useEmployee();
+  const { isSimpleMode } = useSimpleMode();
   
   const isManagerOrSupervisor = useMemo(() => {
     if (!currentEmployee || !currentEmployee.workspaceRole) return false;
@@ -502,26 +504,32 @@ export default function ScheduleMobileFirst() {
                   </Badge>
                 )}
               </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowTemplates(true)}
-                className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
-                data-testid="button-templates"
-              >
-                <LayoutTemplate className="h-3.5 w-3.5 text-purple-600" />
-                Templates
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowReports(true)}
-                className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
-                data-testid="button-reports"
-              >
-                <BarChart3 className="h-3.5 w-3.5 text-blue-600" />
-                Reports
-              </Button>
+              {/* Templates - Pro View only */}
+              {!isSimpleMode && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowTemplates(true)}
+                  className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
+                  data-testid="button-templates"
+                >
+                  <LayoutTemplate className="h-3.5 w-3.5 text-purple-600" />
+                  Templates
+                </Button>
+              )}
+              {/* Reports - Pro View only */}
+              {!isSimpleMode && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowReports(true)}
+                  className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
+                  data-testid="button-reports"
+                >
+                  <BarChart3 className="h-3.5 w-3.5 text-blue-600" />
+                  Reports
+                </Button>
+              )}
             </>
           )}
           {/* Actions for all users */}
@@ -576,8 +584,8 @@ export default function ScheduleMobileFirst() {
         />
       )}
       
-      {/* Mobile Trinity Insights - Managers only */}
-      {isManagerOrSupervisor && showTrinityInsights && (
+      {/* Mobile Trinity Insights - Managers only, Pro View only */}
+      {isManagerOrSupervisor && showTrinityInsights && !isSimpleMode && (
         <div className="mx-3 mt-2">
           <TrinityInsightsPanel
             weekStart={weekStart}

@@ -42,12 +42,14 @@ import { WorkspaceLayout } from "@/components/workspace-layout";
 import { Link } from "wouter";
 import { PageHeader } from "@/components/page-header";
 import { TimelineSkeleton, MetricsCardsSkeleton } from "@/components/loading-indicators/skeletons";
+import { useSimpleMode } from "@/contexts/SimpleModeContext";
 
 export default function TimeTracking() {
   const { toast } = useToast();
   const trinity = useTrinityAnnouncement();
   const { isAuthenticated, isLoading, user } = useAuth();
   const isMobile = useIsMobile();
+  const { isSimpleMode } = useSimpleMode();
   const [view, setView] = useState('clock');
   const [clockInDialogOpen, setClockInDialogOpen] = useState(false);
   const [clockOutDialogOpen, setClockOutDialogOpen] = useState(false);
@@ -107,6 +109,13 @@ export default function TimeTracking() {
 
     return () => clearInterval(interval);
   }, []);
+
+  // Auto-redirect from reports view when Simple Mode is active
+  useEffect(() => {
+    if (isSimpleMode && view === 'reports') {
+      setView('clock');
+    }
+  }, [isSimpleMode, view]);
 
   const { data: employees = [], isError: employeesError, error: employeesErrorObj, refetch: refetchEmployees } = useQuery<Employee[]>({
     queryKey: queryKeys.employees.all,
@@ -949,7 +958,8 @@ export default function TimeTracking() {
                   )}
                 </Button>
               )}
-              {canApprove && (
+              {/* Reports - Pro View only */}
+              {canApprove && !isSimpleMode && (
                 <Button
                   variant="ghost"
                   onClick={() => setView('reports')}
@@ -1301,8 +1311,8 @@ export default function TimeTracking() {
               {/* GetSling-style Weekly Grid View */}
               {timesheetViewMode === 'grid' && (
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-                  {/* Bulk Actions Bar */}
-                  {canApprove && bulkSelectedEmployees.size > 0 && (
+                  {/* Bulk Actions Bar - Pro View only */}
+                  {canApprove && bulkSelectedEmployees.size > 0 && !isSimpleMode && (
                     <div className="bg-blue-50 border-b border-blue-200 p-3 flex items-center justify-between">
                       <span className="text-sm font-medium text-blue-800">
                         {bulkSelectedEmployees.size} employee{bulkSelectedEmployees.size > 1 ? 's' : ''} selected
@@ -1339,7 +1349,8 @@ export default function TimeTracking() {
                     <table className="w-full min-w-[800px]">
                       <thead className="bg-gray-50 border-b border-gray-200">
                         <tr>
-                          {canApprove && (
+                          {/* Bulk select header - Pro View only */}
+                          {canApprove && !isSimpleMode && (
                             <th className="px-3 py-3 text-left w-10">
                               <Checkbox
                                 checked={bulkSelectedEmployees.size === gridEmployees.length && gridEmployees.length > 0}
@@ -1378,7 +1389,8 @@ export default function TimeTracking() {
 
                           return (
                             <tr key={emp.id} className={`hover:bg-gray-50 ${isSelected ? 'bg-blue-50' : ''}`} data-testid={`timesheet-row-${emp.id}`}>
-                              {canApprove && (
+                              {/* Bulk select checkbox - Pro View only */}
+                              {canApprove && !isSimpleMode && (
                                 <td className="px-3 py-3">
                                   <Checkbox
                                     checked={isSelected}
@@ -2041,8 +2053,8 @@ export default function TimeTracking() {
             </div>
           )}
 
-          {/* Reports View */}
-          {view === 'reports' && canApprove && (
+          {/* Reports View - Pro View only */}
+          {view === 'reports' && canApprove && !isSimpleMode && (
             <div className="space-y-6">
               {/* Report Header */}
               <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 lg:p-6">
@@ -2413,16 +2425,19 @@ export default function TimeTracking() {
                     </span>
                   )}
                 </button>
-                <button
-                  onClick={() => setView('reports')}
-                  className={`flex flex-col items-center justify-center ${
-                    view === 'reports' ? 'text-blue-600' : 'text-gray-600'
-                  }`}
-                  data-testid="button-mobile-nav-reports"
-                >
-                  <BarChart2 className="w-5 h-5 mb-1" />
-                  <span className="text-xs">Reports</span>
-                </button>
+                {/* Reports - Pro View only */}
+                {!isSimpleMode && (
+                  <button
+                    onClick={() => setView('reports')}
+                    className={`flex flex-col items-center justify-center ${
+                      view === 'reports' ? 'text-blue-600' : 'text-gray-600'
+                    }`}
+                    data-testid="button-mobile-nav-reports"
+                  >
+                    <BarChart2 className="w-5 h-5 mb-1" />
+                    <span className="text-xs">Reports</span>
+                  </button>
+                )}
               </>
             )}
           </div>

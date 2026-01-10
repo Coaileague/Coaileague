@@ -76,6 +76,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { EmployeeEditDialog } from "@/components/employee-edit-dialog";
 import { ROLE_LABELS, getRoleBadgeColor, normalizeRole } from "@/lib/roleHierarchy";
+import { useSimpleMode } from "@/contexts/SimpleModeContext";
 import {
   Form,
   FormControl,
@@ -91,6 +92,7 @@ export default function Employees() {
   const { isAuthenticated, isLoading: authLoading } = useAuth();
   const { workspaceRole, isPlatformStaff } = useWorkspaceAccess();
   const isMobile = useIsMobile();
+  const { isSimpleMode } = useSimpleMode();
   const [searchQuery, setSearchQuery] = useState("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
