@@ -92,21 +92,61 @@ function SimpleErrorFallback({ errorMessage }: { errorMessage?: string }) {
           </details>
         )}
         
-        <button
-          onClick={() => window.location.reload()}
-          style={{
-            padding: '0.5rem 1.5rem',
-            backgroundColor: '#3b82f6',
-            color: 'white',
-            border: 'none',
-            borderRadius: '0.375rem',
-            fontSize: '0.875rem',
-            fontWeight: '500',
-            cursor: 'pointer'
-          }}
-        >
-          Refresh Page
-        </button>
+        <div style={{
+          display: 'flex',
+          gap: '0.75rem',
+          justifyContent: 'center',
+          flexWrap: 'wrap'
+        }}>
+          <button
+            onClick={() => window.location.href = '/'}
+            style={{
+              padding: '0.5rem 1.5rem',
+              backgroundColor: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
+            data-testid="button-go-home"
+          >
+            Go Home
+          </button>
+          <button
+            onClick={() => window.history.back()}
+            style={{
+              padding: '0.5rem 1.5rem',
+              backgroundColor: '#6b7280',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
+            data-testid="button-go-back"
+          >
+            Go Back
+          </button>
+          <button
+            onClick={() => window.location.reload()}
+            style={{
+              padding: '0.5rem 1.5rem',
+              backgroundColor: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              fontSize: '0.875rem',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
+            data-testid="button-refresh"
+          >
+            Refresh Page
+          </button>
+        </div>
         
         <p style={{
           marginTop: '1rem',
