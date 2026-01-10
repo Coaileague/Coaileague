@@ -285,9 +285,12 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     };
   }, [justGotVoice]);
 
-  // Enhanced connection state tracking
+  // Enhanced connection state tracking with refs to prevent infinite loops
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error' | 'denied'>('disconnected');
   const [apiErrors, setApiErrors] = useState<string[]>([]);
+  // Refs to track previous values and prevent unnecessary state updates (Guru Mode: State Guard)
+  const prevConnectionStatusRef = useRef<string>('disconnected');
+  const prevApiErrorsRef = useRef<string>('');
 
   const { data: roomData, error: roomError } = useQuery({
     queryKey: ['/api/helpdesk/room/helpdesk'],
@@ -392,6 +395,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   }, [motdResponse]);
 
   // Monitor connection and API health - Make server more self-aware
+  // Guru Mode: State Guard pattern to prevent infinite loops
   useEffect(() => {
     const errors: string[] = [];
     
@@ -403,22 +407,36 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     // - motdError (optional feature)
     
     // Determine overall connection status
+    let newStatus: 'connected' | 'disconnected' | 'error' | 'denied' = 'connected';
+    let newErrors: string[] = [];
+    
     if (!isConnected) {
-      setConnectionStatus('disconnected');
+      newStatus = 'disconnected';
     } else if (errors.length > 0) {
       // Connected to WebSocket but API is failing
-      setConnectionStatus('error');
-      setApiErrors(errors);
+      newStatus = 'error';
+      newErrors = errors;
     } else if (onlineUsers.length === 0 && isConnected) {
       // Connected but no users (possible server issue)
-      setConnectionStatus('error');
-      setApiErrors(['No users detected']);
+      newStatus = 'error';
+      newErrors = ['No users detected'];
     } else if (roomData && (roomData as any).status === 'closed') {
-      setConnectionStatus('denied');
-      setApiErrors(['Chat room is closed']);
+      newStatus = 'denied';
+      newErrors = ['Chat room is closed'];
     } else {
-      setConnectionStatus('connected');
-      setApiErrors([]);
+      newStatus = 'connected';
+      newErrors = [];
+    }
+    
+    // State Guard: Only update if values actually changed (prevents infinite loop)
+    const errorsKey = newErrors.join(',');
+    if (prevConnectionStatusRef.current !== newStatus) {
+      prevConnectionStatusRef.current = newStatus;
+      setConnectionStatus(newStatus);
+    }
+    if (prevApiErrorsRef.current !== errorsKey) {
+      prevApiErrorsRef.current = errorsKey;
+      setApiErrors(newErrors);
     }
   }, [isConnected, roomError, queueError, motdError, onlineUsers.length, roomData]);
 
