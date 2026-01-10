@@ -1,10 +1,16 @@
 /**
  * OverlayController - Centralized loading overlay management
  * Prevents double loading bars by ensuring only one overlay renders at a time
+ * 
+ * UNIFIED SYSTEM: All loading overlays now use TrinityLoadingOverlay exclusively
  */
 
 import { createContext, useContext, useState, useCallback, useRef, ReactNode } from "react";
-import { ResponsiveLoading, type ScenarioType, type AnimationType } from "@/components/loading-indicators";
+import { TrinityLoadingOverlay } from "@/components/trinity-loading-overlay";
+
+// Legacy types kept for API compatibility
+export type ScenarioType = "login" | "logout" | "schedule" | "invoice" | "payroll" | "email" | "analytics" | "upload" | "general";
+export type AnimationType = "spinner" | "progress-bar" | "waves" | "dots" | "pulse" | "gradient" | "orbit" | "skeleton" | "ripple" | "bounce";
 
 export type OverlayStatus = "loading" | "success" | "error" | "info";
 export type OverlayPriority = "critical" | "high" | "normal";
@@ -202,20 +208,15 @@ export function OverlayControllerProvider({ children }: { children: ReactNode })
   return (
     <OverlayControllerContext.Provider value={{ showOverlay, hideOverlay, updateOverlay, isModalActive, registerModal, unregisterModal, tryActivate }}>
       {children}
-      {/* Single overlay instance - only one can be visible at a time */}
-      {/* Uses UniversalTransitionOverlay with multiple animation variants */}
-      {/* Never render overlays on public routes (already handled above) */}
-      {activeOverlay && activeOverlay.status === "loading" ? (
-        <ResponsiveLoading
-          isVisible={true}
-          message={activeOverlay.title}
-          submessage={activeOverlay.submessage}
-          scenario={activeOverlay.scenario}
-          animationType={activeOverlay.animationType}
-          progress={activeOverlay.progress}
-          status={activeOverlay.status}
-          duration={activeOverlay.duration}
-          onComplete={activeOverlay.onComplete}
+      {/* Single overlay instance - UNIFIED Trinity Loading System */}
+      {/* All loading overlays now use TrinityLoadingOverlay exclusively */}
+      {/* Render for any status (loading, success, error, info) */}
+      {activeOverlay ? (
+        <TrinityLoadingOverlay
+          isLoading={true}
+          message={activeOverlay.title || (activeOverlay.status === "success" ? "Success!" : activeOverlay.status === "error" ? "Error" : "Processing...")}
+          subMessage={activeOverlay.submessage}
+          variant="fullscreen"
         />
       ) : null}
     </OverlayControllerContext.Provider>

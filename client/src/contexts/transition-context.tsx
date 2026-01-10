@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useCallback, useEffect, ReactNode, useRef } from "react";
-import { type ScenarioType } from "@/components/universal-transition-overlay";
-import { useOverlayController } from "./overlay-controller";
+import { type ScenarioType, useOverlayController } from "./overlay-controller";
 
 export type TransitionStatus = "loading" | "success" | "error" | "info";
 

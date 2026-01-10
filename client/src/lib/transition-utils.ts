@@ -1,4 +1,4 @@
-import { TransitionStatus } from "@/components/universal-transition-overlay";
+import { TransitionStatus } from "@/components/loading-indicators";
 
 export interface TransitionHelperProps {
   showTransition: (options?: any) => void;

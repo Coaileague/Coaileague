@@ -1,11 +1,21 @@
 /**
- * ResponsiveLoading - Universal loading indicator system
- * Uses UniversalTransitionOverlay for professional loading states
- * Supports multiple animations, scenarios, and status types
+ * ResponsiveLoading - UNIFIED Trinity Loading System
+ * 
+ * All loading overlays now use TrinityLoadingOverlay exclusively.
+ * This provides a consistent, brand-compliant loading experience across the platform.
  */
 
-import { UniversalTransitionOverlay, type AnimationType, type ScenarioType, type TransitionStatus } from "@/components/universal-transition-overlay";
+import { TrinityLoadingOverlay } from "@/components/trinity-loading-overlay";
 import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
+
+// Legacy types kept for API compatibility
+export type TransitionStatus = "loading" | "success" | "error" | "info" | "denied";
+export type AnimationType = 
+  | "spinner" | "progress-bar" | "waves" | "dots" | "pulse" 
+  | "gradient" | "orbit" | "skeleton" | "ripple" | "bounce";
+export type ScenarioType = 
+  | "login" | "logout" | "schedule" | "invoice" | "payroll" 
+  | "email" | "analytics" | "upload" | "general";
 
 interface LoadingProps {
   isVisible?: boolean;
@@ -23,35 +33,28 @@ export function ResponsiveLoading({
   isVisible = true,
   message = "Loading...",
   submessage,
-  progress,
   status = "loading",
-  animationType = "spinner",
-  scenario = "general",
-  duration,
-  onComplete
 }: LoadingProps) {
-  // CRITICAL: Respect universal loading gate - NEVER show on public routes
   const { isLoadingBlocked } = useUniversalLoadingGate();
   
-  // If loading is blocked (public route), don't render anything
-  if (isLoadingBlocked) {
+  if (isLoadingBlocked || !isVisible) {
     return null;
   }
 
+  // Map status to appropriate default message if none provided
+  const displayMessage = message || (
+    status === "success" ? "Success!" :
+    status === "error" ? "Error occurred" :
+    status === "denied" ? "Access Denied" :
+    "Loading..."
+  );
+
   return (
-    <UniversalTransitionOverlay
-      isVisible={isVisible}
-      status={status}
-      animationType={animationType}
-      scenario={scenario}
-      message={message}
-      submessage={submessage}
-      progress={progress}
-      duration={duration}
-      onComplete={onComplete}
+    <TrinityLoadingOverlay
+      isLoading={isVisible}
+      message={displayMessage}
+      subMessage={submessage}
+      variant="fullscreen"
     />
   );
 }
-
-// Export types for use in other components
-export type { AnimationType, ScenarioType, TransitionStatus };

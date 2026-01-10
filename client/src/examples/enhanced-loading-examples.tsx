@@ -8,7 +8,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { UniversalTransitionOverlay } from "@/components/universal-transition-overlay";
+import { ResponsiveLoading } from "@/components/loading-indicators";
 import { useEnhancedLoading, simulateProgress } from "@/hooks/useEnhancedLoading";
 import { 
   Calendar, FileText, DollarSign, Mail, 
@@ -178,15 +178,10 @@ export function EnhancedLoadingExamples() {
 
   return (
     <>
-      <UniversalTransitionOverlay
+      <ResponsiveLoading
         isVisible={loading.loadingState.isVisible}
-        status={loading.loadingState.status}
-        animationType={loading.loadingState.animationType}
-        scenario={loading.loadingState.scenario}
         message={loading.loadingState.message}
         submessage={loading.loadingState.submessage}
-        progress={loading.loadingState.progress}
-        onDenied={loading.hideLoading}
       />
 
       <div className="container mx-auto py-8 space-y-6">

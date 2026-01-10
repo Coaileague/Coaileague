@@ -1,5 +1,5 @@
 import { useState, useCallback } from "react";
-import { AnimationType, ScenarioType, TransitionStatus } from "@/components/universal-transition-overlay";
+import { AnimationType, ScenarioType, TransitionStatus } from "@/components/loading-indicators";
 
 export interface LoadingOptions {
   scenario?: ScenarioType;
