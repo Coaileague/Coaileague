@@ -80,20 +80,9 @@
         z-index: -9999 !important; 
       }
     </style>
-    <div id="root">
-      <!-- Fallback content visible only if React fails to mount -->
-      <div id="fallback-content" style="display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;font-family:system-ui,-apple-system,sans-serif;">
-        <div style="font-size:24px;font-weight:600;color:#333;margin-bottom:16px;">CoAIleague</div>
-        <div style="color:#666;font-size:14px;">Loading application...</div>
-        <div id="js-check" style="display:none;color:green;margin-top:8px;font-size:12px;">JavaScript is running</div>
-      </div>
-    </div>
+    <div id="root"></div>
     <script>
       console.log('[DEBUG] HTML script block executing - JS is working');
-      
-      // Show JS is working indicator
-      var jsCheck = document.getElementById('js-check');
-      if (jsCheck) jsCheck.style.display = 'block';
       
       // Suppress Vite HMR WebSocket errors BEFORE any modules load (development-only)
       

@@ -29,6 +29,25 @@ html, body {
 }
 
 /* ============================================================================
+   CRITICAL: Force main content visibility
+   Ensures React content is always visible after mounting
+   ============================================================================ */
+#root {
+  visibility: visible !important;
+  opacity: 1 !important;
+}
+
+/* Hide fallback content ONLY when React has mounted (detected by presence of rendered content) */
+#root:not(:empty) > #fallback-content {
+  display: none !important;
+}
+
+/* Ensure main app content is visible */
+#root > * {
+  visibility: visible !important;
+}
+
+/* ============================================================================
    OPT-IN UTILITY CLASSES (use explicitly on elements that need them)
    ============================================================================ */
 .no-overflow-x {
