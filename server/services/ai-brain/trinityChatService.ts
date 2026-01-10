@@ -580,19 +580,19 @@ class TrinityChatService {
         .from(invoices)
         .where(and(
           eq(invoices.workspaceId, workspaceId),
-          gte(invoices.invoiceDate, startOfMonth)
+          gte(invoices.issueDate, startOfMonth)
         ));
 
       // Get time tracking stats (overtime detection)
       const timeStats = await db
         .select({
-          totalHours: sql<number>`COALESCE(SUM(CAST(hours_worked AS DECIMAL)), 0)`,
-          overtimeHours: sql<number>`COALESCE(SUM(CASE WHEN is_overtime = true THEN CAST(hours_worked AS DECIMAL) ELSE 0 END), 0)`,
+          totalHours: sql<number>`COALESCE(SUM(CAST(total_hours AS DECIMAL)), 0)`,
+          entryCount: sql<number>`COUNT(*)`,
         })
         .from(timeEntries)
         .where(and(
           eq(timeEntries.workspaceId, workspaceId),
-          gte(timeEntries.date, startOfMonth)
+          gte(timeEntries.clockIn, startOfMonth)
         ));
 
       // Check QuickBooks connection
@@ -612,7 +612,7 @@ class TrinityChatService {
         paidAmount: Number(invoiceStats[0]?.paidAmount) || 0,
         outstandingAmount: Number(invoiceStats[0]?.outstandingAmount) || 0,
         totalHoursThisMonth: Number(timeStats[0]?.totalHours) || 0,
-        overtimeHoursThisMonth: Number(timeStats[0]?.overtimeHours) || 0,
+        timeEntriesThisMonth: Number(timeStats[0]?.entryCount) || 0,
         quickbooksConnected: !!qbConnection,
       };
     } catch (error) {
@@ -623,7 +623,7 @@ class TrinityChatService {
         paidAmount: 0,
         outstandingAmount: 0,
         totalHoursThisMonth: 0,
-        overtimeHoursThisMonth: 0,
+        timeEntriesThisMonth: 0,
         quickbooksConnected: false,
       };
     }
