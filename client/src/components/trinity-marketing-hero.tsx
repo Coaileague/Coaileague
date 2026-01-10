@@ -14,6 +14,7 @@ import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Bot, Zap, Brain, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { ColorfulCelticKnot } from '@/components/ui/colorful-celtic-knot';
 
 type TrinityVariant = 'badge' | 'compact' | 'standard' | 'hero' | 'inline';
 
@@ -169,51 +170,13 @@ const TrinityMarketingHero = memo(function TrinityMarketingHero({
         />
       )}
       
-      {/* Trinity Symbol - Stylized interlocking rings */}
-      <div className="relative z-10">
-        <svg
-          viewBox="0 0 100 100"
-          className={cn(styles.iconSize, 'text-white drop-shadow-lg')}
-          fill="none"
-        >
-          {/* Central glow */}
-          <defs>
-            <radialGradient id="trinityGlow" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="#FFD700" stopOpacity="1" />
-              <stop offset="50%" stopColor="#FFD700" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="#FFD700" stopOpacity="0" />
-            </radialGradient>
-            <linearGradient id="petalGold" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#FFD700" />
-              <stop offset="100%" stopColor="#FFA500" />
-            </linearGradient>
-            <linearGradient id="petalCyan" x1="0%" y1="0%" x2="100%" y2="100%">
-              <stop offset="0%" stopColor="#00BFFF" />
-              <stop offset="100%" stopColor="#00CED1" />
-            </linearGradient>
-          </defs>
-          
-          {/* Central core glow */}
-          <circle cx="50" cy="50" r="20" fill="url(#trinityGlow)" opacity="0.6" />
-          
-          {/* Five-pointed interwoven petals */}
-          {[0, 72, 144, 216, 288].map((angle, i) => (
-            <g key={angle} transform={`rotate(${angle} 50 50)`}>
-              <path
-                d={`M 50 50 
-                    Q 50 25, 50 15 
-                    Q 55 20, 60 30 
-                    Q 55 40, 50 50`}
-                fill={i % 2 === 0 ? 'url(#petalGold)' : 'url(#petalCyan)'}
-                opacity="0.9"
-              />
-            </g>
-          ))}
-          
-          {/* Central crystal core */}
-          <circle cx="50" cy="50" r="8" fill="white" opacity="0.95" />
-          <circle cx="48" cy="48" r="3" fill="white" opacity="0.6" />
-        </svg>
+      {/* Trinity Symbol - 3-ribbon Celtic Knot (purple/teal/gold) */}
+      <div className="relative z-10 drop-shadow-lg">
+        <ColorfulCelticKnot 
+          size={variant === 'badge' ? 'sm' : variant === 'compact' ? 'md' : variant === 'inline' ? 'sm' : variant === 'hero' ? 'xl' : 'lg'}
+          animated={animated}
+          animationSpeed="slow"
+        />
       </div>
       
       {/* Sparkle decorations - using Sparkles icon instead of Star */}

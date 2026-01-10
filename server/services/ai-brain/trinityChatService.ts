@@ -371,6 +371,11 @@ class TrinityChatService {
       if (sessionId) {
         console.log('[TrinityChatService] Fetching existing session:', sessionId);
         session = await this.getSession(sessionId);
+        // If sessionId was provided but not found, create a new session
+        if (!session) {
+          console.log('[TrinityChatService] Session not found, creating new one for user:', userId, 'workspace:', workspaceId, 'mode:', mode);
+          session = await this.getOrCreateSession(userId, workspaceId, mode);
+        }
       } else {
         console.log('[TrinityChatService] Creating new session for user:', userId, 'workspace:', workspaceId, 'mode:', mode);
         session = await this.getOrCreateSession(userId, workspaceId, mode);
