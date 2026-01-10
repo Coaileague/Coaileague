@@ -1346,21 +1346,21 @@ export default function UniversalSchedule() {
                 })}
               </div>
               
-              {/* Hour markers row - compact time indicators */}
-              <div className="grid grid-cols-8 border-b bg-muted/20">
-                <div className="border-r" /> {/* Empty cell under Employee column */}
+              {/* Hour markers row - GetSling style time indicators */}
+              <div className="grid grid-cols-8 border-b bg-muted/30">
+                <div className="border-r bg-muted/50" /> {/* Empty cell under Employee column */}
                 {days.map((day, dayIndex) => {
                   const isWeekend = dayIndex >= 5;
                   return (
                     <div 
                       key={`hours-${dayIndex}`}
-                      className={`flex items-center justify-between px-1 py-0.5 border-r last:border-r-0 text-[9px] text-muted-foreground ${isWeekend ? 'bg-muted/10' : ''}`}
+                      className={`flex items-center justify-between px-2 py-1 border-r last:border-r-0 text-[10px] font-medium text-muted-foreground/80 ${isWeekend ? 'bg-muted/20' : ''}`}
                     >
-                      <span>12AM</span>
+                      <span className="text-muted-foreground/60">12AM</span>
                       <span>6AM</span>
                       <span>12PM</span>
                       <span>6PM</span>
-                      <span>12AM</span>
+                      <span className="text-muted-foreground/60">12AM</span>
                     </div>
                   );
                 })}
