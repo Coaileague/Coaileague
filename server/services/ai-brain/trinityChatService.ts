@@ -433,7 +433,18 @@ class TrinityChatService {
     try {
       // Try to find an active session for this user/workspace/mode using raw SQL for reliability
       const existingResult = await db.execute(sql`
-        SELECT * FROM trinity_conversation_sessions 
+        SELECT 
+          id, 
+          user_id as "userId", 
+          workspace_id as "workspaceId", 
+          mode, 
+          session_state as "sessionState", 
+          turn_count as "turnCount",
+          started_at as "startedAt",
+          last_activity_at as "lastActivityAt",
+          ended_at as "endedAt",
+          metadata
+        FROM trinity_conversation_sessions 
         WHERE user_id = ${userId} 
           AND workspace_id = ${workspaceId} 
           AND mode = ${mode} 
@@ -455,7 +466,17 @@ class TrinityChatService {
       const insertResult = await db.execute(sql`
         INSERT INTO trinity_conversation_sessions (user_id, workspace_id, mode, session_state, turn_count)
         VALUES (${userId}, ${workspaceId}, ${mode}, 'active', 0)
-        RETURNING *
+        RETURNING 
+          id, 
+          user_id as "userId", 
+          workspace_id as "workspaceId", 
+          mode, 
+          session_state as "sessionState", 
+          turn_count as "turnCount",
+          started_at as "startedAt",
+          last_activity_at as "lastActivityAt",
+          ended_at as "endedAt",
+          metadata
       `);
 
       const session = insertResult.rows[0] as TrinityConversationSession;
