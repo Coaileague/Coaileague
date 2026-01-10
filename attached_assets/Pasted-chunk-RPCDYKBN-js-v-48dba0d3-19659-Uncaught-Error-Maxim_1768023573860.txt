@@ -1,0 +1,397 @@
+chunk-RPCDYKBN.js?v=48dba0d3:19659 Uncaught Error: Maximum update depth exceeded. This can happen when a component repeatedly calls setState inside componentWillUpdate or componentDidUpdate. React limits the number of nested updates to prevent infinite loops.
+    at checkForNestedUpdates (chunk-RPCDYKBN.js?v=48dba0d3:19659:19)
+    at scheduleUpdateOnFiber (chunk-RPCDYKBN.js?v=48dba0d3:18533:11)
+    at dispatchSetState (chunk-RPCDYKBN.js?v=48dba0d3:12403:15)
+    at @radix-ui_react-scroll-area.js?v=48dba0d3:70:66
+    at setRef (chunk-JDYSANEB.js?v=48dba0d3:12:12)
+    at chunk-JDYSANEB.js?v=48dba0d3:21:23
+    at Array.map (<anonymous>)
+    at chunk-JDYSANEB.js?v=48dba0d3:20:27
+    at safelyDetachRef (chunk-RPCDYKBN.js?v=48dba0d3:16726:30)
+    at commitDeletionEffectsOnFiber (chunk-RPCDYKBN.js?v=48dba0d3:17495:17)
+checkForNestedUpdates @ chunk-RPCDYKBN.js?v=48dba0d3:19659
+scheduleUpdateOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:18533
+dispatchSetState @ chunk-RPCDYKBN.js?v=48dba0d3:12403
+(anonymous) @ @radix-ui_react-scroll-area.js?v=48dba0d3:70
+setRef @ chunk-JDYSANEB.js?v=48dba0d3:12
+(anonymous) @ chunk-JDYSANEB.js?v=48dba0d3:21
+(anonymous) @ chunk-JDYSANEB.js?v=48dba0d3:20
+safelyDetachRef @ chunk-RPCDYKBN.js?v=48dba0d3:16726
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17495
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17503
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17503
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17503
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+commitDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17477
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17674
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17851
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17818
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17851
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17818
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17727
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17727
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17794
+commitMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17663
+commitRootImpl @ chunk-RPCDYKBN.js?v=48dba0d3:19347
+commitRoot @ chunk-RPCDYKBN.js?v=48dba0d3:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=48dba0d3:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=48dba0d3:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=48dba0d3:19432
+commitRoot @ chunk-RPCDYKBN.js?v=48dba0d3:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=48dba0d3:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=48dba0d3:18718
+workLoop @ chunk-RPCDYKBN.js?v=48dba0d3:197
+flushWork @ chunk-RPCDYKBN.js?v=48dba0d3:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=48dba0d3:384Understand this error
+injected.js:37 Warning: Maximum update depth exceeded. This can happen when a component calls setState inside useEffect, but useEffect either doesn't have a dependency array, or one of the dependencies changes on every render.
+    at GlobalErrorBoundary (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/errors/GlobalErrorBoundary.tsx:213:5)
+    at QueryClientProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=48dba0d3:2805:3)
+    at App
+    at _a (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-helmet-async.js?v=48dba0d3:624:5)
+(anonymous) @ injected.js:37
+console.error @ main.tsx:29
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+printWarning @ chunk-RPCDYKBN.js?v=48dba0d3:521
+error @ chunk-RPCDYKBN.js?v=48dba0d3:505
+checkForNestedUpdates @ chunk-RPCDYKBN.js?v=48dba0d3:19665
+scheduleUpdateOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:18533
+dispatchSetState @ chunk-RPCDYKBN.js?v=48dba0d3:12403
+setRef @ chunk-JDYSANEB.js?v=48dba0d3:12
+(anonymous) @ chunk-JDYSANEB.js?v=48dba0d3:21
+(anonymous) @ chunk-JDYSANEB.js?v=48dba0d3:20
+setRef @ chunk-JDYSANEB.js?v=48dba0d3:12
+(anonymous) @ chunk-JDYSANEB.js?v=48dba0d3:21
+(anonymous) @ chunk-JDYSANEB.js?v=48dba0d3:20
+safelyDetachRef @ chunk-RPCDYKBN.js?v=48dba0d3:16726
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17495
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17503
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17610
+recursivelyTraverseDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17486
+commitDeletionEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17577
+commitDeletionEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17477
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17674
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17727
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17699
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17896
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17727
+recursivelyTraverseMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17685
+commitMutationEffectsOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17794
+commitMutationEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17663
+commitRootImpl @ chunk-RPCDYKBN.js?v=48dba0d3:19347
+commitRoot @ chunk-RPCDYKBN.js?v=48dba0d3:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=48dba0d3:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=48dba0d3:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=48dba0d3:19432
+commitRoot @ chunk-RPCDYKBN.js?v=48dba0d3:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=48dba0d3:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=48dba0d3:18718
+workLoop @ chunk-RPCDYKBN.js?v=48dba0d3:197
+flushWork @ chunk-RPCDYKBN.js?v=48dba0d3:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=48dba0d3:384Understand this error
+injected.js:37 The above error occurred in the <div> component:
+
+    at div
+    at https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-WODS62PW.js?v=48dba0d3:42:13
+    at Provider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=48dba0d3:38:15)
+    at https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-scroll-area.js?v=48dba0d3:55:7
+    at _c (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/ui/scroll-area.tsx:21:11)
+    at section
+    at main
+    at div
+    at HelpDesk (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/pages/HelpDesk.tsx:112:43)
+    at Route (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=48dba0d3:265:16)
+    at Switch (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=48dba0d3:321:17)
+    at Suspense
+    at AppContent (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/App.tsx?v=TgStzqkwPtYEcJdRQmHfr:1057:48)
+    at PaymentEnforcementProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/hooks/use-payment-enforcement.tsx:58:46)
+    at Suspense
+    at ResponsiveAppFrame (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/hooks/use-mobile.tsx:44:38)
+    at TrinityModalProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/trinity-chat-modal.tsx:92:40)
+    at SimpleModeProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/SimpleModeContext.tsx:22:38)
+    at SeasonalThemeProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/context/SeasonalThemeContext.tsx:56:41)
+    at UniversalAnimationProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/universal-animation-context.tsx:24:46)
+    at Provider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-OXZDJRWN.js?v=48dba0d3:38:15)
+    at TooltipProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=48dba0d3:97:5)
+    at TransitionProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/transition-context.tsx:21:38)
+    at ThemeProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/ThemeContext.tsx:21:33)
+    at ThemeProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/theme-provider.tsx:25:3)
+    at OverlayControllerProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/overlay-controller.tsx:22:45)
+    at UniversalLoadingGateProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/universal-loading-gate.tsx:47:48)
+    at ForceRefreshProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/ForceRefreshProvider.tsx:21:40)
+    at ServiceHealthProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/contexts/ServiceHealthContext.tsx:22:41)
+    at GlobalErrorBoundary (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/src/components/errors/GlobalErrorBoundary.tsx:213:5)
+    at QueryClientProvider (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=48dba0d3:2805:3)
+    at App
+    at _a (https://db56a2c0-e2f1-4d42-b899-6511f9a8cbad-00-29n8nr39wraa.riker.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/react-helmet-async.js?v=48dba0d3:624:5)
+
+React will try to recreate this component tree from scratch using the error boundary you provided, GlobalErrorBoundary.
+(anonymous) @ injected.js:37
+console.error @ main.tsx:29
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+(anonymous) @ injected.js:37
+logCapturedError @ chunk-RPCDYKBN.js?v=48dba0d3:14032
+callback @ chunk-RPCDYKBN.js?v=48dba0d3:14078
+callCallback @ chunk-RPCDYKBN.js?v=48dba0d3:11248
+commitUpdateQueue @ chunk-RPCDYKBN.js?v=48dba0d3:11265
+commitLayoutEffectOnFiber @ chunk-RPCDYKBN.js?v=48dba0d3:17075
+commitLayoutMountEffects_complete @ chunk-RPCDYKBN.js?v=48dba0d3:17980
+commitLayoutEffects_begin @ chunk-RPCDYKBN.js?v=48dba0d3:17969
+commitLayoutEffects @ chunk-RPCDYKBN.js?v=48dba0d3:17920
+commitRootImpl @ chunk-RPCDYKBN.js?v=48dba0d3:19353
+commitRoot @ chunk-RPCDYKBN.js?v=48dba0d3:19277
+performSyncWorkOnRoot @ chunk-RPCDYKBN.js?v=48dba0d3:18895
+flushSyncCallbacks @ chunk-RPCDYKBN.js?v=48dba0d3:9119
+commitRootImpl @ chunk-RPCDYKBN.js?v=48dba0d3:19432
+commitRoot @ chunk-RPCDYKBN.js?v=48dba0d3:19277
+finishConcurrentRender @ chunk-RPCDYKBN.js?v=48dba0d3:18805
+performConcurrentWorkOnRoot @ chunk-RPCDYKBN.js?v=48dba0d3:18718
+workLoop @ chunk-RPCDYKBN.js?v=48dba0d3:197
+flushWork @ chunk-RPCDYKBN.js?v=48dba0d3:176
+performWorkUntilDeadline @ chunk-RPCDYKBN.js?v=48dba0d3:384Understand this error
+injected.js:37 GlobalErrorBoundary caught error: Error: Maximum update depth exceeded. This can happen when a component repeatedly calls setState inside componentWillUpdate or componentDidUpdate. React limits the number of nested updates to prevent infinite loops.
+    at checkForNestedUpdates (chunk-RPCDYKBN.js?v=48dba0d3:19659:19)
+    at scheduleUpdateOnFiber (chunk-RPCDYKBN.js?v=48dba0d3:18533:11)
+    at dispatchSetState (chunk-RPCDYKBN.js?v=48dba0d3:12403:15)
+    at @radix-ui_react-scroll-area.js?v=48dba0d3:70:66
+    at setRef (chunk-JDYSANEB.js?v=48dba0d3:12:12)
+    at chunk-JDYSANEB.js?v=48dba0d3:21:23
+    at Array.map (<anonymous>)
+    at chunk-JDYSANEB.js?v=48dba0d3:20:27
+    at safelyDetachRef (chunk-RPCDYKBN.js?v=48dba0d3:16726:30)
+    at commitDeletionEffectsOnFiber (chunk-RPCDYKBN.js?v=48dba0d3:17495:17) {componentStack: '\n    at div\n    at https://db56a2c0-e2f1-4d42-b899…vite/deps/react-helmet-async.js?v=48dba0d3:624:5)'}

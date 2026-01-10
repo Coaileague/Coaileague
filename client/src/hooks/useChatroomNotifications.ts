@@ -30,7 +30,7 @@ interface ChatroomNotification {
 export function useChatroomNotifications() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
+  const [location, setLocation] = useLocation();
   const wsRef = useRef<WebSocket | null>(null);
   const lastNotificationRef = useRef<Map<string, number>>(new Map());
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -40,6 +40,13 @@ export function useChatroomNotifications() {
 
   useEffect(() => {
     if (!user?.id) return;
+    
+    // CRITICAL: Skip on HelpDesk page - useChatroomWebSocket already handles chat there
+    // This prevents competing WebSocket connections that cause cascading failures
+    if (location.startsWith('/helpdesk') || location.startsWith('/chat')) {
+      console.log('[ChatroomNotifications] Skipping on HelpDesk/Chat page - avoiding connection conflict');
+      return;
+    }
 
     // Get workspace ID from user context
     const workspaceId = (user as any)?.currentWorkspaceId || (user as any)?.workspaceId || (user as any)?.defaultWorkspaceId;

@@ -1504,7 +1504,10 @@ export function setupWebSocket(server: Server) {
                   // AUTO-VOICE for public HelpDesk room: Give guests immediate ability to send messages
                   if (isMainRoom) {
                     if (ws.readyState === WebSocket.OPEN) {
-                      ws.send(JSON.stringify({ type: 'voice_granted' }));
+                      ws.send(JSON.stringify({ 
+                        type: 'voice_granted',
+                        conversationId: conversationId // CRITICAL: Include conversationId to prevent front-end security rejection
+                      }));
                       console.log(`[HelpAI] Auto-granted voice to ${displayName} in public HelpDesk`);
                     }
                   }
@@ -4399,6 +4402,7 @@ export function setupWebSocket(server: Server) {
             // Send voice_granted event for new animated status
             targetClient.send(JSON.stringify({
               type: 'voice_granted',
+              conversationId: ws.conversationId // CRITICAL: Include conversationId to prevent front-end security rejection
             }));
 
             console.log(`🎤 ${ws.userName} released ${payload.targetUserId} from hold`);

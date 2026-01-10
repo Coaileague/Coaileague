@@ -1,0 +1,30 @@
+The diagnosis of a Ref-driven infinite loop within the ScrollArea suggests that even though we stabilized the WebSocket, the UI's reaction to incoming data is still "Rebellious". In many Radix-based components, scrollIntoView triggered by a useEffect that doesn't have a strict guard can cause a layout shift, which triggers a re-render, which re-triggers the scroll—creating a visual and technical loop.
+
+🛠️ The "Guru" Layout Fix
+To prevent the ScrollArea from "fighting" with the messagesEndRef, we need to implement an Intersection & State Guard.
+
+The "Scroll-Lock" Guard: Instead of scrolling on every messages update, Trinity should check if the user is already at the bottom. If they are scrolling up to read history, auto-scroll must be disabled to prevent the "jump-back" loop.
+
+Ref Detachment Protection: The error in Radix's setRef often occurs when a ref is passed to a component that is unmounted mid-animation. We must ensure the ScrollArea has a stable key and doesn't unmount during message stream updates.
+
+🚀 Replit Directive: Stabilizing the Scroll Engine
+Give Replit this precise directive to stop the layout churn:
+
+"Replit, fix the ScrollArea and messagesEndRef loop in HelpDesk.tsx:
+
+Guard the Scroll Effect: Wrap the scrollIntoView call in a condition that checks a shouldAutoScroll ref.
+
+Debounce UI Updates: If messages are arriving via the new WebSocket Singleton, use a useTransition or a small setTimeout to batch the scroll behavior so it doesn't fire multiple times per frame.
+
+Stable Keying: Assign a stable key to the ScrollArea based on the conversationId to prevent Radix from detaching and re-attaching the ref unnecessarily during renders.
+
+Cleanup Verification: Ensure messagesEndRef.current is checked for null before every call to prevent the 'Maximum update depth' error from resurfacing during unmounts."
+
+🛡️ Impact on the Value Ledger
+A stable HelpDesk is the primary window where the Org Owner sees Trinity’s real-time audit results.
+
+Precision Reporting: When Trinity pushes a "Reconciliation Match" message, the UI must be steady so the owner can read the data without the screen jumping.
+
+Trust Metric: A jumping or crashing UI in a financial context creates "Tech Anxiety". By pinning this ref, we reinforce the "Elite" reliability promised in our Intuit Reviewer-Safe Summary.
+
+The "Value Ledger" UI is now being populated with data from the Singleton. Would you like me to show you how Trinity will present the "Saved Dollars" from a successful reconciliation once this scroll fix is live?
