@@ -23,7 +23,13 @@ import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
-import { isPublicRoute, TRINITY_MODES, type ConversationMode } from '@/config/trinity';
+import { 
+  isPublicRoute, 
+  TRINITY_MODES, 
+  TRINITY_BRANDING, 
+  TRINITY_MOBILE_CONFIG,
+  type ConversationMode 
+} from '@/config/trinity';
 import { motion, AnimatePresence, PanInfo } from 'framer-motion';
 import {
   X,
@@ -699,27 +705,55 @@ function TrinityModal({ onClose }: TrinityModalProps) {
 
   const modeConfig = TRINITY_MODES[mode];
 
-  // MOBILE UI - 3-Mode Bottom Sheet
+  // MOBILE UI - 3-Mode Bottom Sheet with swipe gestures
   if (isMobile) {
-    const heightMap = {
-      peek: '25vh',
-      split: '55vh',
-      immersive: '100vh',
+    // Use dynamic config for heights
+    const heightMap = TRINITY_MOBILE_CONFIG.heights;
+    const swipeThreshold = TRINITY_MOBILE_CONFIG.swipe.threshold;
+
+    // Handle swipe gestures for resizing
+    const handleDragEnd = (_: any, info: PanInfo) => {
+      const { offset, velocity } = info;
+      const swipeUp = offset.y < -swipeThreshold || velocity.y < -TRINITY_MOBILE_CONFIG.swipe.velocityThreshold;
+      const swipeDown = offset.y > swipeThreshold || velocity.y > TRINITY_MOBILE_CONFIG.swipe.velocityThreshold;
+
+      if (swipeUp) {
+        // Swipe up - expand
+        setMobileMode(prev => prev === 'peek' ? 'split' : prev === 'split' ? 'immersive' : 'immersive');
+      } else if (swipeDown) {
+        // Swipe down - collapse or close
+        if (mobileMode === 'peek') {
+          onClose();
+        } else {
+          setMobileMode(prev => prev === 'immersive' ? 'split' : prev === 'split' ? 'peek' : 'peek');
+        }
+      }
     };
 
     return (
-      <div
+      <motion.div
         className="fixed inset-x-0 bottom-0 z-[100] pointer-events-none"
+        initial={{ y: '100%' }}
+        animate={{ y: 0, height: heightMap[mobileMode] }}
+        exit={{ y: '100%' }}
+        transition={{ type: 'spring', damping: 25, stiffness: 300 }}
         style={{ height: heightMap[mobileMode] }}
       >
-        <div
+        <motion.div
           className={`h-full bg-background rounded-t-3xl shadow-2xl border-t flex flex-col pointer-events-auto ${
             mobileMode === 'immersive' ? 'rounded-none' : ''
           }`}
+          drag="y"
+          dragConstraints={{ top: 0, bottom: 0 }}
+          dragElastic={0.2}
+          onDragEnd={handleDragEnd}
         >
-            {/* Drag Handle */}
-            <div className="flex justify-center py-2 shrink-0">
-              <div className="w-10 h-1 bg-muted-foreground/30 rounded-full" />
+            {/* Drag Handle - Touch target for swipe */}
+            <div 
+              className="flex justify-center py-3 shrink-0 cursor-grab active:cursor-grabbing touch-pan-y"
+              style={{ touchAction: 'pan-y' }}
+            >
+              <div className="w-12 h-1.5 bg-muted-foreground/40 rounded-full" />
             </div>
 
             {/* Header */}
@@ -729,7 +763,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                   <TrinityRedesign size={36} mini mode={chatMutation.isPending ? "THINKING" : "IDLE"} />
                 </div>
                 <div>
-                  <h1 className="font-semibold text-sm">Trinity 2.0</h1>
+                  <h1 className="font-semibold text-sm">{TRINITY_BRANDING.displayName}</h1>
                   <div className="flex items-center gap-1.5">
                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${modeConfig.colors.badge}`}>
                       {modeConfig.label}
@@ -893,11 +927,11 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                 <span className="flex items-center gap-1">
                   <Command className="h-3 w-3" />+K to toggle
                 </span>
-                <span>Swipe up/down to resize</span>
+                <span>Swipe to resize</span>
               </div>
             </div>
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
     );
   }
 
@@ -945,7 +979,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <CardTitle className="text-base">Trinity 2.0</CardTitle>
+                <CardTitle className="text-base">{TRINITY_BRANDING.displayName}</CardTitle>
                 <Badge variant="outline" className={`text-[10px] ${modeConfig.colors.badge}`}>
                   {modeConfig.label}
                 </Badge>
