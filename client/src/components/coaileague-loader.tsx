@@ -101,7 +101,7 @@ export function CoAIleagueLoader({
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 2, repeat: Infinity }}
             >
-              <div className="w-16 h-16">
+              <div className="w-32 h-32 md:w-40 md:h-40">
                 <CoAIleagueAFLogo />
               </div>
             </motion.div>

@@ -62,11 +62,11 @@ const SeasonalEffectsLayer = lazy(() => import("@/components/effects/SeasonalEff
 const TrinityLoadingSpinner = lazy(() => import("@/components/trinity-loading-overlay").then(m => ({ default: m.TrinityLoadingSpinner })));
 
 const PageLoader = () => (
-  <div className="flex flex-col items-center justify-center h-full min-h-[200px] gap-2">
-    <Suspense fallback={<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />}>
-      <TrinityLoadingSpinner size={40} />
+  <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-4">
+    <Suspense fallback={<div className="animate-spin rounded-full h-24 w-24 border-4 border-primary/30 border-t-primary" />}>
+      <TrinityLoadingSpinner size={120} className="md:w-40 md:h-40" />
     </Suspense>
-    <span className="text-xs font-medium bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 bg-clip-text text-transparent">
+    <span className="text-lg md:text-xl font-semibold bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 bg-clip-text text-transparent">
       Loading...
     </span>
   </div>

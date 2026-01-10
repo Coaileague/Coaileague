@@ -185,7 +185,7 @@ export const TrinityLoadingOverlay = memo(function TrinityLoadingOverlay({
     };
   }, [isLoading, status]);
 
-  const logoSize = size === 'sm' ? 56 : size === 'lg' ? 140 : 100;
+  const logoSize = size === 'sm' ? 80 : size === 'lg' ? 200 : 160;
   const displayMessage = message || (status === 'loading' ? LOADING_MESSAGES[messageIndex] : message);
   
   // Color theming based on status
@@ -261,7 +261,7 @@ export const TrinityLoadingOverlay = memo(function TrinityLoadingOverlay({
               <p className={cn(
                 'font-semibold bg-gradient-to-r bg-clip-text text-transparent',
                 statusColors[status],
-                size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'
+                size === 'sm' ? 'text-base' : size === 'lg' ? 'text-2xl' : 'text-xl'
               )}>
                 {displayMessage}{isLoadingStatus ? dots : ''}
               </p>
@@ -292,7 +292,7 @@ export const TrinityLoadingOverlay = memo(function TrinityLoadingOverlay({
       <div className="text-center space-y-1">
         <p className={cn(
           'font-semibold bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 bg-clip-text text-transparent',
-          size === 'sm' ? 'text-sm' : size === 'lg' ? 'text-xl' : 'text-base'
+          size === 'sm' ? 'text-base' : size === 'lg' ? 'text-2xl' : 'text-xl'
         )}>
           {displayMessage}{dots}
         </p>
