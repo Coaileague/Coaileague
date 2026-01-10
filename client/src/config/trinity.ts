@@ -130,6 +130,41 @@ export const TRINITY_FEATURE_FLAGS = {
 };
 
 /**
+ * TRINITY BRANDING - Dynamic display names and labels
+ * Centralized so there are no hardcoded strings in components
+ */
+export const TRINITY_BRANDING = {
+  name: 'Trinity',
+  version: '2.0',
+  displayName: 'Trinity',
+  fullDisplayName: 'Trinity AI',
+  tagline: 'Your AI-Powered Business Partner',
+  mobilePlaceholder: 'Quick question...',
+  desktopPlaceholder: 'Ask Trinity anything...',
+} as const;
+
+/**
+ * MOBILE UI CONFIGURATION - Dynamic sizing and gestures
+ */
+export const TRINITY_MOBILE_CONFIG = {
+  // Height modes for bottom sheet (use larger values for better mobile UX)
+  heights: {
+    peek: '35vh',      // Minimized - show quick input
+    split: '65vh',     // Mid - show messages + input
+    immersive: '92vh', // Full screen - leave room for status bar
+  } as const,
+  // Swipe gesture configuration
+  swipe: {
+    threshold: 50,        // Pixels needed to trigger mode change
+    velocityThreshold: 0.5, // Velocity needed for quick swipes
+  },
+  // Touch feedback
+  haptics: true,
+} as const;
+
+export type MobileHeightMode = keyof typeof TRINITY_MOBILE_CONFIG.heights;
+
+/**
  * PUBLIC ROUTES - Trinity modal should NOT appear on these paths
  * These are marketing, auth, and publicly accessible pages
  */
