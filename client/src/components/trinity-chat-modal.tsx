@@ -115,10 +115,26 @@ interface TrinityModalContextType {
 
 const TrinityModalContext = createContext<TrinityModalContextType | null>(null);
 
+// Default safe context for HMR resilience
+const defaultContext: TrinityModalContextType = {
+  isOpen: false,
+  openModal: () => {},
+  closeModal: () => {},
+  toggleModal: () => {},
+  messages: [],
+  setMessages: () => {},
+  clearMessages: () => {},
+  mode: 'business',
+  setMode: () => {},
+};
+
 export function useTrinityModal() {
   const context = useContext(TrinityModalContext);
+  // Return default context during HMR or if accidentally used outside provider
+  // This prevents crashes during hot reloads
   if (!context) {
-    throw new Error('useTrinityModal must be used within TrinityModalProvider');
+    console.warn('[Trinity] Context not available - using safe defaults');
+    return defaultContext;
   }
   return context;
 }
