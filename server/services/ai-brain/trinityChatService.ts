@@ -429,36 +429,51 @@ class TrinityChatService {
    * Get or create a conversation session
    */
   private async getOrCreateSession(userId: string, workspaceId: string, mode: ConversationMode): Promise<TrinityConversationSession | null> {
-    // Try to find an active session for this user/workspace/mode
-    const existing = await db
-      .select()
-      .from(trinityConversationSessions)
-      .where(and(
-        eq(trinityConversationSessions.userId, userId),
-        eq(trinityConversationSessions.workspaceId, workspaceId),
-        eq(trinityConversationSessions.mode, mode),
-        eq(trinityConversationSessions.sessionState, 'active')
-      ))
-      .orderBy(desc(trinityConversationSessions.lastActivityAt))
-      .limit(1);
+    try {
+      // Try to find an active session for this user/workspace/mode
+      const existing = await db
+        .select()
+        .from(trinityConversationSessions)
+        .where(and(
+          eq(trinityConversationSessions.userId, userId),
+          eq(trinityConversationSessions.workspaceId, workspaceId),
+          eq(trinityConversationSessions.mode, mode),
+          eq(trinityConversationSessions.sessionState, 'active')
+        ))
+        .orderBy(desc(trinityConversationSessions.lastActivityAt))
+        .limit(1);
 
-    if (existing.length > 0) {
-      return existing[0];
+      if (existing.length > 0) {
+        console.log('[TrinityChatService] Found existing session:', existing[0].id);
+        return existing[0];
+      }
+
+      // Create new session
+      console.log('[TrinityChatService] Creating new session for user:', userId, 'workspace:', workspaceId, 'mode:', mode);
+      try {
+        const [session] = await db
+          .insert(trinityConversationSessions)
+          .values({
+            userId,
+            workspaceId,
+            mode,
+            sessionState: 'active',
+            turnCount: 0,
+          } as InsertTrinityConversationSession)
+          .returning();
+
+        console.log('[TrinityChatService] Created session:', session?.id);
+        return session;
+      } catch (insertError: any) {
+        console.error('[TrinityChatService] INSERT FAILED:', insertError?.message || insertError);
+        console.error('[TrinityChatService] INSERT ERROR STACK:', insertError?.stack);
+        throw insertError;
+      }
+    } catch (error: any) {
+      console.error('[TrinityChatService] Session creation error:', error?.message || error);
+      console.error('[TrinityChatService] Session creation stack:', error?.stack);
+      return null;
     }
-
-    // Create new session
-    const [session] = await db
-      .insert(trinityConversationSessions)
-      .values({
-        userId,
-        workspaceId,
-        mode,
-        sessionState: 'active',
-        turnCount: 0,
-      } as InsertTrinityConversationSession)
-      .returning();
-
-    return session;
   }
 
   /**

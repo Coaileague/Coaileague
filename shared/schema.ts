@@ -19248,6 +19248,13 @@ export const trinityConversationSessions = pgTable("trinity_conversation_session
   
   sessionState: varchar("session_state", { length: 30 }).default("active"),
   
+  // Session metadata (columns that exist in database)
+  title: varchar("title", { length: 255 }),
+  summary: text("summary"),
+  messageCount: integer("message_count").default(0),
+  metadata: jsonb("metadata").default(sql`'{}'::jsonb`),
+  contextSnapshot: jsonb("context_snapshot").default(sql`'{}'::jsonb`),
+  
   contextMemory: jsonb("context_memory").default(sql`'{}'::jsonb`),
   turnCount: integer("turn_count").default(0),
   
