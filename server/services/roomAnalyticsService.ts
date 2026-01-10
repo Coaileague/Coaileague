@@ -185,6 +185,7 @@ export async function trackMessagePosted(
 
 /**
  * Track participant joining room
+ * Note: Analytics tracking is non-critical - errors are logged but don't block chat operations
  */
 export async function trackParticipantJoined(
   workspaceId: string,
@@ -192,6 +193,12 @@ export async function trackParticipantJoined(
   userId: string
 ): Promise<void> {
   try {
+    // Skip analytics if required params are missing (non-critical feature)
+    if (!workspaceId || !conversationId) {
+      console.log("[RoomAnalyticsService] Skipping analytics - missing workspace or conversation ID");
+      return;
+    }
+    
     await getOrCreateRoomAnalytics(workspaceId, conversationId);
 
     // Check if this is a new participant (first time in this room)
@@ -208,23 +215,26 @@ export async function trackParticipantJoined(
 
     const isNewParticipant = participantRecord.length === 0;
 
-    // Update metrics
-    let updateQuery = sql`UPDATE room_analytics SET
-      active_participants_now = active_participants_now + 1,
-      updated_at = NOW()`;
-
+    // Update metrics using simpler increment logic
+    const updateFields: Record<string, any> = {
+      activeParticipantsNow: sql`active_participants_now + 1`,
+      updatedAt: new Date(),
+    };
+    
     if (isNewParticipant) {
-      updateQuery = sql`UPDATE room_analytics SET
-        total_participants = total_participants + 1,
-        active_participants_now = active_participants_now + 1,
-        new_participants_today = new_participants_today + 1,
-        updated_at = NOW()`;
+      updateFields.totalParticipants = sql`total_participants + 1`;
+      updateFields.newParticipantsToday = sql`new_participants_today + 1`;
     }
 
-    updateQuery = sql`${updateQuery}
-      WHERE workspace_id = ${workspaceId} AND conversation_id = ${conversationId}`;
-
-    await db.execute(updateQuery);
+    await db
+      .update(roomAnalytics)
+      .set(updateFields)
+      .where(
+        and(
+          eq(roomAnalytics.workspaceId, workspaceId),
+          eq(roomAnalytics.conversationId, conversationId)
+        )
+      );
 
     // Add to timeseries
     await trackTimeseriesMetric(
@@ -234,7 +244,8 @@ export async function trackParticipantJoined(
       { participantCount: 1, newParticipants: isNewParticipant ? 1 : 0 }
     );
   } catch (error) {
-    console.error("[RoomAnalyticsService] Error tracking participant join:", error);
+    // Non-critical - log and continue
+    console.warn("[RoomAnalyticsService] Analytics tracking failed (non-critical):", (error as Error).message);
   }
 }
 

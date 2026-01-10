@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from "react";
+import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { useNavigationProtection } from "@/hooks/use-navigation-protection";
@@ -97,17 +98,33 @@ interface HelpDeskProps {
 // Desktop IRC/MSN-style 3-column chatroom with CoAIleague professional branding
 // Can also be forced to mobile layout for /mobilechat route
 export function HelpDesk(props?: HelpDeskProps & any) {
-  // Auto-detect mobile layout based on viewport width
+  // Auto-detect mobile layout based on viewport width with debouncing
+  // Debounce prevents rapid mount/unmount cycles that crash ScrollArea refs
   const [isMobileView, setIsMobileView] = useState(false);
+  const [layoutStable, setLayoutStable] = useState(true);
   
   useEffect(() => {
+    let debounceTimer: NodeJS.Timeout;
     const checkMobile = () => {
-      setIsMobileView(window.innerWidth < 768); // md breakpoint
+      const isMobile = window.innerWidth < 768; // md breakpoint
+      // Only update if changed, with debounce to prevent flicker
+      if (isMobile !== isMobileView) {
+        setLayoutStable(false);
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+          setIsMobileView(isMobile);
+          // Mark layout as stable after transition completes
+          setTimeout(() => setLayoutStable(true), 100);
+        }, 150); // 150ms debounce
+      }
     };
     checkMobile();
     window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
+    return () => {
+      window.removeEventListener('resize', checkMobile);
+      clearTimeout(debounceTimer);
+    };
+  }, [isMobileView]);
   
   const { forceMobileLayout = false, roomId: propRoomId } = props || {};
   const shouldUseMobileLayout = forceMobileLayout || isMobileView;
@@ -562,13 +579,21 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     isOnline: true,
   }));
 
+  // Simple scroll to bottom when new messages arrive
+  // Guard against layout instability to prevent Radix ScrollArea ref thrashing
   const scrollToBottom = useCallback(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, []);
+    if (!messagesEndRef.current || !layoutStable) return;
+    requestAnimationFrame(() => {
+      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    });
+  }, [layoutStable]);
 
+  // Debounced scroll effect for new messages - only when layout is stable
   useEffect(() => {
-    scrollToBottom();
-  }, [messages, scrollToBottom]);
+    if (!layoutStable) return; // Skip scrolling during layout transitions
+    const timeoutId = setTimeout(scrollToBottom, 100);
+    return () => clearTimeout(timeoutId);
+  }, [messages.length, scrollToBottom, layoutStable]);
 
   // No rotating banners - removed IRC-style system
 
@@ -576,6 +601,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     if (inputMessage.trim() && isConnected) {
       sendMessage(inputMessage, userName, 'support');
       setInputMessage("");
+      // Scroll to bottom after sending
+      scrollToBottom();
     }
   };
 
@@ -1240,6 +1267,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           )}
           
           {/* Messages Area - Explicit height for mobile scroll */}
+          {/* Visual Persistence: ScrollArea always mounted, no key to prevent remounting */}
           <ScrollArea className="flex-1 min-h-0 p-2 sm:p-3">
             <div className="space-y-2">
 
@@ -1439,9 +1467,12 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           </div>
         </section>
 
-        {/* RIGHT COLUMN: User List or Context Panel - Only render on desktop for better mobile performance */}
-        {!shouldUseMobileLayout && (
-        <section className="min-w-[280px] max-w-[320px] w-auto bg-muted border-l border-border flex flex-col flex-shrink-0">
+        {/* RIGHT COLUMN: User List or Context Panel - Always mounted, CSS hidden on mobile */}
+        {/* VISUAL PERSISTENCE PATTERN: Keep mounted to prevent Radix ScrollArea ref crash */}
+        <section className={cn(
+          "min-w-[280px] max-w-[320px] w-auto bg-muted border-l border-border flex flex-col flex-shrink-0",
+          shouldUseMobileLayout && "hidden"
+        )}>
           
           {/* Header with toggle */}
           <div className="px-3 py-2 border-b border-border flex-shrink-0 bg-muted/50">
@@ -1496,10 +1527,19 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           </div>
           
           {/* Content Area - Context Panel or User List */}
-          {showContextPanel && isStaff && selectedUserId ? (
+          {/* VISUAL PERSISTENCE PATTERN: Keep both mounted, use CSS to toggle visibility */}
+          {/* This prevents Radix ScrollArea ref thrashing crash during unmount */}
+          
+          {/* Context Panel - Always mounted, CSS toggled */}
+          <div className={cn(
+            "transition-all duration-200 ease-in-out overflow-hidden",
+            showContextPanel && isStaff && selectedUserId 
+              ? "flex-grow opacity-100" 
+              : "h-0 w-0 opacity-0 overflow-hidden pointer-events-none absolute"
+          )}>
             <TicketContextPanel
               user={{
-                id: selectedUserId,
+                id: selectedUserId || '',
                 name: uniqueUsers.find(u => u.id === selectedUserId)?.name || "User",
                 email: "customer@example.com",
                 organization: "CoAIleague Customer",
@@ -1522,8 +1562,16 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 },
               ]}
             />
-          ) : (
-            <ScrollArea className="flex-grow p-2">
+          </div>
+          
+          {/* User List ScrollArea - Always mounted, CSS toggled */}
+          <div className={cn(
+            "transition-all duration-200 ease-in-out",
+            !(showContextPanel && isStaff && selectedUserId)
+              ? "flex-grow opacity-100"
+              : "h-0 w-0 opacity-0 overflow-hidden pointer-events-none absolute"
+          )}>
+            <ScrollArea className="h-full p-2">
               <div className="space-y-1">
                 {uniqueUsers.map((u) => {
                   // No IRC prefix - WF logo icon shows authority
@@ -1811,9 +1859,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               })}
               </div>
             </ScrollArea>
-          )}
+          </div>
         </section>
-        )}
       </main>
 
       {/* GUEST INTAKE FORM - Collects guest information for support agents */}

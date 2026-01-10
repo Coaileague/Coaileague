@@ -48,6 +48,12 @@ function isGlobalSocketReadyFor(userId: string, conversationId: string): boolean
 
 // Create or return existing global socket
 function getOrCreateGlobalSocket(userId: string, conversationId: string): WebSocket | null {
+  // CRITICAL GUARD: Never create connection without valid conversationId
+  if (!conversationId || conversationId === 'undefined' || conversationId === 'null') {
+    console.warn('[TRINITY-WS] Refusing to connect without valid conversationId:', conversationId);
+    return null;
+  }
+  
   // If we already have a valid connection for this user/conversation, return it
   if (isGlobalSocketReadyFor(userId, conversationId)) {
     console.log('[TRINITY-WS] Reusing existing global socket');
@@ -293,7 +299,12 @@ export function useChatroomWebSocket(
   const lastConnectedConversationRef = useRef<string | null>(null); // Track last connected conversation to prevent duplicate connections
 
   const connect = useCallback(() => {
+    // CRITICAL: Guard against missing userId or invalid conversationId
     if (!userId) return;
+    if (!conversationId || conversationId === 'undefined' || conversationId === 'null') {
+      console.warn('[TRINITY-WS] Skipping connect - waiting for valid conversationId');
+      return;
+    }
 
     // GURU MODE: Check if global singleton already has a valid connection
     if (isGlobalSocketReadyFor(userId, conversationId)) {

@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Helmet } from 'react-helmet-async';
 
 interface SEOProps {
@@ -22,8 +23,8 @@ export function SEO({
   type = 'website',
   noindex = false,
 }: SEOProps) {
-  const fullTitle = title ? `${title} | ${SITE_NAME}` : DEFAULT_TITLE;
-  const currentUrl = url || (typeof window !== 'undefined' ? window.location.href : '');
+  const fullTitle = useMemo(() => title ? `${title} | ${SITE_NAME}` : DEFAULT_TITLE, [title]);
+  const currentUrl = useMemo(() => url || (typeof window !== 'undefined' ? window.location.pathname : ''), [url]);
 
   return (
     <Helmet>
