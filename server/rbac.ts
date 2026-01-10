@@ -189,9 +189,26 @@ export function requireWorkspaceRole(allowedRoles: WorkspaceRole[]) {
       return res.status(401).json({ error: 'Authentication required' });
     }
 
+    const userId = req.user.id;
+    
+    // Check platform role first - platform staff bypass workspace requirements
+    const platformRole = await getUserPlatformRole(userId);
+    if (hasPlatformWideAccess(platformRole)) {
+      req.platformRole = platformRole;
+      
+      // Platform staff can optionally specify workspace via query/body
+      const requestedWorkspaceId = req.body?.workspaceId || req.query?.workspaceId || req.params?.workspaceId;
+      if (requestedWorkspaceId) {
+        req.workspaceId = requestedWorkspaceId as string;
+      }
+      
+      // Platform staff bypass role checks - they have full access
+      return next();
+    }
+
     const requestedWorkspaceId = req.body.workspaceId || req.query.workspaceId || req.params.workspaceId;
     const { workspaceId, role, employeeId, error } = await resolveWorkspaceForUser(
-      req.user.id,
+      userId,
       requestedWorkspaceId as string | undefined
     );
 
