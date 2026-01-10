@@ -365,13 +365,27 @@ class TrinityChatService {
     }
 
     // Get or create session
-    const session = sessionId 
-      ? await this.getSession(sessionId)
-      : await this.getOrCreateSession(userId, workspaceId, mode);
+    console.log('[TrinityChatService] Getting session, sessionId:', sessionId || 'none');
+    let session;
+    try {
+      if (sessionId) {
+        console.log('[TrinityChatService] Fetching existing session:', sessionId);
+        session = await this.getSession(sessionId);
+      } else {
+        console.log('[TrinityChatService] Creating new session for user:', userId, 'workspace:', workspaceId, 'mode:', mode);
+        session = await this.getOrCreateSession(userId, workspaceId, mode);
+      }
+    } catch (sessionError: any) {
+      console.error('[TrinityChatService] Session operation failed:', sessionError?.message || sessionError);
+      console.error('[TrinityChatService] Session error stack:', sessionError?.stack);
+      throw new Error('Failed to create or retrieve conversation session: ' + (sessionError?.message || 'Unknown error'));
+    }
 
     if (!session) {
+      console.error('[TrinityChatService] Session is null after operation');
       throw new Error('Failed to create or retrieve conversation session');
     }
+    console.log('[TrinityChatService] Session obtained:', session.id);
 
     // Get context for prompt building
     const [workspaceContext, buddySettings, user, recentInsights, memoryProfile] = await Promise.all([
