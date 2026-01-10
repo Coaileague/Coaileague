@@ -355,6 +355,8 @@ export default function UniversalSchedule() {
   // State management
   const [currentWeek, setCurrentWeek] = useState(new Date());
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [viewMode, setViewMode] = useState<'week' | 'day'>('day'); // Default to day view for GetSling-style
+  const [selectedDay, setSelectedDay] = useState(new Date()); // Current day for day view
   const [showAIPanel, setShowAIPanel] = useState(false);
   const [automationEnabled, setAutomationEnabled] = useState(false);
   const [manualApprovalMode, setManualApprovalMode] = useState(true);
@@ -1309,68 +1311,111 @@ export default function UniversalSchedule() {
           </div>
         </div>
 
-        {/* Schedule Grid - GetSling Style with Days as Columns */}
+        {/* View Mode Toggle & Day Navigation */}
+        <div className="flex items-center justify-between px-4 py-2 bg-muted/30 rounded-lg border mb-2">
+          <div className="flex items-center gap-2">
+            <Button
+              variant={viewMode === 'day' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('day')}
+              data-testid="button-day-view"
+            >
+              <CalendarDays className="w-4 h-4 mr-1" />
+              Day
+            </Button>
+            <Button
+              variant={viewMode === 'week' ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setViewMode('week')}
+              data-testid="button-week-view"
+            >
+              <Calendar className="w-4 h-4 mr-1" />
+              Week
+            </Button>
+          </div>
+          
+          {/* Day Navigation (for day view) */}
+          {viewMode === 'day' && (
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  const prev = new Date(selectedDay);
+                  prev.setDate(prev.getDate() - 1);
+                  setSelectedDay(prev);
+                }}
+                data-testid="button-prev-day"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
+              <div className="font-medium text-sm min-w-[140px] text-center">
+                {selectedDay.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' })}
+              </div>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => {
+                  const next = new Date(selectedDay);
+                  next.setDate(next.getDate() + 1);
+                  setSelectedDay(next);
+                }}
+                data-testid="button-next-day"
+              >
+                <ChevronRight className="w-4 h-4" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedDay(new Date())}
+                data-testid="button-today"
+              >
+                Today
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Schedule Grid - GetSling Style Horizontal Timeline */}
         <ScrollArea className="flex-1 p-4">
-          <div className="bg-card rounded-lg border overflow-hidden min-w-[900px]">
-            {/* Days Header Row - Sticky */}
+          <div className="bg-card rounded-lg border overflow-hidden min-w-[1200px]">
+            {/* GetSling-Style Horizontal Timeline Header */}
             <div className="sticky top-0 z-10 bg-card">
-              {/* Main day headers */}
-              <div className="grid grid-cols-8 border-b bg-gradient-to-r from-muted/80 to-muted/50">
+              {/* Hour Timeline Header - Spans Full Width */}
+              <div className="flex border-b bg-gradient-to-r from-muted/80 to-muted/50">
                 {/* Employee Column Header */}
-                <div className="p-3 font-semibold text-sm border-r bg-muted/80 flex items-center gap-2">
+                <div className="w-48 min-w-48 p-3 font-semibold text-sm border-r bg-muted/80 flex items-center gap-2 flex-shrink-0">
                   <Users className="w-4 h-4 text-muted-foreground" />
                   <span>Employee</span>
                 </div>
-                {/* Days of the week */}
-                {days.map((day, dayIndex) => {
-                  const dayDate = new Date(weekStart);
-                  dayDate.setDate(dayDate.getDate() + dayIndex);
-                  const isToday = dayDate.toDateString() === new Date().toDateString();
-                  const isWeekend = dayIndex >= 5;
-                  
-                  return (
-                    <div 
-                      key={day} 
-                      className={`p-2 text-center border-r last:border-r-0 ${
-                        isToday ? 'bg-primary/10 border-b-2 border-b-primary' : ''
-                      } ${isWeekend ? 'bg-muted/30' : ''}`}
-                    >
-                      <div className={`font-semibold text-sm ${isToday ? 'text-primary' : ''}`}>
-                        {day}
+                {/* 24-Hour Timeline - GetSling style */}
+                <div className="flex-1 flex">
+                  {hours.map((hour) => {
+                    const isNowHour = new Date().getHours() === hour && selectedDay.toDateString() === new Date().toDateString();
+                    const formatHour = (h: number) => {
+                      if (h === 0) return '12AM';
+                      if (h === 12) return '12PM';
+                      return h < 12 ? `${h}AM` : `${h - 12}PM`;
+                    };
+                    return (
+                      <div 
+                        key={hour}
+                        className={`flex-1 min-w-[50px] text-center py-2 text-[11px] font-medium border-r last:border-r-0 ${
+                          isNowHour ? 'bg-primary/20 text-primary font-bold' : 'text-muted-foreground'
+                        }`}
+                      >
+                        {formatHour(hour)}
                       </div>
-                      <div className={`text-xs ${isToday ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
-                        {dayDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              
-              {/* Hour markers row - GetSling style time indicators */}
-              <div className="grid grid-cols-8 border-b bg-muted/30">
-                <div className="border-r bg-muted/50" /> {/* Empty cell under Employee column */}
-                {days.map((day, dayIndex) => {
-                  const isWeekend = dayIndex >= 5;
-                  return (
-                    <div 
-                      key={`hours-${dayIndex}`}
-                      className={`flex items-center justify-between px-2 py-1 border-r last:border-r-0 text-[10px] font-medium text-muted-foreground/80 ${isWeekend ? 'bg-muted/20' : ''}`}
-                    >
-                      <span className="text-muted-foreground/60">12AM</span>
-                      <span>6AM</span>
-                      <span>12PM</span>
-                      <span>6PM</span>
-                      <span className="text-muted-foreground/60">12AM</span>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
 
-            {/* Employee Rows with Day Cells - Uses filtered employees */}
+            {/* Employee Rows - GetSling Style Horizontal Timeline */}
             <div className="divide-y">
               {filteredEmployees.length === 0 ? (
-                <div className="p-8 text-center text-muted-foreground col-span-8">
+                <div className="p-8 text-center text-muted-foreground">
                   <Users className="w-8 h-8 mx-auto mb-2 opacity-50" />
                   <p>No employees match current filters</p>
                 </div>
@@ -1378,11 +1423,22 @@ export default function UniversalSchedule() {
                 filteredEmployees.map((emp) => {
                   const empColor = getEmployeeColor(emp.id);
                   
+                  // Get shifts for this employee on the selected day (day view) or all week (week view)
+                  const employeeShifts = shifts.filter(s => {
+                    if (s.employeeId !== emp.id) return false;
+                    const shiftDate = new Date(s.startTime);
+                    if (viewMode === 'day') {
+                      return shiftDate.toDateString() === selectedDay.toDateString();
+                    } else {
+                      return shiftDate >= weekStart && shiftDate <= weekEnd;
+                    }
+                  });
+                  
                   return (
-                    <div key={emp.id} className="grid grid-cols-8 hover:bg-muted/20 transition-colors group">
-                      {/* Employee Info */}
+                    <div key={emp.id} className="flex hover:bg-muted/20 transition-colors group">
+                      {/* Employee Info - Fixed Width */}
                       <div 
-                        className="p-2 border-r bg-card flex items-center gap-2 cursor-pointer hover-elevate"
+                        className="w-48 min-w-48 p-2 border-r bg-card flex items-center gap-2 cursor-pointer hover-elevate flex-shrink-0"
                         onClick={() => setSelectedEmployee(emp)}
                         data-testid={`employee-row-${emp.id}`}
                       >
@@ -1402,104 +1458,123 @@ export default function UniversalSchedule() {
                         </div>
                       </div>
 
-                      {/* Day Cells for this employee */}
-                      {days.map((day, dayIndex) => {
-                        const dayDate = new Date(weekStart);
-                        dayDate.setDate(dayDate.getDate() + dayIndex);
-                        const isToday = dayDate.toDateString() === new Date().toDateString();
-                        const isWeekend = dayIndex >= 5;
+                      {/* Timeline Row - Horizontal 24-hour grid with shifts positioned by time */}
+                      <div 
+                        className="flex-1 relative min-h-[60px] cursor-pointer group/timeline"
+                        onClick={(e) => {
+                          // Calculate which hour was clicked based on position
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          const clickX = e.clientX - rect.left;
+                          const hourWidth = rect.width / 24;
+                          const clickedHour = Math.floor(clickX / hourWidth);
+                          handleGridClick(selectedDay.getDay() === 0 ? 6 : selectedDay.getDay() - 1, clickedHour);
+                        }}
+                        data-testid={`timeline-row-${emp.id}`}
+                      >
+                        {/* Hour Grid Lines */}
+                        <div className="absolute inset-0 flex">
+                          {hours.map((hour) => (
+                            <div 
+                              key={hour} 
+                              className="flex-1 border-r border-muted/40 last:border-r-0 hover:bg-primary/5 transition-colors"
+                            />
+                          ))}
+                        </div>
                         
-                        // Get shifts for this employee on this day
-                        const dayShifts = shifts.filter(s => {
-                          if (s.employeeId !== emp.id) return false;
-                          const shiftDate = new Date(s.startTime);
-                          return shiftDate.toDateString() === dayDate.toDateString();
-                        });
-
-                        return (
-                          <div
-                            key={dayIndex}
-                            className={`min-h-[60px] p-1 border-r last:border-r-0 cursor-pointer transition-colors relative group/cell ${
-                              isToday ? 'bg-primary/5' : ''
-                            } ${isWeekend ? 'bg-muted/20' : ''} hover:bg-primary/10`}
-                            onClick={() => handleGridClick(dayIndex, 9)}
-                            data-testid={`grid-cell-${emp.id}-${dayIndex}`}
-                          >
-                            {/* Plus icon on hover */}
-                            {dayShifts.length === 0 && (
-                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity">
-                                <div className="bg-primary/80 rounded-full p-1.5 shadow-sm">
-                                  <Plus className="w-3 h-3 text-primary-foreground" />
-                                </div>
-                              </div>
-                            )}
-
-                            {/* Render shifts for this day */}
-                            <div className="space-y-1">
-                              {dayShifts.map(shift => {
-                                const startTime = new Date(shift.startTime);
-                                const endTime = new Date(shift.endTime);
-                                const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
-                                const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                                const timeClockStatus = getShiftTimeClockStatus(shift);
-                                const conflictBadge = getShiftConflictBadge(shift, shifts, employees);
-
-                                return (
-                                  <div
-                                    key={shift.id}
-                                    className="rounded-md px-2 py-1.5 cursor-pointer transition-all hover:shadow-md hover:scale-[1.02] text-white text-xs relative"
-                                    style={{ backgroundColor: empColor }}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setSelectedShiftForAction(shift);
-                                    }}
-                                    data-testid={`shift-${shift.id}`}
-                                  >
-                                    {/* Time Clock Status Badge */}
-                                    <div className={`absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${timeClockStatus.bgColor} ${timeClockStatus.color}`}>
-                                      {timeClockStatus.label}
-                                    </div>
-                                    
-                                    <div className="font-medium truncate">{shift.title || 'Shift'}</div>
-                                    <div className="opacity-80 text-[10px]">
-                                      {formatTime(startTime)} - {formatTime(endTime)}
-                                    </div>
-                                    {client && (
-                                      <div className="opacity-70 text-[10px] truncate">{client.companyName}</div>
-                                    )}
-                                    
-                                    {/* Conflict Badge */}
-                                    {conflictBadge && (
-                                      <Badge 
-                                        variant="outline" 
-                                        className={`absolute -bottom-1 -left-1 text-[8px] px-1 py-0 ${
-                                          conflictBadge.severity === 'error' 
-                                            ? 'bg-red-100 border-red-500 text-red-700' 
-                                            : 'bg-yellow-100 border-yellow-500 text-yellow-700'
-                                        }`}
-                                      >
-                                        {conflictBadge.type}
-                                      </Badge>
-                                    )}
-                                    
-                                    {shift.aiGenerated && (
-                                      <TrinityIconStatic size={12} className="absolute top-1 right-8" />
-                                    )}
-                                  </div>
-                                );
-                              })}
+                        {/* Current Time Indicator */}
+                        {selectedDay.toDateString() === new Date().toDateString() && (
+                          <div 
+                            className="absolute top-0 bottom-0 w-0.5 bg-red-500 z-10"
+                            style={{ 
+                              left: `${((new Date().getHours() * 60 + new Date().getMinutes()) / 1440) * 100}%` 
+                            }}
+                          />
+                        )}
+                        
+                        {/* Plus icon on hover when no shifts */}
+                        {employeeShifts.length === 0 && (
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/timeline:opacity-100 transition-opacity pointer-events-none">
+                            <div className="bg-primary/80 rounded-full p-1.5 shadow-sm">
+                              <Plus className="w-3 h-3 text-primary-foreground" />
                             </div>
                           </div>
-                        );
-                      })}
+                        )}
+                        
+                        {/* Render Shifts as Horizontal Bars Positioned by Time */}
+                        {employeeShifts.map(shift => {
+                          const startTime = new Date(shift.startTime);
+                          const endTime = new Date(shift.endTime);
+                          const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
+                          const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                          const timeClockStatus = getShiftTimeClockStatus(shift);
+                          const conflictBadge = getShiftConflictBadge(shift, shifts, employees);
+                          
+                          // Calculate position as percentage of 24-hour day
+                          const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
+                          const endMinutes = endTime.getHours() * 60 + endTime.getMinutes();
+                          const leftPercent = (startMinutes / 1440) * 100;
+                          const widthPercent = ((endMinutes - startMinutes) / 1440) * 100;
+
+                          return (
+                            <div
+                              key={shift.id}
+                              className="absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all hover:shadow-lg hover:z-20 text-white text-xs flex flex-col justify-center overflow-hidden"
+                              style={{ 
+                                backgroundColor: empColor,
+                                left: `${leftPercent}%`,
+                                width: `${Math.max(widthPercent, 3)}%`,
+                                minWidth: '60px'
+                              }}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedShiftForAction(shift);
+                              }}
+                              data-testid={`shift-${shift.id}`}
+                            >
+                              {/* Time Clock Status Badge */}
+                              <div className={`absolute -top-1 -right-1 px-1.5 py-0.5 rounded-full text-[9px] font-semibold ${timeClockStatus.bgColor} ${timeClockStatus.color}`}>
+                                {timeClockStatus.label}
+                              </div>
+                              
+                              <div className="font-medium truncate text-[11px]">
+                                {formatTime(startTime)} - {formatTime(endTime)}
+                              </div>
+                              {shift.title && (
+                                <div className="opacity-90 text-[10px] truncate">{shift.title}</div>
+                              )}
+                              {client && (
+                                <div className="opacity-70 text-[10px] truncate">{client.companyName}</div>
+                              )}
+                              
+                              {/* Conflict Badge */}
+                              {conflictBadge && (
+                                <Badge 
+                                  variant="outline" 
+                                  className={`absolute -bottom-1 -left-1 text-[8px] px-1 py-0 ${
+                                    conflictBadge.severity === 'error' 
+                                      ? 'bg-red-100 border-red-500 text-red-700' 
+                                      : 'bg-yellow-100 border-yellow-500 text-yellow-700'
+                                  }`}
+                                >
+                                  {conflictBadge.type}
+                                </Badge>
+                              )}
+                              
+                              {shift.aiGenerated && (
+                                <TrinityIconStatic size={10} className="absolute top-1 right-6" />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
                     </div>
                   );
                 })
               )}
 
-              {/* Open Shifts Row */}
-              <div className="grid grid-cols-8 bg-orange-50/50 dark:bg-orange-900/10">
-                <div className="p-2 border-r flex items-center gap-2">
+              {/* Open Shifts Row - Horizontal Timeline */}
+              <div className="flex bg-orange-50/50 dark:bg-orange-900/10">
+                <div className="w-48 min-w-48 p-2 border-r flex items-center gap-2 flex-shrink-0">
                   <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
                     <AlertCircle className="w-4 h-4 text-orange-500" />
                   </div>
@@ -1509,96 +1584,108 @@ export default function UniversalSchedule() {
                   </div>
                 </div>
 
-                {/* Day cells for open shifts */}
-                {days.map((day, dayIndex) => {
-                  const dayDate = new Date(weekStart);
-                  dayDate.setDate(dayDate.getDate() + dayIndex);
-                  const isToday = dayDate.toDateString() === new Date().toDateString();
-                  const isWeekend = dayIndex >= 5;
+                {/* Open Shifts Timeline Row */}
+                <div 
+                  className="flex-1 relative min-h-[60px] cursor-pointer group/timeline"
+                  onClick={(e) => {
+                    const rect = e.currentTarget.getBoundingClientRect();
+                    const clickX = e.clientX - rect.left;
+                    const hourWidth = rect.width / 24;
+                    const clickedHour = Math.floor(clickX / hourWidth);
+                    setShiftForm({
+                      ...shiftForm,
+                      employeeId: null,
+                      isOpenShift: true,
+                      clockIn: `${String(clickedHour).padStart(2, '0')}:00`,
+                      clockOut: `${String(Math.min(clickedHour + 8, 23)).padStart(2, '0')}:00`,
+                    });
+                    setModalPosition({ day: selectedDay.getDay() === 0 ? 6 : selectedDay.getDay() - 1, hour: clickedHour });
+                    setShowShiftModal(true);
+                  }}
+                  data-testid="open-shifts-timeline"
+                >
+                  {/* Hour Grid Lines */}
+                  <div className="absolute inset-0 flex">
+                    {hours.map((hour) => (
+                      <div 
+                        key={hour} 
+                        className="flex-1 border-r border-orange-200/50 dark:border-orange-800/30 last:border-r-0 hover:bg-orange-100/50 dark:hover:bg-orange-900/30 transition-colors"
+                      />
+                    ))}
+                  </div>
                   
-                  // Get open shifts for this day
-                  const dayOpenShifts = shifts.filter(s => {
+                  {/* Plus icon on hover when no open shifts */}
+                  {(() => {
+                    const openShifts = shifts.filter(s => {
+                      if (s.employeeId) return false;
+                      const shiftDate = new Date(s.startTime);
+                      return shiftDate.toDateString() === selectedDay.toDateString();
+                    });
+                    return openShifts.length === 0 && (
+                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/timeline:opacity-100 transition-opacity pointer-events-none">
+                        <div className="bg-orange-400 rounded-full p-1.5 shadow-sm">
+                          <Plus className="w-3 h-3 text-white" />
+                        </div>
+                      </div>
+                    );
+                  })()}
+
+                  {/* Render open shifts as horizontal bars */}
+                  {shifts.filter(s => {
                     if (s.employeeId) return false;
                     const shiftDate = new Date(s.startTime);
-                    return shiftDate.toDateString() === dayDate.toDateString();
-                  });
+                    return shiftDate.toDateString() === selectedDay.toDateString();
+                  }).map(shift => {
+                    const startTime = new Date(shift.startTime);
+                    const endTime = new Date(shift.endTime);
+                    const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
+                    const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                    
+                    // Calculate position as percentage of 24-hour day
+                    const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
+                    const endMinutes = endTime.getHours() * 60 + endTime.getMinutes();
+                    const leftPercent = (startMinutes / 1440) * 100;
+                    const widthPercent = ((endMinutes - startMinutes) / 1440) * 100;
 
-                  return (
-                    <div
-                      key={dayIndex}
-                      className={`min-h-[60px] p-1 border-r last:border-r-0 cursor-pointer transition-colors relative group/cell ${
-                        isToday ? 'bg-orange-100/50 dark:bg-orange-900/30' : ''
-                      } ${isWeekend ? 'bg-orange-50/30 dark:bg-orange-900/10' : ''} hover:bg-orange-100/70 dark:hover:bg-orange-900/40`}
-                      onClick={() => {
-                        setShiftForm({
-                          ...shiftForm,
-                          employeeId: null,
-                          isOpenShift: true,
-                          clockIn: '09:00',
-                          clockOut: '17:00',
-                        });
-                        setModalPosition({ day: dayIndex, hour: 9 });
-                        setShowShiftModal(true);
-                      }}
-                      data-testid={`open-shift-cell-${dayIndex}`}
-                    >
-                      {/* Plus icon on hover */}
-                      {dayOpenShifts.length === 0 && (
-                        <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/cell:opacity-100 transition-opacity">
-                          <div className="bg-orange-400 rounded-full p-1.5 shadow-sm">
-                            <Plus className="w-3 h-3 text-white" />
-                          </div>
+                    return (
+                      <div
+                        key={shift.id}
+                        className="absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all hover:shadow-lg hover:z-20 border-2 border-dashed border-orange-400 bg-orange-100 dark:bg-orange-900/50 text-xs flex flex-col justify-center overflow-hidden"
+                        style={{ 
+                          left: `${leftPercent}%`,
+                          width: `${Math.max(widthPercent, 6)}%`,
+                          minWidth: '80px'
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAIFillOpenShift(shift.id);
+                        }}
+                        data-testid={`open-shift-${shift.id}`}
+                      >
+                        <div className="font-medium text-orange-600 truncate flex items-center gap-1 text-[11px]">
+                          <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                          {formatTime(startTime)} - {formatTime(endTime)}
                         </div>
-                      )}
-
-                      {/* Render open shifts for this day */}
-                      <div className="space-y-1">
-                        {dayOpenShifts.map(shift => {
-                          const startTime = new Date(shift.startTime);
-                          const endTime = new Date(shift.endTime);
-                          const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
-                          const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-
-                          return (
-                            <div
-                              key={shift.id}
-                              className="rounded-md px-2 py-1.5 cursor-pointer transition-all hover:shadow-md border-2 border-dashed border-orange-400 bg-orange-100 dark:bg-orange-900/30 text-xs"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleAIFillOpenShift(shift.id);
-                              }}
-                              data-testid={`open-shift-${shift.id}`}
-                            >
-                              <div className="font-medium text-orange-600 truncate flex items-center gap-1">
-                                <AlertCircle className="w-3 h-3" />
-                                OPEN
-                              </div>
-                              <div className="text-orange-700 dark:text-orange-300 text-[10px]">
-                                {formatTime(startTime)} - {formatTime(endTime)}
-                              </div>
-                              {client && (
-                                <div className="text-orange-600/70 text-[10px] truncate">{client.companyName}</div>
-                              )}
-                              <Button
-                                size="sm"
-                                className="mt-1 h-5 text-[10px] w-full bg-gradient-to-r from-[#00BFFF] to-[#FFD700] hover:from-[#00BFFF]/90 hover:to-[#FFD700]/90"
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  handleAIFillOpenShift(shift.id);
-                                }}
-                                disabled={aiFillMutation.isPending}
-                                data-testid={`button-ai-fill-${shift.id}`}
-                              >
-                                <TrinityIconStatic size={10} className="mr-1" />
-                                {aiFillMutation.isPending ? 'Filling...' : 'Trinity Fill'}
-                              </Button>
-                            </div>
-                          );
-                        })}
+                        {client && (
+                          <div className="text-orange-600/70 text-[10px] truncate">{client.companyName}</div>
+                        )}
+                        <Button
+                          size="sm"
+                          className="mt-0.5 h-4 text-[9px] w-full bg-gradient-to-r from-[#00BFFF] to-[#FFD700] hover:from-[#00BFFF]/90 hover:to-[#FFD700]/90"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleAIFillOpenShift(shift.id);
+                          }}
+                          disabled={aiFillMutation.isPending}
+                          data-testid={`button-ai-fill-${shift.id}`}
+                        >
+                          <TrinityIconStatic size={8} className="mr-0.5" />
+                          {aiFillMutation.isPending ? '...' : 'Fill'}
+                        </Button>
                       </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
             </div>
           </div>
