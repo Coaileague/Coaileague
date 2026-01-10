@@ -5,26 +5,20 @@ import { HelmetProvider } from 'react-helmet-async';
 import App from "./App";
 import "./index.css";
 
-console.log('[CoAIleague] Imports complete, mounting React app...');
-
-// Suppress Vite HMR WebSocket errors in development (harmless dev-only warnings in Replit)
+// Suppress Vite HMR WebSocket errors in development
 if (import.meta.env.DEV) {
-  // Suppress unhandled promise rejections from Vite HMR connection attempts
   window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
     const reason = event.reason;
     const reasonStr = String(reason);
     const messageStr = reason?.message ? String(reason.message) : "";
-    
-    // Check multiple ways the error can be represented
     if (reasonStr.includes("Failed to construct 'WebSocket'") || 
         reasonStr.includes("localhost:undefined") ||
         messageStr.includes("Failed to construct 'WebSocket'") ||
         messageStr.includes("localhost:undefined")) {
-      event.preventDefault(); // Suppress the error
+      event.preventDefault();
     }
   });
   
-  // Also suppress console.error for these development-only errors
   const origError = console.error;
   console.error = (...args: any[]) => {
     const fullStr = args.map(a => String(a)).join(" ");
@@ -40,7 +34,7 @@ createRoot(document.getElementById("root")!).render(
   <HelmetProvider>
     <App />
   </HelmetProvider>
-);
+)
 
 // Service Worker registration - PRODUCTION ONLY
 // In development, the service worker can intercept Vite's module requests and cause blank screens
