@@ -595,7 +595,7 @@ export const sidebarModules: SidebarModule[] = [
       {
         id: 'support-helpdesk',
         label: 'HelpDesk',
-        href: '/chat',
+        href: '/helpdesk',
         icon: Headphones,
         description: 'AI-powered support chat',
         familyId: 'people',
