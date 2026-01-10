@@ -264,9 +264,13 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   });
 
   // Cleanup queue update interval on unmount or when guest gets voice
+  // Note: queueUpdateInterval removed from deps to prevent infinite loop
+  const queueUpdateIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  queueUpdateIntervalRef.current = queueUpdateInterval;
+  
   useEffect(() => {
-    if (justGotVoice && queueUpdateInterval) {
-      clearInterval(queueUpdateInterval);
+    if (justGotVoice && queueUpdateIntervalRef.current) {
+      clearInterval(queueUpdateIntervalRef.current);
       setQueueUpdateInterval(null);
       // Send notification that agent is helping
       sendMessage(
@@ -277,9 +281,9 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     }
     
     return () => {
-      if (queueUpdateInterval) clearInterval(queueUpdateInterval);
+      if (queueUpdateIntervalRef.current) clearInterval(queueUpdateIntervalRef.current);
     };
-  }, [justGotVoice, queueUpdateInterval]);
+  }, [justGotVoice]);
 
   // Enhanced connection state tracking
   const [connectionStatus, setConnectionStatus] = useState<'connected' | 'disconnected' | 'error' | 'denied'>('disconnected');

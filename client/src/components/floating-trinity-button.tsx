@@ -159,7 +159,7 @@ export function FloatingTrinityButton() {
       aria-label="Open Trinity Chat - Drag to move on mobile"
     >
       <div 
-        className="relative flex items-center justify-center bg-gradient-to-br from-[#00BFFF] via-[#3b82f6] to-[#FFD700] border border-blue-500/30 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 w-14 h-14 md:w-12 md:h-12"
+        className="relative flex items-center justify-center bg-gradient-to-br from-purple-500 via-teal-500 to-amber-500 border border-purple-400/30 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 w-14 h-14 md:w-12 md:h-12"
       >
         <div className="w-8 h-8 md:w-7 md:h-7 flex items-center justify-center">
           <TrinityIconStatic size={28} />
