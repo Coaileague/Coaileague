@@ -120,13 +120,21 @@ export async function resolveWorkspaceForUser(userId: string, requestedWorkspace
     }),
   ]);
 
-  // If user owns multiple workspaces, require explicit selection
+  // If user owns multiple workspaces, auto-select the first one (sorted by creation)
+  // User can switch workspaces via workspace selector in the UI
   if (ownedWorkspaces.length > 1) {
+    // Sort by createdAt to pick the oldest (primary) workspace
+    const sortedWorkspaces = ownedWorkspaces.sort((a, b) => {
+      const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      return dateA - dateB;
+    });
+    const workspace = sortedWorkspaces[0];
+    const employee = userEmployees.find(e => e.workspaceId === workspace.id);
     return {
-      workspaceId: null,
-      role: null,
-      employeeId: null,
-      error: 'Please specify workspaceId - you own multiple workspaces',
+      workspaceId: workspace.id,
+      role: 'org_owner',
+      employeeId: employee?.id || null,
     };
   }
 
@@ -161,11 +169,17 @@ export async function resolveWorkspaceForUser(userId: string, requestedWorkspace
   }
 
   // User has multiple employee records (multi-workspace scenario)
+  // Auto-select the first one by creation date
+  const sortedEmployees = userEmployees.sort((a, b) => {
+    const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+    const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+    return dateA - dateB;
+  });
+  const emp = sortedEmployees[0];
   return {
-    workspaceId: null,
-    role: null,
-    employeeId: null,
-    error: 'Please specify workspaceId - you have access to multiple workspaces',
+    workspaceId: emp.workspaceId,
+    role: (emp.workspaceRole as WorkspaceRole) || 'staff',
+    employeeId: emp.id,
   };
 }
 
