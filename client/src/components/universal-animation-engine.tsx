@@ -20,6 +20,7 @@
 import { useEffect, useRef, useCallback, useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUniversalLoadingGate } from '@/contexts/universal-loading-gate';
+import { ColorfulCelticKnot } from '@/components/ui/colorful-celtic-knot';
 
 export type AnimationMode = 'idle' | 'search' | 'analyze' | 'voice' | 'warp' | 'success' | 'error';
 
@@ -601,17 +602,19 @@ export function UniversalAnimationEngine({
           onClick={onClick}
           data-testid="universal-animation-overlay"
         >
+          {/* Trinity Celtic Knot Logo - Brand centerpiece */}
           <motion.div
-            initial={{ scale: 0.8 }}
-            animate={{ scale: 1 }}
-            exit={{ scale: 0.8 }}
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            exit={{ scale: 0.8, opacity: 0 }}
             transition={{ type: 'spring', damping: 20, stiffness: 200 }}
-            className="w-[min(300px,70vmin)] h-[min(300px,70vmin)]"
+            className="flex items-center justify-center"
           >
-            <AnimationCanvas
-              mode={mode}
-              progress={displayProgress}
-              seasonalTheme={seasonalTheme}
+            <ColorfulCelticKnot 
+              size={120} 
+              animated 
+              animationSpeed="slow"
+              state="thinking"
             />
           </motion.div>
 

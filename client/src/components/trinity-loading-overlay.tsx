@@ -38,180 +38,20 @@ const LOADING_MESSAGES = [
  * Three interwoven ribbon paths with animated color flow
  * Distinctly Trinity branding - NOT similar to Claude's starburst
  */
-function AnimatedTrinityLogo({ size = 80, isAnimating = true }: { size?: number; isAnimating?: boolean }) {
-  const reactId = useId();
-  
-  const ids = {
-    flowGrad1: `trinity-flow-1${reactId}`,
-    flowGrad2: `trinity-flow-2${reactId}`,
-    flowGrad3: `trinity-flow-3${reactId}`,
-    coreGrad: `trinity-core${reactId}`,
-    glowFilter: `trinity-glow${reactId}`,
-    ribbonMask: `trinity-mask${reactId}`,
-  };
+/**
+ * AnimatedTrinityLogo - Centralized import of the colorful Celtic knot
+ * Uses the unified ColorfulCelticKnot component with slower animations
+ */
+import { ColorfulCelticKnot } from '@/components/ui/colorful-celtic-knot';
 
+function AnimatedTrinityLogo({ size = 80, isAnimating = true }: { size?: number; isAnimating?: boolean }) {
   return (
-    <svg 
-      width={size} 
-      height={size} 
-      viewBox="0 0 100 100"
-      className="transition-transform"
-    >
-      <defs>
-        <linearGradient id={ids.flowGrad1} x1="0%" y1="0%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#7c3aed">
-            {isAnimating && <animate attributeName="stop-color" values="#7c3aed;#14b8a6;#f59e0b;#7c3aed" dur="3s" repeatCount="indefinite" />}
-          </stop>
-          <stop offset="50%" stopColor="#14b8a6">
-            {isAnimating && <animate attributeName="stop-color" values="#14b8a6;#f59e0b;#7c3aed;#14b8a6" dur="3s" repeatCount="indefinite" />}
-          </stop>
-          <stop offset="100%" stopColor="#f59e0b">
-            {isAnimating && <animate attributeName="stop-color" values="#f59e0b;#7c3aed;#14b8a6;#f59e0b" dur="3s" repeatCount="indefinite" />}
-          </stop>
-        </linearGradient>
-        
-        <linearGradient id={ids.flowGrad2} x1="50%" y1="0%" x2="50%" y2="100%">
-          <stop offset="0%" stopColor="#14b8a6">
-            {isAnimating && <animate attributeName="stop-color" values="#14b8a6;#f59e0b;#7c3aed;#14b8a6" dur="3s" repeatCount="indefinite" begin="1s" />}
-          </stop>
-          <stop offset="50%" stopColor="#f59e0b">
-            {isAnimating && <animate attributeName="stop-color" values="#f59e0b;#7c3aed;#14b8a6;#f59e0b" dur="3s" repeatCount="indefinite" begin="1s" />}
-          </stop>
-          <stop offset="100%" stopColor="#7c3aed">
-            {isAnimating && <animate attributeName="stop-color" values="#7c3aed;#14b8a6;#f59e0b;#7c3aed" dur="3s" repeatCount="indefinite" begin="1s" />}
-          </stop>
-        </linearGradient>
-        
-        <linearGradient id={ids.flowGrad3} x1="100%" y1="50%" x2="0%" y2="50%">
-          <stop offset="0%" stopColor="#f59e0b">
-            {isAnimating && <animate attributeName="stop-color" values="#f59e0b;#7c3aed;#14b8a6;#f59e0b" dur="3s" repeatCount="indefinite" begin="2s" />}
-          </stop>
-          <stop offset="50%" stopColor="#7c3aed">
-            {isAnimating && <animate attributeName="stop-color" values="#7c3aed;#14b8a6;#f59e0b;#7c3aed" dur="3s" repeatCount="indefinite" begin="2s" />}
-          </stop>
-          <stop offset="100%" stopColor="#14b8a6">
-            {isAnimating && <animate attributeName="stop-color" values="#14b8a6;#f59e0b;#7c3aed;#14b8a6" dur="3s" repeatCount="indefinite" begin="2s" />}
-          </stop>
-        </linearGradient>
-        
-        <radialGradient id={ids.coreGrad} cx="50%" cy="50%" r="50%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="40%" stopColor="#a78bfa" />
-          <stop offset="100%" stopColor="#7c3aed" stopOpacity="0.6" />
-        </radialGradient>
-        
-        <filter id={ids.glowFilter} x="-40%" y="-40%" width="180%" height="180%">
-          <feGaussianBlur stdDeviation="2.5" result="blur"/>
-          <feMerge>
-            <feMergeNode in="blur"/>
-            <feMergeNode in="SourceGraphic"/>
-          </feMerge>
-        </filter>
-      </defs>
-      
-      {/* Celtic Triquetra - Three interwoven ribbon loops */}
-      <g filter={`url(#${ids.glowFilter})`} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none">
-        
-        {/* Loop 1 - Top ribbon (curves down left then right, meets at center) */}
-        <path 
-          d="M 50 15 
-             C 30 15, 15 35, 20 55 
-             C 22 62, 30 68, 50 50 
-             C 70 68, 78 62, 80 55 
-             C 85 35, 70 15, 50 15"
-          stroke={`url(#${ids.flowGrad1})`}
-        >
-          {isAnimating && (
-            <animate 
-              attributeName="stroke-dasharray" 
-              values="0 200;100 100;200 0;100 100;0 200" 
-              dur="4s" 
-              repeatCount="indefinite"
-            />
-          )}
-        </path>
-        
-        {/* Loop 2 - Bottom Left ribbon */}
-        <path 
-          d="M 25 75 
-             C 10 60, 15 35, 35 30 
-             C 42 28, 48 32, 50 50 
-             C 38 58, 28 65, 25 75 
-             C 30 88, 45 85, 50 78"
-          stroke={`url(#${ids.flowGrad2})`}
-        >
-          {isAnimating && (
-            <animate 
-              attributeName="stroke-dasharray" 
-              values="0 180;90 90;180 0;90 90;0 180" 
-              dur="4s" 
-              repeatCount="indefinite"
-              begin="1.3s"
-            />
-          )}
-        </path>
-        
-        {/* Loop 3 - Bottom Right ribbon */}
-        <path 
-          d="M 75 75 
-             C 90 60, 85 35, 65 30 
-             C 58 28, 52 32, 50 50 
-             C 62 58, 72 65, 75 75 
-             C 70 88, 55 85, 50 78"
-          stroke={`url(#${ids.flowGrad3})`}
-        >
-          {isAnimating && (
-            <animate 
-              attributeName="stroke-dasharray" 
-              values="0 180;90 90;180 0;90 90;0 180" 
-              dur="4s" 
-              repeatCount="indefinite"
-              begin="2.6s"
-            />
-          )}
-        </path>
-      </g>
-      
-      {/* Central glowing nexus */}
-      <circle cx="50" cy="50" r="10" fill={`url(#${ids.coreGrad})`} filter={`url(#${ids.glowFilter})`}>
-        {isAnimating && (
-          <>
-            <animate attributeName="r" values="8;11;8" dur="2s" repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.8;1;0.8" dur="2s" repeatCount="indefinite" />
-          </>
-        )}
-      </circle>
-      
-      {/* Inner bright core */}
-      <circle cx="50" cy="50" r="4" fill="#ffffff" opacity="0.95">
-        {isAnimating && (
-          <animate attributeName="r" values="3;5;3" dur="2s" repeatCount="indefinite" />
-        )}
-      </circle>
-      
-      {/* Subtle rotating outer ring */}
-      <circle 
-        cx="50" 
-        cy="50" 
-        r="42" 
-        fill="none" 
-        stroke="#a78bfa" 
-        strokeWidth="0.5" 
-        strokeDasharray="8 12"
-        opacity="0.3"
-      >
-        {isAnimating && (
-          <animateTransform 
-            attributeName="transform" 
-            type="rotate" 
-            from="0 50 50" 
-            to="360 50 50" 
-            dur="20s" 
-            repeatCount="indefinite"
-          />
-        )}
-      </circle>
-    </svg>
+    <ColorfulCelticKnot 
+      size={size} 
+      animated={isAnimating} 
+      animationSpeed="slow"
+      state={isAnimating ? "thinking" : "idle"}
+    />
   );
 }
 
