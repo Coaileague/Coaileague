@@ -429,7 +429,8 @@ class TrinityChatService {
    * Get or create a conversation session
    */
   private async getOrCreateSession(userId: string, workspaceId: string, mode: ConversationMode): Promise<TrinityConversationSession | null> {
-    console.log('[TrinityChatService] getOrCreateSession called:', { userId, workspaceId, mode });
+    // IMMEDIATE DEBUG - This should always appear
+    process.stdout.write(`[TrinityChatService] ENTERING getOrCreateSession: userId=${userId}, workspaceId=${workspaceId}, mode=${mode}\n`);
     try {
       // Try to find an active session for this user/workspace/mode using raw SQL for reliability
       const existingResult = await db.execute(sql`
