@@ -20,7 +20,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Sparkles, Plus, ChevronLeft, ChevronRight, 
+  Plus, ChevronLeft, ChevronRight, 
   Calendar, Users, Clock, BarChart3, CheckCircle,
   AlertCircle, CalendarDays, ArrowRightLeft, LayoutTemplate, Download
 } from 'lucide-react';
@@ -708,28 +708,12 @@ export default function ScheduleMobileFirst() {
         </div>
       </ScrollArea>
 
-      {/* FABs - Compact, positioned above bottom nav (56px + safe margin), 44px min touch target */}
+      {/* Add Shift FAB - Left side to avoid overlap with global Trinity button on right */}
       {canEdit && (
-        <div className="fixed bottom-20 right-3 z-40 flex flex-col gap-2">
-          {/* AI Schedule Generation FAB */}
+        <div className="fixed bottom-20 left-4 z-40">
           <Button
             size="icon"
-            className="h-11 w-11 rounded-full shadow-md bg-gradient-to-br from-purple-600 to-blue-600"
-            onClick={() => {
-              toast({
-                title: "AI Generation",
-                description: "AI schedule generation will be integrated here",
-              });
-            }}
-            data-testid="fab-ai-generate"
-          >
-            <Sparkles className="h-5 w-5" />
-          </Button>
-
-          {/* Add Shift FAB */}
-          <Button
-            size="icon"
-            className="h-11 w-11 rounded-full shadow-md"
+            className="h-12 w-12 rounded-full shadow-lg"
             onClick={() => {
               setSelectedEmployee(undefined);
               setEditingShift(undefined);
