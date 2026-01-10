@@ -254,10 +254,10 @@ export function PremiumMetrics({
               <TrendingDown className="w-4 h-4 text-blue-600" />
             </div>
             <div className="text-xl font-bold text-gray-900">
-              ${dashboardStats.laborCost.toLocaleString()}
+              ${(dashboardStats?.laborCost ?? 0).toLocaleString()}
             </div>
             <div className="text-xs text-blue-600 font-semibold mt-1">
-              ↓ {dashboardStats.laborSavings}% vs last week
+              ↓ {dashboardStats?.laborSavings ?? 0}% vs last week
             </div>
           </div>
 
@@ -267,7 +267,7 @@ export function PremiumMetrics({
               <span className="text-xs font-semibold text-gray-600">TOTAL SHIFTS</span>
               <Calendar className="w-4 h-4 text-blue-600" />
             </div>
-            <div className="text-xl font-bold text-gray-900">{dashboardStats.totalShifts}</div>
+            <div className="text-xl font-bold text-gray-900">{dashboardStats?.totalShifts ?? 0}</div>
             <div className="text-xs text-gray-600 mt-1">This week</div>
           </div>
 
@@ -277,9 +277,9 @@ export function PremiumMetrics({
               <span className="text-xs font-semibold text-gray-600">ACTIVE STAFF</span>
               <Users className="w-4 h-4 text-purple-600" />
             </div>
-            <div className="text-xl font-bold text-gray-900">{dashboardStats.activeStaff}</div>
+            <div className="text-xl font-bold text-gray-900">{dashboardStats?.activeStaff ?? 0}</div>
             <div className="text-xs text-gray-600 mt-1">
-              Online now: {dashboardStats.onlineNow}
+              Online now: {dashboardStats?.onlineNow ?? 0}
             </div>
           </div>
 
@@ -289,7 +289,7 @@ export function PremiumMetrics({
               <span className="text-xs font-semibold text-gray-600">NEEDS ACTION</span>
               <AlertCircle className="w-4 h-4 text-blue-600" />
             </div>
-            <div className="text-xl font-bold text-gray-900">{dashboardStats.needsAction}</div>
+            <div className="text-xl font-bold text-gray-900">{dashboardStats?.needsAction ?? 0}</div>
             <div className="text-xs text-gray-600 mt-1">
               Unassigned shifts
             </div>
@@ -301,7 +301,7 @@ export function PremiumMetrics({
               <span className="text-xs font-semibold text-gray-600">ATTENDANCE</span>
               <UserCheck className="w-4 h-4 text-indigo-600" />
             </div>
-            <div className="text-xl font-bold text-gray-900">{dashboardStats.attendance}%</div>
+            <div className="text-xl font-bold text-gray-900">{dashboardStats?.attendance ?? 0}%</div>
             <div className="text-xs text-gray-600 mt-1">This month</div>
           </div>
 
@@ -311,7 +311,7 @@ export function PremiumMetrics({
               <span className="text-xs font-semibold text-gray-600">EFFICIENCY</span>
               <Zap className="w-4 h-4 text-blue-600" />
             </div>
-            <div className="text-xl font-bold text-gray-900">{dashboardStats.efficiency}%</div>
+            <div className="text-xl font-bold text-gray-900">{dashboardStats?.efficiency ?? 0}%</div>
             <div className="text-xs text-gray-600 mt-1">AI-optimized</div>
           </div>
         </div>
