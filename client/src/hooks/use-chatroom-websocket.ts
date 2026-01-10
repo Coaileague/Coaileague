@@ -4,6 +4,120 @@ import { useToast } from "@/hooks/use-toast";
 
 const MAX_RETRIES = 5; // Maximum reconnection attempts before giving up
 
+// ============================================================================
+// GURU MODE: Module-Level WebSocket Singleton Manager
+// Prevents connection churn caused by React StrictMode and component remounts
+// ============================================================================
+interface GlobalWebSocketState {
+  socket: WebSocket | null;
+  conversationId: string | null;
+  userId: string | null;
+  isConnecting: boolean;
+  lastConnectAttempt: number;
+  subscribers: Set<() => void>;
+}
+
+const globalWSState: GlobalWebSocketState = {
+  socket: null,
+  conversationId: null,
+  userId: null,
+  isConnecting: false,
+  lastConnectAttempt: 0,
+  subscribers: new Set(),
+};
+
+// Subscribe to global state changes
+function subscribeToGlobalWS(callback: () => void): () => void {
+  globalWSState.subscribers.add(callback);
+  return () => globalWSState.subscribers.delete(callback);
+}
+
+// Get the global WebSocket
+function getGlobalSocket(): WebSocket | null {
+  return globalWSState.socket;
+}
+
+// Check if global socket is ready for a specific conversation
+function isGlobalSocketReadyFor(userId: string, conversationId: string): boolean {
+  if (!globalWSState.socket) return false;
+  if (globalWSState.userId !== userId) return false;
+  if (globalWSState.conversationId !== conversationId) return false;
+  const state = globalWSState.socket.readyState;
+  return state === WebSocket.OPEN || state === WebSocket.CONNECTING;
+}
+
+// Create or return existing global socket
+function getOrCreateGlobalSocket(userId: string, conversationId: string): WebSocket | null {
+  // If we already have a valid connection for this user/conversation, return it
+  if (isGlobalSocketReadyFor(userId, conversationId)) {
+    console.log('[TRINITY-WS] Reusing existing global socket');
+    return globalWSState.socket;
+  }
+  
+  // Rate limit connection attempts
+  const now = Date.now();
+  if (now - globalWSState.lastConnectAttempt < 1000) {
+    console.log('[TRINITY-WS] Rate limited, waiting...');
+    return globalWSState.socket;
+  }
+  
+  // If we're already connecting, don't start another connection
+  if (globalWSState.isConnecting) {
+    console.log('[TRINITY-WS] Already connecting, skipping');
+    return globalWSState.socket;
+  }
+  
+  // Close existing socket if switching user/conversation
+  if (globalWSState.socket) {
+    const state = globalWSState.socket.readyState;
+    if (state === WebSocket.OPEN || state === WebSocket.CONNECTING) {
+      console.log('[TRINITY-WS] Closing existing socket for new connection');
+      globalWSState.socket.close();
+    }
+  }
+  
+  // Create new connection
+  console.log('[TRINITY-WS] Creating NEW global socket for:', userId, conversationId);
+  globalWSState.isConnecting = true;
+  globalWSState.lastConnectAttempt = now;
+  globalWSState.userId = userId;
+  globalWSState.conversationId = conversationId;
+  
+  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+  const wsHost = window.location.host || 
+    (window.location.port 
+      ? `${window.location.hostname}:${window.location.port}` 
+      : window.location.hostname);
+  const wsUrl = `${protocol}://${wsHost}/ws/chat`;
+  
+  try {
+    const ws = new WebSocket(wsUrl);
+    globalWSState.socket = ws;
+    
+    ws.onopen = () => {
+      console.log('[TRINITY-WS] Connection Stabilized');
+      globalWSState.isConnecting = false;
+      globalWSState.subscribers.forEach(cb => cb());
+    };
+    
+    ws.onclose = () => {
+      globalWSState.isConnecting = false;
+      globalWSState.subscribers.forEach(cb => cb());
+    };
+    
+    ws.onerror = () => {
+      globalWSState.isConnecting = false;
+    };
+    
+    return ws;
+  } catch (err) {
+    console.error('[TRINITY-WS] Failed to create socket:', err);
+    globalWSState.isConnecting = false;
+    return null;
+  }
+}
+// ============================================================================
+
 // IRC-style command ID generator
 function generateCommandId(): string {
   return `cmd_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -170,81 +284,74 @@ export function useChatroomWebSocket(
   const reconnectTimeoutRef = useRef<NodeJS.Timeout>();
   const reconnectAttemptsRef = useRef(0);
   const isConnectingRef = useRef(false); // Track if connection is in progress
+  const isConnectedRef = useRef(false); // Synchronous tracking to prevent infinite re-render loops
   const isManualSwitchRef = useRef(false); // Track if we're manually switching conversations
   const typingTimeoutRef = useRef<Map<string, NodeJS.Timeout>>(new Map());
   const lastConnectAttemptRef = useRef<number>(0);
   const resolvedConversationIdRef = useRef<string>(conversationId); // Synchronous tracking for security checks
   const MIN_RECONNECT_INTERVAL = 1000; // Minimum 1 second between attempts
+  const lastConnectedConversationRef = useRef<string | null>(null); // Track last connected conversation to prevent duplicate connections
 
   const connect = useCallback(() => {
     if (!userId) return;
 
-    // Rate limit connection attempts
-    const now = Date.now();
-    if (now - lastConnectAttemptRef.current < MIN_RECONNECT_INTERVAL) {
-      console.log('⚠️ Connection rate limited, waiting...');
-      return;
-    }
-    lastConnectAttemptRef.current = now;
-
-    // STRICT duplicate connection prevention
-    if (isConnectingRef.current) {
-      console.log('⚠️ Already connecting, aborting duplicate');
-      return;
-    }
-
-    if (wsRef.current) {
-      const state = wsRef.current.readyState;
-      // Block if CONNECTING (0) or OPEN (1) - only allow if CLOSING (2) or CLOSED (3)
-      if (state === WebSocket.CONNECTING || state === WebSocket.OPEN) {
-        console.log(`⚠️ WebSocket exists (state: ${state}), aborting duplicate`);
+    // GURU MODE: Check if global singleton already has a valid connection
+    if (isGlobalSocketReadyFor(userId, conversationId)) {
+      const existingSocket = getGlobalSocket();
+      if (existingSocket) {
+        console.log('[TRINITY-WS] Reusing singleton socket from global state');
+        wsRef.current = existingSocket;
+        // If already open, only update state if not already connected (prevents infinite re-render loop)
+        if (existingSocket.readyState === WebSocket.OPEN) {
+          if (!isConnectedRef.current) {
+            isConnectedRef.current = true;
+            setIsConnected(true);
+            setError(null);
+          }
+        }
         return;
       }
     }
 
-    console.log('🔌 Creating new WebSocket connection for user:', userId);
+    // Use global singleton to create/get socket
+    const ws = getOrCreateGlobalSocket(userId, conversationId);
+    if (!ws) {
+      console.log('[TRINITY-WS] Failed to get global socket');
+      return;
+    }
+    
+    // If this is the same socket we already have, skip setup
+    if (wsRef.current === ws) {
+      console.log('[TRINITY-WS] Same socket instance, skipping handler setup');
+      return;
+    }
+    
+    console.log('[TRINITY-WS] Setting up handlers on global socket');
+    wsRef.current = ws;
     isConnectingRef.current = true;
 
-    // Clean up existing connection if any
-    if (wsRef.current && wsRef.current.readyState !== WebSocket.CLOSED) {
-      wsRef.current.close();
-    }
+    ws.onopen = () => {
+      console.log('WebSocket connected');
+      isConnectedRef.current = true;
+      setIsConnected(true);
+      setError(null);
+      reconnectAttemptsRef.current = 0;
+      isConnectingRef.current = false; // Connection established
+      isManualSwitchRef.current = false; // Reset flag after successful connection
 
-    try {
-      // Connect to WebSocket server with fallback for port detection
-      const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
-      // Fallback: if window.location.host is undefined, construct from hostname + port
-      const wsHost = window.location.host || 
-        (window.location.port 
-          ? `${window.location.hostname}:${window.location.port}` 
-          : window.location.hostname);
-      const wsUrl = `${protocol}://${wsHost}/ws/chat`;
-      console.log('🔗 Attempting WebSocket connection to:', wsUrl);
-      const ws = new WebSocket(wsUrl);
-      console.log('✅ WebSocket object created, state:', ws.readyState);
-      wsRef.current = ws;
+      // Join the specified conversation
+      ws.send(JSON.stringify({
+        type: 'join_conversation',
+        conversationId: conversationId,
+        userId: userId,
+      }));
+    };
 
-      ws.onopen = () => {
-        console.log('WebSocket connected');
-        setIsConnected(true);
-        setError(null);
-        reconnectAttemptsRef.current = 0;
-        isConnectingRef.current = false; // Connection established
-        isManualSwitchRef.current = false; // Reset flag after successful connection
+    ws.onmessage = (event) => {
+      try {
+        const data: WebSocketMessage = JSON.parse(event.data);
 
-        // Join the specified conversation
-        ws.send(JSON.stringify({
-          type: 'join_conversation',
-          conversationId: conversationId,
-          userId: userId,
-        }));
-      };
-
-      ws.onmessage = (event) => {
-        try {
-          const data: WebSocketMessage = JSON.parse(event.data);
-
-          switch (data.type) {
+        switch (data.type) {
             case 'conversation_joined':
               // Backend acknowledged successful join with resolved conversation UUID
               console.log('✅ Join acknowledged:', data.conversationId);
@@ -478,6 +585,7 @@ export function useChatroomWebSocket(
               }
               const kickMessage = typeof data.message === 'string' ? data.message : 'You have been removed from the chat';
               setError(kickMessage);
+              isConnectedRef.current = false;
               setIsConnected(false);
               if (wsRef.current) {
                 wsRef.current.close();
@@ -606,50 +714,45 @@ export function useChatroomWebSocket(
         }
       };
 
-      ws.onclose = () => {
-        console.log('WebSocket disconnected');
-        setIsConnected(false);
-        isConnectingRef.current = false; // Reset connection flag
+    ws.onclose = () => {
+      console.log('WebSocket disconnected');
+      isConnectedRef.current = false;
+      setIsConnected(false);
+      isConnectingRef.current = false; // Reset connection flag
 
-        // Skip auto-reconnect if this is a manual conversation switch
-        if (isManualSwitchRef.current) {
-          console.log('⚠️ Skipping auto-reconnect (manual conversation switch)');
-          return;
+      // Skip auto-reconnect if this is a manual conversation switch
+      if (isManualSwitchRef.current) {
+        console.log('[TRINITY-WS] Skipping auto-reconnect (manual conversation switch)');
+        return;
+      }
+
+      // Check if we've exceeded max retry attempts
+      if (reconnectAttemptsRef.current >= MAX_RETRIES) {
+        console.error(`[TRINITY-WS] Failed to connect after ${MAX_RETRIES} attempts`);
+        setError(`Unable to connect to chat server after ${MAX_RETRIES} attempts`);
+        
+        // Call the failure callback if provided
+        if (onConnectionFailed) {
+          onConnectionFailed(reconnectAttemptsRef.current);
         }
+        return; // Stop trying to reconnect
+      }
 
-        // Check if we've exceeded max retry attempts
-        if (reconnectAttemptsRef.current >= MAX_RETRIES) {
-          console.error(`❌ Failed to connect after ${MAX_RETRIES} attempts`);
-          setError(`Unable to connect to chat server after ${MAX_RETRIES} attempts`);
-          
-          // Call the failure callback if provided
-          if (onConnectionFailed) {
-            onConnectionFailed(reconnectAttemptsRef.current);
-          }
-          return; // Stop trying to reconnect
-        }
+      // Attempt to reconnect with exponential backoff
+      const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
+      reconnectAttemptsRef.current++;
 
-        // Attempt to reconnect with exponential backoff
-        const delay = Math.min(1000 * Math.pow(2, reconnectAttemptsRef.current), 30000);
-        reconnectAttemptsRef.current++;
+      reconnectTimeoutRef.current = setTimeout(() => {
+        console.log(`[TRINITY-WS] Reconnecting... (attempt ${reconnectAttemptsRef.current}/${MAX_RETRIES})`);
+        connect();
+      }, delay);
+    };
 
-        reconnectTimeoutRef.current = setTimeout(() => {
-          console.log(`Reconnecting... (attempt ${reconnectAttemptsRef.current}/${MAX_RETRIES})`);
-          connect();
-        }, delay);
-      };
-
-      ws.onerror = (error) => {
-        console.error('WebSocket error:', error);
-        setError('Connection error');
-        isConnectingRef.current = false; // Reset on error
-      };
-    } catch (err) {
-      console.error('Failed to create WebSocket:', err);
-      console.error('Error details:', JSON.stringify(err, Object.getOwnPropertyNames(err)));
-      setError(err instanceof Error ? err.message : 'Failed to connect');
+    ws.onerror = (error) => {
+      console.error('[TRINITY-WS] WebSocket error:', error);
+      setError('Connection error');
       isConnectingRef.current = false; // Reset on error
-    }
+    };
   }, [userId, conversationId, userName]);
 
   // Send a message
@@ -778,31 +881,47 @@ export function useChatroomWebSocket(
     }
   }, []);
 
-  // Connect on mount and when userId or conversationId changes
+  // GURU MODE FIX: Stabilized connection logic using mount-once pattern
+  // This effect ONLY runs on first mount to establish the connection
+  const hasInitializedRef = useRef(false);
+  
   useEffect(() => {
-    if (userId) {
-      // If switching conversations, send leave_conversation and close existing connection
-      if (wsRef.current) {
-        const state = wsRef.current.readyState;
-        if (state === WebSocket.OPEN) {
-          // Send explicit leave_conversation to prevent stale socket events
-          console.log(`📤 Leaving previous conversation before switching to: ${conversationId}`);
-          try {
-            wsRef.current.send(JSON.stringify({
-              type: 'leave_conversation',
-              userId: userId,
-            }));
-          } catch (err) {
-            console.warn('Failed to send leave_conversation:', err);
-          }
+    if (!userId || !conversationId) return;
+    
+    // GURU MODE: Only connect on first mount, not on re-renders
+    if (hasInitializedRef.current && lastConnectedConversationRef.current === conversationId) {
+      // Already initialized for this conversation - skip
+      return;
+    }
+    
+    // Check if we're switching conversations (not first mount)
+    const isConversationSwitch = hasInitializedRef.current && lastConnectedConversationRef.current !== conversationId;
+    
+    if (isConversationSwitch && wsRef.current) {
+      const state = wsRef.current.readyState;
+      if (state === WebSocket.OPEN) {
+        console.log(`[TRINITY-WS] Leaving conversation ${lastConnectedConversationRef.current} for: ${conversationId}`);
+        try {
+          wsRef.current.send(JSON.stringify({
+            type: 'leave_conversation',
+            userId: userId,
+          }));
+        } catch (err) {
+          console.warn('Failed to send leave_conversation:', err);
         }
-        if (state === WebSocket.CONNECTING || state === WebSocket.OPEN) {
-          console.log(`🔌 Closing WebSocket for conversation switch to: ${conversationId}`);
-          isManualSwitchRef.current = true; // Set flag to suppress auto-reconnect
-          wsRef.current.close();
-          wsRef.current = null;
-          isConnectingRef.current = false;
-        }
+      }
+      if (state === WebSocket.CONNECTING || state === WebSocket.OPEN) {
+        console.log(`[TRINITY-WS] Closing WebSocket for conversation switch`);
+        isManualSwitchRef.current = true;
+        wsRef.current.close();
+        wsRef.current = null;
+        isConnectingRef.current = false;
+        
+        // GURU MODE FIX: Also reset the global singleton state when switching conversations
+        // This ensures getOrCreateGlobalSocket creates a new socket for the new conversation
+        globalWSState.socket = null;
+        globalWSState.conversationId = null;
+        globalWSState.isConnecting = false;
       }
       
       // Clear state for new conversation
@@ -810,29 +929,39 @@ export function useChatroomWebSocket(
       setOnlineUsers([]);
       setConversationParticipants(new Map());
       setReadReceipts(new Map());
-      
-      // Connect to new conversation (flag will be reset in onopen)
+    }
+    
+    // Mark as initialized and track conversation
+    hasInitializedRef.current = true;
+    lastConnectedConversationRef.current = conversationId;
+    
+    // Connect (only if not already connected)
+    const currentState = wsRef.current?.readyState;
+    if (!isConnectingRef.current && currentState !== WebSocket.OPEN && currentState !== WebSocket.CONNECTING) {
       connect();
     }
-
-    // Cleanup on unmount - PROPERLY close connection
-    return () => {
-      if (reconnectTimeoutRef.current) {
-        clearTimeout(reconnectTimeoutRef.current);
-      }
+    
+    // GURU MODE: NO CLEANUP - Never close socket on effect re-runs
+    // Socket cleanup happens only on true page navigation (handled by window unload)
+    // This prevents React StrictMode from causing infinite reconnects
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [userId, conversationId]);
+  
+  // Separate cleanup effect for window unload only - NO effect cleanup
+  // StrictMode will run cleanup on simulated unmount, so we can't close socket there
+  useEffect(() => {
+    const handleUnload = () => {
       if (wsRef.current) {
-        const state = wsRef.current.readyState;
-        // Close if CONNECTING or OPEN
-        if (state === WebSocket.CONNECTING || state === WebSocket.OPEN) {
-          console.log('🔌 Closing WebSocket on cleanup');
-          wsRef.current.close();
-        }
-        // Reset connection flag so next mount can connect
-        isConnectingRef.current = false;
+        wsRef.current.close();
       }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [userId, conversationId]); // Reconnect when either userId or conversationId changes
+    window.addEventListener('beforeunload', handleUnload);
+    return () => {
+      window.removeEventListener('beforeunload', handleUnload);
+      // DO NOT close socket here - StrictMode causes this to run on every "remount"
+      // The socket will be closed when the window unloads or when switching conversations
+    };
+  }, []);
 
   // Clear access error state (call after successful ticket verification)
   const clearAccessError = useCallback(() => {
@@ -864,6 +993,7 @@ export function useChatroomWebSocket(
     // Reset flags and retry counter for manual reconnect
     isConnectingRef.current = false;
     reconnectAttemptsRef.current = 0; // Reset retry counter
+    isConnectedRef.current = false;
     setIsConnected(false);
     setError(null);
     

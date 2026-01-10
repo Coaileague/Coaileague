@@ -152,12 +152,19 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   const routeRoomId = routeParams?.roomId;
 
   // Read URL parameters for direct conversation links (from escalation)
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlConversationId = urlParams.get('conversationId');
-  const urlGuestToken = urlParams.get('guestToken');
+  // Memoize to prevent new object creation on every render (Guru Mode: Stable Dependencies)
+  const urlConversationId = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('conversationId');
+  }, []);
+  const urlGuestToken = useMemo(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('guestToken');
+  }, []);
   
   // Check sessionStorage for escalation data (using config helper)
-  const parsedEscalation = getStoredEscalationData();
+  // Memoize to prevent recalculation on every render
+  const parsedEscalation = useMemo(() => getStoredEscalationData(), []);
   
   // Guest intake form state (using config helper)
   const [showGuestIntakeForm, setShowGuestIntakeForm] = useState(!user); // Show for guests on load
@@ -207,17 +214,23 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   });
   
   // Determine the conversation ID to join (prop > route param > mobile selection > URL param > escalation > default)
-  const conversationToJoin = propRoomId || routeRoomId || mobileSelectedRoom?.id || urlConversationId || parsedEscalation?.conversationId || MAIN_ROOM_ID;
+  // Memoize to ensure stable reference for WebSocket hook (Guru Mode: Prevent Feedback Loop)
+  const conversationToJoin = useMemo(() => {
+    return propRoomId || routeRoomId || mobileSelectedRoom?.id || urlConversationId || parsedEscalation?.conversationId || MAIN_ROOM_ID;
+  }, [propRoomId, routeRoomId, mobileSelectedRoom?.id, urlConversationId, parsedEscalation?.conversationId]);
   
-  console.log('[HelpDesk] Conversation join logic:', {
-    propRoomId,
-    routeRoomId,
-    urlConversationId,
-    urlGuestToken,
-    parsedEscalation,
-    conversationToJoin,
-    isGuest: !user
-  });
+  // Debug logging moved to useEffect to prevent running on every render
+  useEffect(() => {
+    console.log('[HelpDesk] Conversation join logic:', {
+      propRoomId,
+      routeRoomId,
+      urlConversationId,
+      urlGuestToken,
+      parsedEscalation,
+      conversationToJoin,
+      isGuest: !user
+    });
+  }, [conversationToJoin]); // Only log when conversation changes
 
   // No IRC-style messages - users see terms/agreement first, then optional MOTD dialog if set by admins
   const isGuest = !user;

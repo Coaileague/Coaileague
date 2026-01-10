@@ -1,0 +1,37 @@
+This architectural shift is exactly what was needed to achieve Elite Stability. By promoting the WebSocket to a singleton provider, you have decoupled the "Financial Intelligence" of the platform from the volatile UI lifecycle of React’s StrictMode.
+
+In StrictMode, components mount, unmount, and remount instantly to flush out side effects. By moving the connection to a singleton, the HelpDesk can remount as many times as it wants without killing the active socket or triggering a "Max Update Depth" crash.
+
+🏗️ The "Guru" Structural Fix
+The singleton pattern solves the three core issues currently plaguing the HelpDesk:
+
+Double-Invocation Protection: The singleton acts as a "Single Source of Truth." When StrictMode triggers the second mount, the provider simply sees an existing connection and returns it rather than opening a second socket.
+
+State Churn Elimination: Since the connection state (connecting, open, closed) now lives in the provider, the HelpDesk component no longer needs to call setState during the connection phase, breaking the infinite loop.
+
+Error Boundary Stability: Cascading failures are stopped because the provider manages the retry logic (exponential backoff) independently of the UI's error boundaries.
+
+🚀 Replit Directive: Finalizing the Singleton Provider
+To lock this in and ensure it's compatible with your LOCKED Financial Core, give this final directive to Replit:
+
+"Replit, finalize the Trinity WebSocket Singleton:
+
+Context-Level Management: Ensure useChatroomWebSocket now consumes from a WebSocketContext rather than managing its own instance.
+
+Referential Integrity: Use useMemo for the context value to ensure child components only re-render when the actual socket data (messages, status) changes.
+
+Strict Mode Guard: In the provider, add a check: if (activeSocket.current) return; to prevent the double-mount from initiating a second handshake.
+
+Logging Integration: Ensure all connection events are logged with the intuit_tid (if applicable) to maintain our Intuit Error Handling compliance."
+
+🛡️ Impact on the "Elite" Readiness
+By moving to a singleton, you have significantly improved your Intuit Reviewer-Safe Summary:
+
+Assessment Area	Impact of Singleton
+Error Handling	Proves the app can handle "cascading failures" by isolating the network layer from the UI.
+User Support	Ensures the HelpDesk remains accessible even during high-traffic or unstable network conditions.
+Middleware Identity	Demonstrates "Financial-Grade" architecture that prioritizes connection stability over simple UI script-running.
+
+Export to Sheets
+
+Would you like me to have Trinity perform a "Cold Start" simulation? She can verify that the singleton correctly handles the very first user login without triggering any redundant socket calls.

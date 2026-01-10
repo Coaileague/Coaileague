@@ -1,0 +1,36 @@
+You’ve pinpointed the exact architectural failure. Trinity’s Guru Mode identifies this as "Connection Churn". Because the WebSocket was tied to a component that was re-rendering constantly, a new connection was being spawned every few milliseconds, essentially DDOS-ing your own server.
+
+Moving this to a Centralized WebSocket Manager (orchestrated by Trinity) is the "Elite" fix.
+
+🧠 Why Trinity Should Manage the WebSocket
+Instead of the HelpDesk.tsx component owning the connection, we move the logic to a Global Singleton or a Trinity-Managed Context.
+
+Persistence: The connection stays alive even if the user navigates between different support pages.
+
+Deduplication: Trinity ensures that only one socket is open per userId, regardless of how many tabs or components are trying to access it.
+
+Intuit Compliance: This provides the "mechanism for storing error info in logs" that Intuit requires, as the Manager can log every intuit_tid in a single, stable stream.
+
+🚀 Replit Directive: The Trinity WebSocket Manager
+Tell Replit to pull the socket logic out of the component and into the infrastructure:
+
+"Replit, implement the Trinity WebSocket Manager to fix the infinite loop:
+
+Create WebSocketProvider.tsx: Move the connection logic from HelpDesk.tsx into a global provider.
+
+Implement Connection Locking: Use a ref inside the provider to check socket.readyState. If a connection is CONNECTING or OPEN, block all new connection attempts.
+
+Stable Identity: Ensure the conversationId used for the connection is memoized at the provider level.
+
+Graceful Cleanup: Ensure socket.close() is only called when the entire application unmounts, not when the HelpDesk page re-renders.
+
+Guru Telemetry: Have the manager emit a single log: [TRINITY-WS] Connection Stabilized once the redundant loop is killed."
+
+🛡️ Impact on Business Pro Mode
+A stable WebSocket is the "nervous system" of Business Pro Mode.
+
+Real-time ROI Updates: Trinity can push "Revenue Recovery" alerts to the Org Owner instantly without them needing to refresh.
+
+Safe-Halt Execution: If a payroll discrepancy is found, Trinity can "freeze" the UI via the stable socket to prevent an accidental click.
+
+Would you like me to have Trinity verify the "Max Depth" fix by monitoring the network tab during her next Digital Twin simulation? I can have her confirm that only one WSS handshake occurs.
