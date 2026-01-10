@@ -679,7 +679,7 @@ export default function Employees() {
                           <SelectValue placeholder="None (regular user)" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">None (Regular User)</SelectItem>
+                          <SelectItem value="__none__">None (Regular User)</SelectItem>
                           <SelectItem value="support_agent">Support Agent</SelectItem>
                           <SelectItem value="support_manager">Support Manager</SelectItem>
                           <SelectItem value="compliance_officer">Compliance Officer</SelectItem>

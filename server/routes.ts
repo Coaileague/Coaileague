@@ -2882,6 +2882,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
+      // Check if platform staff - they get platform-wide health view
+      const userId = req.user?.id;
+      if (userId) {
+        const { getUserPlatformRole, hasPlatformWideAccess } = await import('./rbac');
+        const platformRole = await getUserPlatformRole(userId);
+        if (hasPlatformWideAccess(platformRole)) {
+          return res.json({
+            overallStatus: 'green',
+            statusMessage: 'Platform staff - full access',
+            billingActive: true,
+            subscriptionTier: 'enterprise',
+            integrations: { quickbooks: 'platform', gusto: 'platform' },
+            isPlatformStaff: true,
+          });
+        }
+      }
+
         return res.status(400).json({ error: 'No workspace selected' });
       }
 
