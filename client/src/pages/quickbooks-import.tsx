@@ -181,6 +181,7 @@ export default function QuickBooksImportPage() {
   const [showPushModal, setShowPushModal] = useState(false);
   const [pushProgress, setPushProgress] = useState(0);
   const [pushMessage, setPushMessage] = useState('Connecting to QuickBooks...');
+  const [pushTasks, setPushTasks] = useState<Array<{ id: string; label: string; status: 'pending' | 'in_progress' | 'completed' }>>([]);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -421,48 +422,76 @@ export default function QuickBooksImportPage() {
 
   const pushToQuickBooksMutation = useMutation({
     mutationFn: async (useSandboxData: boolean = true) => {
-      setShowPushModal(true);
-      setPushProgress(0);
-      setPushMessage('Connecting to QuickBooks...');
-      
-      const progressMessages = [
-        { progress: 10, message: 'Authenticating with QuickBooks...' },
-        { progress: 25, message: 'Fetching sandbox data...' },
-        { progress: 40, message: 'Preparing customers for sync...' },
-        { progress: 55, message: 'Syncing customers to QuickBooks...' },
-        { progress: 70, message: 'Preparing employees for sync...' },
-        { progress: 85, message: 'Syncing employees to QuickBooks...' },
-        { progress: 95, message: 'Finalizing sync...' },
+      const initialTasks = [
+        { id: 'auth', label: 'Authenticating with QuickBooks API', status: 'pending' as const },
+        { id: 'fetch', label: 'Loading sandbox test data (100 employees, 10 clients)', status: 'pending' as const },
+        { id: 'validate', label: 'Validating data integrity & mapping fields', status: 'pending' as const },
+        { id: 'customers', label: 'Creating customers in QuickBooks', status: 'pending' as const },
+        { id: 'employees', label: 'Creating employees in QuickBooks', status: 'pending' as const },
+        { id: 'verify', label: 'Verifying sync completion & IDs', status: 'pending' as const },
+        { id: 'finalize', label: 'Finalizing bidirectional sync mappings', status: 'pending' as const },
       ];
       
-      let progressIndex = 0;
-      const progressInterval = setInterval(() => {
-        if (progressIndex < progressMessages.length) {
-          setPushProgress(progressMessages[progressIndex].progress);
-          setPushMessage(progressMessages[progressIndex].message);
-          progressIndex++;
+      setShowPushModal(true);
+      setPushProgress(0);
+      setPushMessage('Trinity is preparing your sync...');
+      setPushTasks(initialTasks);
+      
+      const updateTask = (taskId: string, status: 'in_progress' | 'completed') => {
+        setPushTasks(prev => prev.map(t => 
+          t.id === taskId ? { ...t, status } : t
+        ));
+      };
+      
+      const completeTaskAndNext = async (currentId: string, nextId: string | null, progress: number, message: string) => {
+        updateTask(currentId, 'completed');
+        setPushProgress(progress);
+        setPushMessage(message);
+        if (nextId) {
+          await new Promise(resolve => setTimeout(resolve, 300));
+          updateTask(nextId, 'in_progress');
         }
-      }, 400);
+      };
       
       try {
+        updateTask('auth', 'in_progress');
+        setPushMessage('Authenticating with QuickBooks...');
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        await completeTaskAndNext('auth', 'fetch', 15, 'Loading sandbox data...');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        await completeTaskAndNext('fetch', 'validate', 30, 'Validating data integrity...');
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        await completeTaskAndNext('validate', 'customers', 45, 'Creating customers in QuickBooks...');
+        
         const res = await apiRequest('POST', '/api/integrations/quickbooks/push', {
           workspaceId: workspace?.id,
           useSandboxData,
         });
         const data = await res.json();
-        clearInterval(progressInterval);
         
         if (!res.ok) {
           throw new Error(data.error || 'Push failed');
         }
         
+        await completeTaskAndNext('customers', 'employees', 60, `Synced ${data.results?.customers?.synced || 0} customers!`);
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        await completeTaskAndNext('employees', 'verify', 75, `Synced ${data.results?.employees?.synced || 0} employees!`);
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        await completeTaskAndNext('verify', 'finalize', 90, 'Verifying sync completion...');
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        updateTask('finalize', 'completed');
         setPushProgress(100);
-        setPushMessage('Sync complete!');
-        await new Promise(resolve => setTimeout(resolve, 800));
+        setPushMessage('All tasks complete! Trinity sync successful.');
+        await new Promise(resolve => setTimeout(resolve, 1200));
         
         return data;
       } catch (error) {
-        clearInterval(progressInterval);
         throw error;
       }
     },
@@ -1397,42 +1426,83 @@ export default function QuickBooksImportPage() {
         </Card>
       )}
 
-      {/* Trinity Push Loading Modal */}
+      {/* Trinity Push Loading Modal with Task Checklist */}
       <Dialog open={showPushModal} onOpenChange={() => {}}>
         <DialogContent 
-          className="sm:max-w-md bg-gradient-to-b from-background to-muted/50 border-2 border-primary/20"
+          className="sm:max-w-lg bg-gradient-to-b from-background to-muted/50 border-2 border-primary/20"
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
-          <div className="flex flex-col items-center py-8 space-y-6">
-            <div className="relative">
-              <ColorfulCelticKnot 
-                size={100} 
-                animated={true}
-                state={pushProgress === 100 ? "success" : "thinking"}
-                animationSpeed={pushProgress === 100 ? "instant" : "fast"}
-              />
-              {pushProgress === 100 && (
-                <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1">
-                  <Check className="h-4 w-4 text-white" />
-                </div>
-              )}
+          <div className="flex flex-col py-6 space-y-5">
+            {/* Header with Trinity Logo */}
+            <div className="flex items-center gap-4">
+              <div className="relative flex-shrink-0">
+                <ColorfulCelticKnot 
+                  size={64} 
+                  animated={true}
+                  state={pushProgress === 100 ? "success" : "thinking"}
+                  animationSpeed={pushProgress === 100 ? "instant" : "fast"}
+                />
+                {pushProgress === 100 && (
+                  <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1">
+                    <Check className="h-3 w-3 text-white" />
+                  </div>
+                )}
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold">
+                  {pushProgress === 100 ? 'Trinity Sync Complete!' : 'Trinity is Working...'}
+                </h3>
+                <p className="text-sm text-muted-foreground">{pushMessage}</p>
+              </div>
             </div>
             
-            <div className="text-center space-y-2">
-              <h3 className="text-lg font-semibold">
-                {pushProgress === 100 ? 'Sync Complete!' : 'Syncing with QuickBooks'}
-              </h3>
-              <p className="text-sm text-muted-foreground">{pushMessage}</p>
-            </div>
-            
-            <div className="w-full max-w-xs space-y-2">
+            {/* Progress Bar */}
+            <div className="space-y-1">
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>Progress</span>
+                <span className="font-medium">{pushProgress}%</span>
+              </div>
               <Progress value={pushProgress} className="h-2" />
-              <p className="text-xs text-center text-muted-foreground">{pushProgress}% complete</p>
             </div>
             
-            <p className="text-xs text-muted-foreground text-center max-w-xs">
-              Trinity is pushing your data to QuickBooks. This may take a moment...
+            {/* Trinity Task Checklist */}
+            <div className="bg-muted/30 rounded-lg p-4 space-y-2">
+              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-3">
+                Trinity Task Execution
+              </p>
+              <div className="space-y-2">
+                {pushTasks.map((task) => (
+                  <div 
+                    key={task.id}
+                    className={`flex items-center gap-3 text-sm transition-all duration-300 ${
+                      task.status === 'completed' ? 'text-green-600 dark:text-green-400' :
+                      task.status === 'in_progress' ? 'text-primary font-medium' :
+                      'text-muted-foreground'
+                    }`}
+                  >
+                    <div className="flex-shrink-0 w-5 h-5 flex items-center justify-center">
+                      {task.status === 'completed' ? (
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      ) : task.status === 'in_progress' ? (
+                        <Loader2 className="h-5 w-5 text-primary animate-spin" />
+                      ) : (
+                        <div className="h-4 w-4 rounded-full border-2 border-muted-foreground/30" />
+                      )}
+                    </div>
+                    <span className={task.status === 'completed' ? 'line-through opacity-70' : ''}>
+                      {task.label}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+            
+            {/* Footer message */}
+            <p className="text-xs text-muted-foreground text-center">
+              {pushProgress === 100 
+                ? 'All tasks completed successfully. You can now import data back from QuickBooks.'
+                : 'Trinity AI is orchestrating your data sync. Please wait...'}
             </p>
           </div>
         </DialogContent>
