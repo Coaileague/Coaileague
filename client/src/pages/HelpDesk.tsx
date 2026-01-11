@@ -7,7 +7,6 @@ import { useIsMobile } from "@/hooks/use-mobile"; // CONSOLIDATED: Use single mo
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation, useRoute } from "wouter";
-import { useLastDashboardRoute } from "@/hooks/use-adaptive-route";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 // ScrollArea removed - using native overflow-auto to fix Radix ref thrashing
@@ -109,7 +108,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   const { user, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [, navigate] = useLocation(); // For navigation buttons
-  const { lastRoute } = useLastDashboardRoute(); // For back navigation within app
   const [inputMessage, setInputMessage] = useState("");
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [showUserProfile, setShowUserProfile] = useState(false);
@@ -1086,7 +1084,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               size="icon"
               variant="ghost"
               className="text-white hover:bg-white/20"
-              onClick={() => navigate(lastRoute || "/dashboard")}
+              onClick={() => navigate("/dashboard")}
               data-testid="button-back-home"
             >
               <ChevronLeft className="h-5 w-5" />
