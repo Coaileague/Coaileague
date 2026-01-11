@@ -38,6 +38,7 @@ import {
   History, MessageCircle, ArrowUpCircle, Eye, RefreshCw, PackageCheck, FileSearch, Home, Check
 } from "lucide-react";
 import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
+import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
 import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
 import { KickDialog, SilenceDialog } from "@/components/moderation-dialogs";
@@ -2593,14 +2594,10 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 )}
               </div>
             ) : (
-              /* Loading state with CoAIleague branding */
-              <div className="text-center py-8">
-                <div className="mb-4 flex justify-center">
-                  <CoAIleagueAFLogo size="lg" variant="icon" className="opacity-75" />
-                </div>
-                <div className="w-12 h-12 mx-auto mb-4 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+              /* Loading state with Trinity branding */
+              <div className="text-center py-8 flex flex-col items-center gap-3">
+                <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
                 <p className="text-gray-600 text-sm font-medium">Loading user information...</p>
-                <p className="text-gray-600 text-xs mt-1">Powered by CoAIleague</p>
               </div>
             )}
           </div>

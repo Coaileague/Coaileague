@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { ShieldAlert, Lock, ArrowLeft, Home } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { navConfig } from "@/config/navigationConfig";
+import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
 
 export type RBACCapability = 
   | 'authenticated'      
@@ -207,8 +208,9 @@ export function RBACRoute({
       return <>{loadingComponent}</>;
     }
     return (
-      <div className="h-screen flex items-center justify-center bg-background">
-        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" aria-label="Loading" />
+      <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
+        <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
+        <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );
   }
@@ -229,8 +231,9 @@ export function RBACRoute({
         window.location.href = navConfig.auth.login;
       }
       return (
-        <div className="h-screen flex items-center justify-center bg-background">
-          <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" aria-label="Redirecting" />
+        <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
+          <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
+          <span className="text-sm text-muted-foreground">Redirecting...</span>
         </div>
       );
     }

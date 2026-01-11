@@ -13,7 +13,7 @@ import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './providers/geminiClient';
 import crypto from "crypto";
 import fs from "fs";
 import path from "path";
-import { publishPlatformUpdate } from "../platformEventBus";
+// publishPlatformUpdate removed - was causing DUPLICATE notifications
 import { getDetailedHealthReport } from "../healthService";
 import { broadcastNotificationToUser } from "../../websocket";
 
@@ -340,73 +340,58 @@ class PlatformChangeMonitorService {
       const moduleContext = this.buildModuleContext(change.affectedModules);
       const impactAnalysis = this.analyzeImpact(change);
       
-      const prompt = `You are the AI Brain for CoAIleague, a Fortune 500-grade workforce management platform.
+      const prompt = `You are Trinity, the senior AI engineer for CoAIleague. You communicate like a friendly, experienced developer - casual but competent.
 
-CRITICAL: Generate SPECIFIC, UNIQUE summaries - NOT generic. Each update must be different and actionable.
+CRITICAL VOICE RULES - You are NOT a corporate PR department:
+- Use contractions (we've, I've, it's, you'll)
+- Use casual transitions ("Just shipped...", "Fixed a hiccup...", "Heads up...")
+- Be direct and human - like a senior engineer updating the team
+- NEVER say "We are pleased to announce" or "This update ensures" or "We have fine-tuned"
+- NEVER use formal corporate language
 
 Change Analysis:
 - Change Type: ${change.type.replace(/_/g, ' ').toUpperCase()}
 - Severity Level: ${change.severity}
-- Affected Systems: ${change.affectedModules.join(', ') || 'Core Platform Systems'}
+- Affected Systems: ${change.affectedModules.join(', ') || 'Platform core'}
 - Modified Components: ${change.affectedFiles.join(', ')}
 - Impact Analysis: ${impactAnalysis}
 - Module Context: ${moduleContext}
 
-Your task - Create a detailed, specific platform update announcement with FULL CATEGORIZATION:
+TITLE REQUIREMENTS (max 70 chars):
+- Specific about WHAT changed
+- Include the module if applicable
+- NEVER mention "Replit" - use "Platform Config" instead
+- Examples: "Schedule loading got faster", "Fixed that login hiccup", "New calendar sync is live"
 
-TITLE REQUIREMENTS:
-- Max 70 characters
-- Be specific about WHAT changed (not "Platform Update")
-- Include the module affected if applicable
-- NEVER mention "Replit" or any development tools in titles - use "Platform Config" or "Dev Environment" instead
-- Examples: "AI Scheduling Optimization Released", "Security Patch: Session Management", "New Mobile Calendar Sync"
+SUMMARY (for technical staff - Trinity's voice):
+- 2-3 sentences, casual but informative
+- Start with action words: "Just shipped...", "Fixed...", "Upgraded..."
+- Explain what changed and why it matters
+- Example: "Just shipped a performance boost for the scheduler. Should load about 40% faster now, especially on mobile."
 
-SUMMARY REQUIREMENTS (for technical staff):
-- 3-4 sentences, NOT generic
-- Explain WHAT specifically was changed
-- Explain WHY it matters to users
-- Highlight the BUSINESS IMPACT
-- Include specific numbers/metrics if applicable
-
-END USER SUMMARY REQUIREMENTS (for non-technical users):
-- 2-3 sentences in PLAIN ENGLISH
-- No technical jargon
-- Focus on the benefit to the user
-- Example: "Your schedule loads faster now" instead of "Optimized query caching"
-
-BROKEN DESCRIPTION (for bugfixes only):
-- If this is a bug fix, explain what was broken
-- What symptoms did users experience?
-- Set to null if not a bug fix
-
-IMPACT DESCRIPTION:
-- Who is affected by this change?
-- What parts of the platform are impacted?
+END USER SUMMARY (for regular users - Trinity's friendly voice):
+- 2 sentences max, plain English
+- Focus on the benefit
+- Example: "Your schedule loads faster now. No action needed on your end."
 
 CATEGORIZATION:
-- detailedCategory: One of: feature, service, bot_automation, bugfix, security, improvement, deprecation, hotpatch, integration, ui_update, backend_update, performance, documentation
-- sourceType: One of: system, ai_brain, support_staff, developer, automated_job, user_request, external_service
-- sourceName: ALWAYS use "Trinity" - Trinity is the AI assistant that communicates all updates to end users
+- detailedCategory: feature|bugfix|security|improvement|hotpatch|performance
+- sourceType: system|ai_brain|developer|automated_job
+- sourceName: ALWAYS "Trinity"
 
-TECHNICAL DETAILS REQUIREMENTS:
-- For support staff and developers
-- List specific components modified
-- Note database/schema changes if any
-- Mention affected APIs or services
-
-Respond ONLY with valid JSON (no markdown, no explanations):
+Respond ONLY with valid JSON:
 {
-  "title": "Specific module change title (NOT generic)",
-  "summary": "Detailed 3-4 sentence summary for technical staff",
-  "endUserSummary": "Plain English 2-3 sentence summary for non-technical users",
-  "technicalDetails": "Specific technical changes and affected components",
+  "title": "Short specific title",
+  "summary": "Trinity-voice summary for tech staff",
+  "endUserSummary": "Friendly summary for regular users",
+  "technicalDetails": "Technical changes made",
   "brokenDescription": "What was broken (for bugfixes) or null",
-  "impactDescription": "Who/what is affected by this change",
-  "detailedCategory": "feature|service|bot_automation|bugfix|security|improvement|deprecation|hotpatch|integration|ui_update|backend_update|performance|documentation",
-  "sourceType": "system|ai_brain|support_staff|developer|automated_job|user_request|external_service",
-  "sourceName": "Specific source name",
-  "requiresAction": boolean,
-  "actionRequired": "Clear action steps if required, otherwise null"
+  "impactDescription": "Who/what is affected",
+  "detailedCategory": "improvement",
+  "sourceType": "system",
+  "sourceName": "Trinity",
+  "requiresAction": false,
+  "actionRequired": null
 }`;
 
       const result = await model.generateContent(prompt);
@@ -579,20 +564,19 @@ Respond ONLY with valid JSON (no markdown, no explanations):
   }
 
   private generateFallbackSummary(change: DetectedChange): string {
-    const moduleList = change.affectedModules.join(', ') || 'core platform';
-    const typeDesc = change.type.replace(/_/g, ' ');
+    const moduleList = change.affectedModules.join(', ') || 'platform core';
     
     switch (change.type) {
       case 'bug_fixed':
-        return `We've resolved a critical issue affecting the ${moduleList}. This update improves platform stability and ensures smoother operations for all users. No action required on your end.`;
+        return `Fixed a hiccup in ${moduleList}. Should be running smooth now - no action needed on your end.`;
       case 'feature_added':
-        return `New feature now available for ${moduleList}. This enhancement streamlines workflows and saves time on routine tasks. Check the updates tab for details on how to use it.`;
+        return `Just shipped something new for ${moduleList}! Worth checking out when you get a chance.`;
       case 'security_fix':
-        return `Important security update deployed to strengthen system protection. This ensures your data and operations remain secure. The update is automatic with no user action needed.`;
+        return `Tightened up security on ${moduleList}. Your data stays safe - nothing you need to do.`;
       case 'enhancement':
-        return `We've optimized the ${moduleList} for better performance and reliability. Users can expect faster operations and improved user experience across these systems.`;
+        return `Boosted ${moduleList} - faster and more reliable than before.`;
       default:
-        return `Platform ${typeDesc} affecting ${moduleList}. This update improves system reliability and user experience. Learn more in the details page.`;
+        return `Quick update to ${moduleList}. Making things run smoother.`;
     }
   }
 
@@ -714,15 +698,8 @@ Respond ONLY with valid JSON (no markdown, no explanations):
       
       if (allUsers.length === 0) {
         console.log('[PlatformChangeMonitor] No users with workspaces to notify');
-        
-        await publishPlatformUpdate({
-          type: 'feature_updated',
-          title: summary.title,
-          description: summary.summary,
-          category: 'improvement',
-          visibility: 'all',
-        });
-        
+        // REMOVED: publishPlatformUpdate was causing duplicate notifications
+        // Trinity is the exclusive writer - no fallback needed
         return 0;
       }
 
@@ -775,28 +752,10 @@ Respond ONLY with valid JSON (no markdown, no explanations):
         }
       }
 
-      await publishPlatformUpdate({
-        type: 'announcement',
-        title: summary.title,
-        description: summary.endUserSummary || summary.summary,
-        category: this.sanitizeCategory(summary.detailedCategory),
-        visibility: 'all',
-        priority: 1, // 1=high, 2=normal, 3=low
-        metadata: {
-          source: 'ai_brain_platform_monitor',
-          changeEventId,
-          notifiedCount: allUsers.length,
-          forceRefresh: true,
-          // Enhanced attribution
-          sourceType: summary.sourceType,
-          sourceName: 'Trinity', // CRITICAL: Trinity is the single AI orchestrator for all user-facing communications
-          detailedCategory: summary.detailedCategory,
-          technicalSummary: summary.summary,
-          brokenDescription: summary.brokenDescription,
-          impactDescription: summary.impactDescription,
-          timestamp: new Date().toISOString(),
-        },
-      });
+      // REMOVED: publishPlatformUpdate was causing DUPLICATE notifications
+      // The db.insert above already creates user notifications
+      // publishPlatformUpdate creates ANOTHER notification in platformUpdates table
+      // Trinity is the exclusive writer - no UNS fallback needed here
 
       console.log(`[PlatformChangeMonitor] Notified ${allUsers.length} users about platform change`);
       

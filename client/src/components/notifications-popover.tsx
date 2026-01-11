@@ -32,6 +32,7 @@ import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
 import { useTrinityContext } from "@/hooks/use-trinity-context";
 import { useNotificationSync } from "@/hooks/use-notification-sync";
 import { humanizeTitle, humanizeText, generateEndUserSummary } from "@shared/utils/humanFriendlyCopy";
+import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
 
 // Priority levels for UNS cards
 type Priority = 'critical' | 'high' | 'medium' | 'info';
@@ -1641,8 +1642,9 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       >
         <div className="min-h-0">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent" />
+          <div className="flex flex-col items-center justify-center py-12 gap-2">
+            <ColorfulCelticKnot size="md" state="loading" animated={true} className="animate-trinity-loading" />
+            <span className="text-xs text-muted-foreground">Loading...</span>
           </div>
         ) : sortedNotifications.length > 0 ? (
           <div className="divide-y min-h-0">

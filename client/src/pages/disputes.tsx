@@ -19,6 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { disputeStatusConfig, disputePriorityConfig, disputeTypesConfig, disputeMessages } from "@/config/disputeConfig";
+import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
 
 export default function DisputesPage() {
   const { user } = useAuth();
@@ -143,11 +144,9 @@ export default function DisputesPage() {
   if (isLoading) {
     return (
       <div className="h-full flex flex-col">
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-4">
-            <div className="w-12 h-12 rounded-full border-4 border-muted border-t-primary animate-spin mx-auto"></div>
-            <p className="text-muted-foreground">Loading disputes...</p>
-          </div>
+        <div className="flex-1 flex flex-col items-center justify-center gap-3">
+          <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
+          <p className="text-muted-foreground">Loading disputes...</p>
         </div>
       </div>
     );

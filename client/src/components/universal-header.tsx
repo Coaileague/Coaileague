@@ -147,14 +147,15 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                 showWordmark={true}
               />
             </div>
-            {/* Mobile: Icon only - no text to prevent cutoff issues */}
-            <div className="flex sm:hidden items-center">
+            {/* Mobile: Compact logo with short wordmark */}
+            <div className="flex sm:hidden items-center gap-1">
               <CoAIleagueLogo 
-                width={36} 
-                height={36} 
+                width={32} 
+                height={32} 
                 onlyIcon={true}
                 className="flex-shrink-0"
               />
+              <span className="text-sm font-bold text-foreground tracking-tight">CoAI</span>
             </div>
           </button>
 

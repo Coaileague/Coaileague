@@ -20,7 +20,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import {
   MessageSquare, Send, Search, UserPlus, MoreVertical,
   Eye, Sparkles, CheckCheck, Circle, Lock, Zap,
-  Paperclip, X, FileText, Image as ImageIcon, Download, ArrowLeft
+  Paperclip, X, FileText, Image as ImageIcon, Download, ArrowLeft, Loader2
 } from "lucide-react";
 import { MessageAttachment } from "@/components/message-attachment";
 import { CameraCapture } from "@/components/camera-capture";
@@ -703,9 +703,7 @@ export default function PrivateMessages() {
                     className="bg-purple-600 hover:bg-purple-700"
                   >
                     {uploadingFile ? (
-                      <div className="flex items-center gap-2">
-                        <div className="h-4 w-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      </div>
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
                       <Send className="h-4 w-4" />
                     )}

@@ -30,6 +30,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { Loader2 } from "lucide-react";
 
 interface RoomMember {
   id: string;
@@ -156,13 +158,11 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
   // Show loading state while auth is loading or rooms are fetching
   if (isAuthLoading || isRoomsLoading) {
     return (
-      <div className="flex items-center justify-center p-12">
-        <div className="text-center space-y-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto"></div>
-          <p className="text-sm text-muted-foreground">
-            {isAuthLoading ? 'Checking authentication...' : 'Loading rooms...'}
-          </p>
-        </div>
+      <div className="flex flex-col items-center justify-center p-12 gap-3">
+        <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
+        <p className="text-sm text-muted-foreground">
+          {isAuthLoading ? 'Checking authentication...' : 'Loading rooms...'}
+        </p>
       </div>
     );
   }
@@ -358,7 +358,7 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
                     data-testid={`button-enter-${room.slug}`}
                   >
                     {joinRoomMutation.isPending ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
                       <MessageSquare className="h-4 w-4 mr-2" />
                     )}
