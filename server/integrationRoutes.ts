@@ -287,18 +287,36 @@ router.get('/quickbooks/preview', requireAuth, requireWorkspaceMembership('query
     let employees: any[] = [];
     if (employeeResponse.ok) {
       const empData = await employeeResponse.json();
-      employees = (empData.QueryResponse?.Employee || []).map((e: any) => ({
-        qboId: e.Id,
-        displayName: e.DisplayName,
-        givenName: e.GivenName || '',
-        familyName: e.FamilyName || '',
-        email: e.PrimaryEmailAddr?.Address || '',
-        phone: e.PrimaryPhone?.FreeFormNumber || '',
-        active: e.Active !== false,
-        payRate: e.BillRate || e.CostRate || null,
-        employeeType: e.V4IDPseudonym ? '1099' : 'W2',
-        role: e.JobTitle || 'Field Staff',
-      }));
+      const { testing } = INTEGRATIONS.quickbooks;
+      const isSandbox = connection.environment === 'sandbox';
+      
+      employees = (empData.QueryResponse?.Employee || []).map((e: any, index: number) => {
+        // Get pay rate from QuickBooks if available
+        let payRate = e.BillRate || e.CostRate || null;
+        
+        // For sandbox testing: generate consistent pay rates when QB doesn't provide them
+        // This allows end-to-end testing without requiring QB Payroll subscription
+        if (!payRate && isSandbox) {
+          // Generate deterministic rate based on employee ID for consistency
+          const seed = parseInt(e.Id || index, 10);
+          const { min, max } = testing.payRateRange;
+          payRate = min + ((seed * 7) % (max - min));
+          payRate = Math.round(payRate * 100) / 100; // Round to 2 decimals
+        }
+        
+        return {
+          qboId: e.Id,
+          displayName: e.DisplayName,
+          givenName: e.GivenName || '',
+          familyName: e.FamilyName || '',
+          email: e.PrimaryEmailAddr?.Address || '',
+          phone: e.PrimaryPhone?.FreeFormNumber || '',
+          active: e.Active !== false,
+          payRate,
+          employeeType: e.V4IDPseudonym ? '1099' : 'W2',
+          role: e.JobTitle || 'Field Staff',
+        };
+      });
     }
 
     // Fetch customers (all, not just active)
@@ -1098,10 +1116,29 @@ router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), asy
     }
 
     const { employees: employeesTable, clients: clientsTable } = await import('@shared/schema');
+    const isSandbox = connection.environment === 'sandbox';
+    const { testing } = INTEGRATIONS.quickbooks;
+
+    // For sandbox: auto-assign pay rates to employees missing them (enables e2e testing)
+    // For production: validate pay rates and warn user
+    const processedEmployees = (selectedEmployees || []).map((emp: any, index: number) => {
+      let payRate = emp.payRate ? parseFloat(String(emp.payRate)) : null;
+      
+      // Auto-assign pay rates in sandbox mode for testing
+      if ((!payRate || payRate <= 0) && isSandbox) {
+        const seed = parseInt(emp.qboId || index, 10);
+        const { min, max } = testing.payRateRange;
+        payRate = min + ((seed * 7) % (max - min));
+        payRate = Math.round(payRate * 100) / 100;
+      }
+      
+      return { ...emp, payRate };
+    });
 
     const employeesWithMissingPayRates: { qboId: string; displayName: string }[] = [];
-    if (selectedEmployees && selectedEmployees.length > 0 && !allowMissingPayRates) {
-      for (const emp of selectedEmployees) {
+    // Only validate pay rates in production mode
+    if (!isSandbox && processedEmployees.length > 0 && !allowMissingPayRates) {
+      for (const emp of processedEmployees) {
         const payRate = emp.payRate ? parseFloat(String(emp.payRate)) : null;
         if (!payRate || payRate <= 0) {
           employeesWithMissingPayRates.push({
@@ -1163,8 +1200,8 @@ router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), asy
     const employeesToInsert: any[] = [];
     const clientsToInsert: any[] = [];
 
-    if (selectedEmployees && selectedEmployees.length > 0) {
-      for (const emp of selectedEmployees) {
+    if (processedEmployees && processedEmployees.length > 0) {
+      for (const emp of processedEmployees) {
         const qboId = String(emp.qboId || '').trim();
         const displayName = String(emp.displayName || '').trim();
         

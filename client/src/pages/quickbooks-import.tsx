@@ -258,8 +258,27 @@ export default function QuickBooksImportPage() {
   };
 
   const handleStartFresh = () => {
+    // Clear localStorage
     clearWizardState();
     setShowResumePrompt(false);
+    
+    // Reset all wizard React state to initial values
+    setCurrentStep('connect');
+    setSelectedEmployees([]);
+    setSelectedCustomers([]);
+    setPayrollMappings({});
+    setPreflightTests([]);
+    setPayRateWarning(null);
+    
+    // Invalidate all QuickBooks-related query caches to force fresh data
+    queryClient.invalidateQueries({ queryKey: ['/api/integrations/quickbooks/preview'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
+    queryClient.invalidateQueries({ queryKey: ['/api/integrations/quickbooks/push/status'] });
+    
+    toast({
+      title: 'Starting Fresh',
+      description: 'All previous selections have been cleared.',
+    });
   };
 
   const { data: connectionStatus, isLoading: isLoadingConnection } = useQuery<ConnectionStatus>({
