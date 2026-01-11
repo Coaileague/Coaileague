@@ -1276,10 +1276,19 @@ router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), asy
 
         const email = String(cust.email || '').trim().slice(0, 255) || null;
         const phone = String(cust.phone || '').trim().slice(0, 20) || null;
+        
+        // Extract first/last name from displayName or use company name as fallback
+        // QB customers are often companies so we split displayName or use company name
+        const displayName = String(cust.displayName || companyName || '').trim();
+        const nameParts = displayName.split(' ');
+        const clientFirstName = String(nameParts[0] || companyName || 'Client').trim().slice(0, 100);
+        const clientLastName = String(nameParts.slice(1).join(' ') || 'Account').trim().slice(0, 100) || 'Account';
 
         clientsToInsert.push({
           workspaceId,
-          name: companyName.slice(0, 255),
+          firstName: clientFirstName,
+          lastName: clientLastName,
+          companyName: companyName.slice(0, 255),
           email,
           phone,
           status: 'active',
