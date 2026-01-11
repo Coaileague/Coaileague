@@ -59,11 +59,9 @@ interface LiveRoomBrowserProps {
   onRoomSelect?: (roomId: string, roomName: string) => void;
   filterByOrg?: boolean; // For end users - show only org rooms
   compact?: boolean; // Compact mode for mobile
-  title?: string; // Custom title for the room list header
-  subtitle?: string; // Custom subtitle
 }
 
-export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = false, title = "Active Rooms", subtitle }: LiveRoomBrowserProps) {
+export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = false }: LiveRoomBrowserProps) {
   const { user, isLoading: isAuthLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [selectedRoom, setSelectedRoom] = useState<string | null>(null);
@@ -222,9 +220,9 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold">{title}</h2>
+          <h2 className="text-2xl font-bold">Active Rooms</h2>
           <p className="text-sm text-muted-foreground">
-            {subtitle || `${rooms.length} room${rooms.length !== 1 ? 's' : ''} available`}
+            {rooms.length} room{rooms.length !== 1 ? 's' : ''} available
           </p>
         </div>
         <Badge variant="outline" className="gap-1">
@@ -233,27 +231,28 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
         </Badge>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {rooms.map((room) => (
           <Card
             key={room.id}
-            className={`hover-elevate cursor-pointer transition-all border-muted/60 ${
-              selectedRoom === room.id ? 'ring-1 ring-primary border-primary/30' : ''
+            className={`hover-elevate cursor-pointer transition-all ${
+              selectedRoom === room.id ? 'ring-2 ring-primary' : ''
             }`}
             onClick={() => setSelectedRoom(room.id === selectedRoom ? null : room.id)}
             data-testid={`room-card-${room.slug}`}
           >
-            <CardHeader className="py-3 px-4">
-              <div className="flex items-center justify-between gap-2">
+            <CardHeader className="pb-3">
+              <div className="flex items-start justify-between gap-2">
                 <div className="flex items-center gap-2 flex-1 min-w-0">
-                  <div className={`h-2 w-2 rounded-full ${getStatusColor(room.status)} shrink-0`} />
-                  <CardTitle className="text-sm font-medium truncate">{room.roomName}</CardTitle>
+                  <div className={`h-3 w-3 rounded-full ${getStatusColor(room.status)} shrink-0`} />
+                  <CardTitle className="text-base truncate">{room.roomName}</CardTitle>
                 </div>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
                     <Button
                       variant="ghost"
                       size="icon"
+                      className="h-7 w-7 shrink-0"
                       data-testid={`button-room-menu-${room.slug}`}
                     >
                       <MoreVertical className="h-4 w-4" />
@@ -261,61 +260,86 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end">
                     <DropdownMenuItem data-testid={`button-settings-${room.slug}`}>
-                      <Settings className="h-3.5 w-3.5 mr-2" />
+                      <Settings className="h-4 w-4 mr-2" />
                       Room Settings
                     </DropdownMenuItem>
                     <DropdownMenuItem>
-                      <VolumeX className="h-3.5 w-3.5 mr-2" />
+                      <VolumeX className="h-4 w-4 mr-2" />
                       Mute Notifications
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </div>
-              <CardDescription className="flex items-center gap-1.5 text-[11px] mt-1">
+              <CardDescription className="flex items-center gap-2 text-xs">
                 <Users className="h-3 w-3" />
-                <span>{room.currentMembers} / {room.maxMembers}</span>
+                <span>
+                  {room.currentMembers} / {room.maxMembers} members
+                </span>
                 {room.onlineMembers.length > 0 && (
-                  <span className="text-primary font-medium">• {room.onlineMembers.length} online</span>
+                  <span className="text-primary">
+                    • {room.onlineMembers.length} online
+                  </span>
                 )}
               </CardDescription>
             </CardHeader>
 
-            <CardContent className="pt-0 pb-3 px-4 space-y-2">
-              {/* Online Members - Compact inline display */}
+            <CardContent className="space-y-3">
+              {/* Online Members List */}
               {room.onlineMembers.length > 0 && (
-                <div className="flex items-center gap-1.5 flex-wrap">
-                  {room.onlineMembers.slice(0, 3).map((member) => (
-                    <div
-                      key={member.id}
-                      className="flex items-center gap-1 bg-muted/50 px-1.5 py-0.5 rounded text-[10px]"
-                      data-testid={`member-${member.id}`}
-                    >
-                      <div className={`h-1.5 w-1.5 rounded-full ${getUserStatusColor(member.status)}`} />
-                      <span className="truncate max-w-[60px]">{member.name.split(' ')[0]}</span>
-                      {member.isStaff && <span className="text-primary font-medium">•</span>}
-                    </div>
-                  ))}
-                  {room.onlineMembers.length > 3 && (
-                    <span className="text-[10px] text-muted-foreground">+{room.onlineMembers.length - 3}</span>
-                  )}
+                <div className="space-y-2">
+                  <p className="text-xs text-muted-foreground font-medium">Online Now</p>
+                  <div className="flex flex-wrap gap-2">
+                    {room.onlineMembers.slice(0, 5).map((member) => (
+                      <div
+                        key={member.id}
+                        className="flex items-center gap-1.5 bg-muted px-2 py-1 rounded-md"
+                        data-testid={`member-${member.id}`}
+                      >
+                        <div className="relative">
+                          <Avatar className="h-5 w-5">
+                            <AvatarFallback className="text-xs">
+                              {getInitials(member.name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div
+                            className={`absolute -bottom-0.5 -right-0.5 h-2 w-2 rounded-full border border-background ${getUserStatusColor(member.status)}`}
+                          />
+                        </div>
+                        <span className="text-xs">{member.name.split(' ')[0]}</span>
+                        {member.isStaff && (
+                          <Badge variant="outline" className="h-4 text-[10px] px-1">
+                            Staff
+                          </Badge>
+                        )}
+                      </div>
+                    ))}
+                    {room.onlineMembers.length > 5 && (
+                      <div className="flex items-center gap-1 bg-muted px-2 py-1 rounded-md">
+                        <UserPlus className="h-3 w-3" />
+                        <span className="text-xs">+{room.onlineMembers.length - 5}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
-              {/* Unread + Action in single row */}
-              <div className={compact ? "space-y-2" : "flex items-center gap-2"}>
-                {room.unreadCount > 0 && (
-                  <Badge variant="destructive" className="text-[10px] gap-0.5">
-                    <MessageSquare className="h-2.5 w-2.5" />
-                    {room.unreadCount}
-                  </Badge>
-                )}
+              {/* Unread Messages Badge */}
+              {room.unreadCount > 0 && (
+                <Badge variant="destructive" className="gap-1">
+                  <MessageSquare className="h-3 w-3" />
+                  {room.unreadCount} unread
+                </Badge>
+              )}
+
+              {/* Action Buttons */}
+              <div className={compact ? "space-y-2" : "flex gap-2"}>
                 {onRoomSelect && (
                   <Button
                     className={compact ? "w-full" : "flex-1"}
-                    size="sm"
                     variant="default"
                     onClick={async (e) => {
                       e.stopPropagation();
+                      // Auto-join if not already a member, then navigate
                       if (!room.isJoined) {
                         try {
                           await joinRoomMutation.mutateAsync(room.id);
@@ -334,25 +358,39 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
                     data-testid={`button-enter-${room.slug}`}
                   >
                     {joinRoomMutation.isPending ? (
-                      <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                     ) : (
-                      <MessageSquare className="h-3.5 w-3.5 mr-1.5" />
+                      <MessageSquare className="h-4 w-4 mr-2" />
                     )}
-                    {room.isJoined ? "Enter" : "Join"}
+                    {room.isJoined ? "Enter Chat" : "Join & Enter"}
                   </Button>
                 )}
-                {!compact && room.isJoined && (
+                {!compact && (
                   <Button
-                    size="icon"
-                    variant="ghost"
+                    className={onRoomSelect ? "" : "w-full"}
+                    variant={room.isJoined ? "outline" : "secondary"}
                     onClick={(e) => {
                       e.stopPropagation();
-                      leaveRoomMutation.mutate(room.id);
+                      if (room.isJoined) {
+                        leaveRoomMutation.mutate(room.id);
+                      } else {
+                        joinRoomMutation.mutate(room.id);
+                      }
                     }}
-                    disabled={leaveRoomMutation.isPending}
-                    data-testid={`button-leave-${room.slug}`}
+                    disabled={joinRoomMutation.isPending || leaveRoomMutation.isPending}
+                    data-testid={room.isJoined ? `button-leave-${room.slug}` : `button-join-${room.slug}`}
                   >
-                    <LogOut className="h-4 w-4" />
+                    {room.isJoined ? (
+                      <>
+                        <LogOut className="h-4 w-4 mr-2" />
+                        Leave
+                      </>
+                    ) : (
+                      <>
+                        <LogIn className="h-4 w-4 mr-2" />
+                        Join
+                      </>
+                    )}
                   </Button>
                 )}
               </div>

@@ -131,7 +131,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   const [showQueuePanel, setShowQueuePanel] = useState(false);
   const [showPriorityPanel, setShowPriorityPanel] = useState(false);
   const [showAccountPanel, setShowAccountPanel] = useState(false);
-  const [aiEnabled, setAiEnabled] = useState(true); // HelpAI enabled by default for Trinity assistance
+  const [aiEnabled, setAiEnabled] = useState(false);
   const [showMotd, setShowMotd] = useState(false);
   const [motdData, setMotdData] = useState<any>(null);
   // REMOVED: Agreement and terms dialogs - chatroom is now publicly accessible without barriers
@@ -1084,20 +1084,20 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               size="icon"
               variant="ghost"
               className="text-white hover:bg-white/20"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/")}
               data-testid="button-back-home"
             >
               <ChevronLeft className="h-5 w-5" />
             </Button>
             <div className="text-center">
-              <h1 className="font-bold text-base">Help Desk</h1>
-              <p className="text-xs text-white/70">{isStaff ? 'All support rooms' : 'Get help from our team'}</p>
+              <h1 className="font-bold text-base">Live Chatrooms</h1>
+              <p className="text-xs text-white/70">{isStaff ? 'All platform rooms' : 'Your organization'}</p>
             </div>
             <Button
               size="icon"
               variant="ghost"
               className="text-white hover:bg-white/20"
-              onClick={() => navigate("/dashboard")}
+              onClick={() => navigate("/")}
               data-testid="button-home"
             >
               <Home className="h-5 w-5" />
@@ -1109,8 +1109,6 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             <LiveRoomBrowser
               compact={true}
               filterByOrg={!isStaff}
-              title="Support Rooms"
-              subtitle={isStaff ? "All organization support channels" : "Choose a support room to get help"}
               onRoomSelect={(roomId, roomName) => {
                 setMobileSelectedRoom({ id: roomId, name: roomName });
                 setShowMobileRoomBrowser(false);
