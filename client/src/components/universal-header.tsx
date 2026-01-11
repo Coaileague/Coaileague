@@ -7,8 +7,8 @@
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Menu, LogOut, LayoutDashboard, Mail, Bug } from "lucide-react";
+import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Menu, LogOut, LayoutDashboard, Mail, Bug, ChevronDown } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { CoAIleagueLogo } from "@/components/coaileague-logo";
 import { performLogout } from "@/lib/logoutHandler";
@@ -26,6 +26,10 @@ import {
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { HEADER_CONFIG, HEADER_SPACING, HEADER_HEIGHTS } from "@/config/headerConfig";
 import { getCurrentHoliday } from "@/config/mascotConfig";
+import { selectSidebarFamilies } from "@/lib/sidebarModules";
+import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { cn } from "@/lib/utils";
 
 interface UniversalHeaderProps {
   variant?: "public" | "workspace";
@@ -35,8 +39,16 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const [isChristmas, setIsChristmas] = useState(false);
   const [lightPhase, setLightPhase] = useState(0);
+  
+  const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading: workspaceLoading } = useWorkspaceAccess();
+  
+  const workspaceFamilies = useMemo(() => {
+    if (workspaceLoading || variant !== "workspace") return [];
+    return selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
+  }, [workspaceLoading, variant, workspaceRole, subscriptionTier, isPlatformStaff]);
 
   // Detect Christmas season only if seasonal theming is not disabled
   useEffect(() => {
@@ -369,7 +381,11 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                     </Button>
                   </SheetTrigger>
                   <SheetContent side="right" className="w-[280px] sm:w-[320px]">
-                    <nav className="flex flex-col gap-4 mt-8">
+                    <SheetHeader>
+                      <SheetTitle>Menu</SheetTitle>
+                      <SheetDescription>Navigate the CoAIleague platform</SheetDescription>
+                    </SheetHeader>
+                    <nav className="flex flex-col gap-4 mt-4">
                       {HEADER_CONFIG.public.navItems.map((item) => (
                         <Button
                           key={item.href}
@@ -445,18 +461,153 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
             </>
           ) : (
             // WORKSPACE NAVIGATION
-            <div className="flex items-center gap-3">
-              <AISearchTrigger />
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleLogout}
-                data-testid="button-logout"
-                className="text-foreground/80 hover:text-foreground"
-              >
-                Logout
-              </Button>
-            </div>
+            <>
+              {/* Desktop workspace controls */}
+              <div className="hidden md:flex items-center gap-3">
+                <TrinityMiniButton 
+                  onClick={() => setLocation("/trinity")} 
+                  data-testid="button-trinity-workspace"
+                />
+                <AISearchTrigger />
+                <NotificationsPopover />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={HEADER_HEIGHTS.iconButton}
+                      data-testid="button-user-menu-workspace"
+                    >
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback className="text-xs font-bold">
+                          {getInitials(user?.firstName, user?.lastName)}
+                        </AvatarFallback>
+                      </Avatar>
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuItem
+                      onClick={() => setLocation("/settings")}
+                      data-testid="menu-settings"
+                    >
+                      Settings
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onClick={handleLogout}
+                      data-testid="menu-logout-workspace"
+                      className="text-red-600 focus:text-red-600 focus:bg-red-50 dark:focus:bg-red-950"
+                    >
+                      <LogOut className="mr-2 h-4 w-4" />
+                      <span>Sign Out</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {/* Mobile workspace navigation */}
+              <div className="flex md:hidden items-center gap-1">
+                <TrinityMiniButton 
+                  onClick={() => setLocation("/trinity")} 
+                  data-testid="mobile-button-trinity-workspace"
+                />
+                <NotificationsPopover />
+                <Sheet open={workspaceMenuOpen} onOpenChange={setWorkspaceMenuOpen}>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={HEADER_HEIGHTS.iconButton}
+                      data-testid="button-workspace-mobile-menu"
+                    >
+                      <Menu className="h-5 w-5" />
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="right" className="w-[300px] sm:w-[340px] overflow-y-auto">
+                    <SheetHeader>
+                      <SheetTitle>Workspace Navigation</SheetTitle>
+                      <SheetDescription>Navigate to different areas of your workspace</SheetDescription>
+                    </SheetHeader>
+                    <div className="flex flex-col gap-4 mt-4">
+                      
+                      {workspaceFamilies.length > 0 ? (
+                        <div className="space-y-3">
+                          {workspaceFamilies.map((family) => (
+                            <Collapsible key={family.id} defaultOpen={family.routes.some(r => location === r.href)}>
+                              <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 rounded-md bg-muted/50 hover-elevate">
+                                <span className="text-sm font-semibold">{family.label}</span>
+                                <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                              </CollapsibleTrigger>
+                              <CollapsibleContent className="pt-2 space-y-1">
+                                {family.routes.map((route) => {
+                                  const isActive = location === route.href;
+                                  const Icon = route.icon;
+                                  return (
+                                    <Button
+                                      key={route.id}
+                                      variant={isActive ? "default" : "ghost"}
+                                      className="w-full justify-start gap-3 h-auto py-3"
+                                      onClick={() => {
+                                        setLocation(route.href);
+                                        setWorkspaceMenuOpen(false);
+                                      }}
+                                      data-testid={`mobile-workspace-route-${route.id}`}
+                                    >
+                                      <Icon className="h-5 w-5" />
+                                      <div className="flex flex-col items-start gap-0.5">
+                                        <span className="font-medium">{route.label}</span>
+                                        {route.description && (
+                                          <span className="text-xs text-muted-foreground">{route.description}</span>
+                                        )}
+                                      </div>
+                                      {route.badge && (
+                                        <span className="ml-auto px-2 py-1 text-xs bg-primary text-primary-foreground rounded-full">
+                                          {route.badge}
+                                        </span>
+                                      )}
+                                    </Button>
+                                  );
+                                })}
+                              </CollapsibleContent>
+                            </Collapsible>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="text-sm text-muted-foreground p-3">
+                          Loading navigation...
+                        </div>
+                      )}
+                      
+                      <div className="border-t pt-4 mt-2 space-y-2">
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start gap-3"
+                          onClick={() => {
+                            setWorkspaceMenuOpen(false);
+                            setLocation("/settings");
+                          }}
+                          data-testid="mobile-workspace-settings"
+                        >
+                          Settings
+                        </Button>
+                        <Button
+                          variant="destructive"
+                          className="w-full justify-center gap-2"
+                          onClick={() => {
+                            setWorkspaceMenuOpen(false);
+                            handleLogout();
+                          }}
+                          data-testid="mobile-workspace-logout"
+                        >
+                          <LogOut className="h-4 w-4" />
+                          Sign Out
+                        </Button>
+                      </div>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+            </>
           )}
         </div>
       </div>
