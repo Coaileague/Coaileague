@@ -8,7 +8,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation, useRoute } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
+// ScrollArea removed - using native overflow-auto to fix Radix ref thrashing
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -100,31 +100,39 @@ interface HelpDeskProps {
 export function HelpDesk(props?: HelpDeskProps & any) {
   // Auto-detect mobile layout based on viewport width with debouncing
   // Debounce prevents rapid mount/unmount cycles that crash ScrollArea refs
-  const [isMobileView, setIsMobileView] = useState(false);
-  const [layoutStable, setLayoutStable] = useState(true);
+  // Initialize with actual viewport state to prevent immediate state change on mount
+  const [isMobileView, setIsMobileView] = useState(() => 
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+  
+  // Track layout stability separately - only resize handlers should modify this
+  const layoutStableRef = useRef(true);
   
   useEffect(() => {
     let debounceTimer: NodeJS.Timeout;
-    const checkMobile = () => {
+    const isMobileRef = { current: isMobileView };
+    
+    const handleResize = () => {
       const isMobile = window.innerWidth < 768; // md breakpoint
       // Only update if changed, with debounce to prevent flicker
-      if (isMobile !== isMobileView) {
-        setLayoutStable(false);
+      if (isMobile !== isMobileRef.current) {
+        layoutStableRef.current = false;
         clearTimeout(debounceTimer);
         debounceTimer = setTimeout(() => {
+          isMobileRef.current = isMobile;
           setIsMobileView(isMobile);
           // Mark layout as stable after transition completes
-          setTimeout(() => setLayoutStable(true), 100);
+          setTimeout(() => { layoutStableRef.current = true; }, 100);
         }, 150); // 150ms debounce
       }
     };
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
+    
+    window.addEventListener('resize', handleResize);
     return () => {
-      window.removeEventListener('resize', checkMobile);
+      window.removeEventListener('resize', handleResize);
       clearTimeout(debounceTimer);
     };
-  }, [isMobileView]);
+  }, []); // Empty deps - resize handler is self-contained
   
   const { forceMobileLayout = false, roomId: propRoomId } = props || {};
   const shouldUseMobileLayout = forceMobileLayout || isMobileView;
@@ -579,21 +587,27 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     isOnline: true,
   }));
 
+  // Track if we've auto-scrolled at least once (for smooth vs instant scroll)
+  const hasAutoScrolledRef = useRef(false);
+  
   // Simple scroll to bottom when new messages arrive
-  // Guard against layout instability to prevent Radix ScrollArea ref thrashing
+  // Guard against layout instability using ref (not state) to prevent render loops
   const scrollToBottom = useCallback(() => {
-    if (!messagesEndRef.current || !layoutStable) return;
+    if (!messagesEndRef.current || !layoutStableRef.current) return;
     requestAnimationFrame(() => {
-      messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      messagesEndRef.current?.scrollIntoView({ 
+        behavior: hasAutoScrolledRef.current ? "smooth" : "auto" 
+      });
+      hasAutoScrolledRef.current = true;
     });
-  }, [layoutStable]);
+  }, []); // No dependencies - uses refs to avoid re-creation
 
   // Debounced scroll effect for new messages - only when layout is stable
   useEffect(() => {
-    if (!layoutStable) return; // Skip scrolling during layout transitions
+    if (!layoutStableRef.current) return; // Skip scrolling during layout transitions
     const timeoutId = setTimeout(scrollToBottom, 100);
     return () => clearTimeout(timeoutId);
-  }, [messages.length, scrollToBottom, layoutStable]);
+  }, [messages.length, scrollToBottom]);
 
   // No rotating banners - removed IRC-style system
 
@@ -1267,8 +1281,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
           )}
           
           {/* Messages Area - Explicit height for mobile scroll */}
-          {/* Visual Persistence: ScrollArea always mounted, no key to prevent remounting */}
-          <ScrollArea className="flex-1 min-h-0 p-2 sm:p-3">
+          {/* SIMPLIFIED: Using native overflow-auto to avoid Radix ScrollArea ref thrashing */}
+          <div className="flex-1 min-h-0 p-2 sm:p-3 overflow-y-auto">
             <div className="space-y-2">
 
               {/* Chat Messages - Modern bubbles with CoAIleague professional styling */}
@@ -1360,7 +1374,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
               
               <div ref={messagesEndRef} />
             </div>
-          </ScrollArea>
+          </div>
 
           {/* Input Area - Mobile-responsive padding and sizing */}
           <div className="border-t border-border bg-muted p-2 sm:p-3 md:p-4">
@@ -1564,14 +1578,15 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             />
           </div>
           
-          {/* User List ScrollArea - Always mounted, CSS toggled */}
+          {/* User List - Always mounted, CSS toggled */}
+          {/* SIMPLIFIED: Using native overflow-auto to avoid Radix ScrollArea ref thrashing */}
           <div className={cn(
             "transition-all duration-200 ease-in-out",
             !(showContextPanel && isStaff && selectedUserId)
               ? "flex-grow opacity-100"
               : "h-0 w-0 opacity-0 overflow-hidden pointer-events-none absolute"
           )}>
-            <ScrollArea className="h-full p-2">
+            <div className="h-full p-2 overflow-y-auto">
               <div className="space-y-1">
                 {uniqueUsers.map((u) => {
                   // No IRC prefix - WF logo icon shows authority
@@ -1858,7 +1873,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
                 );
               })}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         </section>
       </main>
