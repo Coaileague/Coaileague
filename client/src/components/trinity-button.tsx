@@ -69,11 +69,15 @@ export function TrinityMiniButton({
       data-testid={testId}
       title="Ask Trinity AI"
       className={cn(
-        'relative rounded-full hover:bg-blue-500/10 h-10 w-10',
+        'relative rounded-full h-11 w-11',
+        'hover:bg-gradient-to-r hover:from-purple-500/15 hover:via-teal-500/15 hover:to-amber-500/15',
+        'transition-all duration-300 hover:scale-110',
+        'ring-2 ring-purple-400/30 hover:ring-purple-500/50',
+        'shadow-sm hover:shadow-md hover:shadow-purple-500/20',
         className
       )}
     >
-      <ColorfulCelticKnot size={26} />
+      <ColorfulCelticKnot size={32} animated={true} animationSpeed="slow" />
     </Button>
   );
 }

@@ -12,6 +12,17 @@ import { quickbooksTokenRefresh } from './services/integrations/quickbooksTokenR
 
 const router = Router();
 
+// QuickBooks environment-aware base URL helper
+// Uses QUICKBOOKS_ENVIRONMENT env var - defaults to 'sandbox' for safety
+const QUICKBOOKS_ENVIRONMENT = (process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox') as 'sandbox' | 'production';
+const getQuickBooksApiBase = () => {
+  const isProduction = QUICKBOOKS_ENVIRONMENT === 'production';
+  console.log(`[QuickBooks] Using ${isProduction ? 'PRODUCTION' : 'SANDBOX'} environment`);
+  return isProduction 
+    ? 'https://quickbooks.api.intuit.com/v3/company'
+    : 'https://sandbox-quickbooks.api.intuit.com/v3/company';
+};
+
 /**
  * Workspace Authorization Middleware
  * 
@@ -252,7 +263,7 @@ router.get('/quickbooks/preview', requireAuth, requireWorkspaceMembership('query
     // Get valid access token
     const accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
     const realmId = connection.realmId!;
-    const apiBase = 'https://quickbooks.api.intuit.com/v3/company';
+    const apiBase = getQuickBooksApiBase();
 
     // Fetch employees (all, not just active, for complete view)
     const employeeQuery = encodeURIComponent('select * from Employee MAXRESULTS 100');
@@ -707,9 +718,7 @@ router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async
     // Get valid access token
     const accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
     const realmId = connection.realmId!;
-    const apiBase = connection.environment === 'production' 
-      ? 'https://quickbooks.api.intuit.com/v3/company'
-      : 'https://sandbox-quickbooks.api.intuit.com/v3/company';
+    const apiBase = getQuickBooksApiBase();
 
     // Determine which workspace to fetch data from
     const SANDBOX_WORKSPACE_ID = 'sandbox-test-workspace';
@@ -1321,7 +1330,7 @@ router.post('/quickbooks/preflight', requireAuth, requireWorkspaceMembership(), 
     try {
       const accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
       const realmId = connection.realmId!;
-      const apiBase = 'https://quickbooks.api.intuit.com/v3/company';
+      const apiBase = getQuickBooksApiBase();
       
       const companyResponse = await fetch(`${apiBase}/${realmId}/companyinfo/${realmId}`, {
         headers: {
@@ -1343,7 +1352,7 @@ router.post('/quickbooks/preflight', requireAuth, requireWorkspaceMembership(), 
     try {
       const accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
       const realmId = connection.realmId!;
-      const apiBase = 'https://quickbooks.api.intuit.com/v3/company';
+      const apiBase = getQuickBooksApiBase();
       
       const query = encodeURIComponent('select count(*) from Customer');
       const custResponse = await fetch(`${apiBase}/${realmId}/query?query=${query}`, {
@@ -1366,7 +1375,7 @@ router.post('/quickbooks/preflight', requireAuth, requireWorkspaceMembership(), 
     try {
       const accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
       const realmId = connection.realmId!;
-      const apiBase = 'https://quickbooks.api.intuit.com/v3/company';
+      const apiBase = getQuickBooksApiBase();
       
       const query = encodeURIComponent('select count(*) from Invoice');
       const invResponse = await fetch(`${apiBase}/${realmId}/query?query=${query}`, {
