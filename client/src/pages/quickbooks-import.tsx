@@ -422,14 +422,22 @@ export default function QuickBooksImportPage() {
 
   const pushToQuickBooksMutation = useMutation({
     mutationFn: async (useSandboxData: boolean = true) => {
+      const taskWeights = {
+        auth: 8,
+        fetch: 12,
+        validate: 10,
+        sync: 55,
+        verify: 10,
+        finalize: 5,
+      };
+      
       const initialTasks = [
         { id: 'auth', label: 'Authenticating with QuickBooks API', status: 'pending' as const },
         { id: 'fetch', label: 'Loading sandbox test data (100 employees, 10 clients)', status: 'pending' as const },
         { id: 'validate', label: 'Validating data integrity & mapping fields', status: 'pending' as const },
-        { id: 'customers', label: 'Creating customers in QuickBooks', status: 'pending' as const },
-        { id: 'employees', label: 'Creating employees in QuickBooks', status: 'pending' as const },
-        { id: 'verify', label: 'Verifying sync completion & IDs', status: 'pending' as const },
-        { id: 'finalize', label: 'Finalizing bidirectional sync mappings', status: 'pending' as const },
+        { id: 'sync', label: 'Syncing data to QuickBooks (this may take a moment)', status: 'pending' as const },
+        { id: 'verify', label: 'Verifying sync completion & mapping IDs', status: 'pending' as const },
+        { id: 'finalize', label: 'Finalizing bidirectional sync', status: 'pending' as const },
       ];
       
       setShowPushModal(true);
@@ -437,18 +445,21 @@ export default function QuickBooksImportPage() {
       setPushMessage('Trinity is preparing your sync...');
       setPushTasks(initialTasks);
       
+      let completedWeight = 0;
+      let syncProgressTimer: ReturnType<typeof setInterval> | null = null;
+      
       const updateTask = (taskId: string, status: 'in_progress' | 'completed') => {
         setPushTasks(prev => prev.map(t => 
           t.id === taskId ? { ...t, status } : t
         ));
       };
       
-      const completeTaskAndNext = async (currentId: string, nextId: string | null, progress: number, message: string) => {
-        updateTask(currentId, 'completed');
-        setPushProgress(progress);
+      const completeTask = (taskId: string, nextId: string | null, message: string) => {
+        updateTask(taskId, 'completed');
+        completedWeight += taskWeights[taskId as keyof typeof taskWeights] || 0;
+        setPushProgress(Math.min(completedWeight, 95));
         setPushMessage(message);
         if (nextId) {
-          await new Promise(resolve => setTimeout(resolve, 300));
           updateTask(nextId, 'in_progress');
         }
       };
@@ -456,15 +467,24 @@ export default function QuickBooksImportPage() {
       try {
         updateTask('auth', 'in_progress');
         setPushMessage('Authenticating with QuickBooks...');
-        await new Promise(resolve => setTimeout(resolve, 400));
+        await new Promise(resolve => setTimeout(resolve, 600));
         
-        await completeTaskAndNext('auth', 'fetch', 15, 'Loading sandbox data...');
-        await new Promise(resolve => setTimeout(resolve, 500));
+        completeTask('auth', 'fetch', 'Loading sandbox data...');
+        await new Promise(resolve => setTimeout(resolve, 700));
         
-        await completeTaskAndNext('fetch', 'validate', 30, 'Validating data integrity...');
-        await new Promise(resolve => setTimeout(resolve, 400));
+        completeTask('fetch', 'validate', 'Validating data integrity...');
+        await new Promise(resolve => setTimeout(resolve, 600));
         
-        await completeTaskAndNext('validate', 'customers', 45, 'Creating customers in QuickBooks...');
+        completeTask('validate', 'sync', 'Syncing to QuickBooks... This may take 30-60 seconds.');
+        
+        let syncProgress = completedWeight;
+        const syncMaxProgress = completedWeight + taskWeights.sync - 5;
+        syncProgressTimer = setInterval(() => {
+          if (syncProgress < syncMaxProgress) {
+            syncProgress += 0.8;
+            setPushProgress(Math.min(Math.round(syncProgress), syncMaxProgress));
+          }
+        }, 500);
         
         const res = await apiRequest('POST', '/api/integrations/quickbooks/push', {
           workspaceId: workspace?.id,
@@ -472,26 +492,35 @@ export default function QuickBooksImportPage() {
         });
         const data = await res.json();
         
+        if (syncProgressTimer) {
+          clearInterval(syncProgressTimer);
+          syncProgressTimer = null;
+        }
+        
         if (!res.ok) {
           throw new Error(data.error || 'Push failed');
         }
         
-        await completeTaskAndNext('customers', 'employees', 60, `Synced ${data.results?.customers?.synced || 0} customers!`);
-        await new Promise(resolve => setTimeout(resolve, 400));
+        const customersCount = data.results?.customers?.synced || 0;
+        const employeesCount = data.results?.employees?.synced || 0;
         
-        await completeTaskAndNext('employees', 'verify', 75, `Synced ${data.results?.employees?.synced || 0} employees!`);
-        await new Promise(resolve => setTimeout(resolve, 400));
+        completeTask('sync', 'verify', `Synced ${customersCount} customers & ${employeesCount} employees!`);
+        await new Promise(resolve => setTimeout(resolve, 500));
         
-        await completeTaskAndNext('verify', 'finalize', 90, 'Verifying sync completion...');
-        await new Promise(resolve => setTimeout(resolve, 400));
+        completeTask('verify', 'finalize', 'Verifying sync completion...');
+        await new Promise(resolve => setTimeout(resolve, 500));
         
         updateTask('finalize', 'completed');
+        completedWeight += taskWeights.finalize;
         setPushProgress(100);
-        setPushMessage('All tasks complete! Trinity sync successful.');
-        await new Promise(resolve => setTimeout(resolve, 1200));
+        setPushMessage(`All tasks complete! Synced ${customersCount} customers & ${employeesCount} employees.`);
+        await new Promise(resolve => setTimeout(resolve, 1500));
         
         return data;
       } catch (error) {
+        if (syncProgressTimer) {
+          clearInterval(syncProgressTimer);
+        }
         throw error;
       }
     },
