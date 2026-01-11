@@ -53,6 +53,7 @@ integrations = [
 
 [userenv.development]
 TRINITY_DIALOGUE_ENABLED = "false"
+QUICKBOOKS_ENVIRONMENT = "sandbox"
 
 [userenv.shared]
 DISABLE_SEASONAL_THEMING = "true"
