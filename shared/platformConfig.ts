@@ -505,6 +505,19 @@ export const INTEGRATIONS = {
       requestMs: 30000,
       batchMs: 120000,
     },
+    
+    // Sandbox/Testing configuration
+    testing: {
+      // Default pay rate for employees without rates (used in sandbox push)
+      defaultPayRate: 25.00,
+      // Pay rate range for sandbox employee generation
+      payRateRange: {
+        min: 18.00,
+        max: 45.00,
+      },
+      // Sandbox workspace ID
+      sandboxWorkspaceId: 'sandbox-test-workspace',
+    },
   },
   
   gusto: {
