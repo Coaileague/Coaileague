@@ -244,6 +244,173 @@ export class QuickBooksIntegration {
       ? QUICKBOOKS_PRODUCTION_URL 
       : QUICKBOOKS_SANDBOX_URL;
   }
+
+  /**
+   * QuickBooks Batch API - process up to 30 operations in a single request
+   * @see https://developer.intuit.com/app/developer/qbo/docs/api/accounting/all-entities/batch
+   */
+  async executeBatch(
+    credentials: QuickBooksCredentials,
+    batchItems: Array<{ bId: string; operation: 'create' | 'update' | 'delete' | 'query'; entity: string; payload?: any }>
+  ): Promise<{ success: boolean; responses: Array<{ bId: string; success: boolean; data?: any; error?: string }> }> {
+    if (!this.config) {
+      return { success: false, responses: batchItems.map(b => ({ bId: b.bId, success: false, error: 'Not configured' })) };
+    }
+
+    if (batchItems.length > 30) {
+      return { success: false, responses: batchItems.map(b => ({ bId: b.bId, success: false, error: 'Max 30 items per batch' })) };
+    }
+
+    try {
+      const batchRequest = {
+        BatchItemRequest: batchItems.map(item => ({
+          bId: item.bId,
+          operation: item.operation,
+          [item.entity]: item.payload,
+        })),
+      };
+
+      const response = await fetch(
+        `${this.getBaseUrl()}/v3/company/${credentials.realmId}/batch?minorversion=${API_MINOR_VERSION}`,
+        {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${credentials.accessToken}`,
+          },
+          body: JSON.stringify(batchRequest),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('[QuickBooks] Batch request failed:', errorText);
+        return { success: false, responses: batchItems.map(b => ({ bId: b.bId, success: false, error: errorText })) };
+      }
+
+      const result = await response.json();
+      const responses: Array<{ bId: string; success: boolean; data?: any; error?: string }> = [];
+
+      for (const item of result.BatchItemResponse || []) {
+        if (item.Fault) {
+          responses.push({
+            bId: item.bId,
+            success: false,
+            error: item.Fault.Error?.[0]?.Message || 'Unknown error',
+          });
+        } else {
+          responses.push({
+            bId: item.bId,
+            success: true,
+            data: item.Employee || item.Customer || item.Invoice || item.TimeActivity || item,
+          });
+        }
+      }
+
+      const allSuccess = responses.every(r => r.success);
+      console.log(`[QuickBooks] Batch completed: ${responses.filter(r => r.success).length}/${responses.length} succeeded`);
+      
+      return { success: allSuccess, responses };
+    } catch (error: any) {
+      console.error('[QuickBooks] Batch execution error:', error);
+      return { success: false, responses: batchItems.map(b => ({ bId: b.bId, success: false, error: error.message })) };
+    }
+  }
+
+  /**
+   * Process items in batches with concurrent execution
+   * @param items - Items to process
+   * @param batchSize - Items per batch (max 25 to stay under 30 limit)
+   * @param concurrency - Max concurrent batch requests
+   * @param mapFn - Function to map item to batch operation
+   * @param entity - QuickBooks entity type
+   * @param credentials - QB credentials
+   * @param onProgress - Progress callback (called after each batch)
+   */
+  async processBatched<T>(
+    items: T[],
+    batchSize: number,
+    concurrency: number,
+    mapFn: (item: T, index: number) => any,
+    entity: string,
+    credentials: QuickBooksCredentials,
+    onProgress?: (processed: number, total: number, errors: string[]) => void
+  ): Promise<{ success: boolean; synced: number; errors: string[] }> {
+    const errors: string[] = [];
+    let synced = 0;
+    const total = items.length;
+
+    // Chunk items into batches
+    const batches: T[][] = [];
+    for (let i = 0; i < items.length; i += batchSize) {
+      batches.push(items.slice(i, i + batchSize));
+    }
+
+    console.log(`[QuickBooks] Processing ${total} items in ${batches.length} batches (size=${batchSize}, concurrency=${concurrency})`);
+
+    // Process batches with limited concurrency
+    const processBatch = async (batch: T[], batchIndex: number): Promise<void> => {
+      const batchItems = batch.map((item, idx) => ({
+        bId: `${batchIndex}-${idx}`,
+        operation: 'create' as const,
+        entity,
+        payload: mapFn(item, batchIndex * batchSize + idx),
+      }));
+
+      // Use rate limiter for the batch request
+      const result = await this.makeRateLimitedRequest(
+        credentials.workspaceId,
+        credentials.realmId,
+        () => this.executeBatch(credentials, batchItems),
+        0
+      );
+
+      if (result.success && result.data) {
+        for (const resp of result.data.responses) {
+          if (resp.success) {
+            synced++;
+          } else {
+            errors.push(`Item ${resp.bId}: ${resp.error}`);
+          }
+        }
+      } else {
+        // All items in batch failed
+        for (const item of batchItems) {
+          errors.push(`Item ${item.bId}: ${result.error || 'Batch failed'}`);
+        }
+      }
+
+      if (onProgress) {
+        onProgress(synced + errors.length, total, errors);
+      }
+    };
+
+    // Process with concurrency limit
+    const running: Promise<void>[] = [];
+    for (let i = 0; i < batches.length; i++) {
+      const promise = processBatch(batches[i], i);
+      running.push(promise);
+
+      // Limit concurrency
+      if (running.length >= concurrency) {
+        await Promise.race(running);
+        // Remove completed promises
+        for (let j = running.length - 1; j >= 0; j--) {
+          const settled = await Promise.race([running[j].then(() => true), Promise.resolve(false)]);
+          if (settled) {
+            running.splice(j, 1);
+          }
+        }
+      }
+    }
+
+    // Wait for remaining
+    await Promise.all(running);
+
+    console.log(`[QuickBooks] Batch processing complete: ${synced} synced, ${errors.length} errors`);
+    return { success: errors.length === 0, synced, errors };
+  }
   
   async syncInvoicesToQuickBooks(credentials: QuickBooksCredentials, invoices: any[]): Promise<{ success: boolean; synced: number; errors: string[] }> {
     if (!this.config) {
@@ -424,7 +591,11 @@ export class QuickBooksIntegration {
     };
   }
 
-  async syncCustomers(credentials: QuickBooksCredentials, customers: any[]): Promise<{ success: boolean; synced: number; errors: string[] }> {
+  async syncCustomers(
+    credentials: QuickBooksCredentials, 
+    customers: any[],
+    onProgress?: (processed: number, total: number, errors: string[]) => void
+  ): Promise<{ success: boolean; synced: number; errors: string[] }> {
     if (!this.config) {
       return { success: false, synced: 0, errors: ['QuickBooks integration not configured'] };
     }
@@ -433,54 +604,35 @@ export class QuickBooksIntegration {
     if (!editionConfig.syncCapabilities.customers) {
       return { success: false, synced: 0, errors: [`Customer sync not supported for ${editionConfig.displayName}`] };
     }
-    
-    const errors: string[] = [];
-    let synced = 0;
-    
-    for (const customer of customers) {
-      try {
-        const qbCustomer = {
-          DisplayName: customer.name || customer.displayName,
-          CompanyName: customer.companyName,
-          PrimaryEmailAddr: customer.email ? { Address: customer.email } : undefined,
-          PrimaryPhone: customer.phone ? { FreeFormNumber: customer.phone } : undefined,
-          BillAddr: customer.address ? {
-            Line1: customer.address.line1,
-            City: customer.address.city,
-            CountrySubDivisionCode: customer.address.state,
-            PostalCode: customer.address.postalCode,
-          } : undefined,
-        };
 
-        const response = await fetch(
-          `${this.getBaseUrl()}/v3/company/${credentials.realmId}/customer?minorversion=${API_MINOR_VERSION}`,
-          {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${credentials.accessToken}`,
-            },
-            body: JSON.stringify(qbCustomer),
-          }
-        );
-        
-        if (response.ok) {
-          synced++;
-          console.log(`[QuickBooks] Synced customer ${customer.id}`);
-        } else {
-          const error = await response.text();
-          errors.push(`Customer ${customer.id}: ${error}`);
-        }
-      } catch (error) {
-        errors.push(`Customer ${customer.id}: ${error}`);
-      }
-    }
-    
-    return { success: errors.length === 0, synced, errors };
+    // Use batch processing for speed (25 items per batch, 3 concurrent batches)
+    return this.processBatched(
+      customers,
+      25, // batch size
+      3,  // concurrency
+      (customer) => ({
+        DisplayName: customer.name || customer.displayName,
+        CompanyName: customer.companyName,
+        PrimaryEmailAddr: customer.email ? { Address: customer.email } : undefined,
+        PrimaryPhone: customer.phone ? { FreeFormNumber: customer.phone } : undefined,
+        BillAddr: customer.address ? {
+          Line1: customer.address.line1,
+          City: customer.address.city,
+          CountrySubDivisionCode: customer.address.state,
+          PostalCode: customer.address.postalCode,
+        } : undefined,
+      }),
+      'Customer',
+      credentials,
+      onProgress
+    );
   }
 
-  async syncEmployees(credentials: QuickBooksCredentials, employees: any[]): Promise<{ success: boolean; synced: number; errors: string[] }> {
+  async syncEmployees(
+    credentials: QuickBooksCredentials, 
+    employees: any[],
+    onProgress?: (processed: number, total: number, errors: string[]) => void
+  ): Promise<{ success: boolean; synced: number; errors: string[] }> {
     if (!this.config) {
       return { success: false, synced: 0, errors: ['QuickBooks integration not configured'] };
     }
@@ -489,55 +641,32 @@ export class QuickBooksIntegration {
     if (!editionConfig.syncCapabilities.employees) {
       return { success: false, synced: 0, errors: [`Employee sync not supported for ${editionConfig.displayName}. Upgrade to Plus or higher.`] };
     }
-    
-    const errors: string[] = [];
-    let synced = 0;
-    
-    for (const employee of employees) {
-      try {
-        const qbEmployee = {
-          DisplayName: `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employee.name,
-          GivenName: employee.firstName,
-          FamilyName: employee.lastName,
-          PrimaryEmailAddr: employee.email ? { Address: employee.email } : undefined,
-          PrimaryPhone: employee.phone ? { FreeFormNumber: employee.phone } : undefined,
-          SSN: employee.ssn,
-          BirthDate: employee.birthDate?.toISOString().split('T')[0],
-          HiredDate: employee.hireDate?.toISOString().split('T')[0],
-          PrimaryAddr: employee.address ? {
-            Line1: employee.address.line1,
-            City: employee.address.city,
-            CountrySubDivisionCode: employee.address.state,
-            PostalCode: employee.address.postalCode,
-          } : undefined,
-        };
 
-        const response = await fetch(
-          `${this.getBaseUrl()}/v3/company/${credentials.realmId}/employee?minorversion=${API_MINOR_VERSION}`,
-          {
-            method: 'POST',
-            headers: {
-              'Accept': 'application/json',
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${credentials.accessToken}`,
-            },
-            body: JSON.stringify(qbEmployee),
-          }
-        );
-        
-        if (response.ok) {
-          synced++;
-          console.log(`[QuickBooks] Synced employee ${employee.id}`);
-        } else {
-          const error = await response.text();
-          errors.push(`Employee ${employee.id}: ${error}`);
-        }
-      } catch (error) {
-        errors.push(`Employee ${employee.id}: ${error}`);
-      }
-    }
-    
-    return { success: errors.length === 0, synced, errors };
+    // Use batch processing for speed (25 items per batch, 3 concurrent batches)
+    return this.processBatched(
+      employees,
+      25, // batch size
+      3,  // concurrency
+      (employee) => ({
+        DisplayName: `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employee.name,
+        GivenName: employee.firstName,
+        FamilyName: employee.lastName,
+        PrimaryEmailAddr: employee.email ? { Address: employee.email } : undefined,
+        PrimaryPhone: employee.phone ? { FreeFormNumber: employee.phone } : undefined,
+        SSN: employee.ssn,
+        BirthDate: employee.birthDate?.toISOString().split('T')[0],
+        HiredDate: employee.hireDate?.toISOString().split('T')[0],
+        PrimaryAddr: employee.address ? {
+          Line1: employee.address.line1,
+          City: employee.address.city,
+          CountrySubDivisionCode: employee.address.state,
+          PostalCode: employee.address.postalCode,
+        } : undefined,
+      }),
+      'Employee',
+      credentials,
+      onProgress
+    );
   }
 
   async pushSandboxDataToQuickBooks(
