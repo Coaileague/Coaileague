@@ -408,7 +408,7 @@ export default function QuickBooksImportPage() {
       setCurrentStep('complete');
     },
     onError: (error: any) => {
-      if (error.code === 'MISSING_PAY_RATES' && error.employeesWithMissingPayRates) {
+      if (error.code === 'MISSING_PAY_RATES' && Array.isArray(error.employeesWithMissingPayRates)) {
         setPayRateWarning({ employees: error.employeesWithMissingPayRates });
         toast({
           title: 'Pay Rate Validation',
@@ -416,9 +416,13 @@ export default function QuickBooksImportPage() {
           variant: 'destructive',
         });
       } else {
+        // Ensure error message is a safe string, not raw data
+        const errorMessage = typeof error.message === 'string' 
+          ? error.message.slice(0, 200) 
+          : 'Failed to import data';
         toast({
           title: 'Import Failed',
-          description: error.message || 'Failed to import data',
+          description: errorMessage,
           variant: 'destructive',
         });
       }
@@ -1470,7 +1474,7 @@ export default function QuickBooksImportPage() {
               </div>
             </div>
 
-            {payRateWarning && (
+            {payRateWarning && Array.isArray(payRateWarning.employees) && (
               <div className="p-4 bg-red-50 dark:bg-red-950/30 rounded-lg border border-red-200 dark:border-red-800">
                 <div className="flex items-start gap-3">
                   <XCircle className="h-5 w-5 text-red-600 flex-shrink-0 mt-0.5" />
@@ -1482,10 +1486,10 @@ export default function QuickBooksImportPage() {
                       These employees will be imported without pay rates, which may cause payroll calculation errors:
                     </p>
                     <ul className="mt-2 text-sm text-red-600 dark:text-red-400 space-y-1 max-h-32 overflow-y-auto">
-                      {payRateWarning.employees.slice(0, 10).map((emp) => (
-                        <li key={emp.qboId} className="flex items-center gap-2">
+                      {payRateWarning.employees.slice(0, 10).map((emp, idx) => (
+                        <li key={emp?.qboId || idx} className="flex items-center gap-2">
                           <AlertCircle className="h-3 w-3" />
-                          {emp.displayName}
+                          {String(emp?.displayName || 'Unknown Employee')}
                         </li>
                       ))}
                       {payRateWarning.employees.length > 10 && (
