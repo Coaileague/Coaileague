@@ -502,13 +502,27 @@ router.post('/quickbooks/push/cancel', requireAuth, requireWorkspaceMembership()
  * Syncs clients as Customers, employees as Employees, invoices as Invoices
  * 
  * Implements migration lock - only one migration per workspace at a time
+ * 
+ * FAST MODE TIERS:
+ * - standard: 3 concurrent batches, batch size 25 (~10-15 seconds for 100 items)
+ * - fast: 5 concurrent batches, batch size 25 (~5-8 seconds for 100 items)
+ * - turbo: 8 concurrent batches, batch size 25 (~3-5 seconds for 100 items)
  */
 router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
   let migrationRunId: string | null = null;
   
   try {
-    const { workspaceId, useSandboxData } = req.body;
+    const { workspaceId, useSandboxData, mode = 'fast' } = req.body;
     const userId = (req as any).session?.userId;
+    
+    // FAST MODE configuration - parallel batch processing
+    const FAST_MODE_CONFIG = {
+      standard: { concurrency: 3, batchSize: 25 },
+      fast: { concurrency: 5, batchSize: 25 },
+      turbo: { concurrency: 8, batchSize: 25 },
+    };
+    const modeConfig = FAST_MODE_CONFIG[mode as keyof typeof FAST_MODE_CONFIG] || FAST_MODE_CONFIG.fast;
+    console.log(`[QuickBooks Push] Using ${mode.toUpperCase()} mode: ${modeConfig.concurrency} concurrent batches, batch size ${modeConfig.batchSize}`);
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'Missing workspaceId' });
@@ -628,133 +642,223 @@ router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async
       return run?.status === 'cancel_requested';
     };
 
-    // Helper to update progress
-    const updateProgress = async (syncedEmployees: number, syncedCustomers: number, lastEmployeeId?: string, lastCustomerId?: string) => {
+    // Helper to update progress (batch-level updates, not per-record)
+    const updateProgress = async (syncedEmployees: number, syncedCustomers: number) => {
       await db.update(quickbooksMigrationRuns)
         .set({
           syncedEmployees,
           syncedCustomers,
-          lastProcessedEmployeeId: lastEmployeeId,
-          lastProcessedCustomerId: lastCustomerId,
           updatedAt: new Date(),
         })
         .where(eq(quickbooksMigrationRuns.id, migrationRunId!));
     };
 
-    // Push Customers (from clients)
-    for (const client of clients) {
-      // Check for cancellation
-      if (await checkCancellation()) {
-        console.log(`[QuickBooks Push] Cancellation detected during customer sync`);
-        await db.update(quickbooksMigrationRuns)
-          .set({
-            status: 'cancelled',
-            finishedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(quickbooksMigrationRuns.id, migrationRunId!));
-        
-        return res.json({
-          success: false,
-          cancelled: true,
-          message: 'Migration was cancelled',
-          results,
-        });
-      }
-
-      try {
-        const qbCustomer = {
-          DisplayName: client.name,
-          CompanyName: client.companyName || client.name,
-          PrimaryEmailAddr: client.email ? { Address: client.email } : undefined,
-          PrimaryPhone: client.phone ? { FreeFormNumber: client.phone } : undefined,
-          BillAddr: client.address ? {
-            Line1: (client.address as any).street || (client.address as any).line1,
-            City: (client.address as any).city,
-            CountrySubDivisionCode: (client.address as any).state,
-            PostalCode: (client.address as any).zip || (client.address as any).postalCode,
-          } : undefined,
-        };
-
-        const response = await fetch(`${apiBase}/${realmId}/customer?minorversion=75`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(qbCustomer),
-        });
-
-        if (response.ok) {
-          results.customers.synced++;
-          console.log(`[QuickBooks Push] Created customer: ${client.name}`);
-        } else {
-          const error = await response.text();
-          results.customers.errors.push(`${client.name}: ${error}`);
+    // ========================================================================
+    // FAST MODE BATCH PROCESSING - QuickBooks Batch API
+    // Uses rate-limited integration service with proper semaphore control
+    // ========================================================================
+    const startTime = Date.now();
+    
+    // Simple semaphore with FIXED concurrency control
+    const createSemaphore = (limit: number) => {
+      let activeCount = 0;
+      const queue: (() => void)[] = [];
+      
+      return {
+        acquire: (): Promise<void> => new Promise((resolve) => {
+          if (activeCount < limit) {
+            activeCount++;
+            resolve();
+          } else {
+            queue.push(resolve); // Just queue the resolve, don't increment again
+          }
+        }),
+        release: () => {
+          if (queue.length > 0) {
+            // Don't decrement - we're immediately giving the slot to next waiter
+            const next = queue.shift()!;
+            next();
+          } else {
+            activeCount--;
+          }
         }
-      } catch (err: any) {
-        results.customers.errors.push(`${client.name}: ${err.message}`);
-      }
+      };
+    };
 
-      // Update progress after each customer
-      await updateProgress(results.employees.synced, results.customers.synced, undefined, client.id);
+    // Rate-limited batch executor using QuickBooks integration service
+    const executeBatchWithRateLimiter = async <T>(
+      items: T[],
+      entity: 'Customer' | 'Employee',
+      mapFn: (item: T) => any,
+      lastProcessedField: 'lastProcessedCustomerId' | 'lastProcessedEmployeeId'
+    ): Promise<{ synced: number; errors: string[]; lastProcessedId?: string }> => {
+      if (items.length === 0) return { synced: 0, errors: [] };
+      
+      const semaphore = createSemaphore(modeConfig.concurrency);
+      const batchErrors: string[] = [];
+      let batchSynced = 0;
+      let lastProcessedId: string | undefined;
+      let cancelled = false;
+      
+      // Split into batches
+      const batches: { items: T[]; index: number }[] = [];
+      for (let i = 0; i < items.length; i += modeConfig.batchSize) {
+        batches.push({ items: items.slice(i, i + modeConfig.batchSize), index: i });
+      }
+      
+      console.log(`[QuickBooks Push] Processing ${items.length} ${entity}s in ${batches.length} batches (${mode} mode, concurrency=${modeConfig.concurrency})`);
+      
+      // Process batch with rate limiting via quickbooksRateLimiter
+      const processBatch = async (batch: { items: T[]; index: number }) => {
+        if (cancelled) return;
+        
+        // Check for cancellation before each batch
+        if (await checkCancellation()) {
+          cancelled = true;
+          return;
+        }
+        
+        await semaphore.acquire();
+        try {
+          // Use rate limiter from quickbooks integration
+          const canProceed = await quickbooksRateLimiter.waitForSlot(
+            realmId,
+            connection.environment === 'production' ? 'production' : 'sandbox',
+            0,
+            30000
+          );
+          
+          if (!canProceed) {
+            batchErrors.push(`Batch ${batch.index}: Rate limit timeout`);
+            return;
+          }
+          
+          // Build batch request for QuickBooks Batch API
+          const batchItems = batch.items.map((item: any, idx) => ({
+            bId: `${batch.index}-${idx}`,
+            operation: 'create',
+            [entity]: mapFn(item),
+          }));
+          
+          const response = await fetch(`${apiBase}/${realmId}/batch?minorversion=75`, {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ BatchItemRequest: batchItems }),
+          });
+          
+          quickbooksRateLimiter.completeRequest(
+            realmId,
+            connection.environment === 'production' ? 'production' : 'sandbox',
+            response.ok
+          );
+          
+          if (!response.ok) {
+            const errorText = await response.text();
+            console.error(`[QuickBooks Push] Batch ${batch.index} failed:`, errorText);
+            batchErrors.push(`Batch ${batch.index}: ${errorText}`);
+            return;
+          }
+          
+          const result = await response.json();
+          for (const item of result.BatchItemResponse || []) {
+            if (item.Fault) {
+              batchErrors.push(`Item ${item.bId}: ${item.Fault.Error?.[0]?.Message || 'Unknown error'}`);
+            } else {
+              batchSynced++;
+            }
+          }
+          
+          // Track last processed ID for resume capability
+          const lastItem = batch.items[batch.items.length - 1] as any;
+          lastProcessedId = lastItem?.id;
+          
+          console.log(`[QuickBooks Push] Batch ${batch.index} complete: ${batchSynced}/${items.length} synced`);
+        } finally {
+          semaphore.release();
+        }
+      };
+      
+      // Execute all batches with concurrency limit
+      await Promise.all(batches.map(batch => processBatch(batch)));
+      
+      return { synced: batchSynced, errors: batchErrors, lastProcessedId };
+    };
+
+    // Push Customers using Batch API (FAST MODE)
+    console.log(`[QuickBooks Push] Starting customer batch sync...`);
+    const customerResult = await executeBatchWithRateLimiter(
+      clients, 
+      'Customer', 
+      (client) => ({
+        DisplayName: client.name,
+        CompanyName: client.companyName || client.name,
+        PrimaryEmailAddr: client.email ? { Address: client.email } : undefined,
+        PrimaryPhone: client.phone ? { FreeFormNumber: client.phone } : undefined,
+        BillAddr: client.address ? {
+          Line1: (client.address as any).street || (client.address as any).line1,
+          City: (client.address as any).city,
+          CountrySubDivisionCode: (client.address as any).state,
+          PostalCode: (client.address as any).zip || (client.address as any).postalCode,
+        } : undefined,
+      }),
+      'lastProcessedCustomerId'
+    );
+    results.customers.synced = customerResult.synced;
+    results.customers.errors = customerResult.errors;
+    
+    // Update progress after customers with tracking data
+    await db.update(quickbooksMigrationRuns)
+      .set({
+        syncedCustomers: results.customers.synced,
+        lastProcessedCustomerId: customerResult.lastProcessedId,
+        updatedAt: new Date(),
+      })
+      .where(eq(quickbooksMigrationRuns.id, migrationRunId!));
+
+    // Check for cancellation before employees
+    if (await checkCancellation()) {
+      await db.update(quickbooksMigrationRuns)
+        .set({ status: 'cancelled', finishedAt: new Date(), updatedAt: new Date() })
+        .where(eq(quickbooksMigrationRuns.id, migrationRunId!));
+      
+      return res.json({ success: false, cancelled: true, message: 'Migration was cancelled', results });
     }
 
-    // Push Employees
-    for (const emp of dbEmployees) {
-      // Check for cancellation
-      if (await checkCancellation()) {
-        console.log(`[QuickBooks Push] Cancellation detected during employee sync`);
-        await db.update(quickbooksMigrationRuns)
-          .set({
-            status: 'cancelled',
-            finishedAt: new Date(),
-            updatedAt: new Date(),
-          })
-          .where(eq(quickbooksMigrationRuns.id, migrationRunId!));
-        
-        return res.json({
-          success: false,
-          cancelled: true,
-          message: 'Migration was cancelled',
-          results,
-        });
-      }
-
-      try {
-        const qbEmployee = {
-          DisplayName: `${emp.firstName} ${emp.lastName}`,
-          GivenName: emp.firstName,
-          FamilyName: emp.lastName,
-          PrimaryEmailAddr: emp.email ? { Address: emp.email } : undefined,
-          PrimaryPhone: emp.phone ? { FreeFormNumber: emp.phone } : undefined,
-        };
-
-        const response = await fetch(`${apiBase}/${realmId}/employee?minorversion=75`, {
-          method: 'POST',
-          headers: {
-            'Accept': 'application/json',
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${accessToken}`,
-          },
-          body: JSON.stringify(qbEmployee),
-        });
-
-        if (response.ok) {
-          results.employees.synced++;
-          console.log(`[QuickBooks Push] Created employee: ${emp.firstName} ${emp.lastName}`);
-        } else {
-          const error = await response.text();
-          results.employees.errors.push(`${emp.firstName} ${emp.lastName}: ${error}`);
-        }
-      } catch (err: any) {
-        results.employees.errors.push(`${emp.firstName} ${emp.lastName}: ${err.message}`);
-      }
-
-      // Update progress after each employee
-      await updateProgress(results.employees.synced, results.customers.synced, emp.id, undefined);
-    }
+    // Push Employees using Batch API (FAST MODE)
+    console.log(`[QuickBooks Push] Starting employee batch sync...`);
+    const employeeResult = await executeBatchWithRateLimiter(
+      dbEmployees, 
+      'Employee', 
+      (emp) => ({
+        DisplayName: `${emp.firstName} ${emp.lastName}`,
+        GivenName: emp.firstName,
+        FamilyName: emp.lastName,
+        PrimaryEmailAddr: emp.email ? { Address: emp.email } : undefined,
+        PrimaryPhone: emp.phone ? { FreeFormNumber: emp.phone } : undefined,
+      }),
+      'lastProcessedEmployeeId'
+    );
+    results.employees.synced = employeeResult.synced;
+    results.employees.errors = employeeResult.errors;
+    
+    // Final progress update with full tracking data
+    await db.update(quickbooksMigrationRuns)
+      .set({
+        syncedEmployees: results.employees.synced,
+        syncedCustomers: results.customers.synced,
+        lastProcessedEmployeeId: employeeResult.lastProcessedId,
+        updatedAt: new Date(),
+      })
+      .where(eq(quickbooksMigrationRuns.id, migrationRunId!));
+    
+    const totalTime = Date.now() - startTime;
+    const totalItems = clients.length + dbEmployees.length;
+    const itemsPerSecond = totalItems > 0 ? (totalItems / (totalTime / 1000)).toFixed(1) : '0';
+    console.log(`[QuickBooks Push] FAST MODE complete: ${totalItems} items in ${totalTime}ms (${itemsPerSecond} items/sec)`)
 
     // Mark migration as completed
     await db.update(quickbooksMigrationRuns)

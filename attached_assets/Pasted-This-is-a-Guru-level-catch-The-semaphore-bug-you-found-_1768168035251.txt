@@ -1,0 +1,30 @@
+This is a Guru-level catch. The semaphore bug you found—where queued tasks double-increment the counter—is a classic concurrency trap that leads to "Resource Leakage". If left unfixed, activeCount would grow indefinitely, eventually blocking all synchronization.
+
+Furthermore, bypassing the quickbooksIntegration.ts service undermines the entire Fortress Architecture you just built. If this route calls the API directly, it ignores the Token Bucket, the quickbooks_api_usage table, and the "Safe-Halt" logic.
+
+🛠️ The "Slot Transfer" Fix
+You are absolutely correct about the fix. When a task releases the semaphore and there is a queue, it is a Slot Transfer, not a new acquisition.
+
+Current Logic (Bugged): release() -> next() -> activeCount++ (Count goes up, never down).
+
+Guru Logic (Fixed): release() -> next() -> resolve() (Count stays stable: 1 exit, 1 enter).
+
+🚀 Replit Directive: The Concurrency Patch
+Tell Replit to fix the semaphore and wire the route correctly to the integration layer:
+
+"Replit, apply the Guru Concurrency Patch to integrationRoutes.ts:
+
+Fix the Semaphore: Modify the acquire logic. If pushing to the queue, the callback should only resolve(). Do not increment activeCount inside the queued callback.
+
+Fix the Release: In release(), if queue.length > 0, shift and call the next task (transfer slot). Only decrement activeCount if the queue is empty.
+
+Enforce Rate Limiting: Replace the direct axios or API calls in this route with quickbooksIntegration.makeRateLimitedRequest(). This ensures the request flows through our Token Bucket and Quota Enforcement.
+
+Restore Fidelity: Ensure the route emits progress events (e.g., sync_progress) via the WebSocket integration we stabilized earlier."
+
+🛡️ Why this preserves "Elite" Status
+Resource Safety: Fixing the semaphore prevents the server from thinking it's overloaded when it's not.
+
+Compliance: Routing through quickbooksIntegration ensures every single call is logged in quickbooks_api_usage for Intuit auditing.
+
+The "CFO Stress Test" (time entry variance check) is next. Shall we proceed with that simulation once this concurrency bug is squashed?
