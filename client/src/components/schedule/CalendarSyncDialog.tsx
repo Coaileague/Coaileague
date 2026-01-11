@@ -267,7 +267,7 @@ export function CalendarSyncDialog({ open, onOpenChange, employeeId }: CalendarS
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[85vh]">
+      <DialogContent size="xl" className="max-h-[85vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarIcon className="h-5 w-5 text-primary" />

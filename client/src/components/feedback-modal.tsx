@@ -80,7 +80,7 @@ export function FeedbackModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]" data-testid="feedback-modal">
+      <DialogContent size="md" data-testid="feedback-modal">
         <DialogHeader>
           <DialogTitle>How was your support experience?</DialogTitle>
           <DialogDescription>

@@ -602,7 +602,7 @@ export default function TrinitySelfEditGovernancePage() {
       </Tabs>
 
       <Dialog open={!!selectedProposal} onOpenChange={() => setSelectedProposal(null)}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto" data-testid="dialog-proposal-detail">
+        <DialogContent size="full" className="max-h-[90vh] overflow-y-auto" data-testid="dialog-proposal-detail">
           {selectedProposal && (
             <>
               <DialogHeader>

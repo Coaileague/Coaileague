@@ -39,7 +39,7 @@ export function QueueViewerDialog({ open, onClose, queueEntries }: QueueViewerDi
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+      <DialogContent size="xl" className="max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Users className="w-5 h-5" />

@@ -97,7 +97,7 @@ export function HelpCommandPanel({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] p-0 flex flex-col bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-blue-500/30">
+      <DialogContent size="full" className="max-h-[90vh] p-0 flex flex-col bg-gradient-to-br from-slate-900 to-slate-800 border-2 border-blue-500/30">
         {/* Header with Logo and Close */}
         <DialogHeader className="relative p-6 pb-4 flex-shrink-0 bg-gradient-to-r from-blue-600 to-indigo-700 border-b-2 border-blue-400/50">
           <Button

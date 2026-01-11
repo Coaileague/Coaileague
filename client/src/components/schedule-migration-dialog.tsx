@@ -178,7 +178,7 @@ export function ScheduleMigrationDialog() {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-w-4xl max-h-[90vh]">
+      <DialogContent size="full" className="max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Upload className="h-5 w-5" style={{ color: "#3b82f6" }} />

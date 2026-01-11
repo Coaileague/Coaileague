@@ -196,7 +196,7 @@ export default function AdminCustomForms() {
               Create Form
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogContent size="full" className="max-h-[90vh] overflow-y-auto">
             <DialogHeader>
               <div className="flex justify-center mb-6">
                 <CoAIleagueLogo width={200} height={50} showTagline={false} />

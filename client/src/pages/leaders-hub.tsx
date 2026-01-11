@@ -1028,7 +1028,7 @@ export default function LeadersHub() {
 
       {/* Escalation Dialog */}
       <Dialog open={escalationDialog} onOpenChange={setEscalationDialog}>
-        <DialogContent className="max-w-2xl" data-testid="dialog-escalation">
+        <DialogContent size="xl" data-testid="dialog-escalation">
           <DialogHeader>
             <DialogTitle>Create Escalation Ticket</DialogTitle>
             <DialogDescription>

@@ -100,7 +100,7 @@ export function ChatTutorialSlides({ open, onComplete }: ChatTutorialSlidesProps
 
   return (
     <Dialog open={open} onOpenChange={() => {}}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent size="xl">
         <div className="py-4">
           {/* Progress Indicator */}
           <div className="flex items-center justify-center gap-2 mb-6">

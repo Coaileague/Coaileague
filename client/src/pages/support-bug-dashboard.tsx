@@ -416,7 +416,7 @@ export default function SupportBugDashboard() {
       </Tabs>
 
       <Dialog open={!!selectedRemediation} onOpenChange={() => setSelectedRemediation(null)}>
-        <DialogContent className="sm:max-w-[600px]">
+        <DialogContent size="lg">
           {selectedRemediation && (
             <>
               <DialogHeader>

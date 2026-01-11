@@ -52,7 +52,7 @@ export function ScenarioPreviewModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh]" data-testid="modal-scenario-preview">
+      <DialogContent size="full" className="max-h-[90vh]" data-testid="modal-scenario-preview">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <AlertTriangle className="h-5 w-5 text-amber-500" />

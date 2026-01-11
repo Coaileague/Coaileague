@@ -380,7 +380,7 @@ export function QuickBooksCompliancePanel() {
       </Card>
       
       <Dialog open={showUsageLogs} onOpenChange={setShowUsageLogs}>
-        <DialogContent className="bg-slate-900 border-slate-700 max-w-2xl">
+        <DialogContent size="xl" className="bg-slate-900 border-slate-700">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-slate-100">
               <Database className="w-5 h-5 text-cyan-400" />

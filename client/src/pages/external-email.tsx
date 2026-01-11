@@ -443,7 +443,7 @@ export default function ExternalEmail() {
       </Tabs>
 
       <Dialog open={!!selectedEmail} onOpenChange={() => setSelectedEmail(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent size="xl">
           {selectedEmail && (
             <>
               <DialogHeader>

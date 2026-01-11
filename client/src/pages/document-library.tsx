@@ -387,7 +387,7 @@ export default function DocumentLibrary() {
       </div>
 
       <Dialog open={!!selectedDoc && !showSignDialog && !showRequestDialog} onOpenChange={() => setSelectedDoc(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent size="xl">
           {selectedDoc && (
             <>
               <DialogHeader>

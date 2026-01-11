@@ -501,7 +501,7 @@ export default function SalesCRM() {
       </Tabs>
 
       <Dialog open={!!selectedLead} onOpenChange={() => setSelectedLead(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent size="xl">
           {selectedLead && (
             <>
               <DialogHeader>

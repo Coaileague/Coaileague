@@ -139,7 +139,7 @@ export default function PayrollGarnishmentsPage() {
               {payrollMessages.garnishments.addButton}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent size="md">
             <DialogHeader>
               <DialogTitle>{payrollMessages.garnishments.addDialogTitle}</DialogTitle>
               <DialogDescription>{payrollMessages.garnishments.addDialogDescription}</DialogDescription>
