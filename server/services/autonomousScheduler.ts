@@ -105,13 +105,27 @@ async function emitAutomationEvent(data: AutomationEventData) {
     notification: 'all',
   };
 
+  // Generate Trinity-style humanized descriptions
+  const successDescriptions = [
+    `Done! ${data.jobName} ran smoothly${data.recordsProcessed ? ` - ${data.recordsProcessed} records handled` : ''}.`,
+    `${data.jobName} just finished up${data.duration ? ` (took ${data.duration}ms)` : ''}.`,
+    `All good - ${data.jobName} completed${data.recordsProcessed ? `, processed ${data.recordsProcessed} records` : ''}.`,
+    `Finished running ${data.jobName}. Everything looks good.`,
+  ];
+  
+  const failDescriptions = [
+    `Heads up: ${data.jobName} hit a snag. Looking into it.`,
+    `${data.jobName} ran into an issue. Will investigate.`,
+    `Hmm, ${data.jobName} didn't complete. Checking what happened.`,
+  ];
+
   const event: PlatformEvent = {
     type: 'automation_completed',
     category: categoryToEventCategory[data.category] || 'feature',
     title: `${data.jobName} ${data.success ? 'Completed' : 'Failed'}`,
     description: data.success 
-      ? `Automation job "${data.jobName}" completed successfully${data.recordsProcessed ? ` - ${data.recordsProcessed} records processed` : ''}${data.duration ? ` in ${data.duration}ms` : ''}`
-      : `Automation job "${data.jobName}" failed`,
+      ? successDescriptions[Math.floor(Math.random() * successDescriptions.length)]
+      : failDescriptions[Math.floor(Math.random() * failDescriptions.length)],
     workspaceId: data.workspaceId,
     metadata: {
       jobName: data.jobName,

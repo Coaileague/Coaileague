@@ -455,15 +455,15 @@ Respond ONLY with valid JSON (no markdown, no explanations):
     const moduleList = change.affectedModules.join(', ') || 'the platform';
     switch (change.type) {
       case 'bug_fixed':
-        return `We fixed an issue that was affecting ${moduleList}. Everything should work smoothly now.`;
+        return `Fixed a hiccup in ${moduleList}. Should be running smooth now.`;
       case 'feature_added':
-        return `We added a new feature to ${moduleList}! Check it out to see what's new.`;
+        return `Just shipped something new for ${moduleList}! Worth checking out.`;
       case 'security_fix':
-        return `We made security improvements to keep your data safe. No action needed from you.`;
+        return `Tightened up security - your data stays safe. Nothing you need to do.`;
       case 'enhancement':
-        return `We improved ${moduleList} to make it work better and faster for you.`;
+        return `Boosted ${moduleList} - faster and better than before.`;
       default:
-        return `We made updates to ${moduleList} to improve your experience.`;
+        return `Quick update to ${moduleList}. Making things run smoother.`;
     }
   }
   

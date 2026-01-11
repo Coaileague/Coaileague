@@ -102,6 +102,7 @@ The Trinity Chat Interface provides direct conversational access to Trinity with
 - **Universal Trinity Loader:** ALL loading animations now use Trinity Celtic knot exclusively - replaced LoadingScreen, PageLoader, CoAIleague loader, and chatrooms loading states
 - **Mobile Header Fix:** Removed wordmark text on mobile to prevent cutoff - shows only Trinity icon for clean responsive design
 - **Trinity CSS Animations:** Added keyframes for spinSlow, shake, trinityMorph, trinitySpeaking, trinityLoading with corresponding utility classes
+- **Trinity Humanized Notifications:** All "What's New" notifications now use Trinity's conversational senior engineer voice instead of formal corporate language ("Just shipped..." instead of "We have updated...")
 - **Trinity Chat Interface Complete:** 3-mode conversational interface (Business/Personal/Integrated) with BUDDY accountability coaching, spiritual guidance options (none/general/christian), and metacognition layer for pattern recognition and consciousness continuity
 - **Business Mode with Live Data:** Real-time QuickBooks connection status, monthly revenue, invoice stats, overtime hours injected into AI prompts
 - **RBAC Enforcement:** Trinity Chat restricted to org_owner, co_owner, manager roles only
