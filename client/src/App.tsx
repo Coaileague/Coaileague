@@ -211,8 +211,7 @@ const WorkboardDashboard = lazy(() => import("@/components/workboard/WorkboardDa
 const InboxPage = lazy(() => import("@/pages/inbox"));
 import { HeaderChatButton } from "@/components/header-chat-button";
 import { ReenableChatButton } from "@/components/reenable-chat-button";
-// Lazy-loaded heavy components
-const FloatingSupportChat = lazy(() => import("@/components/floating-support-chat").then(m => ({ default: m.FloatingSupportChat })));
+// REMOVED: FloatingSupportChat - Trinity button handles all support
 import { ChatroomNotificationListener } from "@/components/chatroom-notification-listener";
 import { OnboardingWizard } from "@/components/onboarding-wizard";
 import { HeaderBillboard } from "@/components/header-billboard";
@@ -1240,9 +1239,9 @@ function AppContent() {
               </Route> {/* Individual chat room by ID - key forces remount */}
               <Route path="/chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
               <Route path="/mobile-chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
-              <Route path="/chatrooms"><Redirect to="/helpdesk" /></Route> {/* SIMPLIFIED: All chat goes to HelpDesk */}
-              <Route path="/chatroom"><Redirect to="/helpdesk" /></Route> {/* Redirect to unified HelpDesk */}
-              <Route path="/support/chatrooms"><Redirect to="/helpdesk" /></Route> {/* Redirect to unified HelpDesk */}
+              <Route path="/chatrooms" component={Chatrooms} /> {/* Org-isolated chat room discovery */}
+              <Route path="/chatroom"><Redirect to="/chatrooms" /></Route> {/* Redirect singular to plural */}
+              <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route> {/* Redirect support chatrooms */}
               <Route path="/inbox" component={InboxPage} /> {/* Internal email system */}
               <Route path="/helpai-orchestration" component={HelpAIOrchestration} /> {/* HelpAI Orchestration System */}
               
@@ -1482,8 +1481,8 @@ function AppContent() {
                 <Route path="/payroll/garnishments" component={PayrollGarnishments} />
                 <Route path="/communications"><Redirect to="/helpdesk" /></Route>
                 <Route path="/communications/onboarding" component={CommunicationsOnboarding} />
-                <Route path="/chatrooms"><Redirect to="/helpdesk" /></Route> {/* SIMPLIFIED: All chat goes to HelpDesk */}
-                <Route path="/chatroom"><Redirect to="/helpdesk" /></Route>
+                <Route path="/chatrooms" component={Chatrooms} /> {/* Org-isolated chat room discovery */}
+                <Route path="/chatroom"><Redirect to="/chatrooms" /></Route>
                 <Route path="/inbox" component={InboxPage} />
                 <Route path="/diagnostics" component={Diagnostics} />
                 <Route path="/messages" component={PrivateMessages} />
@@ -1641,11 +1640,7 @@ export default function App() {
                         </Suspense>
                         {/* Trinity AI Mascot - UNIVERSAL visibility on ALL pages including public/guest routes */}
                         <MascotRenderer />
-                        {/* Mini HelpAI Chat Bubble - ONLY for guests (not logged in) - lazy loaded */}
-                        {/* Authenticated users access HelpDesk directly via main navigation */}
-                        <Suspense fallback={null}>
-                          <FloatingSupportChat />
-                        </Suspense>
+                        {/* REMOVED: FloatingSupportChat - Trinity button handles all support */}
                         {/* Floating Trinity Button - Inside TrinityModalProvider */}
                         <FloatingTrinityButton />
                         </TrinityModalProvider>

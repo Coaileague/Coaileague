@@ -6,7 +6,7 @@
  * This ensures the server validates the user's identity before allowing notification access.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
@@ -37,13 +37,27 @@ export function useChatroomNotifications() {
   const reconnectAttemptsRef = useRef(0);
   const authenticatedRef = useRef(false);
   const MAX_RECONNECT_ATTEMPTS = 5;
+  
+  // Store setLocation in a ref to avoid effect dependency issues
+  const setLocationRef = useRef(setLocation);
+  setLocationRef.current = setLocation;
+  
+  // Stable navigate function using ref
+  const navigate = useCallback((url: string) => {
+    setLocationRef.current(url);
+  }, []);
+  
+  // Store location in a ref for the effect to use without triggering reruns
+  const locationRef = useRef(location);
+  locationRef.current = location;
 
   useEffect(() => {
     if (!user?.id) return;
     
     // CRITICAL: Skip on HelpDesk page - useChatroomWebSocket already handles chat there
     // This prevents competing WebSocket connections that cause cascading failures
-    if (location.startsWith('/helpdesk') || location.startsWith('/chat')) {
+    const currentLocation = locationRef.current;
+    if (currentLocation.startsWith('/helpdesk') || currentLocation.startsWith('/chat')) {
       console.log('[ChatroomNotifications] Skipping on HelpDesk/Chat page - avoiding connection conflict');
       return;
     }
@@ -157,7 +171,7 @@ export function useChatroomNotifications() {
 
         // Navigate if action URL provided
         if (notification.actionUrl) {
-          setTimeout(() => setLocation(notification.actionUrl!), 1500);
+          setTimeout(() => navigate(notification.actionUrl!), 1500);
         }
         return;
       }
@@ -206,5 +220,5 @@ export function useChatroomNotifications() {
         wsRef.current.close();
       }
     };
-  }, [user?.id, toast, setLocation]);
+  }, [user?.id, toast, navigate]);
 }

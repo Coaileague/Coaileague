@@ -217,7 +217,7 @@ export function FloatingSupportChat() {
             conversationId: data.conversationId,
             ticketNumber: data.ticketNumber
           }));
-          setLocation(`/chat/${data.conversationId}`);
+          setLocation(`/helpdesk/${data.conversationId}`);
         } else {
           // Guest escalation flow would go here
           alert('Please log in to connect with a live support agent.');
@@ -297,7 +297,7 @@ export function FloatingSupportChat() {
                 <Button variant="outline" onClick={() => { setShowCommandSheet(false); handleChatClick(); }} className="justify-start gap-2">
                   <Bug className="w-4 h-4" /> Report Issue
                 </Button>
-                <Button variant="outline" onClick={() => { setShowCommandSheet(false); setLocation('/chat'); }} className="justify-start gap-2">
+                <Button variant="outline" onClick={() => { setShowCommandSheet(false); setLocation('/helpdesk'); }} className="justify-start gap-2">
                   <Headset className="w-4 h-4" /> Live Support
                 </Button>
                 <Button variant="outline" onClick={() => { setShowCommandSheet(false); setLocation('/help'); }} className="justify-start gap-2">

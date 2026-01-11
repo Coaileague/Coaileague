@@ -52,7 +52,7 @@ export function ReenableChatButton() {
   };
 
   // Don't show on chat pages
-  if (location === "/chat" || location === "/mobile-chat") {
+  if (location === "/helpdesk" || location.startsWith("/helpdesk/") || location === "/chat" || location === "/mobile-chat") {
     return null;
   }
 

@@ -148,27 +148,15 @@ export const quickActionsRegistry: QuickAction[] = [
   },
   {
     id: 'live-chat',
-    label: 'Chatrooms',
+    label: 'Help Desk',
     icon: MessageSquare,
     color: 'text-blue-400',
     category: 'support',
-    desktopPath: '/chatrooms', // Unified Chatrooms
-    mobilePath: '/chatrooms', // Mobile: Same unified chatrooms
+    desktopPath: '/helpdesk', // SIMPLIFIED: All chat goes to unified HelpDesk
+    mobilePath: '/helpdesk', // Mobile: Same unified HelpDesk
     requiresAuth: true,
     testId: 'quick-chat',
-    description: 'Discover and join team chatrooms'
-  },
-  {
-    id: 'helpdesk',
-    label: 'Help Desk',
-    icon: HelpCircle,
-    color: 'text-blue-400',
-    category: 'support',
-    desktopPath: '/helpdesk5',
-    mobilePath: '/helpdesk5', // HelpDesk5 is already responsive
-    requiresAuth: true,
-    testId: 'quick-helpdesk',
-    description: 'Customer support and ticket management'
+    description: 'Live chat support and team communication'
   },
   {
     id: 'support-email',

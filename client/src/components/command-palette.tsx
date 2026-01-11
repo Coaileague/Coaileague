@@ -88,7 +88,7 @@ export function CommandPalette() {
 
   const helpResources = [
     { label: "Help Center", icon: HelpCircle, path: "/support" },
-    { label: "Live Chat Support", icon: MessageSquare, path: "/chat" },
+    { label: "Live Chat Support", icon: MessageSquare, path: "/helpdesk" },
     { label: "Contact Support", icon: Mail, path: "/contact" },
     { label: "Login Guide", icon: FileText, action: () => window.open("/docs/LOGIN_GUIDE.md", "_blank") },
     { label: "Feature Showcase", icon: Zap, action: () => window.open("/docs/FEATURES_SHOWCASE.md", "_blank") },

@@ -64,7 +64,7 @@ export function QuickActionsRibbon({
       id: 'live-chat',
       label: 'Live Chat',
       icon: MessageSquare,
-      path: '/chat',
+      path: '/helpdesk',
       badge: liveData.chatUsers || 0,
       variant: liveData.chatUsers ? 'info' : 'default',
     },

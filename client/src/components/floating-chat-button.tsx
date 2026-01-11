@@ -159,7 +159,7 @@ export function FloatingChatButton() {
   };
 
   // Don't show on chat pages - user is already in the chat!
-  if (location === "/chat" || location === "/mobile-chat") {
+  if (location === "/helpdesk" || location.startsWith("/helpdesk/") || location === "/chat" || location === "/mobile-chat") {
     return null;
   }
 

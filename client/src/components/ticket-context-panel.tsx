@@ -1,7 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { 
   User, Building2, CreditCard, FileText, ExternalLink, 
@@ -89,7 +88,7 @@ export function TicketContextPanel({
         <CardDescription>Account info and support history</CardDescription>
       </CardHeader>
 
-      <ScrollArea className="flex-1">
+      <div className="flex-1 overflow-y-auto">
         <CardContent className="space-y-6">
           {/* User Info */}
           {user && (
@@ -220,7 +219,7 @@ export function TicketContextPanel({
             )}
           </div>
         </CardContent>
-      </ScrollArea>
+      </div>
     </Card>
   );
 }

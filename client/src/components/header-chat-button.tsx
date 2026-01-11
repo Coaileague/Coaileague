@@ -78,7 +78,7 @@ export function HeaderChatButton() {
             {/* Input */}
             <div className="p-3 border-t space-y-2">
               <Button
-                onClick={() => window.location.href = '/chat'}
+                onClick={() => window.location.href = '/helpdesk'}
                 className="w-full bg-gradient-to-r from-violet-600 to-indigo-600 text-white"
                 size="sm"
                 data-testid="button-full-chat"
