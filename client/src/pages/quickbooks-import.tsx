@@ -177,6 +177,29 @@ export default function QuickBooksImportPage() {
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [savedState, setSavedState] = useState<Partial<WizardPersistState> | null>(null);
 
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const success = urlParams.get('success');
+    const error = urlParams.get('error');
+    
+    if (success === 'connected') {
+      toast({
+        title: 'QuickBooks Connected',
+        description: 'Successfully connected to QuickBooks. Proceeding to data discovery...',
+      });
+      window.history.replaceState({}, '', '/quickbooks-import');
+    } else if (error) {
+      toast({
+        title: 'Connection Failed',
+        description: error === 'missing_parameters' 
+          ? 'Missing OAuth parameters. Please try connecting again.'
+          : `QuickBooks connection failed: ${error}`,
+        variant: 'destructive',
+      });
+      window.history.replaceState({}, '', '/quickbooks-import');
+    }
+  }, [toast]);
+
   const { data: workspace } = useQuery<{ id: string; orgCode: string }>({
     queryKey: ['/api/workspace'],
   });
