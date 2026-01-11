@@ -108,7 +108,7 @@ export function ShiftApprovalModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[500px]">
+      <DialogContent size="md">
         <DialogHeader>
           <div className="flex items-center gap-3">
             {getActionIcon()}

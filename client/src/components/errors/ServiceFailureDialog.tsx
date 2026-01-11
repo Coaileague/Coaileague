@@ -130,7 +130,7 @@ export function ServiceFailureDialog({ error, isOpen, onClose, onReset }: Servic
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md" data-testid="dialog-service-failure">
+      <DialogContent size="md" data-testid="dialog-service-failure">
         {!reportSubmitted ? (
           <>
             <DialogHeader>

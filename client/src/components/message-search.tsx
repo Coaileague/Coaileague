@@ -83,7 +83,7 @@ export function MessageSearch({ roomId, trigger }: MessageSearchProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+      <DialogContent size="full" className="max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Search className="w-5 h-5 text-primary" />

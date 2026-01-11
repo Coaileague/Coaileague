@@ -252,7 +252,7 @@ export default function FlexStaffing() {
               Post New Gig
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-lg">
+          <DialogContent size="lg">
             <DialogHeader>
               <DialogTitle>Post New Gig</DialogTitle>
             </DialogHeader>
@@ -407,7 +407,7 @@ export default function FlexStaffing() {
       </Tabs>
 
       <Dialog open={!!selectedGig} onOpenChange={() => setSelectedGig(null)}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent size="xl">
           {selectedGig && (
             <>
               <DialogHeader>

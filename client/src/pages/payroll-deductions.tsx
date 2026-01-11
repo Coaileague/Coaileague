@@ -137,7 +137,7 @@ export default function PayrollDeductionsPage() {
               {payrollMessages.deductions.addButton}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-md">
+          <DialogContent size="md">
             <DialogHeader>
               <DialogTitle>{payrollMessages.deductions.addDialogTitle}</DialogTitle>
               <DialogDescription>{payrollMessages.deductions.addDialogDescription}</DialogDescription>

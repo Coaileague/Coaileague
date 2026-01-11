@@ -123,7 +123,7 @@ export function WidgetCustomizer({ userId, onSave }: WidgetCustomizerProps) {
           Customize Dashboard
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+      <DialogContent size="xl" className="max-h-[80vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings2 className="h-5 w-5" />

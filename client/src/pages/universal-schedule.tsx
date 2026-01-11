@@ -2716,7 +2716,7 @@ export default function UniversalSchedule() {
 
     {/* Escalation Matrix Dialog */}
     <Dialog open={showEscalationMatrix} onOpenChange={setShowEscalationMatrix}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent size="xl">
         <DialogHeader>
           <DialogTitle>Escalation Matrix - Shift Coverage</DialogTitle>
           <DialogDescription>

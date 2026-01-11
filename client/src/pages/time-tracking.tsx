@@ -1691,7 +1691,7 @@ export default function TimeTracking() {
 
               {/* Day Detail Modal */}
               <Dialog open={!!selectedDayDetail} onOpenChange={() => setSelectedDayDetail(null)}>
-                <DialogContent className="max-w-2xl">
+                <DialogContent size="xl">
                   <DialogHeader>
                     <DialogTitle className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white text-sm font-bold">
@@ -2445,7 +2445,7 @@ export default function TimeTracking() {
 
         {/* Clock In Dialog */}
         <Dialog open={clockInDialogOpen} onOpenChange={setClockInDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent size="xl" className="max-h-[90vh] overflow-y-auto">
             <DialogHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
               <DialogTitle>Clock In - Verification Required</DialogTitle>
               <DialogDescription className="text-white/90">
@@ -2619,7 +2619,7 @@ export default function TimeTracking() {
 
         {/* Entry Details Dialog */}
         <Dialog open={!!selectedEntry} onOpenChange={() => setSelectedEntry(null)}>
-          <DialogContent className="max-w-2xl">
+          <DialogContent size="xl">
             <DialogHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
               <DialogTitle>Timesheet Entry Details</DialogTitle>
             </DialogHeader>
@@ -2680,7 +2680,7 @@ export default function TimeTracking() {
 
         {/* Clock Out Dialog */}
         <Dialog open={clockOutDialogOpen} onOpenChange={setClockOutDialogOpen}>
-          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogContent size="xl" className="max-h-[90vh] overflow-y-auto">
             <DialogHeader className="bg-gradient-to-r from-red-600 to-rose-600 text-white -mx-6 -mt-6 px-6 py-4 rounded-t-lg">
               <DialogTitle>Clock Out - Verification Required</DialogTitle>
               <DialogDescription className="text-white/90">

@@ -90,7 +90,7 @@ export function PriorityManagerPanel({ isOpen, onClose }: PriorityManagerPanelPr
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-6xl max-h-[90vh] flex flex-col">
+      <DialogContent size="full" className="max-h-[90vh] flex flex-col">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="flex items-center gap-2">
             <Crown className="w-5 h-5 text-blue-500" />

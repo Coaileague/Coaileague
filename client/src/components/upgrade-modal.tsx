@@ -137,7 +137,7 @@ export function UpgradeModal({ isOpen, onClose, feature }: UpgradeModalProps) {
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto cad-panel">
+      <DialogContent size="full" className="max-h-[90vh] overflow-y-auto cad-panel">
         <DialogHeader>
           <div className="flex items-center gap-3 mb-2">
             <div className="p-2 rounded-md bg-[hsl(var(--cad-blue))]/10">
