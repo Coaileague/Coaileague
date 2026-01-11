@@ -101,6 +101,13 @@ const createMailboxSchema = z.object({
   signature: z.string().optional(),
 });
 
+const attachmentSchema = z.object({
+  name: z.string(),
+  url: z.string(),
+  size: z.number(),
+  type: z.string(),
+});
+
 const sendEmailSchema = z.object({
   to: z.array(z.string()),
   cc: z.array(z.string()).optional(),
@@ -111,6 +118,7 @@ const sendEmailSchema = z.object({
   priority: z.enum(["low", "normal", "high", "urgent"]).optional(),
   inReplyTo: z.string().optional(),
   sendExternal: z.boolean().optional().default(false),
+  attachments: z.array(attachmentSchema).optional(),
 });
 
 const updateEmailSchema = z.object({
@@ -587,6 +595,7 @@ router.post("/send", requireAuth, async (req: Request, res: Response) => {
       inReplyTo: validated.inReplyTo,
       threadId,
       sentAt: new Date(),
+      attachments: validated.attachments ? JSON.stringify(validated.attachments) : null,
     }).returning();
 
     await db.update(internalMailboxes)

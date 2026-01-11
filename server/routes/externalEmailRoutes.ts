@@ -61,7 +61,7 @@ export function registerExternalEmailRoutes(app: Express, requireAuth: any) {
 
       const { 
         fromEmail, toEmail, ccEmails, bccEmails, subject, bodyHtml, bodyText,
-        emailType, relatedEntityType, relatedEntityId, scheduledFor, isDraft
+        emailType, relatedEntityType, relatedEntityId, scheduledFor, isDraft, attachments
       } = req.body;
 
       const [email] = await db.insert(externalEmailsSent).values({
@@ -79,7 +79,8 @@ export function registerExternalEmailRoutes(app: Express, requireAuth: any) {
         relatedEntityId,
         scheduledFor,
         isDraft: isDraft || false,
-        status: isDraft ? 'pending' : 'pending'
+        status: isDraft ? 'pending' : 'pending',
+        attachments: attachments ? JSON.stringify(attachments) : null
       }).returning();
 
       res.json({ success: true, data: email });

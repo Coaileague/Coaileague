@@ -22785,6 +22785,9 @@ export const externalEmailsSent = pgTable("external_emails_sent", {
   scheduledFor: timestamp("scheduled_for"),
   isDraft: boolean("is_draft").default(false),
   
+  // Attachments (stored as JSON array of file references)
+  attachments: text("attachments"), // JSON array of {name, url, size, type}
+  
   createdAt: timestamp("created_at").defaultNow().notNull(),
 }, (table) => [
   index("external_emails_workspace_idx").on(table.workspaceId),

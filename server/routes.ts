@@ -3328,6 +3328,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const chatUploadsRouter = (await import('./routes/chat-uploads')).default;
   app.use('/api/chat/upload', attachWorkspaceId, chatUploadsRouter);
 
+  // Register email attachment upload routes
+  const emailAttachmentsRouter = (await import('./routes/email-attachments')).default;
+  app.use('/api/email-attachments', attachWorkspaceId, emailAttachmentsRouter);
+
   // Register AI Communications Chat Room routes (room creation, participant management, shift-based rooms)
   const chatRoomsRouter = (await import('./routes/chat-rooms')).default;
   app.use('/api/chat/rooms', attachWorkspaceIdOptional, chatRoomsRouter);

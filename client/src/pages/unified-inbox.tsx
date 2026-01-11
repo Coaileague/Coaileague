@@ -23,7 +23,7 @@ import {
   MailOpen, Clock, AlertCircle, Check, Menu, Sparkles, Wand2,
   ArrowLeft, MoreVertical, FolderOpen, Bell, ExternalLink,
   ChevronRight, Calendar, MapPin, Phone, User, Filter,
-  Briefcase, Shield, AlertTriangle, ClipboardList
+  Briefcase, Shield, AlertTriangle, ClipboardList, Paperclip, X, Download
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -33,6 +33,13 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import { format, formatDistanceToNow } from "date-fns";
+
+interface EmailAttachment {
+  name: string;
+  url: string;
+  size: number;
+  type: string;
+}
 
 interface UnifiedEmail {
   id: string;
@@ -52,6 +59,7 @@ interface UnifiedEmail {
   threadId: string | null;
   aiSummary?: string | null;
   enhancedByTrinity?: boolean;
+  attachments?: EmailAttachment[];
   senderProfile?: {
     name: string;
     role?: string;
@@ -246,6 +254,8 @@ export default function UnifiedInbox() {
   const [composeBody, setComposeBody] = useState('');
   const [isEnhancing, setIsEnhancing] = useState(false);
   const [originalBody, setOriginalBody] = useState('');
+  const [attachments, setAttachments] = useState<File[]>([]);
+  const [isUploadingAttachments, setIsUploadingAttachments] = useState(false);
 
   const { data: mailboxData, isLoading: mailboxLoading } = useQuery({
     queryKey: ['/api/internal-email/mailbox/auto-create'],
@@ -277,6 +287,7 @@ export default function UnifiedInbox() {
       ...e,
       type: 'internal' as const,
       toAddresses: e.toAddresses,
+      attachments: e.attachments ? (typeof e.attachments === 'string' ? JSON.parse(e.attachments) : e.attachments) : undefined,
     })), [internalEmailsData]);
 
   const externalEmails: UnifiedEmail[] = useMemo(() => 
@@ -295,6 +306,7 @@ export default function UnifiedInbox() {
       isRead: true,
       isStarred: false,
       status: item.email?.status || 'sent',
+      attachments: item.email?.attachments ? (typeof item.email.attachments === 'string' ? JSON.parse(item.email.attachments) : item.email.attachments) : undefined,
       threadId: null,
       enhancedByTrinity: item.email?.enhancedByTrinity,
     })), [externalEmailsData]);
@@ -342,7 +354,7 @@ export default function UnifiedInbox() {
   }), [internalEmails, externalEmails, systemEmails]);
 
   const sendEmailMutation = useMutation({
-    mutationFn: async (data: { to: string[]; cc?: string[]; subject: string; bodyText: string; bodyHtml?: string; sendExternal?: boolean }) => {
+    mutationFn: async (data: { to: string[]; cc?: string[]; subject: string; bodyText: string; bodyHtml?: string; sendExternal?: boolean; attachments?: { name: string; url: string; size: number; type: string }[] }) => {
       const isExternal = data.to.some(r => !r.endsWith('@coaileague.internal'));
       if (isExternal) {
         const res = await apiRequest('/api/external-emails', {
@@ -352,6 +364,7 @@ export default function UnifiedInbox() {
             ccEmails: data.cc || [],
             subject: data.subject,
             bodyHtml: data.bodyHtml || data.bodyText,
+            attachments: data.attachments,
           }),
           headers: { 'Content-Type': 'application/json' },
         });
@@ -362,7 +375,14 @@ export default function UnifiedInbox() {
       }
       return apiRequest('/api/internal-email/send', {
         method: 'POST',
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          to: data.to,
+          cc: data.cc,
+          subject: data.subject,
+          bodyText: data.bodyText,
+          bodyHtml: data.bodyHtml,
+          attachments: data.attachments,
+        }),
         headers: { 'Content-Type': 'application/json' },
       });
     },
@@ -443,22 +463,90 @@ export default function UnifiedInbox() {
     setComposeBody('');
     setOriginalBody('');
     setSelectedTemplate(null);
+    setAttachments([]);
     setComposeOpen(false);
   };
 
-  const handleSend = () => {
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      const maxSize = 10 * 1024 * 1024; // 10MB per file
+      const validFiles = newFiles.filter(f => {
+        if (f.size > maxSize) {
+          toast({ title: `${f.name} is too large (max 10MB)`, variant: 'destructive' });
+          return false;
+        }
+        // Prevent duplicate files
+        if (attachments.some(existing => existing.name === f.name && existing.size === f.size)) {
+          toast({ title: `${f.name} is already attached`, variant: 'destructive' });
+          return false;
+        }
+        return true;
+      });
+      setAttachments(prev => [...prev, ...validFiles]);
+    }
+  };
+
+  const removeAttachment = (index: number) => {
+    setAttachments(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const uploadAttachments = async (files: File[]): Promise<{ name: string; url: string; size: number; type: string }[]> => {
+    if (files.length === 0) return [];
+    
+    const formData = new FormData();
+    files.forEach(file => formData.append('files', file));
+    
+    const res = await fetch('/api/email-attachments/upload', {
+      method: 'POST',
+      body: formData,
+      credentials: 'include',
+    });
+    
+    if (!res.ok) {
+      throw new Error('Failed to upload attachments');
+    }
+    
+    const data = await res.json();
+    return data.attachments || [];
+  };
+
+  const handleSend = async () => {
     if (!composeTo.trim() || !composeSubject.trim()) {
       toast({ title: 'Please fill in recipient and subject', variant: 'destructive' });
       return;
     }
+    
     const recipients = composeTo.split(',').map(e => e.trim()).filter(Boolean);
     const ccRecipients = composeCc.split(',').map(e => e.trim()).filter(Boolean);
+    
+    let uploadedAttachments: { name: string; url: string; size: number; type: string }[] = [];
+    
+    if (attachments.length > 0) {
+      setIsUploadingAttachments(true);
+      try {
+        uploadedAttachments = await uploadAttachments(attachments);
+      } catch (err) {
+        toast({ title: 'Failed to upload attachments', variant: 'destructive' });
+        setIsUploadingAttachments(false);
+        return;
+      }
+      setIsUploadingAttachments(false);
+    }
+    
     sendEmailMutation.mutate({
       to: recipients,
       cc: ccRecipients.length > 0 ? ccRecipients : undefined,
       subject: composeSubject,
       bodyText: composeBody,
       bodyHtml: `<div style="white-space: pre-wrap;">${composeBody}</div>`,
+      attachments: uploadedAttachments.length > 0 ? uploadedAttachments : undefined,
     });
   };
 
@@ -717,6 +805,37 @@ export default function UnifiedInbox() {
                     <p className="whitespace-pre-wrap">{selectedEmail.bodyText}</p>
                   )}
                 </div>
+                
+                {/* Attachments Display */}
+                {selectedEmail.attachments && selectedEmail.attachments.length > 0 && (
+                  <div className="mt-6 pt-4 border-t">
+                    <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                      <Paperclip className="h-4 w-4" />
+                      Attachments ({selectedEmail.attachments.length})
+                    </h4>
+                    <div className="grid gap-2">
+                      {selectedEmail.attachments.map((attachment, idx) => (
+                        <a
+                          key={idx}
+                          href={attachment.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-3 p-3 rounded-lg border bg-muted/30 hover-elevate transition-colors"
+                          data-testid={`attachment-${idx}`}
+                        >
+                          <FileText className="h-5 w-5 text-muted-foreground shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{attachment.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatFileSize(attachment.size)} - {attachment.type.split('/')[1]?.toUpperCase() || 'FILE'}
+                            </p>
+                          </div>
+                          <Download className="h-4 w-4 text-muted-foreground shrink-0" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </ScrollArea>
             </div>
           )}
@@ -747,6 +866,31 @@ export default function UnifiedInbox() {
                     <p className="whitespace-pre-wrap">{selectedEmail.bodyText}</p>
                   )}
                 </div>
+                
+                {/* Attachments Display (Mobile) */}
+                {selectedEmail.attachments && selectedEmail.attachments.length > 0 && (
+                  <div className="mt-4 pt-4 border-t">
+                    <h4 className="text-sm font-medium mb-2 flex items-center gap-2">
+                      <Paperclip className="h-4 w-4" />
+                      Attachments ({selectedEmail.attachments.length})
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedEmail.attachments.map((attachment, idx) => (
+                        <a
+                          key={idx}
+                          href={attachment.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex items-center gap-2 p-2 rounded-md border bg-muted/30"
+                        >
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm truncate flex-1">{attachment.name}</span>
+                          <Download className="h-4 w-4" />
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </ScrollArea>
               <div className="p-4 border-t flex gap-2">
                 <Button className="flex-1" onClick={handleReply}>
@@ -871,6 +1015,60 @@ export default function UnifiedInbox() {
                   </div>
                 )}
               </div>
+              
+              {/* Attachments Section */}
+              <div>
+                <Label>Attachments</Label>
+                <div className="mt-2 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('email-file-upload')?.click()}
+                      data-testid="button-attach-file"
+                    >
+                      <Paperclip className="h-4 w-4 mr-2" />
+                      Attach Files
+                    </Button>
+                    <input
+                      id="email-file-upload"
+                      type="file"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileUpload}
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif,.txt,.csv,.zip"
+                    />
+                    <span className="text-xs text-muted-foreground">
+                      Max 10MB per file. PDF, DOC, XLS, images accepted.
+                    </span>
+                  </div>
+                  {attachments.length > 0 && (
+                    <div className="flex flex-wrap gap-2 p-3 bg-muted/50 rounded-lg">
+                      {attachments.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center gap-2 px-3 py-1.5 bg-background rounded-md border"
+                        >
+                          <FileText className="h-4 w-4 text-muted-foreground" />
+                          <span className="text-sm truncate max-w-[150px]">{file.name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatFileSize(file.size)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeAttachment(index)}
+                            className="text-muted-foreground hover:text-destructive"
+                            data-testid={`button-remove-attachment-${index}`}
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -878,11 +1076,17 @@ export default function UnifiedInbox() {
             <Button variant="outline" onClick={resetCompose}>
               Cancel
             </Button>
-            <Button onClick={handleSend} disabled={sendEmailMutation.isPending} data-testid="button-send">
-              {sendEmailMutation.isPending ? (
+            <Button 
+              onClick={handleSend} 
+              disabled={sendEmailMutation.isPending || isUploadingAttachments} 
+              data-testid="button-send"
+            >
+              {isUploadingAttachments ? (
+                <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Uploading...</>
+              ) : sendEmailMutation.isPending ? (
                 <><RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Sending...</>
               ) : (
-                <><Send className="h-4 w-4 mr-2" /> Send</>
+                <><Send className="h-4 w-4 mr-2" /> Send{attachments.length > 0 && ` (${attachments.length} file${attachments.length > 1 ? 's' : ''})`}</>
               )}
             </Button>
           </DialogFooter>
