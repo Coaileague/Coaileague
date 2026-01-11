@@ -40,6 +40,7 @@ import { platformEventBus } from '../platformEventBus';
 import { aiBrainService } from '../ai-brain/aiBrainService';
 import { trinityOrchestration } from '../trinity/trinityOrchestrationAdapter';
 import crypto from 'crypto';
+import { INTEGRATIONS } from '@shared/platformConfig';
 
 // ============================================================================
 // TYPES
@@ -127,13 +128,14 @@ export const HRIS_PROVIDERS: Record<HRISProvider, HRISProviderConfig> = {
     name: 'QuickBooks Online',
     description: 'Sync employees, payroll, and financial data with QuickBooks',
     logo: '/images/integrations/quickbooks.svg',
-    authUrl: 'https://appcenter.intuit.com/connect/oauth2',
-    tokenUrl: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
-    apiBaseUrl: 'https://quickbooks.api.intuit.com/v3',
-    requiredScopes: ['com.intuit.quickbooks.accounting', 'com.intuit.quickbooks.payroll'],
+    // Use centralized config - NO HARDCODED VALUES
+    authUrl: INTEGRATIONS.quickbooks.oauthUrls.authorization,
+    tokenUrl: INTEGRATIONS.quickbooks.oauthUrls.token,
+    apiBaseUrl: INTEGRATIONS.quickbooks.getVersionedApiBase(),
+    requiredScopes: [INTEGRATIONS.quickbooks.scopes.accounting, INTEGRATIONS.quickbooks.scopes.payroll],
     supportedEntities: ['employee', 'payroll', 'compensation'],
     webhookSupported: true,
-    rateLimitPerMinute: 500,
+    rateLimitPerMinute: INTEGRATIONS.quickbooks.rateLimits.tokensPerMinute,
   },
   gusto: {
     id: 'gusto',

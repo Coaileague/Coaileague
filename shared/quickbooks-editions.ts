@@ -9,6 +9,8 @@
  * @see https://developer.intuit.com/app/developer/qbo/docs/learn/explore-the-quickbooks-online-api/minor-versions
  */
 
+import { INTEGRATIONS } from './platformConfig';
+
 export const QB_API_VERSION = {
   REQUIRED_MINOR_VERSION: 75,
   EFFECTIVE_DATE: '2025-08-01',
@@ -521,11 +523,12 @@ export function buildApiUrl(
     minorVersion?: number;
   } = {}
 ): string {
-  const baseUrl = options.sandbox
-    ? 'https://sandbox-quickbooks.api.intuit.com'
-    : 'https://quickbooks.api.intuit.com';
+  // Use centralized config helper - handles sandbox override via resolveApiBase
+  const baseUrl = INTEGRATIONS.quickbooks.resolveApiBase({ 
+    forceSandbox: options.sandbox 
+  });
   
-  const minorVersion = options.minorVersion ?? QB_API_VERSION.REQUIRED_MINOR_VERSION;
+  const minorVersion = options.minorVersion ?? INTEGRATIONS.quickbooks.minorVersion;
   
   return `${baseUrl}/v3/company/${realmId}/${entity}?minorversion=${minorVersion}`;
 }

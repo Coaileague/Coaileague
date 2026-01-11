@@ -27,14 +27,17 @@ interface QuickBooksTokenResponse {
   realmId: string; // Company ID
 }
 
+import { INTEGRATIONS } from '@shared/platformConfig';
+
 export class QuickBooksOAuthService {
   private readonly clientId: string;
   private readonly clientSecret: string;
   private readonly redirectUri: string;
-  private readonly authorizationEndpoint = 'https://appcenter.intuit.com/connect/oauth2';
-  private readonly tokenEndpoint = 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer';
-  private readonly revokeEndpoint = 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke';
-  private readonly apiBaseUrl = 'https://quickbooks.api.intuit.com/v3';
+  // Use centralized config - NO HARDCODED VALUES
+  private readonly authorizationEndpoint = INTEGRATIONS.quickbooks.oauthUrls.authorization;
+  private readonly tokenEndpoint = INTEGRATIONS.quickbooks.oauthUrls.token;
+  private readonly revokeEndpoint = INTEGRATIONS.quickbooks.oauthUrls.revoke;
+  private readonly apiBaseUrl = INTEGRATIONS.quickbooks.getVersionedApiBase();
 
   constructor() {
     this.clientId = process.env.QUICKBOOKS_CLIENT_ID || '';

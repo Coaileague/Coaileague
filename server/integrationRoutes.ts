@@ -12,15 +12,13 @@ import { quickbooksTokenRefresh } from './services/integrations/quickbooksTokenR
 
 const router = Router();
 
-// QuickBooks environment-aware base URL helper
-// Uses QUICKBOOKS_ENVIRONMENT env var - defaults to 'sandbox' for safety
-const QUICKBOOKS_ENVIRONMENT = (process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox') as 'sandbox' | 'production';
+import { INTEGRATIONS } from '@shared/platformConfig';
+
+// QuickBooks environment-aware base URL helper using centralized config
 const getQuickBooksApiBase = () => {
-  const isProduction = QUICKBOOKS_ENVIRONMENT === 'production';
-  console.log(`[QuickBooks] Using ${isProduction ? 'PRODUCTION' : 'SANDBOX'} environment`);
-  return isProduction 
-    ? 'https://quickbooks.api.intuit.com/v3/company'
-    : 'https://sandbox-quickbooks.api.intuit.com/v3/company';
+  const env = INTEGRATIONS.quickbooks.getEnvironment();
+  console.log(`[QuickBooks] Using ${env.toUpperCase()} environment`);
+  return INTEGRATIONS.quickbooks.getCompanyApiBase();
 };
 
 /**

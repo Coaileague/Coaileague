@@ -22,10 +22,12 @@ import { enhancedLLMJudge } from '../ai-brain/llmJudgeEnhanced';
 import { auditLogger } from '../audit-logger';
 import { quickbooksRateLimiter } from '../integrations/quickbooksRateLimiter';
 import crypto from 'crypto';
+import { INTEGRATIONS } from '@shared/platformConfig';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
-const QBO_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
+// Use centralized config - NO HARDCODED URLs
+const QBO_API_BASE = INTEGRATIONS.quickbooks.getCompanyApiBase();
 
 interface QBOCustomer {
   Id: string;

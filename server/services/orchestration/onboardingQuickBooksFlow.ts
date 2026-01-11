@@ -26,6 +26,7 @@ import {
   partnerDataMappings,
 } from '@shared/schema';
 import { eq, and, ne, inArray } from 'drizzle-orm';
+import { INTEGRATIONS } from '@shared/platformConfig';
 
 export type FlowStage = 
   | 'oauth_initiated'
@@ -604,10 +605,11 @@ class OnboardingQuickBooksFlow {
 
   private buildQuickBooksAuthUrl(callbackUrl: string): string {
     const clientId = process.env.QUICKBOOKS_CLIENT_ID || '';
-    const scope = 'com.intuit.quickbooks.accounting com.intuit.quickbooks.payment';
+    // Use centralized config - NO HARDCODED VALUES
+    const scope = `${INTEGRATIONS.quickbooks.scopes.accounting} ${INTEGRATIONS.quickbooks.scopes.payment}`;
     const state = Math.random().toString(36).substr(2, 9);
     
-    return `https://appcenter.intuit.com/connect/oauth2?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${state}`;
+    return `${INTEGRATIONS.quickbooks.oauthUrls.authorization}?client_id=${clientId}&redirect_uri=${encodeURIComponent(callbackUrl)}&response_type=code&scope=${encodeURIComponent(scope)}&state=${state}`;
   }
 
   private serializeFlowData(flow: QuickBooksFlowState): Record<string, any> {

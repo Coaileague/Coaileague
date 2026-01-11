@@ -22,8 +22,10 @@ import { eq, and } from 'drizzle-orm';
 import { quickbooksOAuthService } from '../oauth/quickbooks';
 import { platformEventBus } from '../platformEventBus';
 import { auditLogger } from '../audit-logger';
+import { INTEGRATIONS } from '@shared/platformConfig';
 
-const QBO_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
+// Use centralized config - NO HARDCODED URLs
+const QBO_API_BASE = INTEGRATIONS.quickbooks.getCompanyApiBase();
 
 interface WebhookEvent {
   realmId: string;

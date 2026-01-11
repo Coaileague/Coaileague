@@ -18,6 +18,7 @@ import { db } from '../../db';
 import { systemAuditLogs, workspaces, employees } from '@shared/schema';
 import crypto from 'crypto';
 import { eq } from 'drizzle-orm';
+import { INTEGRATIONS } from '@shared/platformConfig';
 
 // ============================================================================
 // TYPES - THIRD-PARTY INTEGRATIONS
@@ -159,10 +160,11 @@ const PROVIDER_CONFIGS: Record<IntegrationProvider, {
 }> = {
   quickbooks: {
     name: 'QuickBooks Online',
-    authUrl: 'https://appcenter.intuit.com/connect/oauth2',
-    tokenUrl: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
-    apiBaseUrl: 'https://quickbooks.api.intuit.com/v3',
-    requiredScopes: ['com.intuit.quickbooks.accounting', 'com.intuit.quickbooks.payment'],
+    // Use centralized config - NO HARDCODED VALUES
+    authUrl: INTEGRATIONS.quickbooks.oauthUrls.authorization,
+    tokenUrl: INTEGRATIONS.quickbooks.oauthUrls.token,
+    apiBaseUrl: INTEGRATIONS.quickbooks.getVersionedApiBase(),
+    requiredScopes: [INTEGRATIONS.quickbooks.scopes.accounting, INTEGRATIONS.quickbooks.scopes.payment],
     dataEndpoints: {
       employees: '/company/{companyId}/query?query=select * from Employee',
       payroll: '/company/{companyId}/query?query=select * from PayrollItem',

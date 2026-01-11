@@ -71,7 +71,8 @@ async function qbRequest(
   endpoint: string,
   body?: any
 ): Promise<any> {
-  const baseUrl = `https://quickbooks.api.intuit.com/v3/company/${client.realmId}`;
+  const { INTEGRATIONS } = require('@shared/platformConfig');
+  const baseUrl = `${INTEGRATIONS.quickbooks.getCompanyApiBase()}/${client.realmId}`;
   
   const response = await fetch(`${baseUrl}${endpoint}`, {
     method,
