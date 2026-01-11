@@ -251,19 +251,30 @@ export default function QuickBooksImportPage() {
     queryKey: ['/api/integrations/connections', workspace?.id],
     queryFn: async () => {
       if (!workspace?.id) return {};
-      const res = await fetch(`/api/integrations/connections?workspaceId=${workspace.id}`, {
-        credentials: 'include',
-      });
-      if (!res.ok) throw new Error('Failed to fetch connections');
-      const connections = await res.json();
-      const qbConnection = connections.find((c: any) => c.partnerType === 'quickbooks');
-      return {
-        quickbooks: qbConnection ? {
-          connected: qbConnection.status === 'connected',
-          companyName: qbConnection.companyName,
-          lastSync: qbConnection.lastSyncAt,
-        } : undefined,
-      };
+      try {
+        const res = await fetch(`/api/integrations/connections?workspaceId=${workspace.id}`, {
+          credentials: 'include',
+        });
+        if (!res.ok) {
+          console.warn('Failed to fetch connections, checking preview endpoint');
+          return {};
+        }
+        const data = await res.json();
+        const connections = data.connections || data || [];
+        const qbConnection = Array.isArray(connections) 
+          ? connections.find((c: any) => c.partnerType === 'quickbooks')
+          : null;
+        return {
+          quickbooks: qbConnection ? {
+            connected: qbConnection.status === 'connected',
+            companyName: qbConnection.companyName || qbConnection.metadata?.companyName,
+            lastSync: qbConnection.lastSyncedAt,
+          } : undefined,
+        };
+      } catch (error) {
+        console.error('Connection fetch error:', error);
+        return {};
+      }
     },
     enabled: !!workspace?.id,
   });
@@ -554,7 +565,27 @@ export default function QuickBooksImportPage() {
         </div>
       </div>
 
-      {currentStep !== 'connect' && currentStep !== 'complete' && (
+      {isLoadingConnection && (
+        <Card>
+          <CardContent className="py-12 flex flex-col items-center justify-center gap-4">
+            <div className="relative">
+              <div className="w-16 h-16 rounded-full bg-[#2CA01C]/10 flex items-center justify-center animate-pulse">
+                <SiQuickbooks className="h-8 w-8 text-[#2CA01C]" />
+              </div>
+              <Loader2 className="absolute -top-1 -right-1 h-6 w-6 text-primary animate-spin" />
+            </div>
+            <div className="text-center">
+              <p className="text-lg font-medium">Checking QuickBooks Connection...</p>
+              <p className="text-sm text-muted-foreground mt-1">
+                Verifying your connection and preparing data discovery
+              </p>
+            </div>
+            <Progress value={33} className="w-48 h-2" />
+          </CardContent>
+        </Card>
+      )}
+
+      {!isLoadingConnection && currentStep !== 'connect' && currentStep !== 'complete' && (
         <div className="space-y-2">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Step {currentStepIndex + 1} of {STEPS.length}</span>
@@ -587,7 +618,7 @@ export default function QuickBooksImportPage() {
         </div>
       )}
 
-      {currentStep === 'connect' && (
+      {!isLoadingConnection && currentStep === 'connect' && (
         <Card>
           <CardHeader className="text-center">
             <div className="mx-auto h-16 w-16 rounded-full bg-[#2CA01C]/10 flex items-center justify-center mb-4">
@@ -635,7 +666,7 @@ export default function QuickBooksImportPage() {
         </Card>
       )}
 
-      {currentStep === 'discovery' && (
+      {!isLoadingConnection && currentStep === 'discovery' && (
         <Card>
           <CardHeader className="text-center">
             <div className="mx-auto h-16 w-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">

@@ -927,21 +927,23 @@ router.get('/connections', requireAuth, requireWorkspaceMembership('query'), asy
       return res.status(400).json({ error: 'Missing workspaceId' });
     }
 
-    // Fetch all connections for workspace
-    const connections = await db.select({
-      id: partnerConnections.id,
-      partnerType: partnerConnections.partnerType,
-      status: partnerConnections.status,
-      companyId: partnerConnections.companyId,
-      lastSyncedAt: partnerConnections.lastSyncedAt,
-      accessTokenExpiresAt: partnerConnections.accessTokenExpiresAt,
-      refreshTokenExpiresAt: partnerConnections.refreshTokenExpiresAt,
-      metadata: partnerConnections.metadata,
-    })
+    // Fetch all connections for workspace - use simpler query to avoid metadata field issues
+    const rawConnections = await db.select()
       .from(partnerConnections)
       .where(eq(partnerConnections.workspaceId, workspaceId));
 
-    // Don't expose actual tokens
+    // Map to safe response format - don't expose actual tokens
+    const connections = rawConnections.map(conn => ({
+      id: conn.id,
+      partnerType: conn.partnerType,
+      status: conn.status,
+      companyId: conn.companyId,
+      companyName: (conn.metadata as any)?.companyName || null,
+      lastSyncedAt: conn.lastSyncedAt,
+      accessTokenExpiresAt: conn.accessTokenExpiresAt,
+      refreshTokenExpiresAt: conn.refreshTokenExpiresAt,
+    }));
+
     return res.json({ connections });
   } catch (error: any) {
     console.error('Fetch connections error:', error);
