@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 export default function CommunicationFamilyPage() {
   const modules = [
     {
-      name: "Chatrooms",
+      name: "Team Chat",
       icon: MessageSquare,
       description: "Organization-wide chatrooms with real-time messaging, room management, and access control",
       features: ["Public & Private Rooms", "Member Management", "Real-time Updates", "Room Archives"],
@@ -23,11 +23,11 @@ export default function CommunicationFamilyPage() {
       color: "from-purple-500 to-pink-500"
     },
     {
-      name: "HelpDesk",
+      name: "Support",
       icon: Headphones,
-      description: "Live customer support with mobile-optimized chat interface and ticket management",
-      features: ["Live Chat", "Ticket System", "Mobile Interface", "Support Analytics"],
-      url: "/chat",
+      description: "Get help via knowledge base, FAQ, and ticket system with Trinity AI assistance",
+      features: ["Knowledge Base", "Ticket System", "FAQ", "Trinity AI Help"],
+      url: "/support",
       color: "from-primary to-teal-500"
     }
   ];
@@ -49,7 +49,7 @@ export default function CommunicationFamilyPage() {
             Connect your entire organization with powerful communication tools designed for modern workforces
           </p>
           <Badge variant="outline" className="text-sm px-4 py-1">
-            3 Modules
+            Communication Hub
           </Badge>
         </div>
 

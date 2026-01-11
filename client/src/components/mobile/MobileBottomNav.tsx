@@ -136,7 +136,7 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
   // Items moved to More menu
   const menuItems = [
     { icon: Mail, label: "Inbox", href: "/inbox" },
-    { icon: HelpCircle, label: "Help", href: "/helpdesk" },
+    { icon: HelpCircle, label: "Help", href: "/support" },
     { icon: User, label: "Profile", href: "/profile" },
     { icon: Settings, label: "Settings", href: "/settings" },
   ];

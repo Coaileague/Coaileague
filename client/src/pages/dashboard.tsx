@@ -426,15 +426,15 @@ export default function Dashboard() {
             </CardHeader>
           </Card>
 
-          {/* Support & Help Desk */}
+          {/* Support & Communication */}
           <section className="rounded-2xl bg-white/95 backdrop-blur-sm border-2 border-gray-200 shadow-md p-4 mb-4">
             <div className="text-xs tracking-wide text-blue-600 font-semibold mb-3 uppercase">
-              Support & Helpdesk
+              Support & Communication
             </div>
             <div className="grid gap-3 grid-cols-2">
-              <FeatureCard icon={MessageCircle} label="Live Chat" href="/chat" />
-              <FeatureCard icon={HelpCircle} label="Help Desk" href="/chat" />
-              <FeatureCard icon={Mail} label="Support" href="/support" />
+              <FeatureCard icon={MessageCircle} label="Team Chat" href="/chatrooms" />
+              <FeatureCard icon={HelpCircle} label="Get Help" href="/support" />
+              <FeatureCard icon={Mail} label="Contact" href="/contact" />
               {isStaff && <FeatureCard icon={Shield} label="Admin" href="/support/console" />}
             </div>
           </section>

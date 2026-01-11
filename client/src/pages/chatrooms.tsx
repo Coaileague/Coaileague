@@ -15,7 +15,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { 
-  MessageCircle, Plus, Search, Loader2, ArrowLeft, Headphones,
+  MessageCircle, Plus, Search, Loader2, ArrowLeft,
   Users, Clock, Image, Camera, FileText, LogIn, LogOut
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -67,23 +67,7 @@ const normalizeRoom = (room: any): ChatRoom => {
   };
 };
 
-const DEFAULT_HELPDESK_ROOM: ChatRoom = {
-  roomId: 'helpdesk',
-  id: 'helpdesk',
-  name: 'Help Desk',
-  subject: 'Help Desk',
-  slug: 'helpdesk',
-  type: 'support',
-  conversationType: 'dm_support',
-  participantsCount: 2,
-  status: 'open',
-  isParticipant: false,
-  visibility: 'public',
-  isPlatformOwned: true,
-  lastMessageAt: new Date().toISOString(),
-  lastMessage: 'Tap to chat with Trinity AI',
-  unreadCount: 0,
-};
+// HelpDesk removed - org chatrooms only
 
 function CreateRoomDialog({ open, onOpenChange, onSuccess }: { open: boolean; onOpenChange: (o: boolean) => void; onSuccess: () => void }) {
   const { toast } = useToast();
@@ -174,18 +158,10 @@ function CreateRoomDialog({ open, onOpenChange, onSuccess }: { open: boolean; on
 }
 
 function ConversationItem({ room, onClick, showDetails = false }: { room: ChatRoom; onClick: () => void; showDetails?: boolean }) {
-  const isHelpDesk = room.slug === 'helpdesk';
   const hasUnread = (room.unreadCount || 0) > 0;
   const isShiftRoom = room.isShiftRoom || room.conversationType === 'shift_chat';
   
   const getAvatar = () => {
-    if (isHelpDesk) {
-      return (
-        <div className="w-12 h-12 rounded-full bg-primary flex items-center justify-center shrink-0">
-          <Headphones className="h-6 w-6 text-primary-foreground" />
-        </div>
-      );
-    }
     if (isShiftRoom) {
       return (
         <div className="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center shrink-0">
@@ -237,7 +213,7 @@ function ConversationItem({ room, onClick, showDetails = false }: { room: ChatRo
         </div>
         <div className="flex items-center justify-between gap-2 mt-0.5">
           <p className={`text-sm truncate ${hasUnread ? 'text-foreground font-medium' : 'text-muted-foreground'}`}>
-            {room.lastMessage || (isHelpDesk ? 'Tap to chat with Trinity AI' : 'No messages yet')}
+            {room.lastMessage || 'No messages yet'}
           </p>
           <div className="flex items-center gap-2 shrink-0">
             {showDetails && room.participantsCount && (
@@ -259,7 +235,6 @@ function ConversationItem({ room, onClick, showDetails = false }: { room: ChatRo
 }
 
 function DesktopRoomCard({ room, onClick, isActive }: { room: ChatRoom; onClick: () => void; isActive?: boolean }) {
-  const isHelpDesk = room.slug === 'helpdesk';
   const isShiftRoom = room.isShiftRoom || room.conversationType === 'shift_chat';
   const hasUnread = (room.unreadCount || 0) > 0;
 
@@ -272,9 +247,8 @@ function DesktopRoomCard({ room, onClick, isActive }: { room: ChatRoom; onClick:
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            {isHelpDesk && <Headphones className="h-4 w-4 text-primary" />}
             {isShiftRoom && <Clock className="h-4 w-4 text-amber-500" />}
-            {!isHelpDesk && !isShiftRoom && <Users className="h-4 w-4 text-muted-foreground" />}
+            {!isShiftRoom && <Users className="h-4 w-4 text-muted-foreground" />}
             <CardTitle className="text-sm">{room.name}</CardTitle>
           </div>
           {hasUnread && (
@@ -284,7 +258,7 @@ function DesktopRoomCard({ room, onClick, isActive }: { room: ChatRoom; onClick:
       </CardHeader>
       <CardContent className="pt-0">
         <p className="text-xs text-muted-foreground truncate">
-          {room.lastMessage || (isHelpDesk ? 'Chat with Trinity AI' : 'No messages')}
+          {room.lastMessage || 'No messages'}
         </p>
         <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
           <span className="flex items-center gap-1">
@@ -324,15 +298,10 @@ export default function Chatrooms() {
   const filteredRooms = useMemo(() => {
     let normalized = (roomsData?.rooms || []).map(normalizeRoom);
     
-    const hasHelpDesk = normalized.some(r => r.slug === 'helpdesk' || r.id === 'helpdesk');
-    if (!hasHelpDesk) {
-      normalized = [DEFAULT_HELPDESK_ROOM, ...normalized];
-    }
-    
     // For non-support roles, show rooms they're participants of or open rooms
     if (!hasSupportRole) {
       normalized = normalized.filter((r: ChatRoom) => 
-        r.slug === 'helpdesk' || r.isParticipant || r.status === 'open'
+        r.isParticipant || r.status === 'open'
       );
     }
 
@@ -344,10 +313,8 @@ export default function Chatrooms() {
       });
     }
 
-    // Sort: Help Desk first, then by last message time
+    // Sort by last message time
     normalized.sort((a, b) => {
-      if (a.slug === 'helpdesk') return -1;
-      if (b.slug === 'helpdesk') return 1;
       const aTime = a.lastMessageAt ? new Date(a.lastMessageAt).getTime() : 0;
       const bTime = b.lastMessageAt ? new Date(b.lastMessageAt).getTime() : 0;
       return bTime - aTime;
@@ -358,12 +325,8 @@ export default function Chatrooms() {
 
   const handleOpenChat = (room: ChatRoom) => {
     const roomId = room.id || room.roomId;
-    if (room.slug === 'helpdesk' || roomId === 'helpdesk') {
-      setLocation('/helpdesk');
-    } else {
-      // Navigate to individual chat room by ID
-      setLocation(`/helpdesk/${roomId}`);
-    }
+    // Navigate to chatroom page - use dedicated chat view
+    setLocation(`/chatrooms/${roomId}`);
   };
 
   // Mobile WhatsApp-style layout

@@ -147,27 +147,40 @@ export const quickActionsRegistry: QuickAction[] = [
     description: 'Manage support tickets and customer requests'
   },
   {
-    id: 'live-chat',
-    label: 'Help Desk',
+    id: 'report-bug',
+    label: 'Report a Bug',
+    icon: AlertCircle,
+    color: 'text-red-500',
+    category: 'support',
+    desktopPath: '/support#report-bug', // Opens feedback form
+    mobilePath: '/support#report-bug',
+    requiresAuth: false,
+    testId: 'quick-report-bug',
+    description: 'Report a bug or issue to our support team',
+    isHashAnchor: true,
+  },
+  {
+    id: 'org-chatrooms',
+    label: 'Team Chat',
     icon: MessageSquare,
     color: 'text-blue-400',
     category: 'support',
-    desktopPath: '/helpdesk', // SIMPLIFIED: All chat goes to unified HelpDesk
-    mobilePath: '/helpdesk', // Mobile: Same unified HelpDesk
+    desktopPath: '/chatrooms',
+    mobilePath: '/chatrooms',
     requiresAuth: true,
     testId: 'quick-chat',
-    description: 'Live chat support and team communication'
+    description: 'Internal team communication'
   },
   {
     id: 'support-email',
-    label: 'Support Email',
+    label: 'Contact Support',
     icon: Mail,
     color: 'text-primary',
     category: 'support',
-    desktopPath: '/contact',
+    desktopPath: '/support',
     isExternal: false,
     testId: 'quick-email',
-    description: 'Contact support via email'
+    description: 'Contact support via email or ticket'
   },
 
   // ========================================
