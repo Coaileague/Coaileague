@@ -6,10 +6,9 @@
  * This ensures the server validates the user's identity before allowing notification access.
  */
 
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useToast } from '@/hooks/use-toast';
-import { useLocation } from 'wouter';
 
 interface ChatroomNotification {
   type: 'new_chatroom_message' | 'user_added_to_chatroom' | 'chatroom_invitation' | 'notification_new' | 'notifications_subscribed' | 'error';
@@ -30,7 +29,6 @@ interface ChatroomNotification {
 export function useChatroomNotifications() {
   const { user } = useAuth();
   const { toast } = useToast();
-  const [location, setLocation] = useLocation();
   const wsRef = useRef<WebSocket | null>(null);
   const lastNotificationRef = useRef<Map<string, number>>(new Map());
   const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -38,29 +36,15 @@ export function useChatroomNotifications() {
   const authenticatedRef = useRef(false);
   const MAX_RECONNECT_ATTEMPTS = 5;
   
-  // Store setLocation in a ref to avoid effect dependency issues
-  const setLocationRef = useRef(setLocation);
-  setLocationRef.current = setLocation;
-  
-  // Stable navigate function using ref
-  const navigate = useCallback((url: string) => {
-    setLocationRef.current(url);
-  }, []);
-  
-  // Store location in a ref for the effect to use without triggering reruns
-  const locationRef = useRef(location);
-  locationRef.current = location;
+  // Toast ref to avoid dependency issues
+  const toastRef = useRef(toast);
+  toastRef.current = toast;
 
   useEffect(() => {
     if (!user?.id) return;
     
-    // CRITICAL: Skip on HelpDesk page - useChatroomWebSocket already handles chat there
-    // This prevents competing WebSocket connections that cause cascading failures
-    const currentLocation = locationRef.current;
-    if (currentLocation.startsWith('/helpdesk') || currentLocation.startsWith('/chat')) {
-      console.log('[ChatroomNotifications] Skipping on HelpDesk/Chat page - avoiding connection conflict');
-      return;
-    }
+    // NOTE: Location check moved to ChatroomNotificationListener component level
+    // This hook should NOT be called on HelpDesk/Chat pages
 
     // Get workspace ID from user context
     const workspaceId = (user as any)?.currentWorkspaceId || (user as any)?.workspaceId || (user as any)?.defaultWorkspaceId;
@@ -164,14 +148,14 @@ export function useChatroomNotifications() {
         if (lastTime && Date.now() - lastTime < 2000) return;
         lastNotificationRef.current.set(key, Date.now());
 
-        toast({
+        toastRef.current({
           title: notification.title,
           description: notification.message,
         });
 
         // Navigate if action URL provided
         if (notification.actionUrl) {
-          setTimeout(() => navigate(notification.actionUrl!), 1500);
+          setTimeout(() => window.location.href = notification.actionUrl!, 1500);
         }
         return;
       }
@@ -191,7 +175,7 @@ export function useChatroomNotifications() {
           return;
         }
 
-        toast({
+        toastRef.current({
           title: data.chatroomName || 'New Message',
           description: data.messagePreview || `${data.senderName} sent a message`,
         });
@@ -203,7 +187,7 @@ export function useChatroomNotifications() {
         if (lastTime && Date.now() - lastTime < 5000) return;
         lastNotificationRef.current.set(key, Date.now());
 
-        toast({
+        toastRef.current({
           title: `Added to ${data.chatroomName || 'Chatroom'}`,
           description: 'You\'ve been added to a new conversation',
         });
@@ -220,5 +204,5 @@ export function useChatroomNotifications() {
         wsRef.current.close();
       }
     };
-  }, [user?.id, toast, navigate]);
+  }, [user?.id]);
 }
