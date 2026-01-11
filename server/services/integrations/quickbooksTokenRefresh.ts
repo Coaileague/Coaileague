@@ -10,7 +10,7 @@
  * - Refresh threshold: 15 minutes before access token expiry
  * 
  * Features:
- * - Centralized token vault with encryption
+ * - Uses partner_connections table for credential storage
  * - Proactive refresh scheduling
  * - Retry with exponential backoff on failures
  * - Event bus notifications for token status changes
@@ -21,20 +21,20 @@
 
 import { db } from '../../db';
 import { eq, lt, and, sql } from 'drizzle-orm';
+import { partnerConnections } from '@shared/schema';
 import { platformEventBus } from '../platformEventBus';
 import { quickbooksDiscovery } from './quickbooksDiscovery';
 
 interface StoredCredentials {
   id: string;
   workspaceId: string;
-  realmId: string;
+  realmId: string | null;
   accessToken: string;
-  refreshToken: string;
-  expiresAt: Date;
-  refreshTokenExpiresAt: Date;
-  lastRefreshed: Date;
-  failedAttempts: number;
-  isActive: boolean;
+  refreshToken: string | null;
+  expiresAt: Date | null;
+  refreshTokenExpiresAt: Date | null;
+  status: string;
+  metadata: Record<string, any> | null;
 }
 
 interface RefreshResult {
@@ -60,7 +60,7 @@ class QuickBooksTokenRefreshDaemon {
       return;
     }
     
-    console.log('[QB TokenRefresh] Starting token refresh daemon');
+    console.log('[QB TokenRefresh] Starting token refresh daemon (using partner_connections)');
     this.isRunning = true;
     
     await this.checkAndRefreshTokens();
@@ -88,7 +88,7 @@ class QuickBooksTokenRefreshDaemon {
         return;
       }
       
-      console.log(`[QB TokenRefresh] Found ${expiringCredentials.length} credentials needing refresh`);
+      console.log(`[QB TokenRefresh] Found ${expiringCredentials.length} QuickBooks connections needing refresh`);
       
       for (const creds of expiringCredentials) {
         await this.refreshCredentials(creds);
@@ -102,25 +102,31 @@ class QuickBooksTokenRefreshDaemon {
     const threshold = new Date(Date.now() + this.REFRESH_THRESHOLD_MS);
     
     try {
-      const results = await db.execute(
-        sql`SELECT 
-          id,
-          workspace_id as "workspaceId",
-          realm_id as "realmId",
-          access_token as "accessToken",
-          refresh_token as "refreshToken",
-          expires_at as "expiresAt",
-          refresh_token_expires_at as "refreshTokenExpiresAt",
-          last_refreshed as "lastRefreshed",
-          failed_attempts as "failedAttempts",
-          is_active as "isActive"
-        FROM quickbooks_credentials
-        WHERE is_active = true
-          AND expires_at < ${threshold.toISOString()}
-          AND failed_attempts < ${this.MAX_RETRY_ATTEMPTS}`
+      const results = await db.select({
+        id: partnerConnections.id,
+        workspaceId: partnerConnections.workspaceId,
+        realmId: partnerConnections.realmId,
+        accessToken: partnerConnections.accessToken,
+        refreshToken: partnerConnections.refreshToken,
+        expiresAt: partnerConnections.expiresAt,
+        refreshTokenExpiresAt: partnerConnections.refreshTokenExpiresAt,
+        status: partnerConnections.status,
+        metadata: partnerConnections.metadata,
+      })
+      .from(partnerConnections)
+      .where(
+        and(
+          eq(partnerConnections.partnerType, 'quickbooks'),
+          eq(partnerConnections.status, 'connected'),
+          lt(partnerConnections.expiresAt, threshold)
+        )
       );
       
-      return (results.rows || []) as StoredCredentials[];
+      // Filter out connections that have exceeded max retry attempts
+      return results.filter(cred => {
+        const failedAttempts = (cred.metadata as any)?.failedRefreshAttempts || 0;
+        return failedAttempts < this.MAX_RETRY_ATTEMPTS;
+      }) as StoredCredentials[];
     } catch (error) {
       console.warn('[QB TokenRefresh] Error fetching expiring credentials:', error);
       return [];
@@ -129,8 +135,15 @@ class QuickBooksTokenRefreshDaemon {
   
   private async refreshCredentials(creds: StoredCredentials): Promise<RefreshResult> {
     try {
-      const refreshTokenExpiry = new Date(creds.refreshTokenExpiresAt);
-      if (refreshTokenExpiry < new Date()) {
+      if (!creds.refreshToken) {
+        console.warn(`[QB TokenRefresh] No refresh token for workspace ${creds.workspaceId}`);
+        return {
+          success: false,
+          error: 'No refresh token available',
+        };
+      }
+      
+      if (creds.refreshTokenExpiresAt && new Date(creds.refreshTokenExpiresAt) < new Date()) {
         console.warn(`[QB TokenRefresh] Refresh token expired for workspace ${creds.workspaceId}`);
         
         platformEventBus.publish({
@@ -145,7 +158,7 @@ class QuickBooksTokenRefreshDaemon {
           },
         });
         
-        await this.markCredentialsInactive(creds.id);
+        await this.markConnectionExpired(creds.id);
         
         return {
           success: false,
@@ -185,9 +198,10 @@ class QuickBooksTokenRefreshDaemon {
         const errorText = await response.text();
         console.error(`[QB TokenRefresh] Token refresh failed for workspace ${creds.workspaceId}:`, errorText);
         
-        await this.incrementFailedAttempts(creds.id, creds.failedAttempts + 1);
+        const failedAttempts = ((creds.metadata as any)?.failedRefreshAttempts || 0) + 1;
+        await this.incrementFailedAttempts(creds.id, failedAttempts, creds.metadata);
         
-        const retryDelay = this.BASE_RETRY_DELAY_MS * Math.pow(2, creds.failedAttempts);
+        const retryDelay = this.BASE_RETRY_DELAY_MS * Math.pow(2, failedAttempts - 1);
         
         return {
           success: false,
@@ -199,13 +213,16 @@ class QuickBooksTokenRefreshDaemon {
       const tokens = await response.json();
       
       const newExpiresAt = new Date(Date.now() + tokens.expires_in * 1000);
-      const newRefreshTokenExpiresAt = new Date(Date.now() + 100 * 24 * 60 * 60 * 1000); // 100 days
+      const newRefreshTokenExpiresAt = tokens.refresh_token 
+        ? new Date(Date.now() + 100 * 24 * 60 * 60 * 1000) // 100 days
+        : creds.refreshTokenExpiresAt;
       
       await this.updateCredentials(creds.id, {
         accessToken: tokens.access_token,
         refreshToken: tokens.refresh_token || creds.refreshToken,
         expiresAt: newExpiresAt,
-        refreshTokenExpiresAt: tokens.refresh_token ? newRefreshTokenExpiresAt : creds.refreshTokenExpiresAt,
+        refreshTokenExpiresAt: newRefreshTokenExpiresAt,
+        metadata: creds.metadata,
       });
       
       console.log(`[QB TokenRefresh] Successfully refreshed token for workspace ${creds.workspaceId}`);
@@ -222,20 +239,25 @@ class QuickBooksTokenRefreshDaemon {
         },
       });
       
+      const updatedCreds: StoredCredentials = {
+        ...creds,
+        accessToken: tokens.access_token,
+        refreshToken: tokens.refresh_token || creds.refreshToken,
+        expiresAt: newExpiresAt,
+        refreshTokenExpiresAt: newRefreshTokenExpiresAt,
+      };
+      
+      this.credentialsCache.set(creds.workspaceId, updatedCreds);
+      
       return {
         success: true,
-        credentials: {
-          ...creds,
-          accessToken: tokens.access_token,
-          refreshToken: tokens.refresh_token || creds.refreshToken,
-          expiresAt: newExpiresAt,
-          failedAttempts: 0,
-        },
+        credentials: updatedCreds,
       };
     } catch (error: any) {
       console.error(`[QB TokenRefresh] Error refreshing token for workspace ${creds.workspaceId}:`, error);
       
-      await this.incrementFailedAttempts(creds.id, creds.failedAttempts + 1);
+      const failedAttempts = ((creds.metadata as any)?.failedRefreshAttempts || 0) + 1;
+      await this.incrementFailedAttempts(creds.id, failedAttempts, creds.metadata);
       
       return {
         success: false,
@@ -248,80 +270,120 @@ class QuickBooksTokenRefreshDaemon {
     id: string,
     updates: {
       accessToken: string;
-      refreshToken: string;
-      expiresAt: Date;
-      refreshTokenExpiresAt: Date;
+      refreshToken: string | null;
+      expiresAt: Date | null;
+      refreshTokenExpiresAt: Date | null;
+      metadata: Record<string, any> | null;
     }
   ): Promise<void> {
     try {
-      await db.execute(
-        sql`UPDATE quickbooks_credentials
-        SET 
-          access_token = ${updates.accessToken},
-          refresh_token = ${updates.refreshToken},
-          expires_at = ${updates.expiresAt.toISOString()},
-          refresh_token_expires_at = ${updates.refreshTokenExpiresAt.toISOString()},
-          last_refreshed = NOW(),
-          failed_attempts = 0
-        WHERE id = ${id}`
-      );
+      // First fetch current metadata to perform deep merge
+      const [current] = await db.select({ metadata: partnerConnections.metadata })
+        .from(partnerConnections)
+        .where(eq(partnerConnections.id, id))
+        .limit(1);
+      
+      // Deep merge: preserve existing keys, update token refresh fields
+      const existingMetadata = (current?.metadata as Record<string, any>) || {};
+      const newMetadata = { 
+        ...existingMetadata,
+        ...(updates.metadata || {}),
+        failedRefreshAttempts: 0, // Reset on success
+        lastTokenRefresh: new Date().toISOString(),
+      };
+      
+      await db.update(partnerConnections)
+        .set({
+          accessToken: updates.accessToken,
+          refreshToken: updates.refreshToken,
+          expiresAt: updates.expiresAt,
+          refreshTokenExpiresAt: updates.refreshTokenExpiresAt,
+          metadata: newMetadata,
+          lastSyncAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(partnerConnections.id, id));
     } catch (error) {
       console.error('[QB TokenRefresh] Failed to update credentials:', error);
     }
   }
   
-  private async incrementFailedAttempts(id: string, attempts: number): Promise<void> {
+  private async incrementFailedAttempts(id: string, attempts: number, passedMetadata: Record<string, any> | null): Promise<void> {
     try {
-      await db.execute(
-        sql`UPDATE quickbooks_credentials
-        SET failed_attempts = ${attempts}
-        WHERE id = ${id}`
-      );
+      // First fetch current metadata to perform deep merge
+      const [current] = await db.select({ metadata: partnerConnections.metadata })
+        .from(partnerConnections)
+        .where(eq(partnerConnections.id, id))
+        .limit(1);
+      
+      // Deep merge: preserve existing keys, update failure tracking fields
+      const existingMetadata = (current?.metadata as Record<string, any>) || {};
+      const newMetadata = {
+        ...existingMetadata,
+        ...(passedMetadata || {}),
+        failedRefreshAttempts: attempts,
+        lastFailedAttempt: new Date().toISOString(),
+      };
+      
+      await db.update(partnerConnections)
+        .set({
+          metadata: newMetadata,
+          lastErrorAt: new Date(),
+          lastError: `Token refresh failed (attempt ${attempts}/${this.MAX_RETRY_ATTEMPTS})`,
+          updatedAt: new Date(),
+        })
+        .where(eq(partnerConnections.id, id));
     } catch (error) {
       console.error('[QB TokenRefresh] Failed to update failed attempts:', error);
     }
   }
   
-  private async markCredentialsInactive(id: string): Promise<void> {
+  private async markConnectionExpired(id: string): Promise<void> {
     try {
-      await db.execute(
-        sql`UPDATE quickbooks_credentials
-        SET is_active = false
-        WHERE id = ${id}`
-      );
+      await db.update(partnerConnections)
+        .set({
+          status: 'expired',
+          lastErrorAt: new Date(),
+          lastError: 'Refresh token expired - reauthorization required',
+          updatedAt: new Date(),
+        })
+        .where(eq(partnerConnections.id, id));
     } catch (error) {
-      console.error('[QB TokenRefresh] Failed to mark credentials inactive:', error);
+      console.error('[QB TokenRefresh] Failed to mark connection expired:', error);
     }
   }
   
   async forceRefresh(workspaceId: string): Promise<RefreshResult> {
     try {
-      const result = await db.execute(
-        sql`SELECT 
-          id,
-          workspace_id as "workspaceId",
-          realm_id as "realmId",
-          access_token as "accessToken",
-          refresh_token as "refreshToken",
-          expires_at as "expiresAt",
-          refresh_token_expires_at as "refreshTokenExpiresAt",
-          last_refreshed as "lastRefreshed",
-          failed_attempts as "failedAttempts",
-          is_active as "isActive"
-        FROM quickbooks_credentials
-        WHERE workspace_id = ${workspaceId}
-          AND is_active = true
-        LIMIT 1`
-      );
+      const [connection] = await db.select({
+        id: partnerConnections.id,
+        workspaceId: partnerConnections.workspaceId,
+        realmId: partnerConnections.realmId,
+        accessToken: partnerConnections.accessToken,
+        refreshToken: partnerConnections.refreshToken,
+        expiresAt: partnerConnections.expiresAt,
+        refreshTokenExpiresAt: partnerConnections.refreshTokenExpiresAt,
+        status: partnerConnections.status,
+        metadata: partnerConnections.metadata,
+      })
+      .from(partnerConnections)
+      .where(
+        and(
+          eq(partnerConnections.workspaceId, workspaceId),
+          eq(partnerConnections.partnerType, 'quickbooks'),
+          eq(partnerConnections.status, 'connected')
+        )
+      )
+      .limit(1);
       
-      if (!result.rows || result.rows.length === 0) {
+      if (!connection) {
         return {
           success: false,
-          error: 'No active QuickBooks credentials found for workspace',
+          error: 'No active QuickBooks connection found for workspace',
         };
       }
       
-      return this.refreshCredentials(result.rows[0] as StoredCredentials);
+      return this.refreshCredentials(connection as StoredCredentials);
     } catch (error: any) {
       return {
         success: false,
@@ -332,36 +394,40 @@ class QuickBooksTokenRefreshDaemon {
   
   async getCredentials(workspaceId: string): Promise<StoredCredentials | null> {
     const cached = this.credentialsCache.get(workspaceId);
-    if (cached && cached.expiresAt > new Date()) {
+    if (cached && cached.expiresAt && new Date(cached.expiresAt) > new Date()) {
       return cached;
     }
     
     try {
-      const result = await db.execute(
-        sql`SELECT 
-          id,
-          workspace_id as "workspaceId",
-          realm_id as "realmId",
-          access_token as "accessToken",
-          refresh_token as "refreshToken",
-          expires_at as "expiresAt",
-          refresh_token_expires_at as "refreshTokenExpiresAt",
-          last_refreshed as "lastRefreshed",
-          failed_attempts as "failedAttempts",
-          is_active as "isActive"
-        FROM quickbooks_credentials
-        WHERE workspace_id = ${workspaceId}
-          AND is_active = true
-        LIMIT 1`
-      );
+      const [connection] = await db.select({
+        id: partnerConnections.id,
+        workspaceId: partnerConnections.workspaceId,
+        realmId: partnerConnections.realmId,
+        accessToken: partnerConnections.accessToken,
+        refreshToken: partnerConnections.refreshToken,
+        expiresAt: partnerConnections.expiresAt,
+        refreshTokenExpiresAt: partnerConnections.refreshTokenExpiresAt,
+        status: partnerConnections.status,
+        metadata: partnerConnections.metadata,
+      })
+      .from(partnerConnections)
+      .where(
+        and(
+          eq(partnerConnections.workspaceId, workspaceId),
+          eq(partnerConnections.partnerType, 'quickbooks'),
+          eq(partnerConnections.status, 'connected')
+        )
+      )
+      .limit(1);
       
-      if (!result.rows || result.rows.length === 0) {
+      if (!connection) {
         return null;
       }
       
-      const creds = result.rows[0] as StoredCredentials;
+      const creds = connection as StoredCredentials;
       
-      if (new Date(creds.expiresAt) < new Date(Date.now() + this.REFRESH_THRESHOLD_MS)) {
+      // Check if token needs refresh
+      if (creds.expiresAt && new Date(creds.expiresAt) < new Date(Date.now() + this.REFRESH_THRESHOLD_MS)) {
         const refreshResult = await this.refreshCredentials(creds);
         if (refreshResult.success && refreshResult.credentials) {
           this.credentialsCache.set(workspaceId, refreshResult.credentials);

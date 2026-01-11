@@ -2481,6 +2481,12 @@ export const timeEntries = pgTable("time_entries", {
   payrolledAt: timestamp("payrolled_at"), // When included in payroll
   billableToClient: boolean("billable_to_client").default(true),
 
+  // QuickBooks TimeActivity Integration - Bidirectional sync support
+  quickbooksTimeActivityId: varchar("quickbooks_time_activity_id"), // QB TimeActivity ID after sync
+  quickbooksSyncStatus: varchar("quickbooks_sync_status").default("pending"), // pending, synced, error, orphaned
+  quickbooksLastSync: timestamp("quickbooks_last_sync"), // Last successful sync timestamp
+  quickbooksSyncToken: varchar("quickbooks_sync_token"), // QB SyncToken for change detection
+
   notes: text("notes"),
 
   createdAt: timestamp("created_at").defaultNow(),
@@ -2494,6 +2500,8 @@ export const timeEntries = pgTable("time_entries", {
   index("time_entries_clock_in_idx").on(table.clockIn),
   index("time_entries_invoice_idx").on(table.invoiceId),
   index("time_entries_workspace_employee_idx").on(table.workspaceId, table.employeeId, table.clockIn),
+  index("time_entries_qb_time_activity_idx").on(table.quickbooksTimeActivityId),
+  index("time_entries_qb_sync_status_idx").on(table.quickbooksSyncStatus),
 ]);
 
 export const insertTimeEntrySchema = createInsertSchema(timeEntries).omit({

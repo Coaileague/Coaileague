@@ -39,6 +39,7 @@ import { trinitySelfAwarenessService } from './trinitySelfAwarenessService';
 import { trinityThoughtEngine } from './trinityThoughtEngine';
 import { TRINITY_PERSONA, PERSONA_SYSTEM_INSTRUCTION } from './trinityPersona';
 import { trinityContentGuardrails, GuardrailStatus } from './trinityContentGuardrails';
+import { trinityQuickBooksSnapshot } from './trinityQuickBooksSnapshot';
 
 // ============================================================================
 // TYPES
@@ -121,8 +122,12 @@ You have direct access to this organization's business data including:
 - Payroll processing and labor cost analysis
 - Profit margins per client and per shift
 - Overtime trends and compliance violations
-${ctx.quickbooksConnected ? '- QuickBooks financial data (revenue, expenses, accounts receivable)' : ''}
+${ctx.quickbooksConnected ? '- QuickBooks financial data (revenue, expenses, accounts receivable, AR aging)' : ''}
 - Historical performance data
+${ctx.overdueInvoiceCount > 0 ? `- ALERT: ${ctx.overdueInvoiceCount} overdue invoices need attention` : ''}
+${ctx.hoursReconciliation?.status === 'CRITICAL' ? `- ALERT: Hours variance of ${ctx.hoursReconciliation.variancePercentage?.toFixed(1)}% detected` : ''}
+
+${ctx.financialContext ? `DETAILED FINANCIAL SNAPSHOT:\n${ctx.financialContext}` : ''}
 
 YOUR ROLE:
 You are an analytical business advisor focused on operational efficiency and profitability. You:
@@ -562,12 +567,12 @@ class TrinityChatService {
 
   /**
    * Get business metrics for context (invoices, hours, overtime, etc.)
+   * Integrates with QuickBooks Financial Snapshot for comprehensive data
    */
   private async getBusinessMetrics(workspaceId: string) {
     try {
       const now = new Date();
       const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const startOfYear = new Date(now.getFullYear(), 0, 1);
 
       // Get invoice stats
       const invoiceStats = await db
@@ -595,16 +600,13 @@ class TrinityChatService {
           gte(timeEntries.clockIn, startOfMonth)
         ));
 
-      // Check QuickBooks connection
-      const [qbConnection] = await db
-        .select()
-        .from(partnerConnections)
-        .where(and(
-          eq(partnerConnections.workspaceId, workspaceId),
-          eq(partnerConnections.partnerType, 'quickbooks'),
-          eq(partnerConnections.status, 'connected')
-        ))
-        .limit(1);
+      // Get comprehensive QuickBooks financial snapshot
+      const qbSnapshot = await trinityQuickBooksSnapshot.getFinancialSnapshot(workspaceId);
+      
+      // Format financial snapshot for Trinity context injection
+      const financialContext = qbSnapshot.connectionStatus === 'connected' || qbSnapshot.connectionStatus === 'not_configured'
+        ? trinityQuickBooksSnapshot.formatSnapshotForTrinity(qbSnapshot)
+        : undefined;
 
       return {
         monthlyRevenue: Number(invoiceStats[0]?.totalInvoiced) || 0,
@@ -613,7 +615,13 @@ class TrinityChatService {
         outstandingAmount: Number(invoiceStats[0]?.outstandingAmount) || 0,
         totalHoursThisMonth: Number(timeStats[0]?.totalHours) || 0,
         timeEntriesThisMonth: Number(timeStats[0]?.entryCount) || 0,
-        quickbooksConnected: !!qbConnection,
+        quickbooksConnected: qbSnapshot.connectionStatus === 'connected',
+        quickbooksConnectionStatus: qbSnapshot.connectionStatus,
+        financialAlerts: qbSnapshot.alerts,
+        arAging: qbSnapshot.arAging,
+        hoursReconciliation: qbSnapshot.hoursReconciliation,
+        overdueInvoiceCount: qbSnapshot.overdueInvoices.length,
+        financialContext, // Full formatted snapshot for LLM context
       };
     } catch (error) {
       console.error('[TrinityChatService] Business metrics error:', error);
@@ -625,6 +633,12 @@ class TrinityChatService {
         totalHoursThisMonth: 0,
         timeEntriesThisMonth: 0,
         quickbooksConnected: false,
+        quickbooksConnectionStatus: 'error' as const,
+        financialAlerts: [],
+        arAging: [],
+        hoursReconciliation: null,
+        overdueInvoiceCount: 0,
+        financialContext: undefined,
       };
     }
   }
