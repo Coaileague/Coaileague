@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
+import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
 import { useTransition } from "@/contexts/transition-context";
 import { apiGet } from "@/lib/apiClient";
 import { queryKeys } from "@/config/queryKeys";
@@ -316,8 +317,9 @@ export default function Dashboard() {
 
   if (isLoading || !isAuthenticated) {
     return (
-      <div className="flex items-center justify-center h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex flex-col items-center justify-center h-screen gap-4">
+        <ColorfulCelticKnot size="xl" state="loading" animated={true} className="animate-trinity-loading" />
+        <span className="text-muted-foreground">Loading...</span>
       </div>
     );
   }
@@ -470,10 +472,11 @@ export default function Dashboard() {
   // Desktop UI - full dashboard with detailed stats
   return (
     <WorkspaceLayout heroGradient maxWidth="6xl">
-      {/* Show loading spinner for initial auth check */}
+      {/* Show Trinity loading for initial auth check */}
       {isLoadingDashboard && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm gap-4">
+          <ColorfulCelticKnot size="xl" state="loading" animated={true} className="animate-trinity-loading" />
+          <span className="text-muted-foreground">Loading dashboard...</span>
         </div>
       )}
         {/* Branded Header with Logo - Centered on Large Screens */}
