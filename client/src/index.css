@@ -720,6 +720,102 @@ html.dark, html.dark body, html.dark #root {
   will-change: transform, opacity;
 }
 
+/* Slow spin for loading states */
+@keyframes spinSlow {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+.animate-spin-slow {
+  animation: spinSlow 3s linear infinite;
+  will-change: transform;
+}
+
+/* Shake animation for error states */
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  10%, 30%, 50%, 70%, 90% { transform: translateX(-2px); }
+  20%, 40%, 60%, 80% { transform: translateX(2px); }
+}
+.animate-shake {
+  animation: shake 0.5s ease-in-out;
+}
+
+/* Trinity morphing transition */
+@keyframes trinityMorph {
+  0%, 100% { 
+    transform: scale(1) rotate(0deg);
+    filter: brightness(1);
+  }
+  25% {
+    transform: scale(1.1) rotate(5deg);
+    filter: brightness(1.2);
+  }
+  50% {
+    transform: scale(0.95) rotate(-3deg);
+    filter: brightness(1.1);
+  }
+  75% {
+    transform: scale(1.05) rotate(2deg);
+    filter: brightness(1.15);
+  }
+}
+.animate-trinity-morph {
+  animation: trinityMorph 2s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+/* Trinity speaking rhythm */
+@keyframes trinitySpeaking {
+  0%, 100% { 
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  15% {
+    transform: scale(1.08);
+    filter: brightness(1.2);
+  }
+  30% {
+    transform: scale(0.98);
+    filter: brightness(1.05);
+  }
+  45% {
+    transform: scale(1.05);
+    filter: brightness(1.15);
+  }
+  60% {
+    transform: scale(0.97);
+    filter: brightness(1);
+  }
+  75% {
+    transform: scale(1.03);
+    filter: brightness(1.1);
+  }
+}
+.animate-trinity-speaking {
+  animation: trinitySpeaking 1.2s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+/* Trinity loading flow */
+@keyframes trinityLoading {
+  0% { 
+    transform: rotate(0deg) scale(1);
+    filter: hue-rotate(0deg) brightness(1);
+  }
+  50% { 
+    transform: rotate(180deg) scale(1.1);
+    filter: hue-rotate(30deg) brightness(1.2);
+  }
+  100% { 
+    transform: rotate(360deg) scale(1);
+    filter: hue-rotate(0deg) brightness(1);
+  }
+}
+.animate-trinity-loading {
+  animation: trinityLoading 2s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
 /* Thinking dots animation - three dots that fade in sequence */
 @keyframes dotFade1 {
   0%, 20%, 100% { opacity: 0.2; }

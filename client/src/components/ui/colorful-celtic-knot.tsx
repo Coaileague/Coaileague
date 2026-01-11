@@ -14,15 +14,28 @@
 import { cn } from "@/lib/utils";
 import { useId } from "react";
 
+export type TrinityEmotionState = 
+  | "idle"           // Gentle breathing animation
+  | "thinking"       // Fast spinning/pulsing while processing
+  | "success"        // Celebratory burst
+  | "speaking"       // Rhythmic pulse while Trinity talks
+  | "listening"      // Subtle attention animation
+  | "warning"        // Cautionary orange/yellow pulse
+  | "error"          // Red flash with shake
+  | "loading"        // Smooth infinite flow
+  | "happy"          // Bright bouncy animation
+  | "focused";       // Intense glow
+
 interface ColorfulCelticKnotProps {
-  size?: number | "sm" | "md" | "lg" | "xl" | "2xl";
+  size?: number | "xs" | "sm" | "md" | "lg" | "xl" | "2xl";
   className?: string;
   animated?: boolean;
-  animationSpeed?: "slow" | "normal" | "fast";
-  state?: "idle" | "thinking" | "success";
+  animationSpeed?: "slow" | "normal" | "fast" | "instant";
+  state?: TrinityEmotionState;
 }
 
 const sizeMap = {
+  xs: 20,
   sm: 24,
   md: 32,
   lg: 48,
@@ -31,24 +44,45 @@ const sizeMap = {
 };
 
 const speedMap = {
-  slow: { ribbon: "6s", color: "5s", core: "4s" },
-  normal: { ribbon: "4s", color: "3s", core: "2s" },
-  fast: { ribbon: "2s", color: "1.5s", core: "1s" },
+  slow: { ribbon: "4s", color: "3s", core: "2.5s" },
+  normal: { ribbon: "2.5s", color: "2s", core: "1.5s" },
+  fast: { ribbon: "1.2s", color: "1s", core: "0.6s" },
+  instant: { ribbon: "0.6s", color: "0.4s", core: "0.3s" },
+};
+
+const stateModifiers: Record<TrinityEmotionState, { 
+  speed: keyof typeof speedMap;
+  extraClass: string;
+  coreScale?: string;
+}> = {
+  idle: { speed: "slow", extraClass: "", coreScale: "7;9;7" },
+  thinking: { speed: "fast", extraClass: "animate-pulse", coreScale: "6;12;6" },
+  success: { speed: "instant", extraClass: "animate-bounce", coreScale: "8;14;8" },
+  speaking: { speed: "normal", extraClass: "", coreScale: "7;11;7" },
+  listening: { speed: "slow", extraClass: "", coreScale: "8;10;8" },
+  warning: { speed: "fast", extraClass: "animate-pulse", coreScale: "9;12;9" },
+  error: { speed: "instant", extraClass: "animate-shake", coreScale: "6;10;6" },
+  loading: { speed: "normal", extraClass: "animate-spin-slow", coreScale: "7;10;7" },
+  happy: { speed: "fast", extraClass: "animate-bounce", coreScale: "8;13;8" },
+  focused: { speed: "normal", extraClass: "", coreScale: "10;12;10" },
 };
 
 export function ColorfulCelticKnot({ 
   size = "md", 
   className,
   animated = true,
-  animationSpeed = "normal",
+  animationSpeed,
   state = "idle"
 }: ColorfulCelticKnotProps) {
   const uniqueId = useId().replace(/:/g, '-');
-  const numericSize = typeof size === "number" ? size : sizeMap[size];
-  const speeds = speedMap[animationSpeed];
+  const numericSize = typeof size === "number" ? size : sizeMap[size] || 32;
   
-  const isThinking = state === "thinking";
-  const effectiveSpeed = isThinking ? speedMap.fast : speeds;
+  // Get state-specific modifiers
+  const stateConfig = stateModifiers[state] || stateModifiers.idle;
+  
+  // Animation speed: explicit prop > state default > normal
+  const effectiveSpeedKey = animationSpeed || stateConfig.speed;
+  const effectiveSpeed = speedMap[effectiveSpeedKey];
 
   return (
     <svg 
@@ -57,7 +91,7 @@ export function ColorfulCelticKnot({
       viewBox="0 0 100 100" 
       fill="none" 
       xmlns="http://www.w3.org/2000/svg"
-      className={cn("flex-shrink-0", isThinking && "animate-pulse", className)}
+      className={cn("flex-shrink-0", stateConfig.extraClass, className)}
     >
       <defs>
         {/* Gradient for ribbon 1 - Purple to Magenta */}
@@ -232,7 +266,7 @@ export function ColorfulCelticKnot({
       >
         {animated && (
           <>
-            <animate attributeName="r" values="7;10;7" dur={effectiveSpeed.core} repeatCount="indefinite" />
+            <animate attributeName="r" values={stateConfig.coreScale || "7;10;7"} dur={effectiveSpeed.core} repeatCount="indefinite" />
             <animate attributeName="opacity" values="0.9;1;0.9" dur={effectiveSpeed.core} repeatCount="indefinite" />
           </>
         )}

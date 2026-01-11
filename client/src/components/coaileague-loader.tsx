@@ -7,8 +7,7 @@
  */
 
 import { motion, AnimatePresence } from "framer-motion";
-import { CoAIleagueAFLogo } from "./coaileague-af-logo";
-import { Loader2 } from "lucide-react";
+import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
 import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
 
 export type LoadingScenario = 
@@ -96,22 +95,17 @@ export function CoAIleagueLoader({
           data-testid="coaileague-loader-overlay"
         >
           <div className="flex flex-col items-center gap-6 p-6 text-center">
-            {/* CoAIleague Logo */}
+            {/* Trinity Celtic Knot - The ONLY loading animation */}
             <motion.div
               animate={{ scale: [1, 1.05, 1] }}
-              transition={{ duration: 2, repeat: Infinity }}
+              transition={{ duration: 1.5, repeat: Infinity }}
             >
-              <div className="w-32 h-32 md:w-40 md:h-40">
-                <CoAIleagueAFLogo />
-              </div>
-            </motion.div>
-
-            {/* Spinner Animation */}
-            <motion.div
-              animate={{ rotate: 360 }}
-              transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-            >
-              <Loader2 className="w-12 h-12 text-blue-500" strokeWidth={1.5} />
+              <ColorfulCelticKnot 
+                size="2xl" 
+                state="loading" 
+                animated={true}
+                className="animate-trinity-loading"
+              />
             </motion.div>
 
             {/* Messages */}

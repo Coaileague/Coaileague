@@ -21,6 +21,7 @@ import {
 import { formatDistanceToNow } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
 import { isSupportRole } from "@/config/chatroomsConfig";
+import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
 
 interface ChatRoom {
   roomId?: string;
@@ -410,8 +411,9 @@ export default function Chatrooms() {
 
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <div className="flex flex-col items-center justify-center py-12 gap-3">
+              <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
+              <span className="text-sm text-muted-foreground">Loading chats...</span>
             </div>
           ) : error ? (
             <div className="text-center py-12 px-4">
@@ -496,8 +498,9 @@ export default function Chatrooms() {
 
       <div className="flex-1 overflow-auto p-6">
         {isLoading ? (
-          <div className="flex items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <div className="flex flex-col items-center justify-center py-12 gap-3">
+            <ColorfulCelticKnot size="xl" state="loading" animated={true} className="animate-trinity-loading" />
+            <span className="text-muted-foreground">Loading chat rooms...</span>
           </div>
         ) : error ? (
           <div className="text-center py-12">

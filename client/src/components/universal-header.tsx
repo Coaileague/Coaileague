@@ -147,34 +147,14 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                 showWordmark={true}
               />
             </div>
-            {/* Mobile: Icon only for space efficiency - text hidden on small screens */}
-            <div className="flex sm:hidden items-center gap-1.5">
+            {/* Mobile: Icon only - no text to prevent cutoff issues */}
+            <div className="flex sm:hidden items-center">
               <CoAIleagueLogo 
-                width={32} 
-                height={32} 
+                width={36} 
+                height={36} 
                 onlyIcon={true}
                 className="flex-shrink-0"
               />
-              {/* Abbreviated text for mobile - just "CoAI" to save space */}
-              <span className={`font-bold text-sm ${isChristmas ? '' : 'bg-gradient-to-r from-cyan-500 to-blue-600 bg-clip-text text-transparent'}`}>
-                {isChristmas ? (
-                  <>
-                    {['C','o','A','I'].map((char, i) => (
-                      <span
-                        key={i}
-                        style={{
-                          color: mobileChristmasColors[i % mobileChristmasColors.length],
-                          textShadow: `0 0 6px ${mobileChristmasColors[i % mobileChristmasColors.length]}60`,
-                        }}
-                      >
-                        {char}
-                      </span>
-                    ))}
-                  </>
-                ) : (
-                  'CoAI'
-                )}
-              </span>
             </div>
           </button>
 
