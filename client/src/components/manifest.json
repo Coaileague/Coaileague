@@ -59,7 +59,7 @@
     },
     "schedule": {
       "path": "client/src/components/schedule",
-      "count": 15,
+      "count": 16,
       "description": "Schedule management components",
       "components": [
         { "name": "CalendarSyncDialog", "file": "CalendarSyncDialog.tsx", "tags": ["modal", "sync"] },
@@ -82,7 +82,7 @@
     },
     "aiBrain": {
       "path": "client/src/components/ai-brain",
-      "count": 10,
+      "count": 9,
       "description": "AI Brain dashboard and configuration components",
       "components": [
         { "name": "DocumentExtractionUpload", "file": "document-extraction-upload.tsx", "tags": ["ai", "upload"] },
