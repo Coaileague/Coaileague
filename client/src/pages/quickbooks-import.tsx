@@ -6,6 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ColorfulCelticKnot } from '@/components/ui/colorful-celtic-knot';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, 
@@ -176,6 +178,9 @@ export default function QuickBooksImportPage() {
   const [hasRestoredState, setHasRestoredState] = useState(false);
   const [showResumePrompt, setShowResumePrompt] = useState(false);
   const [savedState, setSavedState] = useState<Partial<WizardPersistState> | null>(null);
+  const [showPushModal, setShowPushModal] = useState(false);
+  const [pushProgress, setPushProgress] = useState(0);
+  const [pushMessage, setPushMessage] = useState('Connecting to QuickBooks...');
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -287,7 +292,7 @@ export default function QuickBooksImportPage() {
     }
   }, [isConnected, currentStep]);
 
-  const { data: previewData, isLoading: isLoadingPreview, refetch: refetchPreview } = useQuery<PreviewData>({
+  const { data: previewData, isLoading: isLoadingPreview, isFetching: isFetchingPreview, refetch: refetchPreview } = useQuery<PreviewData>({
     queryKey: ['/api/integrations/quickbooks/preview', workspace?.id],
     queryFn: async () => {
       if (!workspace?.id) throw new Error('No workspace');
@@ -394,19 +399,75 @@ export default function QuickBooksImportPage() {
     importMutation.mutate({ forceAllowMissingPayRates: true });
   };
 
+  const handleRetryDiscovery = async () => {
+    try {
+      const result = await refetchPreview();
+      const data = result.data;
+      const hasData = (data?.customers?.length || 0) + (data?.employees?.length || 0) > 0;
+      toast({
+        title: hasData ? 'Data Found!' : 'Discovery Complete',
+        description: hasData 
+          ? `Found ${data?.employees?.length || 0} employees and ${data?.customers?.length || 0} customers`
+          : 'No data found in QuickBooks. Try pushing sandbox data first.',
+      });
+    } catch (error: any) {
+      toast({
+        title: 'Discovery Failed',
+        description: error.message || 'Failed to fetch QuickBooks data',
+        variant: 'destructive',
+      });
+    }
+  };
+
   const pushToQuickBooksMutation = useMutation({
     mutationFn: async (useSandboxData: boolean = true) => {
-      const res = await apiRequest('POST', '/api/integrations/quickbooks/push', {
-        workspaceId: workspace?.id,
-        useSandboxData,
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || 'Push failed');
+      setShowPushModal(true);
+      setPushProgress(0);
+      setPushMessage('Connecting to QuickBooks...');
+      
+      const progressMessages = [
+        { progress: 10, message: 'Authenticating with QuickBooks...' },
+        { progress: 25, message: 'Fetching sandbox data...' },
+        { progress: 40, message: 'Preparing customers for sync...' },
+        { progress: 55, message: 'Syncing customers to QuickBooks...' },
+        { progress: 70, message: 'Preparing employees for sync...' },
+        { progress: 85, message: 'Syncing employees to QuickBooks...' },
+        { progress: 95, message: 'Finalizing sync...' },
+      ];
+      
+      let progressIndex = 0;
+      const progressInterval = setInterval(() => {
+        if (progressIndex < progressMessages.length) {
+          setPushProgress(progressMessages[progressIndex].progress);
+          setPushMessage(progressMessages[progressIndex].message);
+          progressIndex++;
+        }
+      }, 400);
+      
+      try {
+        const res = await apiRequest('POST', '/api/integrations/quickbooks/push', {
+          workspaceId: workspace?.id,
+          useSandboxData,
+        });
+        const data = await res.json();
+        clearInterval(progressInterval);
+        
+        if (!res.ok) {
+          throw new Error(data.error || 'Push failed');
+        }
+        
+        setPushProgress(100);
+        setPushMessage('Sync complete!');
+        await new Promise(resolve => setTimeout(resolve, 800));
+        
+        return data;
+      } catch (error) {
+        clearInterval(progressInterval);
+        throw error;
       }
-      return data;
     },
     onSuccess: (data) => {
+      setShowPushModal(false);
       toast({
         title: 'Data Pushed to QuickBooks',
         description: data.message || `Synced ${data.results?.customers?.synced || 0} customers and ${data.results?.employees?.synced || 0} employees`,
@@ -414,6 +475,7 @@ export default function QuickBooksImportPage() {
       refetchPreview();
     },
     onError: (error: any) => {
+      setShowPushModal(false);
       toast({
         title: 'Push Failed',
         description: error.message || 'Failed to push data to QuickBooks',
@@ -816,8 +878,21 @@ export default function QuickBooksImportPage() {
                       </>
                     )}
                   </Button>
-                  <Button variant="outline" onClick={() => refetchPreview()} data-testid="button-retry-discovery">
-                    <RefreshCw className="h-4 w-4 mr-2" /> Retry Discovery
+                  <Button 
+                    variant="outline" 
+                    onClick={handleRetryDiscovery} 
+                    disabled={isFetchingPreview}
+                    data-testid="button-retry-discovery"
+                  >
+                    {isFetchingPreview ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Refreshing...
+                      </>
+                    ) : (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2" /> Retry Discovery
+                      </>
+                    )}
                   </Button>
                 </div>
               </div>
@@ -1321,6 +1396,47 @@ export default function QuickBooksImportPage() {
           </CardFooter>
         </Card>
       )}
+
+      {/* Trinity Push Loading Modal */}
+      <Dialog open={showPushModal} onOpenChange={() => {}}>
+        <DialogContent 
+          className="sm:max-w-md bg-gradient-to-b from-background to-muted/50 border-2 border-primary/20"
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <div className="flex flex-col items-center py-8 space-y-6">
+            <div className="relative">
+              <ColorfulCelticKnot 
+                size={100} 
+                animated={true}
+                state={pushProgress === 100 ? "success" : "thinking"}
+                animationSpeed={pushProgress === 100 ? "instant" : "fast"}
+              />
+              {pushProgress === 100 && (
+                <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1">
+                  <Check className="h-4 w-4 text-white" />
+                </div>
+              )}
+            </div>
+            
+            <div className="text-center space-y-2">
+              <h3 className="text-lg font-semibold">
+                {pushProgress === 100 ? 'Sync Complete!' : 'Syncing with QuickBooks'}
+              </h3>
+              <p className="text-sm text-muted-foreground">{pushMessage}</p>
+            </div>
+            
+            <div className="w-full max-w-xs space-y-2">
+              <Progress value={pushProgress} className="h-2" />
+              <p className="text-xs text-center text-muted-foreground">{pushProgress}% complete</p>
+            </div>
+            
+            <p className="text-xs text-muted-foreground text-center max-w-xs">
+              Trinity is pushing your data to QuickBooks. This may take a moment...
+            </p>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
