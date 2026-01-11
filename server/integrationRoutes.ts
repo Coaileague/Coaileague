@@ -411,7 +411,7 @@ router.get('/quickbooks/preview', requireAuth, requireWorkspaceMembership('query
  */
 router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
   try {
-    const { workspaceId } = req.body;
+    const { workspaceId, useSandboxData } = req.body;
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'Missing workspaceId' });
@@ -440,23 +440,29 @@ router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async
       ? 'https://quickbooks.api.intuit.com/v3/company'
       : 'https://sandbox-quickbooks.api.intuit.com/v3/company';
 
+    // Determine which workspace to fetch data from
+    const SANDBOX_WORKSPACE_ID = 'sandbox-test-workspace';
+    const sourceWorkspaceId = useSandboxData ? SANDBOX_WORKSPACE_ID : workspaceId;
+    
+    console.log(`[QuickBooks Push] Source workspace: ${useSandboxData ? 'SANDBOX TEST DATA' : 'real workspace'}`);
+
     // Fetch data from CoAIleague
     const { clients, employees: dbEmployees, invoices } = await db.transaction(async (tx) => {
       const { clients, employees, invoices } = await import('@shared/schema');
       
       const clientsList = await tx.select()
         .from(clients)
-        .where(eq(clients.workspaceId, workspaceId))
+        .where(eq(clients.workspaceId, sourceWorkspaceId))
         .limit(50);
       
       const employeesList = await tx.select()
         .from(employees)
-        .where(eq(employees.workspaceId, workspaceId))
+        .where(eq(employees.workspaceId, sourceWorkspaceId))
         .limit(100);
       
       const invoicesList = await tx.select()
         .from(invoices)
-        .where(eq(invoices.workspaceId, workspaceId))
+        .where(eq(invoices.workspaceId, sourceWorkspaceId))
         .limit(50);
       
       return { clients: clientsList, employees: employeesList, invoices: invoicesList };

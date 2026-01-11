@@ -395,9 +395,10 @@ export default function QuickBooksImportPage() {
   };
 
   const pushToQuickBooksMutation = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (useSandboxData: boolean = true) => {
       const res = await apiRequest('POST', '/api/integrations/quickbooks/push', {
         workspaceId: workspace?.id,
+        useSandboxData,
       });
       const data = await res.json();
       if (!res.ok) {
@@ -801,17 +802,17 @@ export default function QuickBooksImportPage() {
                 </div>
                 <div className="flex gap-2 justify-center flex-wrap">
                   <Button 
-                    onClick={() => pushToQuickBooksMutation.mutate()} 
+                    onClick={() => pushToQuickBooksMutation.mutate(true)} 
                     disabled={pushToQuickBooksMutation.isPending}
-                    data-testid="button-push-to-quickbooks"
+                    data-testid="button-push-sandbox-to-quickbooks"
                   >
                     {pushToQuickBooksMutation.isPending ? (
                       <>
-                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Pushing Data...
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Pushing Sandbox Data...
                       </>
                     ) : (
                       <>
-                        <ArrowRight className="h-4 w-4 mr-2" /> Push CoAIleague Data to QuickBooks
+                        <ArrowRight className="h-4 w-4 mr-2" /> Push Sandbox Test Data to QuickBooks
                       </>
                     )}
                   </Button>
