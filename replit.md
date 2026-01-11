@@ -9,6 +9,14 @@ CoAIleague is a Fortune 500-grade multi-tenant autonomous workforce management p
 - Ask before making major changes
 - I prefer detailed explanations
 
+## Architecture Rules (MANDATORY)
+1. **Use Existing Infrastructure** - Always use current services, features, and patterns. Do NOT create new ones to avoid confusion. Only create if absolutely needed to keep platform organized.
+2. **Follow Established Patterns** - Use the defined colors, Trinity model, animations, WebSockets, and broadcasting buses already in the codebase.
+3. **File Index for Easy Editing** - Maintain organized file structure enabling parallel or single quick edits and design changes.
+4. **No Hardcoded Values** - All values must be dynamic configuration for easy editing. Reference billingConfig.ts, platformConfig.ts, and similar centralized configs.
+5. **Auto-Fix Modals/UI** - All modals and UI components must resize properly for desktop and mobile automatically.
+6. **ColorfulCelticKnot Logo** - Trinity uses ONLY the 3-ribbon Celtic triquetra (purple/teal/gold) as the universal logo. Never use 5-pointed knot.
+
 ## System Architecture
 CoAIleague features a multi-tenant architecture with RBAC security and isolation, managing application settings through centralized dynamic configuration.
 

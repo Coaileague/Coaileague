@@ -56,13 +56,35 @@ export const STRIPE_PRODUCTS = {
   OVERAGES: {
     EMPLOYEE: {
       priceId: process.env.STRIPE_EMPLOYEE_OVERAGE_PRICE_ID || null,
-      amount: BILLING.overages.perEmployee,
+      amount: BILLING.overages.starter,
       description: 'Additional employee beyond plan limit',
     },
     CREDITS: {
       priceId: process.env.STRIPE_ADDON_CREDITS_PRICE_ID || null,
       amount: BILLING.creditPacks.starter.price,
       description: 'Additional AI automation credits',
+    },
+  },
+  
+  SETUP_FEES: {
+    STARTER: {
+      priceId: process.env.STRIPE_SETUP_STARTER_PRICE_ID || null,
+      amount: BILLING.setupFees.starter.price,
+      name: BILLING.setupFees.starter.name,
+      description: BILLING.setupFees.starter.description,
+    },
+    PROFESSIONAL: {
+      priceId: process.env.STRIPE_SETUP_PROFESSIONAL_PRICE_ID || null,
+      amount: BILLING.setupFees.professional.price,
+      name: BILLING.setupFees.professional.name,
+      description: BILLING.setupFees.professional.description,
+    },
+    ENTERPRISE: {
+      priceId: process.env.STRIPE_SETUP_ENTERPRISE_PRICE_ID || null,
+      amount: BILLING.setupFees.enterprise.startsAt,
+      name: BILLING.setupFees.enterprise.name,
+      description: BILLING.setupFees.enterprise.description,
+      isContactSales: true,
     },
   },
 } as const;
@@ -127,9 +149,26 @@ export function validatePriceIdsConfigured(): {
   if (!STRIPE_PRODUCTS.ENTERPRISE.yearlyPriceId) missing.push('STRIPE_ENTERPRISE_YEARLY_PRICE_ID');
   if (!STRIPE_PRODUCTS.OVERAGES.EMPLOYEE.priceId) missing.push('STRIPE_EMPLOYEE_OVERAGE_PRICE_ID');
   if (!STRIPE_PRODUCTS.OVERAGES.CREDITS.priceId) missing.push('STRIPE_ADDON_CREDITS_PRICE_ID');
+  if (!STRIPE_PRODUCTS.SETUP_FEES.STARTER.priceId) missing.push('STRIPE_SETUP_STARTER_PRICE_ID');
+  if (!STRIPE_PRODUCTS.SETUP_FEES.PROFESSIONAL.priceId) missing.push('STRIPE_SETUP_PROFESSIONAL_PRICE_ID');
   
   return {
     isConfigured: missing.length === 0,
     missing,
   };
+}
+
+export type SetupFeeTier = 'starter' | 'professional' | 'enterprise';
+
+export function getSetupFeeConfig(tier: SetupFeeTier) {
+  const configs = {
+    starter: STRIPE_PRODUCTS.SETUP_FEES.STARTER,
+    professional: STRIPE_PRODUCTS.SETUP_FEES.PROFESSIONAL,
+    enterprise: STRIPE_PRODUCTS.SETUP_FEES.ENTERPRISE,
+  };
+  return configs[tier];
+}
+
+export function getSetupFeePriceId(tier: SetupFeeTier): string | null {
+  return getSetupFeeConfig(tier).priceId;
 }

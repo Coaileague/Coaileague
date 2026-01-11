@@ -260,6 +260,66 @@ export const BILLING = {
   },
 
   // ==========================================================================
+  // TRINITY ONE-TIME SETUP FEES (Business Ready-to-Work Configuration)
+  // Trinity AI configures the entire platform for the business
+  // ==========================================================================
+  setupFees: {
+    starter: {
+      id: "setup_starter",
+      name: "Trinity Starter Setup",
+      price: 49900, // $499 one-time
+      description: "Trinity configures basic scheduling, time tracking, and employee onboarding",
+      includes: [
+        "Organization setup & branding",
+        "Employee roster import (up to 15)",
+        "Basic schedule templates",
+        "Time tracking configuration",
+        "Mobile app setup for team",
+        "1-hour training session",
+      ],
+      estimatedHours: 4,
+    },
+    professional: {
+      id: "setup_professional",
+      name: "Trinity Professional Setup",
+      price: 149900, // $1,499 one-time
+      description: "Full platform configuration with QuickBooks, payroll, and compliance",
+      includes: [
+        "Everything in Starter Setup",
+        "QuickBooks integration & sync",
+        "Payroll automation configuration",
+        "Client billing setup",
+        "Compliance rules for your state",
+        "Custom schedule optimization",
+        "Advanced reporting dashboards",
+        "2-hour training session",
+      ],
+      estimatedHours: 12,
+      popular: true,
+    },
+    enterprise: {
+      id: "setup_enterprise",
+      name: "Trinity Enterprise Setup",
+      price: 0, // Custom pricing - contact sales
+      isContactSales: true,
+      startsAt: 499900, // Starts at $4,999
+      description: "White-glove setup with custom integrations and dedicated support",
+      includes: [
+        "Everything in Professional Setup",
+        "Multi-location configuration",
+        "Custom integrations (ADP, Workday, etc.)",
+        "Data migration from legacy systems",
+        "White-label branding setup",
+        "API configuration",
+        "Dedicated onboarding specialist",
+        "Team training sessions (up to 10 hours)",
+        "30-day post-launch support",
+      ],
+      estimatedHours: 40,
+    },
+  },
+
+  // ==========================================================================
   // STRIPE ENVIRONMENT VARIABLE MAPPING
   // ==========================================================================
   stripeEnvVars: {
@@ -271,6 +331,9 @@ export const BILLING = {
     enterpriseYearly: "STRIPE_ENTERPRISE_YEARLY_PRICE_ID",
     employeeOverage: "STRIPE_EMPLOYEE_OVERAGE_PRICE_ID",
     addonCredits: "STRIPE_ADDON_CREDITS_PRICE_ID",
+    setupStarter: "STRIPE_SETUP_STARTER_PRICE_ID",
+    setupProfessional: "STRIPE_SETUP_PROFESSIONAL_PRICE_ID",
+    setupEnterprise: "STRIPE_SETUP_ENTERPRISE_PRICE_ID",
     webhookSecret: "STRIPE_WEBHOOK_SECRET",
   },
 } as const;
@@ -363,4 +426,24 @@ export function getTrialDaysRemaining(trialStartDate: Date): number {
 export function shouldShowTrialWarning(trialStartDate: Date): boolean {
   const remaining = getTrialDaysRemaining(trialStartDate);
   return remaining <= BILLING.settings.trialWarningDays && remaining > 0;
+}
+
+export type SetupFeeKey = keyof typeof BILLING.setupFees;
+
+export function getSetupFeeById(setupId: SetupFeeKey) {
+  return BILLING.setupFees[setupId];
+}
+
+export function getAllSetupFees() {
+  return Object.values(BILLING.setupFees);
+}
+
+export function getRecommendedSetupFee(tierId: TierKey): SetupFeeKey {
+  const tierToSetup: Record<TierKey, SetupFeeKey> = {
+    free: "starter",
+    starter: "starter", 
+    professional: "professional",
+    enterprise: "enterprise",
+  };
+  return tierToSetup[tierId];
 }
