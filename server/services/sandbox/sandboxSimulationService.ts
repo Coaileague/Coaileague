@@ -4,7 +4,7 @@ import {
   invoices, invoiceLineItems, payrollRuns, payrollEntries,
   workspaceCredits, partnerConnections
 } from '@shared/schema';
-import { eq, and } from 'drizzle-orm';
+import { eq, and, count } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 
 const SANDBOX_WORKSPACE_ID = 'sandbox-test-workspace';
@@ -128,7 +128,6 @@ export class SandboxSimulationService {
     
     await db.delete(payrollEntries).where(eq(payrollEntries.workspaceId, SANDBOX_WORKSPACE_ID));
     await db.delete(payrollRuns).where(eq(payrollRuns.workspaceId, SANDBOX_WORKSPACE_ID));
-    await db.delete(invoiceLineItems).where(eq(invoiceLineItems.workspaceId, SANDBOX_WORKSPACE_ID));
     await db.delete(invoices).where(eq(invoices.workspaceId, SANDBOX_WORKSPACE_ID));
     await db.delete(timeEntries).where(eq(timeEntries.workspaceId, SANDBOX_WORKSPACE_ID));
     await db.delete(shifts).where(eq(shifts.workspaceId, SANDBOX_WORKSPACE_ID));
@@ -366,7 +365,6 @@ export class SandboxSimulationService {
       clockOut.setMinutes(clockOut.getMinutes() + (Math.random() - 0.5) * 15);
 
       const hoursWorked = (clockOut.getTime() - clockIn.getTime()) / (1000 * 60 * 60);
-      const breakMinutes = hoursWorked > 6 ? 30 : 0;
 
       timeEntryRecords.push({
         workspaceId: SANDBOX_WORKSPACE_ID,
@@ -375,11 +373,8 @@ export class SandboxSimulationService {
         clientId: shift.clientId,
         clockIn,
         clockOut,
-        hoursWorked: hoursWorked.toFixed(2),
-        breakMinutes,
+        totalHours: hoursWorked.toFixed(2),
         status: 'approved',
-        approvedBy: SANDBOX_USER_ID,
-        approvedAt: new Date(),
         notes: 'Auto-generated sandbox time entry',
       });
     }
@@ -426,18 +421,18 @@ export class SandboxSimulationService {
           workspaceId: SANDBOX_WORKSPACE_ID,
           clientId: client.id,
           invoiceNumber: `INV-SB-${Date.now()}-${invoicesCreated}`,
-          invoiceDate,
+          issueDate: invoiceDate,
           dueDate,
           subtotal: subtotal.toFixed(2),
+          taxRate: '8.75',
           taxAmount: tax.toFixed(2),
-          totalAmount: total.toFixed(2),
-          status: week < weeksOfHistory - 1 ? 'paid' : 'pending',
-          paidAmount: week < weeksOfHistory - 1 ? total.toFixed(2) : '0.00',
+          total: total.toFixed(2),
+          status: week < weeksOfHistory - 1 ? 'paid' : 'draft',
+          amountPaid: week < weeksOfHistory - 1 ? total.toFixed(2) : '0.00',
           notes: 'Auto-generated sandbox invoice',
         }).returning();
 
         await db.insert(invoiceLineItems).values({
-          workspaceId: SANDBOX_WORKSPACE_ID,
           invoiceId: invoice.id,
           description: `Security services for ${client.company}`,
           quantity: hours.toFixed(2),
@@ -489,14 +484,11 @@ export class SandboxSimulationService {
         workspaceId: SANDBOX_WORKSPACE_ID,
         periodStart,
         periodEnd,
-        payDate,
-        status: 'completed',
-        processedAt: new Date(),
+        status: 'paid',
         processedBy: SANDBOX_USER_ID,
-        totalGross: '0.00',
-        totalNet: '0.00',
-        employeeCount: allEmployees.length,
-        notes: 'Auto-generated sandbox payroll',
+        totalGrossPay: '0.00',
+        totalNetPay: '0.00',
+        totalTaxes: '0.00',
       }).returning();
 
       const payrollEntryRecords = [];
@@ -527,15 +519,13 @@ export class SandboxSimulationService {
           employeeId: employee.id,
           regularHours: regularHours.toFixed(2),
           overtimeHours: overtimeHours.toFixed(2),
-          regularPay: regularPay.toFixed(2),
-          overtimePay: overtimePay.toFixed(2),
+          hourlyRate: hourlyRate.toFixed(2),
           grossPay: grossPay.toFixed(2),
           federalTax: federalTax.toFixed(2),
           stateTax: stateTax.toFixed(2),
           socialSecurity: socialSecurity.toFixed(2),
           medicare: medicare.toFixed(2),
           netPay: netPay.toFixed(2),
-          status: 'paid',
         });
       }
 
@@ -543,10 +533,12 @@ export class SandboxSimulationService {
         await db.insert(payrollEntries).values(payrollEntryRecords);
       }
 
+      const totalTaxes = totalGross - totalNet;
       await db.update(payrollRuns)
         .set({
-          totalGross: totalGross.toFixed(2),
-          totalNet: totalNet.toFixed(2),
+          totalGrossPay: totalGross.toFixed(2),
+          totalNetPay: totalNet.toFixed(2),
+          totalTaxes: totalTaxes.toFixed(2),
         })
         .where(eq(payrollRuns.id, payrollRun.id));
 
@@ -579,23 +571,23 @@ export class SandboxSimulationService {
       };
     }
 
-    const [employeeCount] = await db.select({ count: employees.id }).from(employees).where(eq(employees.workspaceId, SANDBOX_WORKSPACE_ID));
-    const [clientCount] = await db.select({ count: clients.id }).from(clients).where(eq(clients.workspaceId, SANDBOX_WORKSPACE_ID));
-    const [shiftCount] = await db.select({ count: shifts.id }).from(shifts).where(eq(shifts.workspaceId, SANDBOX_WORKSPACE_ID));
-    const [timeEntryCount] = await db.select({ count: timeEntries.id }).from(timeEntries).where(eq(timeEntries.workspaceId, SANDBOX_WORKSPACE_ID));
-    const [invoiceCount] = await db.select({ count: invoices.id }).from(invoices).where(eq(invoices.workspaceId, SANDBOX_WORKSPACE_ID));
-    const [payrollRunCount] = await db.select({ count: payrollRuns.id }).from(payrollRuns).where(eq(payrollRuns.workspaceId, SANDBOX_WORKSPACE_ID));
+    const [employeeCount] = await db.select({ value: count() }).from(employees).where(eq(employees.workspaceId, SANDBOX_WORKSPACE_ID));
+    const [clientCount] = await db.select({ value: count() }).from(clients).where(eq(clients.workspaceId, SANDBOX_WORKSPACE_ID));
+    const [shiftCount] = await db.select({ value: count() }).from(shifts).where(eq(shifts.workspaceId, SANDBOX_WORKSPACE_ID));
+    const [timeEntryCount] = await db.select({ value: count() }).from(timeEntries).where(eq(timeEntries.workspaceId, SANDBOX_WORKSPACE_ID));
+    const [invoiceCount] = await db.select({ value: count() }).from(invoices).where(eq(invoices.workspaceId, SANDBOX_WORKSPACE_ID));
+    const [payrollRunCount] = await db.select({ value: count() }).from(payrollRuns).where(eq(payrollRuns.workspaceId, SANDBOX_WORKSPACE_ID));
 
     return {
       exists: true,
       workspaceId: SANDBOX_WORKSPACE_ID,
       stats: {
-        employees: Number(employeeCount?.count) || 0,
-        clients: Number(clientCount?.count) || 0,
-        shifts: Number(shiftCount?.count) || 0,
-        timeEntries: Number(timeEntryCount?.count) || 0,
-        invoices: Number(invoiceCount?.count) || 0,
-        payrollRuns: Number(payrollRunCount?.count) || 0,
+        employees: Number(employeeCount?.value) || 0,
+        clients: Number(clientCount?.value) || 0,
+        shifts: Number(shiftCount?.value) || 0,
+        timeEntries: Number(timeEntryCount?.value) || 0,
+        invoices: Number(invoiceCount?.value) || 0,
+        payrollRuns: Number(payrollRunCount?.value) || 0,
       },
     };
   }
