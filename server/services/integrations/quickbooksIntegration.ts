@@ -320,6 +320,7 @@ export class QuickBooksIntegration {
 
   /**
    * Process items in batches with concurrent execution
+   * Uses a proper semaphore pattern to limit concurrent batch requests
    * @param items - Items to process
    * @param batchSize - Items per batch (max 25 to stay under 30 limit)
    * @param concurrency - Max concurrent batch requests
@@ -349,64 +350,75 @@ export class QuickBooksIntegration {
 
     console.log(`[QuickBooks] Processing ${total} items in ${batches.length} batches (size=${batchSize}, concurrency=${concurrency})`);
 
-    // Process batches with limited concurrency
-    const processBatch = async (batch: T[], batchIndex: number): Promise<void> => {
-      const batchItems = batch.map((item, idx) => ({
-        bId: `${batchIndex}-${idx}`,
-        operation: 'create' as const,
-        entity,
-        payload: mapFn(item, batchIndex * batchSize + idx),
-      }));
-
-      // Use rate limiter for the batch request
-      const result = await this.makeRateLimitedRequest(
-        credentials.workspaceId,
-        credentials.realmId,
-        () => this.executeBatch(credentials, batchItems),
-        0
-      );
-
-      if (result.success && result.data) {
-        for (const resp of result.data.responses) {
-          if (resp.success) {
-            synced++;
-          } else {
-            errors.push(`Item ${resp.bId}: ${resp.error}`);
-          }
+    // Simple semaphore for concurrency control
+    let activeCount = 0;
+    const queue: (() => void)[] = [];
+    
+    const acquire = (): Promise<void> => {
+      return new Promise((resolve) => {
+        if (activeCount < concurrency) {
+          activeCount++;
+          resolve();
+        } else {
+          queue.push(resolve);
         }
+      });
+    };
+    
+    const release = (): void => {
+      if (queue.length > 0) {
+        const next = queue.shift()!;
+        next();
       } else {
-        // All items in batch failed
-        for (const item of batchItems) {
-          errors.push(`Item ${item.bId}: ${result.error || 'Batch failed'}`);
-        }
-      }
-
-      if (onProgress) {
-        onProgress(synced + errors.length, total, errors);
+        activeCount--;
       }
     };
 
-    // Process with concurrency limit
-    const running: Promise<void>[] = [];
-    for (let i = 0; i < batches.length; i++) {
-      const promise = processBatch(batches[i], i);
-      running.push(promise);
+    // Process a single batch with semaphore control
+    const processBatch = async (batch: T[], batchIndex: number): Promise<void> => {
+      await acquire();
+      
+      try {
+        const batchItems = batch.map((item, idx) => ({
+          bId: `${batchIndex}-${idx}`,
+          operation: 'create' as const,
+          entity,
+          payload: mapFn(item, batchIndex * batchSize + idx),
+        }));
 
-      // Limit concurrency
-      if (running.length >= concurrency) {
-        await Promise.race(running);
-        // Remove completed promises
-        for (let j = running.length - 1; j >= 0; j--) {
-          const settled = await Promise.race([running[j].then(() => true), Promise.resolve(false)]);
-          if (settled) {
-            running.splice(j, 1);
+        // Use rate limiter for the batch request
+        const result = await this.makeRateLimitedRequest(
+          credentials.workspaceId,
+          credentials.realmId,
+          () => this.executeBatch(credentials, batchItems),
+          0
+        );
+
+        if (result.success && result.data) {
+          for (const resp of result.data.responses) {
+            if (resp.success) {
+              synced++;
+            } else {
+              errors.push(`Item ${resp.bId}: ${resp.error}`);
+            }
+          }
+        } else {
+          // All items in batch failed
+          for (const item of batchItems) {
+            errors.push(`Item ${item.bId}: ${result.error || 'Batch failed'}`);
           }
         }
-      }
-    }
 
-    // Wait for remaining
-    await Promise.all(running);
+        if (onProgress) {
+          onProgress(synced + errors.length, total, errors);
+        }
+      } finally {
+        release();
+      }
+    };
+
+    // Start all batch operations (semaphore controls actual concurrency)
+    await Promise.all(batches.map((batch, idx) => processBatch(batch, idx)));
 
     console.log(`[QuickBooks] Batch processing complete: ${synced} synced, ${errors.length} errors`);
     return { success: errors.length === 0, synced, errors };
