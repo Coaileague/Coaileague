@@ -5,8 +5,8 @@ import { quickbooksService } from './services/partners/quickbooks';
 import { gustoService } from './services/partners/gusto';
 import { requireAuth } from './auth';
 import { db } from './db';
-import { partnerConnections, users, workspaces } from '@shared/schema';
-import { eq, and, or, sql, desc } from 'drizzle-orm';
+import { partnerConnections, users, workspaces, quickbooksMigrationRuns } from '@shared/schema';
+import { eq, and, or, sql, desc, inArray } from 'drizzle-orm';
 import { quickbooksRateLimiter } from './services/integrations/quickbooksRateLimiter';
 import { quickbooksTokenRefresh } from './services/integrations/quickbooksTokenRefresh';
 
@@ -404,17 +404,144 @@ router.get('/quickbooks/preview', requireAuth, requireWorkspaceMembership('query
 });
 
 /**
+ * GET /api/integrations/quickbooks/push/status
+ * 
+ * Get current migration status for a workspace
+ */
+router.get('/quickbooks/push/status', requireAuth, requireWorkspaceMembership('query'), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId } = req.query as { workspaceId: string };
+
+    const [activeRun] = await db.select()
+      .from(quickbooksMigrationRuns)
+      .where(
+        and(
+          eq(quickbooksMigrationRuns.workspaceId, workspaceId),
+          inArray(quickbooksMigrationRuns.status, ['running', 'cancel_requested'])
+        )
+      )
+      .orderBy(desc(quickbooksMigrationRuns.startedAt))
+      .limit(1);
+
+    if (activeRun) {
+      return res.json({
+        isRunning: true,
+        run: activeRun,
+        progress: {
+          employees: { synced: activeRun.syncedEmployees, total: activeRun.totalEmployees },
+          customers: { synced: activeRun.syncedCustomers, total: activeRun.totalCustomers },
+        },
+      });
+    }
+
+    // Get last completed run for reference
+    const [lastRun] = await db.select()
+      .from(quickbooksMigrationRuns)
+      .where(eq(quickbooksMigrationRuns.workspaceId, workspaceId))
+      .orderBy(desc(quickbooksMigrationRuns.startedAt))
+      .limit(1);
+
+    return res.json({
+      isRunning: false,
+      lastRun: lastRun || null,
+    });
+  } catch (error: any) {
+    console.error('Migration status error:', error);
+    return res.status(500).json({ error: 'Failed to get migration status' });
+  }
+});
+
+/**
+ * POST /api/integrations/quickbooks/push/cancel
+ * 
+ * Request cancellation of a running migration
+ */
+router.post('/quickbooks/push/cancel', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId } = req.body;
+
+    const [activeRun] = await db.select()
+      .from(quickbooksMigrationRuns)
+      .where(
+        and(
+          eq(quickbooksMigrationRuns.workspaceId, workspaceId),
+          eq(quickbooksMigrationRuns.status, 'running')
+        )
+      )
+      .limit(1);
+
+    if (!activeRun) {
+      return res.status(404).json({ error: 'No active migration to cancel' });
+    }
+
+    await db.update(quickbooksMigrationRuns)
+      .set({ 
+        status: 'cancel_requested',
+        cancelRequestedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(quickbooksMigrationRuns.id, activeRun.id));
+
+    console.log(`[QuickBooks Push] Cancellation requested for run ${activeRun.id}`);
+
+    return res.json({ 
+      success: true, 
+      message: 'Cancellation requested. Migration will stop after current item.',
+      runId: activeRun.id,
+    });
+  } catch (error: any) {
+    console.error('Migration cancel error:', error);
+    return res.status(500).json({ error: 'Failed to cancel migration' });
+  }
+});
+
+/**
  * POST /api/integrations/quickbooks/push
  * 
  * Push CoAIleague data TO QuickBooks (reverse sync)
  * Syncs clients as Customers, employees as Employees, invoices as Invoices
+ * 
+ * Implements migration lock - only one migration per workspace at a time
  */
 router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  let migrationRunId: string | null = null;
+  
   try {
     const { workspaceId, useSandboxData } = req.body;
+    const userId = (req as any).session?.userId;
 
     if (!workspaceId) {
       return res.status(400).json({ error: 'Missing workspaceId' });
+    }
+
+    // Check for existing running migration (migration lock)
+    const [existingRun] = await db.select()
+      .from(quickbooksMigrationRuns)
+      .where(
+        and(
+          eq(quickbooksMigrationRuns.workspaceId, workspaceId),
+          inArray(quickbooksMigrationRuns.status, ['running', 'cancel_requested'])
+        )
+      )
+      .limit(1);
+
+    if (existingRun) {
+      const elapsedSeconds = Math.floor((Date.now() - new Date(existingRun.startedAt!).getTime()) / 1000);
+      return res.status(409).json({
+        error: 'Migration already in progress',
+        code: 'MIGRATION_LOCKED',
+        activeRun: {
+          id: existingRun.id,
+          status: existingRun.status,
+          startedAt: existingRun.startedAt,
+          elapsedSeconds,
+          progress: {
+            employees: { synced: existingRun.syncedEmployees, total: existingRun.totalEmployees },
+            customers: { synced: existingRun.syncedCustomers, total: existingRun.totalCustomers },
+          },
+        },
+        message: `A migration is already running (${elapsedSeconds}s elapsed). You can cancel it or wait for it to complete.`,
+      });
     }
 
     // Find connection
@@ -470,14 +597,71 @@ router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async
 
     console.log(`[QuickBooks Push] Pushing ${dbEmployees.length} employees, ${clients.length} clients, ${invoices.length} invoices`);
 
+    // Create migration run record
+    const [migrationRun] = await db.insert(quickbooksMigrationRuns)
+      .values({
+        workspaceId,
+        status: 'running',
+        totalEmployees: dbEmployees.length,
+        totalCustomers: clients.length,
+        totalInvoices: invoices.length,
+        initiatedBy: userId,
+        metadata: { useSandboxData, sourceWorkspaceId },
+      })
+      .returning();
+    
+    migrationRunId = migrationRun.id;
+    console.log(`[QuickBooks Push] Created migration run: ${migrationRunId}`);
+
     const results = {
       customers: { synced: 0, errors: [] as string[] },
       employees: { synced: 0, errors: [] as string[] },
       invoices: { synced: 0, errors: [] as string[] },
     };
 
+    // Helper to check if cancellation was requested
+    const checkCancellation = async (): Promise<boolean> => {
+      const [run] = await db.select()
+        .from(quickbooksMigrationRuns)
+        .where(eq(quickbooksMigrationRuns.id, migrationRunId!))
+        .limit(1);
+      return run?.status === 'cancel_requested';
+    };
+
+    // Helper to update progress
+    const updateProgress = async (syncedEmployees: number, syncedCustomers: number, lastEmployeeId?: string, lastCustomerId?: string) => {
+      await db.update(quickbooksMigrationRuns)
+        .set({
+          syncedEmployees,
+          syncedCustomers,
+          lastProcessedEmployeeId: lastEmployeeId,
+          lastProcessedCustomerId: lastCustomerId,
+          updatedAt: new Date(),
+        })
+        .where(eq(quickbooksMigrationRuns.id, migrationRunId!));
+    };
+
     // Push Customers (from clients)
     for (const client of clients) {
+      // Check for cancellation
+      if (await checkCancellation()) {
+        console.log(`[QuickBooks Push] Cancellation detected during customer sync`);
+        await db.update(quickbooksMigrationRuns)
+          .set({
+            status: 'cancelled',
+            finishedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(quickbooksMigrationRuns.id, migrationRunId!));
+        
+        return res.json({
+          success: false,
+          cancelled: true,
+          message: 'Migration was cancelled',
+          results,
+        });
+      }
+
       try {
         const qbCustomer = {
           DisplayName: client.name,
@@ -512,10 +696,32 @@ router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async
       } catch (err: any) {
         results.customers.errors.push(`${client.name}: ${err.message}`);
       }
+
+      // Update progress after each customer
+      await updateProgress(results.employees.synced, results.customers.synced, undefined, client.id);
     }
 
     // Push Employees
     for (const emp of dbEmployees) {
+      // Check for cancellation
+      if (await checkCancellation()) {
+        console.log(`[QuickBooks Push] Cancellation detected during employee sync`);
+        await db.update(quickbooksMigrationRuns)
+          .set({
+            status: 'cancelled',
+            finishedAt: new Date(),
+            updatedAt: new Date(),
+          })
+          .where(eq(quickbooksMigrationRuns.id, migrationRunId!));
+        
+        return res.json({
+          success: false,
+          cancelled: true,
+          message: 'Migration was cancelled',
+          results,
+        });
+      }
+
       try {
         const qbEmployee = {
           DisplayName: `${emp.firstName} ${emp.lastName}`,
@@ -545,18 +751,45 @@ router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async
       } catch (err: any) {
         results.employees.errors.push(`${emp.firstName} ${emp.lastName}: ${err.message}`);
       }
+
+      // Update progress after each employee
+      await updateProgress(results.employees.synced, results.customers.synced, emp.id, undefined);
     }
 
-    // Push Invoices (requires customers to exist first)
-    // Skip for now as it requires customer mapping
+    // Mark migration as completed
+    await db.update(quickbooksMigrationRuns)
+      .set({
+        status: 'completed',
+        syncedEmployees: results.employees.synced,
+        syncedCustomers: results.customers.synced,
+        finishedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(quickbooksMigrationRuns.id, migrationRunId!));
+
+    console.log(`[QuickBooks Push] Migration completed: ${migrationRunId}`);
 
     return res.json({
       success: true,
       message: `Pushed ${results.customers.synced} customers and ${results.employees.synced} employees to QuickBooks`,
       results,
+      migrationRunId,
     });
   } catch (error: any) {
     console.error('QuickBooks push error:', error);
+    
+    // Mark migration as failed if we have a run ID
+    if (migrationRunId) {
+      await db.update(quickbooksMigrationRuns)
+        .set({
+          status: 'failed',
+          errorMessage: error.message,
+          finishedAt: new Date(),
+          updatedAt: new Date(),
+        })
+        .where(eq(quickbooksMigrationRuns.id, migrationRunId));
+    }
+    
     return res.status(500).json({ error: error.message || 'Failed to push data to QuickBooks' });
   }
 });

@@ -6,7 +6,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter }
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@/components/ui/visually-hidden';
 import { ColorfulCelticKnot } from '@/components/ui/colorful-celtic-knot';
 import { useToast } from '@/hooks/use-toast';
 import { 
@@ -182,6 +183,14 @@ export default function QuickBooksImportPage() {
   const [pushProgress, setPushProgress] = useState(0);
   const [pushMessage, setPushMessage] = useState('Connecting to QuickBooks...');
   const [pushTasks, setPushTasks] = useState<Array<{ id: string; label: string; status: 'pending' | 'in_progress' | 'completed' }>>([]);
+  const [migrationLocked, setMigrationLocked] = useState(false);
+  const [activeMigrationInfo, setActiveMigrationInfo] = useState<{
+    id: string;
+    status: string;
+    startedAt: string;
+    elapsedSeconds: number;
+    progress?: { employees: { synced: number; total: number }; customers: { synced: number; total: number } };
+  } | null>(null);
 
   useEffect(() => {
     const urlParams = new URLSearchParams(window.location.search);
@@ -517,14 +526,40 @@ export default function QuickBooksImportPage() {
         await new Promise(resolve => setTimeout(resolve, 1500));
         
         return data;
-      } catch (error) {
+      } catch (error: any) {
         if (syncProgressTimer) {
           clearInterval(syncProgressTimer);
+        }
+        
+        // Handle migration lock (409 conflict)
+        if (error.status === 409 || error.message?.includes('Migration already in progress')) {
+          setShowPushModal(false);
+          return { migrationLocked: true, error };
         }
         throw error;
       }
     },
     onSuccess: (data) => {
+      // Handle migration lock case
+      if (data?.migrationLocked) {
+        toast({
+          title: 'Migration Already Running',
+          description: 'Another sync is in progress. You can cancel it or wait for it to complete.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
+      // Handle cancellation case
+      if (data?.cancelled) {
+        toast({
+          title: 'Migration Cancelled',
+          description: data.message || 'The sync was cancelled.',
+        });
+        refetchPreview();
+        return;
+      }
+      
       setShowPushModal(false);
       toast({
         title: 'Data Pushed to QuickBooks',
@@ -534,9 +569,49 @@ export default function QuickBooksImportPage() {
     },
     onError: (error: any) => {
       setShowPushModal(false);
+      
+      // Check for migration lock error
+      if (error.code === 'MIGRATION_LOCKED' || error.message?.includes('already in progress')) {
+        setMigrationLocked(true);
+        setActiveMigrationInfo(error.activeRun || null);
+        toast({
+          title: 'Migration Already Running',
+          description: error.message || 'Another sync is in progress. You can cancel it or wait.',
+          variant: 'destructive',
+        });
+        return;
+      }
+      
       toast({
         title: 'Push Failed',
         description: error.message || 'Failed to push data to QuickBooks',
+        variant: 'destructive',
+      });
+    },
+  });
+  
+  // Cancel migration mutation
+  const cancelMigrationMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/integrations/quickbooks/push/cancel', {
+        workspaceId: workspace?.id,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to cancel');
+      return data;
+    },
+    onSuccess: () => {
+      setMigrationLocked(false);
+      setActiveMigrationInfo(null);
+      toast({
+        title: 'Cancellation Requested',
+        description: 'The migration will stop after the current item.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Cancel Failed',
+        description: error.message,
         variant: 'destructive',
       });
     },
@@ -1455,6 +1530,68 @@ export default function QuickBooksImportPage() {
         </Card>
       )}
 
+      {/* Migration Lock Dialog */}
+      <Dialog open={migrationLocked} onOpenChange={(open) => !open && setMigrationLocked(false)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertCircle className="h-5 w-5" />
+              Migration Already Running
+            </DialogTitle>
+            <DialogDescription>
+              Another sync operation is currently in progress. You can wait for it to complete or cancel it.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {activeMigrationInfo && (
+            <div className="bg-muted/50 rounded-lg p-4 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Status:</span>
+                <span className="font-medium capitalize">{activeMigrationInfo.status?.replace('_', ' ')}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Running for:</span>
+                <span className="font-medium">{Math.floor(activeMigrationInfo.elapsedSeconds / 60)}m {activeMigrationInfo.elapsedSeconds % 60}s</span>
+              </div>
+              {activeMigrationInfo.progress && (
+                <>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Employees:</span>
+                    <span className="font-medium">{activeMigrationInfo.progress.employees.synced} / {activeMigrationInfo.progress.employees.total}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Customers:</span>
+                    <span className="font-medium">{activeMigrationInfo.progress.customers.synced} / {activeMigrationInfo.progress.customers.total}</span>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+          
+          <div className="flex gap-3 justify-end pt-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setMigrationLocked(false)}
+              data-testid="button-wait-migration"
+            >
+              Wait for Completion
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => cancelMigrationMutation.mutate()}
+              disabled={cancelMigrationMutation.isPending}
+              data-testid="button-cancel-migration"
+            >
+              {cancelMigrationMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Cancelling...</>
+              ) : (
+                'Cancel Migration'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       {/* Trinity Push Loading Modal with Task Checklist */}
       <Dialog open={showPushModal} onOpenChange={() => {}}>
         <DialogContent 
@@ -1462,6 +1599,10 @@ export default function QuickBooksImportPage() {
           onPointerDownOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
+          <VisuallyHidden>
+            <DialogTitle>Trinity Sync Progress</DialogTitle>
+            <DialogDescription>Syncing data to QuickBooks</DialogDescription>
+          </VisuallyHidden>
           <div className="flex flex-col py-6 space-y-5">
             {/* Header with Trinity Logo */}
             <div className="flex items-center gap-4">

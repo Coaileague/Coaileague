@@ -12300,6 +12300,68 @@ export const insertPartnerConnectionSchema = createInsertSchema(partnerConnectio
 export type InsertPartnerConnection = z.infer<typeof insertPartnerConnectionSchema>;
 export type PartnerConnection = typeof partnerConnections.$inferSelect;
 
+// Migration status enum
+export const migrationStatusEnum = pgEnum("migration_status", [
+  'running',
+  'completed', 
+  'failed',
+  'cancelled',
+  'cancel_requested'
+]);
+
+// QuickBooks Migration Runs - Track migration state and prevent concurrent runs
+export const quickbooksMigrationRuns = pgTable("quickbooks_migration_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Migration status
+  status: migrationStatusEnum("status").notNull().default('running'),
+  
+  // Progress tracking
+  totalEmployees: integer("total_employees").default(0),
+  syncedEmployees: integer("synced_employees").default(0),
+  totalCustomers: integer("total_customers").default(0),
+  syncedCustomers: integer("synced_customers").default(0),
+  totalInvoices: integer("total_invoices").default(0),
+  syncedInvoices: integer("synced_invoices").default(0),
+  
+  // Current position for restart capability
+  lastProcessedEmployeeId: varchar("last_processed_employee_id"),
+  lastProcessedCustomerId: varchar("last_processed_customer_id"),
+  
+  // Timing
+  startedAt: timestamp("started_at").defaultNow(),
+  finishedAt: timestamp("finished_at"),
+  cancelRequestedAt: timestamp("cancel_requested_at"),
+  
+  // Initiator
+  initiatedBy: varchar("initiated_by").references(() => users.id, { onDelete: 'set null' }),
+  
+  // Error tracking
+  errorMessage: text("error_message"),
+  
+  // Metadata for additional context
+  metadata: jsonb("metadata"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => ({
+  workspaceIdx: index("qb_migration_runs_workspace_idx").on(table.workspaceId),
+  statusIdx: index("qb_migration_runs_status_idx").on(table.status),
+  runningWorkspaceUnique: uniqueIndex("qb_migration_runs_running_workspace")
+    .on(table.workspaceId)
+    .where(sql`status = 'running' OR status = 'cancel_requested'`),
+}));
+
+export const insertQuickbooksMigrationRunSchema = createInsertSchema(quickbooksMigrationRuns).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertQuickbooksMigrationRun = z.infer<typeof insertQuickbooksMigrationRunSchema>;
+export type QuickbooksMigrationRun = typeof quickbooksMigrationRuns.$inferSelect;
+
 // Partner API Usage Events - Track all partner API calls with costs
 export const partnerApiUsageEvents = pgTable("partner_api_usage_events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
