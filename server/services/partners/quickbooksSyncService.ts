@@ -669,7 +669,7 @@ export class QuickBooksSyncService {
     coaileagueContractors: any[]
   ): EntityMatch {
     const qboEmail = qboVendor.PrimaryEmailAddr?.Address?.toLowerCase();
-    const qboName = qboVendor.DisplayName.toLowerCase();
+    const qboName = (qboVendor.DisplayName || '').toLowerCase();
     const qboCompany = qboVendor.CompanyName?.toLowerCase();
 
     // First try email match (highest confidence)
@@ -767,7 +767,7 @@ export class QuickBooksSyncService {
     coaileagueClients: any[]
   ): EntityMatch {
     const qboEmail = qboCustomer.PrimaryEmailAddr?.Address?.toLowerCase();
-    const qboName = qboCustomer.DisplayName.toLowerCase();
+    const qboName = (qboCustomer.DisplayName || '').toLowerCase();
 
     if (qboEmail) {
       const emailMatch = coaileagueClients.find(c => 
@@ -916,7 +916,7 @@ export class QuickBooksSyncService {
     coaileagueEmployees: any[]
   ): EntityMatch {
     const qboEmail = qboEmployee.PrimaryEmailAddr?.Address?.toLowerCase();
-    const qboName = qboEmployee.DisplayName.toLowerCase();
+    const qboName = (qboEmployee.DisplayName || '').toLowerCase();
     const qboFirst = qboEmployee.GivenName?.toLowerCase();
     const qboLast = qboEmployee.FamilyName?.toLowerCase();
 
