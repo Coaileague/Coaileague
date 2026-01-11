@@ -108,7 +108,6 @@ export const navConfig = {
     sales: "/sales-portal",
     client: "/client-portal",
     auditor: "/auditor-portal",
-    helpDesk: "/helpdesk",
   },
 
   // AI & Automation Routes

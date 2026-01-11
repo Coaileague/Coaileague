@@ -128,7 +128,7 @@ const HRBenefits = lazy(() => import("@/pages/hr-benefits"));
 const HRReviews = lazy(() => import("@/pages/hr-reviews"));
 const HRPTO = lazy(() => import("@/pages/hr-pto"));
 const HRTerminations = lazy(() => import("@/pages/hr-terminations"));
-const HelpDesk = lazy(() => import("@/pages/HelpDesk"));
+// HelpDesk chatroom removed - using ticket system instead
 const Chatrooms = lazy(() => import("@/pages/chatrooms"));
 const PayrollDashboard = lazy(() => import("@/pages/payroll-dashboard"));
 const HelpAIOrchestration = lazy(() => import("@/pages/helpai-orchestration"));
@@ -396,8 +396,7 @@ function MascotRenderer() {
   // PUBLIC ROUTES for showcase mode detection
   const PUBLIC_ROUTES = useMemo(() => new Set([
     "/", "/login", "/register", "/pricing", "/contact", "/support",
-    "/terms", "/privacy", "/helpdesk", "/chat", "/mobile-chat", "/live-chat",
-    "/helpdesk5", "/support/chat", "/trinity-features"
+    "/terms", "/privacy", "/trinity-features"
   ]), []);
   
   const isPublicPage = PUBLIC_ROUTES.has(location) || 
@@ -912,7 +911,6 @@ function AppContent() {
   // Use wouter location for route checks to ensure reactivity
   const currentPath = location;
   const isMobileChat = currentPath === '/mobile-chat';
-  const isHelpDesk = currentPath === '/helpdesk' || currentPath.startsWith('/helpdesk');
   
   // CRITICAL: Public routes that should render IMMEDIATELY without waiting for auth loading
   const PUBLIC_ROUTES = new Set([
@@ -928,12 +926,6 @@ function AppContent() {
     "/support",
     "/terms",
     "/privacy",
-    "/helpdesk",
-    "/chat",
-    "/mobile-chat",
-    "/live-chat",
-    "/helpdesk5",
-    "/support/chat",
     "/error-403",
     "/error-404",
     "/error-500",
@@ -966,15 +958,13 @@ function AppContent() {
         <Route path="/support" component={Support} />
         <Route path="/terms" component={TermsOfService} />
         <Route path="/privacy" component={PrivacyPolicy} />
-        {/* Consolidated chat routes - /helpdesk for support, /chatrooms for discovery */}
-        <Route path="/helpdesk" component={HelpDesk} /> {/* Universal responsive helpdesk (works on desktop + mobile) */}
-        <Route path="/chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
-        <Route path="/mobile-chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
-        {/* Trinity Chat moved to authenticated routes - requires org_owner, co_owner, manager, or platform staff */}
-        <Route path="/live-chat"><Redirect to="/helpdesk" /></Route>
-        
-        <Route path="/helpdesk5"><Redirect to="/helpdesk" /></Route>
-        <Route path="/support/chat"><Redirect to="/helpdesk" /></Route>
+        {/* Legacy chat routes redirect to support page */}
+        <Route path="/helpdesk"><Redirect to="/support" /></Route>
+        <Route path="/chat"><Redirect to="/support" /></Route>
+        <Route path="/mobile-chat"><Redirect to="/support" /></Route>
+        <Route path="/live-chat"><Redirect to="/support" /></Route>
+        <Route path="/helpdesk5"><Redirect to="/support" /></Route>
+        <Route path="/support/chat"><Redirect to="/support" /></Route>
         <Route path="/onboarding/start" component={OnboardingStart} />
         <Route path="/onboarding/:token" component={OnboardingPage} />
         <Route path="/create-org" component={CreateOrg} />
@@ -1011,7 +1001,7 @@ function AppContent() {
         <CommandPalette />
         <div className="flex flex-col h-screen w-full bg-background">
           {/* Mobile Header with Logo */}
-          {!isHelpDesk && (
+          {(
             <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 py-2">
               <div className="flex items-center justify-between gap-2">
                 <a href="/" data-testid="link-logo-mobile" className="flex-shrink-0">
@@ -1235,23 +1225,21 @@ function AppContent() {
               <Route path="/contact" component={Contact} />
               <Route path="/terms" component={TermsOfService} />
               <Route path="/privacy" component={PrivacyPolicy} />
-              {/* Consolidated Chat Routes - /helpdesk for support, /chatrooms for discovery */}
-              <Route path="/helpdesk" component={HelpDesk} /> {/* Universal responsive helpdesk (works on desktop + mobile) */}
-              <Route path="/helpdesk/:roomId">
-                {(params) => <HelpDesk key={params.roomId} roomId={params.roomId} />}
-              </Route> {/* Individual chat room by ID - key forces remount */}
-              <Route path="/chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
-              <Route path="/mobile-chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
-              <Route path="/chatrooms" component={Chatrooms} /> {/* Org-isolated chat room discovery */}
-              <Route path="/chatroom"><Redirect to="/chatrooms" /></Route> {/* Redirect singular to plural */}
-              <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route> {/* Redirect support chatrooms */}
-              <Route path="/inbox" component={InboxPage} /> {/* Internal email system */}
-              <Route path="/helpai-orchestration" component={HelpAIOrchestration} /> {/* HelpAI Orchestration System */}
+              {/* Org-isolated chat rooms (internal communication) */}
+              <Route path="/chatrooms" component={Chatrooms} />
+              <Route path="/chatroom"><Redirect to="/chatrooms" /></Route>
+              <Route path="/inbox" component={InboxPage} />
+              <Route path="/helpai-orchestration" component={HelpAIOrchestration} />
               
-              {/* Redirect legacy chat routes to /helpdesk */}
-              <Route path="/support/chat"><Redirect to="/helpdesk" /></Route>
-              <Route path="/live-chat"><Redirect to="/helpdesk" /></Route>
-              <Route path="/helpdesk5"><Redirect to="/helpdesk" /></Route>
+              {/* Legacy chat routes redirect to support page */}
+              <Route path="/helpdesk"><Redirect to="/support" /></Route>
+              <Route path="/helpdesk/:roomId"><Redirect to="/support" /></Route>
+              <Route path="/chat"><Redirect to="/support" /></Route>
+              <Route path="/mobile-chat"><Redirect to="/support" /></Route>
+              <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route>
+              <Route path="/support/chat"><Redirect to="/support" /></Route>
+              <Route path="/live-chat"><Redirect to="/support" /></Route>
+              <Route path="/helpdesk5"><Redirect to="/support" /></Route>
               <Route path="/support" component={Support} />
               
               {/* Error pages */}
@@ -1265,9 +1253,9 @@ function AppContent() {
           </main>
           
           {/* Mobile Bottom Navigation - Fixed at bottom */}
-          {!isHelpDesk && <MobileBottomNav />}
+          <MobileBottomNav />
           {/* Mobile Quick Actions FAB - Above bottom nav */}
-          {!isHelpDesk && <MobileQuickActionsFAB />}
+          <MobileQuickActionsFAB />
           {/* PWA Install Prompt - Shows once for mobile users */}
           <PWAInstallPrompt />
         </div>
@@ -1283,7 +1271,7 @@ function AppContent() {
       <SidebarProvider style={sidebarStyle as React.CSSProperties}>
         <div className="flex flex-col h-screen w-full">
           {/* Header + Tabs Navigation (stacked vertically) */}
-          {!isHelpDesk && !isMobile && (
+          {!isMobile && (
             <>
               <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
                 <div className="flex items-center justify-between px-4 py-2.5">
@@ -1371,14 +1359,14 @@ function AppContent() {
               <AISystemStatusBanner />
 
             {/* Compact top-right utility cluster - HIDDEN on mobile and when universal header is shown */}
-            {!isMobileChat && !isHelpDesk && !isMobile && !true && (
+            {!isMobileChat && !isMobile && !true && (
               <AppUtilityCluster setLocation={setLocation} />
             )}
 
               {/* Main content area - visible scrollbar for desktop users */}
               <main className="flex-1 overflow-x-hidden overflow-y-auto bg-background min-h-0 w-full max-w-full" data-scroll="styled">
                 {/* Breadcrumb Navigation - helps users know where they are (desktop only) */}
-                {!isMobileChat && !isHelpDesk && !isMobile && <PageBreadcrumb />}
+                {!isMobileChat && !isMobile && <PageBreadcrumb />}
               
               <Suspense fallback={<PageLoader />}>
               <Switch>
@@ -1482,7 +1470,7 @@ function AppContent() {
                 <Route path="/review-disputes" component={ReviewDisputes} />
                 <Route path="/payroll/deductions" component={PayrollDeductions} />
                 <Route path="/payroll/garnishments" component={PayrollGarnishments} />
-                <Route path="/communications"><Redirect to="/helpdesk" /></Route>
+                <Route path="/communications"><Redirect to="/chatrooms" /></Route>
                 <Route path="/communications/onboarding" component={CommunicationsOnboarding} />
                 <Route path="/chatrooms" component={Chatrooms} /> {/* Org-isolated chat room discovery */}
                 <Route path="/chatroom"><Redirect to="/chatrooms" /></Route>
@@ -1573,19 +1561,17 @@ function AppContent() {
                 <Route path="/contact" component={Contact} />
                 <Route path="/terms" component={TermsOfService} />
                 <Route path="/privacy" component={PrivacyPolicy} />
-                {/* Consolidated Chat Routes - /helpdesk for support, /chatrooms for discovery */}
-                <Route path="/helpdesk" component={HelpDesk} /> {/* Universal responsive helpdesk (works on desktop + mobile) */}
-                <Route path="/helpdesk/:roomId">
-                  {(params) => <HelpDesk key={params.roomId} roomId={params.roomId} />}
-                </Route> {/* Individual chat room by ID - key forces remount */}
-                <Route path="/chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
-                <Route path="/mobile-chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
-                <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route> {/* Redirect support chatrooms to unified page */}
+                {/* Org chatrooms (internal communication) */}
+                <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route>
                 
-                {/* Redirect legacy chat routes to /helpdesk */}
-                <Route path="/support/chat"><Redirect to="/helpdesk" /></Route>
-                <Route path="/live-chat"><Redirect to="/helpdesk" /></Route>
-                <Route path="/helpdesk5"><Redirect to="/helpdesk" /></Route>
+                {/* Legacy chat routes redirect to support page */}
+                <Route path="/helpdesk"><Redirect to="/support" /></Route>
+                <Route path="/helpdesk/:roomId"><Redirect to="/support" /></Route>
+                <Route path="/chat"><Redirect to="/support" /></Route>
+                <Route path="/mobile-chat"><Redirect to="/support" /></Route>
+                <Route path="/support/chat"><Redirect to="/support" /></Route>
+                <Route path="/live-chat"><Redirect to="/support" /></Route>
+                <Route path="/helpdesk5"><Redirect to="/support" /></Route>
                 <Route path="/support" component={Support} />
                 
                 {/* Error pages */}
