@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -27,6 +28,7 @@ import {
   LifeBuoy,
   ArrowRight,
   Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import {
   Accordion,
@@ -35,8 +37,54 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 
+import type { HealthSummary } from '@shared/healthTypes';
+
 export default function Support() {
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Fetch live health data from API
+  const { data: healthData, isLoading: healthLoading, isError: healthError, refetch: refetchHealth } = useQuery<HealthSummary>({
+    queryKey: ['/api/health/summary'],
+    refetchInterval: 60000, // Refresh every minute
+    retry: 2,
+    staleTime: 30000, // Consider data fresh for 30 seconds
+  });
+
+  // Map service names to display labels
+  const serviceDisplayNames: Record<string, string> = {
+    database: 'Platform Core',
+    chat_websocket: 'Real-time Services',
+    gemini_ai: 'AI Services',
+    object_storage: 'File Storage',
+    stripe: 'Payments',
+    email: 'Email Services',
+    quickbooks: 'QuickBooks',
+    gusto: 'Gusto HRIS',
+  };
+
+  // Convert live health data to status items with error handling
+  const statusItems = healthError ? [
+    { label: "Platform Core", value: "Check Failed", status: "unknown" },
+    { label: "AI Services", value: "Check Failed", status: "unknown" },
+    { label: "Real-time Services", value: "Check Failed", status: "unknown" },
+    { label: "Integrations", value: "Check Failed", status: "unknown" },
+  ] : healthData?.services?.slice(0, 4).map(service => ({
+    label: serviceDisplayNames[service.service] || service.service,
+    value: service.status === 'operational' ? 'Operational' : 
+           service.status === 'degraded' ? 'Degraded' : 'Down',
+    status: service.status === 'operational' ? 'success' : 
+            service.status === 'degraded' ? 'warning' : 'error',
+  })) || [
+    { label: "Platform Core", value: "Loading...", status: "loading" },
+    { label: "AI Services", value: "Loading...", status: "loading" },
+    { label: "Real-time Services", value: "Loading...", status: "loading" },
+    { label: "Integrations", value: "Loading...", status: "loading" },
+  ];
+
+  // Determine overall status - show 'loading' during initial load, 'unknown' on error
+  const overallStatus = healthLoading ? 'loading' : 
+                        healthError ? 'unknown' : 
+                        (healthData?.overall || 'operational');
 
   const resourceCategories = [
     {
@@ -148,13 +196,6 @@ export default function Support() {
     },
   ];
 
-  const statusItems = [
-    { label: "Platform Core", value: "Operational", status: "success" },
-    { label: "AI Services", value: "Operational", status: "success" },
-    { label: "Mobile Apps", value: "Operational", status: "success" },
-    { label: "Integrations", value: "Operational", status: "success" },
-  ];
-
   return (
     <div className="min-h-screen bg-background dark:bg-background">
       {/* Top Bar - Fortune 500 Header with Branding */}
@@ -262,26 +303,66 @@ export default function Support() {
           </Card>
         </div>
 
-        {/* System Status - Clear Labels and Values */}
+        {/* System Status - Live Data from API */}
         <Card className="bg-card border-border mb-8 max-w-xl mx-auto" data-testid="card-status">
           <div className="p-4">
             <div className="flex items-center justify-between mb-3">
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
-                <span className="text-sm font-medium">All Systems Operational</span>
+                {overallStatus === 'operational' ? (
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                ) : overallStatus === 'degraded' ? (
+                  <AlertCircle className="h-4 w-4 text-amber-500" />
+                ) : overallStatus === 'loading' ? (
+                  <RefreshCw className="h-4 w-4 text-muted-foreground animate-spin" />
+                ) : overallStatus === 'unknown' ? (
+                  <AlertCircle className="h-4 w-4 text-muted-foreground" />
+                ) : (
+                  <AlertCircle className="h-4 w-4 text-red-500" />
+                )}
+                <span className="text-sm font-medium">
+                  {overallStatus === 'operational' ? 'All Systems Operational' :
+                   overallStatus === 'degraded' ? 'Some Services Degraded' :
+                   overallStatus === 'loading' ? 'Checking System Status...' :
+                   overallStatus === 'unknown' ? 'Status Check Failed' : 'Service Issues Detected'}
+                </span>
               </div>
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                className="h-7 w-7"
+                onClick={() => refetchHealth()}
+                data-testid="button-refresh-status"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${healthLoading ? 'animate-spin' : ''}`} />
+              </Button>
             </div>
             <div className="grid grid-cols-2 gap-3">
               {statusItems.map((item) => (
                 <div key={item.label} className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-emerald-500 shrink-0" />
+                  <div className={`w-2 h-2 rounded-full shrink-0 ${
+                    item.status === 'success' ? 'bg-emerald-500' :
+                    item.status === 'warning' ? 'bg-amber-500' :
+                    item.status === 'error' ? 'bg-red-500' :
+                    item.status === 'unknown' ? 'bg-muted-foreground' :
+                    'bg-muted-foreground animate-pulse'
+                  }`} />
                   <div className="min-w-0">
                     <p className="text-xs text-muted-foreground truncate">{item.label}</p>
-                    <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{item.value}</p>
+                    <p className={`text-xs font-medium ${
+                      item.status === 'success' ? 'text-emerald-600 dark:text-emerald-400' :
+                      item.status === 'warning' ? 'text-amber-600 dark:text-amber-400' :
+                      item.status === 'error' ? 'text-red-600 dark:text-red-400' :
+                      'text-muted-foreground'
+                    }`}>{item.value}</p>
                   </div>
                 </div>
               ))}
             </div>
+            {healthData?.timestamp && (
+              <p className="text-[10px] text-muted-foreground mt-2 text-right">
+                Last updated: {new Date(healthData.timestamp).toLocaleTimeString()}
+              </p>
+            )}
           </div>
         </Card>
 

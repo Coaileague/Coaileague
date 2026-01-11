@@ -218,6 +218,35 @@ export function registerHealthRoutes(app: Express, requireAuth: any) {
     }
   });
 
+  // Get data integrity scan results (Trinity dead connection detection)
+  // GET /api/health/data-integrity
+  healthRouter.get('/data-integrity', async (req: Request, res: Response) => {
+    try {
+      const { trinityDataIntegrityScanner } = await import('../services/trinityDataIntegrityScanner');
+      const result = await trinityDataIntegrityScanner.scan();
+      const hardcodedReport = trinityDataIntegrityScanner.getHardcodedPatternsReport();
+      
+      res.json({
+        success: true,
+        ...result,
+        hardcodedPatterns: {
+          fixedCount: hardcodedReport.fixed.length,
+          intentionallyStaticCount: hardcodedReport.intentionallyStatic.length,
+          needsAttentionCount: hardcodedReport.needsAttention.length,
+          details: hardcodedReport,
+        },
+        conversationalSummary: trinityDataIntegrityScanner.getConversationalSummary(),
+      });
+    } catch (error: any) {
+      console.error('[Health] Data integrity scan failed:', error.message);
+      res.status(500).json({
+        success: false,
+        error: 'Data integrity scan failed',
+        message: error.message,
+      });
+    }
+  });
+
   // Get individual service health
   // GET /api/health/:service
   healthRouter.get('/:service', async (req: Request, res: Response) => {
