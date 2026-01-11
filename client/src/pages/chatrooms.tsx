@@ -412,7 +412,7 @@ export default function Chatrooms() {
         <div className="flex-1 overflow-y-auto">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-12 gap-3">
-              <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
+              <ColorfulCelticKnot size="lg" state="speaking" animated={true} animationSpeed="normal" />
               <span className="text-sm text-muted-foreground">Loading chats...</span>
             </div>
           ) : error ? (
@@ -499,7 +499,7 @@ export default function Chatrooms() {
       <div className="flex-1 overflow-auto p-6">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-3">
-            <ColorfulCelticKnot size="xl" state="loading" animated={true} className="animate-trinity-loading" />
+            <ColorfulCelticKnot size="xl" state="happy" animated={true} animationSpeed="fast" />
             <span className="text-muted-foreground">Loading chat rooms...</span>
           </div>
         ) : error ? (

@@ -1643,7 +1643,7 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         <div className="min-h-0">
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-12 gap-2">
-            <ColorfulCelticKnot size="md" state="loading" animated={true} className="animate-trinity-loading" />
+            <ColorfulCelticKnot size="md" state="listening" animated={true} animationSpeed="slow" />
             <span className="text-xs text-muted-foreground">Loading...</span>
           </div>
         ) : sortedNotifications.length > 0 ? (

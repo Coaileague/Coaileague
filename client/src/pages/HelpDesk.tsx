@@ -2596,7 +2596,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             ) : (
               /* Loading state with Trinity branding */
               <div className="text-center py-8 flex flex-col items-center gap-3">
-                <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
+                <ColorfulCelticKnot size="lg" state="speaking" animated={true} animationSpeed="normal" />
                 <p className="text-gray-600 text-sm font-medium">Loading user information...</p>
               </div>
             )}

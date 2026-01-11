@@ -209,7 +209,7 @@ export function RBACRoute({
     }
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
-        <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
+        <ColorfulCelticKnot size="lg" state="thinking" animated={true} animationSpeed="fast" />
         <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );
@@ -232,7 +232,7 @@ export function RBACRoute({
       }
       return (
         <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
-          <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
+          <ColorfulCelticKnot size="lg" state="warning" animated={true} animationSpeed="normal" />
           <span className="text-sm text-muted-foreground">Redirecting...</span>
         </div>
       );
