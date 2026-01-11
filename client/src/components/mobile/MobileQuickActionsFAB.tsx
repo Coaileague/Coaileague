@@ -126,7 +126,8 @@ export function MobileQuickActionsFAB() {
     return null;
   }
 
-  const hiddenPaths = ['/chat', '/helpdesk', '/inbox', '/time-tracking'];
+  // Hide FAB on pages with their own fixed bottom navigation/actions
+  const hiddenPaths = ['/chat', '/helpdesk', '/inbox', '/time-tracking', '/quickbooks-import'];
   if (hiddenPaths.some(path => location.startsWith(path))) {
     return null;
   }
