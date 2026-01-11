@@ -152,9 +152,9 @@ export function FloatingSupportChat() {
   const handleNavigateToDashboard = () => {
     if (platformRole === 'root_admin' || platformRole === 'support' || 
         platformRole === 'support_manager' || platformRole === 'support_agent') {
-      setLocation('/support/chatrooms');
+      setLocation('/helpdesk'); // SIMPLIFIED: All chat goes to HelpDesk
     } else {
-      setLocation('/org-chat');
+      setLocation('/helpdesk'); // SIMPLIFIED: All chat goes to HelpDesk
     }
   };
 
@@ -162,7 +162,7 @@ export function FloatingSupportChat() {
   const handleRequestHumanHelp = () => {
     // Store conversation history for persistence
     sessionStorage.setItem('chat_conversation_history', JSON.stringify(messages));
-    setLocation('/chat'); // Route to support chatroom with welcome form
+    setLocation('/helpdesk'); // SIMPLIFIED: Route to unified HelpDesk
     setState(prev => ({ ...prev, isOpen: false }));
   };
   

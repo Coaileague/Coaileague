@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
 import { useChatroomWebSocket } from "@/hooks/use-chatroom-websocket";
 import { useNavigationProtection } from "@/hooks/use-navigation-protection";
+import { useIsMobile } from "@/hooks/use-mobile"; // CONSOLIDATED: Use single mobile detection hook
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useLocation, useRoute } from "wouter";
@@ -96,43 +97,10 @@ interface HelpDeskProps {
 }
 
 // Desktop IRC/MSN-style 3-column chatroom with CoAIleague professional branding
-// Can also be forced to mobile layout for /mobilechat route
+// SIMPLIFIED: Uses consolidated useIsMobile() hook instead of bespoke detection
 export function HelpDesk(props?: HelpDeskProps & any) {
-  // Auto-detect mobile layout based on viewport width with debouncing
-  // Debounce prevents rapid mount/unmount cycles that crash ScrollArea refs
-  // Initialize with actual viewport state to prevent immediate state change on mount
-  const [isMobileView, setIsMobileView] = useState(() => 
-    typeof window !== 'undefined' ? window.innerWidth < 768 : false
-  );
-  
-  // Track layout stability separately - only resize handlers should modify this
-  const layoutStableRef = useRef(true);
-  
-  useEffect(() => {
-    let debounceTimer: NodeJS.Timeout;
-    const isMobileRef = { current: isMobileView };
-    
-    const handleResize = () => {
-      const isMobile = window.innerWidth < 768; // md breakpoint
-      // Only update if changed, with debounce to prevent flicker
-      if (isMobile !== isMobileRef.current) {
-        layoutStableRef.current = false;
-        clearTimeout(debounceTimer);
-        debounceTimer = setTimeout(() => {
-          isMobileRef.current = isMobile;
-          setIsMobileView(isMobile);
-          // Mark layout as stable after transition completes
-          setTimeout(() => { layoutStableRef.current = true; }, 100);
-        }, 150); // 150ms debounce
-      }
-    };
-    
-    window.addEventListener('resize', handleResize);
-    return () => {
-      window.removeEventListener('resize', handleResize);
-      clearTimeout(debounceTimer);
-    };
-  }, []); // Empty deps - resize handler is self-contained
+  // CONSOLIDATED: Use single mobile detection hook (eliminates duplicate resize listeners)
+  const isMobileView = useIsMobile();
   
   const { forceMobileLayout = false, roomId: propRoomId } = props || {};
   const shouldUseMobileLayout = forceMobileLayout || isMobileView;
@@ -591,9 +559,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
   const hasAutoScrolledRef = useRef(false);
   
   // Simple scroll to bottom when new messages arrive
-  // Guard against layout instability using ref (not state) to prevent render loops
   const scrollToBottom = useCallback(() => {
-    if (!messagesEndRef.current || !layoutStableRef.current) return;
+    if (!messagesEndRef.current) return;
     requestAnimationFrame(() => {
       messagesEndRef.current?.scrollIntoView({ 
         behavior: hasAutoScrolledRef.current ? "smooth" : "auto" 
@@ -602,9 +569,8 @@ export function HelpDesk(props?: HelpDeskProps & any) {
     });
   }, []); // No dependencies - uses refs to avoid re-creation
 
-  // Debounced scroll effect for new messages - only when layout is stable
+  // Debounced scroll effect for new messages
   useEffect(() => {
-    if (!layoutStableRef.current) return; // Skip scrolling during layout transitions
     const timeoutId = setTimeout(scrollToBottom, 100);
     return () => clearTimeout(timeoutId);
   }, [messages.length, scrollToBottom]);

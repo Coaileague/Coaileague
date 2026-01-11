@@ -1240,9 +1240,9 @@ function AppContent() {
               </Route> {/* Individual chat room by ID - key forces remount */}
               <Route path="/chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
               <Route path="/mobile-chat"><Redirect to="/helpdesk" /></Route> {/* Legacy redirect */}
-              <Route path="/chatrooms" component={Chatrooms} /> {/* Organization chatroom discovery + Helpdesk link */}
-              <Route path="/chatroom"><Redirect to="/chatrooms" /></Route> {/* Redirect singular to plural */}
-              <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route> {/* Redirect support chatrooms to unified page */}
+              <Route path="/chatrooms"><Redirect to="/helpdesk" /></Route> {/* SIMPLIFIED: All chat goes to HelpDesk */}
+              <Route path="/chatroom"><Redirect to="/helpdesk" /></Route> {/* Redirect to unified HelpDesk */}
+              <Route path="/support/chatrooms"><Redirect to="/helpdesk" /></Route> {/* Redirect to unified HelpDesk */}
               <Route path="/inbox" component={InboxPage} /> {/* Internal email system */}
               <Route path="/helpai-orchestration" component={HelpAIOrchestration} /> {/* HelpAI Orchestration System */}
               
@@ -1480,10 +1480,10 @@ function AppContent() {
                 <Route path="/review-disputes" component={ReviewDisputes} />
                 <Route path="/payroll/deductions" component={PayrollDeductions} />
                 <Route path="/payroll/garnishments" component={PayrollGarnishments} />
-                <Route path="/communications"><Redirect to="/chatrooms" /></Route>
+                <Route path="/communications"><Redirect to="/helpdesk" /></Route>
                 <Route path="/communications/onboarding" component={CommunicationsOnboarding} />
-                <Route path="/chatrooms" component={Chatrooms} />
-                <Route path="/chatroom"><Redirect to="/chatrooms" /></Route>
+                <Route path="/chatrooms"><Redirect to="/helpdesk" /></Route> {/* SIMPLIFIED: All chat goes to HelpDesk */}
+                <Route path="/chatroom"><Redirect to="/helpdesk" /></Route>
                 <Route path="/inbox" component={InboxPage} />
                 <Route path="/diagnostics" component={Diagnostics} />
                 <Route path="/messages" component={PrivateMessages} />
