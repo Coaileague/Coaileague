@@ -61,6 +61,13 @@ export class QuickBooksOAuthService {
       console.warn('⚠️  QuickBooks OAuth not configured - missing QUICKBOOKS_CLIENT_ID or QUICKBOOKS_CLIENT_SECRET');
     }
     
+    // Log environment and credential info for debugging (first 8 chars of client ID only for security)
+    const qbEnv = process.env.QUICKBOOKS_ENVIRONMENT || 'sandbox';
+    const clientIdPrefix = this.clientId ? this.clientId.substring(0, 8) + '...' : 'NOT SET';
+    console.log(`[QuickBooks OAuth] Environment: ${qbEnv.toUpperCase()}`);
+    console.log(`[QuickBooks OAuth] Client ID prefix: ${clientIdPrefix}`);
+    console.log(`[QuickBooks OAuth] IMPORTANT: For sandbox testing, use Development app credentials from Intuit Developer Portal`);
+    
     if (this.redirectUri) {
       console.log(`[QuickBooks OAuth] Redirect URI: ${this.redirectUri}`);
     }
