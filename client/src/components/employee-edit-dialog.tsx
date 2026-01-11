@@ -693,7 +693,7 @@ export function EmployeeEditDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg max-h-[85vh] flex flex-col">
+        <DialogContent size="lg" className="max-h-[85vh] flex flex-col">
           <DialogHeader>
             <DialogTitle>Edit Employee</DialogTitle>
             <DialogDescription>

@@ -89,7 +89,7 @@ import {
 
 export default function Employees() {
   const { toast } = useToast();
-  const { isAuthenticated, isLoading: authLoading } = useAuth();
+  const { isAuthenticated, isLoading: authLoading, user } = useAuth();
   const { workspaceRole, isPlatformStaff } = useWorkspaceAccess();
   const isMobile = useIsMobile();
   const { isSimpleMode } = useSimpleMode();
@@ -834,7 +834,7 @@ export default function Employees() {
                               <Edit className="h-3.5 w-3.5 mr-2" />
                               Edit
                             </DropdownMenuItem>
-                            {employee.onboardingStatus !== 'completed' && employee.onboardingStatus !== 'pending_review' && (
+                            {employee.onboardingStatus !== 'completed' && employee.onboardingStatus !== 'pending_review' && employee.id !== user?.employeeId && !employee.userId && (
                               <DropdownMenuItem 
                                 onClick={() => {
                                   setSelectedEmployee(employee);
@@ -915,7 +915,7 @@ export default function Employees() {
                       Approve & Set Pay Rate
                     </Button>
                   )}
-                  {!isMobile && employee.onboardingStatus !== 'completed' && employee.onboardingStatus !== 'pending_review' && (
+                  {!isMobile && employee.onboardingStatus !== 'completed' && employee.onboardingStatus !== 'pending_review' && employee.id !== user?.employeeId && !employee.userId && (
                     <Button
                       variant="outline"
                       size="sm"
