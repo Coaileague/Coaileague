@@ -134,6 +134,7 @@ import dashboardRoutes from "./routes/dashboardRoutes";
 import gamificationEnhancedRoutes from "./routes/gamificationRoutes";
 import aiSchedulingRoutes from "./routes/aiSchedulingRoutes";
 import infrastructureRoutes from "./routes/infrastructureRoutes"; // Q1 2026 Infrastructure
+import sandboxRoutes from "./routes/sandbox-routes"; // Sandbox Simulation Testing
 import resendWebhooksRouter from "./routes/resendWebhooks"; // Resend email webhooks
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
@@ -3253,6 +3254,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Q1 2026 Infrastructure Services (backups, error tracking, key rotation)
   app.use('/api/infrastructure', requireAuth, infrastructureRoutes);
+  app.use("/api/sandbox", sandboxRoutes); // Sandbox Simulation Testing
 
 
   // Register CoAIleague Autonomous Scheduler API
