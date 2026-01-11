@@ -982,13 +982,25 @@ router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async
     const employeeResult = await executeBatchWithRateLimiter(
       dbEmployees, 
       'Employee', 
-      (emp) => ({
-        DisplayName: `${emp.firstName} ${emp.lastName}`,
-        GivenName: emp.firstName,
-        FamilyName: emp.lastName,
-        PrimaryEmailAddr: emp.email ? { Address: emp.email } : undefined,
-        PrimaryPhone: emp.phone ? { FreeFormNumber: emp.phone } : undefined,
-      }),
+      (emp) => {
+        // Parse hourly rate - sandbox employees have this set
+        const hourlyRate = emp.hourlyRate ? parseFloat(String(emp.hourlyRate)) : null;
+        // Use configurable default rate from platformConfig (NO HARDCODED VALUES)
+        const defaultRate = INTEGRATIONS.quickbooks.testing.defaultPayRate;
+        const effectiveRate = hourlyRate && hourlyRate > 0 ? hourlyRate : defaultRate;
+        
+        return {
+          DisplayName: `${emp.firstName} ${emp.lastName}`,
+          GivenName: emp.firstName,
+          FamilyName: emp.lastName,
+          PrimaryEmailAddr: emp.email ? { Address: emp.email } : undefined,
+          PrimaryPhone: emp.phone ? { FreeFormNumber: emp.phone } : undefined,
+          // Include pay rates so they're available when importing back
+          BillRate: effectiveRate,
+          CostRate: effectiveRate,
+          BillableTime: true,
+        };
+      },
       'lastProcessedEmployeeId'
     );
     results.employees.synced = employeeResult.synced;
