@@ -66,7 +66,7 @@ export function ImageLightbox({ src, alt = "Image", isOpen, onClose }: ImageLigh
 
   return (
     <Dialog open={isOpen} onOpenChange={resetAndClose}>
-      <DialogContent className="max-w-[95vw] max-h-[95vh] p-0 border-0">
+      <DialogContent size="full" className="max-h-[95vh] p-0 border-0">
         <div className="relative w-full h-full bg-black/95 rounded-lg overflow-hidden">
           {/* Controls */}
           <div className="absolute top-4 right-4 z-50 flex items-center gap-2">

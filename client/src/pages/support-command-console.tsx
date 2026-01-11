@@ -1168,7 +1168,7 @@ export default function SupportCommandConsole() {
       </Dialog>
 
       <Dialog open={isFullscreenChat} onOpenChange={setIsFullscreenChat}>
-        <DialogContent className="max-w-[95vw] w-full h-[90vh] max-h-[90vh] flex flex-col p-0 gap-0" showHomeButton={false}>
+        <DialogContent size="full" className="h-[90vh] max-h-[90vh] flex flex-col p-0 gap-0" showHomeButton={false}>
           <DialogHeader className="bg-gradient-to-r from-slate-900 to-slate-800 text-white p-4 shrink-0 rounded-t-lg">
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">

@@ -1,0 +1,176 @@
+2.2 Testing Suite (Continued & Completed)
+This completes the error handling for the pre-checks and adds the critical Post-Migration and Data Integrity validators to ensure no data is lost or corrupted.
+
+JavaScript
+
+      if (failed > 0) {
+        throw new Error('🚨 CRITICAL: Pre-migration checks failed. Fix database schema before proceeding.');
+      }
+      return true;
+    },
+
+  // POST-MIGRATION VALIDATION (The "Zero Data Loss" Check)
+  async postMigrationValidation(syncResults) {
+    console.log('🔍 Running Post-Migration Validation...\n');
+
+    const validators = [
+      {
+        name: 'Record Count Match',
+        test: async () => {
+          // Compare QB counts vs Database counts
+          const entities = ['customers', 'employees', 'vendors', 'invoices', 'items'];
+          const discrepancies = [];
+
+          for (const entity of entities) {
+            const qbCount = await QuickBooksService.getCount(entity); // Helper to get QB API count
+            const dbCount = await db.query(`SELECT COUNT(*) FROM ${this.getTableFor(entity)}`);
+            
+            if (parseInt(dbCount) !== qbCount) {
+              discrepancies.push(`${entity}: QB(${qbCount}) vs DB(${dbCount})`);
+            }
+          }
+
+          if (discrepancies.length > 0) {
+            throw new Error(`Count Mismatch: ${discrepancies.join(', ')}`);
+          }
+          return true;
+        }
+      },
+      {
+        name: 'Financial Totals Reconciliation',
+        test: async () => {
+          // Verify total Accounts Receivable matches
+          const qbAR = await QuickBooksService.getReceivablesTotal();
+          const dbAR = await db.query('SELECT SUM(balance) FROM clients');
+          
+          const diff = Math.abs(qbAR - dbAR);
+          if (diff > 1.00) { // Allow small float variance
+            throw new Error(`Accounts Receivable Mismatch: QB($${qbAR}) vs DB($${dbAR})`);
+          }
+          return true;
+        }
+      },
+      {
+        name: 'Orphan Check',
+        test: async () => {
+          // Ensure all invoices are linked to valid clients
+          const orphans = await db.query(`
+            SELECT count(*) FROM invoices i 
+            LEFT JOIN clients c ON i.client_id = c.id 
+            WHERE c.id IS NULL
+          `);
+          
+          if (orphans > 0) {
+            throw new Error(`Found ${orphans} orphaned invoices (no client link)`);
+          }
+          return true;
+        }
+      }
+    ];
+
+    for (const check of validators) {
+      try {
+        await check.test();
+        console.log(`✅ ${check.name}`);
+      } catch (error) {
+        console.error(`❌ ${check.name}: ${error.message}`);
+        // Log critical failure to sync log
+        await this.logFailure('validation', check.name, error.message);
+      }
+    }
+  },
+
+  // DATA INTEGRITY & RELATIONSHIP MAPPING
+  async checkReferentialIntegrity() {
+    console.log('🔗 Checking Referential Integrity...\n');
+    
+    // 1. Verify Employee SSN Encryption
+    const unencryptedSSNs = await db.query(`
+      SELECT count(*) FROM employees 
+      WHERE ssn IS NOT NULL AND length(ssn) < 20
+    `); // Encrypted strings are typically long
+    
+    if (unencryptedSSNs > 0) {
+      console.error('❌ SECURITY ALERT: Found unencrypted SSNs in database');
+    } else {
+      console.log('✅ Employee SSN Encryption Verified');
+    }
+
+    // 2. Verify Service Codes
+    const invalidServiceItems = await db.query(`
+      SELECT count(*) FROM invoice_line_items li
+      LEFT JOIN services s ON li.service_id = s.id
+      WHERE s.id IS NULL
+    `);
+
+    if (invalidServiceItems > 0) {
+      console.error(`❌ Found ${invalidServiceItems} invoice lines with invalid service codes`);
+    } else {
+      console.log('✅ Service Item Mapping Verified');
+    }
+  },
+
+  // UTILITIES
+  getTableFor(entity) {
+    const map = {
+      'customers': 'clients',
+      'vendors': 'contractors',
+      'items': 'services',
+      'invoices': 'invoices',
+      'employees': 'employees'
+    };
+    return map[entity];
+  },
+
+  async logFailure(type, checkName, message) {
+    await db.query(`
+      INSERT INTO qb_sync_log (sync_type, operation, status, error_message, started_at)
+      VALUES ('validation', $1, 'failed', $2, NOW())
+    `, [checkName, message]);
+  }
+};
+
+module.exports = QuickBooksTestSuite;
+PHASE 3: EXECUTION INSTRUCTIONS FOR REPLIT
+To run this integration safely on Replit without corrupting live data, follow this strict sequence:
+
+1. Database Setup (SQL Shell)
+Run these commands to ensure your schema is ready for the data dump:
+
+SQL
+
+-- Check if tables exist first
+\dt
+-- If migrating fresh, verify the QuickbooksSchema tables are created
+-- (Paste the schema creation SQL derived from section 1.1)
+2. Environment Configuration (.env)
+Ensure your .env file has the Sandbox keys first for testing:
+
+Bash
+
+QB_CLIENT_ID=your_sandbox_key
+QB_CLIENT_SECRET=your_sandbox_secret
+QB_ENVIRONMENT=sandbox
+QB_REDIRECT_URI=https://<your-replit-url>/callback
+DATABASE_URL=postgres://<credentials>
+3. Run the Test Suite (Shell)
+Execute the pre-checks to verify your database is ready to receive data.
+
+Bash
+
+# Create a test runner script
+node -e "const Test = require('./app/tests/quickbooks-integration.test.js'); Test.preMigrationChecks();"
+4. Execute Dry-Run Sync
+Run the sync in "Dry Run" mode (logs actions but doesn't write to DB) if possible, or run against a staging database.
+
+Bash
+
+# Run the sync service
+node -e "const QB = require('./app/services/quickbooks-service.js'); QB.fullSync();"
+5. Verify Results
+After the sync completes, run the post-migration validation:
+
+Bash
+
+node -e "const Test = require('./app/tests/quickbooks-integration.test.js'); Test.postMigrationValidation();"
+This completes the CoAIleague QuickBooks Integration Infrastructure. You now have the schema, the service layer, and the validation suite to prove to clients that their data was migrated with 100% accuracy.

@@ -2109,7 +2109,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
 
       {/* Room Status Dialog - Functional with Select + Textarea + Save - Mobile responsive */}
       <Dialog open={showRoomStatus && isStaff} onOpenChange={(open) => { if (!open) setShowRoomStatus(false); }}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[calc(100vh-2rem)] overflow-y-auto">
+        <DialogContent size="md" className="max-h-[calc(100vh-2rem)] overflow-y-auto">
           <DialogHeader>
             <div className="flex items-center gap-3 mb-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-600 to-blue-500 flex items-center justify-center flex-shrink-0">
@@ -2310,7 +2310,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
         setShowUserProfile(open);
         if (!open) setSelectedUserId(null); // Reset selection when dialog closes
       }}>
-        <DialogContent className="max-w-[95vw] sm:max-w-[600px] max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-white via-gray-50 to-blue-50 border-2 border-gray-200 text-gray-900 [&>button]:text-gray-500 [&>button]:opacity-100 [&>button]:hover:text-gray-900 [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-blue-600">
+        <DialogContent size="lg" className="max-h-[calc(100vh-2rem)] overflow-y-auto bg-gradient-to-br from-white via-gray-50 to-blue-50 border-2 border-gray-200 text-gray-900 [&>button]:text-gray-500 [&>button]:opacity-100 [&>button]:hover:text-gray-900 [&>button]:focus-visible:ring-2 [&>button]:focus-visible:ring-blue-600">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-3 text-xl text-gray-900">
               <CoAIleagueAFLogo size="sm" variant="icon" />

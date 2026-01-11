@@ -1,0 +1,623 @@
+COMPLETE QUICKBOOKS INTEGRATION & TESTING GUIDE FOR COAILEAGUE
+CRITICAL: FULL QUICKBOOKS INTEGRATION WITH ZERO-FAILURE MIGRATION
+This ensures your QuickBooks data transfers perfectly to CoAIleague with Trinity having full access for real-time financial intelligence.
+
+PHASE 1: COMPLETE QUICKBOOKS DATA MAPPING
+1.1 Database Schema Alignment
+javascript// LOCATION: /app/database/quickbooks-schema.js
+// CRITICAL: These tables MUST exist before any QB sync
+
+const QuickBooksSchema = {
+  // CUSTOMERS → CLIENTS mapping
+  clients: {
+    // QuickBooks Customer fields
+    qb_customer_id: 'VARCHAR(100) UNIQUE', // QuickBooks ID for sync
+    company_name: 'VARCHAR(255)', // Maps to QB: CompanyName
+    display_name: 'VARCHAR(255)', // Maps to QB: DisplayName
+    billing_address: 'JSONB', // Maps to QB: BillAddr
+    shipping_address: 'JSONB', // Maps to QB: ShipAddr
+    primary_phone: 'VARCHAR(50)', // Maps to QB: PrimaryPhone.FreeFormNumber
+    mobile_phone: 'VARCHAR(50)', // Maps to QB: Mobile.FreeFormNumber
+    primary_email: 'VARCHAR(255)', // Maps to QB: PrimaryEmailAddr.Address
+    tax_id: 'VARCHAR(50)', // Maps to QB: TaxIdentifier
+    payment_terms_ref: 'VARCHAR(100)', // Maps to QB: TermsRef
+    payment_method_ref: 'VARCHAR(100)', // Maps to QB: PaymentMethodRef
+    balance: 'DECIMAL(15,2)', // Maps to QB: Balance
+    balance_with_jobs: 'DECIMAL(15,2)', // Maps to QB: BalanceWithJobs
+    credit_limit: 'DECIMAL(15,2)', // Maps to QB: CreditLimit
+    is_active: 'BOOLEAN DEFAULT true', // Maps to QB: Active
+    tax_exempt: 'BOOLEAN DEFAULT false', // Maps to QB: Taxable (inverse)
+    notes: 'TEXT', // Maps to QB: Notes
+    custom_fields: 'JSONB', // Maps to QB: CustomField array
+    qb_sync_token: 'VARCHAR(50)', // For update detection
+    last_qb_sync: 'TIMESTAMP',
+    created_at: 'TIMESTAMP',
+    updated_at: 'TIMESTAMP'
+  },
+
+  // EMPLOYEES mapping
+  employees: {
+    qb_employee_id: 'VARCHAR(100) UNIQUE', // QuickBooks Employee ID
+    employee_number: 'VARCHAR(50)', // Maps to QB: EmployeeNumber
+    first_name: 'VARCHAR(100)', // Maps to QB: GivenName
+    middle_name: 'VARCHAR(100)', // Maps to QB: MiddleName
+    last_name: 'VARCHAR(100)', // Maps to QB: FamilyName
+    display_name: 'VARCHAR(255)', // Maps to QB: DisplayName
+    print_on_check_name: 'VARCHAR(255)', // Maps to QB: PrintOnCheckName
+    ssn: 'VARCHAR(20) ENCRYPTED', // Maps to QB: SSN (encrypted)
+    birth_date: 'DATE', // Maps to QB: BirthDate
+    gender: 'VARCHAR(10)', // Maps to QB: Gender
+    hired_date: 'DATE', // Maps to QB: HiredDate
+    released_date: 'DATE', // Maps to QB: ReleasedDate
+    
+    // Contact Information
+    primary_phone: 'VARCHAR(50)', // Maps to QB: PrimaryPhone
+    mobile_phone: 'VARCHAR(50)', // Maps to QB: Mobile
+    primary_email: 'VARCHAR(255)', // Maps to QB: PrimaryEmailAddr
+    address: 'JSONB', // Maps to QB: PrimaryAddr
+    
+    // Employment Details
+    employee_type: 'VARCHAR(50)', // Regular, Contractor, etc.
+    pay_frequency: 'VARCHAR(50)', // Weekly, Biweekly, Monthly
+    pay_rate: 'DECIMAL(10,2)', // Hourly or Salary rate
+    overtime_rate: 'DECIMAL(10,2)', // OT multiplier
+    department: 'VARCHAR(100)',
+    position: 'VARCHAR(100)',
+    
+    // Security Specific
+    badge_number: 'VARCHAR(50)',
+    license_number: 'VARCHAR(100)',
+    license_expiry: 'DATE',
+    certifications: 'JSONB', // Array of certs with expiry dates
+    clearance_level: 'VARCHAR(50)',
+    
+    // QuickBooks Payroll
+    qb_payroll_id: 'VARCHAR(100)',
+    w4_status: 'VARCHAR(50)',
+    withholding_allowances: 'INTEGER',
+    additional_withholding: 'DECIMAL(10,2)',
+    
+    is_active: 'BOOLEAN DEFAULT true',
+    qb_sync_token: 'VARCHAR(50)',
+    last_qb_sync: 'TIMESTAMP'
+  },
+
+  // VENDORS → CONTRACTORS mapping
+  contractors: {
+    qb_vendor_id: 'VARCHAR(100) UNIQUE', // QuickBooks Vendor ID
+    company_name: 'VARCHAR(255)', // Maps to QB: CompanyName
+    display_name: 'VARCHAR(255)', // Maps to QB: DisplayName
+    first_name: 'VARCHAR(100)', // Maps to QB: GivenName
+    last_name: 'VARCHAR(100)', // Maps to QB: FamilyName
+    tax_id: 'VARCHAR(50)', // Maps to QB: TaxIdentifier
+    vendor_1099: 'BOOLEAN', // Maps to QB: Vendor1099
+    
+    // Contact
+    primary_phone: 'VARCHAR(50)',
+    mobile_phone: 'VARCHAR(50)',
+    email: 'VARCHAR(255)',
+    website: 'VARCHAR(255)',
+    billing_address: 'JSONB',
+    
+    // Payment Info
+    payment_terms_ref: 'VARCHAR(100)',
+    billing_rate: 'DECIMAL(10,2)',
+    currency_ref: 'VARCHAR(10)',
+    account_number: 'VARCHAR(100)',
+    
+    // Security Contractor Specific
+    contractor_type: 'VARCHAR(50)', // Individual, Company
+    insurance_carrier: 'VARCHAR(255)',
+    insurance_expiry: 'DATE',
+    bond_number: 'VARCHAR(100)',
+    bond_amount: 'DECIMAL(15,2)',
+    service_areas: 'JSONB', // Array of locations they cover
+    
+    balance: 'DECIMAL(15,2)',
+    is_active: 'BOOLEAN DEFAULT true',
+    qb_sync_token: 'VARCHAR(50)',
+    last_qb_sync: 'TIMESTAMP'
+  },
+
+  // ITEMS → SERVICES mapping
+  services: {
+    qb_item_id: 'VARCHAR(100) UNIQUE', // QuickBooks Item ID
+    name: 'VARCHAR(255)', // Maps to QB: Name
+    sku: 'VARCHAR(100)', // Maps to QB: Sku
+    description: 'TEXT', // Maps to QB: Description
+    type: 'VARCHAR(50)', // Maps to QB: Type (Service, etc)
+    
+    // Pricing
+    unit_price: 'DECIMAL(10,2)', // Maps to QB: UnitPrice
+    cost: 'DECIMAL(10,2)', // Maps to QB: PurchaseCost
+    
+    // Security Services Specific
+    service_category: 'VARCHAR(100)', // Armed, Unarmed, Patrol, etc.
+    billing_unit: 'VARCHAR(50)', // Hour, Day, Week, Month, Post
+    minimum_hours: 'DECIMAL(5,2)',
+    overtime_eligible: 'BOOLEAN',
+    
+    // Accounting
+    income_account_ref: 'VARCHAR(100)', // Maps to QB: IncomeAccountRef
+    expense_account_ref: 'VARCHAR(100)', // Maps to QB: ExpenseAccountRef
+    tax_code_ref: 'VARCHAR(100)', // Maps to QB: TaxCodeRef
+    
+    is_active: 'BOOLEAN DEFAULT true',
+    qb_sync_token: 'VARCHAR(50)',
+    last_qb_sync: 'TIMESTAMP'
+  },
+
+  // INVOICES mapping
+  invoices: {
+    qb_invoice_id: 'VARCHAR(100) UNIQUE', // QuickBooks Invoice ID
+    invoice_number: 'VARCHAR(50)', // Maps to QB: DocNumber
+    client_id: 'UUID REFERENCES clients(id)',
+    qb_customer_ref: 'VARCHAR(100)', // Maps to QB: CustomerRef
+    
+    // Dates
+    invoice_date: 'DATE', // Maps to QB: TxnDate
+    due_date: 'DATE', // Maps to QB: DueDate
+    service_period_start: 'DATE',
+    service_period_end: 'DATE',
+    
+    // Line Items stored as JSONB for flexibility
+    line_items: 'JSONB', /* Structure:
+      [{
+        description: string,
+        quantity: number,
+        rate: number,
+        amount: number,
+        service_date: date,
+        location: string,
+        qb_item_ref: string
+      }]
+    */
+    
+    // Totals
+    subtotal: 'DECIMAL(15,2)',
+    tax_amount: 'DECIMAL(15,2)',
+    total_amount: 'DECIMAL(15,2)', // Maps to QB: TotalAmt
+    balance_due: 'DECIMAL(15,2)', // Maps to QB: Balance
+    
+    // Payment Info
+    payment_terms_ref: 'VARCHAR(100)',
+    payment_method_ref: 'VARCHAR(100)',
+    deposit_amount: 'DECIMAL(15,2)',
+    
+    // Status
+    status: 'VARCHAR(50)', // Draft, Sent, Paid, Overdue
+    sent_date: 'TIMESTAMP',
+    paid_date: 'TIMESTAMP',
+    
+    // References
+    po_number: 'VARCHAR(100)', // Maps to QB: PONumber
+    sales_rep: 'VARCHAR(100)',
+    location_ref: 'VARCHAR(100)',
+    class_ref: 'VARCHAR(100)', // For QB class tracking
+    
+    // Sync
+    qb_sync_token: 'VARCHAR(50)',
+    last_qb_sync: 'TIMESTAMP'
+  },
+
+  // TIME TRACKING mapping
+  time_entries: {
+    qb_time_activity_id: 'VARCHAR(100) UNIQUE',
+    employee_id: 'UUID REFERENCES employees(id)',
+    qb_employee_ref: 'VARCHAR(100)',
+    
+    work_date: 'DATE', // Maps to QB: TxnDate
+    start_time: 'TIME', // Maps to QB: StartTime
+    end_time: 'TIME', // Maps to QB: EndTime
+    break_duration: 'INTEGER', // Minutes
+    total_hours: 'DECIMAL(5,2)', // Maps to QB: Hours
+    
+    // Security Specific
+    post_location: 'VARCHAR(255)',
+    client_id: 'UUID REFERENCES clients(id)',
+    qb_customer_ref: 'VARCHAR(100)', // Maps to QB: CustomerRef
+    
+    hourly_rate: 'DECIMAL(10,2)', // Maps to QB: HourlyRate
+    billable: 'BOOLEAN', // Maps to QB: Billable
+    taxable: 'BOOLEAN', // Maps to QB: Taxable
+    
+    // Overtime Tracking
+    regular_hours: 'DECIMAL(5,2)',
+    overtime_hours: 'DECIMAL(5,2)',
+    double_time_hours: 'DECIMAL(5,2)',
+    
+    description: 'TEXT', // Maps to QB: Description
+    
+    // Approval
+    approved: 'BOOLEAN DEFAULT false',
+    approved_by: 'UUID',
+    approved_at: 'TIMESTAMP',
+    
+    qb_sync_token: 'VARCHAR(50)',
+    last_qb_sync: 'TIMESTAMP'
+  },
+
+  // BILLS for contractor payments
+  bills: {
+    qb_bill_id: 'VARCHAR(100) UNIQUE',
+    vendor_id: 'UUID REFERENCES contractors(id)',
+    qb_vendor_ref: 'VARCHAR(100)',
+    
+    bill_date: 'DATE',
+    due_date: 'DATE',
+    ref_number: 'VARCHAR(100)',
+    
+    line_items: 'JSONB',
+    
+    total_amount: 'DECIMAL(15,2)',
+    balance_due: 'DECIMAL(15,2)',
+    
+    status: 'VARCHAR(50)',
+    
+    qb_sync_token: 'VARCHAR(50)',
+    last_qb_sync: 'TIMESTAMP'
+  },
+
+  // CHART OF ACCOUNTS
+  accounts: {
+    qb_account_id: 'VARCHAR(100) UNIQUE',
+    account_number: 'VARCHAR(50)',
+    name: 'VARCHAR(255)',
+    type: 'VARCHAR(50)', // Bank, Income, Expense, etc.
+    subtype: 'VARCHAR(50)',
+    parent_account_ref: 'VARCHAR(100)',
+    description: 'TEXT',
+    balance: 'DECIMAL(15,2)',
+    is_active: 'BOOLEAN',
+    qb_sync_token: 'VARCHAR(50)',
+    last_qb_sync: 'TIMESTAMP'
+  },
+
+  // SYNC LOG for tracking all operations
+  qb_sync_log: {
+    id: 'UUID PRIMARY KEY DEFAULT gen_random_uuid()',
+    sync_type: 'VARCHAR(50)', // full, incremental, single
+    entity_type: 'VARCHAR(50)', // customer, employee, invoice, etc.
+    entity_id: 'VARCHAR(100)',
+    operation: 'VARCHAR(20)', // create, update, delete, error
+    status: 'VARCHAR(20)', // success, failed, pending
+    error_message: 'TEXT',
+    qb_response: 'JSONB',
+    started_at: 'TIMESTAMP',
+    completed_at: 'TIMESTAMP',
+    records_synced: 'INTEGER',
+    records_failed: 'INTEGER'
+  }
+};
+
+PHASE 2: COMPREHENSIVE QUICKBOOKS API INTEGRATION
+2.1 Complete API Service
+javascript// LOCATION: /app/services/quickbooks-service.js
+
+const QuickBooksService = {
+  // OAuth Configuration
+  oauth: {
+    clientId: process.env.QB_CLIENT_ID,
+    clientSecret: process.env.QB_CLIENT_SECRET,
+    redirectUri: process.env.QB_REDIRECT_URI,
+    environment: process.env.QB_ENVIRONMENT, // sandbox or production
+    
+    async getTokens() {
+      // Retrieve stored tokens from database
+      return await db.query('SELECT * FROM qb_auth WHERE active = true');
+    },
+    
+    async refreshToken() {
+      // Auto-refresh tokens before expiry
+      // Store new tokens in database
+    }
+  },
+
+  // FULL DATA SYNC - Initial Migration
+  async fullSync() {
+    console.log('🚀 Starting QuickBooks Full Sync...');
+    
+    const syncOrder = [
+      'accounts',    // Chart of accounts first
+      'customers',   // Then clients
+      'employees',   // Then employees
+      'vendors',     // Then contractors
+      'items',       // Then services
+      'invoices',    // Then invoices
+      'timeactivities', // Then time entries
+      'bills'        // Finally bills
+    ];
+    
+    const results = {};
+    
+    for (const entity of syncOrder) {
+      try {
+        results[entity] = await this.syncEntity(entity);
+        console.log(`✅ ${entity}: ${results[entity].success} synced, ${results[entity].failed} failed`);
+      } catch (error) {
+        console.error(`❌ Failed to sync ${entity}:`, error);
+        
+        // Log to sync table
+        await this.logSync({
+          sync_type: 'full',
+          entity_type: entity,
+          status: 'failed',
+          error_message: error.message
+        });
+        
+        // Don't stop - continue with other entities
+      }
+    }
+    
+    return results;
+  },
+
+  // ENTITY-SPECIFIC SYNC METHODS
+  async syncEntity(entityType) {
+    const config = {
+      customers: {
+        endpoint: '/v3/company/{companyId}/query?query=select * from Customer',
+        table: 'clients',
+        mapFunction: this.mapCustomerToClient
+      },
+      employees: {
+        endpoint: '/v3/company/{companyId}/query?query=select * from Employee',
+        table: 'employees',
+        mapFunction: this.mapEmployeeToEmployee
+      },
+      vendors: {
+        endpoint: '/v3/company/{companyId}/query?query=select * from Vendor',
+        table: 'contractors',
+        mapFunction: this.mapVendorToContractor
+      },
+      items: {
+        endpoint: '/v3/company/{companyId}/query?query=select * from Item where Type=\'Service\'',
+        table: 'services',
+        mapFunction: this.mapItemToService
+      },
+      invoices: {
+        endpoint: '/v3/company/{companyId}/query?query=select * from Invoice',
+        table: 'invoices',
+        mapFunction: this.mapInvoiceToInvoice
+      },
+      timeactivities: {
+        endpoint: '/v3/company/{companyId}/query?query=select * from TimeActivity',
+        table: 'time_entries',
+        mapFunction: this.mapTimeActivityToTimeEntry
+      },
+      bills: {
+        endpoint: '/v3/company/{companyId}/query?query=select * from Bill',
+        table: 'bills',
+        mapFunction: this.mapBillToBill
+      },
+      accounts: {
+        endpoint: '/v3/company/{companyId}/query?query=select * from Account',
+        table: 'accounts',
+        mapFunction: this.mapAccountToAccount
+      }
+    };
+    
+    const { endpoint, table, mapFunction } = config[entityType];
+    const data = await this.queryQuickBooks(endpoint);
+    
+    let success = 0;
+    let failed = 0;
+    
+    for (const record of data) {
+      try {
+        const mapped = mapFunction(record);
+        await this.upsertRecord(table, mapped);
+        success++;
+      } catch (error) {
+        failed++;
+        console.error(`Failed to sync ${entityType} ${record.Id}:`, error);
+      }
+    }
+    
+    return { success, failed };
+  },
+
+  // MAPPING FUNCTIONS WITH FULL FIELD COVERAGE
+  mapCustomerToClient(qbCustomer) {
+    return {
+      qb_customer_id: qbCustomer.Id,
+      company_name: qbCustomer.CompanyName || qbCustomer.DisplayName,
+      display_name: qbCustomer.DisplayName,
+      billing_address: qbCustomer.BillAddr ? {
+        line1: qbCustomer.BillAddr.Line1,
+        line2: qbCustomer.BillAddr.Line2,
+        city: qbCustomer.BillAddr.City,
+        state: qbCustomer.BillAddr.CountrySubDivisionCode,
+        postal_code: qbCustomer.BillAddr.PostalCode,
+        country: qbCustomer.BillAddr.Country
+      } : null,
+      shipping_address: qbCustomer.ShipAddr ? {
+        line1: qbCustomer.ShipAddr.Line1,
+        line2: qbCustomer.ShipAddr.Line2,
+        city: qbCustomer.ShipAddr.City,
+        state: qbCustomer.ShipAddr.CountrySubDivisionCode,
+        postal_code: qbCustomer.ShipAddr.PostalCode
+      } : null,
+      primary_phone: qbCustomer.PrimaryPhone?.FreeFormNumber,
+      mobile_phone: qbCustomer.Mobile?.FreeFormNumber,
+      primary_email: qbCustomer.PrimaryEmailAddr?.Address,
+      tax_id: qbCustomer.TaxIdentifier,
+      payment_terms_ref: qbCustomer.TermsRef?.value,
+      payment_method_ref: qbCustomer.PaymentMethodRef?.value,
+      balance: parseFloat(qbCustomer.Balance || 0),
+      balance_with_jobs: parseFloat(qbCustomer.BalanceWithJobs || 0),
+      credit_limit: parseFloat(qbCustomer.CreditLimit || 0),
+      is_active: qbCustomer.Active === 'true',
+      tax_exempt: qbCustomer.Taxable === 'false',
+      notes: qbCustomer.Notes,
+      custom_fields: qbCustomer.CustomField ? 
+        qbCustomer.CustomField.reduce((acc, field) => {
+          acc[field.Name] = field.StringValue || field.NumberValue || field.BooleanValue;
+          return acc;
+        }, {}) : {},
+      qb_sync_token: qbCustomer.SyncToken,
+      last_qb_sync: new Date()
+    };
+  },
+
+  mapEmployeeToEmployee(qbEmployee) {
+    return {
+      qb_employee_id: qbEmployee.Id,
+      employee_number: qbEmployee.EmployeeNumber,
+      first_name: qbEmployee.GivenName,
+      middle_name: qbEmployee.MiddleName,
+      last_name: qbEmployee.FamilyName,
+      display_name: qbEmployee.DisplayName,
+      print_on_check_name: qbEmployee.PrintOnCheckName,
+      ssn: qbEmployee.SSN ? this.encryptSSN(qbEmployee.SSN) : null,
+      birth_date: qbEmployee.BirthDate,
+      gender: qbEmployee.Gender,
+      hired_date: qbEmployee.HiredDate,
+      released_date: qbEmployee.ReleasedDate,
+      primary_phone: qbEmployee.PrimaryPhone?.FreeFormNumber,
+      mobile_phone: qbEmployee.Mobile?.FreeFormNumber,
+      primary_email: qbEmployee.PrimaryEmailAddr?.Address,
+      address: qbEmployee.PrimaryAddr ? {
+        line1: qbEmployee.PrimaryAddr.Line1,
+        city: qbEmployee.PrimaryAddr.City,
+        state: qbEmployee.PrimaryAddr.CountrySubDivisionCode,
+        postal_code: qbEmployee.PrimaryAddr.PostalCode
+      } : null,
+      is_active: qbEmployee.Active === 'true',
+      qb_sync_token: qbEmployee.SyncToken,
+      last_qb_sync: new Date()
+    };
+  },
+
+  mapVendorToContractor(qbVendor) {
+    return {
+      qb_vendor_id: qbVendor.Id,
+      company_name: qbVendor.CompanyName,
+      display_name: qbVendor.DisplayName,
+      first_name: qbVendor.GivenName,
+      last_name: qbVendor.FamilyName,
+      tax_id: qbVendor.TaxIdentifier,
+      vendor_1099: qbVendor.Vendor1099 === 'true',
+      primary_phone: qbVendor.PrimaryPhone?.FreeFormNumber,
+      mobile_phone: qbVendor.Mobile?.FreeFormNumber,
+      email: qbVendor.PrimaryEmailAddr?.Address,
+      website: qbVendor.WebAddr?.URI,
+      billing_address: qbVendor.BillAddr ? {
+        line1: qbVendor.BillAddr.Line1,
+        city: qbVendor.BillAddr.City,
+        state: qbVendor.BillAddr.CountrySubDivisionCode,
+        postal_code: qbVendor.BillAddr.PostalCode
+      } : null,
+      payment_terms_ref: qbVendor.TermsRef?.value,
+      currency_ref: qbVendor.CurrencyRef?.value || 'USD',
+      account_number: qbVendor.AcctNum,
+      balance: parseFloat(qbVendor.Balance || 0),
+      is_active: qbVendor.Active === 'true',
+      qb_sync_token: qbVendor.SyncToken,
+      last_qb_sync: new Date()
+    };
+  },
+
+  // Continue with other mapping functions...
+};
+2.2 Testing Suite
+javascript// LOCATION: /app/tests/quickbooks-integration.test.js
+
+const QuickBooksTestSuite = {
+  // PRE-MIGRATION VALIDATION
+  async preMigrationChecks() {
+    console.log('🔍 Running Pre-Migration Validation...\n');
+    
+    const checks = [
+      {
+        name: 'Database Tables Exist',
+        test: async () => {
+          const tables = [
+            'clients', 'employees', 'contractors', 'services',
+            'invoices', 'time_entries', 'bills', 'accounts', 'qb_sync_log'
+          ];
+          
+          for (const table of tables) {
+            const exists = await this.tableExists(table);
+            if (!exists) {
+              throw new Error(`Table '${table}' does not exist`);
+            }
+          }
+          return true;
+        }
+      },
+      
+      {
+        name: 'Required Columns Present',
+        test: async () => {
+          const columnChecks = {
+            clients: ['qb_customer_id', 'company_name', 'qb_sync_token'],
+            employees: ['qb_employee_id', 'first_name', 'last_name', 'badge_number'],
+            invoices: ['qb_invoice_id', 'invoice_number', 'line_items', 'total_amount']
+          };
+          
+          for (const [table, columns] of Object.entries(columnChecks)) {
+            for (const column of columns) {
+              const exists = await this.columnExists(table, column);
+              if (!exists) {
+                throw new Error(`Column '${column}' missing in table '${table}'`);
+              }
+            }
+          }
+          return true;
+        }
+      },
+      
+      {
+        name: 'QuickBooks Connection',
+        test: async () => {
+          const companyInfo = await QuickBooksService.getCompanyInfo();
+          if (!companyInfo) {
+            throw new Error('Cannot connect to QuickBooks');
+          }
+          console.log(`  ✓ Connected to: ${companyInfo.CompanyName}`);
+          return true;
+        }
+      },
+      
+      {
+        name: 'Data Types Match',
+        test: async () => {
+          // Verify decimal precision for financial fields
+          const financialFields = {
+            invoices: ['total_amount', 'balance_due'],
+            employees: ['pay_rate', 'overtime_rate'],
+            time_entries: ['total_hours', 'hourly_rate']
+          };
+          
+          for (const [table, fields] of Object.entries(financialFields)) {
+            for (const field of fields) {
+              const dataType = await this.getColumnDataType(table, field);
+              if (!dataType.includes('DECIMAL') && !dataType.includes('NUMERIC')) {
+                throw new Error(`${table}.${field} must be DECIMAL type for accurate financial data`);
+              }
+            }
+          }
+          return true;
+        }
+      }
+    ];
+    
+    let passed = 0;
+    let failed = 0;
+    
+    for (const check of checks) {
+      try {
+        await check.test();
+        console.log(`✅ ${check.name}`);
+        passed++;
+      } catch (error) {
+        console.log(`❌ ${check.name}: ${error.message}`);
+        failed++;
+      }
+    }
+    
+    console.log(`\n📊 Pre-Migration Results: ${passed} passed, ${failed} failed\n`);
+    
+    if (failed > 0) {
+      throw new Error('Pre-migration checks failed.

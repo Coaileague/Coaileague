@@ -283,7 +283,7 @@ export function FeedbackForm({ trigger, onSubmitSuccess }: FeedbackFormProps) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden">
+      <DialogContent size="md" className="p-0 overflow-hidden">
         {/* Branded Header */}
         <div className="bg-gradient-to-r from-primary/10 via-purple-500/10 to-blue-500/10 dark:from-primary/20 dark:via-purple-500/20 dark:to-blue-500/20 px-6 py-4 border-b">
           <DialogHeader className="space-y-2">

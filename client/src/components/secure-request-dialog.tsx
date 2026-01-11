@@ -267,7 +267,7 @@ export function SecureRequestDialog({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-[95vw] sm:max-w-[500px] max-h-[calc(100vh-2rem)] overflow-y-auto">
+      <DialogContent size="md" className="max-h-[calc(100vh-2rem)] overflow-y-auto">
         {getDialogContent()}
         <DialogFooter>
           <div className="flex items-center justify-between w-full">
