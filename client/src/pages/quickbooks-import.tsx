@@ -394,6 +394,33 @@ export default function QuickBooksImportPage() {
     importMutation.mutate({ forceAllowMissingPayRates: true });
   };
 
+  const pushToQuickBooksMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest('POST', '/api/integrations/quickbooks/push', {
+        workspaceId: workspace?.id,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || 'Push failed');
+      }
+      return data;
+    },
+    onSuccess: (data) => {
+      toast({
+        title: 'Data Pushed to QuickBooks',
+        description: data.message || `Synced ${data.results?.customers?.synced || 0} customers and ${data.results?.employees?.synced || 0} employees`,
+      });
+      refetchPreview();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Push Failed',
+        description: error.message || 'Failed to push data to QuickBooks',
+        variant: 'destructive',
+      });
+    },
+  });
+
   const runPreflightTests = async () => {
     setIsRunningPreflight(true);
     setAllTestsPassed(false);
@@ -767,14 +794,31 @@ export default function QuickBooksImportPage() {
                 <div className="bg-muted/50 rounded-lg p-4 max-w-md mx-auto text-left">
                   <p className="font-medium mb-2">To test the migration:</p>
                   <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Push your CoAIleague data to QuickBooks (recommended)</li>
                     <li>Add test customers in your QuickBooks sandbox</li>
-                    <li>Create sample employees with pay rates</li>
                     <li>Or connect your production QuickBooks account</li>
                   </ul>
                 </div>
-                <Button variant="outline" onClick={() => refetchPreview()} data-testid="button-retry-discovery">
-                  <RefreshCw className="h-4 w-4 mr-2" /> Retry Discovery
-                </Button>
+                <div className="flex gap-2 justify-center flex-wrap">
+                  <Button 
+                    onClick={() => pushToQuickBooksMutation.mutate()} 
+                    disabled={pushToQuickBooksMutation.isPending}
+                    data-testid="button-push-to-quickbooks"
+                  >
+                    {pushToQuickBooksMutation.isPending ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 mr-2 animate-spin" /> Pushing Data...
+                      </>
+                    ) : (
+                      <>
+                        <ArrowRight className="h-4 w-4 mr-2" /> Push CoAIleague Data to QuickBooks
+                      </>
+                    )}
+                  </Button>
+                  <Button variant="outline" onClick={() => refetchPreview()} data-testid="button-retry-discovery">
+                    <RefreshCw className="h-4 w-4 mr-2" /> Retry Discovery
+                  </Button>
+                </div>
               </div>
             )}
           </CardContent>

@@ -479,6 +479,139 @@ export class QuickBooksIntegration {
     
     return { success: errors.length === 0, synced, errors };
   }
+
+  async syncEmployees(credentials: QuickBooksCredentials, employees: any[]): Promise<{ success: boolean; synced: number; errors: string[] }> {
+    if (!this.config) {
+      return { success: false, synced: 0, errors: ['QuickBooks integration not configured'] };
+    }
+
+    const editionConfig = credentials.editionConfig || QB_EDITIONS[credentials.edition || 'unknown'];
+    if (!editionConfig.syncCapabilities.employees) {
+      return { success: false, synced: 0, errors: [`Employee sync not supported for ${editionConfig.displayName}. Upgrade to Plus or higher.`] };
+    }
+    
+    const errors: string[] = [];
+    let synced = 0;
+    
+    for (const employee of employees) {
+      try {
+        const qbEmployee = {
+          DisplayName: `${employee.firstName || ''} ${employee.lastName || ''}`.trim() || employee.name,
+          GivenName: employee.firstName,
+          FamilyName: employee.lastName,
+          PrimaryEmailAddr: employee.email ? { Address: employee.email } : undefined,
+          PrimaryPhone: employee.phone ? { FreeFormNumber: employee.phone } : undefined,
+          SSN: employee.ssn,
+          BirthDate: employee.birthDate?.toISOString().split('T')[0],
+          HiredDate: employee.hireDate?.toISOString().split('T')[0],
+          PrimaryAddr: employee.address ? {
+            Line1: employee.address.line1,
+            City: employee.address.city,
+            CountrySubDivisionCode: employee.address.state,
+            PostalCode: employee.address.postalCode,
+          } : undefined,
+        };
+
+        const response = await fetch(
+          `${this.getBaseUrl()}/v3/company/${credentials.realmId}/employee?minorversion=${API_MINOR_VERSION}`,
+          {
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${credentials.accessToken}`,
+            },
+            body: JSON.stringify(qbEmployee),
+          }
+        );
+        
+        if (response.ok) {
+          synced++;
+          console.log(`[QuickBooks] Synced employee ${employee.id}`);
+        } else {
+          const error = await response.text();
+          errors.push(`Employee ${employee.id}: ${error}`);
+        }
+      } catch (error) {
+        errors.push(`Employee ${employee.id}: ${error}`);
+      }
+    }
+    
+    return { success: errors.length === 0, synced, errors };
+  }
+
+  async pushSandboxDataToQuickBooks(
+    credentials: QuickBooksCredentials, 
+    workspaceId: string
+  ): Promise<{ 
+    success: boolean; 
+    customers: { synced: number; errors: string[] }; 
+    employees: { synced: number; errors: string[] };
+    invoices: { synced: number; errors: string[] };
+  }> {
+    const { clients, employees: dbEmployees, invoices } = await db.transaction(async (tx) => {
+      const clients = await tx.query.clients.findMany({
+        where: eq(require('../../db').clients.workspaceId, workspaceId),
+        limit: 50,
+      });
+      
+      const employees = await tx.query.employees.findMany({
+        where: eq(require('../../db').employees.workspaceId, workspaceId),
+        limit: 100,
+      });
+      
+      const invoices = await tx.query.invoices.findMany({
+        where: eq(require('../../db').invoices.workspaceId, workspaceId),
+        limit: 50,
+      });
+      
+      return { clients, employees, invoices };
+    });
+
+    console.log(`[QuickBooks] Pushing sandbox data: ${clients.length} clients, ${dbEmployees.length} employees, ${invoices.length} invoices`);
+
+    const customersResult = await this.syncCustomers(credentials, clients.map(c => ({
+      id: c.id,
+      name: c.name,
+      displayName: c.name,
+      companyName: c.companyName || c.name,
+      email: c.email,
+      phone: c.phone,
+      address: c.address ? {
+        line1: (c.address as any).street || (c.address as any).line1,
+        city: (c.address as any).city,
+        state: (c.address as any).state,
+        postalCode: (c.address as any).zip || (c.address as any).postalCode,
+      } : undefined,
+    })));
+
+    const employeesResult = await this.syncEmployees(credentials, dbEmployees.map(e => ({
+      id: e.id,
+      firstName: e.firstName,
+      lastName: e.lastName,
+      name: `${e.firstName} ${e.lastName}`,
+      email: e.email,
+      phone: e.phone,
+      hireDate: e.hireDate,
+    })));
+
+    const invoicesResult = await this.syncInvoicesToQuickBooks(credentials, invoices.map(inv => ({
+      id: inv.id,
+      invoiceNumber: inv.invoiceNumber,
+      clientId: inv.clientId,
+      clientName: 'Client',
+      total: inv.total,
+      issueDate: inv.issueDate,
+      dueDate: inv.dueDate,
+    })));
+
+    return {
+      success: customersResult.success || employeesResult.success || invoicesResult.success,
+      customers: { synced: customersResult.synced, errors: customersResult.errors },
+      employees: { synced: employeesResult.synced, errors: employeesResult.errors },
+      invoices: { synced: invoicesResult.synced, errors: invoicesResult.errors },
+    };
+  }
 }
 
 export const quickbooksIntegration = new QuickBooksIntegration();

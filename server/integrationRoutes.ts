@@ -404,6 +404,158 @@ router.get('/quickbooks/preview', requireAuth, requireWorkspaceMembership('query
 });
 
 /**
+ * POST /api/integrations/quickbooks/push
+ * 
+ * Push CoAIleague data TO QuickBooks (reverse sync)
+ * Syncs clients as Customers, employees as Employees, invoices as Invoices
+ */
+router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId } = req.body;
+
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Missing workspaceId' });
+    }
+
+    // Find connection
+    const [connection] = await db.select()
+      .from(partnerConnections)
+      .where(
+        and(
+          eq(partnerConnections.workspaceId, workspaceId),
+          eq(partnerConnections.partnerType, 'quickbooks'),
+          eq(partnerConnections.status, 'connected')
+        )
+      )
+      .limit(1);
+
+    if (!connection) {
+      return res.status(404).json({ error: 'QuickBooks not connected' });
+    }
+
+    // Get valid access token
+    const accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
+    const realmId = connection.realmId!;
+    const apiBase = connection.environment === 'production' 
+      ? 'https://quickbooks.api.intuit.com/v3/company'
+      : 'https://sandbox-quickbooks.api.intuit.com/v3/company';
+
+    // Fetch data from CoAIleague
+    const { clients, employees: dbEmployees, invoices } = await db.transaction(async (tx) => {
+      const { clients, employees, invoices } = await import('@shared/schema');
+      
+      const clientsList = await tx.select()
+        .from(clients)
+        .where(eq(clients.workspaceId, workspaceId))
+        .limit(50);
+      
+      const employeesList = await tx.select()
+        .from(employees)
+        .where(eq(employees.workspaceId, workspaceId))
+        .limit(100);
+      
+      const invoicesList = await tx.select()
+        .from(invoices)
+        .where(eq(invoices.workspaceId, workspaceId))
+        .limit(50);
+      
+      return { clients: clientsList, employees: employeesList, invoices: invoicesList };
+    });
+
+    console.log(`[QuickBooks Push] Pushing ${dbEmployees.length} employees, ${clients.length} clients, ${invoices.length} invoices`);
+
+    const results = {
+      customers: { synced: 0, errors: [] as string[] },
+      employees: { synced: 0, errors: [] as string[] },
+      invoices: { synced: 0, errors: [] as string[] },
+    };
+
+    // Push Customers (from clients)
+    for (const client of clients) {
+      try {
+        const qbCustomer = {
+          DisplayName: client.name,
+          CompanyName: client.companyName || client.name,
+          PrimaryEmailAddr: client.email ? { Address: client.email } : undefined,
+          PrimaryPhone: client.phone ? { FreeFormNumber: client.phone } : undefined,
+          BillAddr: client.address ? {
+            Line1: (client.address as any).street || (client.address as any).line1,
+            City: (client.address as any).city,
+            CountrySubDivisionCode: (client.address as any).state,
+            PostalCode: (client.address as any).zip || (client.address as any).postalCode,
+          } : undefined,
+        };
+
+        const response = await fetch(`${apiBase}/${realmId}/customer?minorversion=75`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(qbCustomer),
+        });
+
+        if (response.ok) {
+          results.customers.synced++;
+          console.log(`[QuickBooks Push] Created customer: ${client.name}`);
+        } else {
+          const error = await response.text();
+          results.customers.errors.push(`${client.name}: ${error}`);
+        }
+      } catch (err: any) {
+        results.customers.errors.push(`${client.name}: ${err.message}`);
+      }
+    }
+
+    // Push Employees
+    for (const emp of dbEmployees) {
+      try {
+        const qbEmployee = {
+          DisplayName: `${emp.firstName} ${emp.lastName}`,
+          GivenName: emp.firstName,
+          FamilyName: emp.lastName,
+          PrimaryEmailAddr: emp.email ? { Address: emp.email } : undefined,
+          PrimaryPhone: emp.phone ? { FreeFormNumber: emp.phone } : undefined,
+        };
+
+        const response = await fetch(`${apiBase}/${realmId}/employee?minorversion=75`, {
+          method: 'POST',
+          headers: {
+            'Accept': 'application/json',
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify(qbEmployee),
+        });
+
+        if (response.ok) {
+          results.employees.synced++;
+          console.log(`[QuickBooks Push] Created employee: ${emp.firstName} ${emp.lastName}`);
+        } else {
+          const error = await response.text();
+          results.employees.errors.push(`${emp.firstName} ${emp.lastName}: ${error}`);
+        }
+      } catch (err: any) {
+        results.employees.errors.push(`${emp.firstName} ${emp.lastName}: ${err.message}`);
+      }
+    }
+
+    // Push Invoices (requires customers to exist first)
+    // Skip for now as it requires customer mapping
+
+    return res.json({
+      success: true,
+      message: `Pushed ${results.customers.synced} customers and ${results.employees.synced} employees to QuickBooks`,
+      results,
+    });
+  } catch (error: any) {
+    console.error('QuickBooks push error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to push data to QuickBooks' });
+  }
+});
+
+/**
  * POST /api/integrations/quickbooks/import
  * 
  * Import selected employees and customers from QuickBooks with:
