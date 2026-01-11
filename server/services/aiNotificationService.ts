@@ -61,6 +61,7 @@ interface AIInsightData {
   learnMoreUrl?: string;
   metadata?: Record<string, unknown>;
   skipBroadcast?: boolean; // Set by platformEventBus to prevent double WebSocket broadcast
+  skipInsert?: boolean; // TRINITY-EXCLUSIVE: Skip DB insert when only enriching content
 }
 
 interface MaintenanceAlertData {
@@ -209,6 +210,18 @@ SUMMARY:`;
     }
   } catch (error) {
     console.log("[AINotification] Gemini enhancement skipped:", error);
+  }
+  
+  // TRINITY-EXCLUSIVE ARCHITECTURE: Skip DB insert if this is just for enrichment
+  // Trinity Notification Bridge handles all What's New inserts - we only enrich content here
+  if (data.skipInsert) {
+    console.log(`[AINotification] Returning enriched content only (skipInsert=true): ${humanizedTitle}`);
+    return {
+      id: idempotencyKey,
+      enrichedTitle: humanizedTitle,
+      enrichedDescription: enhancedDescription,
+      category: (data.category || "announcement") as string,
+    };
   }
   
   const updateId = idempotencyKey;

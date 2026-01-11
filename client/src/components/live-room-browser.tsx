@@ -159,7 +159,7 @@ export function LiveRoomBrowser({ onRoomSelect, filterByOrg = false, compact = f
   if (isAuthLoading || isRoomsLoading) {
     return (
       <div className="flex flex-col items-center justify-center p-12 gap-3">
-        <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
+        <ColorfulCelticKnot size="lg" state={isAuthLoading ? "focused" : "listening"} animated={true} animationSpeed="normal" />
         <p className="text-sm text-muted-foreground">
           {isAuthLoading ? 'Checking authentication...' : 'Loading rooms...'}
         </p>

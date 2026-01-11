@@ -318,7 +318,7 @@ export default function Dashboard() {
   if (isLoading || !isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4">
-        <ColorfulCelticKnot size="xl" state="loading" animated={true} className="animate-trinity-loading" />
+        <ColorfulCelticKnot size="xl" state="thinking" animated={true} animationSpeed="fast" />
         <span className="text-muted-foreground">Loading...</span>
       </div>
     );
@@ -475,7 +475,7 @@ export default function Dashboard() {
       {/* Show Trinity loading for initial auth check */}
       {isLoadingDashboard && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm gap-4">
-          <ColorfulCelticKnot size="xl" state="loading" animated={true} className="animate-trinity-loading" />
+          <ColorfulCelticKnot size="xl" state="focused" animated={true} animationSpeed="normal" />
           <span className="text-muted-foreground">Loading dashboard...</span>
         </div>
       )}

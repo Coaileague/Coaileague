@@ -18,7 +18,7 @@ export function SupportStaffRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
-        <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
+        <ColorfulCelticKnot size="lg" state="focused" animated={true} animationSpeed="fast" />
         <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );

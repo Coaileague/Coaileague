@@ -145,7 +145,7 @@ export default function DisputesPage() {
     return (
       <div className="h-full flex flex-col">
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
-          <ColorfulCelticKnot size="lg" state="loading" animated={true} className="animate-trinity-loading" />
+          <ColorfulCelticKnot size="lg" state="focused" animated={true} animationSpeed="normal" />
           <p className="text-muted-foreground">Loading disputes...</p>
         </div>
       </div>
