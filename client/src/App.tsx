@@ -11,11 +11,6 @@ import { GraduationCap, Settings2, Search, Menu, Sparkles, LogOut, User, Bell, M
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuTrigger, DropdownMenuItem, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
-import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
-import { selectSidebarFamilies } from "@/lib/sidebarModules";
-import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
@@ -53,6 +48,7 @@ import { MobileQuickActionsFAB } from "@/components/mobile/MobileQuickActionsFAB
 import { PWAInstallPrompt } from "@/components/mobile/PWAInstallPrompt";
 import { FloatingTrinityButton } from "@/components/floating-trinity-button";
 import { HeaderTrinityButton } from "@/components/header-trinity-button";
+import { UniversalHeader } from "@/components/universal-header";
 import { TrinityModalProvider } from "@/components/trinity-chat-modal";
 import { performLogout } from "@/lib/logoutHandler";
 import { useTransition } from "@/contexts/transition-context";
@@ -902,14 +898,7 @@ function AppContent() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const [location, setLocation] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
-  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const isMobile = useIsMobile();
-  const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading: workspaceLoading } = useWorkspaceAccess();
-  
-  const workspaceFamilies = useMemo(() => {
-    if (workspaceLoading || !isAuthenticated) return [];
-    return selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
-  }, [workspaceLoading, isAuthenticated, workspaceRole, subscriptionTier, isPlatformStaff]);
 
   // Query onboarding status for authenticated users
   const { data: onboardingStatus } = useQuery({
@@ -1016,100 +1005,8 @@ function AppContent() {
       <ProtectedRoute>
         <CommandPalette />
         <div className="flex flex-col h-screen w-full bg-background">
-          {/* Mobile Header with Logo */}
-          {(
-            <div className="sticky top-0 z-40 border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-3 py-2">
-              <div className="flex items-center justify-between gap-1">
-                <div className="flex items-center gap-2">
-                  {/* Hamburger Menu - Opens navigation sheet */}
-                  <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
-                    <SheetTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-9 w-9"
-                        data-testid="button-mobile-nav-menu"
-                      >
-                        <Menu className="h-5 w-5" />
-                      </Button>
-                    </SheetTrigger>
-                    <SheetContent side="bottom" className="h-[75vh] overflow-y-auto rounded-t-2xl">
-                      <SheetHeader className="text-left pb-4">
-                        <SheetTitle>Navigation</SheetTitle>
-                        <SheetDescription>Go to any workspace area</SheetDescription>
-                      </SheetHeader>
-                      
-                      {workspaceFamilies.length > 0 ? (
-                        <div className="space-y-3">
-                          {workspaceFamilies.map((family) => (
-                            <Collapsible key={family.id} defaultOpen={family.routes.some(r => location === r.href)}>
-                              <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2.5 rounded-lg bg-muted/50 hover:bg-muted transition-colors">
-                                <span className="text-sm font-semibold">{family.label}</span>
-                                <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
-                              </CollapsibleTrigger>
-                              <CollapsibleContent className="pt-2 space-y-1 pl-2">
-                                {family.routes.map((route) => {
-                                  const isActive = location === route.href;
-                                  const Icon = route.icon;
-                                  return (
-                                    <Button
-                                      key={route.id}
-                                      variant={isActive ? "default" : "ghost"}
-                                      className="w-full justify-start gap-3 h-11"
-                                      onClick={() => {
-                                        setLocation(route.href);
-                                        setMobileNavOpen(false);
-                                      }}
-                                      data-testid={`mobile-nav-${route.id}`}
-                                    >
-                                      <Icon className="h-4 w-4" />
-                                      <span>{route.label}</span>
-                                    </Button>
-                                  );
-                                })}
-                              </CollapsibleContent>
-                            </Collapsible>
-                          ))}
-                        </div>
-                      ) : (
-                        <div className="text-sm text-muted-foreground p-3">Loading...</div>
-                      )}
-                      
-                      <div className="border-t pt-4 mt-4 space-y-2">
-                        <Button
-                          variant="outline"
-                          className="w-full justify-start gap-3"
-                          onClick={() => { setMobileNavOpen(false); setLocation("/settings"); }}
-                          data-testid="mobile-nav-settings"
-                        >
-                          <Settings2 className="h-4 w-4" />
-                          Settings
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          className="w-full justify-center gap-2"
-                          onClick={() => { setMobileNavOpen(false); performLogout(); }}
-                          data-testid="mobile-nav-logout"
-                        >
-                          <LogOut className="h-4 w-4" />
-                          Sign Out
-                        </Button>
-                      </div>
-                    </SheetContent>
-                  </Sheet>
-                  <a href="/" data-testid="link-logo-mobile" className="flex-shrink-0">
-                    <CoAIleagueLogo width={36} height={36} onlyIcon={true} className="h-9 w-9" />
-                  </a>
-                </div>
-                <div className="flex items-center gap-1">
-                  {/* Trinity AI Assistant */}
-                  <HeaderTrinityButton />
-                  {/* Notifications */}
-                  <NotificationsPopover />
-                </div>
-              </div>
-            </div>
-          )}
+          {/* Universal Header - adapts to workspace mode automatically */}
+          <UniversalHeader variant="workspace" />
           
           {/* Main content area - with bottom nav padding */}
           <main className="flex-1 overflow-x-hidden overflow-y-auto min-h-0 w-full max-w-full pb-20">

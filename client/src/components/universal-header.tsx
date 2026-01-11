@@ -1,6 +1,6 @@
 /**
- * Universal Header - Consistent navigation for ALL pages (public + workspace)
- * Shows appropriate nav based on variant prop (not auth state for public pages)
+ * Universal Header - ONE header for ALL pages (public + workspace)
+ * Auto-detects mode based on route and auth state
  * Configuration-driven for easy editing (see config/headerConfig.ts)
  */
 
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Menu, LogOut, LayoutDashboard, Mail, Bug, ChevronDown } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, Mail, Bug, ChevronDown, Settings } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { CoAIleagueLogo } from "@/components/coaileague-logo";
 import { performLogout } from "@/lib/logoutHandler";
@@ -31,24 +31,46 @@ import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { cn } from "@/lib/utils";
 
+const PUBLIC_ROUTES = new Set([
+  "/", "/homepage", "/login", "/register", "/forgot-password", "/reset-password",
+  "/pricing", "/trinity-features", "/contact", "/support", "/terms", "/privacy",
+  "/error-403", "/error-404", "/error-500"
+]);
+
 interface UniversalHeaderProps {
-  variant?: "public" | "workspace";
+  variant?: "public" | "workspace" | "auto";
 }
 
-export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
+export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   const { user } = useAuth();
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [workspaceMenuOpen, setWorkspaceMenuOpen] = useState(false);
   const [isChristmas, setIsChristmas] = useState(false);
+  
+  // Close mobile menu on route change
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location]);
   const [lightPhase, setLightPhase] = useState(0);
   
   const { workspaceRole, subscriptionTier, isPlatformStaff, isLoading: workspaceLoading } = useWorkspaceAccess();
   
+  const resolvedMode = useMemo(() => {
+    if (variant !== "auto") return variant;
+    const isPublicRoute = PUBLIC_ROUTES.has(location) || 
+                          location.startsWith("/onboarding/") ||
+                          location.startsWith("/pay-invoice/");
+    if (!user) return "public";
+    if (isPublicRoute) return "public";
+    return "workspace";
+  }, [variant, location, user]);
+  
+  const isWorkspaceMode = resolvedMode === "workspace";
+  
   const workspaceFamilies = useMemo(() => {
-    if (workspaceLoading || variant !== "workspace") return [];
+    if (workspaceLoading || !isWorkspaceMode) return [];
     return selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
-  }, [workspaceLoading, variant, workspaceRole, subscriptionTier, isPlatformStaff]);
+  }, [workspaceLoading, isWorkspaceMode, workspaceRole, subscriptionTier, isPlatformStaff]);
 
   // Detect Christmas season only if seasonal theming is not disabled
   useEffect(() => {
@@ -118,9 +140,9 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
     await performLogout();
   };
 
-  // Handle logo click - PUBLIC variant always goes to homepage
+  // Handle logo click - PUBLIC mode always goes to homepage
   const handleLogoClick = () => {
-    if (variant === "public") {
+    if (!isWorkspaceMode) {
       setLocation("/");
     } else {
       setLocation("/dashboard");
@@ -140,7 +162,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
           <button 
             onClick={handleLogoClick}
             className="relative cursor-pointer hover-elevate transition-all duration-300 shrink-0"
-            aria-label={variant === "public" ? "Go to homepage" : "Go to dashboard"}
+            aria-label={!isWorkspaceMode ? "Go to homepage" : "Go to dashboard"}
             data-testid="button-logo-home"
           >
             {/* Desktop: Full logo with wordmark */}
@@ -173,8 +195,8 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
             </div>
           </button>
 
-          {/* PUBLIC NAVIGATION - Always show when variant is "public" */}
-          {variant === "public" ? (
+          {/* NAVIGATION - Adapts based on mode (public vs workspace) */}
+          {!isWorkspaceMode ? (
             <>
               {/* Desktop Navigation */}
               <div className={`hidden md:flex items-center ${HEADER_SPACING.desktopNavGap} flex-1`}>
@@ -512,7 +534,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                   data-testid="mobile-button-trinity-workspace"
                 />
                 <NotificationsPopover />
-                <Sheet open={workspaceMenuOpen} onOpenChange={setWorkspaceMenuOpen}>
+                <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
                     <Button
                       variant="ghost"
@@ -549,7 +571,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                                       className="w-full justify-start gap-3 h-auto py-3"
                                       onClick={() => {
                                         setLocation(route.href);
-                                        setWorkspaceMenuOpen(false);
+                                        setMobileMenuOpen(false);
                                       }}
                                       data-testid={`mobile-workspace-route-${route.id}`}
                                     >
@@ -583,7 +605,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                           variant="outline"
                           className="w-full justify-start gap-3"
                           onClick={() => {
-                            setWorkspaceMenuOpen(false);
+                            setMobileMenuOpen(false);
                             setLocation("/settings");
                           }}
                           data-testid="mobile-workspace-settings"
@@ -594,7 +616,7 @@ export function UniversalHeader({ variant = "public" }: UniversalHeaderProps) {
                           variant="destructive"
                           className="w-full justify-center gap-2"
                           onClick={() => {
-                            setWorkspaceMenuOpen(false);
+                            setMobileMenuOpen(false);
                             handleLogout();
                           }}
                           data-testid="mobile-workspace-logout"
