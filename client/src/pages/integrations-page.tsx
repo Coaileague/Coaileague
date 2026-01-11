@@ -87,10 +87,53 @@ export default function IntegrationsPage() {
     provider: null,
   });
 
-  // Fetch connections
-  const { data: connectionsData, isLoading } = useQuery<{ connections: PartnerConnection[] }>({
-    queryKey: ['/api/integrations/connections', user?.currentWorkspaceId],
+  // Fetch QuickBooks status from unified endpoint
+  const { data: qbStatus, isLoading: qbStatusLoading, error: qbStatusError } = useQuery<{
+    connected: boolean;
+    status: string;
+    connectionId?: string;
+    realmId?: string;
+    companyId?: string;
+    companyName?: string;
+    lastSyncedAt?: string;
+    accessTokenExpiresAt?: string;
+    refreshTokenExpiresAt?: string;
+    tokenExpiresSoon?: boolean;
+    tokenExpired?: boolean;
+    needsAttention?: boolean;
+    message?: string;
+    authorizationUrl?: string;
+    canDisconnect?: boolean;
+    canRefresh?: boolean;
+    error?: string;
+  }>({
+    queryKey: ['/api/integrations/quickbooks/status', user?.currentWorkspaceId],
+    queryFn: async () => {
+      const res = await fetch(`/api/integrations/quickbooks/status?workspaceId=${user?.currentWorkspaceId}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Request failed' }));
+        throw new Error(errorData.message || errorData.error || 'Failed to fetch QuickBooks status');
+      }
+      return res.json();
+    },
     enabled: !!user?.currentWorkspaceId,
+    refetchInterval: 30000, // Refresh every 30s
+    retry: 2,
+  });
+
+  // Fetch connections (for Gusto and legacy)
+  const { data: connectionsData, isLoading, error: connectionsError } = useQuery<{ connections: PartnerConnection[] }>({
+    queryKey: ['/api/integrations/connections', user?.currentWorkspaceId],
+    queryFn: async () => {
+      const res = await fetch(`/api/integrations/connections?workspaceId=${user?.currentWorkspaceId}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({ error: 'Request failed' }));
+        throw new Error(errorData.message || errorData.error || 'Failed to fetch connections');
+      }
+      return res.json();
+    },
+    enabled: !!user?.currentWorkspaceId,
+    retry: 2,
   });
 
   // Fetch HRIS providers
@@ -178,9 +221,16 @@ export default function IntegrationsPage() {
   const quickbooksConnection = connections.find(c => c.partnerType === 'quickbooks');
   const gustoConnection = connections.find(c => c.partnerType === 'gusto');
 
-  // Connect mutation
+  // Connect mutation - uses unified status endpoint for QuickBooks
   const connectMutation = useMutation({
     mutationFn: async (partner: 'quickbooks' | 'gusto') => {
+      // For QuickBooks, use the authorization URL from status if available
+      if (partner === 'quickbooks' && qbStatus?.authorizationUrl) {
+        window.location.href = qbStatus.authorizationUrl;
+        return { redirecting: true };
+      }
+
+      // Otherwise, call the connect endpoint
       const response = await apiRequest(
         'POST',
         `/api/integrations/${partner}/connect`,
@@ -189,8 +239,9 @@ export default function IntegrationsPage() {
       
       const data = await response.json();
       
-      if (data.authUrl) {
-        window.location.href = data.authUrl;
+      // Handle both authUrl and authorizationUrl
+      if (data.authorizationUrl || data.authUrl) {
+        window.location.href = data.authorizationUrl || data.authUrl;
       }
       
       return data;
@@ -208,7 +259,7 @@ export default function IntegrationsPage() {
   const disconnectMutation = useMutation({
     mutationFn: async (partner: 'quickbooks' | 'gusto') => {
       const response = await apiRequest(
-        'DELETE',
+        'POST',
         `/api/integrations/${partner}/disconnect`,
         { workspaceId: user?.currentWorkspaceId }
       );
@@ -216,6 +267,7 @@ export default function IntegrationsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations/quickbooks/status'] });
       toast({
         title: 'Disconnected',
         description: FRIENDLY_MESSAGES.disconnectSuccess,
@@ -243,6 +295,7 @@ export default function IntegrationsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/integrations/connections'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/integrations/quickbooks/status'] });
       toast({
         title: 'Connection Renewed',
         description: FRIENDLY_MESSAGES.refreshSuccess,
@@ -264,6 +317,20 @@ export default function IntegrationsPage() {
           <Badge variant="default" className="gap-1" data-testid={`badge-status-connected`}>
             <CheckCircle className="w-3 h-3" />
             {FRIENDLY_LABELS.connected}
+          </Badge>
+        );
+      case 'token_expiring':
+        return (
+          <Badge variant="secondary" className="gap-1" data-testid={`badge-status-token-expiring`}>
+            <AlertCircle className="w-3 h-3" />
+            Expiring Soon
+          </Badge>
+        );
+      case 'token_expired':
+        return (
+          <Badge variant="destructive" className="gap-1" data-testid={`badge-status-token-expired`}>
+            <XCircle className="w-3 h-3" />
+            Token Expired
           </Badge>
         );
       case 'expired':
@@ -303,8 +370,21 @@ export default function IntegrationsPage() {
     connection?: PartnerConnection;
     icon: React.ReactNode;
   }) => {
-    const isConnected = connection?.status === 'connected';
-    const isExpired = connection?.status === 'expired';
+    // For QuickBooks, use the unified status endpoint
+    const isQuickBooks = partner === 'quickbooks';
+    const isConnected = isQuickBooks ? qbStatus?.connected : connection?.status === 'connected';
+    const isExpired = isQuickBooks 
+      ? (qbStatus?.status === 'token_expired' || qbStatus?.status === 'error' || qbStatus?.tokenExpired)
+      : connection?.status === 'expired';
+    const needsAttention = isQuickBooks ? qbStatus?.needsAttention : false;
+    const statusMessage = isQuickBooks ? (qbStatusError ? String(qbStatusError) : qbStatus?.message) : null;
+    const lastSyncedAt = isQuickBooks ? qbStatus?.lastSyncedAt : connection?.lastSyncedAt;
+    const accessTokenExpiresAt = isQuickBooks ? qbStatus?.accessTokenExpiresAt : connection?.accessTokenExpiresAt;
+    const companyName = isQuickBooks ? qbStatus?.companyName : null;
+    // Determine display status with proper token state handling
+    const displayStatus = isQuickBooks 
+      ? (qbStatus?.status || (qbStatus?.connected ? 'connected' : 'disconnected'))
+      : (connection?.status || 'disconnected');
 
     return (
       <Card data-testid={`card-integration-${partner}`}>
@@ -317,21 +397,33 @@ export default function IntegrationsPage() {
               <div>
                 <CardTitle className="text-lg">{title}</CardTitle>
                 <CardDescription className="text-sm mt-1">{description}</CardDescription>
+                {companyName && isConnected && (
+                  <p className="text-xs text-muted-foreground mt-1">Connected to: {companyName}</p>
+                )}
               </div>
             </div>
-            {getStatusBadge(connection?.status || 'disconnected')}
+            {getStatusBadge(displayStatus)}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {connection && (
+          {/* Status message for QuickBooks */}
+          {isQuickBooks && statusMessage && (
+            <Alert variant={needsAttention ? 'destructive' : 'default'} className="py-2">
+              <AlertDescription className="text-sm">
+                {statusMessage}
+              </AlertDescription>
+            </Alert>
+          )}
+
+          {(lastSyncedAt || accessTokenExpiresAt) && isConnected && (
             <div className="space-y-3 text-sm bg-muted/30 p-4 rounded-md">
-              {connection.lastSyncedAt && (
+              {lastSyncedAt && (
                 <div className="space-y-1">
                   <div className="flex items-start gap-2">
                     <CheckCircle className="w-4 h-4 mt-0.5 text-primary shrink-0" />
                     <div>
                       <p className="font-medium" data-testid={`text-last-synced-${partner}`}>
-                        {partner === 'quickbooks' ? 'QuickBooks' : 'Gusto'} finished updating {getRelativeTime(new Date(connection.lastSyncedAt))}. You're all set!
+                        {partner === 'quickbooks' ? 'QuickBooks' : 'Gusto'} finished updating {getRelativeTime(new Date(lastSyncedAt))}. You're all set!
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         {partner === 'quickbooks' 
@@ -342,13 +434,13 @@ export default function IntegrationsPage() {
                   </div>
                 </div>
               )}
-              {connection.accessTokenExpiresAt && (
+              {accessTokenExpiresAt && (
                 <div className="space-y-1">
                   <div className="flex items-start gap-2">
                     <AlertCircle className="w-4 h-4 mt-0.5 text-secondary shrink-0" />
                     <div>
                       <p className="font-medium" data-testid={`text-token-expires-${partner}`}>
-                        This connection stays active until {new Date(connection.accessTokenExpiresAt).toLocaleDateString()}.
+                        This connection stays active until {new Date(accessTokenExpiresAt).toLocaleDateString()}.
                       </p>
                       <p className="text-xs text-muted-foreground mt-1">
                         We'll remind you before then. If you see a warning, click "Renew Connection" to keep things running.
@@ -364,11 +456,15 @@ export default function IntegrationsPage() {
             {!isConnected ? (
               <Button
                 onClick={() => connectMutation.mutate(partner)}
-                disabled={connectMutation.isPending}
+                disabled={connectMutation.isPending || (isQuickBooks && qbStatusLoading)}
                 className="gap-2"
                 data-testid={`button-connect-${partner}`}
               >
-                <LinkIcon className="w-4 h-4" />
+                {(connectMutation.isPending || (isQuickBooks && qbStatusLoading)) ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <LinkIcon className="w-4 h-4" />
+                )}
                 {connectMutation.isPending ? 'Connecting...' : 'Connect'}
               </Button>
             ) : (
@@ -382,7 +478,7 @@ export default function IntegrationsPage() {
                   <Unlink className="w-4 h-4" />
                   Disconnect
                 </Button>
-                {isExpired && (
+                {(isExpired || needsAttention) && (
                   <Button
                     variant="secondary"
                     onClick={() => refreshMutation.mutate(partner)}
@@ -390,7 +486,7 @@ export default function IntegrationsPage() {
                     className="gap-2"
                     data-testid={`button-refresh-${partner}`}
                   >
-                    <RefreshCw className="w-4 h-4" />
+                    <RefreshCw className={`w-4 h-4 ${refreshMutation.isPending ? 'animate-spin' : ''}`} />
                     {refreshMutation.isPending ? 'Renewing...' : 'Renew Connection'}
                   </Button>
                 )}

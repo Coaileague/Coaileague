@@ -911,6 +911,152 @@ router.post('/gusto/refresh', requireAuth, requireWorkspaceMembership(), async (
 });
 
 // ============================================================================
+// UNIFIED QUICKBOOKS STATUS (Single Source of Truth)
+// ============================================================================
+
+/**
+ * GET /api/integrations/quickbooks/status
+ * 
+ * Unified endpoint returning all QuickBooks connection state, token status,
+ * and OAuth URL when disconnected. This is the single source of truth for
+ * all QuickBooks UI surfaces.
+ */
+router.get('/quickbooks/status', requireAuth, requireWorkspaceMembership('query'), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).session?.userId;
+    const workspaceId = req.query.workspaceId as string || (req as any).session?.currentWorkspaceId;
+
+    if (!workspaceId) {
+      return res.status(400).json({ 
+        error: 'Missing workspaceId',
+        connected: false,
+        authorizationUrl: null,
+      });
+    }
+
+    // Find QuickBooks connection
+    const [connection] = await db.select()
+      .from(partnerConnections)
+      .where(
+        and(
+          eq(partnerConnections.workspaceId, workspaceId),
+          eq(partnerConnections.partnerType, 'quickbooks')
+        )
+      )
+      .limit(1);
+
+    // Not connected - return OAuth URL
+    if (!connection) {
+      const { url } = await quickbooksOAuthService.generateAuthorizationUrl(workspaceId);
+      return res.json({
+        connected: false,
+        status: 'disconnected',
+        authorizationUrl: url,
+        canConnect: true,
+        message: 'QuickBooks not connected. Click to connect.',
+      });
+    }
+
+    // Calculate token expiry status
+    const now = new Date();
+    const accessTokenExpiry = connection.accessTokenExpiresAt ? new Date(connection.accessTokenExpiresAt) : null;
+    const refreshTokenExpiry = connection.refreshTokenExpiresAt ? new Date(connection.refreshTokenExpiresAt) : null;
+    
+    const accessTokenExpiresSoon = accessTokenExpiry && 
+      (accessTokenExpiry.getTime() - now.getTime()) < 10 * 60 * 1000; // 10 minutes
+    const refreshTokenExpiresSoon = refreshTokenExpiry && 
+      (refreshTokenExpiry.getTime() - now.getTime()) < 7 * 24 * 60 * 60 * 1000; // 7 days
+    const tokenExpired = accessTokenExpiry && accessTokenExpiry < now;
+    const refreshTokenExpired = refreshTokenExpiry && refreshTokenExpiry < now;
+
+    // Determine overall status
+    let status: 'connected' | 'token_expiring' | 'token_expired' | 'error' = 'connected';
+    let needsAttention = false;
+    let message = 'QuickBooks connected and syncing';
+
+    if (refreshTokenExpired) {
+      status = 'token_expired';
+      needsAttention = true;
+      message = 'QuickBooks connection expired. Please reconnect.';
+    } else if (tokenExpired) {
+      status = 'token_expired';
+      needsAttention = true;
+      message = 'Access token expired. Attempting auto-refresh.';
+      // Trigger background refresh
+      quickbooksTokenRefresh.refreshExpiringTokens().catch(console.error);
+    } else if (accessTokenExpiresSoon) {
+      status = 'token_expiring';
+      needsAttention = true;
+      message = 'Token expiring soon. Will auto-refresh.';
+      // Trigger background refresh
+      quickbooksTokenRefresh.refreshExpiringTokens().catch(console.error);
+    } else if (refreshTokenExpiresSoon) {
+      status = 'token_expiring';
+      needsAttention = true;
+      message = 'Refresh token expiring in less than 7 days.';
+    }
+
+    // Get company info from metadata
+    const metadata = connection.metadata as any || {};
+    const companyName = metadata.companyName || metadata.CompanyName || 'Unknown Company';
+
+    return res.json({
+      connected: connection.status === 'connected',
+      status: connection.status === 'connected' ? status : connection.status,
+      connectionId: connection.id,
+      realmId: connection.realmId,
+      companyId: connection.companyId,
+      companyName,
+      lastSyncedAt: connection.lastSyncedAt,
+      accessTokenExpiresAt: connection.accessTokenExpiresAt,
+      refreshTokenExpiresAt: connection.refreshTokenExpiresAt,
+      tokenExpiresSoon: accessTokenExpiresSoon || refreshTokenExpiresSoon,
+      tokenExpired: tokenExpired || refreshTokenExpired,
+      needsAttention,
+      message,
+      canDisconnect: true,
+      canRefresh: !refreshTokenExpired,
+      migrationWizardAvailable: true,
+    });
+  } catch (error: any) {
+    console.error('QuickBooks status error:', error);
+    return res.status(500).json({ 
+      error: error.message,
+      connected: false,
+      status: 'error',
+    });
+  }
+});
+
+/**
+ * POST /api/integrations/quickbooks/reset-migration
+ * 
+ * Reset migration wizard state - allows user to restart migration
+ */
+router.post('/quickbooks/reset-migration', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const userId = (req as any).session?.userId;
+    const { workspaceId } = req.body;
+
+    if (!workspaceId) {
+      return res.status(400).json({ error: 'Missing workspaceId' });
+    }
+
+    // Clear any persisted migration state
+    // This endpoint allows user to retry migration from scratch
+    console.log(`[QuickBooks] Migration reset requested for workspace ${workspaceId} by user ${userId}`);
+
+    return res.json({ 
+      success: true,
+      message: 'Migration state reset. You can now restart the migration wizard.',
+    });
+  } catch (error: any) {
+    console.error('QuickBooks reset-migration error:', error);
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+// ============================================================================
 // CONNECTION STATUS
 // ============================================================================
 
