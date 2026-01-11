@@ -122,11 +122,11 @@ router.get('/quickbooks/callback', async (req: Request, res: Response) => {
 
     // Handle OAuth errors (user denied, etc.)
     if (error) {
-      return res.redirect(`/settings/integrations?error=${encodeURIComponent(error as string)}`);
+      return res.redirect(`/quickbooks-import?error=${encodeURIComponent(error as string)}`);
     }
 
     if (!code || !state || !realmId) {
-      return res.redirect('/settings/integrations?error=missing_parameters');
+      return res.redirect('/quickbooks-import?error=missing_parameters');
     }
 
     // Exchange code for tokens
@@ -136,11 +136,11 @@ router.get('/quickbooks/callback', async (req: Request, res: Response) => {
       realmId as string
     );
 
-    // Redirect to integrations page with success message
-    return res.redirect('/settings/integrations?success=quickbooks_connected');
+    // Redirect to QuickBooks migration wizard with success message
+    return res.redirect('/quickbooks-import?success=connected');
   } catch (error: any) {
     console.error('QuickBooks callback error:', error);
-    return res.redirect(`/settings/integrations?error=${encodeURIComponent(error.message)}`);
+    return res.redirect(`/quickbooks-import?error=${encodeURIComponent(error.message)}`);
   }
 });
 
