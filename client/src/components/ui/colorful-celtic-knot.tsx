@@ -4,8 +4,8 @@
  * Features:
  * - 3 flowing interwoven ribbons forming a Celtic triquetra
  * - Vibrant gradient colors: purple, teal, gold/amber
- * - Smooth color-flowing animations
- * - Glowing central nexus
+ * - Phase-based assembly animation (like tech company logos)
+ * - Glowing central nexus with subtle pulse
  * - SVG-based for crisp rendering at any size
  * 
  * This is the official Trinity brand logo throughout the platform.
@@ -15,14 +15,14 @@ import { cn } from "@/lib/utils";
 import { useId } from "react";
 
 export type TrinityEmotionState = 
-  | "idle"           // Gentle breathing animation
-  | "thinking"       // Fast spinning/pulsing while processing
-  | "success"        // Celebratory burst
+  | "idle"           // Subtle glow breathing
+  | "thinking"       // Fast pulsing while processing
+  | "success"        // Bright celebratory glow
   | "speaking"       // Rhythmic pulse while Trinity talks
   | "listening"      // Subtle attention animation
   | "warning"        // Cautionary orange/yellow pulse
   | "error"          // Red flash with shake
-  | "loading"        // Smooth infinite flow
+  | "loading"        // Smooth spinning flow
   | "happy"          // Bright bouncy animation
   | "focused";       // Intense glow
 
@@ -44,27 +44,27 @@ const sizeMap = {
 };
 
 const speedMap = {
-  slow: { ribbon: "4s", color: "3s", core: "2.5s" },
-  normal: { ribbon: "2.5s", color: "2s", core: "1.5s" },
-  fast: { ribbon: "1.2s", color: "1s", core: "0.6s" },
-  instant: { ribbon: "0.6s", color: "0.4s", core: "0.3s" },
+  slow: { glow: "4s", pulse: "3s", spin: "20s" },
+  normal: { glow: "2.5s", pulse: "2s", spin: "12s" },
+  fast: { glow: "1.2s", pulse: "1s", spin: "6s" },
+  instant: { glow: "0.6s", pulse: "0.5s", spin: "3s" },
 };
 
 const stateModifiers: Record<TrinityEmotionState, { 
   speed: keyof typeof speedMap;
   extraClass: string;
-  coreScale?: string;
+  glowIntensity: number;
 }> = {
-  idle: { speed: "slow", extraClass: "", coreScale: "7;9;7" },
-  thinking: { speed: "fast", extraClass: "animate-pulse", coreScale: "6;12;6" },
-  success: { speed: "instant", extraClass: "animate-bounce", coreScale: "8;14;8" },
-  speaking: { speed: "normal", extraClass: "", coreScale: "7;11;7" },
-  listening: { speed: "slow", extraClass: "", coreScale: "8;10;8" },
-  warning: { speed: "fast", extraClass: "animate-pulse", coreScale: "9;12;9" },
-  error: { speed: "instant", extraClass: "animate-shake", coreScale: "6;10;6" },
-  loading: { speed: "normal", extraClass: "animate-spin-slow", coreScale: "7;10;7" },
-  happy: { speed: "fast", extraClass: "animate-bounce", coreScale: "8;13;8" },
-  focused: { speed: "normal", extraClass: "", coreScale: "10;12;10" },
+  idle: { speed: "slow", extraClass: "", glowIntensity: 2 },
+  thinking: { speed: "fast", extraClass: "animate-pulse", glowIntensity: 4 },
+  success: { speed: "instant", extraClass: "animate-bounce", glowIntensity: 5 },
+  speaking: { speed: "normal", extraClass: "", glowIntensity: 3 },
+  listening: { speed: "slow", extraClass: "", glowIntensity: 2.5 },
+  warning: { speed: "fast", extraClass: "animate-pulse", glowIntensity: 4 },
+  error: { speed: "instant", extraClass: "animate-shake", glowIntensity: 3 },
+  loading: { speed: "normal", extraClass: "animate-spin-slow", glowIntensity: 3 },
+  happy: { speed: "fast", extraClass: "animate-bounce", glowIntensity: 4 },
+  focused: { speed: "normal", extraClass: "", glowIntensity: 5 },
 };
 
 export function ColorfulCelticKnot({ 
@@ -77,10 +77,7 @@ export function ColorfulCelticKnot({
   const uniqueId = useId().replace(/:/g, '-');
   const numericSize = typeof size === "number" ? size : sizeMap[size] || 32;
   
-  // Get state-specific modifiers
   const stateConfig = stateModifiers[state] || stateModifiers.idle;
-  
-  // Animation speed: explicit prop > state default > normal
   const effectiveSpeedKey = animationSpeed || stateConfig.speed;
   const effectiveSpeed = speedMap[effectiveSpeedKey];
 
@@ -96,90 +93,44 @@ export function ColorfulCelticKnot({
       <defs>
         {/* Gradient for ribbon 1 - Purple to Magenta */}
         <linearGradient id={`ribbon1-grad-${uniqueId}`} x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#a855f7">
-            {animated && (
-              <animate 
-                attributeName="stop-color" 
-                values="#a855f7;#ec4899;#f59e0b;#a855f7" 
-                dur={effectiveSpeed.color} 
-                repeatCount="indefinite" 
-              />
-            )}
-          </stop>
-          <stop offset="100%" stopColor="#7c3aed">
-            {animated && (
-              <animate 
-                attributeName="stop-color" 
-                values="#7c3aed;#db2777;#d97706;#7c3aed" 
-                dur={effectiveSpeed.color} 
-                repeatCount="indefinite" 
-              />
-            )}
-          </stop>
+          <stop offset="0%" stopColor="#a855f7" />
+          <stop offset="50%" stopColor="#c026d3" />
+          <stop offset="100%" stopColor="#7c3aed" />
         </linearGradient>
         
         {/* Gradient for ribbon 2 - Teal to Cyan */}
         <linearGradient id={`ribbon2-grad-${uniqueId}`} x1="0%" y1="100%" x2="100%" y2="0%">
-          <stop offset="0%" stopColor="#14b8a6">
-            {animated && (
-              <animate 
-                attributeName="stop-color" 
-                values="#14b8a6;#06b6d4;#3b82f6;#14b8a6" 
-                dur={effectiveSpeed.color} 
-                repeatCount="indefinite" 
-                begin="0.5s"
-              />
-            )}
-          </stop>
-          <stop offset="100%" stopColor="#06b6d4">
-            {animated && (
-              <animate 
-                attributeName="stop-color" 
-                values="#06b6d4;#0ea5e9;#6366f1;#06b6d4" 
-                dur={effectiveSpeed.color} 
-                repeatCount="indefinite" 
-                begin="0.5s"
-              />
-            )}
-          </stop>
+          <stop offset="0%" stopColor="#14b8a6" />
+          <stop offset="50%" stopColor="#22d3ee" />
+          <stop offset="100%" stopColor="#06b6d4" />
         </linearGradient>
         
         {/* Gradient for ribbon 3 - Gold to Orange */}
         <linearGradient id={`ribbon3-grad-${uniqueId}`} x1="100%" y1="50%" x2="0%" y2="50%">
-          <stop offset="0%" stopColor="#f59e0b">
-            {animated && (
-              <animate 
-                attributeName="stop-color" 
-                values="#f59e0b;#eab308;#84cc16;#f59e0b" 
-                dur={effectiveSpeed.color} 
-                repeatCount="indefinite" 
-                begin="1s"
-              />
-            )}
-          </stop>
-          <stop offset="100%" stopColor="#f97316">
-            {animated && (
-              <animate 
-                attributeName="stop-color" 
-                values="#f97316;#facc15;#22c55e;#f97316" 
-                dur={effectiveSpeed.color} 
-                repeatCount="indefinite" 
-                begin="1s"
-              />
-            )}
-          </stop>
+          <stop offset="0%" stopColor="#f59e0b" />
+          <stop offset="50%" stopColor="#fbbf24" />
+          <stop offset="100%" stopColor="#f97316" />
         </linearGradient>
         
         {/* Center nexus gradient */}
         <radialGradient id={`nexus-grad-${uniqueId}`} cx="50%" cy="50%" r="50%">
           <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="40%" stopColor="#c4b5fd" />
+          <stop offset="40%" stopColor="#e9d5ff" />
           <stop offset="100%" stopColor="#a855f7" />
         </radialGradient>
         
-        {/* Glow filter */}
+        {/* Glow filter - adjustable intensity */}
         <filter id={`glow-${uniqueId}`} x="-50%" y="-50%" width="200%" height="200%">
-          <feGaussianBlur stdDeviation="2" result="blur"/>
+          <feGaussianBlur stdDeviation={stateConfig.glowIntensity} result="blur"/>
+          <feMerge>
+            <feMergeNode in="blur"/>
+            <feMergeNode in="SourceGraphic"/>
+          </feMerge>
+        </filter>
+        
+        {/* Outer glow for ribbons */}
+        <filter id={`ribbon-glow-${uniqueId}`} x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="1.5" result="blur"/>
           <feMerge>
             <feMergeNode in="blur"/>
             <feMergeNode in="SourceGraphic"/>
@@ -187,10 +138,10 @@ export function ColorfulCelticKnot({
         </filter>
       </defs>
       
-      {/* Celtic Triquetra - Three interwoven loops */}
-      <g filter={`url(#glow-${uniqueId})`} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none">
+      {/* Celtic Triquetra - Three fully-formed interwoven loops */}
+      <g filter={`url(#ribbon-glow-${uniqueId})`} strokeWidth="6" strokeLinecap="round" strokeLinejoin="round" fill="none">
         
-        {/* Loop 1 - Top loop (purple/magenta) */}
+        {/* Loop 1 - Top loop (purple/magenta) - always fully visible */}
         <path 
           d="M 50 15 
              C 25 15, 15 40, 25 55 
@@ -198,14 +149,13 @@ export function ColorfulCelticKnot({
              C 58 60, 68 65, 75 55 
              C 85 40, 75 15, 50 15"
           stroke={`url(#ribbon1-grad-${uniqueId})`}
-          strokeDasharray={animated ? "200" : "none"}
-          strokeDashoffset="0"
+          opacity="1"
         >
           {animated && (
             <animate 
-              attributeName="stroke-dashoffset" 
-              values="0;-200" 
-              dur={effectiveSpeed.ribbon} 
+              attributeName="opacity" 
+              values="0.85;1;0.85" 
+              dur={effectiveSpeed.glow} 
               repeatCount="indefinite"
             />
           )}
@@ -219,16 +169,15 @@ export function ColorfulCelticKnot({
              C 42 58, 32 70, 30 78 
              C 35 88, 50 85, 50 75"
           stroke={`url(#ribbon2-grad-${uniqueId})`}
-          strokeDasharray={animated ? "180" : "none"}
-          strokeDashoffset="0"
+          opacity="1"
         >
           {animated && (
             <animate 
-              attributeName="stroke-dashoffset" 
-              values="0;-180" 
-              dur={effectiveSpeed.ribbon} 
+              attributeName="opacity" 
+              values="0.85;1;0.85" 
+              dur={effectiveSpeed.glow} 
               repeatCount="indefinite"
-              begin="0.8s"
+              begin="0.3s"
             />
           )}
         </path>
@@ -241,54 +190,30 @@ export function ColorfulCelticKnot({
              C 58 58, 68 70, 70 78 
              C 65 88, 50 85, 50 75"
           stroke={`url(#ribbon3-grad-${uniqueId})`}
-          strokeDasharray={animated ? "180" : "none"}
-          strokeDashoffset="0"
+          opacity="1"
         >
           {animated && (
             <animate 
-              attributeName="stroke-dashoffset" 
-              values="0;-180" 
-              dur={effectiveSpeed.ribbon} 
+              attributeName="opacity" 
+              values="0.85;1;0.85" 
+              dur={effectiveSpeed.glow} 
               repeatCount="indefinite"
-              begin="1.6s"
+              begin="0.6s"
             />
           )}
         </path>
       </g>
       
-      {/* Central glowing nexus */}
-      <circle 
-        cx="50" 
-        cy="50" 
-        r="8" 
-        fill={`url(#nexus-grad-${uniqueId})`} 
-        filter={`url(#glow-${uniqueId})`}
-      >
-        {animated && (
-          <>
-            <animate attributeName="r" values={stateConfig.coreScale || "7;10;7"} dur={effectiveSpeed.core} repeatCount="indefinite" />
-            <animate attributeName="opacity" values="0.9;1;0.9" dur={effectiveSpeed.core} repeatCount="indefinite" />
-          </>
-        )}
-      </circle>
-      
-      {/* Bright inner core */}
-      <circle cx="50" cy="50" r="4" fill="#ffffff" opacity="0.95">
-        {animated && (
-          <animate attributeName="r" values="3;5;3" dur={effectiveSpeed.core} repeatCount="indefinite" />
-        )}
-      </circle>
-      
-      {/* Outer decorative ring (subtle) */}
+      {/* Outer energy ring - subtle rotating accent */}
       <circle 
         cx="50" 
         cy="50" 
         r="44" 
         fill="none" 
-        stroke="#a855f7" 
-        strokeWidth="0.5" 
-        strokeDasharray="6 10"
-        opacity="0.25"
+        stroke="url(#ribbon1-grad-${uniqueId})" 
+        strokeWidth="1" 
+        strokeDasharray="8 16 4 16"
+        opacity="0.2"
       >
         {animated && (
           <animateTransform 
@@ -296,11 +221,60 @@ export function ColorfulCelticKnot({
             type="rotate" 
             from="0 50 50" 
             to="360 50 50" 
-            dur="30s" 
+            dur={effectiveSpeed.spin} 
             repeatCount="indefinite"
           />
         )}
       </circle>
+      
+      {/* Secondary energy ring - counter rotation */}
+      <circle 
+        cx="50" 
+        cy="50" 
+        r="40" 
+        fill="none" 
+        stroke="url(#ribbon2-grad-${uniqueId})" 
+        strokeWidth="0.5" 
+        strokeDasharray="4 20"
+        opacity="0.15"
+      >
+        {animated && (
+          <animateTransform 
+            attributeName="transform" 
+            type="rotate" 
+            from="360 50 50" 
+            to="0 50 50" 
+            dur={effectiveSpeed.spin} 
+            repeatCount="indefinite"
+          />
+        )}
+      </circle>
+      
+      {/* Central glowing nexus - soft pulsing core */}
+      <circle 
+        cx="50" 
+        cy="50" 
+        r="9" 
+        fill={`url(#nexus-grad-${uniqueId})`} 
+        filter={`url(#glow-${uniqueId})`}
+      >
+        {animated && (
+          <>
+            <animate attributeName="r" values="8;10;8" dur={effectiveSpeed.pulse} repeatCount="indefinite" />
+            <animate attributeName="opacity" values="0.9;1;0.9" dur={effectiveSpeed.pulse} repeatCount="indefinite" />
+          </>
+        )}
+      </circle>
+      
+      {/* Bright inner core - white center */}
+      <circle cx="50" cy="50" r="4" fill="#ffffff" opacity="0.95">
+        {animated && (
+          <animate attributeName="r" values="3.5;5;3.5" dur={effectiveSpeed.pulse} repeatCount="indefinite" />
+        )}
+      </circle>
+      
+      {/* Inner sparkle highlight */}
+      <circle cx="47" cy="47" r="1.5" fill="#ffffff" opacity="0.8" />
     </svg>
   );
 }
