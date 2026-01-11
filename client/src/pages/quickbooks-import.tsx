@@ -616,6 +616,34 @@ export default function QuickBooksImportPage() {
       });
     },
   });
+  
+  // Unlock stuck migration mutation
+  const unlockMigrationMutation = useMutation({
+    mutationFn: async (forceReset: boolean = false) => {
+      const res = await apiRequest('POST', '/api/integrations/quickbooks/push/unlock', {
+        workspaceId: workspace?.id,
+        forceReset,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || 'Failed to unlock');
+      return data;
+    },
+    onSuccess: (data) => {
+      setMigrationLocked(false);
+      setActiveMigrationInfo(null);
+      toast({
+        title: 'Migration Unlocked',
+        description: data.message || 'You can now start a new sync.',
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Unlock Failed',
+        description: error.message,
+        variant: 'destructive',
+      });
+    },
+  });
 
   const runPreflightTests = async () => {
     setIsRunningPreflight(true);
@@ -1568,26 +1596,50 @@ export default function QuickBooksImportPage() {
             </div>
           )}
           
-          <div className="flex gap-3 justify-end pt-2">
-            <Button 
-              variant="outline" 
-              onClick={() => setMigrationLocked(false)}
-              data-testid="button-wait-migration"
-            >
-              Wait for Completion
-            </Button>
-            <Button 
-              variant="destructive"
-              onClick={() => cancelMigrationMutation.mutate()}
-              disabled={cancelMigrationMutation.isPending}
-              data-testid="button-cancel-migration"
-            >
-              {cancelMigrationMutation.isPending ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Cancelling...</>
-              ) : (
-                'Cancel Migration'
-              )}
-            </Button>
+          <div className="flex flex-col gap-3 pt-2">
+            <div className="flex gap-3 justify-end">
+              <Button 
+                variant="outline" 
+                onClick={() => setMigrationLocked(false)}
+                data-testid="button-wait-migration"
+              >
+                Wait for Completion
+              </Button>
+              <Button 
+                variant="destructive"
+                onClick={() => cancelMigrationMutation.mutate()}
+                disabled={cancelMigrationMutation.isPending}
+                data-testid="button-cancel-migration"
+              >
+                {cancelMigrationMutation.isPending ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Cancelling...</>
+                ) : (
+                  'Cancel Migration'
+                )}
+              </Button>
+            </div>
+            
+            {/* Unlock button for stuck migrations (visible after 5+ minutes) */}
+            {activeMigrationInfo && activeMigrationInfo.elapsedSeconds > 300 && (
+              <div className="border-t pt-3 mt-1">
+                <p className="text-xs text-muted-foreground mb-2">
+                  Migration appears stuck (running for over 5 minutes). You can force unlock to retry.
+                </p>
+                <Button 
+                  variant="outline"
+                  className="w-full border-orange-500 text-orange-600 hover:bg-orange-50 dark:hover:bg-orange-950"
+                  onClick={() => unlockMigrationMutation.mutate(true)}
+                  disabled={unlockMigrationMutation.isPending}
+                  data-testid="button-unlock-migration"
+                >
+                  {unlockMigrationMutation.isPending ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Unlocking...</>
+                  ) : (
+                    'Force Unlock & Retry'
+                  )}
+                </Button>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

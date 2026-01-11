@@ -496,6 +496,136 @@ router.post('/quickbooks/push/cancel', requireAuth, requireWorkspaceMembership()
 });
 
 /**
+ * POST /api/integrations/quickbooks/push/unlock
+ * 
+ * Unlock a stuck migration so end-user can retry
+ * - End users: Can unlock their own org's stuck migrations
+ * - Support staff: Can force unlock any org's migrations
+ * - Trinity AI: Can force reset via AI Brain action
+ */
+router.post('/quickbooks/push/unlock', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, forceReset = false } = req.body;
+    const userId = (req as any).session?.userId;
+    const userRole = (req as any).session?.platformRole;
+    
+    // Check if user is support staff (can force reset any workspace)
+    const isSupportStaff = ['root_admin', 'co_admin', 'sysops'].includes(userRole);
+    
+    // Find stuck migrations (running or cancel_requested for > 5 minutes, or failed)
+    const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000);
+    
+    const [stuckRun] = await db.select()
+      .from(quickbooksMigrationRuns)
+      .where(
+        and(
+          eq(quickbooksMigrationRuns.workspaceId, workspaceId),
+          inArray(quickbooksMigrationRuns.status, ['running', 'cancel_requested'])
+        )
+      )
+      .orderBy(desc(quickbooksMigrationRuns.startedAt))
+      .limit(1);
+
+    if (!stuckRun) {
+      return res.json({ 
+        success: true, 
+        message: 'No stuck migration found. You can start a new sync.',
+        alreadyUnlocked: true,
+      });
+    }
+
+    const runStartTime = new Date(stuckRun.startedAt!).getTime();
+    const isActuallyStuck = Date.now() - runStartTime > 5 * 60 * 1000; // > 5 minutes
+
+    // Allow unlock if: (1) migration is stuck, or (2) support staff with forceReset, or (3) explicit forceReset
+    if (!isActuallyStuck && !forceReset && !isSupportStaff) {
+      return res.status(400).json({
+        error: 'Migration is still in progress',
+        message: 'This migration started less than 5 minutes ago. Please wait or request cancellation first.',
+        runId: stuckRun.id,
+        elapsedSeconds: Math.floor((Date.now() - runStartTime) / 1000),
+      });
+    }
+
+    // Unlock the migration by marking it as failed with unlock reason
+    await db.update(quickbooksMigrationRuns)
+      .set({
+        status: 'failed',
+        errorMessage: forceReset 
+          ? `Force reset by ${isSupportStaff ? 'support staff' : 'user'} (${userId})`
+          : 'Auto-unlocked: Migration was stuck',
+        finishedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(quickbooksMigrationRuns.id, stuckRun.id));
+
+    console.log(`[QuickBooks Push] Migration ${stuckRun.id} unlocked by user ${userId} (forceReset: ${forceReset}, isSupportStaff: ${isSupportStaff})`);
+
+    return res.json({
+      success: true,
+      message: 'Migration lock cleared. You can now start a new sync.',
+      unlockedRunId: stuckRun.id,
+      wasStuck: isActuallyStuck,
+      forceReset,
+    });
+  } catch (error: any) {
+    console.error('Migration unlock error:', error);
+    return res.status(500).json({ error: 'Failed to unlock migration' });
+  }
+});
+
+/**
+ * POST /api/integrations/quickbooks/push/factory-reset
+ * 
+ * Factory reset all migration state for a workspace (SUPPORT STAFF ONLY)
+ * Clears all migration history and locks so end-user can start fresh
+ */
+router.post('/quickbooks/push/factory-reset', requireAuth, requireWorkspaceMembership(), async (req: Request, res: Response) => {
+  try {
+    const { workspaceId, reason } = req.body;
+    const userId = (req as any).session?.userId;
+    const userRole = (req as any).session?.platformRole;
+    
+    // Only support staff can factory reset
+    const isSupportStaff = ['root_admin', 'co_admin', 'sysops'].includes(userRole);
+    if (!isSupportStaff) {
+      return res.status(403).json({ 
+        error: 'Forbidden',
+        message: 'Factory reset requires support staff privileges. Please contact support.',
+      });
+    }
+
+    // Mark all running/pending migrations as failed
+    const result = await db.update(quickbooksMigrationRuns)
+      .set({
+        status: 'failed',
+        errorMessage: `Factory reset by support staff (${userId}): ${reason || 'No reason provided'}`,
+        finishedAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(
+        and(
+          eq(quickbooksMigrationRuns.workspaceId, workspaceId),
+          inArray(quickbooksMigrationRuns.status, ['running', 'cancel_requested'])
+        )
+      );
+
+    console.log(`[QuickBooks Push] Factory reset for workspace ${workspaceId} by support staff ${userId}`);
+
+    return res.json({
+      success: true,
+      message: 'Factory reset complete. All migration locks cleared.',
+      workspaceId,
+      resetBy: userId,
+      reason: reason || 'No reason provided',
+    });
+  } catch (error: any) {
+    console.error('Factory reset error:', error);
+    return res.status(500).json({ error: 'Failed to factory reset migrations' });
+  }
+});
+
+/**
  * POST /api/integrations/quickbooks/push
  * 
  * Push CoAIleague data TO QuickBooks (reverse sync)
