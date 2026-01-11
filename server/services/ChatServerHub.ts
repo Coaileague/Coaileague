@@ -166,8 +166,8 @@ class ChatServerHubClass {
     console.log(`[ChatServerHub] Initializing gateway v${CHAT_SERVER_HUB.version}...`);
     
     try {
-      // Seed HelpDesk room with HelpAI bot (idempotent)
-      await this.seedHelpDeskRoom();
+      // HelpDesk room seeding disabled - platform uses ticket system instead
+      // await this.seedHelpDeskRoom();
       
       // Load all active rooms from database
       await this.loadAllActiveRooms();
