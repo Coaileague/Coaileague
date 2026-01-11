@@ -98,6 +98,17 @@ The Trinity Chat Interface provides direct conversational access to Trinity with
 - Self-Evolving Cognitive Architectures
 
 ## Recent Changes (January 2026)
+- **Simplified 1-on-1 Support Chat System:** Complete HelpAI-first support flow with automatic escalation to human support
+  - User clicks chat widget → HelpAI (Trinity/Gemini) greets → Tries to solve using AI + FAQ
+  - If can't resolve → Creates ticket, user waits in chat → Human support joins same chat → 1-on-1 conversation until resolved
+  - Support Session Service (supportSessionService.ts): In-memory session management with states (ai_active, waiting_human, human_joined, resolved)
+  - Support Chat REST API (support-chat.ts): Session creation, messaging, escalation, staff queue, join, staff-message, resolution
+  - Header Chat Widget: Fixed real-time polling (2s in human_joined state) to ensure users receive staff messages
+  - Support Queue (/support/queue): Staff dashboard to see waiting users and join sessions
+  - My Tickets (/my-tickets): User-facing ticket status tracking
+  - Support Chatrooms (/support/chatrooms): Staff view of all organization chatrooms with export functionality
+  - Guest Ticket Form: Added to /support page for unauthenticated users to submit support requests
+  - Chat History Export: Compliance-ready JSON export endpoint for chatroom history
 - **Trinity Celtic Knot Animation System:** 10 emotion states (idle, thinking, success, speaking, listening, warning, error, loading, happy, focused) with 4 speed tiers (slow, normal, fast, instant) for responsive UI feedback
 - **Universal Trinity Loader:** ALL loading animations now use Trinity Celtic knot exclusively - replaced LoadingScreen, PageLoader, CoAIleague loader, and chatrooms loading states
 - **Mobile Header Fix:** Removed wordmark text on mobile to prevent cutoff - shows only Trinity icon for clean responsive design

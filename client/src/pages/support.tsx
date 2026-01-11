@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Footer } from "@/components/footer";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
 import { TrinityBadge } from "@/components/trinity-marketing-hero";
 import TrinityRedesign from "@/components/trinity-redesign";
+import { Loader2, Mail, Send } from "lucide-react";
 import {
   Book,
   Video,
@@ -41,6 +45,42 @@ import type { HealthSummary } from '@shared/healthTypes';
 
 export default function Support() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { toast } = useToast();
+  
+  const [guestForm, setGuestForm] = useState({
+    name: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+  const [ticketSubmitted, setTicketSubmitted] = useState(false);
+  
+  const submitGuestTicket = useMutation({
+    mutationFn: async (data: typeof guestForm) => {
+      const res = await fetch('/api/support/chat/guest-ticket', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      });
+      if (!res.ok) throw new Error('Failed to submit ticket');
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setTicketSubmitted(true);
+      toast({
+        title: "Ticket Submitted",
+        description: `Your ticket #${data.ticketNumber || 'N/A'} has been received. We'll respond to ${guestForm.email} soon.`,
+      });
+      setGuestForm({ name: "", email: "", subject: "", message: "" });
+    },
+    onError: () => {
+      toast({
+        title: "Submission Failed",
+        description: "Please try again or contact us directly.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Fetch live health data from API
   const { data: healthData, isLoading: healthLoading, isError: healthError, refetch: refetchHealth } = useQuery<HealthSummary>({
@@ -449,6 +489,107 @@ export default function Support() {
                 </AccordionItem>
               ))}
             </Accordion>
+          </Card>
+        </div>
+
+        {/* Guest Contact Form */}
+        <div className="mb-10">
+          <h2 className="text-lg sm:text-xl font-bold mb-4 flex items-center gap-2">
+            <Mail className="h-5 w-5 text-violet-600" />
+            Submit a Support Request
+          </h2>
+          <Card className="bg-card border-border p-4 sm:p-6">
+            {ticketSubmitted ? (
+              <div className="text-center py-6">
+                <CheckCircle2 className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                <h3 className="text-lg font-semibold mb-2">Ticket Submitted!</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  We've received your request and will respond shortly.
+                </p>
+                <Button 
+                  variant="outline" 
+                  onClick={() => setTicketSubmitted(false)}
+                  data-testid="button-submit-another"
+                >
+                  Submit Another Request
+                </Button>
+              </div>
+            ) : (
+              <form 
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  submitGuestTicket.mutate(guestForm);
+                }}
+                className="space-y-4"
+              >
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="guest-name">Your Name</Label>
+                    <Input
+                      id="guest-name"
+                      placeholder="John Doe"
+                      value={guestForm.name}
+                      onChange={(e) => setGuestForm(prev => ({ ...prev, name: e.target.value }))}
+                      required
+                      data-testid="input-guest-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="guest-email">Email Address</Label>
+                    <Input
+                      id="guest-email"
+                      type="email"
+                      placeholder="john@example.com"
+                      value={guestForm.email}
+                      onChange={(e) => setGuestForm(prev => ({ ...prev, email: e.target.value }))}
+                      required
+                      data-testid="input-guest-email"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="guest-subject">Subject</Label>
+                  <Input
+                    id="guest-subject"
+                    placeholder="Brief description of your issue"
+                    value={guestForm.subject}
+                    onChange={(e) => setGuestForm(prev => ({ ...prev, subject: e.target.value }))}
+                    required
+                    data-testid="input-guest-subject"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="guest-message">Message</Label>
+                  <Textarea
+                    id="guest-message"
+                    placeholder="Please describe your issue or question in detail..."
+                    value={guestForm.message}
+                    onChange={(e) => setGuestForm(prev => ({ ...prev, message: e.target.value }))}
+                    required
+                    rows={4}
+                    data-testid="input-guest-message"
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  className="w-full sm:w-auto"
+                  disabled={submitGuestTicket.isPending}
+                  data-testid="button-submit-guest-ticket"
+                >
+                  {submitGuestTicket.isPending ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      <Send className="w-4 h-4 mr-2" />
+                      Submit Request
+                    </>
+                  )}
+                </Button>
+              </form>
+            )}
           </Card>
         </div>
 

@@ -101,6 +101,7 @@ import { whatsNewRouter } from "./routes/whatsNewRoutes";
 import empireRouter from "./routes/empireRoutes"; // Empire Mode (Trinity CSO upgrade)
 import { trinityNotificationRouter } from "./routes/trinityNotificationRoutes"; // Trinity Notification Bridge
 import { supportCommandRouter } from "./routes/support-command-console";
+import { supportChatRouter } from "./routes/support-chat"; // Simplified 1-on-1 HelpAI support chat
 import trinityChatRouter from "./routes/trinityChatRoutes"; // Trinity Chat Interface with BUDDY mode
 import resilienceRouter from "./routes/resilience-api"; // Fortune 500-grade resilience infrastructure
 import { endUserControlRouter } from "./routes/endUserControlRoutes";
@@ -3291,6 +3292,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/subagents", subagentRouter);
   // Register Support Command Console routes (Force-push updates for support staff)
   app.use("/api/support/command", supportCommandRouter);
+  app.use("/api/support/chat", supportChatRouter); // Simplified 1-on-1 HelpAI support chat
   app.use("/api/admin/end-users", endUserControlRouter);
   // Register AI Brain Console routes (Interactive AI chat and control for support staff)
   // Register Support-Assisted Onboarding routes (platform staff creates orgs for users)

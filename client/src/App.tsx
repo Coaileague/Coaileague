@@ -196,6 +196,9 @@ const WorkflowApprovals = lazy(() => import("@/pages/workflow-approvals"));
 const AICommandCenter = lazy(() => import("@/pages/ai-command-center"));
 const SupportCommandConsole = lazy(() => import("@/pages/support-command-console"));
 const SupportBugDashboard = lazy(() => import("@/pages/support-bug-dashboard"));
+const SupportQueue = lazy(() => import("@/pages/support-queue"));
+const SupportChatrooms = lazy(() => import("@/pages/support-chatrooms"));
+const MyTickets = lazy(() => import("@/pages/my-tickets"));
 const EndUserControls = lazy(() => import("@/pages/end-user-controls"));
 const TrinityCommandCenter = lazy(() => import("@/pages/trinity-command-center"));
 const AuditLogs = lazy(() => import("@/pages/audit-logs"));
@@ -1066,6 +1069,9 @@ function AppContent() {
               <Route path="/ai/command-center" component={AICommandCenter} />
               <Route path="/support/console" component={SupportCommandConsole} />
               <Route path="/support/bugs" component={SupportBugDashboard} />
+              <Route path="/support/queue" component={SupportQueue} />
+              <Route path="/support/chatrooms" component={SupportChatrooms} />
+              <Route path="/my-tickets" component={MyTickets} />
               <Route path="/admin/end-user-controls" component={EndUserControls} />
               <Route path="/support/assisted-onboarding" component={AssistedOnboarding} />
               <Route path="/workspace-onboarding" component={WorkspaceOnboarding} />
@@ -1406,6 +1412,9 @@ function AppContent() {
                 <Route path="/ai/command-center" component={AICommandCenter} />
                 <Route path="/support/console" component={SupportCommandConsole} />
                 <Route path="/support/bugs" component={SupportBugDashboard} />
+              <Route path="/support/queue" component={SupportQueue} />
+              <Route path="/support/chatrooms" component={SupportChatrooms} />
+              <Route path="/my-tickets" component={MyTickets} />
                 <Route path="/admin/end-user-controls" component={EndUserControls} />
                 <Route path="/support/assisted-onboarding" component={AssistedOnboarding} />
                 <Route path="/workspace-onboarding" component={WorkspaceOnboarding} />

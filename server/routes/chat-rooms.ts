@@ -1815,4 +1815,117 @@ router.get(
   }
 );
 
+// ============================================================================
+// GET ALL ORG CHATROOMS - GET /api/chat/rooms/all-orgs (Support Staff Only)
+// ============================================================================
+router.get(
+  "/all-orgs",
+  async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    try {
+      const platformRole = (authReq.user as any)?.platformRole || authReq.user?.role;
+      const supportRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
+      
+      if (!platformRole || !supportRoles.includes(platformRole)) {
+        return res.status(403).json({ error: "Support staff access required" });
+      }
+
+      const { workspaces } = await import("@shared/schema");
+
+      const rooms = await db
+        .select({
+          id: organizationChatRooms.id,
+          name: organizationChatRooms.name,
+          workspaceId: organizationChatRooms.workspaceId,
+          roomType: organizationChatRooms.roomType,
+          createdAt: organizationChatRooms.createdAt,
+        })
+        .from(organizationChatRooms)
+        .leftJoin(workspaces, eq(organizationChatRooms.workspaceId, workspaces.id));
+
+      const roomsWithDetails = await Promise.all(
+        rooms.map(async (room) => {
+          const [workspace] = await db.select({ name: workspaces.name }).from(workspaces).where(eq(workspaces.id, room.workspaceId)).limit(1);
+          const [memberResult] = await db.select({ count: count() }).from(organizationRoomMembers).where(eq(organizationRoomMembers.roomId, room.id));
+          const [messageResult] = await db.select({ count: count() }).from(chatMessages).where(eq(chatMessages.conversationId, room.id));
+          const [lastMessage] = await db.select({ createdAt: chatMessages.createdAt }).from(chatMessages).where(eq(chatMessages.conversationId, room.id)).orderBy(desc(chatMessages.createdAt)).limit(1);
+
+          const lastActivityDate = lastMessage?.createdAt || room.createdAt;
+          const idleThreshold = Date.now() - 30 * 60 * 1000;
+          const status = lastActivityDate && new Date(lastActivityDate).getTime() > idleThreshold ? 'active' : 'idle';
+
+          return {
+            ...room,
+            workspaceName: workspace?.name || 'Unknown',
+            memberCount: memberResult?.count || 0,
+            messageCount: messageResult?.count || 0,
+            lastActivity: lastMessage?.createdAt,
+            status,
+          };
+        })
+      );
+
+      res.json({ success: true, rooms: roomsWithDetails });
+    } catch (error: any) {
+      console.error("Error fetching all org chatrooms:", error);
+      res.status(500).json({ error: "Failed to fetch chatrooms" });
+    }
+  }
+);
+
+// ============================================================================
+// EXPORT CHAT HISTORY - GET /api/chat/rooms/:roomId/export (Support Staff Only)
+// ============================================================================
+router.get(
+  "/:roomId/export",
+  async (req, res) => {
+    const authReq = req as AuthenticatedRequest;
+    const { roomId } = req.params;
+
+    try {
+      const platformRole = (authReq.user as any)?.platformRole || authReq.user?.role;
+      const supportRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
+      
+      if (!platformRole || !supportRoles.includes(platformRole)) {
+        return res.status(403).json({ error: "Support staff access required" });
+      }
+
+      const messages = await db
+        .select()
+        .from(chatMessages)
+        .where(eq(chatMessages.conversationId, roomId))
+        .orderBy(chatMessages.createdAt);
+
+      const [room] = await db
+        .select()
+        .from(organizationChatRooms)
+        .where(eq(organizationChatRooms.id, roomId))
+        .limit(1);
+
+      const exportData = {
+        exportedAt: new Date().toISOString(),
+        exportedBy: authReq.userId,
+        roomId,
+        roomName: room?.name || 'Unknown Room',
+        messageCount: messages.length,
+        messages: messages.map(m => ({
+          id: m.id,
+          senderId: m.senderId,
+          senderName: m.senderName,
+          content: m.content,
+          messageType: m.messageType,
+          createdAt: m.createdAt,
+        })),
+      };
+
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Content-Disposition', `attachment; filename="chat-export-${roomId}-${Date.now()}.json"`);
+      res.json(exportData);
+    } catch (error: any) {
+      console.error("Error exporting chat history:", error);
+      res.status(500).json({ error: "Failed to export chat history" });
+    }
+  }
+);
+
 export default router;
