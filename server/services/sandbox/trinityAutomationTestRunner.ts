@@ -196,11 +196,11 @@ export class TrinityAutomationTestRunner {
       }
 
       const approvedEntries = entries.filter(e => e.status === 'approved');
-      const totalHours = entries.reduce((sum, e) => sum + parseFloat(e.hoursWorked || '0'), 0);
+      const totalHours = entries.reduce((sum, e) => sum + parseFloat(e.totalHours || '0'), 0);
       const avgHoursPerEntry = totalHours / entries.length;
 
       const validEntries = entries.filter(e => {
-        const hours = parseFloat(e.hoursWorked || '0');
+        const hours = parseFloat(e.totalHours || '0');
         return hours > 0 && hours <= 24;
       });
 
@@ -248,8 +248,8 @@ export class TrinityAutomationTestRunner {
 
       const paidInvoices = allInvoices.filter(i => i.status === 'paid');
       const pendingInvoices = allInvoices.filter(i => i.status === 'pending');
-      const totalBilled = allInvoices.reduce((sum, i) => sum + parseFloat(i.totalAmount || '0'), 0);
-      const totalPaid = allInvoices.reduce((sum, i) => sum + parseFloat(i.paidAmount || '0'), 0);
+      const totalBilled = allInvoices.reduce((sum, i) => sum + parseFloat(i.total || '0'), 0);
+      const totalPaid = allInvoices.reduce((sum, i) => sum + parseFloat(i.amountPaid || '0'), 0);
 
       return {
         testName,
@@ -292,8 +292,8 @@ export class TrinityAutomationTestRunner {
       }
 
       const completedRuns = runs.filter(r => r.status === 'completed');
-      const totalGross = runs.reduce((sum, r) => sum + parseFloat(r.totalGross || '0'), 0);
-      const totalNet = runs.reduce((sum, r) => sum + parseFloat(r.totalNet || '0'), 0);
+      const totalGross = runs.reduce((sum, r) => sum + parseFloat(r.totalGrossPay || '0'), 0);
+      const totalNet = runs.reduce((sum, r) => sum + parseFloat(r.totalNetPay || '0'), 0);
       const totalEmployees = runs.reduce((sum, r) => sum + (r.employeeCount || 0), 0);
 
       return {
