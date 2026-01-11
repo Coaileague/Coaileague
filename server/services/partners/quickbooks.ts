@@ -9,6 +9,7 @@ import {
 import { eq, and } from 'drizzle-orm';
 import { quickbooksOAuthService } from '../oauth/quickbooks';
 import { withUsageTracking } from '../../middleware/usageTracking';
+import { INTEGRATIONS } from '@shared/platformConfig';
 
 /**
  * QuickBooks Online API Service
@@ -22,7 +23,8 @@ import { withUsageTracking } from '../../middleware/usageTracking';
  * All API calls are tracked for usage-based billing.
  */
 
-const QBO_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
+// Use centralized config - NO HARDCODED URLs
+const QBO_API_BASE = INTEGRATIONS.quickbooks.getCompanyApiBase();
 
 interface QBOCustomer {
   Id?: string;

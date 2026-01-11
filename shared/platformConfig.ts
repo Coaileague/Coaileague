@@ -409,6 +409,130 @@ export const ONBOARDING = {
 } as const;
 
 // ============================================================================
+// EXTERNAL INTEGRATIONS CONFIGURATION
+// Server-side only values - DO NOT use in client code directly
+// ============================================================================
+
+// Safe environment check for SSR/browser compatibility
+const getEnv = (key: string, defaultValue: string): string => {
+  if (typeof process !== 'undefined' && process.env) {
+    return process.env[key] || defaultValue;
+  }
+  return defaultValue;
+};
+
+export const INTEGRATIONS = {
+  quickbooks: {
+    // API Base URLs - SINGLE SOURCE OF TRUTH - never hardcode elsewhere
+    apiUrls: {
+      sandbox: 'https://sandbox-quickbooks.api.intuit.com',
+      production: 'https://quickbooks.api.intuit.com',
+    },
+    
+    // OAuth URLs - SINGLE SOURCE OF TRUTH - never hardcode elsewhere
+    oauthUrls: {
+      authorization: 'https://appcenter.intuit.com/connect/oauth2',
+      token: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
+      revoke: 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke',
+      userinfo: 'https://accounts.platform.intuit.com/v1/openid_connect/userinfo',
+      userinfoSandbox: 'https://sandbox-accounts.platform.intuit.com/v1/openid_connect/userinfo',
+      jwks: 'https://oauth.platform.intuit.com/op/v1/jwks',
+      issuer: 'https://oauth.platform.intuit.com/op/v1',
+    },
+    
+    // OpenID Connect Discovery URLs
+    discoveryUrls: {
+      production: 'https://developer.api.intuit.com/.well-known/openid_configuration',
+      sandbox: 'https://developer.api.intuit.com/.well-known/openid_sandbox_configuration',
+    },
+    
+    // Required OAuth scopes
+    scopes: {
+      accounting: 'com.intuit.quickbooks.accounting',
+      payment: 'com.intuit.quickbooks.payment',
+      payroll: 'com.intuit.quickbooks.payroll',
+    },
+    
+    // Get environment (server-side only)
+    getEnvironment(): 'sandbox' | 'production' {
+      return getEnv('QUICKBOOKS_ENVIRONMENT', 'sandbox') as 'sandbox' | 'production';
+    },
+    
+    // Get the correct API base URL based on environment
+    getApiBase(): string {
+      const env = this.getEnvironment();
+      return env === 'production' 
+        ? this.apiUrls.production 
+        : this.apiUrls.sandbox;
+    },
+    
+    // Resolve API base with optional sandbox override (for functions needing explicit control)
+    resolveApiBase(options?: { forceSandbox?: boolean }): string {
+      if (options?.forceSandbox !== undefined) {
+        return options.forceSandbox 
+          ? this.apiUrls.sandbox 
+          : this.apiUrls.production;
+      }
+      return this.getApiBase();
+    },
+    
+    // Get full company API path
+    getCompanyApiBase(): string {
+      return `${this.getApiBase()}/v3/company`;
+    },
+    
+    // Get versioned API base (with /v3)
+    getVersionedApiBase(): string {
+      return `${this.getApiBase()}/v3`;
+    },
+    
+    // API versioning
+    minorVersion: 75, // Updated to 75 as per QB requirements Aug 2025
+    
+    // Rate limiting
+    rateLimits: {
+      tokensPerMinute: 500,
+      maxBatchSize: 30,
+      concurrency: {
+        standard: 3,
+        fast: 5,
+        turbo: 8,
+      },
+    },
+    
+    // Timeouts
+    timeouts: {
+      requestMs: 30000,
+      batchMs: 120000,
+    },
+  },
+  
+  gusto: {
+    apiUrls: {
+      sandbox: 'https://api.gusto-demo.com',
+      production: 'https://api.gusto.com',
+    },
+    getEnvironment(): 'sandbox' | 'production' {
+      return getEnv('GUSTO_ENVIRONMENT', 'sandbox') as 'sandbox' | 'production';
+    },
+    getApiBase(): string {
+      const env = this.getEnvironment();
+      return env === 'production' 
+        ? this.apiUrls.production 
+        : this.apiUrls.sandbox;
+    },
+  },
+  
+  stripe: {
+    // Stripe uses mode based on API key prefix (sk_test_ vs sk_live_)
+    getMode(): 'live' | 'test' {
+      const key = getEnv('STRIPE_SECRET_KEY', '');
+      return key.startsWith('sk_live_') ? 'live' : 'test';
+    },
+  },
+};
+
+// ============================================================================
 // API ENDPOINTS (relative paths)
 // ============================================================================
 export const API = {

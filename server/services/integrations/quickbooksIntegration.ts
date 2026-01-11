@@ -27,11 +27,10 @@ import {
 import { quickbooksDiscovery } from './quickbooksDiscovery';
 import { quickbooksRateLimiter } from './quickbooksRateLimiter';
 import { quotaEnforcementService } from './quotaEnforcementService';
+import { INTEGRATIONS } from '@shared/platformConfig';
 
-const QUICKBOOKS_SANDBOX_URL = 'https://sandbox-quickbooks.api.intuit.com';
-const QUICKBOOKS_PRODUCTION_URL = 'https://quickbooks.api.intuit.com';
-
-const API_MINOR_VERSION = QB_API_VERSION.REQUIRED_MINOR_VERSION;
+// Use centralized config - NO HARDCODED URLs
+const API_MINOR_VERSION = INTEGRATIONS.quickbooks.minorVersion;
 
 export interface QuickBooksConfig {
   clientId: string;

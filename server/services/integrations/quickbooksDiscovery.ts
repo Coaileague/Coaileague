@@ -5,32 +5,29 @@
  * This ensures compliance with Intuit's OAuth 2.0 requirements and handles
  * endpoint changes automatically.
  * 
- * Discovery Document URLs:
- * - Production: https://developer.api.intuit.com/.well-known/openid_configuration
- * - Sandbox: https://developer.api.intuit.com/.well-known/openid_sandbox_configuration
- * 
  * @see https://developer.intuit.com/app/developer/qbo/docs/develop/authentication-and-authorization/oauth-openid-discovery-doc
  */
 
-const DISCOVERY_URLS = {
-  production: 'https://developer.api.intuit.com/.well-known/openid_configuration',
-  sandbox: 'https://developer.api.intuit.com/.well-known/openid_sandbox_configuration',
-} as const;
+import { INTEGRATIONS } from '@shared/platformConfig';
 
+// Use centralized config - NO HARDCODED VALUES
+const DISCOVERY_URLS = INTEGRATIONS.quickbooks.discoveryUrls;
+
+// Fallback endpoints from centralized config (used when discovery fetch fails)
 const FALLBACK_ENDPOINTS = {
-  authorization_endpoint: 'https://appcenter.intuit.com/connect/oauth2',
-  token_endpoint: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
-  userinfo_endpoint: 'https://accounts.platform.intuit.com/v1/openid_connect/userinfo',
-  revocation_endpoint: 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke',
-  jwks_uri: 'https://oauth.platform.intuit.com/op/v1/jwks',
+  authorization_endpoint: INTEGRATIONS.quickbooks.oauthUrls.authorization,
+  token_endpoint: INTEGRATIONS.quickbooks.oauthUrls.token,
+  userinfo_endpoint: INTEGRATIONS.quickbooks.oauthUrls.userinfo,
+  revocation_endpoint: INTEGRATIONS.quickbooks.oauthUrls.revoke,
+  jwks_uri: INTEGRATIONS.quickbooks.oauthUrls.jwks,
 };
 
 const FALLBACK_ENDPOINTS_SANDBOX = {
-  authorization_endpoint: 'https://appcenter.intuit.com/connect/oauth2',
-  token_endpoint: 'https://oauth.platform.intuit.com/oauth2/v1/tokens/bearer',
-  userinfo_endpoint: 'https://sandbox-accounts.platform.intuit.com/v1/openid_connect/userinfo',
-  revocation_endpoint: 'https://developer.api.intuit.com/v2/oauth2/tokens/revoke',
-  jwks_uri: 'https://oauth.platform.intuit.com/op/v1/jwks',
+  authorization_endpoint: INTEGRATIONS.quickbooks.oauthUrls.authorization,
+  token_endpoint: INTEGRATIONS.quickbooks.oauthUrls.token,
+  userinfo_endpoint: INTEGRATIONS.quickbooks.oauthUrls.userinfoSandbox,
+  revocation_endpoint: INTEGRATIONS.quickbooks.oauthUrls.revoke,
+  jwks_uri: INTEGRATIONS.quickbooks.oauthUrls.jwks,
 };
 
 export interface IntuitDiscoveryDocument {
@@ -116,7 +113,8 @@ class QuickBooksDiscoveryService {
     const endpoints = environment === 'production' ? FALLBACK_ENDPOINTS : FALLBACK_ENDPOINTS_SANDBOX;
     
     return {
-      issuer: 'https://oauth.platform.intuit.com/op/v1',
+      // Use centralized config - NO HARDCODED VALUES
+      issuer: INTEGRATIONS.quickbooks.oauthUrls.issuer,
       ...endpoints,
       scopes_supported: [
         'openid',
@@ -124,8 +122,8 @@ class QuickBooksDiscoveryService {
         'email',
         'phone',
         'address',
-        'com.intuit.quickbooks.accounting',
-        'com.intuit.quickbooks.payment',
+        INTEGRATIONS.quickbooks.scopes.accounting,
+        INTEGRATIONS.quickbooks.scopes.payment,
       ],
       response_types_supported: ['code'],
       token_endpoint_auth_methods_supported: ['client_secret_post', 'client_secret_basic'],

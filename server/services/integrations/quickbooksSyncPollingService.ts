@@ -19,8 +19,10 @@ import { eq, and, gt, lte } from 'drizzle-orm';
 import { quickbooksOAuthService } from '../oauth/quickbooks';
 import { quickbooksRateLimiter } from './quickbooksRateLimiter';
 import { platformEventBus } from '../platformEventBus';
+import { INTEGRATIONS } from '@shared/platformConfig';
 
-const QBO_API_BASE = 'https://quickbooks.api.intuit.com/v3/company';
+// Use centralized config - NO HARDCODED URLs
+const QBO_API_BASE = INTEGRATIONS.quickbooks.getCompanyApiBase();
 
 interface SyncPollingConfig {
   intervalMinutes: number;
