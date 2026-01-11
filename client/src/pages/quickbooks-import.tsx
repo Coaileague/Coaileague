@@ -700,7 +700,7 @@ export default function QuickBooksImportPage() {
                   <span className="text-muted-foreground">Analyzing billing patterns...</span>
                 </div>
               </div>
-            ) : previewData && (
+            ) : previewData && (previewData.customers?.length || previewData.employees?.length) ? (
               <div className="grid grid-cols-2 gap-4">
                 <Card className="bg-blue-50 dark:bg-blue-950/30 border-blue-200 dark:border-blue-800">
                   <CardContent className="pt-4">
@@ -753,10 +753,33 @@ export default function QuickBooksImportPage() {
                   </CardContent>
                 </Card>
               </div>
+            ) : previewData && (
+              <div className="text-center py-8 space-y-4">
+                <div className="mx-auto h-16 w-16 rounded-full bg-amber-100 dark:bg-amber-900/30 flex items-center justify-center">
+                  <AlertCircle className="h-8 w-8 text-amber-600" />
+                </div>
+                <div className="space-y-2">
+                  <h3 className="text-lg font-semibold">Sandbox Connected - No Data Found</h3>
+                  <p className="text-muted-foreground max-w-md mx-auto">
+                    Your QuickBooks sandbox is connected, but Trinity didn't find any customers, employees, or payroll items to import.
+                  </p>
+                </div>
+                <div className="bg-muted/50 rounded-lg p-4 max-w-md mx-auto text-left">
+                  <p className="font-medium mb-2">To test the migration:</p>
+                  <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
+                    <li>Add test customers in your QuickBooks sandbox</li>
+                    <li>Create sample employees with pay rates</li>
+                    <li>Or connect your production QuickBooks account</li>
+                  </ul>
+                </div>
+                <Button variant="outline" onClick={() => refetchPreview()} data-testid="button-retry-discovery">
+                  <RefreshCw className="h-4 w-4 mr-2" /> Retry Discovery
+                </Button>
+              </div>
             )}
           </CardContent>
           <CardFooter className="justify-end gap-2">
-            <Button onClick={goNext} disabled={isLoadingPreview || !previewData} data-testid="button-next">
+            <Button onClick={goNext} disabled={isLoadingPreview || !previewData || (!previewData.customers?.length && !previewData.employees?.length)} data-testid="button-next">
               Continue <ArrowRight className="h-4 w-4 ml-2" />
             </Button>
           </CardFooter>
