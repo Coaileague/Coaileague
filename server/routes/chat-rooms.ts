@@ -226,11 +226,12 @@ router.post(
       }
 
       // Create the conversation
+      const roomName = subject || (shiftData ? `Shift: ${shiftData.title}` : "New Workroom");
       const [conversation] = await db
         .insert(chatConversations)
         .values({
           workspaceId,
-          subject: subject || (shiftData ? `Shift: ${shiftData.title}` : "New Workroom"),
+          subject: roomName,
           conversationType: req.body.conversationType || conversationType || 'open_chat',
           visibility: visibility || 'workspace',
           status: 'active',
@@ -241,6 +242,19 @@ router.post(
           customerName: userName,
         })
         .returning();
+
+      // Create organization chat room wrapper for org-isolated persistence
+      const roomSlug = roomName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'room';
+      const uniqueSlug = `${roomSlug}-${conversation.id.slice(0, 8)}`;
+      
+      await db.insert(organizationChatRooms).values({
+        workspaceId,
+        roomName,
+        roomSlug: uniqueSlug,
+        conversationId: conversation.id,
+        status: 'active',
+        createdBy: userId,
+      });
 
       // Add creator as room owner
       await db.insert(chatParticipants).values({
