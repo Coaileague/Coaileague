@@ -113,9 +113,23 @@ export default function CustomLogin() {
       const duration = endTime - startTime;
       setLoadingDuration(duration);
 
-      const result: LoginResponse = await response.json();
+      const result = await response.json();
 
       if (!response.ok) {
+        // Handle special case for OAuth-only accounts needing password reset
+        if (result.needsPasswordReset) {
+          toast({
+            title: "Password Required",
+            description: "This account was created via Replit login. Please reset your password to sign in with email.",
+            variant: "destructive",
+            duration: 8000,
+          });
+          // Redirect to forgot password page
+          setTimeout(() => {
+            setLocation("/forgot-password");
+          }, 2000);
+          return;
+        }
         throw new Error(result.message || "Login failed");
       }
 

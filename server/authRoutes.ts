@@ -3,7 +3,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { db } from "./db";
 import { users, platformRoles, employees, workspaces, expenseCategories } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 
 // Type for User from database queries
 type User = typeof users.$inferSelect;
@@ -215,14 +215,16 @@ router.post("/api/auth/login", async (req, res) => {
       return res.status(429).json({ message: "Suspicious activity detected. Please try again later." });
     }
 
-    // Find user
+    // Find user (case-insensitive email lookup)
+    const normalizedEmail = data.email.toLowerCase().trim();
     const [user] = await db
       .select()
       .from(users)
-      .where(eq(users.email, data.email))
+      .where(sql`lower(${users.email}) = ${normalizedEmail}`)
       .limit(1);
 
     if (!user) {
+      console.warn(`[Login] User not found for email: ${normalizedEmail}`);
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
@@ -232,8 +234,16 @@ router.post("/api/auth/login", async (req, res) => {
       return res.status(403).json({ message: lockStatus.message });
     }
 
-    // Verify password
+    // Verify password - special message for users who signed up via OAuth (Replit Auth)
     if (!user.passwordHash) {
+      console.warn(`[Login] User ${user.id} has no password set (likely OAuth-only account)`);
+      // Check if they have a Replit ID (signed up via Replit Auth)
+      if (user.replitId) {
+        return res.status(401).json({ 
+          message: "This account was created using Replit login. Please use 'Log in with Replit' or reset your password to set one.",
+          needsPasswordReset: true
+        });
+      }
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
