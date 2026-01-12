@@ -9,6 +9,10 @@ import {
   employees,
   timeEntries,
   invoices,
+  onboardingInvites,
+  workspaces,
+  users,
+  billingServices,
   InsertPartnerDataMapping,
   InsertPartnerInvoiceIdempotency,
   InsertPartnerSyncLog,
@@ -23,6 +27,7 @@ import { auditLogger } from '../audit-logger';
 import { quickbooksRateLimiter } from '../integrations/quickbooksRateLimiter';
 import crypto from 'crypto';
 import { INTEGRATIONS } from '@shared/platformConfig';
+import { emailService } from '../emailService';
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
@@ -87,6 +92,26 @@ interface QBOVendor {
   Active?: boolean;
   Vendor1099?: boolean;
   TaxIdentifier?: string;
+}
+
+// QuickBooks Item/Service - Used for billing accuracy
+interface QBOItem {
+  Id: string;
+  SyncToken: string;
+  Name: string;
+  Description?: string;
+  FullyQualifiedName?: string;
+  Type: 'Service' | 'Inventory' | 'NonInventory' | 'Group' | 'Category' | 'Bundle';
+  Active: boolean;
+  UnitPrice?: number;
+  PurchaseCost?: number;
+  Taxable?: boolean;
+  SalesTaxIncluded?: boolean;
+  ParentRef?: { value: string; name: string };
+  SubItem?: boolean;
+  IncomeAccountRef?: { value: string; name: string };
+  ExpenseAccountRef?: { value: string; name: string };
+  AssetAccountRef?: { value: string; name: string };
 }
 
 interface EntityMatch {
@@ -306,6 +331,21 @@ export class QuickBooksSyncService {
       recordsReviewRequired += vendorResult.reviewRequired;
       errors.push(...vendorResult.errors);
 
+      // Sync QuickBooks Items/Services for billing accuracy
+      const itemsResult = await this.syncQBOItems(
+        workspaceId,
+        connection.id,
+        realmId,
+        accessToken,
+        userId
+      );
+      
+      recordsProcessed += itemsResult.processed;
+      recordsMatched += itemsResult.matched;
+      recordsCreated += itemsResult.created;
+      recordsReviewRequired += itemsResult.reviewRequired;
+      errors.push(...itemsResult.errors);
+
       await this.updateSyncLog(jobId, {
         status: errors.length > 0 ? 'partial' : 'completed',
         recordsProcessed,
@@ -495,6 +535,7 @@ export class QuickBooksSyncService {
     let created = 0;
     let reviewRequired = 0;
     const errors: string[] = [];
+    const newEmployeesToInvite: Array<{ employeeId: string; email: string; firstName: string; lastName: string }> = [];
 
     for (const qboEmployee of qboEmployees) {
       try {
@@ -529,13 +570,260 @@ export class QuickBooksSyncService {
             userId
           );
           reviewRequired++;
+        } else if (match.matchType === 'no_match') {
+          // Create new employee record for unmatched QuickBooks employees
+          const firstName = qboEmployee.GivenName || (qboEmployee.DisplayName || '').split(' ')[0] || 'Unknown';
+          const lastName = qboEmployee.FamilyName || (qboEmployee.DisplayName || '').split(' ').slice(1).join(' ') || '';
+          const email = qboEmployee.PrimaryEmailAddr?.Address || null;
+          
+          const [newEmployee] = await db.insert(employees)
+            .values({
+              workspaceId,
+              firstName,
+              lastName,
+              email,
+              phone: qboEmployee.PrimaryPhone?.FreeFormNumber || null,
+              workerType: 'employee',
+              quickbooksEmployeeId: qboEmployee.Id,
+              isActive: qboEmployee.Active !== false,
+              onboardingStatus: 'pending',
+            })
+            .returning();
+          
+          // Create mapping for the new employee
+          await this.createOrUpdateMapping(
+            workspaceId,
+            connectionId,
+            'employee',
+            newEmployee.id,
+            qboEmployee.Id,
+            qboEmployee.DisplayName,
+            qboEmployee.SyncToken,
+            email,
+            1.0,
+            userId
+          );
+          
+          // Queue for invitation if they have an email
+          if (email) {
+            newEmployeesToInvite.push({
+              employeeId: newEmployee.id,
+              email,
+              firstName,
+              lastName,
+            });
+          }
+          
+          created++;
         }
       } catch (error: any) {
         errors.push(`Employee ${qboEmployee.DisplayName}: ${error.message}`);
       }
     }
+    
+    // Send invitations for newly created employees
+    if (newEmployeesToInvite.length > 0) {
+      await this.sendEmployeeInvitationsAfterSync(workspaceId, userId, newEmployeesToInvite);
+    }
 
     return { processed: qboEmployees.length, matched, created, reviewRequired, errors };
+  }
+  
+  /**
+   * Auto-send employee invitations after QuickBooks migration
+   * Creates invitation records and sends emails with unique login links
+   */
+  private async sendEmployeeInvitationsAfterSync(
+    workspaceId: string,
+    invitedByUserId: string,
+    employeesToInvite: Array<{ employeeId: string; email: string; firstName: string; lastName: string }>
+  ): Promise<void> {
+    try {
+      // Get workspace and inviter details
+      const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId));
+      const [inviter] = await db.select().from(users).where(eq(users.id, invitedByUserId));
+      
+      if (!workspace) {
+        console.error('[QuickBooksSyncService] Cannot send invites - workspace not found');
+        return;
+      }
+      
+      const workspaceName = workspace.name || 'Your Organization';
+      const inviterName = inviter?.fullName || inviter?.email || 'Your Admin';
+      
+      for (const emp of employeesToInvite) {
+        try {
+          // Generate secure invite token
+          const inviteToken = crypto.randomBytes(32).toString('hex');
+          const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+          
+          // Create invitation record
+          const [invite] = await db.insert(onboardingInvites).values({
+            workspaceId,
+            employeeId: emp.employeeId,
+            email: emp.email,
+            firstName: emp.firstName,
+            lastName: emp.lastName,
+            inviteToken,
+            expiresAt,
+            status: 'sent' as any,
+            sendEmailOnCreate: true,
+            sentBy: invitedByUserId,
+          }).returning();
+          
+          // Send invitation email
+          await emailService.sendEmployeeInvitation(
+            workspaceId,
+            emp.email,
+            inviteToken,
+            {
+              firstName: emp.firstName,
+              inviterName,
+              workspaceName,
+              roleName: 'Team Member',
+              expiresInDays: 7,
+            }
+          );
+          
+          console.log(`[QuickBooksSyncService] Sent invite to ${emp.email} for employee ${emp.employeeId}`);
+        } catch (inviteError: any) {
+          console.error(`[QuickBooksSyncService] Failed to invite ${emp.email}: ${inviteError.message}`);
+        }
+      }
+      
+      console.log(`[QuickBooksSyncService] Sent ${employeesToInvite.length} employee invitations`);
+    } catch (error: any) {
+      console.error('[QuickBooksSyncService] Error sending employee invitations:', error.message);
+    }
+  }
+
+  /**
+   * Sync QuickBooks Items/Services for billing accuracy
+   * Creates or updates billing services with QB item mapping for invoice line items
+   */
+  private async syncQBOItems(
+    workspaceId: string,
+    connectionId: string,
+    realmId: string,
+    accessToken: string,
+    userId: string
+  ): Promise<{ processed: number; matched: number; created: number; reviewRequired: number; errors: string[] }> {
+    try {
+      // Query service-type items from QuickBooks
+      const qboItems = await this.queryWithPagination<QBOItem>(
+        'Item',
+        realmId,
+        accessToken,
+        "where Active = true and Type = 'Service'"
+      );
+      
+      // Get existing billing services
+      const existingServices = await db.select().from(billingServices)
+        .where(eq(billingServices.workspaceId, workspaceId));
+      
+      let matched = 0;
+      let created = 0;
+      let reviewRequired = 0;
+      const errors: string[] = [];
+      
+      for (const qboItem of qboItems) {
+        try {
+          // Check if we already have a mapping for this QB item
+          const existingByQBId = existingServices.find(s => s.quickbooksItemId === qboItem.Id);
+          
+          if (existingByQBId) {
+            // Update existing service with latest QB data
+            await db.update(billingServices)
+              .set({
+                quickbooksItemName: qboItem.Name || qboItem.FullyQualifiedName,
+                description: qboItem.Description || existingByQBId.description,
+                defaultHourlyRate: qboItem.UnitPrice?.toString() || existingByQBId.defaultHourlyRate,
+                updatedAt: new Date(),
+              })
+              .where(eq(billingServices.id, existingByQBId.id));
+            matched++;
+            continue;
+          }
+          
+          // Try to match by name
+          const matchByName = existingServices.find(s => 
+            s.serviceName?.toLowerCase() === (qboItem.Name || '').toLowerCase() ||
+            s.serviceCode?.toLowerCase() === (qboItem.Name || '').toLowerCase()
+          );
+          
+          if (matchByName) {
+            // Link existing service to QB item
+            await db.update(billingServices)
+              .set({
+                quickbooksItemId: qboItem.Id,
+                quickbooksItemName: qboItem.Name || qboItem.FullyQualifiedName,
+                description: qboItem.Description || matchByName.description,
+                defaultHourlyRate: qboItem.UnitPrice?.toString() || matchByName.defaultHourlyRate,
+                updatedAt: new Date(),
+              })
+              .where(eq(billingServices.id, matchByName.id));
+            
+            // Create mapping record
+            await this.createOrUpdateMapping(
+              workspaceId,
+              connectionId,
+              'billing_service',
+              matchByName.id,
+              qboItem.Id,
+              qboItem.Name,
+              qboItem.SyncToken,
+              undefined,
+              0.9,
+              userId
+            );
+            matched++;
+          } else {
+            // Create new billing service from QB item
+            const serviceCode = `QB-${qboItem.Id}`;
+            const defaultRate = qboItem.UnitPrice?.toString() || '0.00';
+            
+            const [newService] = await db.insert(billingServices)
+              .values({
+                workspaceId,
+                serviceCode,
+                serviceName: qboItem.Name || `QB Item ${qboItem.Id}`,
+                description: qboItem.Description || null,
+                defaultHourlyRate: defaultRate,
+                serviceType: 'custom',
+                quickbooksItemId: qboItem.Id,
+                quickbooksItemName: qboItem.Name || qboItem.FullyQualifiedName,
+                isActive: qboItem.Active,
+              })
+              .returning();
+            
+            // Create mapping record
+            await this.createOrUpdateMapping(
+              workspaceId,
+              connectionId,
+              'billing_service',
+              newService.id,
+              qboItem.Id,
+              qboItem.Name,
+              qboItem.SyncToken,
+              undefined,
+              1.0,
+              userId
+            );
+            
+            created++;
+          }
+        } catch (itemError: any) {
+          errors.push(`Item ${qboItem.Name}: ${itemError.message}`);
+        }
+      }
+      
+      console.log(`[QuickBooksSyncService] Items sync: ${qboItems.length} processed, ${matched} matched, ${created} created`);
+      
+      return { processed: qboItems.length, matched, created, reviewRequired, errors };
+    } catch (error: any) {
+      console.error('[QuickBooksSyncService] Items sync failed:', error.message);
+      return { processed: 0, matched: 0, created: 0, reviewRequired: 0, errors: [error.message] };
+    }
   }
 
   /**

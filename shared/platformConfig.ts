@@ -336,8 +336,9 @@ export const FEATURES = {
   enablePushNotifications: false,  // PWA push - future
   
   // Email Testing Mode - logs emails instead of sending via Resend
-  // Set to true during development to save Resend credits
-  emailSimulationMode: process.env.EMAIL_SIMULATION_MODE === 'true' || false,
+  // Set EMAIL_SIMULATION_MODE=true env var on server to enable
+  // This flag is checked server-side in emailService.ts
+  emailSimulationMode: false,
   
   // Calendar Integration
   enableCalendarExport: true,  // ICS export
