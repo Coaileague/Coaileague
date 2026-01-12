@@ -36496,7 +36496,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
   // Create an invite code (organization owners/admins only)
   app.post('/api/invites/create', isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -36565,7 +36565,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
   // Accept an invite code (any authenticated user without a workspace)
   app.post('/api/invites/accept', isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -36664,7 +36664,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
   // List invites for current workspace (org owners/admins only)
   app.get('/api/invites', isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -36709,7 +36709,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
   // Revoke an invite (org owners/admins only)
   app.delete('/api/invites/:id', isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -36751,7 +36751,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
   app.get('/api/trinity-training/status', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -36774,7 +36774,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
   app.post('/api/trinity-training/seed', requireAuth, async (req: AuthenticatedRequest, res) => {
     console.log('[TrinityTraining:Seed] Route handler entered, body:', JSON.stringify(req.body));
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -36808,7 +36808,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
   app.post('/api/trinity-training/clear', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -36835,7 +36835,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
   });
   app.post('/api/trinity-training/reset', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
@@ -36863,7 +36863,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
   app.post('/api/trinity-training/start-run', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
-      const userId = req.user?.claims?.sub;
+      const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
       }
