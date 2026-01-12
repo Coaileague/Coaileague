@@ -18,12 +18,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { 
-  Plus, ChevronLeft, ChevronRight, 
-  Calendar, Users, Clock, BarChart3, CheckCircle,
-  AlertCircle, CalendarDays, ArrowRightLeft, LayoutTemplate, Download
+  Plus, ChevronLeft, ChevronRight, Menu,
+  Users, Clock, BarChart3, CheckCircle,
+  ArrowRightLeft, LayoutTemplate, Download
 } from 'lucide-react';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { EmployeeShiftCard } from '@/components/schedule/EmployeeShiftCard';
 import { ShiftBottomSheet } from '@/components/schedule/ShiftBottomSheet';
 import { ShiftDetailSheet } from '@/components/schedule/ShiftDetailSheet';
@@ -69,6 +69,7 @@ export default function ScheduleMobileFirst() {
   const [showTemplates, setShowTemplates] = useState(false);
   const [showCalendarSync, setShowCalendarSync] = useState(false);
   const [swapShift, setSwapShift] = useState<Shift | null>(null);
+  const [showManagerTools, setShowManagerTools] = useState(false);
   
   // Shift detail popup state
   const [selectedShift, setSelectedShift] = useState<Shift | null>(null);
@@ -226,9 +227,15 @@ export default function ScheduleMobileFirst() {
     },
   });
 
-  // Handlers
-  const handlePreviousWeek = () => setWeekStart(prev => addWeeks(prev, -1));
-  const handleNextWeek = () => setWeekStart(prev => addWeeks(prev, 1));
+  // Handlers - sync selectedDate with week changes
+  const handlePreviousWeek = () => {
+    setWeekStart(prev => addWeeks(prev, -1));
+    setSelectedDate(prev => addWeeks(prev, -1));
+  };
+  const handleNextWeek = () => {
+    setWeekStart(prev => addWeeks(prev, 1));
+    setSelectedDate(prev => addWeeks(prev, 1));
+  };
   
   const handleViewShift = (shift: Shift) => {
     // Simply update the shift - the sheet will re-render with new data
@@ -386,23 +393,24 @@ export default function ScheduleMobileFirst() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* Header with Week Navigation - Fortune 500 Compact Design */}
-      <div className="border-b border-border/40 bg-background">
-        {/* Week Navigation Row */}
-        <div className="flex items-center justify-between px-3 py-2">
+      {/* GetSling-style Header */}
+      <div className="bg-primary text-primary-foreground">
+        {/* Month Header with Navigation */}
+        <div className="flex items-center justify-between px-4 py-3">
           <Button
             variant="ghost"
             size="icon"
             onClick={handlePreviousWeek}
-            className="h-8 w-8"
+            className="h-9 w-9 text-primary-foreground hover:bg-primary-foreground/20"
             data-testid="button-prev-week"
           >
-            <ChevronLeft className="h-4 w-4" />
+            <ChevronLeft className="h-5 w-5" />
           </Button>
           
           <div className="text-center">
-            <div className="font-semibold text-sm">
-              {format(weekStart, 'MMM d')} - {format(addDays(weekStart, 6), 'MMM d, yyyy')}
+            <div className="font-bold text-lg flex items-center gap-1">
+              {format(weekStart, 'MMMM')}
+              <ChevronRight className="h-4 w-4 rotate-90 opacity-70" />
             </div>
           </div>
           
@@ -410,35 +418,60 @@ export default function ScheduleMobileFirst() {
             variant="ghost"
             size="icon"
             onClick={handleNextWeek}
-            className="h-8 w-8"
+            className="h-9 w-9 text-primary-foreground hover:bg-primary-foreground/20"
             data-testid="button-next-week"
           >
-            <ChevronRight className="h-4 w-4" />
+            <ChevronRight className="h-5 w-5" />
           </Button>
         </div>
 
-        {/* Quick Stats - Compact Inline Format (GetSling style) */}
-        <div className="flex items-center justify-center gap-4 px-3 py-1.5 text-xs border-t border-border/30 bg-muted/30">
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-primary">{stats?.totalShifts || 0}</span>
-            <span className="text-muted-foreground">Shifts</span>
-          </div>
-          <span className="text-border">|</span>
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-green-600">{stats?.totalHours?.toFixed(0) || 0}</span>
-            <span className="text-muted-foreground">Hours</span>
-          </div>
-          <span className="text-border">|</span>
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-amber-600">{pendingShifts.length}</span>
-            <span className="text-muted-foreground">Pending</span>
-          </div>
+        {/* GetSling-style 3-Tab Switcher */}
+        <div className="flex border-b border-primary-foreground/20">
+          <button
+            onClick={() => setViewMode('my')}
+            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+              viewMode === 'my' 
+                ? 'border-b-2 border-primary-foreground text-primary-foreground' 
+                : 'text-primary-foreground/70 hover:text-primary-foreground'
+            }`}
+            data-testid="tab-my-schedule"
+          >
+            My schedule
+          </button>
+          <button
+            onClick={() => setViewMode('full')}
+            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+              viewMode === 'full' 
+                ? 'border-b-2 border-primary-foreground text-primary-foreground' 
+                : 'text-primary-foreground/70 hover:text-primary-foreground'
+            }`}
+            data-testid="tab-full-schedule"
+          >
+            Full schedule
+          </button>
+          <button
+            onClick={() => setViewMode('pending')}
+            className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
+              viewMode === 'pending' 
+                ? 'border-b-2 border-primary-foreground text-primary-foreground' 
+                : 'text-primary-foreground/70 hover:text-primary-foreground'
+            }`}
+            data-testid="tab-pending"
+          >
+            Pending
+            {pendingShifts.length > 0 && (
+              <span className="absolute -top-0.5 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
+                {pendingShifts.length}
+              </span>
+            )}
+          </button>
         </div>
       </div>
 
-      {/* Day Selector - Fortune 500 Compact Pills (GetSling style) */}
-      <div className="border-b border-border/40 overflow-x-auto">
-        <div className="flex min-w-max px-2 py-1.5">
+      {/* GetSling-style Day Picker with Shift Indicators */}
+      <div className="border-b border-border bg-muted/30">
+        {/* Horizontal Day Scroller */}
+        <div className="flex justify-around py-3 px-2">
           {weekDays.map((day) => {
             const isSelected = format(day, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
             const dayIsToday = isToday(day);
@@ -450,138 +483,55 @@ export default function ScheduleMobileFirst() {
               <button
                 key={day.toISOString()}
                 onClick={() => setSelectedDate(day)}
-                className={`flex flex-col items-center py-1 px-2 mx-0.5 rounded-md min-w-[40px] transition-colors ${
-                  isSelected
-                    ? 'bg-primary text-primary-foreground'
-                    : dayIsToday
-                    ? 'bg-primary/15 text-primary'
-                    : 'hover:bg-muted/60 active:bg-muted'
+                className={`flex flex-col items-center min-w-[40px] py-1 px-2 rounded-lg transition-colors ${
+                  isSelected ? 'bg-primary/10' : ''
                 }`}
                 data-testid={`day-tab-${format(day, 'yyyy-MM-dd')}`}
               >
-                <span className="text-[10px] font-medium uppercase opacity-80">
-                  {format(day, 'EEE')}
+                <span className={`text-lg font-bold ${
+                  isSelected ? 'text-primary' : dayIsToday ? 'text-primary' : 'text-foreground'
+                }`}>
+                  {format(day, 'd')}
                 </span>
-                <span className="text-sm font-bold leading-tight">{format(day, 'd')}</span>
-                {dayShiftCount > 0 && (
-                  <div className={`w-1 h-1 rounded-full mt-0.5 ${
-                    isSelected ? 'bg-primary-foreground' : 'bg-primary'
-                  }`} />
-                )}
+                {/* Shift indicator dots */}
+                <div className="flex gap-0.5 mt-1 h-2">
+                  {dayShiftCount > 0 && (
+                    <div className={`w-1.5 h-1.5 rounded-full ${
+                      isSelected ? 'bg-primary' : dayIsToday ? 'bg-primary/70' : 'bg-muted-foreground/50'
+                    }`} />
+                  )}
+                  {dayShiftCount > 1 && (
+                    <div className={`w-1.5 h-1.5 rounded-full ${
+                      isSelected ? 'bg-primary' : dayIsToday ? 'bg-primary/70' : 'bg-muted-foreground/50'
+                    }`} />
+                  )}
+                  {dayShiftCount > 2 && (
+                    <div className={`w-1.5 h-1.5 rounded-full ${
+                      isSelected ? 'bg-primary' : dayIsToday ? 'bg-primary/70' : 'bg-muted-foreground/50'
+                    }`} />
+                  )}
+                </div>
               </button>
             );
           })}
         </div>
+        
+        {/* Week Range + Hours Summary */}
+        <div className="flex items-center justify-between px-4 py-1.5 text-xs border-t border-border/50">
+          <span className="text-muted-foreground">
+            {format(weekStart, 'd')} - {format(addDays(weekStart, 6), 'd MMM')}
+          </span>
+          <span className="font-semibold text-foreground">
+            {stats?.totalHours?.toFixed(0) || 0}h
+          </span>
+        </div>
       </div>
 
-      {/* View Toggle - GetSling-style 3 tabs */}
-      <div className="border-b border-border/40 px-3 py-1.5">
-        <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as 'my' | 'full' | 'pending')}>
-          <TabsList className="w-full grid grid-cols-3 h-8">
-            <TabsTrigger value="my" className="text-xs h-7" data-testid="tab-my-schedule">
-              My schedule
-            </TabsTrigger>
-            <TabsTrigger value="full" className="text-xs h-7" data-testid="tab-full-schedule">
-              Full schedule
-            </TabsTrigger>
-            <TabsTrigger value="pending" className="text-xs h-7 relative" data-testid="tab-pending">
-              Pending
-              {pendingShifts.length > 0 && (
-                <Badge variant="destructive" className="absolute -top-1 -right-1 text-[9px] px-1 h-4 min-w-4">
-                  {pendingShifts.length}
-                </Badge>
-              )}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {/* Quick Actions - Compact Horizontal Scroll */}
-      <div className="border-b border-border/40 px-2 py-1.5 bg-muted/20">
-        <div className="flex gap-1.5 overflow-x-auto">
-          {/* Manager-only actions */}
-          {isManagerOrSupervisor && (
-            <>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowApprovals(true)}
-                className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
-                data-testid="button-approvals"
-              >
-                <Clock className="h-3.5 w-3.5 text-amber-600" />
-                Approvals
-                {pendingShifts.length > 0 && (
-                  <Badge variant="destructive" className="ml-0.5 text-[10px] px-1 h-4">
-                    {pendingShifts.length}
-                  </Badge>
-                )}
-              </Button>
-              {/* Templates - Pro View only */}
-              {!isSimpleMode && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowTemplates(true)}
-                  className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
-                  data-testid="button-templates"
-                >
-                  <LayoutTemplate className="h-3.5 w-3.5 text-purple-600" />
-                  Templates
-                </Button>
-              )}
-              {/* Reports - Pro View only */}
-              {!isSimpleMode && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setShowReports(true)}
-                  className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
-                  data-testid="button-reports"
-                >
-                  <BarChart3 className="h-3.5 w-3.5 text-blue-600" />
-                  Reports
-                </Button>
-              )}
-            </>
-          )}
-          {/* Actions for all users */}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => {
-              setSwapShift(null);
-              setShowSwaps(true);
-            }}
-            className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
-            data-testid="button-swaps"
-          >
-            <ArrowRightLeft className="h-3.5 w-3.5 text-cyan-600" />
-            Swaps
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => setShowCalendarSync(true)}
-            className="flex-shrink-0 gap-1 h-7 px-2 text-xs"
-            data-testid="button-calendar-sync"
-          >
-            <Download className="h-3.5 w-3.5 text-indigo-600" />
-            Export
-          </Button>
-          {/* Trinity for managers only - compact icon on mobile */}
-          {isManagerOrSupervisor && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setShowTrinityInsights(!showTrinityInsights)}
-              className="flex-shrink-0 gap-1 h-7 px-2 text-xs bg-gradient-to-r from-purple-500/10 via-teal-500/10 to-amber-500/10"
-              data-testid="button-trinity-mobile"
-            >
-              <ColorfulCelticKnot size={14} animated={false} />
-              <span className="hidden sm:inline">Ask Trinity</span>
-            </Button>
-          )}
+      {/* Selected Day Header - GetSling Style */}
+      <div className="bg-primary text-primary-foreground px-4 py-2">
+        <div className="flex items-center gap-3">
+          <div className="text-2xl font-bold">{format(selectedDate, 'd')}</div>
+          <div className="text-lg font-medium uppercase">{format(selectedDate, 'EEE')}</div>
         </div>
       </div>
       
@@ -879,12 +829,13 @@ export default function ScheduleMobileFirst() {
         </div>
       </ScrollArea>
 
-      {/* Add Shift FAB - Left side to avoid overlap with global Trinity button on right */}
-      {canEdit && (
-        <div className="fixed bottom-20 left-4 z-40">
+      {/* Floating Action Buttons */}
+      <div className="fixed bottom-20 left-4 right-4 z-40 flex justify-between pointer-events-none">
+        {/* Add Shift FAB - Left side */}
+        {canEdit && (
           <Button
             size="icon"
-            className="h-12 w-12 rounded-full shadow-lg"
+            className="h-12 w-12 rounded-full shadow-lg pointer-events-auto"
             onClick={() => {
               setSelectedEmployee(undefined);
               setEditingShift(undefined);
@@ -894,8 +845,113 @@ export default function ScheduleMobileFirst() {
           >
             <Plus className="h-5 w-5" />
           </Button>
-        </div>
-      )}
+        )}
+        
+        {/* Manager Tools FAB - Right side */}
+        {isManagerOrSupervisor && (
+          <Button
+            size="icon"
+            className="h-12 w-12 rounded-full shadow-lg pointer-events-auto bg-secondary text-secondary-foreground hover:bg-secondary/90"
+            onClick={() => setShowManagerTools(true)}
+            data-testid="fab-manager-tools"
+          >
+            <Menu className="h-5 w-5" />
+          </Button>
+        )}
+      </div>
+
+      {/* Manager Tools Drawer */}
+      <Sheet open={showManagerTools} onOpenChange={setShowManagerTools}>
+        <SheetContent side="bottom" className="h-auto max-h-[50vh]">
+          <SheetHeader>
+            <SheetTitle>Schedule Tools</SheetTitle>
+          </SheetHeader>
+          <div className="grid grid-cols-2 gap-3 py-4">
+            <Button
+              variant="outline"
+              className="h-20 flex-col gap-2"
+              onClick={() => {
+                setShowManagerTools(false);
+                setShowApprovals(true);
+              }}
+              data-testid="tool-approvals"
+            >
+              <Clock className="h-6 w-6 text-amber-600" />
+              <span className="text-sm">Approvals</span>
+              {pendingShifts.length > 0 && (
+                <Badge variant="destructive" className="text-[10px] px-1.5 h-4">
+                  {pendingShifts.length}
+                </Badge>
+              )}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-20 flex-col gap-2"
+              onClick={() => {
+                setShowManagerTools(false);
+                setSwapShift(null);
+                setShowSwaps(true);
+              }}
+              data-testid="tool-swaps"
+            >
+              <ArrowRightLeft className="h-6 w-6 text-cyan-600" />
+              <span className="text-sm">Swaps</span>
+            </Button>
+            {!isSimpleMode && (
+              <>
+                <Button
+                  variant="outline"
+                  className="h-20 flex-col gap-2"
+                  onClick={() => {
+                    setShowManagerTools(false);
+                    setShowTemplates(true);
+                  }}
+                  data-testid="tool-templates"
+                >
+                  <LayoutTemplate className="h-6 w-6 text-purple-600" />
+                  <span className="text-sm">Templates</span>
+                </Button>
+                <Button
+                  variant="outline"
+                  className="h-20 flex-col gap-2"
+                  onClick={() => {
+                    setShowManagerTools(false);
+                    setShowReports(true);
+                  }}
+                  data-testid="tool-reports"
+                >
+                  <BarChart3 className="h-6 w-6 text-blue-600" />
+                  <span className="text-sm">Reports</span>
+                </Button>
+              </>
+            )}
+            <Button
+              variant="outline"
+              className="h-20 flex-col gap-2"
+              onClick={() => {
+                setShowManagerTools(false);
+                setShowCalendarSync(true);
+              }}
+              data-testid="tool-export"
+            >
+              <Download className="h-6 w-6 text-indigo-600" />
+              <span className="text-sm">Export</span>
+            </Button>
+            <Button
+              variant="outline"
+              className="h-20 flex-col gap-2"
+              onClick={() => {
+                setShowManagerTools(false);
+                setShowTrinityInsights(!showTrinityInsights);
+              }}
+              data-testid="tool-trinity"
+            >
+              <ColorfulCelticKnot size={24} animated={false} />
+              <span className="text-sm">Trinity AI</span>
+            </Button>
+          </div>
+        </SheetContent>
+      </Sheet>
 
       {/* Shift Detail Sheet - Tap to view - keyed by shift ID for fresh render */}
       <ShiftDetailSheet
