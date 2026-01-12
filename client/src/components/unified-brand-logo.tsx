@@ -122,15 +122,14 @@ export function UnifiedBrandLogo({
       <div className="flex flex-col min-w-0">
         {responsive ? (
           <>
+            {/* Desktop: Full logo "CoAIleague™" */}
             <span className={cn("hidden sm:inline", config.text)}>
               {renderWordmark()}
             </span>
+            {/* Mobile: Compact "CoAI" only to save space */}
             <span className={cn("sm:hidden font-extrabold tracking-tight whitespace-nowrap", config.text)}>
               <span style={{ color: colors.accent }}>Co</span>
               <span style={{ color: colors.primary }}>AI</span>
-              {variant === "full" && (
-                <span style={{ color: colors.accent }}>league</span>
-              )}
             </span>
           </>
         ) : (
