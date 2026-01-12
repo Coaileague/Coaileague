@@ -233,7 +233,7 @@ class QuickBooksSyncPollingService {
     try {
       const accessToken = await quickbooksOAuthService.getValidAccessToken(connection.id);
       const realmId = connection.realmId!;
-      const environment = (process.env.QUICKBOOKS_ENVIRONMENT as 'production' | 'sandbox') || 'production';
+      const environment = (process.env.QUICKBOOKS_ENVIRONMENT as 'production' | 'sandbox') || 'sandbox';
 
       const lastSyncTime = mode === 'incremental' && connection.lastSyncAt
         ? new Date(connection.lastSyncAt).toISOString()

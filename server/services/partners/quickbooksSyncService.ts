@@ -170,7 +170,7 @@ export class QuickBooksSyncService {
     body?: any,
     priority: number = 0
   ): Promise<T> {
-    const environment = (process.env.QUICKBOOKS_ENVIRONMENT as 'production' | 'sandbox') || 'production';
+    const environment = (process.env.QUICKBOOKS_ENVIRONMENT as 'production' | 'sandbox') || 'sandbox';
     
     const canProceed = await quickbooksRateLimiter.waitForSlot(realmId, environment, priority, 30000);
     if (!canProceed) {
