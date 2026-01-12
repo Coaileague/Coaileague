@@ -350,12 +350,12 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                       <Menu className="h-5 w-5" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-[280px] sm:w-[320px]">
+                  <SheetContent side="right" className="w-[280px] sm:w-[320px] overflow-y-auto">
                     <SheetHeader>
                       <SheetTitle>Menu</SheetTitle>
                       <SheetDescription>Navigate the CoAIleague platform</SheetDescription>
                     </SheetHeader>
-                    <nav className="flex flex-col gap-4 mt-4">
+                    <nav className="flex flex-col gap-4 mt-4 pb-8">
                       {HEADER_CONFIG.public.navItems.map((item) => (
                         <Button
                           key={item.href}
