@@ -14,6 +14,8 @@ import {
 } from '../helpai/platformActionHub';
 import { serviceController, featureToggleManager, consoleCommandExecutor, endUserBotSupport, supportStaffAssistant } from './orchestratorCapabilities';
 import { db } from '../../db';
+import { creditManager, CREDIT_COSTS } from '../billing/creditManager';
+import { FAST_MODE_TIERS, type FastModeTier } from './fastModeService';
 import { eq, and, desc, gte, lte, sql, isNull } from 'drizzle-orm';
 import {
   employees,
@@ -241,6 +243,37 @@ class AIBrainActionRegistry {
         const { broadcastShiftUpdate, broadcastToWorkspace } = require('../../websocket');
         
         try {
+          // Determine execution mode and credit multiplier
+          const executionMode = (request.payload?.executionMode as FastModeTier | 'normal') || 'normal';
+          const baseCost = CREDIT_COSTS.ai_open_shift_fill;
+          let creditMultiplier = 1.0;
+          
+          if (executionMode !== 'normal' && FAST_MODE_TIERS[executionMode as FastModeTier]) {
+            creditMultiplier = FAST_MODE_TIERS[executionMode as FastModeTier].creditMultiplier;
+          }
+          
+          const totalCredits = Math.ceil(baseCost * creditMultiplier);
+          
+          // Check and deduct credits before proceeding (with multiplier for FAST modes)
+          const creditResult = await creditManager.deductCredits({
+            workspaceId: request.workspaceId!,
+            userId: request.userId,
+            featureKey: 'ai_open_shift_fill',
+            featureName: 'AI Open Shift Auto-Fill',
+            description: `Trinity AI shift auto-fill (${executionMode} mode, ${totalCredits} credits)`,
+            amountOverride: totalCredits, // Apply execution mode multiplier
+          });
+          
+          if (!creditResult.success) {
+            return createResult(request.actionId, false, 
+              creditResult.errorMessage || 'Insufficient credits for AI scheduling', 
+              { creditsRequired: totalCredits, executionMode },
+              start
+            );
+          }
+          
+          console.log(`[ActionRegistry] Charged ${totalCredits} credits for open shift fill (${executionMode} mode)`);
+          
           // Step 1: Create the open shift (no employee assigned)
           const [openShift] = await db.insert(shifts).values({
             workspaceId: request.workspaceId!,
@@ -262,6 +295,8 @@ class AIBrainActionRegistry {
               step: 'analyzing',
               message: 'Trinity is analyzing available employees...',
               progress: 20,
+              executionMode,
+              creditsCharged: totalCredits,
             }
           });
           

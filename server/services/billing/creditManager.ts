@@ -91,6 +91,7 @@ export const CREDIT_COSTS = {
   'ai_scheduling': 25,           // Full schedule generation
   'ai_schedule_optimization': 15, // Optimize existing schedule
   'ai_shift_matching': 5,         // Match employee to single shift
+  'ai_open_shift_fill': 10,       // AI-powered open shift auto-fill
   
   // AI Invoicing
   'ai_invoice_generation': 15,    // Generate invoice from timesheet
@@ -333,8 +334,9 @@ export class CreditManager {
     relatedEntityType?: string;
     relatedEntityId?: string;
     description?: string;
+    amountOverride?: number; // For FAST mode multipliers - overrides base cost
   }): Promise<CreditDeductionResult> {
-    const { workspaceId, userId, featureKey, featureName, aiUsageEventId, relatedEntityType, relatedEntityId, description } = params;
+    const { workspaceId, userId, featureKey, featureName, aiUsageEventId, relatedEntityType, relatedEntityId, description, amountOverride } = params;
     
     // Check if feature is credit-exempt (Trinity conversations are FREE)
     if (CREDIT_EXEMPT_FEATURES.has(featureKey)) {
@@ -380,8 +382,9 @@ export class CreditManager {
       };
     }
     
-    // Check if has enough credits
-    const required = CREDIT_COSTS[featureKey] || 0;
+    // Check if has enough credits - use amountOverride for FAST mode multipliers
+    const baseCost = CREDIT_COSTS[featureKey] || 0;
+    const required = amountOverride ?? baseCost;
     if (credits.currentBalance < required) {
       return {
         success: false,
