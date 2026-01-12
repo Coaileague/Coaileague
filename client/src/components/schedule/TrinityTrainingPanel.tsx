@@ -84,11 +84,7 @@ export function TrinityTrainingPanel() {
 
   const seedMutation = useMutation({
     mutationFn: async (difficulty: DifficultyLevel) => {
-      const res = await apiRequest("/api/trinity-training/seed", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ difficulty }),
-      });
+      const res = await apiRequest("POST", "/api/trinity-training/seed", { difficulty });
       return res.json();
     },
     onSuccess: (data) => {
@@ -110,9 +106,7 @@ export function TrinityTrainingPanel() {
 
   const clearMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("/api/trinity-training/clear", {
-        method: "POST",
-      });
+      const res = await apiRequest("POST", "/api/trinity-training/clear");
       return res.json();
     },
     onSuccess: (data) => {
@@ -134,9 +128,7 @@ export function TrinityTrainingPanel() {
 
   const resetMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("/api/trinity-training/reset", {
-        method: "POST",
-      });
+      const res = await apiRequest("POST", "/api/trinity-training/reset");
       return res.json();
     },
     onSuccess: (data) => {
@@ -158,11 +150,7 @@ export function TrinityTrainingPanel() {
 
   const startRunMutation = useMutation({
     mutationFn: async (runId: string) => {
-      const res = await apiRequest("/api/trinity-training/start-run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ runId }),
-      });
+      const res = await apiRequest("POST", "/api/trinity-training/start-run", { runId });
       return res.json();
     },
     onSuccess: (data) => {
