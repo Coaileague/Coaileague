@@ -69,27 +69,27 @@ export function CoAIleagueLogo({
 
       {showWordmark && (
         <div className="flex flex-col min-w-0">
-          <div className="flex items-baseline gap-0.5">
+          <div className="flex items-baseline gap-0.5 whitespace-nowrap flex-nowrap">
             <span 
-              className="font-extrabold text-lg md:text-xl tracking-tight"
+              className="font-extrabold text-lg md:text-xl tracking-tight whitespace-nowrap"
               style={{ color: colors.textAccent }}
             >
               Co
             </span>
             <span 
-              className="font-extrabold text-lg md:text-xl tracking-tight"
+              className="font-extrabold text-lg md:text-xl tracking-tight whitespace-nowrap"
               style={{ color: colors.textPrimary }}
             >
               AI
             </span>
             <span 
-              className="font-extrabold text-lg md:text-xl tracking-tight"
+              className="font-extrabold text-lg md:text-xl tracking-tight whitespace-nowrap"
               style={{ color: colors.textAccent }}
             >
               league
             </span>
             <span 
-              className="text-[10px] align-super ml-0.5"
+              className="text-[10px] align-super ml-0.5 whitespace-nowrap"
               style={{ color: colors.textSecondary }}
             >
               ™
