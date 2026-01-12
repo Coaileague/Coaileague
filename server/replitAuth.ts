@@ -67,6 +67,10 @@ export function getSession() {
   
   console.log('[Session] Session store configured - TTL:', Math.round(sessionTtl / 1000 / 60 / 60 / 24), 'days');
   
+  // Detect if running on Replit (always HTTPS) or locally
+  const isReplit = !!process.env.REPLIT_DOMAINS || !!process.env.REPL_ID;
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   return session({
     secret: sessionSecret || 'session-secret-fallback-insecure',
     store: sessionStore,
@@ -74,12 +78,15 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
+      // Replit always uses HTTPS, so secure should be true when on Replit
+      secure: isReplit || isProduction,
       maxAge: sessionTtl,
       sameSite: 'lax', // More compatible than 'strict'
     },
     name: 'connect.sid', // Standard name for express-session
-  });
+    // Trust proxy for Replit's reverse proxy
+    proxy: isReplit,
+  } as any);
 }
 
 function updateUserSession(

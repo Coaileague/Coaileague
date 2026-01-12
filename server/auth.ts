@@ -166,6 +166,10 @@ export function getSession() {
     tableName: "sessions",
   });
 
+  // Detect if running on Replit (always HTTPS) or locally
+  const isReplit = !!process.env.REPLIT_DOMAINS || !!process.env.REPL_ID;
+  const isProduction = process.env.NODE_ENV === "production";
+  
   return session({
     secret: process.env.SESSION_SECRET!,
     store: sessionStore,
@@ -173,11 +177,14 @@ export function getSession() {
     saveUninitialized: false,
     cookie: {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      // Replit always uses HTTPS, so secure should be true when on Replit
+      secure: isReplit || isProduction,
       maxAge: sessionTtl,
       sameSite: "lax",
     },
-  });
+    // Trust proxy for Replit's reverse proxy
+    proxy: isReplit,
+  } as any);
 }
 
 // ============================================================================
