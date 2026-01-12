@@ -1238,7 +1238,9 @@ router.post('/quickbooks/import', requireAuth, requireWorkspaceMembership(), asy
         .map(c => [c.partnerCustomerId, c])
     );
     const existingByName = new Map(
-      existingClients.map(c => [c.name.toLowerCase(), c])
+      existingClients
+        .filter(c => c.name)
+        .map(c => [c.name!.toLowerCase(), c])
     );
 
     let importedEmployees = 0;
