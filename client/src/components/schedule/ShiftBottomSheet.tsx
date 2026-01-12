@@ -249,12 +249,12 @@ export function ShiftBottomSheet({
       <ModalGuardContent isDirty={isDirty}>
         <Drawer open={open} onOpenChange={handleGuardedOpenChange}>
           <DrawerContent 
-            className="max-h-[85vh] focus:outline-none"
+            className="max-h-[95vh] h-[95vh] sm:max-h-[85vh] sm:h-auto focus:outline-none flex flex-col"
             data-testid="shift-bottom-sheet"
           >
             <MobileSheetHandle />
-            <div className="mx-auto w-full max-w-md">
-              <DrawerHeader className="pb-2 pt-4 px-4">
+            <div className="mx-auto w-full max-w-md flex flex-col flex-1 min-h-0">
+              <DrawerHeader className="pb-2 pt-4 px-4 flex-shrink-0">
                 <VisuallyHidden>
                   <DrawerDescription>Form to create or edit work shifts</DrawerDescription>
                 </VisuallyHidden>
@@ -279,7 +279,7 @@ export function ShiftBottomSheet({
               </DrawerHeader>
 
               <Form {...form}>
-                <form onSubmit={form.handleSubmit(handleSubmit)} className="px-4 pb-4 space-y-3">
+                <form onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 overflow-y-auto px-4 pb-4 space-y-3">
               
               <div className="flex items-center justify-between p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/20">
                 <div className="flex items-center gap-2">
@@ -609,7 +609,7 @@ export function ShiftBottomSheet({
                 </Collapsible>
               )}
 
-              <DrawerFooter className="px-0 pt-3 pb-0">
+              <DrawerFooter className="px-4 pt-3 pb-6 flex-shrink-0 border-t mt-3 bg-background sticky bottom-0">
                 <div className="flex gap-2">
                   <DrawerClose asChild>
                     <Button 
