@@ -13,7 +13,9 @@ import {
   TrendingUp,
   AlertTriangle,
   CheckCircle2,
-  Loader2
+  Loader2,
+  Eraser,
+  Trash2
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -100,6 +102,30 @@ export function TrinityTrainingPanel() {
     onError: (error: any) => {
       toast({
         title: "Failed to Create Scenario",
+        description: error.message || "An error occurred",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const clearMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("/api/trinity-training/clear", {
+        method: "POST",
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Assignments Cleared",
+        description: data.message,
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/trinity-training/status"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/shifts"] });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Failed to Clear Assignments",
         description: error.message || "An error occurred",
         variant: "destructive",
       });
@@ -342,20 +368,39 @@ export function TrinityTrainingPanel() {
               </div>
             )}
 
-            <Button 
-              variant="outline"
-              className="w-full"
-              onClick={() => resetMutation.mutate()}
-              disabled={resetMutation.isPending}
-              data-testid="button-reset-training"
-            >
-              {resetMutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              ) : (
-                <RotateCcw className="w-4 h-4 mr-2" />
-              )}
-              Reset Training
-            </Button>
+            <div className="grid grid-cols-2 gap-2">
+              <Button 
+                variant="outline"
+                className="w-full"
+                onClick={() => clearMutation.mutate()}
+                disabled={clearMutation.isPending || shiftsAssigned === 0}
+                data-testid="button-clear-assignments"
+              >
+                {clearMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Eraser className="w-4 h-4 mr-2" />
+                )}
+                Clear
+              </Button>
+              <Button 
+                variant="outline"
+                className="w-full text-destructive hover:text-destructive"
+                onClick={() => resetMutation.mutate()}
+                disabled={resetMutation.isPending}
+                data-testid="button-reset-training"
+              >
+                {resetMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="w-4 h-4 mr-2" />
+                )}
+                Delete All
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground text-center">
+              Clear re-opens shifts for next run. Delete removes all training data.
+            </p>
           </div>
         )}
       </CardContent>

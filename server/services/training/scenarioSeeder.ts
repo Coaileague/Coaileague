@@ -293,7 +293,63 @@ export class ScenarioSeederService {
   }
   
   /**
-   * Reset all training shifts for a workspace
+   * Clear training shift assignments (re-open shifts for next training run)
+   * This nullifies employeeId but keeps the shifts intact
+   */
+  async clearAssignments(workspaceId: string): Promise<{
+    shiftsCleared: number;
+    runReset: boolean;
+  }> {
+    // Get active scenario
+    const [activeScenario] = await db.select()
+      .from(trainingScenarios)
+      .where(and(
+        eq(trainingScenarios.workspaceId, workspaceId),
+        eq(trainingScenarios.isActive, true)
+      ))
+      .limit(1);
+    
+    if (!activeScenario) {
+      return { shiftsCleared: 0, runReset: false };
+    }
+    
+    // Clear employee assignments on training shifts (re-open them)
+    const clearedShifts = await db.update(shifts)
+      .set({
+        employeeId: null,
+        status: 'draft',
+      })
+      .where(and(
+        eq(shifts.workspaceId, workspaceId),
+        eq(shifts.isTrainingShift, true),
+        eq(shifts.scenarioId, activeScenario.id)
+      ))
+      .returning();
+    
+    // Reset the training run metrics
+    await db.update(trainingRuns)
+      .set({
+        status: 'pending',
+        assignedShifts: 0,
+        failedShifts: 0,
+        averageConfidence: null,
+        totalCreditsUsed: null,
+        startedAt: null,
+        completedAt: null,
+        updatedAt: new Date(),
+      })
+      .where(eq(trainingRuns.scenarioId, activeScenario.id));
+    
+    console.log(`[ScenarioSeeder] Cleared ${clearedShifts.length} shift assignments for next training run`);
+    
+    return {
+      shiftsCleared: clearedShifts.length,
+      runReset: true,
+    };
+  }
+  
+  /**
+   * Delete all training data for a workspace (full reset)
    */
   async resetTraining(workspaceId: string): Promise<{
     shiftsDeleted: number;
@@ -318,7 +374,7 @@ export class ScenarioSeederService {
       .where(eq(trainingScenarios.workspaceId, workspaceId))
       .returning();
     
-    console.log(`[ScenarioSeeder] Reset training: ${deletedShifts.length} shifts, ${deletedScenarios.length} scenarios, ${deletedRuns.length} runs`);
+    console.log(`[ScenarioSeeder] Full reset: ${deletedShifts.length} shifts, ${deletedScenarios.length} scenarios, ${deletedRuns.length} runs deleted`);
     
     return {
       shiftsDeleted: deletedShifts.length,

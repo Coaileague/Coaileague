@@ -36805,6 +36805,34 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     }
   });
 
+
+  app.post('/api/trinity-training/clear', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user?.currentWorkspaceId) {
+        return res.status(400).json({ message: "No workspace selected" });
+      }
+
+      const { scenarioSeederService } = await import('./services/training/scenarioSeeder');
+      const result = await scenarioSeederService.clearAssignments(user.currentWorkspaceId);
+
+      console.log(`[TrinityTraining] Cleared ${result.shiftsCleared} shift assignments for workspace ${user.currentWorkspaceId}`);
+
+      res.json({
+        success: true,
+        ...result,
+        message: `Cleared ${result.shiftsCleared} shift assignments. Training shifts are now open again.`,
+      });
+    } catch (error) {
+      console.error("[TrinityTraining] Error clearing assignments:", error);
+      res.status(500).json({ message: "Failed to clear shift assignments" });
+    }
+  });
   app.post('/api/trinity-training/reset', isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.claims?.sub;
