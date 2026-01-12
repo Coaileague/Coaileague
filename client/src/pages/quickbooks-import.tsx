@@ -357,6 +357,8 @@ export default function QuickBooksImportPage() {
 
   const [qbEnvironment, setQbEnvironment] = useState<{ environment: string; note: string; apiBase: string } | null>(null);
   
+  const [oauthPopupOpen, setOauthPopupOpen] = useState(false);
+  
   const connectMutation = useMutation({
     mutationFn: async () => {
       const res = await apiRequest('POST', '/api/integrations/quickbooks/connect', {
@@ -365,7 +367,6 @@ export default function QuickBooksImportPage() {
       return res.json();
     },
     onSuccess: (data) => {
-      // Store environment info for display
       if (data.environment) {
         setQbEnvironment({ 
           environment: data.environment, 
@@ -375,7 +376,6 @@ export default function QuickBooksImportPage() {
       }
       
       if (data.authorizationUrl) {
-        // Show environment info in toast for awareness
         if (data.environment === 'sandbox') {
           toast({
             title: 'Sandbox Mode',
@@ -383,9 +383,45 @@ export default function QuickBooksImportPage() {
           });
         }
         
-        // Navigate in same tab for seamless in-platform experience
-        // The callback will redirect back to this page after OAuth completes
-        window.location.href = data.authorizationUrl;
+        setOauthPopupOpen(true);
+        const popup = window.open(data.authorizationUrl, '_blank', 'noopener,noreferrer');
+        
+        if (!popup) {
+          toast({
+            title: 'Popup Blocked',
+            description: 'Please allow popups and try again, or click the link below',
+            variant: 'destructive',
+          });
+          return;
+        }
+        
+        toast({
+          title: 'QuickBooks Login Opened',
+          description: 'Complete login in the new tab, then return here',
+        });
+        
+        const pollInterval = setInterval(async () => {
+          try {
+            const statusRes = await fetch(`/api/integrations/quickbooks/status?workspaceId=${workspace?.id}`);
+            const status = await statusRes.json();
+            if (status.quickbooks?.connected) {
+              clearInterval(pollInterval);
+              setOauthPopupOpen(false);
+              queryClient.invalidateQueries({ queryKey: ['/api/integrations/status'] });
+              toast({
+                title: 'Connected!',
+                description: `Connected to ${status.quickbooks.companyName || 'QuickBooks'}`,
+              });
+              setCurrentStep('discovery');
+            }
+          } catch (e) {
+          }
+        }, 2000);
+        
+        setTimeout(() => {
+          clearInterval(pollInterval);
+          setOauthPopupOpen(false);
+        }, 300000);
       }
     },
     onError: (error: any) => {
@@ -959,20 +995,43 @@ export default function QuickBooksImportPage() {
                 <span>Sync invoices bidirectionally</span>
               </div>
             </div>
-            <Button
-              size="lg"
-              onClick={() => connectMutation.mutate()}
-              disabled={connectMutation.isPending || !workspace?.id}
-              className="bg-[#2CA01C] hover:bg-[#248016]"
-              data-testid="button-connect-quickbooks"
-            >
-              {connectMutation.isPending ? (
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              ) : (
-                <ExternalLink className="h-4 w-4 mr-2" />
-              )}
-              Connect QuickBooks (Sandbox)
-            </Button>
+            {oauthPopupOpen ? (
+              <div className="space-y-3">
+                <div className="p-4 bg-blue-50 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <div className="flex items-center gap-2 justify-center mb-2">
+                    <Loader2 className="h-5 w-5 animate-spin text-blue-600" />
+                    <span className="font-medium text-blue-800 dark:text-blue-200">Waiting for QuickBooks Login</span>
+                  </div>
+                  <p className="text-sm text-blue-600 dark:text-blue-400">
+                    Complete the login in the new browser tab, then return here.
+                    This page will automatically detect when you're connected.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setOauthPopupOpen(false)}
+                  data-testid="button-cancel-oauth"
+                >
+                  Cancel
+                </Button>
+              </div>
+            ) : (
+              <Button
+                size="lg"
+                onClick={() => connectMutation.mutate()}
+                disabled={connectMutation.isPending || !workspace?.id}
+                className="bg-[#2CA01C] hover:bg-[#248016]"
+                data-testid="button-connect-quickbooks"
+              >
+                {connectMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                )}
+                Connect QuickBooks (Sandbox)
+              </Button>
+            )}
           </CardContent>
         </Card>
       )}
