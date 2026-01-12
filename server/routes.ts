@@ -36749,7 +36749,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
   // TRINITY TRAINING SCENARIO API - AI Confidence Building
   // ============================================================================
 
-  app.get('/api/trinity-training/status', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.get('/api/trinity-training/status', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -36771,7 +36771,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     }
   });
 
-  app.post('/api/trinity-training/seed', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/trinity-training/seed', requireAuth, async (req: AuthenticatedRequest, res) => {
     console.log('[TrinityTraining:Seed] Route handler entered, body:', JSON.stringify(req.body));
     try {
       const userId = req.user?.claims?.sub;
@@ -36806,7 +36806,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
   });
 
 
-  app.post('/api/trinity-training/clear', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/trinity-training/clear', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -36833,7 +36833,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.status(500).json({ message: "Failed to clear shift assignments" });
     }
   });
-  app.post('/api/trinity-training/reset', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/trinity-training/reset', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
@@ -36861,7 +36861,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     }
   });
 
-  app.post('/api/trinity-training/start-run', isAuthenticated, async (req: AuthenticatedRequest, res) => {
+  app.post('/api/trinity-training/start-run', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
