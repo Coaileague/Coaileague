@@ -304,25 +304,14 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                 </div>
               </div>
 
-              {/* Mobile Menu */}
-              <div className={`flex md:hidden items-center gap-1 shrink-0`}>
+              {/* Mobile Menu - Compact for small screens */}
+              <div className={`flex md:hidden items-center gap-0.5 sm:gap-1 shrink-0`}>
                 {showNotificationFeatures && (
-                  <div className="flex items-center gap-1">
+                  <div className="flex items-center gap-0.5 sm:gap-1">
                     <TrinityMiniButton 
                       onClick={() => setLocation("/trinity")} 
                       data-testid="mobile-button-trinity"
                     />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setLocation("/support")}
-                      data-testid="mobile-button-bug-report"
-                      aria-label="Get Help"
-                      title="Get Help"
-                      className="h-10 w-10"
-                    >
-                      <Bug className="h-6 w-6" />
-                    </Button>
                     <AISearchTrigger />
                     <Button
                       variant="ghost"
@@ -331,33 +320,19 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                       data-testid="mobile-button-inbox"
                       aria-label="Inbox"
                       title="Inbox"
-                      className="h-10 w-10"
+                      className="h-9 w-9 sm:h-10 sm:w-10"
                     >
-                      <Mail className="h-6 w-6" />
+                      <Mail className="h-5 w-5 sm:h-6 sm:w-6" />
                     </Button>
                     <NotificationsPopover />
                   </div>
-                )}
-                {/* Bug report for unauthenticated mobile users */}
-                {!user && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setLocation("/support")}
-                    data-testid="mobile-button-bug-report-guest"
-                    aria-label="Get Help"
-                    title="Get Help"
-                    className="h-10 w-10"
-                  >
-                    <Bug className="h-6 w-6" />
-                  </Button>
                 )}
                 {/* Visible Login button for unauthenticated mobile users */}
                 {!user && (
                   <Button
                     variant="default"
                     size="sm"
-                    className="h-8 px-3 text-xs font-semibold"
+                    className="h-8 px-2 sm:px-3 text-xs font-semibold"
                     onClick={() => setLocation("/login")}
                     data-testid="mobile-button-login-visible"
                   >
@@ -395,6 +370,21 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                           {item.label}
                         </Button>
                       ))}
+                      <div className="border-t my-2" />
+                      
+                      <Button
+                        variant="ghost"
+                        className="justify-start text-base"
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          setLocation("/support");
+                        }}
+                        data-testid="mobile-button-support"
+                      >
+                        <Bug className="mr-2 h-4 w-4" />
+                        Get Help
+                      </Button>
+                      
                       <div className="border-t my-2" />
                       
                       {!user ? (
@@ -500,8 +490,8 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                 </DropdownMenu>
               </div>
 
-              {/* Mobile workspace navigation */}
-              <div className="flex md:hidden items-center gap-1">
+              {/* Mobile workspace navigation - Compact for small screens */}
+              <div className="flex md:hidden items-center gap-0.5 sm:gap-1">
                 <TrinityMiniButton 
                   onClick={() => setLocation("/trinity")} 
                   data-testid="mobile-button-trinity-workspace"
@@ -579,10 +569,23 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                           className="w-full justify-start gap-3"
                           onClick={() => {
                             setMobileMenuOpen(false);
+                            setLocation("/support");
+                          }}
+                          data-testid="mobile-workspace-help"
+                        >
+                          <Bug className="h-4 w-4" />
+                          Get Help
+                        </Button>
+                        <Button
+                          variant="outline"
+                          className="w-full justify-start gap-3"
+                          onClick={() => {
+                            setMobileMenuOpen(false);
                             setLocation("/settings");
                           }}
                           data-testid="mobile-workspace-settings"
                         >
+                          <Settings className="h-4 w-4" />
                           Settings
                         </Button>
                         <Button
