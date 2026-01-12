@@ -23,7 +23,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { performLogout } from "@/lib/logoutHandler";
-import { CoAIleagueLogo } from "@/components/coaileague-logo";
+import { UnifiedBrandLogo, IconLogo } from "@/components/unified-brand-logo";
 
 export function AppSidebar() {
   const [location] = useLocation();
@@ -72,22 +72,18 @@ export function AppSidebar() {
       collapsible="offcanvas" 
       className="bg-slate-900 border-r border-slate-700/50"
     >
-      {/* Header - Using CoAIleagueLogo Component */}
+      {/* Header - Unified Brand Logo */}
       <SidebarHeader className="p-5 border-b border-slate-700/50">
         <Link href="/dashboard" className="flex items-center" data-testid="link-dashboard-logo">
           {state === 'collapsed' ? (
-            <CoAIleagueLogo 
-              width={40} 
-              height={40} 
-              onlyIcon={true}
-              className="shrink-0"
-            />
+            <IconLogo size="sm" />
           ) : (
-            <CoAIleagueLogo 
-              width={180} 
-              height={50} 
-              showTagline={true} 
-              showWordmark={true}
+            <UnifiedBrandLogo 
+              size="lg" 
+              variant="full" 
+              responsive={false}
+              showTagline={true}
+              theme="dark"
             />
           )}
         </Link>

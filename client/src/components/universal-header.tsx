@@ -10,7 +10,7 @@ import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
 import { Menu, LogOut, LayoutDashboard, Mail, Bug, ChevronDown, Settings } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
-import { CoAIleagueLogo } from "@/components/coaileague-logo";
+import { HeaderLogo } from "@/components/unified-brand-logo";
 import { performLogout } from "@/lib/logoutHandler";
 import { NotificationsPopover } from "@/components/notifications-popover";
 import { AISearchTrigger } from "@/components/ai-search";
@@ -158,41 +158,14 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
     <nav className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-3 sm:px-6">
         <div className={`flex ${HEADER_HEIGHTS.mobile} ${HEADER_HEIGHTS.desktop} items-center justify-between gap-2`}>
-          {/* Logo - Uses the provided CoAIleagueLogo component */}
+          {/* Logo - Unified responsive branding */}
           <button 
             onClick={handleLogoClick}
             className="relative cursor-pointer hover-elevate transition-all duration-300 shrink-0"
             aria-label={!isWorkspaceMode ? "Go to homepage" : "Go to dashboard"}
             data-testid="button-logo-home"
           >
-            {/* Desktop: Full logo with wordmark */}
-            <div className="hidden sm:block">
-              <CoAIleagueLogo 
-                width={220} 
-                height={55} 
-                showTagline={false} 
-                showWordmark={true}
-              />
-            </div>
-            {/* Tablet: Medium logo */}
-            <div className="hidden sm:block md:hidden">
-              <CoAIleagueLogo 
-                width={160} 
-                height={40} 
-                showTagline={false} 
-                showWordmark={true}
-              />
-            </div>
-            {/* Mobile: Compact logo with short wordmark */}
-            <div className="flex sm:hidden items-center gap-1">
-              <CoAIleagueLogo 
-                width={32} 
-                height={32} 
-                onlyIcon={true}
-                className="flex-shrink-0"
-              />
-              <span className="text-sm font-bold text-foreground tracking-tight">CoAI</span>
-            </div>
+            <HeaderLogo />
           </button>
 
           {/* NAVIGATION - Adapts based on mode (public vs workspace) */}
