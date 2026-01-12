@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { MapPin, Clock, Edit2, Trash2, Plus, ChevronRight, Calendar, Coffee, AlertTriangle, Copy, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
+import { cn, formatRoleDisplay } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import type { Employee, Shift, ScheduledBreak } from '@shared/schema';
 
@@ -69,7 +69,7 @@ export function EmployeeShiftCard({
   canEdit,
   showBreakCompliance = true,
 }: EmployeeShiftCardProps) {
-  const role = employee.role || 'Employee';
+  const role = formatRoleDisplay(employee.role);
 
   return (
     <Card className="overflow-hidden touch-manipulation" data-testid={`employee-card-${employee.id}`}>

@@ -18,6 +18,7 @@ import { format, differenceInHours, isBefore, addHours } from 'date-fns';
 import { AlertTriangle, ChevronDown, UserPlus, Bot, Clock, MapPin, Loader2 } from 'lucide-react';
 import { TrinityIconStatic } from '@/components/trinity-button';
 import type { Shift, Employee, Client } from '@shared/schema';
+import { formatRoleDisplay } from '@/lib/utils';
 
 interface UnassignedShiftsPanelProps {
   shifts: Shift[];
@@ -218,7 +219,7 @@ export function UnassignedShiftsPanel({
                   <SelectContent>
                     {employees.map(emp => (
                       <SelectItem key={emp.id} value={emp.id}>
-                        {emp.firstName} {emp.lastName} - {emp.role || 'Employee'}
+                        {emp.firstName} {emp.lastName} - {formatRoleDisplay(emp.role)}
                       </SelectItem>
                     ))}
                   </SelectContent>

@@ -5,7 +5,7 @@
 
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { format, addHours, startOfDay, differenceInMinutes, isSameDay } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, formatRoleDisplay } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -196,7 +196,7 @@ function ShiftBlock({
         </div>
         <div className="text-[11px] text-muted-foreground truncate flex items-center gap-1 mt-0.5">
           <Shield className="h-3 w-3 flex-shrink-0" />
-          {(shift as any).positionType || (shift as any).role || 'Security'}
+          {formatRoleDisplay((shift as any).positionType || (shift as any).role || 'Security')}
         </div>
       </div>
     </div>

@@ -4,7 +4,7 @@
  */
 
 import { format, differenceInHours, differenceInMinutes } from 'date-fns';
-import { cn } from '@/lib/utils';
+import { cn, formatRoleDisplay } from '@/lib/utils';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -163,7 +163,7 @@ export function ShiftDetailModal({
             
             <div className="flex items-center gap-3 text-sm">
               <Shield className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-              <span>{(shift as any).positionType || (shift as any).role || 'Security Officer'}</span>
+              <span>{formatRoleDisplay((shift as any).positionType || (shift as any).role || 'Security Officer')}</span>
             </div>
           </div>
 

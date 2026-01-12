@@ -14,6 +14,7 @@ import { Badge } from '@/components/ui/badge';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Search, MapPin, Briefcase, Users, Star, ChevronDown, X } from 'lucide-react';
 import type { Employee, Client } from '@shared/schema';
+import { formatRoleDisplay } from '@/lib/utils';
 
 export interface ScheduleFilterState {
   searchQuery: string;
@@ -208,7 +209,7 @@ export function ScheduleFilters({
                       htmlFor={`position-${position}`} 
                       className="text-sm flex-1 cursor-pointer"
                     >
-                      {position}
+                      {formatRoleDisplay(position)}
                     </Label>
                     <Badge variant="secondary" className="text-xs">
                       {getFilteredCount('positions', position)}

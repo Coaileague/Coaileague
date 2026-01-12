@@ -50,6 +50,7 @@ import {
 import { Loader2, Clock, User, Briefcase, MapPin, FileText, Sparkles, X, Repeat, ChevronDown, Calendar } from 'lucide-react';
 import { LogoMark } from '@/components/ui/logo-mark';
 import type { Employee, Client, Shift } from '@shared/schema';
+import { formatRoleDisplay } from '@/lib/utils';
 
 const DAYS_OF_WEEK = [
   { value: 'sunday', label: 'Sun', fullLabel: 'Sunday' },
@@ -157,7 +158,7 @@ export function ShiftBottomSheet({
       const dayName = DAYS_OF_WEEK[selectedDate.getDay()].value;
       form.reset({
         employeeId: selectedEmployee.id,
-        title: selectedEmployee.role || '',
+        title: formatRoleDisplay(selectedEmployee.role),
         clientId: '',
         location: '',
         startTime: '09:00',
