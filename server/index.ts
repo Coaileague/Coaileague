@@ -742,9 +742,20 @@ process.on('unhandledRejection', (reason, promise) => {
     res.status(status).json({ message });
   });
 
-  // Setup Vite in development
+  // Setup Vite in development with API route guard
+  // The Vite catch-all (app.use("*")) would otherwise intercept API routes
+  // and return HTML instead of letting Express route handlers respond
   if (app.get("env") === "development") {
-    await setupVite(app, server);
+    const viteRouter = express.Router();
+    await setupVite(viteRouter as any, server);
+    
+    // Guard: only pass to Vite if NOT an API or WebSocket route
+    app.use((req, res, next) => {
+      if (req.path.startsWith('/api/') || req.path.startsWith('/ws/')) {
+        return next();
+      }
+      return viteRouter(req, res, next);
+    });
   } else {
     serveStatic(app);
   }
