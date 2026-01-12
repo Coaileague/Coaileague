@@ -976,17 +976,6 @@ export default function UniversalSchedule() {
             </div>
           </ScrollArea>
 
-          <div className="p-3 border-t space-y-2">
-            <TrinityInsightsPanel
-              weekStart={weekStart}
-              weekEnd={weekEnd}
-              shifts={shifts}
-              employees={employees}
-              clients={clients}
-              isCollapsed={!showTrinityInsights}
-              onToggleCollapse={() => setShowTrinityInsights(!showTrinityInsights)}
-            />
-          </div>
         </div>
       )}
 
@@ -1017,6 +1006,8 @@ export default function UniversalSchedule() {
           onShowReports={() => setShowReportsPanel(!showReportsPanel)}
           onShowAvailability={() => setShowAvailabilityPanel(!showAvailabilityPanel)}
           onShowSettings={() => setShowSettingsPanel(!showSettingsPanel)}
+          onShowTrinityInsights={() => setShowTrinityInsights(!showTrinityInsights)}
+          showTrinityInsights={showTrinityInsights}
         />
         
         {/* Week Stats Bar */}
@@ -1289,57 +1280,51 @@ export default function UniversalSchedule() {
                   </PopoverContent>
                 </Popover>
 
-                {/* Ask Trinity Button */}
-                <AskTrinityButton
-                  onClick={() => setShowAIPanel(!showAIPanel)}
-                  size="sm"
-                  data-testid="button-ask-trinity"
-                />
               </div>
             ) : (
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Employee view - minimal toolbar */}
-                <AskTrinityButton
-                  onClick={() => setShowAIPanel(!showAIPanel)}
-                  size="sm"
-                  data-testid="button-ask-trinity"
-                />
+                {/* Employee view - minimal toolbar (Ask Trinity in chat) */}
               </div>
             )}
           </div>
 
-          {/* Trinity Status Bar */}
-          <div className="flex items-center justify-between p-3 bg-gradient-to-r from-[#00BFFF]/10 via-[#3b82f6]/10 to-[#FFD700]/10 rounded-lg border border-[#00BFFF]/20">
-            <div className="flex items-center gap-4 flex-wrap">
-              <div className="flex items-center gap-2">
-                <TrinityIconStatic size={20} />
-                <span className="font-medium text-sm">Trinity Automation</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => toggleAutomationMutation.mutate(!automationEnabled)}
-                  disabled={toggleAutomationMutation.isPending}
-                  className={`h-6 px-2 ${automationEnabled ? 'text-green-600' : 'text-muted-foreground'}`}
-                  data-testid="button-ai-toggle"
-                >
-                  {toggleAutomationMutation.isPending ? '...' : automationEnabled ? 'ON' : 'OFF'}
-                </Button>
+          {/* Trinity Status Bar with Live Progress */}
+          <div className="p-3 bg-gradient-to-r from-[#00BFFF]/10 via-[#3b82f6]/10 to-[#FFD700]/10 rounded-lg border border-[#00BFFF]/20 space-y-2">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4 flex-wrap">
+                <div className="flex items-center gap-2">
+                  <TrinityIconStatic size={20} />
+                  <span className="font-medium text-sm">Trinity Automation</span>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleAutomationMutation.mutate(!automationEnabled)}
+                    disabled={toggleAutomationMutation.isPending}
+                    className={`h-6 px-2 ${automationEnabled ? 'text-green-600' : 'text-muted-foreground'}`}
+                    data-testid="button-ai-toggle"
+                  >
+                    {toggleAutomationMutation.isPending ? '...' : automationEnabled ? 'ON' : 'OFF'}
+                  </Button>
+                </div>
+
+                <div className="h-6 w-px bg-border" />
+
+                <div className="flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Smart AI Engine</span>
+                </div>
               </div>
 
-              <div className="h-6 w-px bg-border" />
-
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-muted-foreground" />
-                <span className="text-sm text-muted-foreground">Smart AI Engine</span>
-              </div>
+              {manualApprovalMode && (
+                <Badge variant="outline" className="bg-yellow-100 dark:bg-yellow-900/20 border-yellow-600 text-yellow-800 dark:text-yellow-200">
+                  <AlertCircle className="w-3 h-3 mr-1" />
+                  Manual Approval Required
+                </Badge>
+              )}
             </div>
-
-            {manualApprovalMode && (
-              <Badge variant="outline" className="bg-yellow-100 dark:bg-yellow-900/20 border-yellow-600 text-yellow-800 dark:text-yellow-200">
-                <AlertCircle className="w-3 h-3 mr-1" />
-                Manual Approval Required
-              </Badge>
-            )}
+            
+            {/* Trinity Thought Box - Live Progress Display */}
+            <TrinitySchedulingProgress workspaceId={workspaceId} embedded={true} />
           </div>
         </div>
 
@@ -1408,8 +1393,10 @@ export default function UniversalSchedule() {
           )}
         </div>
 
-        {/* Schedule Grid - GetSling Style Horizontal Timeline */}
-        <ScrollArea className="flex-1 p-4">
+        {/* Main Schedule Area with Right Panel for Trinity Insights */}
+        <div className="flex-1 flex overflow-hidden">
+          {/* Schedule Grid - GetSling Style Horizontal Timeline */}
+          <ScrollArea className="flex-1 p-4">
           <div className="bg-card rounded-lg border overflow-hidden min-w-[1200px]">
             {/* GetSling-Style Horizontal Timeline Header */}
             <div className="sticky top-0 z-10 bg-card">
@@ -1441,6 +1428,122 @@ export default function UniversalSchedule() {
                     );
                   })}
                 </div>
+              </div>
+            </div>
+
+            {/* Unassigned/Open Shifts Row - FIRST like GetSling */}
+            <div className="flex bg-orange-50/50 dark:bg-orange-900/10 border-b-2 border-orange-300 dark:border-orange-700">
+              <div className="w-48 min-w-48 p-2 border-r flex items-center gap-2 flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
+                  <AlertCircle className="w-4 h-4 text-orange-500" />
+                </div>
+                <div>
+                  <div className="font-medium text-sm text-orange-600 dark:text-orange-400">Unassigned</div>
+                  <div className="text-xs text-muted-foreground">Open Shifts</div>
+                </div>
+              </div>
+
+              {/* Unassigned Shifts Timeline Row */}
+              <div 
+                className="flex-1 relative min-h-[60px] cursor-pointer group/timeline"
+                onClick={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const clickX = e.clientX - rect.left;
+                  const hourWidth = rect.width / 24;
+                  const clickedHour = Math.floor(clickX / hourWidth);
+                  setShiftForm({
+                    ...shiftForm,
+                    employeeId: null,
+                    isOpenShift: true,
+                    clockIn: `${String(clickedHour).padStart(2, '0')}:00`,
+                    clockOut: `${String(Math.min(clickedHour + 8, 23)).padStart(2, '0')}:00`,
+                  });
+                  setModalPosition({ day: selectedDay.getDay() === 0 ? 6 : selectedDay.getDay() - 1, hour: clickedHour });
+                  setShowShiftModal(true);
+                }}
+                data-testid="unassigned-shifts-timeline"
+              >
+                {/* Hour Grid Lines */}
+                <div className="absolute inset-0 flex">
+                  {hours.map((hour) => (
+                    <div 
+                      key={hour} 
+                      className="flex-1 border-r border-orange-200/50 dark:border-orange-800/30 last:border-r-0 hover:bg-orange-100/50 dark:hover:bg-orange-900/30 transition-colors"
+                    />
+                  ))}
+                </div>
+                
+                {/* Plus icon on hover when no open shifts */}
+                {(() => {
+                  const openShifts = shifts.filter(s => {
+                    if (s.employeeId) return false;
+                    const shiftDate = new Date(s.startTime);
+                    return shiftDate.toDateString() === selectedDay.toDateString();
+                  });
+                  return openShifts.length === 0 && (
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/timeline:opacity-100 transition-opacity pointer-events-none">
+                      <div className="bg-orange-400 rounded-full p-1.5 shadow-sm">
+                        <Plus className="w-3 h-3 text-white" />
+                      </div>
+                    </div>
+                  );
+                })()}
+
+                {/* Render open shifts as horizontal bars */}
+                {shifts.filter(s => {
+                  if (s.employeeId) return false;
+                  const shiftDate = new Date(s.startTime);
+                  return shiftDate.toDateString() === selectedDay.toDateString();
+                }).map(shift => {
+                  const startTime = new Date(shift.startTime);
+                  const endTime = new Date(shift.endTime);
+                  const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
+                  const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                  
+                  // Calculate position as percentage of 24-hour day
+                  const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
+                  const endMinutes = endTime.getHours() * 60 + endTime.getMinutes();
+                  const leftPercent = (startMinutes / 1440) * 100;
+                  const widthPercent = ((endMinutes - startMinutes) / 1440) * 100;
+
+                  return (
+                    <div
+                      key={shift.id}
+                      className="absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all hover:shadow-lg hover:z-20 border-2 border-dashed border-orange-400 bg-orange-100 dark:bg-orange-900/50 text-xs flex flex-col justify-center overflow-hidden"
+                      style={{ 
+                        left: `${leftPercent}%`,
+                        width: `${Math.max(widthPercent, 6)}%`,
+                        minWidth: '80px'
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleAIFillOpenShift(shift.id);
+                      }}
+                      data-testid={`unassigned-shift-${shift.id}`}
+                    >
+                      <div className="font-medium text-orange-600 truncate flex items-center gap-1 text-[11px]">
+                        <AlertCircle className="w-3 h-3 flex-shrink-0" />
+                        {formatTime(startTime)} - {formatTime(endTime)}
+                      </div>
+                      {client && (
+                        <div className="text-orange-600/70 text-[10px] truncate">{client.companyName}</div>
+                      )}
+                      <Button
+                        size="sm"
+                        className="mt-0.5 h-4 text-[9px] w-full bg-gradient-to-r from-[#00BFFF] to-[#FFD700] hover:from-[#00BFFF]/90 hover:to-[#FFD700]/90"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAIFillOpenShift(shift.id);
+                        }}
+                        disabled={aiFillMutation.isPending}
+                        data-testid={`button-ai-fill-unassigned-${shift.id}`}
+                      >
+                        <TrinityIconStatic size={8} className="mr-0.5" />
+                        {aiFillMutation.isPending ? '...' : 'Fill'}
+                      </Button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
 
@@ -1604,124 +1707,43 @@ export default function UniversalSchedule() {
                 })
               )}
 
-              {/* Open Shifts Row - Horizontal Timeline */}
-              <div className="flex bg-orange-50/50 dark:bg-orange-900/10">
-                <div className="w-48 min-w-48 p-2 border-r flex items-center gap-2 flex-shrink-0">
-                  <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center flex-shrink-0">
-                    <AlertCircle className="w-4 h-4 text-orange-500" />
-                  </div>
-                  <div>
-                    <div className="font-medium text-sm text-orange-600 dark:text-orange-400">Open Shifts</div>
-                    <div className="text-xs text-muted-foreground">Unassigned</div>
-                  </div>
-                </div>
-
-                {/* Open Shifts Timeline Row */}
-                <div 
-                  className="flex-1 relative min-h-[60px] cursor-pointer group/timeline"
-                  onClick={(e) => {
-                    const rect = e.currentTarget.getBoundingClientRect();
-                    const clickX = e.clientX - rect.left;
-                    const hourWidth = rect.width / 24;
-                    const clickedHour = Math.floor(clickX / hourWidth);
-                    setShiftForm({
-                      ...shiftForm,
-                      employeeId: null,
-                      isOpenShift: true,
-                      clockIn: `${String(clickedHour).padStart(2, '0')}:00`,
-                      clockOut: `${String(Math.min(clickedHour + 8, 23)).padStart(2, '0')}:00`,
-                    });
-                    setModalPosition({ day: selectedDay.getDay() === 0 ? 6 : selectedDay.getDay() - 1, hour: clickedHour });
-                    setShowShiftModal(true);
-                  }}
-                  data-testid="open-shifts-timeline"
-                >
-                  {/* Hour Grid Lines */}
-                  <div className="absolute inset-0 flex">
-                    {hours.map((hour) => (
-                      <div 
-                        key={hour} 
-                        className="flex-1 border-r border-orange-200/50 dark:border-orange-800/30 last:border-r-0 hover:bg-orange-100/50 dark:hover:bg-orange-900/30 transition-colors"
-                      />
-                    ))}
-                  </div>
-                  
-                  {/* Plus icon on hover when no open shifts */}
-                  {(() => {
-                    const openShifts = shifts.filter(s => {
-                      if (s.employeeId) return false;
-                      const shiftDate = new Date(s.startTime);
-                      return shiftDate.toDateString() === selectedDay.toDateString();
-                    });
-                    return openShifts.length === 0 && (
-                      <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/timeline:opacity-100 transition-opacity pointer-events-none">
-                        <div className="bg-orange-400 rounded-full p-1.5 shadow-sm">
-                          <Plus className="w-3 h-3 text-white" />
-                        </div>
-                      </div>
-                    );
-                  })()}
-
-                  {/* Render open shifts as horizontal bars */}
-                  {shifts.filter(s => {
-                    if (s.employeeId) return false;
-                    const shiftDate = new Date(s.startTime);
-                    return shiftDate.toDateString() === selectedDay.toDateString();
-                  }).map(shift => {
-                    const startTime = new Date(shift.startTime);
-                    const endTime = new Date(shift.endTime);
-                    const client = shift.clientId ? clients.find(c => c.id === shift.clientId) : null;
-                    const formatTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
-                    
-                    // Calculate position as percentage of 24-hour day
-                    const startMinutes = startTime.getHours() * 60 + startTime.getMinutes();
-                    const endMinutes = endTime.getHours() * 60 + endTime.getMinutes();
-                    const leftPercent = (startMinutes / 1440) * 100;
-                    const widthPercent = ((endMinutes - startMinutes) / 1440) * 100;
-
-                    return (
-                      <div
-                        key={shift.id}
-                        className="absolute top-1 bottom-1 rounded-md px-2 py-1 cursor-pointer transition-all hover:shadow-lg hover:z-20 border-2 border-dashed border-orange-400 bg-orange-100 dark:bg-orange-900/50 text-xs flex flex-col justify-center overflow-hidden"
-                        style={{ 
-                          left: `${leftPercent}%`,
-                          width: `${Math.max(widthPercent, 6)}%`,
-                          minWidth: '80px'
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleAIFillOpenShift(shift.id);
-                        }}
-                        data-testid={`open-shift-${shift.id}`}
-                      >
-                        <div className="font-medium text-orange-600 truncate flex items-center gap-1 text-[11px]">
-                          <AlertCircle className="w-3 h-3 flex-shrink-0" />
-                          {formatTime(startTime)} - {formatTime(endTime)}
-                        </div>
-                        {client && (
-                          <div className="text-orange-600/70 text-[10px] truncate">{client.companyName}</div>
-                        )}
-                        <Button
-                          size="sm"
-                          className="mt-0.5 h-4 text-[9px] w-full bg-gradient-to-r from-[#00BFFF] to-[#FFD700] hover:from-[#00BFFF]/90 hover:to-[#FFD700]/90"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleAIFillOpenShift(shift.id);
-                          }}
-                          disabled={aiFillMutation.isPending}
-                          data-testid={`button-ai-fill-${shift.id}`}
-                        >
-                          <TrinityIconStatic size={8} className="mr-0.5" />
-                          {aiFillMutation.isPending ? '...' : 'Fill'}
-                        </Button>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
           </div>
         </ScrollArea>
+
+          {/* Trinity Insights Right Panel - Like Gemini */}
+          {showTrinityInsights && (
+            <div className="w-80 border-l bg-card flex flex-col shrink-0" data-testid="panel-trinity-insights-right">
+              <div className="p-3 border-b flex items-center justify-between bg-gradient-to-r from-[#00BFFF]/10 via-[#3b82f6]/10 to-[#FFD700]/10">
+                <div className="flex items-center gap-2">
+                  <TrinityIconStatic size={20} />
+                  <span className="font-medium text-sm">Trinity Insights</span>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowTrinityInsights(false)}
+                  data-testid="button-close-trinity-insights"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+              <ScrollArea className="flex-1">
+                <div className="p-3">
+                  <TrinityInsightsPanel
+                    weekStart={weekStart}
+                    weekEnd={weekEnd}
+                    shifts={shifts}
+                    employees={employees}
+                    clients={clients}
+                    isCollapsed={false}
+                    onToggleCollapse={() => setShowTrinityInsights(!showTrinityInsights)}
+                  />
+                </div>
+              </ScrollArea>
+            </div>
+          )}
+        </div>
 
         {/* Legacy Grid Hidden - Kept for Reference */}
         <div className="hidden">

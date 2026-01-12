@@ -15,6 +15,7 @@ import { useTrinitySchedulingProgress, type SchedulingProgressStep, type Thinkin
 
 interface TrinitySchedulingProgressProps {
   workspaceId?: string;
+  embedded?: boolean;
 }
 
 function ThinkingStepItem({ step }: { step: ThinkingStep }) {
@@ -269,11 +270,47 @@ function ProgressItem({ progress }: { progress: SchedulingProgressStep }) {
   );
 }
 
-export function TrinitySchedulingProgress({ workspaceId }: TrinitySchedulingProgressProps) {
+export function TrinitySchedulingProgress({ workspaceId, embedded = false }: TrinitySchedulingProgressProps) {
   const { activeProgress, hasActiveProgress } = useTrinitySchedulingProgress(workspaceId);
 
   if (!hasActiveProgress) {
+    if (embedded) {
+      return (
+        <div className="text-xs text-muted-foreground flex items-center gap-2">
+          <CheckCircle2 className="h-3 w-3 text-green-500" />
+          <span>Ready to process scheduling requests</span>
+        </div>
+      );
+    }
     return null;
+  }
+
+  if (embedded) {
+    return (
+      <div className="space-y-2" data-testid="panel-trinity-scheduling-progress-embedded">
+        <AnimatePresence mode="popLayout">
+          {activeProgress.map((progress) => (
+            <div key={progress.shiftId} className="space-y-1">
+              <div className="flex items-center gap-2">
+                {progress.step === 'complete' ? (
+                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                ) : progress.step === 'error' ? (
+                  <AlertCircle className="h-3 w-3 text-red-500" />
+                ) : (
+                  <Loader2 className="h-3 w-3 animate-spin text-purple-500" />
+                )}
+                <span className="text-xs font-medium">{progress.message}</span>
+                <Progress value={progress.progress} className="h-1 flex-1 max-w-24" />
+                <span className="text-xs text-muted-foreground">{progress.progress}%</span>
+              </div>
+              {progress.step !== 'complete' && progress.step !== 'error' && (
+                <ThoughtBox progress={progress} />
+              )}
+            </div>
+          ))}
+        </AnimatePresence>
+      </div>
+    );
   }
 
   return (

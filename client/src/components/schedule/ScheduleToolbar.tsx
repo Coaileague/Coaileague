@@ -27,33 +27,68 @@ import {
 import { TrinityIconStatic } from '@/components/trinity-button';
 
 interface ScheduleToolbarProps {
-  isManager: boolean;
+  // Core schedule info
   weekStart: Date;
   weekEnd: Date;
-  weekDisplay: string;
+  
+  // Optional legacy props for backward compatibility
+  isManager?: boolean;
+  weekDisplay?: string;
   scheduleStats?: {
     totalShifts: number;
     publishedShifts: number;
     draftShifts: number;
     laborCost: number;
   };
-  onCreateShift: () => void;
-  onOpenTasks: () => void;
-  onOpenTimeClock: () => void;
-  onOpenMessages: () => void;
-  onOpenReports: () => void;
-  onOpenAvailability: () => void;
-  onOpenSettings: () => void;
-  onAutoSchedule: () => void;
+  
+  // New unified props - these take precedence when provided
+  totalShifts?: number;
+  publishedShifts?: number;
+  draftShifts?: number;
+  laborCost?: number;
+  
+  // Core actions - support both old and new naming
+  onCreateShift?: () => void;
+  onAddShift?: () => void;
+  onWeekChange?: (start: Date, end: Date) => void;
+  onPublish?: () => void;
+  
+  // Panel toggles - support both naming conventions  
+  onOpenTasks?: () => void;
+  onOpenTimeClock?: () => void;
+  onOpenMessages?: () => void;
+  onOpenReports?: () => void;
+  onOpenAvailability?: () => void;
+  onOpenSettings?: () => void;
+  onAutoSchedule?: () => void;
+  
+  // New naming convention
+  onShowTasks?: () => void;
+  onShowTimeClock?: () => void;
+  onShowMessages?: () => void;
+  onShowReports?: () => void;
+  onShowAvailability?: () => void;
+  onShowSettings?: () => void;
+  
+  // Trinity Insights toggle
+  onShowTrinityInsights?: () => void;
+  showTrinityInsights?: boolean;
 }
 
 export function ScheduleToolbar({
-  isManager,
   weekStart,
   weekEnd,
+  isManager = true,
   weekDisplay,
   scheduleStats,
+  totalShifts,
+  publishedShifts,
+  draftShifts,
+  laborCost,
   onCreateShift,
+  onAddShift,
+  onWeekChange,
+  onPublish,
   onOpenTasks,
   onOpenTimeClock,
   onOpenMessages,
@@ -61,7 +96,35 @@ export function ScheduleToolbar({
   onOpenAvailability,
   onOpenSettings,
   onAutoSchedule,
+  onShowTasks,
+  onShowTimeClock,
+  onShowMessages,
+  onShowReports,
+  onShowAvailability,
+  onShowSettings,
+  onShowTrinityInsights,
+  showTrinityInsights,
 }: ScheduleToolbarProps) {
+  // Resolve props - prefer new naming, fallback to legacy
+  const handleCreateShift = onAddShift || onCreateShift;
+  const handleTasks = onShowTasks || onOpenTasks;
+  const handleTimeClock = onShowTimeClock || onOpenTimeClock;
+  const handleMessages = onShowMessages || onOpenMessages;
+  const handleReports = onShowReports || onOpenReports;
+  const handleAvailability = onShowAvailability || onOpenAvailability;
+  const handleSettings = onShowSettings || onOpenSettings;
+  
+  // Resolve stats - prefer individual props, fallback to scheduleStats object
+  const resolvedStats = {
+    totalShifts: totalShifts ?? scheduleStats?.totalShifts ?? 0,
+    publishedShifts: publishedShifts ?? scheduleStats?.publishedShifts ?? 0,
+    draftShifts: draftShifts ?? scheduleStats?.draftShifts ?? 0,
+    laborCost: laborCost ?? scheduleStats?.laborCost ?? 0,
+  };
+  
+  // Compute week display if not provided
+  const resolvedWeekDisplay = weekDisplay || `${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+
   const { toast } = useToast();
   const [showPublishDialog, setShowPublishDialog] = useState(false);
   const [publishOptions, setPublishOptions] = useState({
@@ -119,9 +182,9 @@ export function ScheduleToolbar({
     },
   });
 
-  const isFullyPublished = scheduleStats && scheduleStats.totalShifts > 0 && 
-    scheduleStats.publishedShifts === scheduleStats.totalShifts;
-  const hasDrafts = scheduleStats && scheduleStats.draftShifts > 0;
+  const isFullyPublished = resolvedStats.totalShifts > 0 && 
+    resolvedStats.publishedShifts === resolvedStats.totalShifts;
+  const hasDrafts = resolvedStats.draftShifts > 0;
 
   return (
     <>
@@ -130,7 +193,7 @@ export function ScheduleToolbar({
           <>
             <Button 
               size="sm" 
-              onClick={onCreateShift}
+              onClick={handleCreateShift}
               data-testid="button-create-shift"
             >
               <Plus className="w-4 h-4 mr-1" />
@@ -140,7 +203,7 @@ export function ScheduleToolbar({
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={onOpenTasks}
+              onClick={handleTasks}
               data-testid="button-tasks"
             >
               <ClipboardList className="w-4 h-4 mr-1" />
@@ -150,7 +213,7 @@ export function ScheduleToolbar({
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={onOpenTimeClock}
+              onClick={handleTimeClock}
               data-testid="button-time-clock"
             >
               <Clock className="w-4 h-4 mr-1" />
@@ -160,7 +223,7 @@ export function ScheduleToolbar({
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={onOpenMessages}
+              onClick={handleMessages}
               data-testid="button-messages"
             >
               <MessageSquare className="w-4 h-4 mr-1" />
@@ -176,20 +239,20 @@ export function ScheduleToolbar({
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={onOpenReports} data-testid="menu-labor-cost">
+                <DropdownMenuItem onClick={handleReports} data-testid="menu-labor-cost">
                   <FileText className="w-4 h-4 mr-2" />
                   Labor Cost Report
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onOpenReports} data-testid="menu-hours-summary">
+                <DropdownMenuItem onClick={handleReports} data-testid="menu-hours-summary">
                   <Clock className="w-4 h-4 mr-2" />
                   Hours Worked Summary
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={onOpenReports} data-testid="menu-adherence">
+                <DropdownMenuItem onClick={handleReports} data-testid="menu-adherence">
                   <Users className="w-4 h-4 mr-2" />
                   Schedule Adherence
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onOpenReports} data-testid="menu-export">
+                <DropdownMenuItem onClick={handleReports} data-testid="menu-export">
                   <Download className="w-4 h-4 mr-2" />
                   Export to Excel/PDF
                 </DropdownMenuItem>
@@ -199,7 +262,7 @@ export function ScheduleToolbar({
             <Button 
               variant="outline" 
               size="sm" 
-              onClick={onOpenAvailability}
+              onClick={handleAvailability}
               data-testid="button-availability"
             >
               <Users className="w-4 h-4 mr-1" />
@@ -216,7 +279,7 @@ export function ScheduleToolbar({
               {isFullyPublished ? 'Published' : 'Publish'}
               {hasDrafts && (
                 <Badge variant="secondary" className="ml-1 text-xs">
-                  {scheduleStats?.draftShifts}
+                  {resolvedStats.draftShifts}
                 </Badge>
               )}
             </Button>
@@ -235,11 +298,24 @@ export function ScheduleToolbar({
             <Button 
               variant="ghost" 
               size="icon" 
-              onClick={onOpenSettings}
+              onClick={handleSettings}
               data-testid="button-settings"
             >
               <Settings className="w-4 h-4" />
             </Button>
+            {/* Trinity Insights Toggle */}
+            {onShowTrinityInsights && (
+              <Button
+                variant={showTrinityInsights ? "default" : "outline"}
+                size="sm"
+                onClick={onShowTrinityInsights}
+                className={showTrinityInsights ? "bg-gradient-to-r from-[#00BFFF] to-[#FFD700] text-white" : ""}
+                data-testid="button-trinity-insights"
+              >
+                <TrinityIconStatic className="w-4 h-4 mr-1" />
+                Trinity Insights
+              </Button>
+            )}
           </>
         )}
       </div>
@@ -249,15 +325,15 @@ export function ScheduleToolbar({
           <DialogHeader>
             <DialogTitle>Publish Schedule</DialogTitle>
             <DialogDescription>
-              Publish schedule for {weekDisplay}?
+              Publish schedule for {resolvedWeekDisplay}?
             </DialogDescription>
           </DialogHeader>
           
           <div className="py-4 space-y-4">
             <div className="text-sm text-muted-foreground space-y-1">
               <p><strong>Preview:</strong></p>
-              <p>{scheduleStats?.totalShifts || 0} shifts</p>
-              <p>${scheduleStats?.laborCost?.toLocaleString() || 0} estimated labor cost</p>
+              <p>{resolvedStats.totalShifts} shifts</p>
+              <p>${resolvedStats.laborCost.toLocaleString()} estimated labor cost</p>
             </div>
 
             <div className="space-y-3">
