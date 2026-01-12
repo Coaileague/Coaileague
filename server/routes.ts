@@ -423,9 +423,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (dbFeature) {
         dbFeature.status = 'error';
         dbFeature.enabled = false;
-      });
+      }
       return res.status(503).json(health);
-    });
+    }
 
     // Test session store
     try {
@@ -434,7 +434,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Health check sessions error:', error);
       health.dependencies.sessions = 'degraded';
-    });
+    }
 
     // Test Stripe connection if enabled
     if (FEATURES.STRIPE_PAYMENTS) {
@@ -452,9 +452,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const stripeFeature = health.features.find((f: any) => f.feature === 'STRIPE_PAYMENTS');
         if (stripeFeature) {
           stripeFeature.status = 'error';
-        });
-      });
-    });
+        }
+      }
+    }
 
     res.json(health);
   });
@@ -543,7 +543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           unreadAlerts: 0,
           totalUnread: mappedUpdates.length,
         });
-      });
+      }
       // Get user's workspace
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       const member = await storage.getWorkspaceMemberByUserId(userId);
@@ -556,7 +556,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // even without a workspace - use the platform workspace
       if (!workspaceId && hasPlatformWideAccess(platformRole)) {
         workspaceId = 'coaileague-platform-workspace';
-      });
+      }
 
        
       if (!workspaceId) {
@@ -569,7 +569,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           unreadAlerts: 0,
           totalUnread: 0,
         });
-      });
+      }
       
       
       // Get platform updates with user read state - fetch more for display (50 items)
@@ -598,8 +598,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           gapFindings = await gapIntelligenceService.getGapFindingsForUNS(15);
         } catch (err) {
           console.error('[Notifications] Failed to fetch gap findings:', err);
-        });
-      });
+        }
+      }
       
       res.json({
         platformUpdates: platformUpdatesData,
@@ -614,7 +614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error) {
       res.status(500).json({ message: 'Failed to fetch notifications' });
-    });
+    }
   });
   app.post('/api/notifications/mark-all-read', async (req, res) => {
     try {
@@ -624,7 +624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Get user's workspace
       const workspace = await storage.getWorkspaceByOwnerId(userId);
@@ -636,7 +636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: true, 
           markedRead: { platformUpdates: 0, notifications: 0, alerts: 0 } 
         });
-      });
+      }
       
       // Mark all platform updates as viewed
       const platformUpdatesMarked = await storage.markAllPlatformUpdatesAsViewed(userId, workspaceId);
@@ -650,8 +650,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!(alert as any).isAcknowledged) {
           await aiNotificationService.acknowledgeMaintenanceAlert(alert.id, userId);
           alertsAcknowledged++;
-        });
-      });
+        }
+      }
       
       
       // WebSocket broadcast for real-time client updates
@@ -684,7 +684,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error acknowledging all notifications:', error);
       res.status(500).json({ message: 'Failed to acknowledge notifications' });
-    });
+    }
   });
 
   // Alias route for acknowledge-all (frontend uses this endpoint)
@@ -704,7 +704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           platformUpdatesMarked: 0,
           alertsAcknowledged: 0
         });
-      });
+      }
       
       // Mark all platform updates as viewed
       const platformUpdatesMarked = await storage.markAllPlatformUpdatesAsViewed(userId, workspaceId);
@@ -719,8 +719,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!(alert as any).isAcknowledged) {
           await aiNotificationService.acknowledgeMaintenanceAlert(alert.id, userId);
           alertsAcknowledged++;
-        });
-      });
+        }
+      }
       
       // Get updated counts after clearing
       const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
@@ -748,7 +748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error in acknowledge-all:', error);
       res.status(500).json({ message: 'Failed to acknowledge notifications' });
-    });
+    }
   });
 
 
@@ -762,7 +762,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
-      });
+      }
 
       // Mark all platform updates as viewed
       const platformUpdatesMarked = await storage.markAllPlatformUpdatesAsViewed(userId); // Don't filter by workspace - clear ALL
@@ -786,7 +786,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           source: 'clear_all' 
         }, 0);
         broadcastNotification(workspaceId, userId, 'whats_new_cleared', { count: 0 }, 0);
-      });
+      }
 
       console.log("[Clear All] User " + userId + " cleared " + platformUpdatesMarked + " platform updates, " + acknowledged + " notifications, and " + alertsAcknowledged + " alerts");
       res.json({
@@ -797,7 +797,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in clear-all:", error);
       res.status(500).json({ message: "Failed to clear notifications" });
-    });
+    }
   });
 
 
@@ -807,7 +807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
-      });
+      }
 
       const { getOnboardingDigest, autoCleanupSystemNotifications } = await import('./services/notificationService');
       
@@ -824,7 +824,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching onboarding digest:", error);
       res.status(500).json({ message: "Failed to fetch onboarding digest" });
-    });
+    }
   });
 
   // Send Trinity welcome notification to a user
@@ -836,7 +836,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
-      });
+      }
 
       const { sendTrinityWelcomeNotification } = await import('./services/notificationService');
       
@@ -849,7 +849,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Broadcast via WebSocket
       if (workspaceId) {
         broadcastNotification(workspaceId, userId, 'trinity_welcome', notification);
-      });
+      }
 
       res.json({
         success: true,
@@ -858,7 +858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error sending Trinity welcome:", error);
       res.status(500).json({ message: "Failed to send Trinity welcome" });
-    });
+    }
   });
   // Tab-specific clear endpoint - clears notifications for a specific tab only
   app.post("/api/notifications/clear-tab/:tab", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -870,12 +870,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
-      });
+      }
 
       const validTabs = ['updates', 'notifications', 'maintenance', 'system'];
       if (!validTabs.includes(tab)) {
         return res.status(400).json({ message: "Invalid tab. Must be: updates, notifications, maintenance, or system" });
-      });
+      }
 
       let cleared = { platformUpdates: 0, notifications: 0, alerts: 0 };
 
@@ -894,7 +894,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { getCategoriesForTab } = await import("@shared/config/notificationConfig");
         const systemCategories = getCategoriesForTab('system');
         cleared.platformUpdates = await storage.deletePlatformUpdatesByCategories(userId, systemCategories, workspaceId);
-      });
+      }
 
       // WebSocket broadcast for real-time sync
       if (workspaceId) {
@@ -902,7 +902,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tab,
           cleared,
         }, 0);
-      });
+      }
 
       console.log(`[Clear Tab] User ${userId} cleared tab '${tab}': ${JSON.stringify(cleared)}`);
       res.json({
@@ -913,7 +913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in clear-tab:", error);
       res.status(500).json({ message: "Failed to clear tab notifications" });
-    });
+    }
   });
 
   // Notification system diagnostics (AI Brain Trinity orchestrated)
@@ -934,7 +934,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         success: false, 
         error: error.message || "Failed to run diagnostics" 
       });
-    });
+    }
   });
 
   // Universal Platform Diagnostics API (AI Brain Trinity orchestrated with Gemini 3)
@@ -949,7 +949,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const allowedRoles = ["platform_support", "platform_admin", "root_admin"];
       if (!allowedRoles.includes(platformRole)) {
         return res.status(403).json({ success: false, message: "Insufficient permissions for platform diagnostics" });
-      });
+      }
 
       const { universalDiagnosticOrchestrator } = await import("./services/ai-brain/universalDiagnosticOrchestrator");
       
@@ -959,11 +959,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else {
         const report = await universalDiagnosticOrchestrator.runFullDiagnostic(userId || "system", platformRole);
         return res.json({ success: true, report });
-      });
+      }
     } catch (error: any) {
       console.error("Error running platform diagnostics:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   // Hotpatch execution API with RBAC
@@ -976,7 +976,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!hotpatch) {
         return res.status(400).json({ success: false, message: "Hotpatch object required" });
-      });
+      }
 
       const { universalDiagnosticOrchestrator } = await import("./services/ai-brain/universalDiagnosticOrchestrator");
       const execution = await universalDiagnosticOrchestrator.executeHotpatch(
@@ -991,7 +991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error executing hotpatch:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   // Get diagnostic subagents list
@@ -1007,7 +1007,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, subagents });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   // Acknowledge a single notification
@@ -1019,11 +1019,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!userId) {
         return res.status(401).json({ message: 'Authentication required' });
-      });
+      }
       
       if (!notificationId) {
         return res.status(400).json({ message: 'Notification ID is required' });
-      });
+      }
       
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       const member = await storage.getWorkspaceMemberByUserId(userId);
@@ -1034,7 +1034,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!notification) {
         return res.status(404).json({ message: 'Notification not found' });
-      });
+      }
       
       // Get updated counts
       const counts = await storage.getUnreadAndUnclearedCount(userId, workspaceId);
@@ -1052,7 +1052,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           counts: { notifications: counts.unread, platformUpdates: platformUpdatesCount, total: totalCount, lastUpdated: new Date().toISOString() }, 
           source: 'acknowledge_single' 
         }, counts.unread);
-      });
+      }
       
       console.log("[Acknowledge] User " + userId + " acknowledged notification " + notificationId);
       
@@ -1064,7 +1064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error acknowledging notification:', error);
       res.status(500).json({ message: 'Failed to acknowledge notification' });
-    });
+    }
   });
 
   // Acknowledge maintenance alert
@@ -1076,7 +1076,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { id: alertId } = req.params;
       
       const success = await aiNotificationService.acknowledgeMaintenanceAlert(alertId, userId);
@@ -1085,11 +1085,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ success: true });
       } else {
         res.status(500).json({ message: 'Failed to acknowledge alert' });
-      });
+      }
     } catch (error) {
       console.error('Error acknowledging maintenance alert:', error);
       res.status(500).json({ message: 'Failed to acknowledge alert' });
-    });
+    }
   });
 
 
@@ -1110,7 +1110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           total: 0,
           lastUpdated: new Date().toISOString()
         });
-      });
+      }
       
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       const member = await storage.getWorkspaceMemberByUserId(userId);
@@ -1123,7 +1123,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error getting unread counts:', error);
       res.status(500).json({ message: 'Failed to get unread counts' });
-    });
+    }
   });
 
   // Mark individual notification as read
@@ -1145,11 +1145,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         res.status(500).json({ message: 'Failed to mark notification as read' });
-      });
+      }
     } catch (error) {
       console.error('Error marking notification as read:', error);
       res.status(500).json({ message: 'Failed to mark notification as read' });
-    });
+    }
   });
 
   // Mark platform update as viewed
@@ -1177,11 +1177,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else {
         res.status(500).json({ message: 'Failed to mark update as viewed' });
-      });
+      }
     } catch (error) {
       console.error('Error marking platform update as viewed:', error);
       res.status(500).json({ message: 'Failed to mark update as viewed' });
-    });
+    }
   });
 
   // Sync notification counts (force refresh from database)
@@ -1203,7 +1203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error syncing notification counts:', error);
       res.status(500).json({ message: 'Failed to sync counts' });
-    });
+    }
   });
 
   // Get user notifications
@@ -1215,7 +1215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Get user's workspace
       const workspace = await storage.getWorkspaceByOwnerId(userId);
@@ -1224,11 +1224,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const member = await storage.getWorkspaceMemberByUserId(userId);
         if (!member) {
           return res.status(404).json({ message: 'Workspace not found' });
-        });
+        }
         // Get notifications for member
         const notifications = await storage.getNotificationsByUser(userId, member.workspaceId);
         return res.json(notifications);
-      });
+      }
       
       // Get notifications for workspace owner
       const notifications = await storage.getNotificationsByUser(userId, workspace.id);
@@ -1236,7 +1236,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching notifications:', error);
       res.status(500).json({ message: 'Failed to fetch notifications' });
-    });
+    }
   });
 
   // Toggle notification read status (mark as read/unread)
@@ -1248,7 +1248,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { id } = req.params;
       
       // Toggle notification read status
@@ -1256,7 +1256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!notification) {
         return res.status(404).json({ message: 'Notification not found' });
-      });
+      }
       
       // Broadcast updated unread count
       const workspace = await storage.getWorkspaceByOwnerId(userId);
@@ -1268,13 +1268,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (member) {
           const unreadCount = await storage.getUnreadNotificationCount(userId, member.workspaceId);
           broadcastNotification(member.workspaceId, userId, 'notification_count_updated', undefined, unreadCount);
-        });
-      });
+        }
+      }
       res.json({ success: true, notification });
     } catch (error) {
       console.error('Error toggling notification read status:', error);
       res.status(500).json({ message: 'Failed to toggle notification read status' });
-    });
+    }
   });
 
   // Delete notification
@@ -1286,7 +1286,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { id } = req.params;
       
       // Delete notification (storage will verify ownership)
@@ -1294,7 +1294,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!deleted) {
         return res.status(404).json({ message: 'Notification not found or unauthorized' });
-      });
+      }
       
       // Broadcast updated unread count
       const workspace = await storage.getWorkspaceByOwnerId(userId);
@@ -1306,14 +1306,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (member) {
           const unreadCount = await storage.getUnreadNotificationCount(userId, member.workspaceId);
           broadcastNotification(member.workspaceId, userId, 'notification_count_updated', undefined, unreadCount);
-        });
-      });
+        }
+      }
       
       res.json({ success: true });
     } catch (error) {
       console.error('Error deleting notification:', error);
       res.status(500).json({ message: 'Failed to delete notification' });
-    });
+    }
   });
 
   // ============================================================================
@@ -1329,7 +1329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { id } = req.params;
       const { conversationId, message } = req.body;
 
@@ -1337,7 +1337,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validation = editChatMessageSchema.safeParse({ message });
       if (!validation.success) {
         return res.status(400).json({ message: 'Invalid message content', errors: validation.error.errors });
-      });
+      }
 
       // Get the message to verify ownership
       const [chatMessage] = await db
@@ -1348,30 +1348,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!chatMessage) {
         return res.status(404).json({ message: 'Message not found' });
-      });
+      }
 
       // Verify user is the sender
       if (chatMessage.senderId !== userId) {
         return res.status(403).json({ message: 'Not authorized to edit this message' });
-      });
+      }
 
       // Verify conversation ID matches
       if (chatMessage.conversationId !== conversationId) {
         return res.status(400).json({ message: 'Invalid conversation ID' });
-      });
+      }
 
       // Update the message
       const updatedMessage = await storage.updateChatMessage(id, conversationId, { message: validation.data.message });
 
       if (!updatedMessage) {
         return res.status(404).json({ message: 'Failed to update message' });
-      });
+      }
 
       res.json(updatedMessage);
     } catch (error) {
       console.error('Error editing chat message:', error);
       res.status(500).json({ message: 'Failed to edit message' });
-    });
+    }
   });
 
   // Delete chat message
@@ -1383,13 +1383,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { id } = req.params;
       const { conversationId } = req.body;
 
       if (!conversationId) {
         return res.status(400).json({ message: 'Conversation ID is required' });
-      });
+      }
 
       // Get the message to verify ownership
       const [chatMessage] = await db
@@ -1400,29 +1400,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!chatMessage) {
         return res.status(404).json({ message: 'Message not found' });
-      });
+      }
 
       // Verify user is the sender
       if (chatMessage.senderId !== userId) {
         return res.status(403).json({ message: 'Not authorized to delete this message' });
-      });
+      }
 
       // Verify conversation ID matches
       if (chatMessage.conversationId !== conversationId) {
         return res.status(400).json({ message: 'Invalid conversation ID' });
-      });
+      }
 
       // Delete the message
       const deleted = await storage.deleteChatMessage(id, conversationId);
 
       if (!deleted) {
         return res.status(404).json({ message: 'Failed to delete message' });
-      });
+      }
       res.json({ success: true, message: 'Message deleted' });
     } catch (error) {
       console.error('Error deleting chat message:', error);
       res.status(500).json({ message: 'Failed to delete message' });
-    });
+    }
   });
 
   // ============================================================================
@@ -1438,12 +1438,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
-      });
+      }
 
       const preferences = await storage.getNotificationPreferences(userId, workspaceId);
 
@@ -1451,7 +1451,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching notification preferences:', error);
       res.status(500).json({ message: 'Failed to fetch notification preferences' });
-    });
+    }
   });
 
   // Update notification preferences
@@ -1463,26 +1463,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
-      });
+      }
 
       // Validate request body
       const validation = updateNotificationPreferencesSchema.safeParse(req.body);
       if (!validation.success) {
         return res.status(400).json({ message: 'Invalid preference data', errors: validation.error.errors });
-      });
+      }
 
       // Validate quiet hours logic
       if (validation.data.quietHoursStart !== undefined && validation.data.quietHoursEnd !== undefined) {
         if (validation.data.quietHoursStart !== null && validation.data.quietHoursEnd !== null && 
             validation.data.quietHoursStart >= validation.data.quietHoursEnd) {
           return res.status(400).json({ message: 'Quiet hours end must be after start' });
-        });
-      });
+        }
+      }
 
       // Update preferences
       const preferences = await storage.createOrUpdateNotificationPreferences(userId, workspaceId, validation.data);
@@ -1491,7 +1491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error updating notification preferences:', error);
       res.status(500).json({ message: 'Failed to update notification preferences' });
-    });
+    }
   });
 
   // Subscribe to notification type
@@ -1503,17 +1503,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
       const {  notificationType  } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
-      });
+      }
 
       if (!notificationType || typeof notificationType !== 'string') {
         return res.status(400).json({ message: 'Notification type is required' });
-      });
+      }
 
       // Get current preferences
       const currentPrefs = await storage.getNotificationPreferences(userId, workspaceId);
@@ -1522,7 +1522,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Add notification type if not already present
       if (!enabledTypes.includes(notificationType)) {
         enabledTypes.push(notificationType);
-      });
+      }
 
       // Update preferences
       const preferences = await storage.createOrUpdateNotificationPreferences(userId, workspaceId, {
@@ -1532,7 +1532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error subscribing to notification type:', error);
       res.status(500).json({ message: 'Failed to subscribe to notification type' });
-    });
+    }
   });
 
   // Unsubscribe from notification type
@@ -1544,17 +1544,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
       const {  notificationType  } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
-      });
+      }
 
       if (!notificationType || typeof notificationType !== 'string') {
         return res.status(400).json({ message: 'Notification type is required' });
-      });
+      }
 
       // Get current preferences
       const currentPrefs = await storage.getNotificationPreferences(userId, workspaceId);
@@ -1571,7 +1571,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error unsubscribing from notification type:', error);
       res.status(500).json({ message: 'Failed to unsubscribe from notification type' });
-    });
+    }
   });
 
   // ============================================================================
@@ -1593,7 +1593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error checking SMS status:', error);
       res.status(500).json({ message: 'Failed to check SMS status' });
-    });
+    }
   });
 
   // Get shift reminder timing options
@@ -1612,7 +1612,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error getting reminder options:', error);
       res.status(500).json({ message: 'Failed to get reminder options' });
-    });
+    }
   });
 
   // Send test SMS to user
@@ -1624,23 +1624,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
       const {  phoneNumber  } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
-      });
+      }
 
       if (!phoneNumber || typeof phoneNumber !== 'string') {
         return res.status(400).json({ message: 'Phone number is required' });
-      });
+      }
 
       const { sendSMS, isSMSConfigured } = await import('./services/smsService');
       
       if (!isSMSConfigured()) {
         return res.status(400).json({ message: 'SMS is not configured. Please add Twilio credentials.' });
-      });
+      }
 
       const result = await sendSMS({
         to: phoneNumber,
@@ -1654,11 +1654,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ success: true, messageId: result.messageId, message: 'Test SMS sent successfully' });
       } else {
         res.status(400).json({ success: false, error: result.error });
-      });
+      }
     } catch (error) {
       console.error('Error sending test SMS:', error);
       res.status(500).json({ message: 'Failed to send test SMS' });
-    });
+    }
   });
 
   // Verify SMS phone number
@@ -1670,17 +1670,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
       const {  phoneNumber  } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
-      });
+      }
 
       if (!phoneNumber || typeof phoneNumber !== 'string') {
         return res.status(400).json({ message: 'Phone number is required' });
-      });
+      }
 
       const preferences = await storage.createOrUpdateNotificationPreferences(userId, workspaceId, {
         smsPhoneNumber: phoneNumber,
@@ -1690,7 +1690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error verifying phone:', error);
       res.status(500).json({ message: 'Failed to verify phone number' });
-    });
+    }
   });
 
   // Trigger manual shift reminder (for testing)
@@ -1701,11 +1701,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!workspaceId) {
         return res.status(400).json({ message: 'No active workspace' });
-      });
+      }
 
       if (!shiftId || typeof shiftId !== 'string') {
         return res.status(400).json({ message: 'Shift ID is required' });
-      });
+      }
 
       const { sendShiftReminder } = await import('./services/shiftRemindersService');
       const result = await sendShiftReminder(shiftId, workspaceId);
@@ -1714,11 +1714,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         res.json({ success: true, result });
       } else {
         res.status(404).json({ message: 'Shift not found or no employee assigned' });
-      });
+      }
     } catch (error) {
       console.error('Error sending shift reminder:', error);
       res.status(500).json({ message: 'Failed to send shift reminder' });
-    });
+    }
   });
 
   // SECURE USER IDENTITY & AUTHORIZATION ENDPOINTS
@@ -1733,12 +1733,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
       
       if (!workspaceId) {
         return res.json({ workspaceRole: null });
-      });
+      }
       
       const [employee] = await db
         .select({ workspaceRole: employees.workspaceRole })
@@ -1753,7 +1753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[API] Error fetching workspace role:', error);
       res.status(500).json({ message: 'Failed to fetch workspace role' });
-    });
+    }
   });
   
   // Get current user's platform role (secure)
@@ -1765,7 +1765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       const [platformRole] = await db
         .select({ role: platformRoles.role })
@@ -1780,7 +1780,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[API] Error fetching platform role:', error);
       res.status(500).json({ message: 'Failed to fetch platform role' });
-    });
+    }
   });
   
   // Get workspace features available to current user (SERVER-SIDE VALIDATION)
@@ -1792,7 +1792,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.user!.currentWorkspaceId;
       
       // Fetch workspace role
@@ -1807,7 +1807,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ))
           .limit(1);
         workspaceRole = employee?.workspaceRole || null;
-      });
+      }
       
       // Fetch platform role
       const [platformRoleData] = await db
@@ -1832,7 +1832,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[API] Error fetching workspace features:', error);
       res.status(500).json({ message: 'Failed to fetch workspace features' });
-    });
+    }
   });
 
   // Get active feature updates (platform-wide, shown to all users)
@@ -1844,7 +1844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const now = new Date();
 
       // Check if user is new (created within last 7 days)
@@ -1908,7 +1908,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching feature updates:', error);
       res.status(500).json({ message: 'Failed to fetch feature updates' });
-    });
+    }
   });
 
   // Dismiss a specific feature update (platform-wide, user-scoped)
@@ -1920,7 +1920,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const updateId = req.params.id;
       // Use current workspace if available, otherwise use a placeholder
       const workspaceId = req.user!.currentWorkspaceId || 'platform-global';
@@ -1954,13 +1954,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           viewedAt: new Date(),
           dismissedAt: new Date(),
         });
-      });
+      }
 
       res.json({ success: true });
     } catch (error) {
       console.error('Error dismissing update:', error);
       res.status(500).json({ message: 'Failed to dismiss update' });
-    });
+    }
   });
 
   // DYNAMIC CONFIGURATION MANAGEMENT (Admin Only)
@@ -1991,7 +1991,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { changes } = req.body;
 
       // Validate request body
@@ -2000,14 +2000,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: false,
           message: 'Invalid request body. Expected { changes: Array<{ scope, key, value }> }' 
         });
-      });
+      }
 
       if (changes.length === 0) {
         return res.status(400).json({ 
           success: false,
           message: 'No changes provided' 
         });
-      });
+      }
 
       // Validate each change before applying
       const validationErrors: string[] = [];
@@ -2017,14 +2017,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!change.scope || !change.key || change.value === undefined) {
           validationErrors.push(`Change ${i}: Missing required fields (scope, key, value)`);
           continue;
-        });
+        }
 
         try {
           configRegistry.validateChange(change.scope, change.key, change.value);
         } catch (error: any) {
           validationErrors.push(`Change ${i} (${change.scope}.${change.key}): ${error.message}`);
-        });
-      });
+        }
+      }
 
       // If any validation errors, return them all
       if (validationErrors.length > 0) {
@@ -2033,7 +2033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Validation failed',
           errors: validationErrors
         });
-      });
+      }
 
       // Apply all changes atomically
       try {
@@ -2045,7 +2045,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: 'Failed to apply configuration changes',
           error: error.message
         });
-      });
+      }
 
       // Create audit log entries (console + database)
       for (const change of changes) {
@@ -2065,13 +2065,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
               key: change.key,
               value: change.value,
               timestamp: new Date().toISOString()
-            });
+            }
           });
         } catch (auditError) {
           // Non-critical - log but don't fail the request
           console.error('[ConfigChange] Failed to create audit trail entry:', auditError);
-        });
-      });
+        }
+      }
 
       // Clear cache to force reload
       configRegistry.clearCache();
@@ -2096,7 +2096,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Internal server error while processing configuration changes',
         error: error.message
       });
-    });
+    }
   });
 
   /**
@@ -2117,7 +2117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           success: false,
           message: 'Scope query parameter is required (e.g., ?scope=featureToggles)'
         });
-      });
+      }
 
       // Get current config
       const config = configRegistry.getConfig(scope);
@@ -2140,7 +2140,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: 'Failed to fetch configuration',
         error: error.message
       });
-    });
+    }
   });
 
   // Submit user feedback
@@ -2152,12 +2152,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { type, message } = req.body;
       
       if (!type || !message) {
         return res.status(400).json({ message: 'Type and message are required' });
-      });
+      }
 
       // Create support ticket for feedback
       const ticket = await storage.createSupportTicket({
@@ -2174,7 +2174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error submitting feedback:', error);
       res.status(500).json({ message: 'Failed to submit feedback' });
-    });
+    }
   });
 
 
@@ -2200,7 +2200,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: 'Missing required field: transcript',
           message: 'Please provide a voice command transcript.'
         });
-      });
+      }
 
       console.log('[VoiceCommand] Received command:', {
         userId,
@@ -2256,7 +2256,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Failed to process voice command',
         message: error.message || 'An unexpected error occurred.'
       });
-    });
+    }
   });
   // ============================================================================
   // ============================================================================
@@ -2268,7 +2268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!conversationId || !guestName || !guestEmail || !issue) {
         return res.status(400).json({ error: 'Missing required fields' });
-      });
+      }
       
       // Generate a guest token for authentication (simple JWT-like structure)
       const guestToken = crypto.randomBytes(32).toString('hex');
@@ -2296,7 +2296,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Failed to complete escalation',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
-    });
+    }
   });
 
   // Create support ticket from floating chat (CoAIleague AI)
@@ -2307,7 +2307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!subject || !description) {
         return res.status(400).json({ message: 'Subject and description are required' });
-      });
+      }
 
       // Get user info (support both auth methods)
       let userId: string | null = null;
@@ -2318,18 +2318,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (authReq.session?.userId) {
         userId = authReq.session.userId;
         workspaceId = authReq.session.workspaceId || null;
-      });
+      }
       // Try Replit Auth (OIDC)
       else if (authReq.isAuthenticated?.() && authReq.user?.claims?.sub) {
         userId = authReq.user.claims.sub;
         userEmail = authReq.user?.claims?.email || userEmail;
-      });
+      }
       
       // For guests, use CoAIleague Platform workspace
       const { PLATFORM_WORKSPACE_ID } = await import('./seed-platform-workspace');
         if (!workspaceId) {
           workspaceId = PLATFORM_WORKSPACE_ID;
-        });
+        }
       
       // Combine conversation history into description
       const fullDescription = conversationHistory && Array.isArray(conversationHistory)
@@ -2364,7 +2364,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Failed to create support ticket',
         details: error instanceof Error ? error.message : 'Unknown error'
       });
-    });
+    }
   });
 
   // HelpAI bubble chat - Customer-facing AI chat (supports both authenticated and anonymous users)
@@ -2375,7 +2375,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!message || typeof message !== 'string') {
         return res.status(400).json({ message: 'Message is required' });
-      });
+      }
 
       // Support both auth systems: Custom auth (session) and Replit Auth (OIDC)
       let userId: string | null = null;
@@ -2385,12 +2385,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (authReq.session?.userId) {
         userId = authReq.session.userId;
         isAuthenticated = true;
-      });
+      }
       // Try Replit Auth (OIDC)
       else if (authReq.isAuthenticated?.() && authReq.user?.claims?.sub) {
         userId = authReq.user.claims.sub;
         isAuthenticated = true;
-      });
+      }
       
       // For anonymous users, derive a stable userId from sessionId to prevent session hijacking
       // This ensures anonymous users can only access their own sessions
@@ -2398,7 +2398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         userId = sessionId 
           ? `anon-${sessionId}` // Stable anonymous ID based on session
           : `anon-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`; // New anonymous user
-      });
+      }
       
       // For anonymous users, use CoAIleague Platform workspace
       const { PLATFORM_WORKSPACE_ID } = await import('./seed-platform-workspace');
@@ -2411,7 +2411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (!requestedWorkspaceId) {
           const [userRecord] = await db.select().from(users).where(eq(users.id, userId!)).limit(1);
           requestedWorkspaceId = userRecord?.currentWorkspaceId || undefined;
-        });
+        }
         
         const resolution = await resolveWorkspaceForUser(userId!, requestedWorkspaceId);
         
@@ -2422,12 +2422,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             message: resolution.error || 'Please select a workspace using the workspace switcher',
             requiresWorkspace: true
           });
-        });
+        }
         
         workspaceId = resolution.workspaceId;
       } else {
         workspaceId = PLATFORM_WORKSPACE_ID;
-      });
+      }
       
       // SECURITY: Validate session ownership to prevent cross-user access
       // For ALL requests with sessionId, validate the session belongs to this user
@@ -2443,10 +2443,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isAuthenticated
             });
             return res.status(403).json({ message: 'Unauthorized: Session does not belong to this user' });
-          });
-        });
+          }
+        }
         // If session doesn't exist, it will be created by bubbleAgent_reply
-      });
+      }
       
       // Get user details for chat context
       const user = isAuthenticated ? await storage.getUser(userId) : null;
@@ -2500,16 +2500,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 existingWorkspace = await storage.getWorkspace(PLATFORM_WORKSPACE_ID);
                 if (!existingWorkspace) {
                   throw new Error('CRITICAL: Platform workspace seeding failed - workspace still missing after seed attempt');
-                });
+                }
                 console.log('[HelpAI] ✅ Platform workspace seeded successfully');
               } else {
                 console.log('[HelpAI] Platform workspace was created by concurrent request');
-              });
+              }
             } finally {
               platformWorkspaceSeedLock.release();
-            });
-          });
-        });
+            }
+          }
+        }
         
         // For anonymous users, create a basic conversation record so WebSocket can join
         if (!isAuthenticated) {
@@ -2532,7 +2532,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             conversationId: conversation.id, // Use real conversation ID
             ticketNumber,
           });
-        });
+        }
         
         // For authenticated users, create full support ticket
         const session = await storage.getHelposSession(response.sessionId, workspaceId);
@@ -2574,14 +2574,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           conversationId: escalationData.conversationId,
           ticketNumber: escalationData.ticketNumber,
         });
-      });
+      }
 
       console.log('[HelpAI] No escalation needed, returning normal response');
       res.json(response);
     } catch (error: any) {
       console.error('HelpAI chat error:', error);
       res.status(500).json({ message: error.message || 'Failed to process HelpAI chat' });
-    });
+    }
   });
 
   // HelpAI staff copilot - AI suggestions for support agents
@@ -2592,7 +2592,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!message || typeof message !== 'string') {
         return res.status(400).json({ message: 'Message is required' });
-      });
+      }
 
       const userId = authReq.user!.id;
       const { workspaceId } = await resolveWorkspaceForUser(userId, req.body.workspaceId);
@@ -2608,7 +2608,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('HelpAI copilot error:', error);
       res.status(500).json({ message: error.message || 'Failed to generate suggestion' });
-    });
+    }
   });
 
   // Get all workspaces user has access to (for workspace switcher)
@@ -2620,7 +2620,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Get user's owned workspace
       const ownedWorkspace = await storage.getWorkspaceByOwnerId(userId);
@@ -2632,7 +2632,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching workspaces:', error);
       res.status(500).json({ message: 'Failed to fetch workspaces' });
-    });
+    }
   });
 
 
@@ -2643,13 +2643,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const user = req.user;
       if (!userId || !user) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       const { name, description, industry, size, companyName, sectorId, industryGroupId, subIndustryId, complianceTemplates, certifications } = req.body;
 
       if (!name || typeof name !== 'string' || name.trim().length === 0) {
         return res.status(400).json({ message: 'Organization name is required' });
-      });
+      }
 
       // Create the workspace
       const workspace = await storage.createWorkspace({
@@ -2680,7 +2680,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (req.session) {
         (req.session as any).workspaceId = workspace.id;
         (req.session as any).activeWorkspaceId = workspace.id;
-      });
+      }
 
       // Try to attach employee external ID
       try {
@@ -2689,7 +2689,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.log(`[Workspace Create] Attached external ID to employee ${employee.id}`);
       } catch (extIdError: any) {
         console.error(`[Workspace Create] Failed to attach external ID:`, extIdError.message);
-      });
+      }
 
       // Log the organization creation
       await storage.createAuditLog({
@@ -2733,7 +2733,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error creating workspace:', error);
       res.status(500).json({ message: 'Failed to create organization' });
-    });
+    }
   });
   // Switch workspace
   app.post('/api/workspace/switch/:workspaceId', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2744,14 +2744,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { workspaceId } = req.params;
       
       // Verify user has access to this workspace
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace || workspace.ownerId !== userId) {
         return res.status(403).json({ message: 'Access denied to this workspace' });
-      });
+      }
       
       // Update user's current workspace
       await storage.updateUser(userId, {
@@ -2761,7 +2761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error switching workspace:', error);
       res.status(500).json({ message: 'Failed to switch workspace' });
-    });
+    }
   });
 
   // ============================================================================
@@ -2805,7 +2805,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`[AutoTicket] Created ticket for ${service}`);
     } catch (error) {
       console.error('[AutoTicket] Failed:', error);
-    });
+    }
   }
 
   // DEBUG: Test endpoint to analyze view_id values from SQL
@@ -2852,13 +2852,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create auto-tickets for critical failures
       if (dbHealth.status === 'down') {
         await createHealthCheckTicket('default', 'database', 'Database connection failed - auto-created by health check');
-      });
+      }
       if (stripeHealth.status === 'down') {
         await createHealthCheckTicket('default', 'stripe', 'Stripe API unreachable - auto-created by health check');
-      });
+      }
       if (geminiHealth.status === 'down') {
         await createHealthCheckTicket('default', 'gemini_ai', 'Gemini API unreachable - auto-created by health check');
-      });
+      }
 
       const isHealthy = !Object.values(checks).some(c => c.status === 'down');
       
@@ -2877,7 +2877,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Health check failed',
         services: checks
       });
-    });
+    }
   });
 
   // Workspace health endpoint - returns simplified status for non-technical users
@@ -2899,17 +2899,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             integrations: { quickbooks: 'platform', gusto: 'platform' },
             isPlatformStaff: true,
           });
-        });
-      });
+        }
+      }
 
         return res.status(400).json({ error: 'No workspace selected' });
-      });
+      }
 
       // Get workspace with billing info
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' });
-      });
+      }
 
       // Check partner integrations
       const qboConnection = await db.select().from(partnerIntegrations)
@@ -2940,7 +2940,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (!hasIntegrations) {
         overallStatus = 'yellow';
         statusMessage = 'Connect QuickBooks or Gusto to enable automation';
-      });
+      }
 
       res.json({
         status: overallStatus,
@@ -2963,7 +2963,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Workspace health check error:', error);
       res.status(500).json({ error: 'Failed to check workspace health' });
-    });
+    }
   });
 
 
@@ -2981,7 +2981,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         overall: 'down',
         timestamp: new Date().toISOString()
       });
-    });
+    }
   });
   // Organization status endpoint - returns org-aware status for universal toast notifications
   app.get('/api/workspace/status', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -2989,12 +2989,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: 'No workspace selected' });
-      });
+      }
 
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' });
-      });
+      }
 
       // Determine org status based on workspace state
       type OrgStatusType = 'active' | 'suspended_payment' | 'suspended_violation' | 'suspended_other' | 'maintenance' | 'restricted' | 'trial_ending' | 'trial_expired';
@@ -3006,7 +3006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status = 'suspended_violation';
       } else if (workspace.isLocked) {
         status = 'suspended_other';
-      });
+      }
 
       res.json({
         workspaceId,
@@ -3018,7 +3018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Failed to fetch workspace status:', error);
       res.status(500).json({ error: 'Failed to fetch workspace status' });
-    });
+    }
   });
 
   // Get custom organization status messages - per-org customization
@@ -3027,7 +3027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: 'No workspace selected' });
-      });
+      }
 
       // Return empty customization (future: store in DB per org)
       res.json({
@@ -3038,7 +3038,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Failed to fetch custom messages:', error);
       res.status(500).json({ error: 'Failed to fetch custom messages' });
-    });
+    }
   });
   
   // SECURITY: Apply rate limiting BEFORE auth routes to prevent brute-force attacks
@@ -3070,13 +3070,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspaceId = req.user?.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: "Workspace required" });
-      });
+      }
       const result = await quickbooksSyncService.runInitialSync(workspaceId, req.user!.id);
       res.json(result);
     } catch (error: any) {
       console.error("[QBO Sync] Initial sync error:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Create invoice with idempotency - Zod validated
@@ -3095,7 +3095,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspaceId = req.user?.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: "Workspace required" });
-      });
+      }
       
       const parseResult = qboInvoiceSchema.safeParse(req.body);
       if (!parseResult.success) {
@@ -3103,7 +3103,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: "Validation failed", 
           details: parseResult.error.issues 
         });
-      });
+      }
       
       const { clientId, weekEnding, lineItems } = parseResult.data;
       const result = await quickbooksSyncService.createInvoiceWithIdempotency(
@@ -3117,7 +3117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("[QBO Sync] Invoice creation error:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Run CDC poll for changes
@@ -3126,7 +3126,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspaceId = req.user?.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: "Workspace required" });
-      });
+      }
       const { sinceDate } = req.body;
       const result = await quickbooksSyncService.runCDCPoll(
         workspaceId,
@@ -3137,7 +3137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("[QBO Sync] CDC poll error:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Get manual review queue
@@ -3146,7 +3146,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspaceId = req.user?.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ error: "Workspace required" });
-      });
+      }
       const status = (req.query.status as string) || 'pending';
       const queue = await quickbooksSyncService.getManualReviewQueue(
         workspaceId,
@@ -3156,7 +3156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("[QBO Sync] Review queue error:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Resolve manual review item
@@ -3166,7 +3166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { resolution, selectedCoaileagueEntityId } = req.body;
       if (!resolution) {
         return res.status(400).json({ error: "resolution is required" });
-      });
+      }
       await quickbooksSyncService.resolveManualReview(
         itemId,
         resolution,
@@ -3177,7 +3177,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("[QBO Sync] Review resolution error:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Webhook handler for QuickBooks real-time updates with proper HMAC verification
@@ -3187,27 +3187,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!signature) {
         console.log("[QBO Webhook] Missing intuit-signature header");
         return res.status(401).json({ error: "Missing signature" });
-      });
+      }
 
       // Use raw body captured by middleware for proper HMAC verification
       const rawPayload = (req as any).rawBody;
       if (!rawPayload) {
         console.log("[QBO Webhook] No raw body available for verification");
         return res.status(400).json({ error: "Missing request body" });
-      });
+      }
       
       // Find the connection and verify signature before processing
       const event = req.body;
       if (!event.eventNotifications || event.eventNotifications.length === 0) {
         console.log("[QBO Webhook] No event notifications in payload");
         return res.status(200).send('OK');
-      });
+      }
 
       const realmId = event.eventNotifications[0]?.realmId;
       if (!realmId) {
         console.log("[QBO Webhook] No realmId in event notification");
         return res.status(200).send('OK');
-      });
+      }
 
       const [connection] = await db.select()
         .from(partnerConnections)
@@ -3217,7 +3217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!connection || !connection.webhookSecret) {
         console.log("[QBO Webhook] No connection or webhook secret for realm:", realmId);
         return res.status(401).json({ error: "Unknown realm or missing webhook secret" });
-      });
+      }
 
       // Verify HMAC-SHA256 signature using the raw payload
       try {
@@ -3230,13 +3230,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (verifyError: any) {
         console.error("[QBO Webhook] HMAC verification failed");
         return res.status(401).json({ error: "Invalid signature" });
-      });
+      }
       
       res.status(200).send('OK');
     } catch (error: any) {
       console.error("[QBO Webhook] Error:", error.message);
       res.status(500).json({ error: "Internal server error" });
-    });
+    }
   });
 
 
@@ -3385,7 +3385,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("[TrinityRegistry] Error:", error);
       res.status(500).json({ success: false, error: "Failed to get registry" });
-    });
+    }
   });
 
   app.get("/api/trinity/route-health", async (_req, res) => {
@@ -3402,7 +3402,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("[RouteHealth] Error:", error);
       res.status(500).json({ success: false, error: "Failed to get route health" });
-    });
+    }
   });
   // ============================================================================
   // AUTH ROUTES
@@ -3427,20 +3427,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({
           message: 'Email, password, first name, last name, and company name are required',
         });
-      });
+      }
 
       // Email format validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return res.status(400).json({ message: 'Invalid email format' });
-      });
+      }
 
       // Password strength validation
       if (password.length < 8) {
         return res.status(400).json({
           message: 'Password must be at least 8 characters long',
         });
-      });
+      }
 
       // Check if user already exists
       const existingUser = await storage.getUserByEmail(email);
@@ -3448,7 +3448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({
           message: 'An account with this email already exists',
         });
-      });
+      }
 
       // Validate subscription tier
       const validTiers = ['free', 'starter', 'professional', 'enterprise'];
@@ -3456,7 +3456,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({
           message: 'Invalid subscription tier',
         });
-      });
+      }
 
       console.log(`🚀 Starting organization registration for ${email} (${subscriptionTier} tier)`);
 
@@ -3536,10 +3536,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({
             message: subscriptionResult.error || 'Failed to create subscription',
           });
-        });
+        }
 
         console.log(`✅ Subscription created: ${subscriptionTier} (${billingCycle})`);
-      });
+      }
 
       // 6. Send welcome notification
       await notificationHelpers.sendWelcomeOrgNotification(workspace.id, user.id);
@@ -3590,7 +3590,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({
         message: error.message || 'Registration failed. Please try again.',
       });
-    });
+    }
   });
   
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
@@ -3601,7 +3601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
-    });
+    }
   });
 
   // Update user profile - supports both Replit Auth and custom session auth
@@ -3616,18 +3616,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } else if (req.session?.userId) {
         // Custom session auth
         userId = req.session.userId;
-      });
+      }
       
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const { firstName, lastName } = req.body;
 
       // Validation
       if (!firstName || !lastName) {
         return res.status(400).json({ message: "First name and last name are required" });
-      });
+      }
 
       // Update user profile
       const updatedUser = await storage.updateUser(userId, {
@@ -3644,7 +3644,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating profile:", error);
       res.status(500).json({ message: "Failed to update profile" });
-    });
+    }
   });
 
   // ============================================================================
@@ -3660,13 +3660,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const status = await checkMfaStatus(userId);
       res.json(status);
     } catch (error) {
       console.error("Error checking MFA status:", error);
       res.status(500).json({ message: "Failed to check MFA status" });
-    });
+    }
   });
 
   // Setup MFA - Generate secret and QR code
@@ -3678,12 +3678,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const userEmail = req.user!.email || '';
 
       if (!userEmail) {
         return res.status(400).json({ message: "Email required for MFA setup" });
-      });
+      }
 
       const mfaSetup = await generateMfaSecret(userId, userEmail);
       res.json({
@@ -3694,7 +3694,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error setting up MFA:", error);
       res.status(500).json({ message: "Failed to setup MFA" });
-    });
+    }
   });
 
   // Enable MFA - Verify first token and activate
@@ -3706,19 +3706,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { token } = req.body;
 
       if (!token) {
         return res.status(400).json({ message: "Token required" });
-      });
+      }
 
       // Verify the token
       const verification = await verifyMfaToken(userId, token);
 
       if (!verification.valid) {
         return res.status(400).json({ message: "Invalid token" });
-      });
+      }
 
       // Enable MFA
       await enableMfa(userId);
@@ -3730,7 +3730,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error enabling MFA:", error);
       res.status(500).json({ message: "Failed to enable MFA" });
-    });
+    }
   });
 
   // Verify MFA token during login (public endpoint for login flow)
@@ -3740,13 +3740,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!userId || !token) {
         return res.status(400).json({ message: "User ID and token required" });
-      });
+      }
 
       const verification = await verifyMfaToken(userId, token);
 
       if (!verification.valid) {
         return res.status(400).json({ message: "Invalid token" });
-      });
+      }
 
       res.json({
         success: true,
@@ -3755,7 +3755,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error verifying MFA token:", error);
       res.status(500).json({ message: "Failed to verify token" });
-    });
+    }
   });
 
   // Disable MFA - Requires password OR MFA token confirmation
@@ -3767,14 +3767,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { password, token } = req.body;
 
       if (!password && !token) {
         return res.status(400).json({ 
           message: "Password or MFA token required to disable MFA" 
         });
-      });
+      }
 
       // Option 1: Verify with password (for password-based accounts)
       if (password) {
@@ -3783,21 +3783,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           return res.status(400).json({ 
             message: "Password authentication not available. Use MFA token instead." 
           });
-        });
+        }
 
         const validPassword = await bcrypt.compare(password, user.passwordHash);
         if (!validPassword) {
           return res.status(400).json({ message: "Invalid password" });
-        });
-      });
+        }
+      }
 
       // Option 2: Verify with MFA token (for OIDC/social accounts)
       if (token && !password) {
         const verification = await verifyMfaToken(userId, token);
         if (!verification.valid) {
           return res.status(400).json({ message: "Invalid MFA token" });
-        });
-      });
+        }
+      }
 
       // Disable MFA after successful verification
       await disableMfa(userId);
@@ -3809,7 +3809,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error disabling MFA:", error);
       res.status(500).json({ message: "Failed to disable MFA" });
-    });
+    }
   });
 
   // Regenerate backup codes
@@ -3821,7 +3821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const newBackupCodes = await regenerateBackupCodes(userId);
 
       res.json({
@@ -3831,7 +3831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error regenerating backup codes:", error);
       res.status(500).json({ message: "Failed to regenerate backup codes" });
-    });
+    }
   });
 
   // Demo login route - bypasses authentication for demo workspace
@@ -3844,7 +3844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ 
         message: "Demo login is disabled in production for security reasons." 
       });
-    });
+    }
 
     try {
       const DEMO_USER_ID = "demo-user-00000000";
@@ -3856,7 +3856,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { seedDemoWorkspace } = await import("./seed-demo");
         await seedDemoWorkspace();
         demoUser = await storage.getUser(DEMO_USER_ID);
-      });
+      }
 
       // Support BOTH auth systems (custom auth + Replit Auth)
       // Custom auth format (requireAuth middleware expects this)
@@ -3875,7 +3875,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // OIDC token fields required by isAuthenticated middleware
           expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60), // 24 hours from now
           refresh_token: "demo-refresh-token", // Dummy token for demo
-        });
+        }
       };
 
       await new Promise((resolve, reject) => {
@@ -3891,7 +3891,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in demo login:", error);
       res.status(500).json({ message: "Failed to start demo" });
-    });
+    }
   });
 
   // Platform Staff Demo Login - separate endpoint for security clarity
@@ -3904,7 +3904,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       return res.status(403).json({ 
         message: "Platform demo login is disabled in production for security reasons." 
       });
-    });
+    }
 
     try {
       const ROOT_USER_ID = 'root-user-00000000';
@@ -3920,7 +3920,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const rootUser = await storage.getUser(ROOT_USER_ID);
       if (!rootUser) {
         throw new Error('Failed to create root user');
-      });
+      }
       
       // Support BOTH auth systems (custom auth + Replit Auth)
       req.session.userId = ROOT_USER_ID;
@@ -3935,7 +3935,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           },
           expires_at: Math.floor(Date.now() / 1000) + (24 * 60 * 60),
           refresh_token: "root-refresh-token",
-        });
+        }
       };
       
       await new Promise((resolve, reject) => {
@@ -3950,7 +3950,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in platform demo login:", error);
       res.status(500).json({ message: "Failed to start platform demo" });
-    });
+    }
   });
 
   // ============================================================================
@@ -3967,11 +3967,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
       const workspaceId = workspace.id;
 
       let reportData: any = {};
@@ -4058,13 +4058,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         default:
           return res.status(400).json({ message: "Invalid report type" });
-      });
+      }
 
       res.json(reportData);
     } catch (error: any) {
       console.error("Error generating report:", error);
       res.status(500).json({ message: "Failed to generate report" });
-    });
+    }
   });
 
   // ============================================================================
@@ -4081,19 +4081,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       // Get workspace from user (support both OIDC and Custom Auth)
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Get invoice with line items
       const invoice = await storage.getInvoice(id, workspace.id);
       if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
-      });
+      }
 
       const lineItems = await storage.getInvoiceLineItems(id);
       const client = invoice.clientId ? await db.select().from(clients).where(eq(clients.id, invoice.clientId)).limit(1) : null;
@@ -4155,7 +4155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error generating invoice PDF:", error);
       res.status(500).json({ message: "Failed to generate PDF" });
-    });
+    }
   });
 
   // Export payroll report as CSV
@@ -4167,11 +4167,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const workspaceId = workspace.id;
       const { startDate, endDate } = req.query;
@@ -4214,7 +4214,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error exporting payroll CSV:", error);
       res.status(500).json({ message: "Failed to export payroll" });
-    });
+    }
   });
 
   // Export time entries as CSV
@@ -4226,11 +4226,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const workspaceId = workspace.id;
       const { startDate, endDate, clientId } = req.query;
@@ -4251,7 +4251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error exporting time entries CSV:", error);
       res.status(500).json({ message: "Failed to export time entries" });
-    });
+    }
   });
 
   // Share report via workflow
@@ -4265,7 +4265,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       // Create workflow notification for each recipient
       for (const email of recipients) {
@@ -4294,11 +4294,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
             reportNumber: reportId,
             reportTitle: reportType.replace(/_/g, ' ').toUpperCase(),
             clientName: email.split('@')[0],
-          });
+          }
         ).catch(err => console.error(`[REPORT WORKFLOW] Failed to send report email to ${email}:`, err.message));
         
         console.log(`[REPORT WORKFLOW] Shared ${reportType} report to ${email}`);
-      });
+      }
 
       res.json({
         success: true,
@@ -4307,7 +4307,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error sharing report:", error);
       res.status(500).json({ message: "Failed to share report" });
-    });
+    }
   });
 
   // ============================================================================
@@ -4319,7 +4319,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     // ROOT users can see everything
     if (platformRole === 'root_admin') {
       return workspace;
-    });
+    }
 
     // For non-root users, remove sensitive admin/billing fields
     const {
@@ -4350,7 +4350,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // First try to get user's current workspace (the one they're actively using)
       const user = await storage.getUser(userId);
@@ -4358,12 +4358,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (user?.currentWorkspaceId) {
         workspace = await storage.getWorkspace(user.currentWorkspaceId);
-      });
+      }
       
       // Fallback to workspace they own
       if (!workspace) {
         workspace = await storage.getWorkspaceByOwnerId(userId);
-      });
+      }
       
       // Auto-create workspace on first login if none exists
       if (!workspace) {
@@ -4389,14 +4389,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Fix existing employee missing org_owner role
           await storage.updateEmployee(existingEmployee.id, { workspaceRole: 'org_owner' });
           console.log(`[Workspace Auto-Create] Fixed org_owner role for existing employee ${existingEmployee.id}`);
-        });
+        }
         
         // Clear historical platform updates for new workspace owner (UNS fresh start)
         const { onboardingOrchestrator } = await import('./services/ai-brain/subagents/onboardingOrchestrator');
         onboardingOrchestrator.clearPlatformUpdatesForNewUser(userId, workspace.id)
           .then(count => count > 0 && console.log(`[UNS] Cleared ${count} platform updates for new workspace owner ${userId}`))
           .catch(err => console.error('[UNS] Failed to clear platform updates:', err));
-      });
+      }
       
       // Get organization external ID (ORG-XXXX)
       const [orgIdentifier] = await db
@@ -4421,7 +4421,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching workspace:", error);
       res.status(500).json({ message: "Failed to fetch workspace" });
-    });
+    }
   });
 
   // Reactivate workspace subscription (org owner only)
@@ -4432,7 +4432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
       
       // Get the user's workspace
       const user = await storage.getUser(userId);
@@ -4440,13 +4440,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.status(404).json({ message: "No workspace found" });
-      });
+      }
       
       // Check if user is the org owner
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace || workspace.ownerId !== userId) {
         return res.status(403).json({ message: "Only the organization owner can reactivate the subscription" });
-      });
+      }
       
       // Reactivate the workspace
       await db.update(workspaces).set({ subscriptionStatus: "active" }).where(eq(workspaces.id, workspaceId));
@@ -4462,7 +4462,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error reactivating workspace:", error);
       res.status(500).json({ message: "Failed to reactivate subscription" });
-    });
+    }
   });
 
   // Update workspace (Users can only update basic settings, Platform Admin can update critical org info)
@@ -4474,12 +4474,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // SECURITY: Users can only update basic settings, not critical organization data
       // Platform admins use the /api/admin/workspace endpoint for full control
@@ -4498,12 +4498,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const [frontendKey, backendKey] of Object.entries(fieldMapping)) {
         if (req.body[frontendKey] !== undefined) {
           filteredData[backendKey] = req.body[frontendKey];
-        });
-      });
+        }
+      }
 
       if (Object.keys(filteredData).length === 0) {
         return res.status(400).json({ message: "No valid fields to update" });
-      });
+      }
 
       const validated = insertWorkspaceSchema.partial().parse(filteredData);
       const updated = await storage.updateWorkspace(workspace.id, validated);
@@ -4515,7 +4515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating workspace:", error);
       res.status(400).json({ message: error.message || "Failed to update workspace" });
-    });
+    }
   });
 
   /**
@@ -4535,7 +4535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     const currentWorkspace = await storage.getWorkspace(workspaceId);
     if (!currentWorkspace) {
       throw new Error('Workspace not found');
-    });
+    }
     
     const newSchedule = validated[scheduleField];
     const currentSchedule = currentWorkspace[scheduleField];
@@ -4553,7 +4553,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const anchor = seedAnchor(dayOfWeek, new Date());
       validated[anchorField] = anchor;
       console.log(`🌱 Seeding ${anchorField} for workspace ${workspaceId} (day ${dayOfWeek})`);
-    });
+    }
     
     // Update workspace in transaction
     return await db.transaction(async (tx) => {
@@ -4574,18 +4574,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { resolveWorkspaceForUser } = await import("./rbac");
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
       
       if (error || !workspaceId) {
         return res.status(404).json({ message: error || "Workspace not found" });
-      });
+      }
 
       // Only org owners and admins can update automation settings
       if (!['org_owner', 'org_admin'].includes(role || '')) {
         return res.status(403).json({ message: "Only organization owners and admins can update automation settings" });
-      });
+      }
 
       // Validate invoicing automation settings
       const invoicingSchema = insertWorkspaceSchema.pick({
@@ -4596,7 +4596,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).refine((data) => {
         if (data.invoiceSchedule === 'custom' && !data.invoiceCustomDays) {
           return false;
-        });
+        }
         return true;
       }, {
         message: "invoiceCustomDays is required when invoiceSchedule is 'custom'",
@@ -4621,7 +4621,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating invoicing automation:", error);
       res.status(400).json({ message: error.message || "Failed to update invoicing automation" });
-    });
+    }
   });
 
   // Update workspace automation settings - Payroll
@@ -4633,18 +4633,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { resolveWorkspaceForUser } = await import("./rbac");
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
       
       if (error || !workspaceId) {
         return res.status(404).json({ message: error || "Workspace not found" });
-      });
+      }
 
       // Only org owners and admins can update automation settings
       if (!['org_owner', 'org_admin'].includes(role || '')) {
         return res.status(403).json({ message: "Only organization owners and admins can update automation settings" });
-      });
+      }
 
       // Validate payroll automation settings
       const payrollSchema = insertWorkspaceSchema.pick({
@@ -4656,7 +4656,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).refine((data) => {
         if (data.payrollSchedule === 'custom' && !data.payrollCustomDays) {
           return false;
-        });
+        }
         return true;
       }, {
         message: "payrollCustomDays is required when payrollSchedule is 'custom'",
@@ -4681,7 +4681,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating payroll automation:", error);
       res.status(400).json({ message: error.message || "Failed to update payroll automation" });
-    });
+    }
   });
 
   // Update workspace automation settings - Scheduling
@@ -4693,18 +4693,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { resolveWorkspaceForUser } = await import("./rbac");
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
       
       if (error || !workspaceId) {
         return res.status(404).json({ message: error || "Workspace not found" });
-      });
+      }
 
       // Only org owners and admins can update automation settings
       if (!['org_owner', 'org_admin'].includes(role || '')) {
         return res.status(403).json({ message: "Only organization owners and admins can update automation settings" });
-      });
+      }
 
       // Validate scheduling automation settings
       const schedulingSchema = insertWorkspaceSchema.pick({
@@ -4716,7 +4716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).refine((data) => {
         if (data.scheduleGenerationInterval === 'custom' && !data.scheduleCustomDays) {
           return false;
-        });
+        }
         return true;
       }, {
         message: "scheduleCustomDays is required when scheduleGenerationInterval is 'custom'",
@@ -4741,7 +4741,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating scheduling automation:", error);
       res.status(400).json({ message: error.message || "Failed to update scheduling automation" });
-    });
+    }
   });
 
   // Update workspace organization info (Platform Admin Staff ONLY)
@@ -4753,7 +4753,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Platform staff can update ANY workspace field except ownerId
       const { ownerId, ...updateData } = req.body;
@@ -4768,7 +4768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating workspace (admin):", error);
       res.status(400).json({ message: error.message || "Failed to update workspace" });
-    });
+    }
   });
 
   // Get workspace theme
@@ -4780,20 +4780,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { resolveWorkspaceForUser } = await import("./rbac");
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
       
       if (error || !workspaceId) {
         return res.json(null);
-      });
+      }
 
       const theme = await storage.getWorkspaceTheme(workspaceId);
       res.json(theme);
     } catch (error) {
       console.error("Error fetching workspace theme:", error);
       res.json(null);
-    });
+    }
   });
 
   // Get available business categories
@@ -4804,7 +4804,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching business categories:", error);
       res.status(500).json({ message: "Failed to fetch business categories" });
-    });
+    }
   });
 
   // Seed form templates for workspace based on business category
@@ -4816,12 +4816,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { getTemplatesForCategory } = await import("./seedFormTemplates");
       const templates = getTemplatesForCategory(workspace.businessCategory || 'general');
@@ -4840,7 +4840,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           createdBy: userId,
         });
         createdTemplates.push(created);
-      });
+      }
 
       res.json({
         message: `Seeded ${createdTemplates.length} form templates for ${workspace.businessCategory || 'general'} category`,
@@ -4849,7 +4849,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error seeding form templates:", error);
       res.status(500).json({ message: error.message || "Failed to seed form templates" });
-    });
+    }
   });
 
   // Upgrade workspace billing tier
@@ -4860,7 +4860,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { tier } = req.body;
       
@@ -4874,7 +4874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!tierConfig[tier]) {
         return res.status(400).json({ message: "Invalid tier selected" });
-      });
+      }
 
       const config = tierConfig[tier];
 
@@ -4901,7 +4901,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error upgrading workspace:", error);
       res.status(500).json({ message: error.message || "Failed to upgrade workspace" });
-    });
+    }
   });
 
   // ============================================================================
@@ -4915,7 +4915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
-      });
+      }
       
       const isPlatformStaff = req.platformRole && ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'].includes(req.platformRole);
       
@@ -4946,7 +4946,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           isOwner: true,
           canManage: true,
         });
-      });
+      }
       
       // For platform staff, also add any workspace they're currently viewing
       if (isPlatformStaff && contextWorkspaceId && !processedIds.has(contextWorkspaceId)) {
@@ -4964,8 +4964,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             isOwner: false,
             canManage: true, // Platform staff can manage
           });
-        });
-      });
+        }
+      }
       
       // If user is an org_admin in a workspace (but not owner), add that too
       if (contextWorkspaceId && !processedIds.has(contextWorkspaceId)) {
@@ -4985,15 +4985,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
               isOwner: employee.workspaceRole === 'org_owner',
               canManage: true,
             });
-          });
-        });
-      });
+          }
+        }
+      }
       
       res.json(orgs);
     } catch (error: any) {
       console.error("Error fetching managed organizations:", error);
       res.status(500).json({ message: error.message || "Failed to fetch organizations" });
-    });
+    }
   });
   
   // Get members of an organization (employees in the workspace)
@@ -5008,12 +5008,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!userId) {
         return res.status(401).json({ message: "Authentication required" });
-      });
+      }
       
       // Validate status
       if (!["active", "suspended", "cancelled"].includes(status)) {
         return res.status(400).json({ message: "Invalid status. Must be: active, suspended, or cancelled" });
-      });
+      }
       
       // Check if user is platform admin or org owner
       const platformRole = req.platformRole;
@@ -5023,13 +5023,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, orgId)).limit(1);
       if (!workspace) {
         return res.status(404).json({ message: "Organization not found" });
-      });
+      }
       
       const isOwner = workspace.ownerId === userId;
       
       if (!isPlatformAdmin && !isOwner) {
         return res.status(403).json({ message: "Only platform admins or org owners can change activation status" });
-      });
+      }
       
       // Update workspace status
       await db.update(workspaces).set({ subscriptionStatus: status }).where(eq(workspaces.id, orgId));
@@ -5045,7 +5045,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error updating organization status:", error);
       res.status(500).json({ message: error.message || "Failed to update organization status" });
-    });
+    }
   });
 
   app.get('/api/organizations/:orgId/members', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -5056,7 +5056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!userId || !workspaceId) {
         return res.status(400).json({ message: "User and workspace context required" });
-      });
+      }
       
       // Check platform staff first
       const isPlatformStaff = req.platformRole && ['root_admin', 'sysop', 'support_manager', 'support_agent'].includes(req.platformRole);
@@ -5066,13 +5066,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const employee = await storage.getEmployeeByUserId(userId, workspaceId);
         if (employee?.workspaceRole !== 'org_owner' && employee?.workspaceRole !== 'org_admin') {
           return res.status(403).json({ message: "Only organization owners and admins can view member lists" });
-        });
-      });
+        }
+      }
       
       // Verify the user has access to this specific organization
       if (orgId !== workspaceId && !isPlatformStaff) {
         return res.status(403).json({ message: "You do not have access to this organization" });
-      });
+      }
       
       // Get all employees in the organization
       const employees = await storage.getEmployeesByWorkspace(orgId);
@@ -5092,7 +5092,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching organization members:", error);
       res.status(500).json({ message: error.message || "Failed to fetch members" });
-    });
+    }
   });
   
   // Update employee workspace role (org owners/admins only)
@@ -5105,11 +5105,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!userId || !workspaceId) {
         return res.status(400).json({ message: "User and workspace context required" });
-      });
+      }
       
       if (!newRole) {
         return res.status(400).json({ message: "New role is required" });
-      });
+      }
       
       // Check if requester is org_owner, org_admin, or platform staff
       const requesterEmployee = await storage.getEmployeeByUserId(userId, workspaceId);
@@ -5117,23 +5117,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!isPlatformStaff && requesterEmployee?.workspaceRole !== 'org_owner' && requesterEmployee?.workspaceRole !== 'org_admin') {
         return res.status(403).json({ message: "Only organization owners and admins can change roles" });
-      });
+      }
       
       // Get target employee
       const targetEmployee = await storage.getEmployee(employeeId);
       if (!targetEmployee) {
         return res.status(404).json({ message: "Employee not found" });
-      });
+      }
       
       // Prevent demoting yourself from org_owner
       if (targetEmployee.userId === userId && targetEmployee.workspaceRole === 'org_owner' && newRole !== 'org_owner') {
         return res.status(400).json({ message: "You cannot demote yourself from organization owner" });
-      });
+      }
       
       // Only platform staff or org_owner can promote to org_owner
       if (newRole === 'org_owner' && !isPlatformStaff && requesterEmployee?.workspaceRole !== 'org_owner') {
         return res.status(403).json({ message: "Only platform staff or org owners can promote to org owner" });
-      });
+      }
       
       // Update the role
       const updated = await storage.updateEmployee(employeeId, { workspaceRole: newRole });
@@ -5165,7 +5165,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               timestamp: new Date().toISOString(),
             },
           });
-        });
+        }
         
         // Emit Trinity orchestration event
         const { platformEventBus } = await import('./services/platformEventBus');
@@ -5184,13 +5184,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       } catch (wsError) {
         console.error('[RBAC] Failed to emit role change events:', wsError);
         // Non-fatal - continue with response
-      });
+      }
       
       res.json({ success: true, employee: updated });
     } catch (error: any) {
       console.error("Error updating employee role:", error);
       res.status(500).json({ message: error.message || "Failed to update role" });
-    });
+    }
   });
   
   // Toggle employee access (activate/deactivate)
@@ -5203,11 +5203,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!userId || !workspaceId) {
         return res.status(400).json({ message: "User and workspace context required" });
-      });
+      }
       
       if (typeof isActive !== 'boolean') {
         return res.status(400).json({ message: "isActive must be a boolean" });
-      });
+      }
       
       // Check if requester is org_owner, org_admin, or platform staff
       const requesterEmployee = await storage.getEmployeeByUserId(userId, workspaceId);
@@ -5215,23 +5215,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!isPlatformStaff && requesterEmployee?.workspaceRole !== 'org_owner' && requesterEmployee?.workspaceRole !== 'org_admin') {
         return res.status(403).json({ message: "Only organization owners and admins can manage access" });
-      });
+      }
       
       // Get target employee
       const targetEmployee = await storage.getEmployee(employeeId);
       if (!targetEmployee) {
         return res.status(404).json({ message: "Employee not found" });
-      });
+      }
       
       // Prevent deactivating yourself
       if (targetEmployee.userId === userId && !isActive) {
         return res.status(400).json({ message: "You cannot deactivate yourself" });
-      });
+      }
       
       // Only platform staff can deactivate org_owner
       if (targetEmployee.workspaceRole === 'org_owner' && !isActive && !isPlatformStaff) {
         return res.status(403).json({ message: "Only platform staff can deactivate organization owners" });
-      });
+      }
       
       // Update status
       const newStatus = isActive ? 'active' : 'inactive';
@@ -5251,7 +5251,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error toggling employee access:", error);
       res.status(500).json({ message: error.message || "Failed to toggle access" });
-    });
+    }
   });
 
   // ============================================================================
@@ -5270,30 +5270,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Get specific workspace employees
           const employees = await storage.getEmployeesByWorkspace(targetWorkspaceId);
           return res.json(employees);
-        });
+        }
         
         // No workspaceId specified - show demo workspace for backwards compatibility
         const allWorkspaces = await db.select().from(workspaces).limit(1);
         if (allWorkspaces.length > 0) {
           const employees = await storage.getEmployeesByWorkspace(allWorkspaces[0].id);
           return res.json(employees);
-        });
+        }
         return res.json([]);
-      });
+      }
       
       // Regular workspace manager/owner - use workspace from middleware
       const workspaceId = req.workspaceId;
       
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
 
       const employees = await storage.getEmployeesByWorkspace(workspaceId);
       res.json(employees);
     } catch (error) {
       console.error("Error fetching employees:", error);
       res.status(500).json({ message: "Failed to fetch employees" });
-    });
+    }
   });
 
   // PROTECTED: Manager or platform staff
@@ -5304,13 +5304,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
       
       // Get workspace for email sending
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Extract platform role (support staff only) before validation
       // Normalize empty strings to undefined to prevent database errors
@@ -5323,17 +5323,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!isPlatformStaff) {
           return res.status(403).json({ message: "Only platform staff can assign platform roles" });
-        });
+        }
         
         if (!employeeData.email) {
           return res.status(400).json({ message: "Email is required when assigning platform roles" });
-        });
+        }
         
         const validPlatformRoles = ['support_agent', 'support_manager', 'compliance_officer', 'sysop', 'deputy_admin', 'root_admin'];
         if (!validPlatformRoles.includes(platformRole)) {
           return res.status(400).json({ message: `Invalid platform role: ${platformRole}` });
-        });
-      });
+        }
+      }
 
       // Validate with Zod - only employee fields, no platformRole
       const validated = insertEmployeeSchema.parse({
@@ -5371,13 +5371,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   name: `${newEmployee.firstName} ${newEmployee.lastName}`,
                 }).returning();
                 userId = user.id;
-              });
+              }
               
               // Link user to employee
               await tx.update(employees)
                 .set({ userId })
                 .where(eq(employees.id, newEmployee.id));
-            });
+            }
             
             // Assign platform role
             await tx.insert(platformRoles).values({
@@ -5387,7 +5387,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               grantedReason: `Assigned during employee creation by ${req.user!.email || 'platform staff'}`,
             });
             console.log(`✅ Platform role ${platformRole} assigned to employee ${newEmployee.id} (user: ${userId})`);
-          });
+          }
           
           return newEmployee;
         });
@@ -5396,13 +5396,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Distinguish 404 vs 500 errors
         if (err.message && err.message.includes('Organization not found')) {
           return res.status(404).json({ message: "Workspace not found" });
-        });
+        }
         // All other errors are 500 (transaction rolled back successfully)
         return res.status(500).json({ 
           message: "Failed to create employee. No partial data was created.",
           error: err.message || "Unknown error"
         });
-      });
+      }
       
       // Fetch employee with external ID (created inside transaction)
       const updatedEmployee = await storage.getEmployee(employee.id, workspaceId);
@@ -5430,14 +5430,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           onboardingOrchestrator.clearPlatformUpdatesForNewUser(employee.userId, workspaceId)
             .then(count => count > 0 && console.log(`[UNS] Cleared ${count} platform updates for new employee user ${employee.userId}`))
             .catch(err => console.error('[UNS] Failed to clear platform updates:', err));
-        });
-      });
+        }
+      }
       
       // Trigger automated onboarding workflow (non-blocking)
       if (employee.id) {
         initiateEmployeeOnboarding(employee.id, workspaceId, req.user?.id)
           .catch(err => console.error('[Onboarding] Failed to initiate workflow:', err));
-      });
+      }
       
       // Post to AI Brain for observability (fire-and-forget, never blocks response)
       setImmediate(async () => {
@@ -5453,13 +5453,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         } catch (err) {
           console.error('[AIBrain] Event post error:', err);
-        });
+        }
       });
       res.json(updatedEmployee || employee);
     } catch (error: any) {
       console.error("Error creating employee:", error);
       res.status(400).json({ message: error.message || "Failed to create employee" });
-    });
+    }
   });
 
   // PROTECTED: Manager or platform staff
@@ -5470,7 +5470,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
 
       // Validate partial update, ensure no workspaceId override
       const { workspaceId: _, ...updateData } = req.body;
@@ -5490,8 +5490,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (mappedRole) {
           (validated as any).workspaceRole = mappedRole;
           console.log(`[RBAC Sync] Employee ${req.params.id}: organizationalTitle=${(validated as any).organizationalTitle} -> workspaceRole=${mappedRole}`);
-        });
-      });
+        }
+      }
 
       // Fetch old employee record for change comparison
       const oldEmployee = await storage.getEmployee(req.params.id, workspaceId);
@@ -5501,7 +5501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const employee = await storage.updateEmployee(req.params.id, workspaceId, validated);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
-      });
+      }
 
       // Emit Trinity orchestration event only when role/title actually changes
       const newOrgTitle = (employee as any)?.organizationalTitle;
@@ -5528,13 +5528,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           previous: { title: oldOrgTitle, role: oldWorkspaceRole },
           new: { title: newOrgTitle, role: newWorkspaceRole }
         });
-      });
+      }
 
       res.json(employee);
     } catch (error: any) {
       console.error("Error updating employee:", error);
       res.status(400).json({ message: error.message || "Failed to update employee" });
-    });
+    }
   });
 
   // PROTECTED: Owner only (destructive operation)
@@ -5545,18 +5545,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
 
       const deleted = await storage.deleteEmployee(req.params.id, workspaceId);
       if (!deleted) {
         return res.status(404).json({ message: "Employee not found" });
-      });
+      }
       
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting employee:", error);
       res.status(500).json({ message: "Failed to delete employee" });
-    });
+    }
   });
 
 
@@ -5567,19 +5567,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
 
       const employee = await storage.reactivateEmployee(req.params.id, workspaceId);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
-      });
+      }
       
       console.log(`[Employees] Reactivated employee ${req.params.id} in workspace ${workspaceId}`);
       res.json({ success: true, employee });
     } catch (error) {
       console.error("Error reactivating employee:", error);
       res.status(500).json({ message: "Failed to reactivate employee" });
-    });
+    }
   });
   // DUPLICATE REMOVED - This endpoint is defined earlier at line 1878
 
@@ -5595,7 +5595,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Get platform role FIRST (always available)
       const { getUserPlatformRole, isPlatformStaff } = await import('./rbac');
@@ -5616,7 +5616,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           platformRole,
           isPlatformStaff: true,
         });
-      });
+      }
       
       // For non-staff users, workspace is required
       if (!workspaceId || !workspaceRole) {
@@ -5624,7 +5624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: error || 'No workspace access found',
           requiresWorkspaceSelection: error?.includes('specify workspaceId'),
         });
-      });
+      }
       
       // Get workspace tier
       const workspace = await db.query.workspaces.findFirst({
@@ -5637,7 +5637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' });
-      });
+      }
       
       res.json({
         workspaceId,
@@ -5650,7 +5650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[API] Error fetching workspace access:', error);
       res.status(500).json({ message: 'Failed to fetch workspace access' });
-    });
+    }
   });
 
   /**
@@ -5666,18 +5666,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
       
       if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
-      });
+      }
 
       // RBAC: Only org_owner and org_admin can view billing data
       if (role !== 'org_owner' && role !== 'org_admin') {
         return res.status(403).json({ error: 'Insufficient permissions to view usage data' });
-      });
+      }
 
       // Get current month by default, or custom period from query params
       const now = new Date();
@@ -5692,7 +5692,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[API] Error fetching usage summary:', error);
       res.status(500).json({ message: 'Failed to fetch usage summary' });
-    });
+    }
   });
 
   // ==================== CREDIT SYSTEM API ROUTES ====================
@@ -5709,13 +5709,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
       
       if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
-      });
+      }
 
       // Get workspace details for tier
       const { workspaces } = await import('@shared/schema');
@@ -5724,7 +5724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' });
-      });
+      }
 
       const { creditManager, isUnlimitedCreditUser, UNLIMITED_CREDITS_BALANCE } = await import('./services/billing/creditManager');
       
@@ -5748,7 +5748,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subscriptionTier: 'unlimited',
           unlimitedCredits: true,
         });
-      });
+      }
       
       const credits = await creditManager.getCreditsAccount(workspaceId);
 
@@ -5759,7 +5759,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ...newCredits,
           subscriptionTier: workspace.subscriptionTier || 'free',
         });
-      });
+      }
 
       res.json({
         ...credits,
@@ -5768,7 +5768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[API] Error fetching credit balance:', error);
       res.status(500).json({ message: 'Failed to fetch credit balance' });
-    });
+    }
   });
 
   /**
@@ -5783,13 +5783,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
       
       if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
-      });
+      }
 
       const { creditManager, isUnlimitedCreditUser, UNLIMITED_CREDITS_BALANCE } = await import('./services/billing/creditManager');
       
@@ -5813,7 +5813,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subscriptionTier: 'unlimited',
           unlimitedCredits: true,
         });
-      });
+      }
       
       const breakdown = await creditManager.getMonthlyUsageBreakdown(workspaceId);
 
@@ -5821,7 +5821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[API] Error fetching credit usage breakdown:', error);
       res.status(500).json({ message: 'Failed to fetch usage breakdown' });
-    });
+    }
   });
 
   /**
@@ -5836,18 +5836,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
       
       if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
-      });
+      }
 
       // RBAC: Only org_owner and org_admin can view transaction history
       if (role !== 'org_owner' && role !== 'org_admin') {
         return res.status(403).json({ error: 'Insufficient permissions to view transaction history' });
-      });
+      }
 
       const limit = parseInt(req.query.limit as string) || 50;
       const offset = parseInt(req.query.offset as string) || 0;
@@ -5874,7 +5874,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           subscriptionTier: 'unlimited',
           unlimitedCredits: true,
         });
-      });
+      }
       
       const transactions = await creditManager.getTransactionHistory(workspaceId, limit, offset);
 
@@ -5882,7 +5882,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[API] Error fetching credit transactions:', error);
       res.status(500).json({ message: 'Failed to fetch transactions' });
-    });
+    }
   });
 
   /**
@@ -5896,13 +5896,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, error } = await resolveWorkspaceForUser(userId);
       
       if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
-      });
+      }
 
       // Get workspace tier
       const { workspaces } = await import('@shared/schema');
@@ -5911,7 +5911,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!workspace) {
         return res.status(404).json({ error: 'Workspace not found' });
-      });
+      }
 
       // Fetch available packs for this tier
       const { creditPacks } = await import('@shared/schema');
@@ -5933,7 +5933,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[API] Error fetching credit packs:', error);
       res.status(500).json({ message: 'Failed to fetch credit packs' });
-    });
+    }
   });
 
   /**
@@ -5948,24 +5948,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { resolveWorkspaceForUser } = await import('./rbac');
       const { workspaceId, role, error } = await resolveWorkspaceForUser(userId);
       
       if (!workspaceId) {
         return res.status(400).json({ error: error || 'No workspace found' });
-      });
+      }
 
       // RBAC: Only org_owner and org_admin can purchase credits
       if (role !== 'org_owner' && role !== 'org_admin') {
         return res.status(403).json({ error: 'Insufficient permissions to purchase credits' });
-      });
+      }
 
       const { creditPackId, successUrl, cancelUrl } = req.body;
 
       if (!creditPackId || !successUrl || !cancelUrl) {
         return res.status(400).json({ error: 'Missing required fields' });
-      });
+      }
 
       const { creditPurchaseService } = await import('./services/billing/creditPurchase');
       const session = await creditPurchaseService.createCheckoutSession({
@@ -5980,7 +5980,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[API] Error creating credit purchase session:', error);
       res.status(500).json({ message: 'Failed to create checkout session' });
-    });
+    }
   });
 
   /**
@@ -5992,7 +5992,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     if (!signature) {
       return res.status(400).json({ error: 'Missing stripe-signature header' });
-    });
+    }
 
     try {
       const { creditPurchaseService } = await import('./services/billing/creditPurchase');
@@ -6010,14 +6010,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Only process credit purchases
         if (session.metadata?.type === 'credit_purchase') {
           await creditPurchaseService.handlePaymentSuccess(session);
-        });
-      });
+        }
+      }
 
       res.json({ received: true });
     } catch (error) {
       console.error('[Webhook] Error processing Stripe webhook:', error);
       res.status(400).json({ error: 'Webhook processing failed' });
-    });
+    }
   });
 
   // ==================== REPORTING API ROUTES ====================
@@ -6050,7 +6050,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[Reports] Error generating billable hours report:', error);
       res.status(500).json({ message: 'Failed to generate billable hours report' });
-    });
+    }
   });
 
   /**
@@ -6079,7 +6079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[Reports] Error generating payroll report:', error);
       res.status(500).json({ message: 'Failed to generate payroll report' });
-    });
+    }
   });
 
   /**
@@ -6108,7 +6108,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[Reports] Error generating client summary report:', error);
       res.status(500).json({ message: 'Failed to generate client summary report' });
-    });
+    }
   });
 
   /**
@@ -6137,7 +6137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[Reports] Error generating employee activity report:', error);
       res.status(500).json({ message: 'Failed to generate employee activity report' });
-    });
+    }
   });
 
   /**
@@ -6166,7 +6166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('[Reports] Error generating audit logs report:', error);
       res.status(500).json({ message: 'Failed to generate audit logs report' });
-    });
+    }
   });
 
   // Get current employee profile (Employee Self-Service)
@@ -6179,22 +6179,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try custom auth first (session-based)
       if (req.session?.userId) {
         userId = req.session.userId;
-      });
+      }
       // Try Replit Auth (OIDC)
       else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
         userId = req.user.claims.sub;
-      });
+      }
       
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
       
       // Find employee by userId
       const employee = await storage.getEmployeeByUserId(userId);
       
       if (!employee) {
         return res.status(404).json({ message: "Employee profile not found" });
-      });
+      }
       
       // Fetch platformRole for RBAC (chat routing, access control)
       const [platformRoleData] = await db
@@ -6211,7 +6211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching employee profile:", error);
       res.status(500).json({ message: "Failed to fetch employee profile" });
-    });
+    }
   });
 
   // Get current user's complete identity (ALL user types) - RBAC tracking
@@ -6224,21 +6224,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Try custom auth first (session-based)
       if (req.session?.userId) {
         userId = req.session.userId;
-      });
+      }
       // Try Replit Auth (OIDC)
       else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
         userId = req.user.claims.sub;
-      });
+      }
       
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
       
       // Get user account
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
-      });
+      }
       
       const identity: any = {
         userType: 'guest',
@@ -6268,7 +6268,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         identity.externalId = supportAgent.supportCode;
         identity.details = supportAgent;
         return res.json(identity);
-      });
+      }
       
       // Check if user is an employee
       const employee = await storage.getEmployeeByUserId(userId);
@@ -6292,17 +6292,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (orgIdentifier) {
             identity.orgId = orgIdentifier.externalId; // ORG-XXXX
-          });
-        });
+          }
+        }
         
         return res.json(identity);
-      });
+      }
       
       // Check for platform admin (no employee/support record)
       if (user.platformRole && ['root_admin', 'deputy_admin', 'sysop', 'support_manager'].includes(user.platformRole)) {
         identity.userType = 'platform_admin';
         return res.json(identity);
-      });
+      }
       
       // Check if user is a client
       const client = await storage.getClientByUserId(userId);
@@ -6325,18 +6325,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           if (orgIdentifier) {
             identity.orgId = orgIdentifier.externalId; // ORG-XXXX
-          });
-        });
+          }
+        }
         
         return res.json(identity);
-      });
+      }
       
       // Default: guest or unassigned user
       return res.json(identity);
     } catch (error: any) {
       console.error("Error fetching user identity:", error);
       res.status(500).json({ message: "Failed to fetch user identity" });
-    });
+    }
   });
 
   // Update employee contact information (Employee Self-Service)
@@ -6349,7 +6349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!employee) {
         return res.status(404).json({ message: "Employee profile not found" });
-      });
+      }
       
       // Only allow updating contact info fields (not employment details)
       const allowedFields = ['phone', 'email', 'address', 'addressLine2', 'city', 'state', 'zipCode', 'country', 
@@ -6358,25 +6358,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const key of allowedFields) {
         if (req.body[key] !== undefined) {
           filteredData[key] = req.body[key];
-        });
-      });
+        }
+      }
 
       if (Object.keys(filteredData).length === 0) {
         return res.status(400).json({ message: "No valid fields to update" });
-      });
+      }
 
       const validated = insertEmployeeSchema.partial().parse(filteredData);
       const updated = await storage.updateEmployee(employee.id, employee.workspaceId, validated);
       
       if (!updated) {
         return res.status(404).json({ message: "Failed to update employee" });
-      });
+      }
       
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating contact info:", error);
       res.status(400).json({ message: error.message || "Failed to update contact information" });
-    });
+    }
   });
 
   // Get employee's own documents (Employee Self-Service)
@@ -6389,7 +6389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!employee) {
         return res.status(404).json({ message: "Employee profile not found" });
-      });
+      }
       
       // Fetch employee's documents
       const documents = await storage.getEmployeeDocuments(employee.workspaceId, employee.id, {});
@@ -6398,7 +6398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching employee documents:", error);
       res.status(500).json({ message: "Failed to fetch documents" });
-    });
+    }
   });
 
   // Approve employee and set pay rate (post-onboarding) - MANAGER/OWNER ONLY
@@ -6409,7 +6409,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       // Validate request body
       const approvalSchema = z.object({
@@ -6424,13 +6424,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!existingEmployee) {
         return res.status(404).json({ message: "Employee not found or does not belong to your workspace" });
-      });
+      }
 
       if (existingEmployee.onboardingStatus !== 'pending_review') {
         return res.status(400).json({ 
           message: `Employee must be in 'pending_review' status. Current status: ${existingEmployee.onboardingStatus}` 
         });
-      });
+      }
 
       // Update employee with pay rate and mark as completed
       const employee = await storage.updateEmployee(employeeId, user.currentWorkspaceId, {
@@ -6440,7 +6440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!employee) {
         return res.status(404).json({ message: "Failed to update employee" });
-      });
+      }
 
       // Audit log
       console.log(`[AUDIT] Manager ${userId} approved employee ${employeeId} with hourly rate $${hourlyRate}`);
@@ -6450,9 +6450,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error approving employee:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: error.errors[0].message });
-      });
+      }
       res.status(400).json({ message: error.message || "Failed to approve employee" });
-    });
+    }
   });
 
   // ============================================================================
@@ -6466,14 +6466,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const benefits = await storage.getEmployeeBenefitsByWorkspace(workspace.id);
       res.json(benefits);
     } catch (error) {
       console.error("Error fetching benefits:", error);
       res.status(500).json({ message: "Failed to fetch benefits" });
-    });
+    }
   });
 
   app.get('/api/benefits/employee/:employeeId', isAuthenticated, async (req: any, res) => {
@@ -6483,7 +6483,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { employeeId } = req.params;
       const benefits = await storage.getEmployeeBenefitsByEmployee(employeeId, workspace.id);
@@ -6491,7 +6491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching employee benefits:", error);
       res.status(500).json({ message: "Failed to fetch employee benefits" });
-    });
+    }
   });
 
   app.post('/api/benefits', isAuthenticated, async (req: any, res) => {
@@ -6501,7 +6501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Import schema for validation
       const { insertEmployeeBenefitSchema } = await import("@shared/schema");
@@ -6516,7 +6516,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating benefit:", error);
       res.status(400).json({ message: error.message || "Failed to create benefit" });
-    });
+    }
   });
 
   app.patch('/api/benefits/:id', isAuthenticated, async (req: any, res) => {
@@ -6526,7 +6526,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { id } = req.params;
       
@@ -6541,13 +6541,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updated) {
         return res.status(404).json({ message: "Benefit not found" });
-      });
+      }
 
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating benefit:", error);
       res.status(400).json({ message: error.message || "Failed to update benefit" });
-    });
+    }
   });
 
   app.delete('/api/benefits/:id', isAuthenticated, async (req: any, res) => {
@@ -6557,20 +6557,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { id } = req.params;
       const deleted = await storage.deleteEmployeeBenefit(id, workspace.id);
       
       if (!deleted) {
         return res.status(404).json({ message: "Benefit not found" });
-      });
+      }
 
       res.json({ message: "Benefit deleted successfully" });
     } catch (error) {
       console.error("Error deleting benefit:", error);
       res.status(500).json({ message: "Failed to delete benefit" });
-    });
+    }
   });
 
   // ============================================================================
@@ -6584,14 +6584,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const reviews = await storage.getPerformanceReviewsByWorkspace(workspace.id);
       res.json(reviews);
     } catch (error) {
       console.error("Error fetching reviews:", error);
       res.status(500).json({ message: "Failed to fetch reviews" });
-    });
+    }
   });
 
   app.post('/api/reviews', isAuthenticated, async (req: any, res) => {
@@ -6601,7 +6601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { insertPerformanceReviewSchema } = await import("@shared/schema");
       const validated = insertPerformanceReviewSchema.parse({
@@ -6614,7 +6614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating review:", error);
       res.status(400).json({ message: error.message || "Failed to create review" });
-    });
+    }
   });
 
   app.patch('/api/reviews/:id', isAuthenticated, async (req: any, res) => {
@@ -6624,7 +6624,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { id } = req.params;
       
@@ -6639,13 +6639,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updated) {
         return res.status(404).json({ message: "Review not found" });
-      });
+      }
 
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating review:", error);
       res.status(400).json({ message: error.message || "Failed to update review" });
-    });
+    }
   });
 
   // ============================================================================
@@ -6659,7 +6659,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const status = req.query.status as string | undefined;
       const requests = await storage.getPtoRequestsByWorkspace(workspace.id, { status });
@@ -6667,7 +6667,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching PTO requests:", error);
       res.status(500).json({ message: "Failed to fetch PTO requests" });
-    });
+    }
   });
 
   app.post('/api/pto', isAuthenticated, async (req: any, res) => {
@@ -6677,7 +6677,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { insertPtoRequestSchema } = await import("@shared/schema");
       const validated = insertPtoRequestSchema.parse({
@@ -6690,7 +6690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating PTO request:", error);
       res.status(400).json({ message: error.message || "Failed to create PTO request" });
-    });
+    }
   });
 
   app.patch('/api/pto/:id/approve', isAuthenticated, async (req: any, res) => {
@@ -6700,7 +6700,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { id } = req.params;
       const { approverId } = req.body;
@@ -6708,13 +6708,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!approved) {
         return res.status(404).json({ message: "PTO request not found" });
-      });
+      }
 
       res.json(approved);
     } catch (error: any) {
       console.error("Error approving PTO request:", error);
       res.status(400).json({ message: error.message || "Failed to approve PTO request" });
-    });
+    }
   });
 
   app.patch('/api/pto/:id/deny', isAuthenticated, async (req: any, res) => {
@@ -6724,7 +6724,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { id } = req.params;
       const { approverId, denialReason } = req.body;
@@ -6732,13 +6732,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!denied) {
         return res.status(404).json({ message: "PTO request not found" });
-      });
+      }
 
       res.json(denied);
     } catch (error: any) {
       console.error("Error denying PTO request:", error);
       res.status(400).json({ message: error.message || "Failed to deny PTO request" });
-    });
+    }
   });
 
   // ============================================================================
@@ -6754,7 +6754,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching PTO balances:", error);
       res.status(500).json({ message: "Failed to fetch PTO balances" });
-    });
+    }
   });
   
   // Get specific employee PTO balance
@@ -6767,13 +6767,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!balance) {
         return res.status(404).json({ message: "Employee or PTO benefit not found" });
-      });
+      }
       
       res.json(balance);
     } catch (error: any) {
       console.error("Error fetching employee PTO balance:", error);
       res.status(500).json({ message: "Failed to fetch PTO balance" });
-    });
+    }
   });
   
   // Manually trigger weekly PTO accrual (Owner only)
@@ -6790,7 +6790,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error running PTO accrual:", error);
       res.status(500).json({ message: "Failed to run PTO accrual" });
-    });
+    }
   });
   
   // Get performance review reminders summary (Manager/Owner only)
@@ -6802,7 +6802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching review reminder summary:", error);
       res.status(500).json({ message: "Failed to fetch review reminders" });
-    });
+    }
   });
   
   // Get all overdue performance reviews (Manager/Owner only)
@@ -6814,7 +6814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching overdue reviews:", error);
       res.status(500).json({ message: "Failed to fetch overdue reviews" });
-    });
+    }
   });
   
   // Get upcoming performance reviews (Manager/Owner only)
@@ -6827,7 +6827,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching upcoming reviews:", error);
       res.status(500).json({ message: "Failed to fetch upcoming reviews" });
-    });
+    }
   });
 
   // ============================================================================
@@ -6841,14 +6841,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const terminations = await storage.getEmployeeTerminationsByWorkspace(workspace.id);
       res.json(terminations);
     } catch (error) {
       console.error("Error fetching terminations:", error);
       res.status(500).json({ message: "Failed to fetch terminations" });
-    });
+    }
   });
 
   app.post('/api/terminations', isAuthenticated, async (req: any, res) => {
@@ -6858,7 +6858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { insertEmployeeTerminationSchema } = await import("@shared/schema");
       const validated = insertEmployeeTerminationSchema.parse({
@@ -6871,7 +6871,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating termination:", error);
       res.status(400).json({ message: error.message || "Failed to create termination" });
-    });
+    }
   });
 
   app.patch('/api/terminations/:id', isAuthenticated, async (req: any, res) => {
@@ -6881,7 +6881,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { id } = req.params;
       
@@ -6896,13 +6896,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updated) {
         return res.status(404).json({ message: "Termination not found" });
-      });
+      }
 
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating termination:", error);
       res.status(400).json({ message: error.message || "Failed to update termination" });
-    });
+    }
   });
 
   app.patch('/api/terminations/:id/complete', isAuthenticated, async (req: any, res) => {
@@ -6912,20 +6912,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { id } = req.params;
       const completed = await storage.completeTermination(id, workspace.id);
       
       if (!completed) {
         return res.status(404).json({ message: "Termination not found" });
-      });
+      }
 
       res.json(completed);
     } catch (error: any) {
       console.error("Error completing termination:", error);
       res.status(400).json({ message: error.message || "Failed to complete termination" });
-    });
+    }
   });
 
   // ============================================================================
@@ -7027,7 +7027,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching leader stats:", error);
       res.status(500).json({ message: "Failed to fetch leader stats" });
-    });
+    }
   });
   
   // Get pending tasks for leader
@@ -7043,7 +7043,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching recent actions:", error);
       res.status(500).json({ message: "Failed to fetch recent actions" });
-    });
+    }
   });
   
   // Reset employee password (leader self-service)
@@ -7057,7 +7057,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const employee = await storage.getEmployee(employeeId, workspaceId);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found in your workspace" });
-      });
+      }
       
       // Generate temporary password
       const tempPassword = crypto.randomBytes(8).toString('hex');
@@ -7074,7 +7074,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updatedAt: new Date()
           })
           .where(eq(users.id, employee.userId));
-      });
+      }
       
       // Log action to leader_actions table
       await storage.createLeaderAction({
@@ -7113,7 +7113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error resetting password:", error);
       res.status(500).json({ message: "Failed to reset password" });
-    });
+    }
   });
   
   // Unlock employee account (leader self-service)
@@ -7127,7 +7127,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const employee = await storage.getEmployee(employeeId, workspaceId);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found in your workspace" });
-      });
+      }
       
       // Unlock account (if employee has userId)
       if (employee.userId) {
@@ -7139,7 +7139,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updatedAt: new Date()
           })
           .where(eq(users.id, employee.userId));
-      });
+      }
       
       // Log action to leader_actions table
       await storage.createLeaderAction({
@@ -7166,7 +7166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error unlocking account:", error);
       res.status(500).json({ message: "Failed to unlock account" });
-    });
+    }
   });
   
   // Update employee contact info (leader self-service)
@@ -7180,7 +7180,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const employee = await storage.getEmployee(employeeId, workspaceId);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found in your workspace" });
-      });
+      }
       
       // Capture before state for audit
       const beforeState = {
@@ -7230,7 +7230,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating contact info:", error);
       res.status(500).json({ message: "Failed to update contact information" });
-    });
+    }
   });
 
   // Create escalation ticket to platform support
@@ -7273,16 +7273,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             attempts++;
             if (attempts >= maxAttempts) {
               return res.status(500).json({ message: "Failed to generate unique ticket number after retries" });
-            });
+            }
             continue;
-          });
+          }
           throw error; // Re-throw other errors
-        });
-      });
+        }
+      }
       
       if (!ticket) {
         return res.status(500).json({ message: "Failed to create escalation ticket" });
-      });
+      }
       
       // Log escalation action
       await storage.createLeaderAction({
@@ -7310,7 +7310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error creating escalation ticket:", error);
       res.status(500).json({ message: "Failed to create escalation ticket" });
-    });
+    }
   });
 
   // Get escalation tickets for workspace
@@ -7323,7 +7323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching escalation tickets:", error);
       res.status(500).json({ message: "Failed to fetch escalation tickets" });
-    });
+    }
   });
 
   // Update escalation ticket status (platform staff only)
@@ -7349,7 +7349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!isPlatformStaff) {
         return res.status(403).json({ message: "Only platform staff can update escalation tickets" });
-      });
+      }
       
       // Get existing ticket for audit trail and state validation
       const [existingTicket] = await db
@@ -7360,7 +7360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!existingTicket) {
         return res.status(404).json({ message: "Escalation ticket not found" });
-      });
+      }
       
       // Validate status transition based on current state
       const currentStatus = existingTicket.status;
@@ -7373,19 +7373,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validStatuses = ['open', 'in_progress', 'resolved'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ message: "Invalid status value" });
-      });
+      }
       
       const allowedNextStates = allowedTransitions[currentStatus || 'open'] || [];
       if (!allowedNextStates.includes(status)) {
         return res.status(400).json({ 
           message: `Cannot transition from ${currentStatus} to ${status}. Allowed transitions: ${allowedNextStates.join(', ') || 'none'}` 
         });
-      });
+      }
       
       // Require resolution when closing ticket
       if (status === 'resolved' && !resolution) {
         return res.status(400).json({ message: "Resolution is required when closing an escalation ticket" });
-      });
+      }
       
       // Capture before state for audit
       const beforeState = {
@@ -7398,7 +7398,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (resolution && updated) {
         await storage.addEscalationTicketResponse(id, resolution);
-      });
+      }
       
       // Capture after state for audit
       const afterState = {
@@ -7432,7 +7432,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating escalation ticket:", error);
       res.status(500).json({ message: "Failed to update escalation ticket" });
-    });
+    }
   });
 
   // ============================================================================
@@ -7459,7 +7459,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             hasNext: false,
             hasPrev: false
           });
-        });
+        }
         
         // Validate pagination params
         const validated = clientsQuerySchema.parse(paginationQuery);
@@ -7471,14 +7471,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
         
         return res.json(result);
-      });
+      }
       
       // Regular workspace manager/owner - use workspace from middleware
       const workspaceId = req.workspaceId;
       
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
 
       // Validate pagination params
       const validated = clientsQuerySchema.parse(req.query);
@@ -7496,10 +7496,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid query parameters",
           errors: error.errors
         });
-      });
+      }
       console.error("Error fetching clients:", error);
       res.status(500).json({ message: "Failed to fetch clients" });
-    });
+    }
   });
 
   // PROTECTED: Lightweight client lookup for dropdowns/selectors (unpaginated)
@@ -7511,25 +7511,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (!targetWorkspaceId) {
           return res.json([]);
-        });
+        }
         
         const clients = await storage.getClientsByWorkspace(targetWorkspaceId);
         return res.json(clients);
-      });
+      }
       
       // Regular workspace manager/owner
       const workspaceId = req.workspaceId;
       
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
 
       const clients = await storage.getClientsByWorkspace(workspaceId);
       res.json(clients);
     } catch (error) {
       console.error("Error fetching clients for lookup:", error);
       res.status(500).json({ message: "Failed to fetch clients" });
-    });
+    }
   });
 
   // PROTECTED: Manager or platform staff
@@ -7540,13 +7540,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
       
       // Get workspace for reference
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Extract billing info from request
       const { billableRate, billingCycle, serviceType, ...clientData } = req.body;
@@ -7570,12 +7570,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (matchingUser) {
             userId = matchingUser.id;
             console.log(`[Client Creation] Linked client to user ${matchingUser.id} via email`);
-          });
+          }
         } catch (error) {
           console.error('[Client Creation] Error looking up user by email:', error);
           // Continue without linking - don't fail client creation
-        });
-      });
+        }
+      }
 
       // Create the client with userId if found
       const client = await storage.createClient({
@@ -7601,7 +7601,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           hasSubscription: false,
           subscriptionFrequency: billingCycle || "monthly", // Store billing cycle here
         });
-      });
+      }
 
 
       // Send client welcome email (non-blocking)
@@ -7615,12 +7615,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           validated.companyName || '',
           workspace.name || ''
         ).catch(err => console.error('[Client Creation] Failed to send welcome email:', err));
-      });
+      }
       res.json(client);
     } catch (error: any) {
       console.error("Error creating client:", error);
       res.status(400).json({ message: error.message || "Failed to create client" });
-    });
+    }
   });
 
   // PROTECTED: Manager or platform staff
@@ -7631,7 +7631,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
 
       // Validate partial update, ensure no workspaceId override
       const { workspaceId: _, ...updateData } = req.body;
@@ -7640,13 +7640,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const client = await storage.updateClient(req.params.id, workspaceId, validated);
       if (!client) {
         return res.status(404).json({ message: "Client not found" });
-      });
+      }
       
       res.json(client);
     } catch (error: any) {
       console.error("Error updating client:", error);
       res.status(400).json({ message: error.message || "Failed to update client" });
-    });
+    }
   });
 
   // PROTECTED: Manager or platform staff
@@ -7657,18 +7657,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
 
       const deleted = await storage.deleteClient(req.params.id, workspaceId);
       if (!deleted) {
         return res.status(404).json({ message: "Client not found" });
-      });
+      }
       
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting client:", error);
       res.status(500).json({ message: "Failed to delete client" });
-    });
+    }
   });
 
   // ============================================================================
@@ -7683,7 +7683,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Extract date range filters from query params
       const weekStart = req.query.weekStart as string | undefined;
@@ -7705,10 +7705,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const shiftStart = new Date(shift.startTime);
               return shiftStart >= startDate && shiftStart <= endDate;
             });
-          });
+          }
           
           return res.json(shifts);
-        });
+        }
         // No workspace specified: return first workspace's shifts (diagnostic mode)
         const allWorkspaces = await db.select().from(workspaces).limit(1);
         if (allWorkspaces.length > 0) {
@@ -7722,12 +7722,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               const shiftStart = new Date(shift.startTime);
               return shiftStart >= startDate && shiftStart <= endDate;
             });
-          });
+          }
           
           return res.json(shifts);
-        });
+        }
         return res.json([]);
-      });
+      }
       
       // Regular workspace member: resolve workspace via RBAC
       const requestedWorkspaceId = req.query.workspaceId as string | undefined;
@@ -7735,7 +7735,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId || !role) {
         return res.status(403).json({ error: error || 'No workspace access found' });
-      });
+      }
       
       // All workspace roles can view shifts (owner, manager, admin, supervisor, staff)
       let shifts = await storage.getShiftsByWorkspace(workspaceId);
@@ -7748,13 +7748,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const shiftStart = new Date(shift.startTime);
           return shiftStart >= startDate && shiftStart <= endDate;
         });
-      });
+      }
       
       res.json(shifts);
     } catch (error) {
       console.error("Error fetching shifts:", error);
       res.status(500).json({ message: "Failed to fetch shifts" });
-    });
+    }
   });
 
   app.post('/api/shifts', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -7765,7 +7765,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId!;
 
       // Extract post orders array before validation (not part of shift schema)
@@ -7798,12 +7798,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 relatedEntityId: shift.id,
                 createdBy: userId,
               });
-            });
-          });
-        });
+            }
+          }
+        }
       } catch (notifyError) {
         console.error('Error sending shift notification:', notifyError);
-      });
+      }
 
       // AUDIT LOG: Shift created
       try {
@@ -7821,7 +7821,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } catch (auditError) {
         console.error('Audit log error:', auditError);
-      });
+      }
       
       // Create shift orders (post orders) if provided
       if (postOrders && Array.isArray(postOrders) && postOrders.length > 0) {
@@ -7865,7 +7865,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             requiresPhotos: true,
             photoFrequency: 'hourly',
             photoInstructions: 'Photo evidence of equipment status'
-          });
+          }
         ];
 
         for (const orderId of postOrders) {
@@ -7883,11 +7883,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
               photoInstructions: template.photoInstructions,
               createdBy: userId,
             });
-          });
-        });
+          }
+        }
 
         console.log(`📋 Created ${postOrders.length} post orders for shift ${shift.id}`);
-      });
+      }
       
       // Send shift assignment email if employee has email
       if (shift.employeeId) {
@@ -7910,8 +7910,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             endTime,
             clientName: client ? `${client.firstName} ${client.lastName}` : undefined
           }).catch(err => console.error('Failed to send shift assignment email:', err));
-        });
-      });
+        }
+      }
       
       // 📡 REAL-TIME: Broadcast shift creation ONLY after successful DB operation
       broadcastShiftUpdate(workspaceId, 'shift_created', shift);
@@ -7933,15 +7933,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             shiftTitle: shift.title || 'Shift',
             shiftDate,
             assignedBy: userId,
-          });
+          }
         ).catch(err => console.error('Failed to create shift notification:', err));
-      });
+      }
       
       res.json(shift);
     } catch (error: any) {
       console.error("Error creating shift:", error);
       res.status(400).json({ message: error.message || "Failed to create shift" });
-    });
+    }
   });
 
   app.patch('/api/shifts/:id', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -7952,7 +7952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId!;
 
       // Validate partial update, ensure no workspaceId override
@@ -7962,7 +7962,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const shift = await storage.updateShift(req.params.id, workspaceId, validated);
       if (!shift) {
         return res.status(404).json({ message: "Shift not found" });
-      });
+      }
       
       // 📡 REAL-TIME: Broadcast shift update ONLY after successful DB operation
       broadcastShiftUpdate(workspaceId, 'shift_updated', shift);
@@ -7987,15 +7987,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             shiftTitle: shift.title || 'Shift',
             changes,
             changedBy: userId,
-          });
+          }
         ).catch(err => console.error('Failed to create shift update notification:', err));
-      });
+      }
       
       res.json(shift);
     } catch (error: any) {
       console.error("Error updating shift:", error);
       res.status(400).json({ message: error.message || "Failed to update shift" });
-    });
+    }
   });
 
   app.delete('/api/shifts/:id', requireAuth, requireManagerOrPlatformStaff, async (req: AuthenticatedRequest, res) => {
@@ -8006,7 +8006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId!;
 
       // Get shift details before deletion for notification
@@ -8015,7 +8015,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const deleted = await storage.deleteShift(req.params.id, workspaceId);
       if (!deleted) {
         return res.status(404).json({ message: "Shift not found" });
-      });
+      }
       
       // 📡 REAL-TIME: Broadcast shift deletion ONLY after successful DB operation
       broadcastShiftUpdate(workspaceId, 'shift_deleted', undefined, req.params.id);
@@ -8037,15 +8037,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             shiftTitle: shift.title || 'Shift',
             shiftDate,
             cancelledBy: userId,
-          });
+          }
         ).catch(err => console.error('Failed to create shift cancellation notification:', err));
-      });
+      }
       
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting shift:", error);
       res.status(500).json({ message: "Failed to delete shift" });
-    });
+    }
   });
 
   // ============================================================================
@@ -8059,7 +8059,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!weekStart) {
         return res.status(400).json({ message: "weekStart query parameter required (ISO date string)" });
-      });
+      }
       
       // Calculate week range
       const startDate = new Date(weekStart);
@@ -8104,16 +8104,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const employee = employeeMap.get(shift.employeeId);
           if (employee?.hourlyRate) {
             totalCost += hours * parseFloat(employee.hourlyRate.toString());
-          });
-        });
-      });
+          }
+        }
+      }
       
       // Calculate overtime (hours > 40 per week per employee)
       for (const [employeeId, hours] of employeeHours.entries()) {
         if (hours > 40) {
           overtimeHours += hours - 40;
-        });
-      });
+        }
+      }
       
       res.json({
         weekStart: startDate.toISOString(),
@@ -8128,7 +8128,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error calculating week stats:", error);
       res.status(500).json({ message: "Failed to calculate week stats" });
-    });
+    }
   });
 
   // ============================================================================
@@ -8144,12 +8144,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const shift = await storage.getShift(shiftId, workspaceId);
       if (!shift) {
         return res.status(404).json({ message: "Shift not found" });
-      });
+      }
 
       // Verify it's an open shift
       if (shift.employeeId) {
         return res.status(400).json({ message: "Shift is already assigned or not an open shift" });
-      });
+      }
 
       // STEP 1: Score employees using weighted algorithm
       const { scoreEmployeesForShift, getTopCandidates, formatCandidatesForAI } = await import('./services/automation/employeeScoring');
@@ -8169,7 +8169,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "No qualified employees available for this shift",
           details: "All employees filtered out due to availability, credentials, or distance constraints"
         });
-      });
+      }
 
       console.log(`[AI Fill] Found ${scoredCandidates.length} qualified candidates`);
       
@@ -8209,7 +8209,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             enableReliabilityScoring: true,
             penalizeLateHistory: true,
             considerAbsenteeismRisk: true,
-          });
+          }
         },
         // Pass scoring context to Gemini
         scoringContext: formatCandidatesForAI(topCandidates)
@@ -8222,7 +8222,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           unassignedShifts: result.unassignedShifts,
           summary: result.summary
         });
-      });
+      }
 
       const assignment = result.assignments[0];
 
@@ -8270,9 +8270,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
             shiftTitle: updatedShift.title || 'Shift',
             shiftDate,
             assignedBy: req.user!.id,
-          });
+          }
         ).catch(err => console.error('Failed to create AI assignment notification:', err));
-      });
+      }
 
       res.json({
         success: true,
@@ -8289,7 +8289,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error in AI Fill:", error);
       res.status(500).json({ message: error.message || "Failed to auto-assign shift" });
-    });
+    }
   });
 
   // ============================================================================
@@ -8306,18 +8306,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       // Get the open shift
       const shift = await storage.getShift(shiftId, workspaceId);
       if (!shift) {
         return res.status(404).json({ message: "Shift not found" });
-      });
+      }
 
       // Verify it's an open shift
       if (shift.employeeId) {
         return res.status(400).json({ message: "Shift is already assigned or not an open shift" });
-      });
+      }
 
       console.log(`[Fill Request] Searching contractor pool for shift ${shiftId}...`);
 
@@ -8354,7 +8354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "No contractors found matching criteria",
           shiftRequestId: shiftRequest[0].id
         });
-      });
+      }
 
       console.log(`[Fill Request] Found ${contractors.length} potential contractors`);
 
@@ -8366,19 +8366,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const maxDist = req.body.maxDistance || 50;
         if (contractor.maxDistanceWilling && contractor.maxDistanceWilling >= maxDist) {
           score += 0.2;
-        });
+        }
 
         // Pay rate bonus (lower rate is better for margin)
         const maxPay = parseFloat(shift.maxPayRate || req.body.maxPayRate || "100");
         const contractorRate = parseFloat(contractor.minHourlyRate);
         if (contractorRate <= maxPay) {
           score += 0.15;
-        });
+        }
 
         // Last minute availability
         if (contractor.availableForLastMinute) {
           score += 0.15;
-        });
+        }
 
         return {
           contractor,
@@ -8430,7 +8430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         console.log(`[Fill Request] Sent offer to ${contractor.firstName} ${contractor.lastName} - Score: ${(score * 100).toFixed(1)}%`);
-      });
+      }
 
       // Update shift request with offer count
       await db.update(shiftRequests)
@@ -8450,7 +8450,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating fill request:", error);
       res.status(500).json({ message: error.message || "Failed to create fill request" });
-    });
+    }
   });
 
   // ============================================================================
@@ -8464,11 +8464,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!action || !token) {
         return res.status(400).json({ message: "Missing action or token" });
-      });
+      }
       
       if (action !== 'accept' && action !== 'decline') {
         return res.status(400).json({ message: "Invalid action. Must be 'accept' or 'decline'" });
-      });
+      }
       
       // SECURITY FIX 1: Validate token format (opaque UUID)
       const { validateResponseTokenFormat } = await import('./utils/contractorTokens');
@@ -8477,7 +8477,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!formatValidation.valid) {
         console.warn(`[Security] Invalid token format attempt: offer ${offerId}`);
         return res.status(403).json({ message: formatValidation.error || "Invalid token" });
-      });
+      }
       
       console.log(`[Contractor Response] Offer ${offerId} - Action: ${action}`);
       
@@ -8501,7 +8501,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!offerResult || offerResult.length === 0) {
         console.warn(`[Security] Invalid offer/token combination: offer ${offerId}`);
         return res.status(404).json({ message: "Offer not found or invalid token" });
-      });
+      }
       
       const { offer: currentOffer, request: shiftRequest, shift } = offerResult[0];
       const workspaceId = shiftRequest.workspaceId;
@@ -8510,7 +8510,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (shift.workspaceId !== workspaceId) {
         console.error(`[Security] Cross-tenant data inconsistency detected: offer ${offerId}`);
         return res.status(403).json({ message: "Data integrity violation" });
-      });
+      }
       
       // Check offer status
       if (currentOffer.status !== 'pending') {
@@ -8518,7 +8518,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: `Offer already ${currentOffer.status}`,
           currentStatus: currentOffer.status
         });
-      });
+      }
       
       // Check expiry
       if (new Date() > new Date(currentOffer.expiresAt)) {
@@ -8535,7 +8535,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ));
         
         return res.status(400).json({ message: "Offer has expired" });
-      });
+      }
       
       // ACTION: ACCEPT - PROPER DRIZZLE TRANSACTION for true atomicity
       if (action === 'accept') {
@@ -8559,7 +8559,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // SECURITY FIX 4: Verify update succeeded (validate row count to prevent silent failures)
           if (!updateResult || updateResult.length === 0) {
             throw new Error('Offer was already accepted, token invalid, or concurrent modification detected');
-          });
+          }
           
           // 2. Create contractor assignment
           const assignment = await tx.insert(contractorAssignments).values({
@@ -8646,13 +8646,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 manager.email,
                 `${contractor[0].firstName} ${contractor[0].lastName}`
               );
-            });
+            }
             
             console.log(`[Onboarding] Checklist created and manager notified for ${contractor[0].firstName}`);
           } catch (error) {
             console.error(`[Onboarding] Error creating checklist:`, error);
-          });
-        });
+          }
+        }
         
         // 📡 Broadcast shift update (post-transaction, idempotent)
         broadcastShiftUpdate(workspaceId, 'shift_updated', shift);
@@ -8663,7 +8663,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           assignment: result.assignment,
           message: "Offer accepted! Assignment created and onboarding started."
         });
-      });
+      }
       
       // ACTION: DECLINE - TRANSACTION with workspace guards and token invalidation
       if (action === 'decline') {
@@ -8686,7 +8686,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // SECURITY FIX 4: Verify update succeeded
           if (!updateResult || updateResult.length === 0) {
             throw new Error('Offer was already declined, token invalid, or concurrent modification detected');
-          });
+          }
           
           // 2. Check if all offers for this shift are now declined/expired
           const allOffers = await tx
@@ -8737,13 +8737,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       'shift_staffing_alert',
                       workspaceId
                     ).catch(err => console.error('[Shift Alert] Failed to send email:', err.message));
-                  });
+                  }
                 } catch (err) {
                   console.error('[Shift Alert] Error notifying manager:', err);
-                });
+                }
               });
-            });
-          });
+            }
+          }
         });
         
         return res.json({
@@ -8751,12 +8751,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           action: 'declined',
           message: "Offer declined. Thank you for your response."
         });
-      });
+      }
       
     } catch (error: any) {
       console.error("Error processing contractor response:", error);
       res.status(500).json({ message: error.message || "Failed to process response" });
-    });
+    }
   });
 
   // ============================================================================
@@ -8772,12 +8772,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const shift = await storage.getShift(req.params.id, workspaceId);
       if (!shift) {
         return res.status(404).json({ message: "Shift not found" });
-      });
+      }
 
       // OWNERSHIP CHECK: Employee can only acknowledge their own shifts
       if (shift.employeeId !== employeeId) {
         return res.status(403).json({ message: "You can only acknowledge shifts assigned to you" });
-      });
+      }
 
       // Update shift with acknowledgment
       const updated = await storage.updateShift(req.params.id, workspaceId, {
@@ -8793,7 +8793,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error acknowledging shift:", error);
       res.status(500).json({ message: "Failed to acknowledge shift" });
-    });
+    }
   });
 
   // Employee denies AI-generated shift (triggers auto-replacement)
@@ -8807,12 +8807,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!shift) {
         return res.status(404).json({ message: "Shift not found" });
-      });
+      }
 
       // OWNERSHIP CHECK: Employee can only deny their own shifts
       if (shift.employeeId !== employeeId) {
         return res.status(403).json({ message: "You can only deny shifts assigned to you" });
-      });
+      }
 
       // Mark shift as denied
       await storage.updateShift(req.params.id, workspaceId, {
@@ -8843,7 +8843,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Shift already denied with existing replacement",
           duplicate: true,
         });
-      });
+      }
 
       // AUTO-REPLACEMENT: Find backup employee
       const { scheduleOSAI } = await import('./ai/scheduleos');
@@ -8905,7 +8905,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                       // Primary search: metadata.shiftId (most reliable)
                       if (item.metadata && typeof item.metadata === 'object') {
                         return item.metadata.shiftId === shift.id;
-                      });
+                      }
                       // Fallback: description contains shift ID
                       return item.description?.includes(shift.id);
                     });
@@ -8913,9 +8913,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     if (deniedShiftLineItem) {
                       targetInvoice = invoice;
                       break;
-                    });
-                  });
-                });
+                    }
+                  }
+                }
 
                 if (deniedShiftLineItem && targetInvoice) {
                   // Remove denied shift line item
@@ -8971,7 +8971,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                     message: 'Shift not yet invoiced - replacement will be included in next invoice generation',
                     deferred: true,
                   };
-                });
+                }
               } catch (billingError: any) {
                 console.error('[Billing Platform] Failed to update invoice for replacement:', billingError);
                 // Non-fatal: replacement shift created successfully, billing can be corrected manually if needed
@@ -8979,8 +8979,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
                   error: billingError.message,
                   message: 'Billing sync failed - replacement shift created but invoice may need manual correction',
                 };
-              });
-            });
+              }
+            }
 
             return res.json({
               success: true,
@@ -8991,8 +8991,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
               warnings: replacementResult.warnings,
               billingUpdate,
             });
-          });
-        });
+          }
+        }
 
         // No suitable replacement found
         return res.json({
@@ -9013,12 +9013,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Shift denied. Auto-replacement failed. Manual scheduling required.",
           error: replacementError.message,
         });
-      });
+      }
 
     } catch (error: any) {
       console.error("Error denying shift:", error);
       res.status(500).json({ message: error.message || "Failed to deny shift" });
-    });
+    }
   });
 
   // Bulk create shifts (recurring)
@@ -9040,7 +9040,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           shouldCreate = true;
         } else if (recurrence === 'weekly' && days?.includes(start.getDay())) {
           shouldCreate = true;
-        });
+        }
         
         if (shouldCreate) {
           const shiftStart = new Date(start);
@@ -9063,16 +9063,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
           
           createdShifts.push(shift);
-        });
+        }
         
         start.setDate(start.getDate() + 1);
-      });
+      }
       
       res.json({ shifts: createdShifts, count: createdShifts.length });
     } catch (error: any) {
       console.error("Error creating bulk shifts:", error);
       res.status(400).json({ message: error.message || "Failed to create bulk shifts" });
-    });
+    }
   });
 
   // ============================================================================
@@ -9087,12 +9087,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.status(400).json({ message: "workspaceId is required" });
-      });
+      }
       
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
       
       // Read actual prior state for accurate audit trail
       const priorEnabled = workspace.feature_scheduleos_enabled ?? false;
@@ -9135,7 +9135,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error toggling SmartSchedule AI:", error);
       res.status(500).json({ message: "Failed to toggle AI" });
-    });
+    }
   });
   
   // Get SmartSchedule AI status - Reads from DB
@@ -9153,7 +9153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ enabled, workspaceId, workspaceName: workspace.name });
     } catch (error: any) {
       res.status(500).json({ message: "Failed to get AI status" });
-    });
+    }
   });
   
   // Generate AI Schedule with Smart Approval (99% AI, 1% Human Governance)
@@ -9182,7 +9182,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           currentTier: workspace.subscriptionTier,
           upgradeOptions: ['professional', 'enterprise', 'addon:smart_schedule_ai']
         });
-      });
+      }
 
       // PAYMENT GATING: Verify active billing (credit card on file OR prepay balance)
       if (workspace.subscriptionStatus !== 'active') {
@@ -9191,13 +9191,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requiresPayment: true,
           subscriptionStatus: workspace.subscriptionStatus
         });
-      });
+      }
       
       // Validate request body
       const { openShiftIds, constraints } = req.body;
       if (!openShiftIds || !Array.isArray(openShiftIds) || openShiftIds.length === 0) {
         return res.status(400).json({ message: "openShiftIds array is required" });
-      });
+      }
       
       // Fetch unassigned shifts (published or draft without employeeId)
       const openShifts = await db.select().from(shifts).where(
@@ -9210,7 +9210,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (openShifts.length === 0) {
         return res.status(404).json({ message: "No open shifts found" });
-      });
+      }
       
       const availableEmployees = await db.select().from(employees).where(
         eq(employees.workspaceId, workspace.id)
@@ -9242,7 +9242,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               updatedAt: new Date(),
             }).where(eq(shifts.id, assignment.shiftId));
             shiftIdsCreated.push(assignment.shiftId);
-          });
+          }
           
           // Save proposal with auto_approved status
           const [proposal] = await tx.insert(scheduleProposals).values({
@@ -9290,11 +9290,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           confidenceFactors: aiResponse.confidenceFactors,
           message: `AI schedule requires human approval (${aiResponse.overallConfidence}% confidence). Review proposal to continue.`,
         });
-      });
+      }
     } catch (error: any) {
       console.error("AI Scheduling™ Smart Generate Error:", error);
       res.status(500).json({ message: error.message || "Failed to generate schedule" });
-    });
+    }
   });
   
   // List All Schedule Proposals (for workflow approval page)
@@ -9326,17 +9326,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             weekStart = new Date(firstShift.startTime);
             weekEnd = new Date(weekStart);
             weekEnd.setDate(weekEnd.getDate() + 6);
-          });
+          }
         } catch (e) {
           console.warn('Failed to extract week dates from proposal:', p.id);
-        });
+        }
         
         // Fallback to proposal creation date if no shift data
         if (!weekStart) {
           weekStart = p.createdAt ? new Date(p.createdAt) : new Date();
           weekEnd = new Date(weekStart);
           weekEnd.setDate(weekEnd.getDate() + 6);
-        });
+        }
         
         return {
           ...p,
@@ -9349,7 +9349,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching schedule proposals:", error);
       res.status(500).json({ message: error.message || "Failed to fetch proposals" });
-    });
+    }
   });
   
   // Get Schedule Proposal Details
@@ -9370,12 +9370,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!proposal) {
         return res.status(404).json({ message: "Proposal not found" });
-      });
+      }
       
       res.json(proposal);
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to fetch proposal" });
-    });
+    }
   });
   
   // Approve Schedule Proposal
@@ -9399,11 +9399,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!proposal) {
         return res.status(404).json({ message: "Proposal not found or already processed" });
-      });
+      }
       
       if (proposal.confidence < 100 && !disclaimerAcknowledged) {
         return res.status(400).json({ message: "Legal disclaimer must be acknowledged for proposals with <100% confidence" });
-      });
+      }
       
       // Apply shifts from proposal in a transaction
       const aiResponse = proposal.aiResponse as any;
@@ -9417,7 +9417,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             updatedAt: new Date(),
           }).where(eq(shifts.id, assignment.shiftId));
           shiftIdsCreated.push(assignment.shiftId);
-        });
+        }
         
         // Update proposal status
         await tx.update(scheduleProposals).set({
@@ -9443,7 +9443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("AI Scheduling™ Approval Error:", error);
       res.status(500).json({ message: error.message || "Failed to approve proposal" });
-    });
+    }
   });
   
   // Reject Schedule Proposal
@@ -9466,7 +9466,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!proposal) {
         return res.status(404).json({ message: "Proposal not found or already processed" });
-      });
+      }
       
       await db.update(scheduleProposals).set({
         status: 'rejected',
@@ -9485,7 +9485,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to reject proposal" });
-    });
+    }
   });
   
   // ==================== INVOICE PROPOSALS ====================
@@ -9508,7 +9508,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching invoice proposals:", error);
       res.status(500).json({ message: error.message || "Failed to fetch proposals" });
-    });
+    }
   });
   
   // Approve Invoice Proposal
@@ -9530,7 +9530,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!proposal) {
         return res.status(404).json({ message: "Proposal not found or already processed" });
-      });
+      }
       
       await db.update(invoiceProposals).set({
         status: 'approved',
@@ -9549,7 +9549,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Billing Platform Invoice Approval Error:", error);
       res.status(500).json({ message: error.message || "Failed to approve invoice" });
-    });
+    }
   });
   
   // Reject Invoice Proposal
@@ -9572,7 +9572,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!proposal) {
         return res.status(404).json({ message: "Proposal not found or already processed" });
-      });
+      }
       
       await db.update(invoiceProposals).set({
         status: 'rejected',
@@ -9591,7 +9591,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to reject invoice" });
-    });
+    }
   });
   
   // ==================== PAYROLL PROPOSALS ====================
@@ -9614,7 +9614,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching payroll proposals:", error);
       res.status(500).json({ message: error.message || "Failed to fetch proposals" });
-    });
+    }
   });
   
   // Approve Payroll Proposal
@@ -9636,7 +9636,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!proposal) {
         return res.status(404).json({ message: "Proposal not found or already processed" });
-      });
+      }
       
       await db.update(payrollProposals).set({
         status: 'approved',
@@ -9655,7 +9655,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("OperationsOS™ Payroll Approval Error:", error);
       res.status(500).json({ message: error.message || "Failed to approve payroll" });
-    });
+    }
   });
   
   // Reject Payroll Proposal
@@ -9678,7 +9678,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!proposal) {
         return res.status(404).json({ message: "Proposal not found or already processed" });
-      });
+      }
       
       await db.update(payrollProposals).set({
         status: 'rejected',
@@ -9697,7 +9697,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to reject payroll" });
-    });
+    }
   });
   
   // AI Scheduling™ - Migrate schedule from external apps (Deputy, WhenIWork, GetSling)
@@ -9707,13 +9707,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!fileData || !mimeType) {
         return res.status(400).json({ message: "fileData and mimeType are required" });
-      });
+      }
 
       // Validate mime type
       const allowedTypes = ['image/png', 'image/jpeg', 'application/pdf'];
       if (!allowedTypes.includes(mimeType)) {
         return res.status(400).json({ message: "Unsupported file type. Use PNG, JPEG, or PDF" });
-      });
+      }
 
       const authReq = req as AuthenticatedRequest;
       const userId = authReq.user?.id;
@@ -9721,7 +9721,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { workspaceId } = await resolveWorkspaceForUser(userId, req.body.workspaceId);
 
       // Import migration service
@@ -9740,7 +9740,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Schedule migration error:", error);
       res.status(500).json({ message: error.message || "Failed to migrate schedule" });
-    });
+    }
   });
 
   // AI Scheduling™ - Import extracted shifts from migration
@@ -9750,7 +9750,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!Array.isArray(extractedShifts) || extractedShifts.length === 0) {
         return res.status(400).json({ message: "extractedShifts array is required" });
-      });
+      }
 
       const authReq = req as AuthenticatedRequest;
       const userId = authReq.user?.id;
@@ -9758,7 +9758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { workspaceId } = await resolveWorkspaceForUser(userId, req.body.workspaceId);
 
       // Import shifts table and migration service schema
@@ -9784,13 +9784,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (isNaN(startDateTime.getTime()) || isNaN(endDateTime.getTime())) {
             errors.push(`Shift ${i + 1}: Invalid date/time format`);
             continue;
-          });
+          }
           
           // Check logical date order
           if (endDateTime <= startDateTime) {
             errors.push(`Shift ${i + 1}: End time must be after start time`);
             continue;
-          });
+          }
 
           validatedShifts.push({
             workspaceId,
@@ -9805,15 +9805,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
         } catch (validationError: any) {
           errors.push(`Shift ${i + 1}: ${validationError.message}`);
-        });
-      });
+        }
+      }
 
       if (validatedShifts.length === 0) {
         return res.status(400).json({ 
           message: "No valid shifts to import",
           errors,
         });
-      });
+      }
 
       // Bulk insert valid shifts
       const createdShifts = await db.insert(shifts).values(validatedShifts).returning();
@@ -9830,7 +9830,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Shift import error:", error);
       res.status(500).json({ message: error.message || "Failed to import shifts" });
-    });
+    }
   });
   
   // Request Service Coverage
@@ -9864,7 +9864,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ request: { ...request, requestNumber }, matches: result.generatedShifts, billing: { aiUsageId: log.id, tokensUsed: tokens, costUsd: parseFloat(cost.toFixed(2)) } });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to find coverage" });
-    });
+    }
   });
   
   // Publish Schedule
@@ -9890,7 +9890,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ success: true, published, message: `Schedule published. ${employeesAffected} employees notified.` });
     } catch (error: any) {
       res.status(500).json({ message: error.message || "Failed to publish schedule" });
-    });
+    }
   });
 
   // Duplicate week shifts to next week
@@ -9903,7 +9903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!sourceWeekStart || !targetWeekStart) {
         return res.status(400).json({ message: "sourceWeekStart and targetWeekStart are required" });
-      });
+      }
       
       const sourceStart = new Date(sourceWeekStart);
       const targetStart = new Date(targetWeekStart);
@@ -9924,7 +9924,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (sourceShifts.length === 0) {
         return res.json({ success: true, copiedShifts: 0, message: "No shifts found in source week" });
-      });
+      }
       
       const newShifts = [];
       for (const shift of sourceShifts) {
@@ -9944,14 +9944,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           status: 'draft',
         }).returning();
         newShifts.push(newShift);
-      });
+      }
       
       console.log(`📅 Duplicated ${newShifts.length} shifts to ${targetWeekStart}`);
       res.json({ success: true, copiedShifts: newShifts.length, message: `Copied ${newShifts.length} shifts` });
     } catch (error: any) {
       console.error("Error duplicating week:", error);
       res.status(500).json({ message: error.message || "Failed to duplicate week" });
-    });
+    }
   });
   
   // ============================================================================
@@ -9966,7 +9966,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Check if trial already started
       if (workspace.scheduleosTrialStartedAt) {
@@ -9982,7 +9982,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           daysLeft: Math.max(0, daysLeft),
           isActive: workspace.scheduleosActivatedAt ? true : (daysLeft > 0),
         });
-      });
+      }
 
       // Start trial
       await storage.updateWorkspace(workspace.id, {
@@ -9999,7 +9999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error starting AI Scheduling™ trial:", error);
       res.status(500).json({ message: "Failed to start trial" });
-    });
+    }
   });
 
   // Create Payment Intent for Scheduling Platform activation (SECURE: Server-side creation)
@@ -10011,13 +10011,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const employee = await storage.getEmployeeByUserId(userId);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
-      });
+      }
 
       // Verify they're a manager or owner
       const roles = ['owner', 'manager'];
       if (!roles.includes(employee.role)) {
         return res.status(403).json({ message: "Requires owner or manager role" });
-      });
+      }
 
       const [workspace] = await db.select()
         .from(workspaces)
@@ -10026,7 +10026,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Check if already activated
       if (workspace.scheduleosActivatedAt) {
@@ -10035,7 +10035,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           alreadyActivated: true,
           activatedAt: workspace.scheduleosActivatedAt,
         });
-      });
+      }
 
       const SCHEDULEOS_ACTIVATION_FEE = 9900; // $99 one-time fee
 
@@ -10056,7 +10056,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               amount: SCHEDULEOS_ACTIVATION_FEE,
               status: existingIntent.status,
             });
-          });
+          }
           
           // If status is 'requires_payment_method', 'canceled', or 'requires_action':
           // Allow creating a new intent by clearing the old one
@@ -10070,8 +10070,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           await storage.updateWorkspace(workspace.id, {
             scheduleosPaymentIntentId: null,
           });
-        });
-      });
+        }
+      }
 
       // Ensure Stripe customer exists
       let customerId = workspace.stripeCustomerId;
@@ -10079,7 +10079,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const { subscriptionManager } = await import('./services/billing/subscriptionManager');
         const manager = new subscriptionManager.SubscriptionManager();
         customerId = await manager.ensureStripeCustomer(workspace.id);
-      });
+      }
 
       // Create new Payment Intent with strict metadata (server-side only)
       const paymentIntent = await stripe.paymentIntents.create({
@@ -10114,7 +10114,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('[Stripe] Error creating Payment Intent:', error);
       res.status(500).json({ error: "Failed to create payment intent", details: error.message });
-    });
+    }
   });
 
   // Activate AI Scheduling™ with payment (SECURE: Validates Payment Intent ownership and prevents reuse)
@@ -10126,13 +10126,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const employee = await storage.getEmployeeByUserId(userId);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
-      });
+      }
 
       // Verify they're a manager or owner
       const roles = ['owner', 'manager'];
       if (!roles.includes(employee.role)) {
         return res.status(403).json({ message: "Requires owner or manager role" });
-      });
+      }
 
       const [workspace] = await db.select()
         .from(workspaces)
@@ -10141,13 +10141,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { paymentMethod, paymentIntentId } = req.body; // 'stripe_subscription' | 'stripe_card'
 
       if (!paymentMethod) {
         return res.status(400).json({ message: "Payment method required" });
-      });
+      }
 
       // Check if already activated
       if (workspace.scheduleosActivatedAt) {
@@ -10156,7 +10156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           activatedAt: workspace.scheduleosActivatedAt,
           activatedBy: workspace.scheduleosActivatedBy,
         });
-      });
+      }
 
       // STEP 1: Check subscription tier - paid tiers get free activation
       if (workspace.subscriptionTier !== 'free') {
@@ -10174,7 +10174,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           activatedAt: new Date(),
           activatedBy: userId,
         });
-      });
+      }
 
       // STEP 2: Free tier requires payment
       const SCHEDULEOS_ACTIVATION_FEE = 9900; // $99 one-time fee
@@ -10187,7 +10187,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             error: "No active subscription found. Please upgrade your tier first.",
             requiresUpgrade: true,
           });
-        });
+        }
 
         console.log('[Stripe] Scheduling activation via subscription:', workspace.stripeSubscriptionId);
 
@@ -10203,7 +10203,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           activatedAt: new Date(),
           activatedBy: userId,
         });
-      });
+      }
 
       if (paymentMethod === 'stripe_card') {
         // SECURITY: Verify payment intent was provided
@@ -10212,7 +10212,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             success: false,
             error: "Payment Intent ID required. Please create payment intent first.",
           });
-        });
+        }
 
         try {
           // SECURITY: Verify payment with Stripe (using shared singleton)
@@ -10225,7 +10225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               success: false,
               error: `Payment failed: ${paymentIntent.status}`,
             });
-          });
+          }
 
           // SECURITY CHECK #2: Amount must match exactly
           if (paymentIntent.amount !== SCHEDULEOS_ACTIVATION_FEE) {
@@ -10234,7 +10234,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               success: false,
               error: "Invalid payment amount",
             });
-          });
+          }
 
           // SECURITY CHECK #3: Metadata workspaceId must match current workspace
           if (paymentIntent.metadata?.workspaceId !== workspace.id) {
@@ -10243,7 +10243,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               success: false,
               error: "Payment Intent does not belong to this workspace",
             });
-          });
+          }
 
           // SECURITY CHECK #4: Payment Intent must have correct purpose
           if (paymentIntent.metadata?.purpose !== 'scheduleos_activation') {
@@ -10252,7 +10252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               success: false,
               error: "Invalid Payment Intent purpose",
             });
-          });
+          }
 
           // SECURITY CHECK #5: Payment Intent hasn't been used before (check if stored in any workspace)
           const [existingUsage] = await db
@@ -10267,7 +10267,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               success: false,
               error: "Payment Intent has already been used",
             });
-          });
+          }
 
           console.log('[Stripe] Scheduling payment verified:', paymentIntentId);
 
@@ -10291,8 +10291,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             success: false,
             error: `Payment verification failed: ${stripeError.message}`,
           });
-        });
-      });
+        }
+      }
 
       return res.status(400).json({
         success: false,
@@ -10301,7 +10301,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error activating AI Scheduling™:", error);
       res.status(500).json({ message: "Failed to activate AI Scheduling™" });
-    });
+    }
   });
 
   // Check AI Scheduling™ status (trial/activated)
@@ -10318,14 +10318,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const [dbUser] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
         if (!dbUser) {
           return res.status(401).json({ message: "Unauthorized" });
-        });
+        }
         user = dbUser;
         const userPlatformRoles = await db.select().from(platformRoles).where(eq(platformRoles.userId, userId));
         const activePlatformRole = userPlatformRoles.find(pr => !pr.revokedAt);
         user.platformRole = activePlatformRole?.role || null;
       } else {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
       
       if (user.platformRole === 'root_admin' || user.platformRole === 'sysop') {
         const allWorkspaces = await db.select().from(workspaces).limit(1);
@@ -10347,17 +10347,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
             response.trialEndsAt = trialEnd;
             response.daysLeft = Math.max(0, daysLeft);
             response.trialExpired = daysLeft <= 0;
-          });
+          }
           return res.json(response);
-        });
+        }
         return res.json({ isActivated: false });
-      });
+      }
       
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const response: any = {
         isActivated: !!workspace.scheduleosActivatedAt,
@@ -10377,13 +10377,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         response.trialEndsAt = trialEnd;
         response.daysLeft = Math.max(0, daysLeft);
         response.trialExpired = daysLeft <= 0;
-      });
+      }
 
       res.json(response);
     } catch (error: any) {
       console.error("Error checking AI Scheduling™ status:", error);
       res.status(500).json({ message: "Failed to check status" });
-    });
+    }
   });
 
   // ============================================================================
@@ -10397,7 +10397,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Check if user is platform staff - grant full access
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -10424,7 +10424,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             const now = new Date();
             const daysLeft = Math.ceil((trialEnd.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
             isInTrial = daysLeft > 0;
-          });
+          }
 
           // Require activation or active trial (legacy system only)
           if (!isActivated && !isInTrial) {
@@ -10434,10 +10434,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
               requiresPayment: true,
               feature: "scheduleOS"
             });
-          });
-        });
+          }
+        }
         // If hasCreditAccount=true, skip legacy checks and proceed to credit deduction
-      });
+      }
 
       // Import AI Scheduling AI
       const { scheduleOSAI } = await import('./ai/scheduleos');
@@ -10448,7 +10448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({
           message: "Missing required fields: weekStartDate and shiftRequirements"
         });
-      });
+      }
 
       // Import credit system
       const { withCredits } = await import('./services/billing/creditWrapper');
@@ -10468,7 +10468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             clientIds: clientIds || [],
             shiftRequirements,
           });
-        });
+        }
       );
 
       if (!creditResult.success) {
@@ -10479,13 +10479,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
             feature: 'ai_scheduling',
             creditsRequired: 25,
           });
-        });
+        }
         
         // Other errors (automation execution failure, etc.)
         return res.status(500).json({
           message: creditResult.error || 'Failed to generate AI schedule',
         });
-      });
+      }
 
       const result = creditResult.result;
 
@@ -10543,7 +10543,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
               total: '0',
               notes: `Auto-generated by AI Scheduling™ for ${invoiceMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`,
             });
-          });
+          }
 
           // Add line item to invoice
           const lineItem = await storage.createInvoiceLineItem({
@@ -10578,8 +10578,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           console.log(`[Billing Platform] Added ${hours}h ($${amount.toFixed(2)}) to invoice ${invoice.invoiceNumber} for client ${client.name}`);
         } catch (billingError: any) {
           console.error(`[Billing Platform] Failed to create invoice line item for shift:`, billingError);
-        });
-      });
+        }
+      }
 
       res.json({
         ...result,
@@ -10599,7 +10599,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: error.message || "AI Scheduling™ failed to generate schedule",
         error: "SCHEDULEOS_ERROR"
       });
-    });
+    }
   });
 
   // Acknowledge AI-generated shift (employee confirmation)
@@ -10615,11 +10615,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!shift) {
         return res.status(404).json({ message: "Shift not found" });
-      });
+      }
 
       if (!shift.aiGenerated) {
         return res.status(400).json({ message: "This shift was not AI-generated" });
-      });
+      }
 
       // Update acknowledgment
       await db.update(shifts)
@@ -10637,7 +10637,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error acknowledging shift:", error);
       res.status(500).json({ message: "Failed to acknowledge shift" });
-    });
+    }
   });
 
   // ============================================================================
@@ -10662,12 +10662,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     if (!workspaceId) {
       return res.status(400).json({ error: "No workspace selected" });
-    });
+    }
 
     try {
       if (!isScheduleSmartAvailable()) {
         return res.status(503).json({ error: "AI scheduling unavailable - Gemini API not configured" });
-      });
+      }
 
       // Validate request body with Zod
       const validationResult = scheduleSmartAIRequestSchema.safeParse(req.body);
@@ -10676,7 +10676,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           error: "Invalid request body", 
           details: validationResult.error.errors 
         });
-      });
+      }
 
       const { openShiftIds, availableEmployeeIds, constraints } = validationResult.data;
 
@@ -10693,7 +10693,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (openShifts.length === 0) {
         return res.status(404).json({ error: "No open shifts found" });
-      });
+      }
 
       // Fetch available employees
       const availableEmployees = await db.select()
@@ -10707,7 +10707,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (availableEmployees.length === 0) {
         return res.status(404).json({ error: "No available employees found" });
-      });
+      }
 
       // Call AI Scheduling™ AI Engine
       const aiResponse = await scheduleSmartAI({
@@ -10727,7 +10727,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('AI Scheduling™ AI error:', error);
       res.status(500).json({ error: error.message || 'AI scheduling failed' });
-    });
+    }
   });
 
   // ============================================================================
@@ -10741,14 +10741,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const templates = await storage.getShiftTemplatesByWorkspace(workspace.id);
       res.json(templates);
     } catch (error) {
       console.error("Error fetching shift templates:", error);
       res.status(500).json({ message: "Failed to fetch shift templates" });
-    });
+    }
   });
 
   app.post('/api/shift-templates', isAuthenticated, async (req: any, res) => {
@@ -10758,7 +10758,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const template = await storage.createShiftTemplate({
         ...req.body,
@@ -10768,7 +10768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating shift template:", error);
       res.status(400).json({ message: error.message || "Failed to create shift template" });
-    });
+    }
   });
 
   app.delete('/api/shift-templates/:id', isAuthenticated, async (req: any, res) => {
@@ -10778,18 +10778,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const deleted = await storage.deleteShiftTemplate(req.params.id, workspace.id);
       if (!deleted) {
         return res.status(404).json({ message: "Template not found" });
-      });
+      }
       
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting shift template:", error);
       res.status(500).json({ message: "Failed to delete shift template" });
-    });
+    }
   });
 
   // ============================================================================
@@ -10814,7 +10814,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!shift) {
         return res.status(404).json({ message: "Shift not found" });
-      });
+      }
 
       const acknowledgments = await db.query.shiftAcknowledgments.findMany({
         where: and(
@@ -10831,7 +10831,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching shift acknowledgments:", error);
       res.status(500).json({ message: "Failed to fetch acknowledgments" });
-    });
+    }
   });
 
   // Create a new acknowledgment (Post Order/Special Order)
@@ -10844,7 +10844,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       const { eq, and } = await import("drizzle-orm");
 
@@ -10858,7 +10858,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!shift) {
         return res.status(404).json({ message: "Shift not found in this workspace" });
-      });
+      }
 
       // Get the current employee (who is creating the acknowledgment)
       const currentEmployee = await db.query.employees.findFirst({
@@ -10867,7 +10867,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!currentEmployee) {
         return res.status(404).json({ message: "Employee record not found" });
-      });
+      }
 
       // Verify target employee belongs to workspace
       if (req.body.employeeId) {
@@ -10880,8 +10880,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
         if (!targetEmployee) {
           return res.status(404).json({ message: "Target employee not found in this workspace" });
-        });
-      });
+        }
+      }
 
       const { insertShiftAcknowledgmentSchema, shiftAcknowledgments } = await import("@shared/schema");
       
@@ -10900,7 +10900,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating shift acknowledgment:", error);
       res.status(400).json({ message: error.message || "Failed to create acknowledgment" });
-    });
+    }
   });
 
   // Employee acknowledges a shift acknowledgment
@@ -10913,7 +10913,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       const { eq, and } = await import("drizzle-orm");
 
@@ -10923,7 +10923,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!currentEmployee) {
         return res.status(404).json({ message: "Employee record not found" });
-      });
+      }
 
       const { shiftAcknowledgments } = await import("@shared/schema");
 
@@ -10937,7 +10937,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!acknowledgment) {
         return res.status(404).json({ message: "Acknowledgment not found or not assigned to you" });
-      });
+      }
 
       const [updated] = await db.update(shiftAcknowledgments)
         .set({
@@ -10952,7 +10952,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error acknowledging:", error);
       res.status(500).json({ message: "Failed to acknowledge" });
-    });
+    }
   });
 
   // Employee denies/declines a shift acknowledgment
@@ -10965,7 +10965,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       const { eq, and } = await import("drizzle-orm");
 
@@ -10975,7 +10975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!currentEmployee) {
         return res.status(404).json({ message: "Employee record not found" });
-      });
+      }
 
       const { shiftAcknowledgments } = await import("@shared/schema");
 
@@ -10989,7 +10989,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!acknowledgment) {
         return res.status(404).json({ message: "Acknowledgment not found or not assigned to you" });
-      });
+      }
 
       const [updated] = await db.update(shiftAcknowledgments)
         .set({
@@ -11004,7 +11004,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error denying acknowledgment:", error);
       res.status(500).json({ message: "Failed to deny acknowledgment" });
-    });
+    }
   });
 
   // Delete an acknowledgment (manager only)
@@ -11024,7 +11024,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!acknowledgment) {
         return res.status(404).json({ message: "Acknowledgment not found" });
-      });
+      }
 
       await db.delete(shiftAcknowledgments)
         .where(eq(shiftAcknowledgments.id, req.params.id));
@@ -11033,7 +11033,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error deleting acknowledgment:", error);
       res.status(500).json({ message: "Failed to delete acknowledgment" });
-    });
+    }
   });
 
   // ============================================================================
@@ -11047,14 +11047,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const entries = await storage.getTimeEntriesByWorkspace(workspace.id);
       res.json(entries);
     } catch (error) {
       console.error("Error fetching time entries:", error);
       res.status(500).json({ message: "Failed to fetch time entries" });
-    });
+    }
   });
 
   app.post('/api/time-entries', isAuthenticated, async (req: any, res) => {
@@ -11064,7 +11064,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Validate with Zod and enforce workspace ownership
       const validated = insertTimeEntrySchema.parse({
@@ -11077,7 +11077,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating time entry:", error);
       res.status(400).json({ message: error.message || "Failed to create time entry" });
-    });
+    }
   });
 
   // ============================================================================
@@ -11093,12 +11093,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const clients = await storage.getClientsByWorkspace(workspace.id);
       const generatedInvoices = [];
@@ -11110,7 +11110,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const clientRate = await storage.getClientRate(workspace.id, client.id);
           if (!clientRate || !clientRate.isActive) {
             continue;
-          });
+          }
 
           const billingCycle = clientRate.subscriptionFrequency || 'monthly';
           
@@ -11142,12 +11142,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
               default:
                 isDue = daysSinceLastInvoice >= 30;
                 break;
-            });
-          });
+            }
+          }
 
           if (!isDue) {
             continue;
-          });
+          }
 
           // Get unbilled time entries
           const timeEntries = await storage.getTimeEntriesByWorkspace(workspace.id);
@@ -11157,7 +11157,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
           if (unbilledEntries.length === 0) {
             continue;
-          });
+          }
 
           // Calculate totals
           let subtotal = 0;
@@ -11192,7 +11192,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           // Link time entries
           for (const entry of unbilledEntries) {
             await storage.updateTimeEntry(entry.id, { invoiceId: invoice.id });
-          });
+          }
 
           generatedInvoices.push({
             invoice,
@@ -11208,8 +11208,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             clientName: `${client.firstName} ${client.lastName}`,
             error: error.message,
           });
-        });
-      });
+        }
+      }
 
       res.json({
         success: true,
@@ -11221,7 +11221,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error auto-generating invoices:", error);
       res.status(500).json({ message: error.message || "Failed to auto-generate invoices" });
-    });
+    }
   });
 
   // Send invoice email to client
@@ -11232,20 +11232,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { id } = req.params;
       const invoice = await storage.getInvoice(id, workspace.id);
       
       if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
-      });
+      }
 
       // Get client details
       const client = await storage.getClient(invoice.clientId, workspace.id);
       if (!client || !client.email) {
         return res.status(400).json({ message: "Client email not found" });
-      });
+      }
 
       // Send email
       const { sendInvoiceGeneratedEmail } = await import('./email');
@@ -11258,7 +11258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!emailResult.success) {
         return res.status(500).json({ message: "Failed to send email", error: emailResult.error });
-      });
+      }
 
       // Update invoice status to 'sent' (with workspace scope)
       const updatedInvoice = await storage.updateInvoice(invoice.id, workspace.id, { status: 'sent' });
@@ -11272,7 +11272,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error sending invoice email:", error);
       res.status(500).json({ message: error.message || "Failed to send invoice email" });
-    });
+    }
   });
   
   // PROTECTED: Managers and auditors only
@@ -11284,19 +11284,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const invoices = await storage.getInvoicesByWorkspace(workspace.id);
       res.json(invoices);
     } catch (error) {
       console.error("Error fetching invoices:", error);
       res.status(500).json({ message: "Failed to fetch invoices" });
-    });
+    }
   });
 
   // Get line items for a specific invoice (with authorization check) - PROTECTED: Manager/auditor/client
@@ -11308,14 +11308,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { invoiceId } = req.params;
       
       // Get the invoice to check ownership
       const invoice = await storage.getInvoice(invoiceId);
       if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
-      });
+      }
 
       // Check if user owns the workspace OR is the client on this invoice
       const workspace = await storage.getWorkspace(invoice.workspaceId);
@@ -11327,7 +11327,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!isWorkspaceOwner && !isInvoiceClient) {
         return res.status(403).json({ message: "Not authorized to view this invoice" });
-      });
+      }
 
       // Get line items for this specific invoice only
       const lineItems = await storage.getInvoiceLineItems(invoiceId);
@@ -11335,7 +11335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching invoice line items:", error);
       res.status(500).json({ message: "Failed to fetch invoice line items" });
-    });
+    }
   });
 
   app.post('/api/invoices', isAuthenticated, async (req: any, res) => {
@@ -11345,7 +11345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Generate invoice number
       const invoiceNumber = `INV-${Date.now()}`;
@@ -11363,7 +11363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating invoice:", error);
       res.status(400).json({ message: error.message || "Failed to create invoice" });
-    });
+    }
   });
 
   app.post('/api/invoices/generate-from-time', isAuthenticated, async (req: any, res) => {
@@ -11373,13 +11373,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { clientId, timeEntryIds, dueDate, taxRate } = req.body;
 
       if (!clientId || !timeEntryIds || !Array.isArray(timeEntryIds) || timeEntryIds.length === 0) {
         return res.status(400).json({ message: "Client ID and time entry IDs are required" });
-      });
+      }
 
       // Get the time entries
       const timeEntries = [];
@@ -11387,12 +11387,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const entry = await storage.getTimeEntry(id, workspace.id);
         if (entry && entry.clientId === clientId && entry.clockOut) {
           timeEntries.push(entry);
-        });
-      });
+        }
+      }
 
       if (timeEntries.length === 0) {
         return res.status(400).json({ message: "No valid time entries found" });
-      });
+      }
 
       // Calculate totals with NaN guards
       let subtotal = 0;
@@ -11400,8 +11400,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const amount = parseFloat(entry.totalAmount as string || "0");
         if (!isNaN(amount)) {
           subtotal += amount;
-        });
-      });
+        }
+      }
 
       // Tax rate is percentage, taxAmount is dollars
       const taxRatePercent = parseFloat(taxRate || "0");
@@ -11443,7 +11443,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           amount: entry.totalAmount as string || "0",
           timeEntryId: entry.id,
         });
-      });
+      }
 
       // Send invoice notification email to workspace owner
       const client = await storage.getClient(clientId, workspace.id);
@@ -11460,13 +11460,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           total: total.toFixed(2),
           dueDate
         }).catch(err => console.error('Failed to send invoice email:', err));
-      });
+      }
 
       res.json(invoice);
     } catch (error: any) {
       console.error("Error generating invoice from time entries:", error);
       res.status(400).json({ message: error.message || "Failed to generate invoice" });
-    });
+    }
   });
 
   // ============================================================================
@@ -11481,7 +11481,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const validated = insertClientRateSchema.parse({
         ...req.body,
@@ -11493,7 +11493,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating client rate:", error);
       res.status(400).json({ message: error.message || "Failed to create client rate" });
-    });
+    }
   });
 
   app.get('/api/client-rates/:clientId', isAuthenticated, async (req: any, res) => {
@@ -11503,14 +11503,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const rates = await storage.getClientRates(workspace.id, req.params.clientId);
       res.json(rates);
     } catch (error: any) {
       console.error("Error fetching client rates:", error);
       res.status(500).json({ message: "Failed to fetch client rates" });
-    });
+    }
   });
 
   // Process delinquent invoices and send reminders (Manager/Owner only)
@@ -11525,7 +11525,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error processing reminders:", error);
       res.status(500).json({ message: error.message || "Failed to process reminders" });
-    });
+    }
   });
 
   // Get reminder history for an invoice (Manager/Owner only)
@@ -11549,7 +11549,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching invoice reminders:", error);
       res.status(500).json({ message: "Failed to fetch invoice reminders" });
-    });
+    }
   });
 
   // Get all reminders needing attention (Manager/Owner only)
@@ -11578,7 +11578,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching urgent reminders:", error);
       res.status(500).json({ message: "Failed to fetch urgent reminders" });
-    });
+    }
   });
 
   // ============================================================================
@@ -11594,7 +11594,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching expense categories:", error);
       res.status(500).json({ message: "Failed to fetch expense categories" });
-    });
+    }
   });
 
   // Seed default expense categories (Manager/Admin only) - For existing workspaces
@@ -11625,14 +11625,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           created.push(newCategory);
         } catch (error) {
           console.log(`Category ${category.name} may already exist`);
-        });
-      });
+        }
+      }
       
       res.json({ message: `Seeded ${created.length} default categories`, categories: created });
     } catch (error: any) {
       console.error("Error seeding expense categories:", error);
       res.status(500).json({ message: error.message || "Failed to seed expense categories" });
-    });
+    }
   });
 
   // Create expense category (Manager/Admin only)
@@ -11648,7 +11648,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating expense category:", error);
       res.status(400).json({ message: error.message || "Failed to create expense category" });
-    });
+    }
   });
 
   // Submit expense
@@ -11661,13 +11661,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       // Find employee record for user
       const employee = await storage.getEmployeeByUserId(userId);
       if (!employee || employee.workspaceId !== workspaceId) {
         return res.status(404).json({ message: "Employee record not found" });
-      });
+      }
 
       const validated = insertExpenseSchema.parse({
         ...req.body,
@@ -11682,7 +11682,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating expense:", error);
       res.status(400).json({ message: error.message || "Failed to create expense" });
-    });
+    }
   });
 
   // Get expenses (employees see their own, managers see all)
@@ -11695,7 +11695,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const user = await storage.getUser(userId);
       
       let filters: { status?: string; employeeId?: string; categoryId?: string } = {};
@@ -11705,9 +11705,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const employee = await storage.getEmployeeByUserId(userId);
         if (!employee) {
           return res.json([]);
-        });
+        }
         filters.employeeId = employee.id;
-      });
+      }
       
       // Apply query filters
       if (req.query.status) filters.status = req.query.status as string;
@@ -11719,7 +11719,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching expenses:", error);
       res.status(500).json({ message: "Failed to fetch expenses" });
-    });
+    }
   });
 
   // Get single expense with receipts
@@ -11730,14 +11730,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
-      });
+      }
       
       const receipts = await storage.getExpenseReceiptsByExpense(expense.id);
       res.json({ ...expense, receipts });
     } catch (error: any) {
       console.error("Error fetching expense:", error);
       res.status(500).json({ message: "Failed to fetch expense" });
-    });
+    }
   });
 
   // Upload expense receipt to object storage
@@ -11748,19 +11748,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
-      });
+      }
 
       const { fileData, fileName, fileType } = req.body;
       
       if (!fileData || !fileName || !fileType) {
         return res.status(400).json({ message: "File data, name, and type are required" });
-      });
+      }
 
       // SECURITY: Validate file type (only images and PDFs)
       const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png', 'image/gif', 'application/pdf'];
       if (!allowedTypes.includes(fileType.toLowerCase())) {
         return res.status(400).json({ message: "Invalid file type. Only images (JPEG, PNG, GIF) and PDF are allowed." });
-      });
+      }
 
       // SECURITY: Sanitize filename - remove path traversal attempts
       const sanitizedName = fileName.replace(/[^a-zA-Z0-9._-]/g, '_').substring(0, 255);
@@ -11776,7 +11776,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
       if (!extensionMap[fileType]?.includes(fileExt)) {
         return res.status(400).json({ message: "File extension does not match MIME type" });
-      });
+      }
 
       // Convert base64 to buffer
       const base64Data = fileData.replace(/^data:[^;]+;base64,/, '');
@@ -11786,14 +11786,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
       if (buffer.length > MAX_FILE_SIZE) {
         return res.status(400).json({ message: `File too large. Maximum size is ${MAX_FILE_SIZE / 1024 / 1024}MB` });
-      });
+      }
 
       // SECURITY: Verify PRIVATE_OBJECT_DIR is configured
       const privateDir = process.env.PRIVATE_OBJECT_DIR;
       if (!privateDir) {
         console.error('PRIVATE_OBJECT_DIR environment variable not set');
         return res.status(500).json({ message: "Object storage not configured" });
-      });
+      }
 
       // Upload to object storage
       const receiptId = crypto.randomUUID();
@@ -11833,7 +11833,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error uploading receipt:", error);
       res.status(400).json({ message: error.message || "Failed to upload receipt" });
-    });
+    }
   });
 
   // Approve expense (Manager/Admin only)
@@ -11846,20 +11846,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { reviewNotes } = req.body;
 
       const expense = await storage.approveExpense(req.params.id, workspaceId, userId, reviewNotes);
       
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
-      });
+      }
 
       res.json(expense);
     } catch (error: any) {
       console.error("Error approving expense:", error);
       res.status(500).json({ message: error.message || "Failed to approve expense" });
-    });
+    }
   });
 
   // Reject expense (Manager/Admin only)
@@ -11872,24 +11872,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { reviewNotes } = req.body;
 
       if (!reviewNotes) {
         return res.status(400).json({ message: "Review notes are required when rejecting an expense" });
-      });
+      }
 
       const expense = await storage.rejectExpense(req.params.id, workspaceId, userId, reviewNotes);
       
       if (!expense) {
         return res.status(404).json({ message: "Expense not found" });
-      });
+      }
 
       res.json(expense);
     } catch (error: any) {
       console.error("Error rejecting expense:", error);
       res.status(500).json({ message: error.message || "Failed to reject expense" });
-    });
+    }
   });
 
   // Mark expense as paid (Manager/Admin only)
@@ -11902,20 +11902,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { paymentMethod } = req.body;
 
       const expense = await storage.markExpensePaid(req.params.id, workspaceId, userId, paymentMethod);
       
       if (!expense) {
         return res.status(404).json({ message: "Expense not found or not approved" });
-      });
+      }
 
       res.json(expense);
     } catch (error: any) {
       console.error("Error marking expense as paid:", error);
       res.status(500).json({ message: error.message || "Failed to mark expense as paid" });
-    });
+    }
   });
 
   // ============================================================================
@@ -11931,7 +11931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching I-9 records:", error);
       res.status(500).json({ message: "Failed to fetch I-9 records" });
-    });
+    }
   });
 
   // Get expiring I-9 authorizations (Manager/Admin only)
@@ -11944,7 +11944,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching expiring I-9 records:", error);
       res.status(500).json({ message: "Failed to fetch expiring I-9 records" });
-    });
+    }
   });
 
   // Get I-9 record by employee ID
@@ -11957,7 +11957,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const user = await storage.getUser(userId);
       
       // Employees can only view their own record, managers can view all
@@ -11965,18 +11965,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (user?.role !== 'manager' && user?.role !== 'owner' && user?.role !== 'admin' && 
           employee?.id !== req.params.employeeId) {
         return res.status(403).json({ message: "Access denied" });
-      });
+      }
 
       const record = await storage.getI9RecordByEmployee(req.params.employeeId, workspaceId);
       if (!record) {
         return res.status(404).json({ message: "I-9 record not found" });
-      });
+      }
       
       res.json(record);
     } catch (error: any) {
       console.error("Error fetching I-9 record:", error);
       res.status(500).json({ message: "Failed to fetch I-9 record" });
-    });
+    }
   });
 
   // ============================================================================
@@ -11993,7 +11993,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       const policy = await storage.createCompanyPolicy({
         ...req.body,
@@ -12006,7 +12006,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating policy:", error);
       res.status(400).json({ message: error.message || "Failed to create policy" });
-    });
+    }
   });
 
   // Get all policies for workspace
@@ -12018,7 +12018,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching policies:", error);
       res.status(500).json({ message: "Failed to fetch policies" });
-    });
+    }
   });
 
   // Get single policy
@@ -12029,13 +12029,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!policy) {
         return res.status(404).json({ message: "Policy not found" });
-      });
+      }
       
       res.json(policy);
     } catch (error: any) {
       console.error("Error fetching policy:", error);
       res.status(500).json({ message: "Failed to fetch policy" });
-    });
+    }
   });
 
   // Publish policy (Manager/Admin only)
@@ -12048,19 +12048,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       const policy = await storage.publishPolicy(req.params.id, workspaceId, userId);
       
       if (!policy) {
         return res.status(404).json({ message: "Policy not found" });
-      });
+      }
       
       res.json(policy);
     } catch (error: any) {
       console.error("Error publishing policy:", error);
       res.status(500).json({ message: "Failed to publish policy" });
-    });
+    }
   });
 
   // Acknowledge policy (Employee)
@@ -12073,17 +12073,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       const employee = await storage.getEmployeeByUserId(userId);
       if (!employee || employee.workspaceId !== workspaceId) {
         return res.status(404).json({ message: "Employee record not found" });
-      });
+      }
 
       const policy = await storage.getCompanyPolicy(req.params.id, workspaceId);
       if (!policy) {
         return res.status(404).json({ message: "Policy not found" });
-      });
+      }
 
       const { signatureUrl, ipAddress, userAgent } = req.body;
 
@@ -12102,7 +12102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error acknowledging policy:", error);
       res.status(400).json({ message: error.message || "Failed to acknowledge policy" });
-    });
+    }
   });
 
   // Get policy acknowledgments (Manager/Admin only)
@@ -12113,7 +12113,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching policy acknowledgments:", error);
       res.status(500).json({ message: "Failed to fetch policy acknowledgments" });
-    });
+    }
   });
 
   // ============================================================================
@@ -12130,12 +12130,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       const timeEntry = await storage.getTimeEntry(req.params.id, workspaceId);
       if (!timeEntry) {
         return res.status(404).json({ message: "Time entry not found" });
-      });
+      }
 
       // Prevent self-approval
       const employee = await db.select().from(employees).where(
@@ -12147,7 +12147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (employee.length > 0 && employee[0].userId === userId) {
         return res.status(403).json({ message: "Cannot approve your own time entries" });
-      });
+      }
 
       // Update status to approved
       const [updated] = await db
@@ -12168,7 +12168,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error approving time entry:", error);
       res.status(500).json({ message: error.message || "Failed to approve time entry" });
-    });
+    }
   });
 
   // Reject time entry (Manager/Admin only)
@@ -12181,13 +12181,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { reason } = req.body;
       
       const timeEntry = await storage.getTimeEntry(req.params.id, workspaceId);
       if (!timeEntry) {
         return res.status(404).json({ message: "Time entry not found" });
-      });
+      }
 
       // Prevent self-rejection
       const employee = await db.select().from(employees).where(
@@ -12199,7 +12199,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (employee.length > 0 && employee[0].userId === userId) {
         return res.status(403).json({ message: "Cannot reject your own time entries" });
-      });
+      }
 
       // Update status to rejected
       const [updated] = await db
@@ -12224,7 +12224,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error rejecting time entry:", error);
       res.status(500).json({ message: error.message || "Failed to reject time entry" });
-    });
+    }
   });
 
   // Get pending time entries (Manager/Admin only) - FOR APPROVAL DASHBOARD
@@ -12261,16 +12261,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let filtered = results;
       if (hasGps === 'true') {
         filtered = filtered.filter(r => r.timeEntry.clockInLatitude !== null);
-      });
+      }
       if (hasPhoto === 'true') {
         filtered = filtered.filter(r => r.timeEntry.clockInPhotoUrl !== null);
-      });
+      }
 
       res.json(filtered);
     } catch (error: any) {
       console.error("Error fetching pending time entries:", error);
       res.status(500).json({ message: error.message || "Failed to fetch pending time entries" });
-    });
+    }
   });
 
   // Bulk approve time entries (Manager/Admin only)
@@ -12283,12 +12283,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { timeEntryIds } = req.body;
 
       if (!Array.isArray(timeEntryIds) || timeEntryIds.length === 0) {
         return res.status(400).json({ message: "timeEntryIds must be a non-empty array" });
-      });
+      }
 
       // Prevent self-approval: get all employee IDs for the time entries
       const entries = await db
@@ -12320,7 +12320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Cannot approve your own time entries",
           selfApprovalCount: userEmployees.length
         });
-      });
+      }
 
       // Bulk approve all valid entries
       const updated = await db
@@ -12347,7 +12347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error bulk approving time entries:", error);
       res.status(500).json({ message: error.message || "Failed to bulk approve time entries" });
-    });
+    }
   });
 
   // ============================================================================
@@ -12361,14 +12361,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const timeEntries = await storage.getTimeEntriesByWorkspace(workspace.id);
       res.json(timeEntries);
     } catch (error) {
       console.error("Error fetching time entries:", error);
       res.status(500).json({ message: "Failed to fetch time entries" });
-    });
+    }
   });
 
   app.post('/api/time-entries/clock-in', isAuthenticated, async (req: any, res) => {
@@ -12378,7 +12378,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // GEO-COMPLIANCE: Capture IP address from request
       const ipAddress = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || req.connection.remoteAddress;
@@ -12393,7 +12393,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requiredAccuracy: 50,
           currentAccuracy: gpsAccuracy
         });
-      });
+      }
 
       const validated = insertTimeEntrySchema.parse({
         ...req.body,
@@ -12411,7 +12411,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error clocking in:", error);
       res.status(400).json({ message: error.message || "Failed to clock in" });
-    });
+    }
   });
 
   app.patch('/api/time-entries/:id/clock-out', isAuthenticated, async (req: any, res) => {
@@ -12421,12 +12421,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const timeEntry = await storage.getTimeEntry(req.params.id, workspace.id);
       if (!timeEntry) {
         return res.status(404).json({ message: "Time entry not found" });
-      });
+      }
 
       // GEO-COMPLIANCE: Capture IP address from request
       const ipAddress = req.headers['x-forwarded-for']?.split(',')[0].trim() || req.ip || req.connection.remoteAddress;
@@ -12441,7 +12441,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           requiredAccuracy: 50,
           currentAccuracy: gpsAccuracy
         });
-      });
+      }
 
       const clockOut = new Date();
       const clockIn = new Date(timeEntry.clockIn);
@@ -12469,13 +12469,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           timeEntry.clockInIpAddress,
           ipAddress
         );
-      });
+      }
 
       res.json(updated);
     } catch (error: any) {
       console.error("Error clocking out:", error);
       res.status(400).json({ message: error.message || "Failed to clock out" });
-    });
+    }
   });
 
   // ============================================================================
@@ -12491,7 +12491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const shift = await storage.getShift(shiftId, workspaceId);
       if (!shift) {
         return res.status(404).json({ message: "Shift not found" });
-      });
+      }
       
       // Get shift creator info
       let creatorInfo = null;
@@ -12506,9 +12506,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               email: owner.email,
               role: 'owner'
             };
-          });
-        });
-      });
+          }
+        }
+      }
       
       // Get employee who took the shift
       let employeeInfo = null;
@@ -12521,8 +12521,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             email: employee.email,
             phone: employee.phoneNumber
           };
-        });
-      });
+        }
+      }
       
       // Get all time entries for this shift
       const allTimeEntries = await storage.getTimeEntriesByWorkspace(workspaceId);
@@ -12554,7 +12554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             latitude: te.jobSiteLatitude,
             longitude: te.jobSiteLongitude,
             address: te.jobSiteAddress
-          });
+          }
         },
         createdAt: te.createdAt,
         updatedAt: te.updatedAt
@@ -12606,14 +12606,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           totalDiscrepancies: shiftDiscrepancies.length,
           hasGpsAnomalies: shiftDiscrepancies.some(d => d.discrepancyType === 'gps_anomaly'),
           hasIpAnomalies: shiftDiscrepancies.some(d => d.discrepancyType === 'ip_anomaly')
-        });
+        }
       };
       
       res.json(auditData);
     } catch (error: any) {
       console.error("Error fetching shift audit data:", error);
       res.status(500).json({ message: error.message || "Failed to fetch shift audit data" });
-    });
+    }
   });
 
   // ============================================================================
@@ -12629,12 +12629,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const user = await storage.getUser(userId);
       
       if (!user) {
         return res.status(404).json({ message: "User not found" });
-      });
+      }
       
       const {
         subject,
@@ -12671,9 +12671,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
               name: participant.displayName || participant.email,
               email: participant.email
             });
-          });
-        });
-      });
+          }
+        }
+      }
       
       // Create guest tokens (if provided)
       const createdGuestTokens = [];
@@ -12692,8 +12692,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             accessToken: token,
             expiresAt
           });
-        });
-      });
+        }
+      }
       
       // Send welcome system message
       const userName = user.displayName || user.email;
@@ -12718,7 +12718,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating chat:", error);
       res.status(500).json({ message: error.message || "Failed to create chat" });
-    });
+    }
   });
 
   // ============================================================================
@@ -12732,14 +12732,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const activeChatrooms = await storage.getActiveShiftChatrooms(workspace.id);
       res.json(activeChatrooms);
     } catch (error: any) {
       console.error("Error fetching active shift chatrooms:", error);
       res.status(400).json({ message: error.message || "Failed to fetch shift chatrooms" });
-    });
+    }
   });
 
   app.get('/api/shift-chatrooms/:shiftId/:timeEntryId', isAuthenticated, async (req: any, res) => {
@@ -12749,17 +12749,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const chatroom = await storage.getShiftChatroom(req.params.shiftId, req.params.timeEntryId);
       
       if (!chatroom) {
         return res.status(404).json({ message: "Shift chatroom not found" });
-      });
+      }
 
       if (chatroom.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Access denied" });
-      });
+      }
 
       const messages = await storage.getChatMessagesByConversation(chatroom.id);
       
@@ -12767,7 +12767,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching shift chatroom:", error);
       res.status(400).json({ message: error.message || "Failed to fetch shift chatroom" });
-    });
+    }
   });
 
   app.post('/api/shift-chatrooms/:conversationId/messages', isAuthenticated, async (req: any, res) => {
@@ -12777,17 +12777,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
-      });
+      }
 
       const conversation = await storage.getChatConversation(req.params.conversationId);
       
       if (!conversation) {
         return res.status(404).json({ message: "Conversation not found" });
-      });
+      }
 
       if (conversation.conversationType !== 'shift_chat') {
         return res.status(403).json({ message: "Not a shift chatroom" });
-      });
+      }
 
       const message = await storage.createChatMessage({
         conversationId: req.params.conversationId,
@@ -12802,7 +12802,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error sending shift chat message:", error);
       res.status(400).json({ message: error.message || "Failed to send message" });
-    });
+    }
   });
 
   app.get('/api/time-entries/unbilled/:clientId', isAuthenticated, async (req: any, res) => {
@@ -12812,14 +12812,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const unbilledEntries = await storage.getUnbilledTimeEntries(workspace.id, req.params.clientId);
       res.json(unbilledEntries);
     } catch (error) {
       console.error("Error fetching unbilled time entries:", error);
       res.status(500).json({ message: "Failed to fetch unbilled time entries" });
-    });
+    }
   });
 
   // ============================================================================
@@ -12832,12 +12832,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.status(404).json({ message: "No workspace selected" });
-      });
+      }
       
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const analytics = await storage.getWorkspaceAnalytics(workspace.id);
       res.json({
@@ -12851,7 +12851,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching analytics:", error);
       res.status(500).json({ message: "Failed to fetch analytics" });
-    });
+    }
   });
 
   // ============================================================================
@@ -12873,7 +12873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message: "Invalid manager assignment data",
           errors: parsed.error.errors 
         });
-      });
+      }
 
       // Validate manager assignment (cross-tenant check + role check)
       const validation = await validateManagerAssignment(
@@ -12884,14 +12884,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!validation.valid) {
         return res.status(400).json({ message: validation.error });
-      });
+      }
 
       const assignment = await storage.createManagerAssignment(parsed.data);
       res.status(201).json(assignment);
     } catch (error) {
       console.error("Error creating manager assignment:", error);
       res.status(500).json({ message: "Failed to create manager assignment" });
-    });
+    }
   });
 
   // Get manager assignments by workspace
@@ -12903,7 +12903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching manager assignments:", error);
       res.status(500).json({ message: "Failed to fetch manager assignments" });
-    });
+    }
   });
 
   // Get assignments for a specific manager
@@ -12915,7 +12915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching manager assignments:", error);
       res.status(500).json({ message: "Failed to fetch manager assignments" });
-    });
+    }
   });
 
   // Get assignments for a specific employee
@@ -12927,7 +12927,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching manager assignments:", error);
       res.status(500).json({ message: "Failed to fetch manager assignments" });
-    });
+    }
   });
 
   // Delete manager assignment (owners only)
@@ -12938,13 +12938,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!success) {
         return res.status(404).json({ message: "Manager assignment not found" });
-      });
+      }
 
       res.status(204).send();
     } catch (error) {
       console.error("Error deleting manager assignment:", error);
       res.status(500).json({ message: "Failed to delete manager assignment" });
-    });
+    }
   });
 
   // ============================================================================
@@ -12961,7 +12961,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!email || !firstName || !lastName) {
         return res.status(400).json({ message: "Email, first name, and last name are required" });
-      });
+      }
       
       // Generate unique invite token
       const inviteToken = crypto.randomBytes(32).toString('hex');
@@ -12999,7 +12999,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating onboarding invite:", error);
       res.status(400).json({ message: error.message || "Failed to create invite" });
-    });
+    }
   });
   
   // Get invite by token (public route)
@@ -13010,21 +13010,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!invite) {
         return res.status(404).json({ message: "Invite not found" });
-      });
+      }
       
       if (invite.isUsed) {
         return res.status(400).json({ message: "Invite has already been used" });
-      });
+      }
       
       if (new Date() > new Date(invite.expiresAt)) {
         return res.status(400).json({ message: "Invite has expired" });
-      });
+      }
       
       res.json(invite);
     } catch (error) {
       console.error("Error fetching invite:", error);
       res.status(500).json({ message: "Failed to fetch invite" });
-    });
+    }
   });
   
   // List all invites for workspace
@@ -13036,7 +13036,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching invites:", error);
       res.status(500).json({ message: "Failed to fetch invites" });
-    });
+    }
   });
 
   // Resend an invitation with new token
@@ -13050,15 +13050,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!invite) {
         return res.status(404).json({ message: 'Invite not found' });
-      });
+      }
       
       if (invite.workspaceId !== workspaceId) {
         return res.status(403).json({ message: 'Access denied' });
-      });
+      }
       
       if (invite.isUsed) {
         return res.status(400).json({ message: 'Invite has already been used' });
-      });
+      }
 
       // Generate new token and expiry
       const crypto = await import('crypto');
@@ -13070,7 +13070,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!updatedInvite) {
         return res.status(500).json({ message: 'Failed to resend invite' });
-      });
+      }
       
       // Send invitation email again
       const workspace = await storage.getWorkspace(workspaceId);
@@ -13104,7 +13104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error resending invite:', error);
       res.status(500).json({ message: error.message || 'Failed to resend invite' });
-    });
+    }
   });
 
   // Revoke an invitation
@@ -13118,21 +13118,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!invite) {
         return res.status(404).json({ message: 'Invite not found' });
-      });
+      }
       
       if (invite.workspaceId !== workspaceId) {
         return res.status(403).json({ message: 'Access denied' });
-      });
+      }
       
       if (invite.isUsed) {
         return res.status(400).json({ message: 'Cannot revoke a used invite' });
-      });
+      }
       
       const revokedInvite = await storage.revokeInvite(id);
       
       if (!revokedInvite) {
         return res.status(500).json({ message: 'Failed to revoke invite' });
-      });
+      }
       
       res.json({ 
         success: true, 
@@ -13142,7 +13142,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('Error revoking invite:', error);
       res.status(500).json({ message: error.message || 'Failed to revoke invite' });
-    });
+    }
   });
 
   // Mark invite as opened (called when user opens the invite link)
@@ -13153,18 +13153,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!invite) {
         return res.status(404).json({ message: 'Invite not found' });
-      });
+      }
       
       // Only mark as opened if not already used
       if (!invite.isUsed && invite.status !== 'opened' && invite.status !== 'accepted') {
         await storage.markInviteOpened(invite.id);
-      });
+      }
       
       res.json({ success: true });
     } catch (error) {
       console.error('Error marking invite as opened:', error);
       res.status(500).json({ message: 'Failed to mark invite as opened' });
-    });
+    }
   });
 
   // Get invites by status
@@ -13176,14 +13176,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const validStatuses = ['sent', 'opened', 'accepted', 'expired', 'revoked'];
       if (!validStatuses.includes(status)) {
         return res.status(400).json({ message: 'Invalid status. Must be one of: ' + validStatuses.join(', ') });
-      });
+      }
       
       const invites = await storage.getInvitesByStatus(workspaceId, status);
       res.json(invites);
     } catch (error) {
       console.error('Error fetching invites by status:', error);
       res.status(500).json({ message: 'Failed to fetch invites' });
-    });
+    }
   });
 
   // Get invite statistics for workspace
@@ -13206,7 +13206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error fetching invite stats:', error);
       res.status(500).json({ message: 'Failed to fetch invite statistics' });
-    });
+    }
   });
   
   // Create/start onboarding application (public route with valid token)
@@ -13216,13 +13216,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!inviteToken) {
         return res.status(400).json({ message: "Invite token is required" });
-      });
+      }
       
       const invite = await storage.getOnboardingInviteByToken(inviteToken);
       
       if (!invite || invite.isUsed || new Date() > new Date(invite.expiresAt)) {
         return res.status(400).json({ message: "Invalid or expired invite" });
-      });
+      }
       
       // Generate employee number
       const employeeNumber = await storage.generateEmployeeNumber(invite.workspaceId);
@@ -13252,7 +13252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating application:", error);
       res.status(400).json({ message: error.message || "Failed to create application" });
-    });
+    }
   });
   
   // Get onboarding application
@@ -13263,19 +13263,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
       
       const application = await storage.getOnboardingApplication(id, workspaceId);
       
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
-      });
+      }
       
       res.json(application);
     } catch (error) {
       console.error("Error fetching application:", error);
       res.status(500).json({ message: "Failed to fetch application" });
-    });
+    }
   });
   
   // Update onboarding application (public route during onboarding, or authenticated)
@@ -13286,19 +13286,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
       
       const updated = await storage.updateOnboardingApplication(id, workspaceId, updateData);
       
       if (!updated) {
         return res.status(404).json({ message: "Application not found" });
-      });
+      }
       
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating application:", error);
       res.status(400).json({ message: error.message || "Failed to update application" });
-    });
+    }
   });
   
   // List all applications for workspace
@@ -13310,7 +13310,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching applications:", error);
       res.status(500).json({ message: "Failed to fetch applications" });
-    });
+    }
   });
   
   // Search employees and applications
@@ -13321,14 +13321,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (!query) {
         return res.status(400).json({ message: "Search query is required" });
-      });
+      }
       
       const results = await storage.searchEmployeesAndApplications(workspaceId, query);
       res.json(results);
     } catch (error) {
       console.error("Error searching employees:", error);
       res.status(500).json({ message: "Failed to search employees" });
-    });
+    }
   });
   
   // Create document signature
@@ -13347,7 +13347,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating signature:", error);
       res.status(400).json({ message: error.message || "Failed to create signature" });
-    });
+    }
   });
   
   // Get signatures for application
@@ -13359,7 +13359,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching signatures:", error);
       res.status(500).json({ message: "Failed to fetch signatures" });
-    });
+    }
   });
   
   // Create certification
@@ -13371,7 +13371,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error creating certification:", error);
       res.status(400).json({ message: error.message || "Failed to create certification" });
-    });
+    }
   });
   
   // Get certifications for application
@@ -13383,7 +13383,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching certifications:", error);
       res.status(500).json({ message: "Failed to fetch certifications" });
-    });
+    }
   });
 
   // Upload document during onboarding (public route with token validation)
@@ -13394,27 +13394,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate required fields
       if (!applicationId || !workspaceId || !documentType || !fileName || !fileType) {
         return res.status(400).json({ message: "Missing required fields" });
-      });
+      }
 
       // Validate file size (15MB max)
       const maxSizeBytes = 15 * 1024 * 1024;
       if (fileSize && fileSize > maxSizeBytes) {
         return res.status(400).json({ message: "File size exceeds 15MB limit" });
-      });
+      }
 
       // SECURITY: Verify application exists and matches workspace
       const application = await storage.getOnboardingApplication(applicationId, workspaceId);
       if (!application) {
         return res.status(404).json({ message: "Application not found or access denied" });
-      });
+      }
 
       // Verify invite is still valid (not expired)
       if (application.inviteId) {
         const invite = await storage.getOnboardingInvite(application.inviteId);
         if (!invite || new Date() > new Date(invite.expiresAt)) {
           return res.status(400).json({ message: "Invitation has expired" });
-        });
-      });
+        }
+      }
 
       // Sanitize filename (remove path traversal attempts, special chars)
       const sanitizedFileName = fileName
@@ -13448,7 +13448,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error generating upload URL:", error);
       res.status(500).json({ message: error.message || "Failed to generate upload URL" });
-    });
+    }
   });
 
   // Confirm document upload and store metadata (after client uploads to signed URL)
@@ -13460,13 +13460,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate required fields
       if (!applicationId || !workspaceId || !filePath || !documentType) {
         return res.status(400).json({ message: "Missing required fields" });
-      });
+      }
 
       // SECURITY: Verify application exists and matches workspace
       const application = await storage.getOnboardingApplication(applicationId, workspaceId);
       if (!application) {
         return res.status(404).json({ message: "Application not found or access denied" });
-      });
+      }
 
       // Get or create employee record for this application
       let employeeId = application.employeeId;
@@ -13479,8 +13479,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (invite) {
             inviteRole = invite.role || null; // Job title from invite
             inviteWorkspaceRole = invite.workspaceRole || 'staff'; // Permission level from invite
-          });
-        });
+          }
+        }
 
         // Create placeholder employee with role/workspaceRole from invite
         const employee = await storage.createEmployee({
@@ -13509,7 +13509,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           workspaceRole: inviteWorkspaceRole,
           source: 'onboarding_application',
         });
-      });
+      }
 
       const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
       const userAgent = req.get('user-agent') || 'unknown';
@@ -13519,7 +13519,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let digitalSignatureHash = null;
       if (isComplianceDoc) {
         digitalSignatureHash = crypto.createHash('sha256').update(filePath + Date.now()).digest('hex');
-      });
+      }
 
       // Auto-calculate delete-after date (7 years for compliance)
       const retentionYears = isComplianceDoc ? 7 : 3;
@@ -13554,7 +13554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error confirming document upload:", error);
       res.status(500).json({ message: error.message || "Failed to confirm upload" });
-    });
+    }
   });
 
   // Get documents for onboarding application (public route with validation)
@@ -13565,13 +13565,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
 
       // SECURITY: Verify application exists and matches workspace
       const application = await storage.getOnboardingApplication(applicationId, workspaceId as string);
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
-      });
+      }
 
       // Get all documents for this application
       const documents = await db
@@ -13588,7 +13588,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching onboarding documents:", error);
       res.status(500).json({ message: "Failed to fetch documents" });
-    });
+    }
   });
 
   // Get contracts for onboarding application (public route with validation)
@@ -13599,13 +13599,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
 
       // SECURITY: Verify application exists and matches workspace
       const application = await storage.getOnboardingApplication(applicationId, workspaceId as string);
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
-      });
+      }
 
       // Check if contracts exist, if not create them
       let contracts = await db
@@ -13669,7 +13669,7 @@ I certify that I have completed the W-4 withholding information during onboardin
 By signing below, I authorize my employer to withhold federal income tax from my wages based on the information I have provided.`,
             status: 'pending',
           });
-        });
+        }
 
         // W-9 Form (for contractors)
         if (isW9Contractor) {
@@ -13696,7 +13696,7 @@ I certify that:
 By signing below, I certify under penalties of perjury that the information provided is true, correct, and complete.`,
             status: 'pending',
           });
-        });
+        }
 
         // Employee Handbook (for all)
         contractsToCreate.push({
@@ -13756,14 +13756,14 @@ ${application.email}`,
             .insert(documentSignatures)
             .values(contractsToCreate)
             .returning();
-        });
-      });
+        }
+      }
 
       res.json(contracts);
     } catch (error) {
       console.error("Error fetching onboarding contracts:", error);
       res.status(500).json({ message: "Failed to fetch contracts" });
-    });
+    }
   });
 
   // Sign a contract (public route with validation)
@@ -13775,17 +13775,17 @@ ${application.email}`,
 
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID is required" });
-      });
+      }
 
       if (!signedByName || !applicationId) {
         return res.status(400).json({ message: "Signature name and application ID are required" });
-      });
+      }
 
       // SECURITY: Verify application exists and matches workspace
       const application = await storage.getOnboardingApplication(applicationId, workspaceId as string);
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
-      });
+      }
 
       // SECURITY: Verify contract belongs to this application and workspace
       const [existingContract] = await db
@@ -13802,11 +13802,11 @@ ${application.email}`,
 
       if (!existingContract) {
         return res.status(404).json({ message: "Contract not found or access denied" });
-      });
+      }
 
       if (existingContract.status === 'signed') {
         return res.status(400).json({ message: "Contract has already been signed" });
-      });
+      }
 
       // Record signature with audit trail
       const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
@@ -13829,7 +13829,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error("Error signing contract:", error);
       res.status(500).json({ message: error.message || "Failed to sign contract" });
-    });
+    }
   });
 
   // ============================================================================
@@ -13852,7 +13852,7 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
       
       const documentData = req.body;
       
@@ -13860,13 +13860,13 @@ ${application.email}`,
       const employee = await storage.getEmployee(documentData.employeeId, workspace.id);
       if (!employee) {
         return res.status(403).json({ message: "Employee not found or access denied" });
-      });
+      }
 
       // Calculate SHA-256 hash for immutable documents (signatures, I-9, etc)
       let digitalSignatureHash = null;
       if (documentData.isImmutable && documentData.fileUrl) {
         digitalSignatureHash = crypto.createHash('sha256').update(documentData.fileUrl).digest('hex');
-      });
+      }
 
       // Auto-calculate delete-after date based on retention period
       const retentionYears = documentData.retentionPeriodYears || 7;
@@ -13889,7 +13889,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error("Error uploading document:", error);
       res.status(400).json({ message: error.message || "Failed to upload document" });
-    });
+    }
   });
 
   // Get employee documents (with filters) - HR managers can view all documents
@@ -13905,13 +13905,13 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
       
       // SECURITY: Verify employee belongs to user's workspace
       const employee = await storage.getEmployee(employeeId, workspace.id);
       if (!employee) {
         return res.status(403).json({ message: "Employee not found or access denied" });
-      });
+      }
       
       const documents = await storage.getEmployeeDocuments(
         workspace.id,
@@ -13924,7 +13924,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error fetching documents:", error);
       res.status(500).json({ message: "Failed to fetch documents" });
-    });
+    }
   });
 
   // Approve document (manager/owner/hr_manager only)
@@ -13940,20 +13940,20 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
       
       // SECURITY: Verify document belongs to user's workspace
       const existingDoc = await storage.getEmployeeDocument(documentId);
       if (!existingDoc || existingDoc.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Document not found or access denied" });
-      });
+      }
 
       const document = await storage.approveEmployeeDocument(documentId, userId, approvalNotes);
       res.json(document);
     } catch (error: any) {
       console.error("Error approving document:", error);
       res.status(400).json({ message: error.message || "Failed to approve document" });
-    });
+    }
   });
 
   // Reject document (manager/owner/hr_manager only)
@@ -13965,7 +13965,7 @@ ${application.email}`,
 
       if (!rejectionReason) {
         return res.status(400).json({ message: "Rejection reason is required" });
-      });
+      }
 
       // SECURITY: Resolve workspace from authenticated user
       const workspace = await storage.getWorkspaceByOwnerId(userId) || 
@@ -13973,20 +13973,20 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
       
       // SECURITY: Verify document belongs to user's workspace
       const existingDoc = await storage.getEmployeeDocument(documentId);
       if (!existingDoc || existingDoc.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Document not found or access denied" });
-      });
+      }
 
       const document = await storage.rejectEmployeeDocument(documentId, userId, rejectionReason);
       res.json(document);
     } catch (error: any) {
       console.error("Error rejecting document:", error);
       res.status(400).json({ message: error.message || "Failed to reject document" });
-    });
+    }
   });
 
   // Log document access (for compliance audit trail)
@@ -14006,17 +14006,17 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const document = await storage.getEmployeeDocument(documentId);
       if (!document) {
         return res.status(404).json({ message: "Document not found" });
-      });
+      }
       
       // SECURITY: Verify document belongs to user's workspace
       if (document.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Access denied" });
-      });
+      }
 
       const accessLog = await storage.logDocumentAccess({
         workspaceId: document.workspaceId,
@@ -14033,7 +14033,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error("Error logging document access:", error);
       res.status(400).json({ message: error.message || "Failed to log access" });
-    });
+    }
   });
 
   // Get document access logs (for compliance audit)
@@ -14048,20 +14048,20 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
       
       // SECURITY: Verify document belongs to user's workspace
       const document = await storage.getEmployeeDocument(documentId);
       if (!document || document.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Document not found or access denied" });
-      });
+      }
       
       const logs = await storage.getDocumentAccessLogs(documentId);
       res.json(logs);
     } catch (error) {
       console.error("Error fetching access logs:", error);
       res.status(500).json({ message: "Failed to fetch access logs" });
-    });
+    }
   });
 
   // Create/update onboarding workflow template (owner only)
@@ -14072,7 +14072,7 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const templateData = req.body;
       const template = await storage.createOnboardingWorkflowTemplate({
@@ -14085,7 +14085,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error("Error creating workflow template:", error);
       res.status(400).json({ message: error.message || "Failed to create template" });
-    });
+    }
   });
 
   // Get workflow templates
@@ -14097,14 +14097,14 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const templates = await storage.getOnboardingWorkflowTemplates(workspace.id);
       res.json(templates);
     } catch (error) {
       console.error("Error fetching workflow templates:", error);
       res.status(500).json({ message: "Failed to fetch templates" });
-    });
+    }
   });
 
   // Create onboarding checklist from template
@@ -14119,24 +14119,24 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
       
       const application = await storage.getOnboardingApplication(applicationId);
       if (!application) {
         return res.status(404).json({ message: "Application not found" });
-      });
+      }
       
       // SECURITY: Verify application belongs to user's workspace
       if (application.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Application not found or access denied" });
-      });
+      }
 
       const template = templateId ? await storage.getOnboardingWorkflowTemplate(templateId) : null;
       
       // SECURITY: Verify template belongs to user's workspace if provided
       if (template && template.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Template not found or access denied" });
-      });
+      }
       
       // Generate checklist items from template
       let checklistItems: any[] = [];
@@ -14148,7 +14148,7 @@ ${application.email}`,
           isRequired: step.isRequired,
           isCompleted: false,
         }));
-      });
+      }
 
       // Calculate I-9 deadline (3 business days from hire date)
       const i9DeadlineDate = new Date();
@@ -14168,7 +14168,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error("Error creating checklist:", error);
       res.status(400).json({ message: error.message || "Failed to create checklist" });
-    });
+    }
   });
 
   // Update checklist progress
@@ -14184,13 +14184,13 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
       
       // SECURITY: Verify checklist belongs to user's workspace
       const existingChecklist = await storage.getOnboardingChecklist(checklistId);
       if (!existingChecklist || existingChecklist.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Checklist not found or access denied" });
-      });
+      }
 
       // Calculate overall progress
       const totalItems = checklistItems.length;
@@ -14214,7 +14214,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error("Error updating checklist:", error);
       res.status(400).json({ message: error.message || "Failed to update checklist" });
-    });
+    }
   });
 
   // Get compliance report (I-9 expiry, missing docs, etc) - MANAGER/OWNER ONLY
@@ -14226,14 +14226,14 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const report = await storage.getHiringComplianceReport(workspace.id);
       res.json(report);
     } catch (error) {
       console.error("Error generating compliance report:", error);
       res.status(500).json({ message: "Failed to generate report" });
-    });
+    }
   });
 
   // Generate complete onboarding packet as PDF (all documents + audit trail) - HR managers can generate packets
@@ -14252,13 +14252,13 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Verify employee belongs to workspace
       const employee = await storage.getEmployeeById(employeeId);
       if (!employee || employee.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Employee not found or access denied" });
-      });
+      }
 
       // Fetch all approved documents
       const documents = await storage.getEmployeeDocuments(workspace.id, employeeId, {
@@ -14267,7 +14267,7 @@ ${application.email}`,
 
       if (!documents || documents.length === 0) {
         return res.status(404).json({ message: "No approved documents found for this employee" });
-      });
+      }
 
       // Helper function to fetch file as buffer
       const fetchFileAsBuffer = (url: string): Promise<Buffer> => {
@@ -14369,10 +14369,10 @@ ${application.email}`,
         doc.text(`Uploaded At: ${new Date(document.uploadedAt).toLocaleString()}`);
         if (document.approvedAt) {
           doc.text(`Approved At: ${new Date(document.approvedAt).toLocaleString()}`);
-        });
+        }
         if (document.expiresAt) {
           doc.text(`Expires At: ${new Date(document.expiresAt).toLocaleString()}`);
-        });
+        }
         doc.moveDown();
 
         // AUDIT TRAIL - WHERE
@@ -14399,8 +14399,8 @@ ${application.email}`,
           doc.text(`Approved By: ${document.approvedByEmail || 'N/A'}`);
           if (document.approvalNotes) {
             doc.text(`Notes: ${document.approvalNotes}`);
-          });
-        });
+          }
+        }
 
         // Footer with retention info
         doc.fontSize(8).fillColor('#666666');
@@ -14455,7 +14455,7 @@ ${application.email}`,
           if (!document.fileUrl) {
             console.warn(`Document ${document.id} has no file URL, skipping merge`);
             continue;
-          });
+          }
 
           // Fetch document file
           const documentBuffer = await fetchFileAsBuffer(document.fileUrl);
@@ -14481,7 +14481,7 @@ ${application.email}`,
             } else {
               console.warn(`Unsupported image type ${document.fileType}, skipping`);
               continue;
-            });
+            }
 
             // Scale image to fit page
             const { width, height } = page.getSize();
@@ -14508,12 +14508,12 @@ ${application.email}`,
             });
           } else {
             console.warn(`Unsupported file type ${document.fileType} for document ${document.id}, skipping merge`);
-          });
+          }
         } catch (docError: any) {
           console.error(`Error merging document ${document.id}:`, docError.message);
           // Continue with other documents even if one fails
-        });
-      });
+        }
+      }
 
       // Save final merged PDF
       const finalPDFBytes = await masterPDF.save();
@@ -14537,12 +14537,12 @@ ${application.email}`,
           accessIpAddress: req.ip || 'unknown',
           accessUserAgent: req.headers['user-agent'] || 'unknown',
         });
-      });
+      }
 
     } catch (error: any) {
       console.error("Error generating PDF packet:", error);
       res.status(500).json({ message: "Failed to generate PDF packet" });
-    });
+    }
   });
 
   // ============================================================================
@@ -14575,14 +14575,14 @@ ${application.email}`,
         return res.status(503).json({ 
           message: "Stripe integration requires STRIPE_SECRET_KEY. Please add your Stripe keys to activate payment processing." 
         });
-      });
+      }
 
       const userId = req.user?.id;
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Check if account already exists
       if (workspace.stripeConnectedAccountId) {
@@ -14592,7 +14592,7 @@ ${application.email}`,
           chargesEnabled: account.charges_enabled,
           detailsSubmitted: account.details_submitted,
         });
-      });
+      }
 
       // Create new Connect account
       const account = await stripe.accounts.create({
@@ -14618,7 +14618,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error("Error creating Stripe Connect account:", error);
       res.status(500).json({ message: error.message || "Failed to create Stripe account" });
-    });
+    }
   });
 
   // Generate Stripe Connect onboarding link
@@ -14626,14 +14626,14 @@ ${application.email}`,
     try {
       if (!stripe) {
         return res.status(503).json({ message: "Stripe keys required" });
-      });
+      }
 
       const userId = req.user?.id;
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace || !workspace.stripeConnectedAccountId) {
         return res.status(400).json({ message: "Connect account must be created first" });
-      });
+      }
 
       const accountLink = await stripe.accountLinks.create({
         account: workspace.stripeConnectedAccountId,
@@ -14646,7 +14646,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error("Error creating onboarding link:", error);
       res.status(500).json({ message: error.message });
-    });
+    }
   });
 
   // Process invoice payment with platform fee
@@ -14654,7 +14654,7 @@ ${application.email}`,
     try {
       if (!stripe) {
         return res.status(503).json({ message: "Stripe keys required" });
-      });
+      }
 
       const { invoiceId, paymentMethodId } = req.body;
 
@@ -14662,13 +14662,13 @@ ${application.email}`,
       const invoice = await storage.getInvoice(invoiceId);
       if (!invoice) {
         return res.status(404).json({ message: "Invoice not found" });
-      });
+      }
 
       // Get workspace (for platform fee and Stripe account)
       const workspace = await storage.getWorkspace(invoice.workspaceId);
       if (!workspace || !workspace.stripeConnectedAccountId) {
         return res.status(400).json({ message: "Workspace Stripe account not configured" });
-      });
+      }
 
       // Calculate amounts in cents
       const totalCents = Math.round(parseFloat(invoice.total as string) * 100);
@@ -14708,7 +14708,7 @@ ${application.email}`,
           collectedAt: new Date(),
           status: 'collected',
         });
-      });
+      }
 
       res.json({ 
         success: true,
@@ -14718,7 +14718,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error("Error processing payment:", error);
       res.status(500).json({ message: error.message || "Payment failed" });
-    });
+    }
   });
 
   // Create subscription for workspace tier upgrade
@@ -14726,7 +14726,7 @@ ${application.email}`,
     try {
       if (!stripe) {
         return res.status(503).json({ message: "Stripe keys required" });
-      });
+      }
 
       const { tier, paymentMethodId } = req.body;
       const userId = req.user?.id;
@@ -14734,7 +14734,7 @@ ${application.email}`,
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Tier pricing (matching your pricing page)
       const TIER_PRICES: Record<string, { monthly: number, priceId?: string }> = {
@@ -14747,7 +14747,7 @@ ${application.email}`,
       const tierConfig = TIER_PRICES[tier as keyof typeof TIER_PRICES];
       if (!tierConfig) {
         return res.status(400).json({ message: "Invalid tier" });
-      });
+      }
 
       // Create or retrieve Stripe customer
       let customerId = workspace.stripeCustomerId;
@@ -14761,7 +14761,7 @@ ${application.email}`,
         });
         customerId = customer.id;
         await storage.updateWorkspace(workspace.id, { stripeCustomerId: customerId });
-      });
+      }
 
       // Attach payment method
       await stripe.paymentMethods.attach(paymentMethodId, { customer: customerId });
@@ -14810,7 +14810,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error("Error creating subscription:", error);
       res.status(500).json({ message: error.message });
-    });
+    }
   });
 
   // Webhook handler for Stripe events
@@ -14818,7 +14818,7 @@ ${application.email}`,
     try {
       if (!stripe) {
         return res.status(503).send('Stripe not configured');
-      });
+      }
 
       const sig = req.headers['stripe-signature'];
       
@@ -14826,14 +14826,14 @@ ${application.email}`,
       if (!sig || typeof sig !== 'string') {
         console.error('Stripe webhook signature missing or invalid');
         return res.status(401).send('Unauthorized - Invalid signature');
-      });
+      }
 
       const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
       if (!webhookSecret) {
         console.warn('Stripe webhook secret not configured');
         return res.status(400).send('Webhook secret required');
-      });
+      }
 
       // SECURITY: This throws an error if signature is invalid
       const event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
@@ -14871,7 +14871,7 @@ ${application.email}`,
                 updatedAt: new Date(),
               })
               .where(eq(invoices.id, payment.invoiceId));
-          });
+          }
           break;
         
         case 'payment_intent.payment_failed':
@@ -14910,7 +14910,7 @@ ${application.email}`,
           const subscription = event.data.object;
           console.log('Subscription event:', subscription.id);
           break;
-      });
+      }
 
       // Route event to AI Brain StripeEventBridge for additional processing
       try {
@@ -14919,13 +14919,13 @@ ${application.email}`,
         console.log(`[Stripe Webhook] AI Brain processed: ${bridgeResult.action}`);
       } catch (bridgeError) {
         console.warn('[Stripe Webhook] AI Brain processing failed (non-blocking):', bridgeError);
-      });
+      }
 
       res.json({ received: true });
     } catch (error: any) {
       console.error('Webhook error:', error.message);
       res.status(400).send(`Webhook Error: ${error.message}`);
-    });
+    }
   });
 
   // ============================================================================
@@ -14937,7 +14937,7 @@ ${application.email}`,
     try {
       if (!stripe) {
         return res.status(503).json({ message: 'Payment processing not configured' });
-      });
+      }
 
       const { id } = req.params;
       const { payerEmail, payerName, returnUrl } = req.body;
@@ -14946,18 +14946,18 @@ ${application.email}`,
       const invoice = await storage.getInvoice(id);
       if (!invoice) {
         return res.status(404).json({ message: 'Invoice not found' });
-      });
+      }
 
       // Check if invoice is already paid
       if (invoice.status === 'paid') {
         return res.status(400).json({ message: 'Invoice already paid' });
-      });
+      }
 
       // Get or create Stripe customer for the client
       const client = await storage.getClient(invoice.clientId);
       if (!client) {
         return res.status(404).json({ message: 'Client not found' });
-      });
+      }
 
       const { clientPaymentInfo } = await import("@shared/schema");
       
@@ -14999,8 +14999,8 @@ ${application.email}`,
             stripeCustomerId: customer.id,
             billingEmail: payerEmail || client.email || undefined,
           });
-        });
-      });
+        }
+      }
 
       // Create payment intent
       const amount = Math.round(parseFloat(invoice.total) * 100); // Convert to cents
@@ -15049,7 +15049,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error creating payment intent:', error);
       res.status(500).json({ message: error.message || 'Failed to create payment intent' });
-    });
+    }
   });
 
   // Get invoice payment status (public - no auth required)
@@ -15060,7 +15060,7 @@ ${application.email}`,
       const invoice = await storage.getInvoice(id);
       if (!invoice) {
         return res.status(404).json({ message: 'Invoice not found' });
-      });
+      }
 
       const payments = await db
         .select()
@@ -15087,7 +15087,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error getting payment status:', error);
       res.status(500).json({ message: error.message || 'Failed to get payment status' });
-    });
+    }
   });
 
   // Get payment history for a client (auth required)
@@ -15123,7 +15123,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error getting client payments:', error);
       res.status(500).json({ message: error.message || 'Failed to get payments' });
-    });
+    }
   });
 
   // ============================================================================
@@ -15144,7 +15144,7 @@ ${application.email}`,
       
       if (!isManager && userId !== employeeId) {
         return res.status(403).json({ message: 'Forbidden - Can only view own payroll information' });
-      });
+      }
 
       const payrollInfo = await db
         .select()
@@ -15160,13 +15160,13 @@ ${application.email}`,
 
       if (!payrollInfo) {
         return res.status(404).json({ message: 'Payroll information not found' });
-      });
+      }
 
       res.json(payrollInfo);
     } catch (error: any) {
       console.error('Error getting payroll info:', error);
       res.status(500).json({ message: error.message || 'Failed to get payroll information' });
-    });
+    }
   });
 
   // Update employee payroll information - CRITICAL: Requires OWNER+ role  
@@ -15244,13 +15244,13 @@ ${application.email}`,
             i9OnFile,
           })
           .returning();
-      });
+      }
 
       res.json(result);
     } catch (error: any) {
       console.error('Error updating payroll info:', error);
       res.status(500).json({ message: error.message || 'Failed to update payroll information' });
-    });
+    }
   });
 
   // ============================================================================
@@ -15275,7 +15275,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error getting availability:', error);
       res.status(500).json({ message: error.message || 'Failed to get availability' });
-    });
+    }
   });
 
   // Set employee availability (bulk replace all availability for employee)
@@ -15296,7 +15296,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error setting availability:', error);
       res.status(500).json({ message: error.message || 'Failed to set availability' });
-    });
+    }
   });
 
   // Get current user's own availability
@@ -15309,7 +15309,7 @@ ${application.email}`,
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { includeExpired } = req.query;
       const { availabilityService } = await import("./services/availabilityService");
 
@@ -15324,7 +15324,7 @@ ${application.email}`,
 
       if (employee.length === 0) {
         return res.status(404).json({ message: 'Employee record not found' });
-      });
+      }
 
       const availability = await availabilityService.getEmployeeAvailability(
         workspaceId,
@@ -15336,7 +15336,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error getting availability:', error);
       res.status(500).json({ message: error.message || 'Failed to get availability' });
-    });
+    }
   });
 
   // Submit availability pattern (current user)
@@ -15349,7 +15349,7 @@ ${application.email}`,
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { slots } = req.body;
       const { availabilityService } = await import("./services/availabilityService");
 
@@ -15364,7 +15364,7 @@ ${application.email}`,
 
       if (employee.length === 0) {
         return res.status(404).json({ message: 'Employee record not found' });
-      });
+      }
 
       const updated = await availabilityService.setEmployeeAvailability(
         workspaceId,
@@ -15376,7 +15376,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error submitting availability:', error);
       res.status(500).json({ message: error.message || 'Failed to submit availability' });
-    });
+    }
   });
 
   // Update individual availability slot
@@ -15391,13 +15391,13 @@ ${application.email}`,
 
       if (!updated) {
         return res.status(404).json({ message: 'Availability slot not found' });
-      });
+      }
 
       res.json(updated);
     } catch (error: any) {
       console.error('Error updating availability:', error);
       res.status(500).json({ message: error.message || 'Failed to update availability' });
-    });
+    }
   });
 
   // Delete availability slot
@@ -15411,13 +15411,13 @@ ${application.email}`,
 
       if (!deleted) {
         return res.status(404).json({ message: 'Availability slot not found' });
-      });
+      }
 
       res.json({ success: true });
     } catch (error: any) {
       console.error('Error deleting availability:', error);
       res.status(500).json({ message: error.message || 'Failed to delete availability' });
-    });
+    }
   });
 
   // Get team availability overview (manager view)
@@ -15437,7 +15437,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error getting team availability:', error);
       res.status(500).json({ message: error.message || 'Failed to get team availability' });
-    });
+    }
   });
 
   // Add availability exception (one-time unavailability: vacation, sick day, etc.)
@@ -15450,7 +15450,7 @@ ${application.email}`,
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { startDate, endDate, requestType, reason, notes } = req.body;
       const { availabilityService } = await import("./services/availabilityService");
 
@@ -15465,7 +15465,7 @@ ${application.email}`,
 
       if (employee.length === 0) {
         return res.status(404).json({ message: 'Employee record not found' });
-      });
+      }
 
       const exception = await availabilityService.createException(
         workspaceId,
@@ -15476,14 +15476,14 @@ ${application.email}`,
           requestType,
           reason,
           notes,
-        });
+        }
       );
 
       res.json(exception);
     } catch (error: any) {
       console.error('Error creating availability exception:', error);
       res.status(500).json({ message: error.message || 'Failed to create availability exception' });
-    });
+    }
   });
 
   // Check for scheduling conflicts
@@ -15505,7 +15505,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error checking availability conflict:', error);
       res.status(500).json({ message: error.message || 'Failed to check conflict' });
-    });
+    }
   });
 
   // Detect understaffing based on availability patterns (manager view)
@@ -15525,7 +15525,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error detecting understaffing:', error);
       res.status(500).json({ message: error.message || 'Failed to detect understaffing' });
-    });
+    }
   });
 
   // Suggest optimal schedule based on availability (manager view)
@@ -15546,7 +15546,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error suggesting schedule:', error);
       res.status(500).json({ message: error.message || 'Failed to suggest schedule' });
-    });
+    }
   });
 
 
@@ -15584,7 +15584,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error fetching pending time-off requests:', error);
       res.status(500).json({ message: error.message || 'Failed to fetch pending time-off requests' });
-    });
+    }
   });
 
   // Get time off requests for employee
@@ -15609,7 +15609,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error getting time off requests:', error);
       res.status(500).json({ message: error.message || 'Failed to get time off requests' });
-    });
+    }
   });
 
   // Create time off request
@@ -15626,7 +15626,7 @@ ${application.email}`,
       
       if (!isManager && requestEmployeeId !== userId) {
         return res.status(403).json({ message: 'Forbidden - Can only submit time off requests for yourself' });
-      });
+      }
       
       // SECURITY: Validate with Zod (use pick for required fields)
       const validated = insertTimeOffRequestSchema.pick({
@@ -15664,7 +15664,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error creating time off request:', error);
       res.status(500).json({ message: error.message || 'Failed to create time off request' });
-    });
+    }
   });
 
   // Approve/deny time off request (manager only)
@@ -15678,7 +15678,7 @@ ${application.email}`,
 
       if (!['approved', 'denied'].includes(status)) {
         return res.status(400).json({ message: 'Invalid status. Must be approved or denied.' });
-      });
+      }
 
       const [updated] = await db
         .update(timeOffRequests)
@@ -15699,7 +15699,7 @@ ${application.email}`,
 
       if (!updated) {
         return res.status(404).json({ message: 'Time off request not found' });
-      });
+      }
 
       // Send notification email to employee
       try {
@@ -15727,18 +15727,18 @@ ${application.email}`,
             sendPTODeniedEmail(employee.email, emailData).catch(err =>
               console.error('Failed to send PTO denied email:', err)
             );
-          });
-        });
+          }
+        }
       } catch (emailError) {
         console.error('Error sending time-off notification:', emailError);
         // Don't fail the request if email fails
-      });
+      }
 
       res.json(updated);
     } catch (error: any) {
       console.error('Error updating time off request:', error);
       res.status(500).json({ message: error.message || 'Failed to update time off request' });
-    });
+    }
   });
 
   // Contract document management
@@ -15763,7 +15763,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error getting contracts:', error);
       res.status(500).json({ message: error.message || 'Failed to get contracts' });
-    });
+    }
   });
 
   // Submit contract document (I9, W9, W4) - Requires OWNER+  
@@ -15782,7 +15782,7 @@ ${application.email}`,
 
       if (!['i9', 'w9', 'w4'].includes(documentType)) {
         return res.status(400).json({ message: 'Invalid document type. Must be i9, w9, or w4.' });
-      });
+      }
 
       const [contract] = await db
         .insert(contractDocuments)
@@ -15801,7 +15801,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error creating contract document:', error);
       res.status(500).json({ message: error.message || 'Failed to create contract document' });
-    });
+    }
   });
 
   // Approve/reject contract document
@@ -15815,7 +15815,7 @@ ${application.email}`,
 
       if (!['approved', 'rejected'].includes(status)) {
         return res.status(400).json({ message: 'Invalid status. Must be approved or rejected.' });
-      });
+      }
 
       const [updated] = await db
         .update(contractDocuments)
@@ -15836,13 +15836,13 @@ ${application.email}`,
 
       if (!updated) {
         return res.status(404).json({ message: 'Contract document not found' });
-      });
+      }
 
       res.json(updated);
     } catch (error: any) {
       console.error('Error updating contract status:', error);
       res.status(500).json({ message: error.message || 'Failed to update contract status' });
-    });
+    }
   });
 
   // ============================================================================
@@ -15871,7 +15871,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error getting shift actions:', error);
       res.status(500).json({ message: error.message || 'Failed to get shift actions' });
-    });
+    }
   });
 
   // Accept/Deny shift
@@ -15885,7 +15885,7 @@ ${application.email}`,
 
       if (!['accept', 'deny'].includes(action)) {
         return res.status(400).json({ message: 'Invalid action. Must be accept or deny.' });
-      });
+      }
 
       const [shiftAction] = await db
         .insert(shiftActions)
@@ -15904,7 +15904,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error responding to shift:', error);
       res.status(500).json({ message: error.message || 'Failed to respond to shift' });
-    });
+    }
   });
 
   // Request shift switch
@@ -15933,7 +15933,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error requesting shift switch:', error);
       res.status(500).json({ message: error.message || 'Failed to request shift switch' });
-    });
+    }
   });
 
   // Get pending shift actions for managers
@@ -15978,7 +15978,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error fetching pending shift actions:', error);
       res.status(500).json({ message: error.message || 'Failed to fetch pending shift actions' });
-    });
+    }
   });
 
   // Approve/deny shift switch (manager only)
@@ -16009,7 +16009,7 @@ ${application.email}`,
 
       if (!updated) {
         return res.status(404).json({ message: 'Shift action not found' });
-      });
+      }
 
       // Send notification email to employee
       try {
@@ -16044,18 +16044,18 @@ ${application.email}`,
             sendShiftActionDeniedEmail(employee.email, emailData).catch(err =>
               console.error('Failed to send shift action denied email:', err)
             );
-          });
-        });
+          }
+        }
       } catch (emailError) {
         console.error('Error sending shift action notification:', emailError);
         // Don't fail the request if email fails
-      });
+      }
 
       res.json(updated);
     } catch (error: any) {
       console.error('Error approving shift action:', error);
       res.status(500).json({ message: error.message || 'Failed to approve shift action' });
-    });
+    }
   });
 
   // ============================================================================
@@ -16089,7 +16089,7 @@ ${application.email}`,
 
       if (!originalEntry) {
         return res.status(404).json({ message: 'Time entry not found' });
-      });
+      }
 
       const [request] = await db
         .insert(timesheetEditRequests)
@@ -16112,7 +16112,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error creating edit request:', error);
       res.status(500).json({ message: error.message || 'Failed to create edit request' });
-    });
+    }
   });
 
   // Get pending timesheet edit requests for managers (with employee and time entry details)
@@ -16151,7 +16151,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error fetching pending edit requests:', error);
       res.status(500).json({ message: error.message || 'Failed to fetch pending edit requests' });
-    });
+    }
   });
 
   // Get edit requests for supervisor/manager
@@ -16173,7 +16173,7 @@ ${application.email}`,
             eq(timesheetEditRequests.status, status as string)
           )
         );
-      });
+      }
 
       const requests = await query.orderBy(desc(timesheetEditRequests.createdAt));
 
@@ -16181,7 +16181,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error getting edit requests:', error);
       res.status(500).json({ message: error.message || 'Failed to get edit requests' });
-    });
+    }
   });
 
   // Approve/deny timesheet edit request (supervisor/manager only)
@@ -16212,7 +16212,7 @@ ${application.email}`,
 
       if (!updated) {
         return res.status(404).json({ message: 'Edit request not found' });
-      });
+      }
 
       // If approved, apply the changes to the time entry
       if (approved && updated.timeEntryId) {
@@ -16240,11 +16240,11 @@ ${application.email}`,
                 appliedAt: new Date(),
               })
               .where(eq(timesheetEditRequests.id, id));
-          });
+          }
         } catch (error) {
           console.error('Error applying timesheet changes:', error);
-        });
-      });
+        }
+      }
 
       // Send notification email to employee
       try {
@@ -16274,18 +16274,18 @@ ${application.email}`,
             sendTimesheetEditDeniedEmail(employee.email, emailData).catch(err =>
               console.error('Failed to send timesheet edit denied email:', err)
             );
-          });
-        });
+          }
+        }
       } catch (emailError) {
         console.error('Error sending timesheet edit notification:', emailError);
         // Don't fail the request if email fails
-      });
+      }
 
       res.json(updated);
     } catch (error: any) {
       console.error('Error reviewing edit request:', error);
       res.status(500).json({ message: error.message || 'Failed to review edit request' });
-    });
+    }
   });
 
   // ============================================================================
@@ -16327,7 +16327,7 @@ ${application.email}`,
     } catch (error: any) {
       console.error('Error starting onboarding:', error);
       res.status(500).json({ message: error.message || 'Failed to start onboarding' });
-    });
+    }
   });
 
   // Update onboarding progress
@@ -16362,13 +16362,13 @@ ${application.email}`,
 
       if (!updated) {
         return res.status(404).json({ message: 'Onboarding record not found' });
-      });
+      }
 
       res.json(updated);
     } catch (error: any) {
       console.error('Error updating onboarding:', error);
       res.status(500).json({ message: error.message || 'Failed to update onboarding' });
-    });
+    }
   });
 
   // Complete onboarding
@@ -16395,13 +16395,13 @@ ${application.email}`,
 
       if (!completed) {
         return res.status(404).json({ message: 'Onboarding record not found' });
-      });
+      }
 
       res.json(completed);
     } catch (error: any) {
       console.error('Error completing onboarding:', error);
       res.status(500).json({ message: error.message || 'Failed to complete onboarding' });
-    });
+    }
   });
 
   // Get onboarding status
@@ -16420,13 +16420,13 @@ ${application.email}`,
 
       if (!onboarding) {
         return res.json({ status: 'not_started' });
-      });
+      }
 
       res.json(onboarding);
     } catch (error: any) {
       console.error('Error getting onboarding status:', error);
       res.status(500).json({ message: error.message || 'Failed to get onboarding status' });
-    });
+    }
   });
 
   // ============================================================================
@@ -16443,13 +16443,13 @@ ${application.email}`,
         return res.status(400).json({ 
           message: "Missing required fields: name, email, subject, and message are required" 
         });
-      });
+      }
 
       // Email validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return res.status(400).json({ message: "Invalid email address" });
-      });
+      }
 
       // Generate unique ticket number (TKT-XXXXXX format)
       const timestamp = Date.now().toString(36).toUpperCase();
@@ -16505,7 +16505,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error processing contact form:", error);
       res.status(500).json({ message: "Failed to submit contact form. Please try again." });
-    });
+    }
   });
 
   // ============================================================================
@@ -16521,18 +16521,18 @@ ${application.email}`,
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId) || await storage.getWorkspaceByMembership(userId);
       if (!workspace) {
         return res.status(403).json({ message: "No workspace found" });
-      });
+      }
 
       const templates = await storage.getReportTemplatesByWorkspace(workspace.id);
       res.json(templates);
     } catch (error) {
       console.error("Error fetching report templates:", error);
       res.status(500).json({ message: "Failed to fetch report templates" });
-    });
+    }
   });
 
   // Toggle template activation for workspace
@@ -16547,7 +16547,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error toggling template activation:", error);
       res.status(500).json({ message: "Failed to toggle template activation" });
-    });
+    }
   });
 
   // Get report submissions (for employees/supervisors)
@@ -16557,7 +16557,7 @@ ${application.email}`,
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { status, employeeId } = req.query;
       const submissions = await storage.getReportSubmissions(user.currentWorkspaceId, { 
@@ -16568,7 +16568,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error fetching report submissions:", error);
       res.status(500).json({ message: "Failed to fetch report submissions" });
-    });
+    }
   });
 
   // Create new report submission
@@ -16578,7 +16578,7 @@ ${application.email}`,
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const validated = insertReportSubmissionSchema.parse({
         ...req.body,
@@ -16590,7 +16590,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error creating report submission:", error);
       res.status(500).json({ message: "Failed to create report submission" });
-    });
+    }
   });
 
   // Update report submission (for drafts or revisions)
@@ -16602,7 +16602,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error updating report submission:", error);
       res.status(500).json({ message: "Failed to update report submission" });
-    });
+    }
   });
 
   // Supervisor approve/reject report
@@ -16623,7 +16623,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error reviewing report submission:", error);
       res.status(500).json({ message: "Failed to review report submission" });
-    });
+    }
   });
 
   // Send approved report to client via email
@@ -16635,35 +16635,35 @@ ${application.email}`,
       
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
       
       // Get report submission
       const submission = await storage.getReportSubmissionById(id);
       if (!submission) {
         return res.status(404).json({ message: "Report not found" });
-      });
+      }
 
       // CRITICAL: Validate workspace ownership - prevent cross-tenant access
       if (submission.workspaceId !== user.currentWorkspaceId) {
         return res.status(403).json({ message: "Access denied to this report" });
-      });
+      }
 
       // Verify report is approved
       if (submission.status !== 'approved') {
         return res.status(400).json({ message: "Only approved reports can be sent to clients" });
-      });
+      }
 
       // Verify client is assigned
       if (!submission.clientId) {
         return res.status(400).json({ message: "No client assigned to this report" });
-      });
+      }
 
       // Get client details (workspace-scoped through storage)
       const clients = await storage.getClientsByWorkspace(user.currentWorkspaceId);
       const client = clients.find(c => c.id === submission.clientId);
       if (!client || !client.email) {
         return res.status(400).json({ message: "Client not found or has no email address" });
-      });
+      }
 
       // Get employee details (workspace-scoped through storage)
       const employees = await storage.getEmployeesByWorkspace(user.currentWorkspaceId);
@@ -16697,7 +16697,7 @@ ${application.email}`,
       if (!emailResult.success) {
         console.error('Failed to send report email:', emailResult.error);
         return res.status(500).json({ message: "Failed to send email to client" });
-      });
+      }
 
       // Update report status to 'sent_to_customer'
       const updatedSubmission = await storage.updateReportSubmission(id, {
@@ -16712,7 +16712,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error sending report to client:", error);
       res.status(500).json({ message: "Failed to send report to client" });
-    });
+    }
   });
 
   // Generate customer access token for approved report
@@ -16736,7 +16736,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error generating customer access:", error);
       res.status(500).json({ message: "Failed to generate customer access" });
-    });
+    }
   });
 
   // Customer portal - view report by access token (no auth required)
@@ -16747,11 +16747,11 @@ ${application.email}`,
       const access = await storage.getCustomerReportAccessByToken(token);
       if (!access) {
         return res.status(404).json({ message: "Report not found or access expired" });
-      });
+      }
 
       if (access.isRevoked || new Date() > new Date(access.expiresAt)) {
         return res.status(403).json({ message: "Access expired or revoked" });
-      });
+      }
 
       // Update access tracking
       await storage.trackCustomerReportAccess(access.id);
@@ -16761,7 +16761,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error fetching customer report:", error);
       res.status(500).json({ message: "Failed to fetch report" });
-    });
+    }
   });
 
   // ============================================================================
@@ -16775,12 +16775,12 @@ ${application.email}`,
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { startDate, endDate } = req.query;
       if (!startDate || !endDate) {
         return res.status(400).json({ message: "Start and end dates required" });
-      });
+      }
 
       const { generateLaborLawViolationReport } = await import('./services/complianceReports');
       const report = await generateLaborLawViolationReport(
@@ -16793,7 +16793,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error generating labor violations report:", error);
       res.status(500).json({ message: "Failed to generate labor violations report" });
-    });
+    }
   });
 
   app.get('/api/compliance-reports/tax-remittance', isAuthenticated, async (req: any, res) => {
@@ -16802,12 +16802,12 @@ ${application.email}`,
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { startDate, endDate } = req.query;
       if (!startDate || !endDate) {
         return res.status(400).json({ message: "Start and end dates required" });
-      });
+      }
 
       const { generateTaxRemittanceProofReport } = await import('./services/complianceReports');
       const report = await generateTaxRemittanceProofReport(
@@ -16820,7 +16820,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error generating tax remittance report:", error);
       res.status(500).json({ message: "Failed to generate tax remittance report" });
-    });
+    }
   });
 
   app.get('/api/compliance-reports/audit-log', isAuthenticated, async (req: any, res) => {
@@ -16829,12 +16829,12 @@ ${application.email}`,
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { startDate, endDate, filterUserId } = req.query;
       if (!startDate || !endDate) {
         return res.status(400).json({ message: "Start and end dates required" });
-      });
+      }
 
       const { generateTimeEntryAuditLog } = await import('./services/complianceReports');
       const report = await generateTimeEntryAuditLog(
@@ -16848,7 +16848,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error generating audit log report:", error);
       res.status(500).json({ message: "Failed to generate audit log report" });
-    });
+    }
   });
 
 
@@ -16859,7 +16859,7 @@ ${application.email}`,
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { getComplianceSummary } = await import('./services/complianceAlertService');
       const summary = await getComplianceSummary(user.currentWorkspaceId);
@@ -16868,7 +16868,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error fetching compliance summary:", error);
       res.status(500).json({ message: "Failed to fetch compliance summary" });
-    });
+    }
   });
 
   // KPI ALERTS - Real-Time Risk Notifications
@@ -16878,14 +16878,14 @@ ${application.email}`,
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const alerts = await storage.getKpiAlerts(user.currentWorkspaceId);
       res.json(alerts);
     } catch (error) {
       console.error("Error fetching KPI alerts:", error);
       res.status(500).json({ message: "Failed to fetch KPI alerts" });
-    });
+    }
   });
 
   app.post('/api/kpi-alerts', isAuthenticated, requireOwner, async (req: any, res) => {
@@ -16894,7 +16894,7 @@ ${application.email}`,
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const alert = await storage.createKpiAlert({
         ...req.body,
@@ -16906,7 +16906,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error creating KPI alert:", error);
       res.status(500).json({ message: "Failed to create KPI alert" });
-    });
+    }
   });
 
   app.patch('/api/kpi-alerts/:id', isAuthenticated, requireOwner, async (req: any, res) => {
@@ -16915,7 +16915,7 @@ ${application.email}`,
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { id } = req.params;
       const alert = await storage.updateKpiAlert(id, user.currentWorkspaceId, req.body);
@@ -16923,7 +16923,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error updating KPI alert:", error);
       res.status(500).json({ message: "Failed to update KPI alert" });
-    });
+    }
   });
 
   app.delete('/api/kpi-alerts/:id', isAuthenticated, requireOwner, async (req: any, res) => {
@@ -16932,19 +16932,19 @@ ${application.email}`,
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { id } = req.params;
       const deleted = await storage.deleteKpiAlert(id, user.currentWorkspaceId);
       if (!deleted) {
         return res.status(404).json({ message: "KPI alert not found" });
-      });
+      }
 
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting KPI alert:", error);
       res.status(500).json({ message: "Failed to delete KPI alert" });
-    });
+    }
   });
 
   app.get('/api/kpi-alert-triggers', isAuthenticated, async (req: any, res) => {
@@ -16953,7 +16953,7 @@ ${application.email}`,
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { alertId } = req.query;
       const triggers = await storage.getKpiAlertTriggers(user.currentWorkspaceId, alertId as string | undefined);
@@ -16961,7 +16961,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error fetching KPI alert triggers:", error);
       res.status(500).json({ message: "Failed to fetch KPI alert triggers" });
-    });
+    }
   });
 
   app.post('/api/kpi-alert-triggers/:id/acknowledge', isAuthenticated, async (req: any, res) => {
@@ -16974,7 +16974,7 @@ ${application.email}`,
     } catch (error) {
       console.error("Error acknowledging alert:", error);
       res.status(500).json({ message: "Failed to acknowledge alert" });
-    });
+    }
   });
 
   // AI EXECUTIVE SUMMARIES - GPT-4 Narrative Generation
@@ -16984,7 +16984,7 @@ ${application.email}`,
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { id } = req.params;
       const { reportData, reportType } = req.body;
@@ -16993,7 +16993,7 @@ ${application.email}`,
       const openaiKey = process.env.OPENAI_API_KEY;
       if (!openaiKey) {
         return res.status(503).json({ message: "AI summary service not configured" });
-      });
+      }
 
       const { OpenAI } = await import('openai');
       const openai = new OpenAI({ apiKey: openaiKey });
@@ -17023,7 +17023,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error generating AI summary:", error);
       res.status(500).json({ message: "Failed to generate AI summary" });
-    });
+    }
   });
 
   // BENCHMARK METRICS - Peer Comparison Data
@@ -17033,7 +17033,7 @@ Keep it professional, actionable, and under 250 words.`;
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { periodType } = req.query;
       const metrics = await storage.getBenchmarkMetrics(user.currentWorkspaceId, periodType as string | undefined);
@@ -17041,7 +17041,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error fetching benchmark metrics:", error);
       res.status(500).json({ message: "Failed to fetch benchmark metrics" });
-    });
+    }
   });
 
   app.post('/api/benchmark-metrics', isAuthenticated, requireOwner, async (req: any, res) => {
@@ -17050,7 +17050,7 @@ Keep it professional, actionable, and under 250 words.`;
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const metric = await storage.createBenchmarkMetric({
         ...req.body,
@@ -17061,7 +17061,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error creating benchmark metric:", error);
       res.status(500).json({ message: "Failed to create benchmark metric" });
-    });
+    }
   });
 
   // ============================================================================
@@ -17075,14 +17075,14 @@ Keep it professional, actionable, and under 250 words.`;
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const configs = await storage.getWorkflowConfigs(user.currentWorkspaceId);
       res.json(configs);
     } catch (error) {
       console.error("Error fetching workflow configs:", error);
       res.status(500).json({ message: "Failed to fetch workflow configs" });
-    });
+    }
   });
 
   app.post('/api/workflow-configs', isAuthenticated, requireOwner, async (req: any, res) => {
@@ -17091,7 +17091,7 @@ Keep it professional, actionable, and under 250 words.`;
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const config = await storage.createWorkflowConfig({
         ...req.body,
@@ -17102,7 +17102,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error creating workflow config:", error);
       res.status(500).json({ message: "Failed to create workflow config" });
-    });
+    }
   });
 
   app.patch('/api/workflow-configs/:id', isAuthenticated, requireOwner, async (req: any, res) => {
@@ -17111,7 +17111,7 @@ Keep it professional, actionable, and under 250 words.`;
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { id } = req.params;
       const config = await storage.updateWorkflowConfig(id, user.currentWorkspaceId, req.body);
@@ -17119,7 +17119,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error updating workflow config:", error);
       res.status(500).json({ message: "Failed to update workflow config" });
-    });
+    }
   });
 
   app.delete('/api/workflow-configs/:id', isAuthenticated, requireOwner, async (req: any, res) => {
@@ -17128,19 +17128,19 @@ Keep it professional, actionable, and under 250 words.`;
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { id } = req.params;
       const deleted = await storage.deleteWorkflowConfig(id, user.currentWorkspaceId);
       if (!deleted) {
         return res.status(404).json({ message: "Workflow config not found" });
-      });
+      }
 
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting workflow config:", error);
       res.status(500).json({ message: "Failed to delete workflow config" });
-    });
+    }
   });
 
   // APPROVAL QUEUE & PROCESSING
@@ -17150,14 +17150,14 @@ Keep it professional, actionable, and under 250 words.`;
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const pendingApprovals = await storage.getPendingApprovalsByUser(userId, user.currentWorkspaceId);
       res.json(pendingApprovals);
     } catch (error) {
       console.error("Error fetching pending approvals:", error);
       res.status(500).json({ message: "Failed to fetch pending approvals" });
-    });
+    }
   });
 
   app.post('/api/approvals/:stepId/process', isAuthenticated, async (req: any, res) => {
@@ -17168,7 +17168,7 @@ Keep it professional, actionable, and under 250 words.`;
 
       if (!['approve', 'reject'].includes(action)) {
         return res.status(400).json({ message: "Invalid action. Must be 'approve' or 'reject'" });
-      });
+      }
 
       const { processApproval } = await import('./services/reportWorkflowEngine');
       const result = await processApproval(
@@ -17184,7 +17184,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error: any) {
       console.error("Error processing approval:", error);
       res.status(500).json({ message: error.message || "Failed to process approval" });
-    });
+    }
   });
 
   app.get('/api/report-submissions/:id/approval-status', isAuthenticated, async (req: any, res) => {
@@ -17202,7 +17202,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error fetching approval status:", error);
       res.status(500).json({ message: "Failed to fetch approval status" });
-    });
+    }
   });
 
   // LOCKED REPORT RECORDS (Audit Trail)
@@ -17212,7 +17212,7 @@ Keep it professional, actionable, and under 250 words.`;
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { employeeId, clientId, startDate, endDate } = req.query;
       
@@ -17227,7 +17227,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error fetching locked reports:", error);
       res.status(500).json({ message: "Failed to fetch locked reports" });
-    });
+    }
   });
 
   app.get('/api/locked-reports/:id', isAuthenticated, async (req: any, res) => {
@@ -17237,13 +17237,13 @@ Keep it professional, actionable, and under 250 words.`;
       const lockedReport = await storage.getLockedReportBySubmission(id);
       if (!lockedReport) {
         return res.status(404).json({ message: "Locked report not found" });
-      });
+      }
 
       res.json(lockedReport);
     } catch (error) {
       console.error("Error fetching locked report:", error);
       res.status(500).json({ message: "Failed to fetch locked report" });
-    });
+    }
   });
 
   // REPORT ANALYTICS (Cross-Referenced Data)
@@ -17253,7 +17253,7 @@ Keep it professional, actionable, and under 250 words.`;
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { employeeId, clientId, startDate, endDate, templateId } = req.query;
       
@@ -17271,7 +17271,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error generating report analytics:", error);
       res.status(500).json({ message: "Failed to generate report analytics" });
-    });
+    }
   });
 
   // INDUSTRY TEMPLATES - Seed workspace with pre-built templates
@@ -17281,7 +17281,7 @@ Keep it professional, actionable, and under 250 words.`;
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { seedIndustryTemplates } = await import('./services/industryTemplates');
       const seeded = await seedIndustryTemplates(user.currentWorkspaceId, userId);
@@ -17293,7 +17293,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error seeding industry templates:", error);
       res.status(500).json({ message: "Failed to seed industry templates" });
-    });
+    }
   });
 
   // Support Tickets - Create ticket (requires authentication to get workspaceId)
@@ -17305,11 +17305,11 @@ Keep it professional, actionable, and under 250 words.`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       // Validate request body (omit server-generated fields)
       const validated = insertSupportTicketSchema.omit({ 
@@ -17336,7 +17336,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error creating support ticket:", error);
       res.status(500).json({ message: "Failed to create support ticket" });
-    });
+    }
   });
 
   // Get support tickets for current workspace
@@ -17348,18 +17348,18 @@ Keep it professional, actionable, and under 250 words.`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const tickets = await storage.getSupportTickets(user.currentWorkspaceId);
       res.json(tickets);
     } catch (error) {
       console.error("Error fetching support tickets:", error);
       res.status(500).json({ message: "Failed to fetch support tickets" });
-    });
+    }
   });
 
   // Update support ticket status
@@ -17371,7 +17371,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error updating support ticket:", error);
       res.status(500).json({ message: "Failed to update support ticket" });
-    });
+    }
   });
 
   // Escalate support ticket to platform support (org leaders only)
@@ -17385,11 +17385,11 @@ Keep it professional, actionable, and under 250 words.`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       if (!reason) {
         return res.status(400).json({ message: "Escalation reason required" });
-      });
+      }
 
       // Get the ticket to verify ownership
       const ticket = await db.query.supportTickets.findFirst({
@@ -17398,18 +17398,18 @@ Keep it professional, actionable, and under 250 words.`;
 
       if (!ticket) {
         return res.status(404).json({ message: "Ticket not found" });
-      });
+      }
 
       // Verify ticket belongs to user's workspace
       const user = await storage.getUser(userId);
       if (ticket.workspaceId !== user?.currentWorkspaceId) {
         return res.status(403).json({ message: "Access denied" });
-      });
+      }
 
       // Check if already escalated
       if (ticket.isEscalated) {
         return res.status(400).json({ message: "Ticket already escalated" });
-      });
+      }
 
       // Escalate the ticket
       const [updatedTicket] = await db.update(supportTickets)
@@ -17438,13 +17438,13 @@ Keep it professional, actionable, and under 250 words.`;
           link: `/platform-admin/support`,
           priority: 'high',
         });
-      });
+      }
 
       res.json(updatedTicket);
     } catch (error) {
       console.error("Error escalating support ticket:", error);
       res.status(500).json({ message: "Failed to escalate support ticket" });
-    });
+    }
   });
 
   // Get escalated tickets (platform support only)
@@ -17462,7 +17462,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error fetching escalated tickets:", error);
       res.status(500).json({ message: "Failed to fetch escalated tickets" });
-    });
+    }
   });
 
   // Get priority queue - real-time support queue based on subscription tier and wait time
@@ -17540,7 +17540,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error fetching priority queue:", error);
       res.status(500).json({ message: "Failed to fetch priority queue" });
-    });
+    }
   });
 
 
@@ -17561,7 +17561,7 @@ Keep it professional, actionable, and under 250 words.`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       // Verify ticket exists and is escalated
       const ticket = await db.query.supportTickets.findFirst({
@@ -17570,7 +17570,7 @@ Keep it professional, actionable, and under 250 words.`;
 
       if (!ticket || !ticket.isEscalated) {
         return res.status(404).json({ message: "Escalated ticket not found" });
-      });
+      }
 
       // Assign ticket
       const [updatedTicket] = await db.update(supportTickets)
@@ -17586,7 +17586,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error assigning escalated ticket:", error);
       res.status(500).json({ message: "Failed to assign escalated ticket" });
-    });
+    }
   });
 
   // Add platform notes to escalated ticket
@@ -17613,7 +17613,7 @@ Keep it professional, actionable, and under 250 words.`;
     } catch (error) {
       console.error("Error updating platform notes:", error);
       res.status(500).json({ message: "Failed to update platform notes" });
-    });
+    }
   });
 
   // Resolve escalated ticket
@@ -17626,7 +17626,7 @@ Keep it professional, actionable, and under 250 words.`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Validate request body
       const validated = z.object({
@@ -17642,7 +17642,7 @@ Keep it professional, actionable, and under 250 words.`;
 
       if (!ticket || !ticket.isEscalated) {
         return res.status(404).json({ message: "Escalated ticket not found" });
-      });
+      }
 
       // Resolve ticket
       const [updatedTicket] = await db.update(supportTickets)
@@ -17666,13 +17666,13 @@ Keep it professional, actionable, and under 250 words.`;
           link: `/org-support`,
           priority: 'normal',
         });
-      });
+      }
 
       res.json(updatedTicket);
     } catch (error) {
       console.error("Error resolving escalated ticket:", error);
       res.status(500).json({ message: "Failed to resolve escalated ticket" });
-    });
+    }
   });
 
   // Generate AI summary of support conversation
@@ -17683,7 +17683,7 @@ Keep it professional, actionable, and under 250 words.`;
 
       if (!messages || !Array.isArray(messages)) {
         return res.status(400).json({ message: 'Messages array is required' });
-      });
+      }
 
       // Get the ticket to update
       const ticket = await db.query.supportTickets.findFirst({
@@ -17692,7 +17692,7 @@ Keep it professional, actionable, and under 250 words.`;
 
       if (!ticket) {
         return res.status(404).json({ message: 'Ticket not found' });
-      });
+      }
 
       try {
         // Use Gemini to generate conversation summary
@@ -17701,7 +17701,7 @@ Keep it professional, actionable, and under 250 words.`;
         if (!isGeminiAvailable()) {
           console.warn('Gemini not available, skipping AI summary generation');
           return res.status(503).json({ message: 'AI summary generation temporarily unavailable' });
-        });
+        }
 
         // Format messages for Gemini
         const conversationText = messages
@@ -17748,11 +17748,11 @@ Summary:`;
           message: 'AI summary generation failed',
           details: geminiError instanceof Error ? geminiError.message : 'Unknown error'
         });
-      });
+      }
     } catch (error) {
       console.error('Error generating summary:', error);
       res.status(500).json({ message: 'Failed to generate summary' });
-    });
+    }
   });
 
   // Close support ticket and email summary to user
@@ -17763,7 +17763,7 @@ Summary:`;
 
       if (!guestEmail) {
         return res.status(400).json({ message: 'Guest email is required' });
-      });
+      }
 
       // Get the ticket
       const ticket = await db.query.supportTickets.findFirst({
@@ -17772,7 +17772,7 @@ Summary:`;
 
       if (!ticket) {
         return res.status(404).json({ message: 'Ticket not found' });
-      });
+      }
 
       // Update ticket status to closed
       const [closedTicket] = await db.update(supportTickets)
@@ -17822,7 +17822,7 @@ Summary:`;
       } catch (emailError) {
         console.error('Failed to send support summary email:', emailError);
         // Don't fail the whole operation if email fails
-      });
+      }
 
       res.json({ 
         success: true, 
@@ -17832,7 +17832,7 @@ Summary:`;
     } catch (error) {
       console.error('Error closing ticket:', error);
       res.status(500).json({ message: 'Failed to close ticket' });
-    });
+    }
   });
 
   // ============================================================================
@@ -17853,25 +17853,25 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       // Validate status value
       const validStatuses = ['open', 'in_progress', 'waiting_for_customer', 'resolved', 'closed', 'on_hold'];
       if (!status || !validStatuses.includes(status)) {
         return res.status(400).json({ message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` });
-      });
+      }
 
       // Get user to verify workspace access
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: 'No workspace selected' });
-      });
+      }
 
       // Get the ticket
       const ticket = await storage.getSupportTicket(id, user.currentWorkspaceId);
       if (!ticket) {
         return res.status(404).json({ message: 'Ticket not found' });
-      });
+      }
 
       // Update ticket status
       const updatedTicket = await storage.updateSupportTicket(id, {
@@ -17881,7 +17881,7 @@ Summary:`;
 
       if (!updatedTicket) {
         return res.status(500).json({ message: 'Failed to update ticket status' });
-      });
+      }
 
       // Emit event through ChatServerHub for real-time updates
       try {
@@ -17903,7 +17903,7 @@ Summary:`;
       } catch (emitError) {
         console.error('[ChatServerHub] Failed to emit ticket_status_changed:', emitError);
         // Don't fail the entire operation if event emission fails
-      });
+      }
 
       res.json({
         success: true,
@@ -17913,7 +17913,7 @@ Summary:`;
     } catch (error) {
       console.error('Error updating ticket status:', error);
       res.status(500).json({ message: 'Failed to update ticket status' });
-    });
+    }
   });
 
   // DELETE /api/support/tickets/:id - Delete ticket with event emission
@@ -17926,25 +17926,25 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       // Get user to verify workspace access
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: 'No workspace selected' });
-      });
+      }
 
       // Get the ticket
       const ticket = await storage.getSupportTicket(id, user.currentWorkspaceId);
       if (!ticket) {
         return res.status(404).json({ message: 'Ticket not found' });
-      });
+      }
 
       // Delete the ticket
       const success = await storage.deleteSupportTicket(id);
       if (!success) {
         return res.status(500).json({ message: 'Failed to delete ticket' });
-      });
+      }
 
       // Emit event through ChatServerHub for real-time updates
       try {
@@ -17965,7 +17965,7 @@ Summary:`;
       } catch (emitError) {
         console.error('[ChatServerHub] Failed to emit ticket_deleted:', emitError);
         // Don't fail the entire operation if event emission fails
-      });
+      }
 
       res.json({
         success: true,
@@ -17975,7 +17975,7 @@ Summary:`;
     } catch (error) {
       console.error('Error deleting ticket:', error);
       res.status(500).json({ message: 'Failed to delete ticket' });
-    });
+    }
   });
 
   // POST /api/ai/responses/:id/feedback - Submit feedback on AI responses
@@ -17989,40 +17989,40 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       // Validate rating
       if (rating === undefined || rating === null) {
         return res.status(400).json({ message: 'Rating is required (1-5)' });
-      });
+      }
 
       const ratingNum = parseInt(rating, 10);
       if (isNaN(ratingNum) || ratingNum < 1 || ratingNum > 5) {
         return res.status(400).json({ message: 'Rating must be between 1 and 5' });
-      });
+      }
 
       // Get user to verify workspace access
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: 'No workspace selected' });
-      });
+      }
 
       // Get the AI response
       const aiResponse = await storage.getAiResponse(id);
       if (!aiResponse) {
         return res.status(404).json({ message: 'AI response not found' });
-      });
+      }
 
       // Verify workspace access
       if (aiResponse.workspaceId !== user.currentWorkspaceId) {
         return res.status(403).json({ message: 'Access denied' });
-      });
+      }
 
       // Rate the AI response
       const ratedResponse = await storage.rateAiResponse(id, ratingNum, feedback);
       if (!ratedResponse) {
         return res.status(500).json({ message: 'Failed to save feedback' });
-      });
+      }
 
       res.json({
         success: true,
@@ -18032,7 +18032,7 @@ Summary:`;
     } catch (error) {
       console.error('Error submitting AI response feedback:', error);
       res.status(500).json({ message: 'Failed to submit feedback' });
-    });
+    }
   });
 
   // GET /api/ai/responses - Get response history
@@ -18044,11 +18044,11 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: 'No workspace selected' });
-      });
+      }
 
       const { sourceType, feature, limit = 50, offset = 0 } = req.query;
 
@@ -18072,7 +18072,7 @@ Summary:`;
     } catch (error) {
       console.error('Error fetching AI responses:', error);
       res.status(500).json({ message: 'Failed to fetch AI responses' });
-    });
+    }
   });
 
   // GET /api/ai/suggestions - Get unified suggestions
@@ -18084,11 +18084,11 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: 'No workspace selected' });
-      });
+      }
 
       const { status, priority, type, limit = 50, offset = 0, activeOnly } = req.query;
 
@@ -18113,7 +18113,7 @@ Summary:`;
         };
 
         suggestions = await storage.getAiSuggestionsByWorkspace(user.currentWorkspaceId, filters);
-      });
+      }
 
       res.json({
         success: true,
@@ -18126,7 +18126,7 @@ Summary:`;
     } catch (error) {
       console.error('Error fetching AI suggestions:', error);
       res.status(500).json({ message: 'Failed to fetch AI suggestions' });
-    });
+    }
   });
 
   // ============================================================================
@@ -18142,7 +18142,7 @@ Summary:`;
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       // Check platform role for support access
       const user = await storage.getUser(userId);
@@ -18151,7 +18151,7 @@ Summary:`;
           message: 'Access denied. AALV requires support role access.',
           requiredRoles: AALV_SUPPORT_ROLES
         });
-      });
+      }
 
       const { 
         actorType, 
@@ -18193,7 +18193,7 @@ Summary:`;
     } catch (error) {
       console.error('Error fetching AI Brain action logs:', error);
       res.status(500).json({ message: 'Failed to fetch AI audit logs' });
-    });
+    }
   });
 
   // GET /api/ai/audit-logs/stats - Get aggregate stats for dashboard (support only)
@@ -18202,12 +18202,12 @@ Summary:`;
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       const user = await storage.getUser(userId);
       if (!user?.platformRole || !AALV_SUPPORT_ROLES.includes(user.platformRole)) {
         return res.status(403).json({ message: 'Access denied. AALV requires support role access.' });
-      });
+      }
 
       const recentLogs = await storage.getAiBrainActionLogs({ limit: 1000 });
       const pendingReview = await storage.getAiBrainActionLogs({ requiresHumanReview: true, limit: 100 });
@@ -18221,8 +18221,8 @@ Summary:`;
         actorTypeCounts[log.actorType] = (actorTypeCounts[log.actorType] || 0) + 1;
         if (log.categoryTag) {
           categoryCounts[log.categoryTag] = (categoryCounts[log.categoryTag] || 0) + 1;
-        });
-      });
+        }
+      }
 
       res.json({
         success: true,
@@ -18237,7 +18237,7 @@ Summary:`;
     } catch (error) {
       console.error('Error fetching audit log stats:', error);
       res.status(500).json({ message: 'Failed to fetch audit log stats' });
-    });
+    }
   });
 
   // GET /api/ai/audit-logs/:id - Get single AI Brain action log (support only)
@@ -18246,23 +18246,23 @@ Summary:`;
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       const user = await storage.getUser(userId);
       if (!user?.platformRole || !AALV_SUPPORT_ROLES.includes(user.platformRole)) {
         return res.status(403).json({ message: 'Access denied. AALV requires support role access.' });
-      });
+      }
 
       const log = await storage.getAiBrainActionLog(req.params.id);
       if (!log) {
         return res.status(404).json({ message: 'AI Brain action log not found' });
-      });
+      }
 
       res.json({ success: true, data: log });
     } catch (error) {
       console.error('Error fetching AI Brain action log:', error);
       res.status(500).json({ message: 'Failed to fetch AI audit log' });
-    });
+    }
   });
 
   // POST /api/ai/audit-logs/:id/review - Mark action as reviewed (support only)
@@ -18271,25 +18271,25 @@ Summary:`;
       const userId = req.user?.id;
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       const user = await storage.getUser(userId);
       if (!user?.platformRole || !AALV_SUPPORT_ROLES.includes(user.platformRole)) {
         return res.status(403).json({ message: 'Access denied. AALV requires support role access.' });
-      });
+      }
 
       const { notes } = req.body;
       const updated = await storage.markAiBrainActionReviewed(req.params.id, userId, notes);
       
       if (!updated) {
         return res.status(404).json({ message: 'AI Brain action log not found' });
-      });
+      }
 
       res.json({ success: true, data: updated });
     } catch (error) {
       console.error('Error marking action as reviewed:', error);
       res.status(500).json({ message: 'Failed to mark action as reviewed' });
-    });
+    }
   });
 
   // ADMIN SUPPORT ROUTES - Platform Administration
@@ -18305,7 +18305,7 @@ Summary:`;
       
       if (!q || typeof q !== 'string') {
         return res.status(400).json({ message: "Search query required" });
-      });
+      }
 
       // In production, add platform role check here:
       // const isPlatformAdmin = await checkPlatformRole(req.user.claims.sub, ['root', 'sysop']);
@@ -18316,7 +18316,7 @@ Summary:`;
     } catch (error) {
       console.error("Error searching customers:", error);
       res.status(500).json({ message: "Failed to search customers" });
-    });
+    }
   });
 
   // Get workspace detail (platform admin only)
@@ -18332,13 +18332,13 @@ Summary:`;
       
       if (!detail) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       res.json(detail);
     } catch (error) {
       console.error("Error fetching workspace detail:", error);
       res.status(500).json({ message: "Failed to fetch workspace detail" });
-    });
+    }
   });
 
   // Get platform statistics (platform admin only)
@@ -18349,7 +18349,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching platform stats:", error);
       res.status(500).json({ message: "Failed to fetch platform statistics" });
-    });
+    }
   });
 
   // Helper function to map audit event types to LiveActivity types
@@ -18379,7 +18379,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching platform activities:", error);
       res.status(500).json({ message: "Failed to fetch platform activities" });
-    });
+    }
   });
 
   // Get all platform role assignments (for admin management)
@@ -18407,7 +18407,7 @@ Summary:`;
     } catch (error) {
       console.error('Error fetching platform roles:', error);
       res.status(500).json({ message: 'Failed to fetch platform roles' });
-    });
+    }
   });
 
   // Assign or update a platform role
@@ -18417,18 +18417,18 @@ Summary:`;
 
       if (!userId || !role) {
         return res.status(400).json({ message: 'User ID and role are required' });
-      });
+      }
 
       const validRoles = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer', 'Bot', 'none'];
       if (!validRoles.includes(role)) {
         return res.status(400).json({ message: 'Invalid role. Must be one of: ' + validRoles.join(', ') });
-      });
+      }
 
       // Check if user exists
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: 'User not found' });
-      });
+      }
 
       // Revoke existing role if any
       await db
@@ -18454,7 +18454,7 @@ Summary:`;
         });
 
         return res.json({ success: true, message: 'Platform role removed successfully' });
-      });
+      }
 
       // Assign new role
       const [newRole] = await db
@@ -18499,7 +18499,7 @@ Summary:`;
     } catch (error) {
       console.error('Error assigning platform role:', error);
       res.status(500).json({ message: 'Failed to assign platform role' });
-    });
+    }
 
   // ============================================================================
   // MULTI-ORG ONBOARDING VISIBILITY (Platform Admin)
@@ -18554,7 +18554,7 @@ Summary:`;
           onboardingStatus = 'not_started';
         } else if (empStats.onboardingCount > 0 || invStats.pending > 0) {
           onboardingStatus = 'in_progress';
-        });
+        }
 
         return {
           ...ws,
@@ -18590,7 +18590,7 @@ Summary:`;
     } catch (error) {
       console.error('Error fetching platform onboarding data:', error);
       res.status(500).json({ message: 'Failed to fetch onboarding data' });
-    });
+    }
   });
 
   // Get all pending invitations across the platform
@@ -18604,7 +18604,7 @@ Summary:`;
       let statusCondition = eq(employeeInvitations.inviteStatus, status as any);
       if (status === 'all') {
         statusCondition = sql`1=1` as any;
-      });
+      }
 
       const invitations = await db.select({
         id: employeeInvitations.id,
@@ -18640,7 +18640,7 @@ Summary:`;
     } catch (error) {
       console.error('Error fetching platform invitations:', error);
       res.status(500).json({ message: 'Failed to fetch invitations' });
-    });
+    }
   });
   });
 
@@ -18655,7 +18655,7 @@ Summary:`;
       
       if (!query) {
         return res.status(400).json({ message: "Query parameter 'q' is required" });
-      });
+      }
 
       const { supportLookup } = await import('./services/identityService');
       const results = await supportLookup(query);
@@ -18664,7 +18664,7 @@ Summary:`;
     } catch (error) {
       console.error("Error performing support lookup:", error);
       res.status(500).json({ message: "Failed to perform lookup" });
-    });
+    }
   });
 
   // Change user role (platform admin action)
@@ -18679,7 +18679,7 @@ Summary:`;
     } catch (error) {
       console.error("Error changing user role:", error);
       res.status(500).json({ message: "Failed to change user role" });
-    });
+    }
   });
 
 
@@ -18712,7 +18712,7 @@ Summary:`;
     } catch (error) {
       console.error('[Support Sessions] List error:', error);
       res.status(500).json({ message: 'Failed to list support sessions' });
-    });
+    }
   });
 
   // Start a support session for a specific organization
@@ -18723,7 +18723,7 @@ Summary:`;
 
       if (!adminUserId || !workspaceId) {
         return res.status(400).json({ message: "Missing adminUserId or workspaceId" });
-      });
+      }
 
       // Check if admin already has an active session
       const existingSession = await storage.getActiveSupportSessionByAdmin(adminUserId);
@@ -18734,15 +18734,15 @@ Summary:`;
             id: existingSession.id,
             workspaceId: existingSession.workspaceId,
             startedAt: existingSession.startedAt
-          });
+          }
         });
-      });
+      }
 
       // Validate workspace exists
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Create the support session
       const session = await storage.createSupportSession({
@@ -18776,12 +18776,12 @@ Summary:`;
         workspace: {
           id: workspace.id,
           name: workspace.companyName,
-        });
+        }
       });
     } catch (error) {
       console.error("Error starting support session:", error);
       res.status(500).json({ message: "Failed to start support session" });
-    });
+    }
   });
 
   // End the current support session
@@ -18790,12 +18790,12 @@ Summary:`;
       const adminUserId = req.user?.id;
       if (!adminUserId) {
         return res.status(401).json({ message: "Authentication required" });
-      });
+      }
 
       const activeSession = await storage.getActiveSupportSessionByAdmin(adminUserId);
       if (!activeSession) {
         return res.status(404).json({ message: "No active support session found" });
-      });
+      }
 
       // Get session audit logs for summary
       const auditLogs = await storage.getSupportAuditLogs({
@@ -18837,12 +18837,12 @@ Summary:`;
             ? Math.round((new Date(endedSession.endedAt).getTime() - new Date(activeSession.startedAt).getTime()) / 1000 / 60) 
             : 0,
           actionCount: actionsSummary.length,
-        });
+        }
       });
     } catch (error) {
       console.error("Error ending support session:", error);
       res.status(500).json({ message: "Failed to end support session" });
-    });
+    }
   });
 
   // Get current active session for the admin
@@ -18851,12 +18851,12 @@ Summary:`;
       const adminUserId = req.user?.id;
       if (!adminUserId) {
         return res.status(401).json({ message: "Authentication required" });
-      });
+      }
 
       const activeSession = await storage.getActiveSupportSessionByAdmin(adminUserId);
       if (!activeSession) {
         return res.json({ hasActiveSession: false });
-      });
+      }
 
       // Get workspace info
       const workspace = await storage.getWorkspace(activeSession.workspaceId);
@@ -18871,12 +18871,12 @@ Summary:`;
           startedAt: activeSession.startedAt,
           isOrgFrozen: activeSession.isOrgFrozen,
           freezeReason: activeSession.freezeReason,
-        });
+        }
       });
     } catch (error) {
       console.error("Error getting current session:", error);
       res.status(500).json({ message: "Failed to get current session" });
-    });
+    }
   });
 
   // Freeze/unfreeze organization during support session
@@ -18887,19 +18887,19 @@ Summary:`;
 
       if (!adminUserId) {
         return res.status(401).json({ message: "Authentication required" });
-      });
+      }
 
       const activeSession = await storage.getActiveSupportSessionByAdmin(adminUserId);
       if (!activeSession) {
         return res.status(403).json({ 
           message: "Active support session required to freeze/unfreeze organization" 
         });
-      });
+      }
 
       const success = await storage.setOrgFrozen(activeSession.workspaceId, freeze, reason);
       if (!success) {
         return res.status(500).json({ message: "Failed to update freeze status" });
-      });
+      }
 
       // Log the freeze action
       await storage.createSupportAuditLog({
@@ -18921,7 +18921,7 @@ Summary:`;
     } catch (error) {
       console.error("Error updating freeze status:", error);
       res.status(500).json({ message: "Failed to update freeze status" });
-    });
+    }
   });
 
   // Get support audit logs (for compliance/review)
@@ -18941,7 +18941,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching audit logs:", error);
       res.status(500).json({ message: "Failed to fetch audit logs" });
-    });
+    }
   });
   // DEMO WORKSPACE REFRESH - Idempotent data repopulation for testing
   // ⚠️  SECURITY: Only allowed in development/staging for E2E testing
@@ -18952,7 +18952,7 @@ Summary:`;
       return res.status(403).json({ 
         message: "Demo workspace refresh is disabled in production for security reasons." 
       });
-    });
+    }
 
     try {
       console.log("🔧 [DEBUG] Starting demo workspace refresh...");
@@ -18969,7 +18969,7 @@ Summary:`;
     } catch (error) {
       console.error("❌ Error refreshing demo workspace:", error);
       res.status(500).json({ message: "Failed to refresh demo workspace", error: error instanceof Error ? error.message : String(error) });
-    });
+    }
   });
 
   // ACCOUNT CONTROL ACTIONS - Suspend/Freeze/Lock accounts
@@ -18991,7 +18991,7 @@ Summary:`;
     } catch (error) {
       console.error("Error suspending account:", error);
       res.status(500).json({ message: "Failed to suspend account" });
-    });
+    }
   });
   
   // Unsuspend account
@@ -19010,7 +19010,7 @@ Summary:`;
     } catch (error) {
       console.error("Error unsuspending account:", error);
       res.status(500).json({ message: "Failed to unsuspend account" });
-    });
+    }
   });
   
   // Freeze account (for non-payment)
@@ -19029,7 +19029,7 @@ Summary:`;
     } catch (error) {
       console.error("Error freezing account:", error);
       res.status(500).json({ message: "Failed to freeze account" });
-    });
+    }
   });
   
   // Unfreeze account
@@ -19047,7 +19047,7 @@ Summary:`;
     } catch (error) {
       console.error("Error unfreezing account:", error);
       res.status(500).json({ message: "Failed to unfreeze account" });
-    });
+    }
   });
   
   // Lock account (emergency lock)
@@ -19066,7 +19066,7 @@ Summary:`;
     } catch (error) {
       console.error("Error locking account:", error);
       res.status(500).json({ message: "Failed to lock account" });
-    });
+    }
   });
   
   // Unlock account
@@ -19084,7 +19084,7 @@ Summary:`;
     } catch (error) {
       console.error("Error unlocking account:", error);
       res.status(500).json({ message: "Failed to unlock account" });
-    });
+    }
   });
 
   // ============================================================================
@@ -19100,7 +19100,7 @@ Summary:`;
       const employee = await storage.getEmployee(userId);
       if (!employee || employee.workspaceId !== workspaceId) {
         return res.status(404).json({ message: "Employee not found in specified workspace" });
-      });
+      }
       
       await storage.deleteEmployee(userId);
       
@@ -19113,7 +19113,7 @@ Summary:`;
     } catch (error) {
       console.error("Error deleting user:", error);
       res.status(500).json({ message: "Failed to delete user" });
-    });
+    }
   });
 
   // Change user role (promote/demote)
@@ -19125,7 +19125,7 @@ Summary:`;
       const employee = await storage.getEmployee(userId);
       if (!employee || employee.workspaceId !== workspaceId) {
         return res.status(404).json({ message: "Employee not found in specified workspace" });
-      });
+      }
       
       await storage.updateEmployee(userId, { role: newRole });
       
@@ -19137,7 +19137,7 @@ Summary:`;
     } catch (error) {
       console.error("Error changing user role:", error);
       res.status(500).json({ message: "Failed to change user role" });
-    });
+    }
   });
 
   // ============================================================================
@@ -19168,12 +19168,12 @@ Summary:`;
           if (matchingUser) {
             userId = matchingUser.id;
             console.log(`[Admin Client Creation] Linked client to user ${matchingUser.id} via email`);
-          });
+          }
         } catch (error) {
           console.error('[Admin Client Creation] Error looking up user by email:', error);
           // Continue without linking - don't fail client creation
-        });
-      });
+        }
+      }
       
       // Create the client with userId if found
       const client = await storage.createClient({
@@ -19189,7 +19189,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error creating client:", error);
       res.status(400).json({ message: error.message || "Failed to create client" });
-    });
+    }
   });
 
   // Delete client from any workspace
@@ -19201,7 +19201,7 @@ Summary:`;
       const client = await storage.getClient(clientId);
       if (!client || client.workspaceId !== workspaceId) {
         return res.status(404).json({ message: "Client not found in specified workspace" });
-      });
+      }
       
       await storage.deleteClient(clientId);
       
@@ -19214,7 +19214,7 @@ Summary:`;
     } catch (error) {
       console.error("Error deleting client:", error);
       res.status(500).json({ message: "Failed to delete client" });
-    });
+    }
   });
 
   // ============================================================================
@@ -19230,7 +19230,7 @@ Summary:`;
       const invoice = await storage.getInvoice(invoiceId);
       if (!invoice || invoice.workspaceId !== workspaceId) {
         return res.status(404).json({ message: "Invoice not found in specified workspace" });
-      });
+      }
       
       await storage.updateInvoice(invoiceId, {
         status: 'paid',
@@ -19248,7 +19248,7 @@ Summary:`;
     } catch (error) {
       console.error("Error processing payment:", error);
       res.status(500).json({ message: "Failed to process payment" });
-    });
+    }
   });
 
   // Force clear invoice (admin override)
@@ -19260,7 +19260,7 @@ Summary:`;
       const invoice = await storage.getInvoice(invoiceId);
       if (!invoice || invoice.workspaceId !== workspaceId) {
         return res.status(404).json({ message: "Invoice not found in specified workspace" });
-      });
+      }
       
       await storage.updateInvoice(invoiceId, {
         status: 'paid',
@@ -19276,7 +19276,7 @@ Summary:`;
     } catch (error) {
       console.error("Error clearing invoice:", error);
       res.status(500).json({ message: "Failed to clear invoice" });
-    });
+    }
   });
 
   // ============================================================================
@@ -19295,7 +19295,7 @@ Summary:`;
         await storage.updateChatConversation(conv.id, {
           status: 'closed',
         });
-      });
+      }
       
       res.json({ 
         success: true, 
@@ -19306,7 +19306,7 @@ Summary:`;
     } catch (error) {
       console.error("Error resetting chat:", error);
       res.status(500).json({ message: "Failed to reset chat" });
-    });
+    }
   });
 
   // Force close service/feature for workspace
@@ -19324,7 +19324,7 @@ Summary:`;
     } catch (error) {
       console.error("Error force closing service:", error);
       res.status(500).json({ message: "Failed to force close service" });
-    });
+    }
   });
 
   // Update subscription tier (platform admin action)
@@ -19339,7 +19339,7 @@ Summary:`;
     } catch (error) {
       console.error("Error updating subscription:", error);
       res.status(500).json({ message: "Failed to update subscription" });
-    });
+    }
   });
 
   // Get Stripe status (platform admin diagnostic)
@@ -19353,7 +19353,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching Stripe status:", error);
       res.status(500).json({ message: "Failed to fetch Stripe status" });
-    });
+    }
   });
 
   // Create support ticket (admin on behalf of customer)
@@ -19371,7 +19371,7 @@ Summary:`;
     } catch (error) {
       console.error("Error creating support ticket:", error);
       res.status(500).json({ message: "Failed to create support ticket" });
-    });
+    }
   });
 
   // Update ticket status (admin action)
@@ -19386,7 +19386,7 @@ Summary:`;
     } catch (error) {
       console.error("Error updating ticket:", error);
       res.status(500).json({ message: "Failed to update ticket" });
-    });
+    }
   });
 
   // ============================================================================
@@ -19420,7 +19420,7 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const [platformRole] = await db
         .select()
         .from(platformRoles)
@@ -19442,7 +19442,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching analytics stats:", error);
       res.status(500).json({ message: "Failed to fetch analytics statistics" });
-    });
+    }
   });
 
   // AI Compliance Audit Logs - Comprehensive activity tracking
@@ -19451,7 +19451,7 @@ Summary:`;
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ message: "Workspace ID required" });
-      });
+      }
 
       // Filters
       const actorFilter = req.query.actorType as string | undefined;
@@ -19463,11 +19463,11 @@ Summary:`;
       
       if (actorFilter && actorFilter !== 'all') {
         conditions.push(eq(auditEvents.actorType, actorFilter as any));
-      });
+      }
       
       if (statusFilter && statusFilter !== 'all') {
         conditions.push(eq(auditEvents.status, statusFilter as any));
-      });
+      }
 
       // Fetch audit events
       const events = await db
@@ -19500,7 +19500,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching audit logs:", error);
       res.status(500).json({ message: "Failed to fetch audit logs" });
-    });
+    }
   });
 
   // Personal staff data (assigned tickets, etc.)
@@ -19512,7 +19512,7 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const userName = (req.user as any)?.fullName || (req.user as any)?.email || 'Admin';
 
       // Count open escalation tickets assigned to this staff member
@@ -19549,7 +19549,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching personal staff data:", error);
       res.status(500).json({ error: "Failed to fetch personal data" });
-    });
+    }
   });
 
   // Search workspaces (cross-tenant admin search)
@@ -19621,17 +19621,17 @@ Summary:`;
             sql`LOWER(${workspaces.organizationSerial}) LIKE ${`%${params.q.toLowerCase()}%`}`
           )
         );
-      });
+      }
 
       if (params.status) {
         conditions.push(eq(workspaces.subscriptionStatus, params.status));
-      });
+      }
 
       // Combine conditions with AND
       let query = db.select().from(workspaces);
       if (conditions.length > 0) {
         query = query.where(and(...conditions));
-      });
+      }
 
       // Add pagination and ordering
       const organizations = await query
@@ -19645,16 +19645,16 @@ Summary:`;
         results = organizations.filter(org => 
           org.admin_flags?.includes(params.flag!)
         );
-      });
+      }
 
       res.json(results);
     } catch (error: any) {
       console.error("Error fetching organizations:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ error: "Invalid query parameters", details: error.errors });
-      });
+      }
       res.status(500).json({ error: "Failed to fetch organizations" });
-    });
+    }
   });
 
   // Get detailed organization info for Master Keys management
@@ -19670,7 +19670,7 @@ Summary:`;
 
       if (!org) {
         return res.status(404).json({ error: "Organization not found" });
-      });
+      }
 
       // Get owner info
       const [owner] = await db
@@ -19697,12 +19697,12 @@ Summary:`;
         stats: {
           employeeCount: employeeCount?.count || 0,
           clientCount: clientCount?.count || 0
-        });
+        }
       });
     } catch (error) {
       console.error("Error fetching organization detail:", error);
       res.status(500).json({ error: "Failed to fetch organization detail" });
-    });
+    }
   });
 
   // Update organization features and billing (Master Keys)
@@ -19713,7 +19713,7 @@ Summary:`;
       // Validate ID format
       if (!id || typeof id !== 'string') {
         return res.status(400).json({ error: "Invalid organization ID" });
-      });
+      }
 
       // Validate request body
       const validated = masterKeysUpdateSchema.parse(req.body);
@@ -19728,7 +19728,7 @@ Summary:`;
 
       if (!existingWorkspace) {
         return res.status(404).json({ error: "Organization not found" });
-      });
+      }
 
       const updateData: any = {
         last_admin_action: validated.actionDescription,
@@ -19747,7 +19747,7 @@ Summary:`;
         if (validated.featureToggles.analyticsos !== undefined) updateData.feature_analyticsos_enabled = validated.featureToggles.analyticsos;
         if (validated.featureToggles.supportos !== undefined) updateData.feature_supportos_enabled = validated.featureToggles.supportos;
         if (validated.featureToggles.communicationos !== undefined) updateData.feature_communicationos_enabled = validated.featureToggles.communicationos;
-      });
+      }
 
       // Track if we need to update Stripe subscription
       let shouldSyncStripe = false;
@@ -19759,12 +19759,12 @@ Summary:`;
         // Validate discount percent is provided when type is discount
         if (override.type === 'discount' && !override.discountPercent) {
           return res.status(400).json({ error: "Discount percentage required when type is 'discount'" });
-        });
+        }
         
         // Validate custom price is provided when type is custom
         if (override.type === 'custom' && !override.customPrice) {
           return res.status(400).json({ error: "Custom price required when type is 'custom'" });
-        });
+        }
 
         updateData.billing_override_type = override.type;
         updateData.billing_override_discount_percent = override.discountPercent || null;
@@ -19777,8 +19777,8 @@ Summary:`;
         // Mark for Stripe sync if subscription exists
         if (existingWorkspace.stripeSubscriptionId) {
           shouldSyncStripe = true;
-        });
-      });
+        }
+      }
 
       // Update admin notes and flags if provided
       if (validated.adminNotes !== undefined) updateData.admin_notes = validated.adminNotes;
@@ -19792,7 +19792,7 @@ Summary:`;
 
       if (!updated) {
         return res.status(404).json({ error: "Organization not found" });
-      });
+      }
 
       // STEP 3: Sync billing override with Stripe subscription (SECURE: Guards and rollback)
       if (validated.billingOverride) {
@@ -19832,7 +19832,7 @@ Summary:`;
                 subscriptionStatus: subscription.status,
                 message: 'The Stripe subscription is canceled or incomplete. Please reactivate before applying billing overrides.',
               });
-            });
+            }
 
             // Calculate new price based on override
             const baseTier = existingWorkspace.subscriptionTier as keyof typeof TIER_PRICING;
@@ -19847,7 +19847,7 @@ Summary:`;
             } else if (validated.billingOverride.type === 'free') {
               newPrice = 0;
               console.log('[Stripe] Applying free override');
-            });
+            }
 
             // Update subscription price with prorations
             await stripe.subscriptions.update(existingWorkspace.stripeSubscriptionId, {
@@ -19889,9 +19889,9 @@ Summary:`;
               message: 'Unable to sync billing override with Stripe. Please retry or contact support.',
               details: stripeError.message,
             });
-          });
-        });
-      });
+          }
+        }
+      }
 
       res.json({
         success: true,
@@ -19902,9 +19902,9 @@ Summary:`;
       console.error("Error updating organization:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ error: "Invalid request data", details: error.errors });
-      });
+      }
       res.status(500).json({ error: "Failed to update organization" });
-    });
+    }
   });
 
   // Reset organization to defaults
@@ -19915,7 +19915,7 @@ Summary:`;
       // Validate ID format
       if (!id || typeof id !== 'string') {
         return res.status(400).json({ error: "Invalid organization ID" });
-      });
+      }
 
       // Validate request body
       const validated = masterKeysResetSchema.parse(req.body);
@@ -19973,7 +19973,7 @@ Summary:`;
 
       if (!updated) {
         return res.status(404).json({ error: "Organization not found" });
-      });
+      }
 
       res.json({
         success: true,
@@ -19984,9 +19984,9 @@ Summary:`;
       console.error("Error resetting organization:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ error: "Invalid request data", details: error.errors });
-      });
+      }
       res.status(500).json({ error: "Failed to reset organization" });
-    });
+    }
   });
 
   // Backfill client userId for existing clients (link clients to users by email)
@@ -20009,7 +20009,7 @@ Summary:`;
         if (!normalizedClientEmail) {
           skippedNoEmail.push({ clientId: client.id, name: `${client.firstName} ${client.lastName}`, reason: 'Invalid or empty email' });
           continue; // Skip clients with invalid email
-        });
+        }
         
         try {
           // Find user with matching email (normalized)
@@ -20034,7 +20034,7 @@ Summary:`;
             });
             
             console.log(`[Backfill] Linked client ${client.id} (${client.email}) to user ${matchingUser.id}`);
-          });
+          }
         } catch (error) {
           console.error(`Failed to link client ${client.id}:`, error);
           errorCount++;
@@ -20043,8 +20043,8 @@ Summary:`;
             clientEmail: client.email,
             error: error instanceof Error ? error.message : 'Unknown error'
           });
-        });
-      });
+        }
+      }
       
       res.json({
         success: true,
@@ -20057,12 +20057,12 @@ Summary:`;
           linked: linkedClients,
           skippedNoEmail,
           failed: failedClients
-        });
+        }
       });
     } catch (error: any) {
       console.error('Backfill error:', error);
       res.status(500).json({ error: 'Backfill failed', details: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -20077,7 +20077,7 @@ Summary:`;
       
       if (!searchQuery || searchQuery.trim().length === 0) {
         return res.status(400).json({ error: "Search query required" });
-      });
+      }
 
       // Search users by multiple criteria
       const allUsers = await db.select().from(users);
@@ -20127,7 +20127,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error searching users:", error);
       res.status(500).json({ error: "Failed to search users" });
-    });
+    }
   });
 
   // Get all platform users (staff) - ROOT/DEPUTY ADMIN only
@@ -20143,7 +20143,7 @@ Summary:`;
       
       if (userIds.length === 0) {
         return res.json([]);
-      });
+      }
       
       const staffUsers = await db
         .select()
@@ -20170,7 +20170,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error fetching platform users:", error);
       res.status(500).json({ error: "Failed to fetch platform users" });
-    });
+    }
   });
 
   // Get user details by ID (ROOT/DEPUTY ADMIN only)
@@ -20182,7 +20182,7 @@ Summary:`;
       
       if (!user) {
         return res.status(404).json({ error: "User not found" });
-      });
+      }
 
       // Get platform role
       const platformRole = await db.query.platformRoles.findFirst({
@@ -20229,7 +20229,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error fetching user details:", error);
       res.status(500).json({ error: "Failed to fetch user details" });
-    });
+    }
   });
 
   // Update user (ROOT only)
@@ -20242,7 +20242,7 @@ Summary:`;
       
       if (!existingUser) {
         return res.status(404).json({ error: "User not found" });
-      });
+      }
 
       // Check if email is being changed and if it's already in use
       if (email && email !== existingUser.email) {
@@ -20254,8 +20254,8 @@ Summary:`;
         
         if (emailExists) {
           return res.status(400).json({ error: "Email already in use" });
-        });
-      });
+        }
+      }
 
       const [updated] = await db
         .update(users)
@@ -20273,7 +20273,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error updating user:", error);
       res.status(500).json({ error: "Failed to update user" });
-    });
+    }
   });
 
   // Set user password (ROOT only)
@@ -20284,7 +20284,7 @@ Summary:`;
       
       if (!password || password.length < 8) {
         return res.status(400).json({ error: "Password must be at least 8 characters" });
-      });
+      }
 
       const passwordHash = await bcrypt.hash(password, 10);
       
@@ -20299,7 +20299,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error setting password:", error);
       res.status(500).json({ error: "Failed to set password" });
-    });
+    }
   });
 
   // Grant platform role (ROOT only)
@@ -20310,13 +20310,13 @@ Summary:`;
       
       if (!role || !['root_admin', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(role)) {
         return res.status(400).json({ error: "Invalid platform role" });
-      });
+      }
 
       const [user] = await db.select().from(users).where(eq(users.id, userId)).limit(1);
       
       if (!user) {
         return res.status(404).json({ error: "User not found" });
-      });
+      }
 
       // Revoke existing platform roles
       await db
@@ -20345,7 +20345,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error granting platform role:", error);
       res.status(500).json({ error: "Failed to grant platform role" });
-    });
+    }
   });
 
   // Revoke platform role (ROOT only)
@@ -20369,7 +20369,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error revoking platform role:", error);
       res.status(500).json({ error: "Failed to revoke platform role" });
-    });
+    }
   });
 
   // Create new user (ROOT only)
@@ -20379,18 +20379,18 @@ Summary:`;
       
       if (!email || !password) {
         return res.status(400).json({ error: "Email and password required" });
-      });
+      }
 
       if (password.length < 8) {
         return res.status(400).json({ error: "Password must be at least 8 characters" });
-      });
+      }
 
       // Check if email already exists
       const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
       
       if (existing) {
         return res.status(400).json({ error: "Email already in use" });
-      });
+      }
 
       const passwordHash = await bcrypt.hash(password, 10);
       
@@ -20417,12 +20417,12 @@ Summary:`;
           grantedBy: req.user!.id,
           grantedReason: `Created with ${platformRole} role`,
         });
-      });
+      }
       res.json({ success: true, user: newUser });
     } catch (error: any) {
       console.error("Error creating user:", error);
       res.status(500).json({ error: "Failed to create user" });
-    });
+    }
   });
   
   // Save platform settings
@@ -20432,7 +20432,7 @@ Summary:`;
       const settings = req.body;
       if (!settings || typeof settings !== 'object') {
         return res.status(400).json({ error: "Invalid settings object" });
-      });
+      }
       
       // Persist to database via workspace settings (using workspace config pattern)
       if (settings.workspaceId) {
@@ -20442,7 +20442,7 @@ Summary:`;
             updatedAt: new Date(),
           })
           .where(eq(workspaces.id, settings.workspaceId));
-      });
+      }
       
       res.json({ 
         success: true, 
@@ -20452,7 +20452,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error saving platform settings:", error);
       res.status(500).json({ message: error.message || "Failed to save settings" });
-    });
+    }
   });
 
 
@@ -20471,7 +20471,7 @@ Summary:`;
       
       if (userIds.length === 0) {
         return res.json({ staff: [] });
-      });
+      }
       
       const staffUsers = await db.select().from(users).where(inArray(users.id, userIds));
       
@@ -20495,7 +20495,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error fetching platform staff:", error);
       res.status(500).json({ error: "Failed to fetch platform staff" });
-    });
+    }
   });
 
   app.post('/api/platform/staff/grant-role', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -20504,18 +20504,18 @@ Summary:`;
       
       if (!email) {
         return res.status(400).json({ error: "Email is required" });
-      });
+      }
       
       const validRoles = ['deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
       if (!role || !validRoles.includes(role)) {
         return res.status(400).json({ error: `Invalid platform role. Valid roles: ${validRoles.join(', ')}` });
-      });
+      }
 
       const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
       
       if (!user) {
         return res.status(404).json({ error: "User not found. They must have an existing account." });
-      });
+      }
 
       const [existingRole] = await db
         .select()
@@ -20525,7 +20525,7 @@ Summary:`;
       
       if (existingRole) {
         return res.status(400).json({ error: "User already has a platform role. Use change role instead." });
-      });
+      }
 
       const [newRole] = await db
         .insert(platformRoles)
@@ -20541,7 +20541,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error granting platform role:", error);
       res.status(500).json({ error: "Failed to grant platform role" });
-    });
+    }
   });
 
   app.post('/api/platform/staff/:userId/revoke-role', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -20561,7 +20561,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error revoking platform role:", error);
       res.status(500).json({ error: "Failed to revoke platform role" });
-    });
+    }
   });
 
   app.post('/api/platform/staff/:userId/suspend', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -20571,7 +20571,7 @@ Summary:`;
       
       if (!reason) {
         return res.status(400).json({ error: "Suspension reason is required for audit trail" });
-      });
+      }
 
       await db
         .update(platformRoles)
@@ -20587,7 +20587,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error suspending staff:", error);
       res.status(500).json({ error: "Failed to suspend staff member" });
-    });
+    }
   });
 
   app.post('/api/platform/staff/:userId/unsuspend', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -20608,7 +20608,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error unsuspending staff:", error);
       res.status(500).json({ error: "Failed to reinstate staff member" });
-    });
+    }
   });
 
   app.post('/api/platform/staff/:userId/change-role', requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -20619,7 +20619,7 @@ Summary:`;
       const validRoles = ['deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
       if (!newRole || !validRoles.includes(newRole)) {
         return res.status(400).json({ error: `Invalid platform role. Valid roles: ${validRoles.join(', ')}` });
-      });
+      }
 
       await db
         .update(platformRoles)
@@ -20644,7 +20644,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error changing platform role:", error);
       res.status(500).json({ error: "Failed to change platform role" });
-    });
+    }
   });
 
   // ============================================================================
@@ -20659,8 +20659,8 @@ Summary:`;
       if (user) {
         req.user = user;
         return next();
-      });
-    });
+      }
+    }
     
     // Try Replit OAuth
     if (req.isAuthenticated() && req.user?.claims?.sub) {
@@ -20669,8 +20669,8 @@ Summary:`;
       if (user) {
         req.user = user;
         return next();
-      });
-    });
+      }
+    }
     
     return res.status(401).json({ message: "Unauthorized" });
   };
@@ -20684,7 +20684,7 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Check if user is platform admin/staff
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -20694,14 +20694,14 @@ Summary:`;
         const status = req.query.status as string | undefined;
         const allConversations = await storage.getAllChatConversations({ status });
         return res.json(allConversations);
-      });
+      }
       
       // Regular workspace users see only their workspace conversations
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const status = req.query.status as string | undefined;
       const conversations = await storage.getChatConversationsByWorkspace(workspace.id, { status });
@@ -20709,7 +20709,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching conversations:", error);
       res.status(500).json({ message: "Failed to fetch conversations" });
-    });
+    }
   });
 
   // Create new conversation
@@ -20720,7 +20720,7 @@ Summary:`;
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const validated = insertChatConversationSchema.parse({
         ...req.body,
@@ -20732,7 +20732,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error creating conversation:", error);
       res.status(400).json({ message: error.message || "Failed to create conversation" });
-    });
+    }
   });
 
   // Get conversation messages
@@ -20745,7 +20745,7 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Check if user is platform admin/staff
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -20758,7 +20758,7 @@ Summary:`;
         const enrichedMessages = await Promise.all(messages.map(async (msg) => {
           if (!msg.senderId || msg.senderId === 'system' || msg.senderId === 'ai-bot') {
             return { ...msg, role: msg.senderId === 'ai-bot' ? 'bot' : 'system', userType: 'system' };
-          });
+          }
           const senderRole = await storage.getUserPlatformRole(msg.senderId).catch(() => null);
           const userInfo = await storage.getUserDisplayInfo(msg.senderId).catch(() => null);
           return { 
@@ -20769,20 +20769,20 @@ Summary:`;
         }));
         
         return res.json(enrichedMessages);
-      });
+      }
       
       // Regular workspace users need workspace verification
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Verify conversation belongs to workspace
       const conversation = await storage.getChatConversation(id);
       if (!conversation || conversation.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Unauthorized" });
-      });
+      }
 
       const messages = await storage.getChatMessagesByConversation(id);
       
@@ -20790,7 +20790,7 @@ Summary:`;
       const enrichedMessages = await Promise.all(messages.map(async (msg) => {
         if (!msg.senderId || msg.senderId === 'system' || msg.senderId === 'ai-bot') {
           return { ...msg, role: msg.senderId === 'ai-bot' ? 'bot' : 'system', userType: 'system' };
-        });
+        }
         const senderRole = await storage.getUserPlatformRole(msg.senderId).catch(() => null);
         const userInfo = await storage.getUserDisplayInfo(msg.senderId).catch(() => null);
         return { 
@@ -20804,7 +20804,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
-    });
+    }
   });
 
   // Update conversation (assign agent, change status, etc.)
@@ -20816,13 +20816,13 @@ Summary:`;
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Verify conversation belongs to workspace
       const conversation = await storage.getChatConversation(id);
       if (!conversation || conversation.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Unauthorized" });
-      });
+      }
       
       const validated = insertChatConversationSchema
         .partial()
@@ -20833,13 +20833,13 @@ Summary:`;
       
       if (!updated) {
         return res.status(404).json({ message: "Conversation not found" });
-      });
+      }
 
       res.json(updated);
     } catch (error: any) {
       console.error("Error updating conversation:", error);
       res.status(400).json({ message: error.message || "Failed to update conversation" });
-    });
+    }
   });
 
   // Close conversation
@@ -20851,25 +20851,25 @@ Summary:`;
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Verify conversation belongs to workspace
       const conversation = await storage.getChatConversation(id);
       if (!conversation || conversation.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Unauthorized" });
-      });
+      }
 
       const closed = await storage.closeChatConversation(id);
       
       if (!closed) {
         return res.status(404).json({ message: "Conversation not found" });
-      });
+      }
 
       res.json(closed);
     } catch (error) {
       console.error("Error closing conversation:", error);
       res.status(500).json({ message: "Failed to close conversation" });
-    });
+    }
   });
 
   // ============================================================================
@@ -20896,13 +20896,13 @@ Summary:`;
           isSilenced: false,
           lastMessageAt: new Date(),
         });
-      });
+      }
       
       res.json(mainRoom);
     } catch (error) {
       console.error("Error getting main room:", error);
       res.status(500).json({ message: "Failed to get main room" });
-    });
+    }
   });
   
   // Get all messages from main room (live feed)
@@ -20922,14 +20922,14 @@ Summary:`;
           isSilenced: false,
           lastMessageAt: new Date(),
         });
-      });
+      }
       
       const messages = await storage.getChatMessagesByConversation(MAIN_ROOM_ID);
       res.json(messages);
     } catch (error) {
       console.error("Error fetching main room messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
-    });
+    }
   });
   
   // Send message to main room
@@ -20941,7 +20941,7 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const user = req.user!;
       
       // Ensure room exists
@@ -20958,13 +20958,13 @@ Summary:`;
           isSilenced: false,
           lastMessageAt: new Date(),
         });
-      });
+      }
       
       const { message, messageType = "text" } = req.body;
       
       if (!message || !message.trim()) {
         return res.status(400).json({ message: "Message content is required" });
-      });
+      }
       
       // Determine sender name and type
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -20990,7 +20990,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error sending message:", error);
       res.status(400).json({ message: error.message || "Failed to send message" });
-    });
+    }
   });
 
   // Grant voice to user (remove silence) - Managers and Owners only
@@ -21004,7 +21004,7 @@ Summary:`;
       const conversation = await storage.getChatConversation(id);
       if (!conversation) {
         return res.status(404).json({ message: "Conversation not found" });
-      });
+      }
 
       // CRITICAL: Verify user's workspace matches conversation's workspace (tenant scoping)
       // requireManager already validates role, now we validate workspace membership
@@ -21015,7 +21015,7 @@ Summary:`;
       
       if (!workspaceId || workspaceId !== conversation.workspaceId) {
         return res.status(403).json({ message: "Access denied: Conversation belongs to a different workspace" });
-      });
+      }
 
       // Grant voice (remove silence)
       const updated = await storage.updateChatConversation(id, {
@@ -21040,7 +21040,7 @@ Summary:`;
     } catch (error) {
       console.error("Error granting voice:", error);
       res.status(500).json({ message: "Failed to grant voice" });
-    });
+    }
   });
 
   // Help bot: Send AI response
@@ -21052,13 +21052,13 @@ Summary:`;
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Verify conversation belongs to workspace
       const conversation = await storage.getChatConversation(conversationId);
       if (!conversation || conversation.workspaceId !== workspace.id) {
         return res.status(403).json({ message: "Unauthorized" });
-      });
+      }
 
       const { HelpBotService } = await import('./ai/help-bot');
       const botResponse = await HelpBotService.generateResponse(userMessage, {
@@ -21083,7 +21083,7 @@ Summary:`;
     } catch (error) {
       console.error("Error generating bot response:", error);
       res.status(500).json({ message: "Failed to generate bot response" });
-    });
+    }
   });
 
   // Gemini AI: Generate chat response (with usage-based billing)
@@ -21093,7 +21093,7 @@ Summary:`;
       
       if (!message || typeof message !== 'string') {
         return res.status(400).json({ message: "Message is required" });
-      });
+      }
 
       const { generateGeminiResponse, isGeminiAvailable } = await import('./gemini');
       
@@ -21102,7 +21102,7 @@ Summary:`;
           message: "Gemini AI is not configured. Please contact support.",
           available: false 
         });
-      });
+      }
 
       // PUBLIC ACCESS: Guests can access chat but AI features require workspace for billing
       // Workspace users get AI assistance (billed), guests get human support only
@@ -21114,7 +21114,7 @@ Summary:`;
           available: false,
           guestMode: true
         });
-      });
+      }
 
       const userId = req.user?.id;
 
@@ -21137,7 +21137,7 @@ Summary:`;
         message: error.message || "Failed to generate AI response",
         available: false 
       });
-    });
+    }
   });
 
   // Check Gemini AI availability
@@ -21157,7 +21157,7 @@ Summary:`;
         available: false,
         message: "Failed to check AI status" 
       });
-    });
+    }
   });
 
   // ============================================================================
@@ -21173,13 +21173,13 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // RBAC: Only support agents can access macros
       const platformRole = await storage.getUserPlatformRole(userId);
       if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole)) {
         return res.status(403).json({ message: "Unauthorized - Support agent access required" });
-      });
+      }
       
       // Get workspace for the user (optional workspaceId query param for platform staff)
       const workspaceId = req.query.workspaceId as string | undefined;
@@ -21192,7 +21192,7 @@ Summary:`;
         // Default to user's own workspace
         workspace = await storage.getWorkspaceByOwnerId(userId) || 
                           await storage.getWorkspaceByMembership(userId);
-      });
+      }
       
       // Return BOTH workspace-specific macros AND global macros
       const macros = await db
@@ -21212,7 +21212,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error fetching chat macros:", error);
       res.status(500).json({ message: "Failed to fetch chat macros" });
-    });
+    }
   });
 
   // Create new chat macro - Support agents only
@@ -21224,13 +21224,13 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // RBAC: Only support agents can create macros
       const platformRole = await storage.getUserPlatformRole(userId);
       if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole)) {
         return res.status(403).json({ message: "Unauthorized - Support agent access required" });
-      });
+      }
       
       // Validate request body (workspaceId can be explicitly provided or auto-detected)
       const validatedData = insertChatMacroSchema.parse({
@@ -21251,8 +21251,8 @@ Summary:`;
         const workspace = await storage.getWorkspace(targetWorkspaceId);
         if (!workspace) {
           return res.status(404).json({ message: "Workspace not found" });
-        });
-      });
+        }
+      }
       
       // Check for duplicate shortcut in target workspace scope
       if (validatedData.shortcut) {
@@ -21271,8 +21271,8 @@ Summary:`;
         
         if (existing.length > 0) {
           return res.status(409).json({ message: "A macro with this shortcut already exists in this workspace" });
-        });
-      });
+        }
+      }
       
       // Create the macro with explicit workspace assignment
       const [macro] = await db
@@ -21288,9 +21288,9 @@ Summary:`;
       console.error("Error creating chat macro:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: "Invalid macro data", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to create chat macro" });
-    });
+    }
   });
 
   // Delete chat macro - Support agents only
@@ -21302,14 +21302,14 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { id } = req.params;
       
       // RBAC: Only support agents can delete macros
       const platformRole = await storage.getUserPlatformRole(userId);
       if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole)) {
         return res.status(403).json({ message: "Unauthorized - Support agent access required" });
-      });
+      }
       
       // Get workspace for the user
       const workspace = await storage.getWorkspaceByOwnerId(userId) || 
@@ -21324,12 +21324,12 @@ Summary:`;
       
       if (!macro.length) {
         return res.status(404).json({ message: "Macro not found" });
-      });
+      }
       
       // Verify workspace ownership (or null for global)
       if (macro[0].workspaceId && macro[0].workspaceId !== workspace?.id) {
         return res.status(403).json({ message: "Unauthorized - Cannot delete macros from other workspaces" });
-      });
+      }
       
       // Delete the macro
       await db.delete(chatMacros).where(eq(chatMacros.id, id));
@@ -21338,7 +21338,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error deleting chat macro:", error);
       res.status(500).json({ message: "Failed to delete chat macro" });
-    });
+    }
   });
 
   // Start typing indicator
@@ -21350,7 +21350,7 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const user = req.user!;
       const { id: conversationId } = req.params;
       
@@ -21358,13 +21358,13 @@ Summary:`;
       const conversation = await storage.getChatConversation(conversationId);
       if (!conversation) {
         return res.status(404).json({ message: "Conversation not found" });
-      });
+      }
       
       // SECURITY: Verify user is a participant in this conversation
       const isParticipant = conversation.participantIds?.includes(userId);
       if (!isParticipant && conversation.creatorId !== userId) {
         return res.status(403).json({ message: "Unauthorized - Not a participant in this conversation" });
-      });
+      }
       
       // SECURITY: Verify workspace alignment (if conversation is workspace-scoped)
       if (conversation.workspaceId) {
@@ -21373,8 +21373,8 @@ Summary:`;
         
         if (!workspace || workspace.id !== conversation.workspaceId) {
           return res.status(403).json({ message: "Unauthorized - Conversation belongs to different workspace" });
-        });
-      });
+        }
+      }
       
       // Upsert typing indicator (overwrite if exists)
       await db
@@ -21396,7 +21396,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error starting typing indicator:", error);
       res.status(500).json({ message: "Failed to start typing indicator" });
-    });
+    }
   });
 
   // Stop typing indicator
@@ -21408,20 +21408,20 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { id: conversationId } = req.params;
       
       // SECURITY: Verify conversation exists and user is a participant
       const conversation = await storage.getChatConversation(conversationId);
       if (!conversation) {
         return res.status(404).json({ message: "Conversation not found" });
-      });
+      }
       
       // SECURITY: Verify user is a participant in this conversation
       const isParticipant = conversation.participantIds?.includes(userId);
       if (!isParticipant && conversation.creatorId !== userId) {
         return res.status(403).json({ message: "Unauthorized - Not a participant in this conversation" });
-      });
+      }
       
       // SECURITY: Verify workspace alignment (if conversation is workspace-scoped)
       if (conversation.workspaceId) {
@@ -21430,8 +21430,8 @@ Summary:`;
         
         if (!workspace || workspace.id !== conversation.workspaceId) {
           return res.status(403).json({ message: "Unauthorized - Conversation belongs to different workspace" });
-        });
-      });
+        }
+      }
       
       // Delete typing indicator
       await db
@@ -21447,7 +21447,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error stopping typing indicator:", error);
       res.status(500).json({ message: "Failed to stop typing indicator" });
-    });
+    }
   });
 
   // ============================================================================
@@ -21462,13 +21462,13 @@ Summary:`;
       
       if (!room) {
         return res.status(404).json({ message: "HelpDesk room not found" });
-      });
+      }
       
       res.json(room);
     } catch (error) {
       console.error("Error fetching HelpDesk room:", error);
       res.status(500).json({ message: "Failed to fetch HelpDesk room" });
-    });
+    }
   });
 
   // List all support rooms - Staff only (for room selector)
@@ -21480,13 +21480,13 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // SECURITY: Only platform staff can list rooms (all staff levels)
       const platformRole = await storage.getUserPlatformRole(userId);
       if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop', 'support'].includes(platformRole)) {
         return res.status(403).json({ message: "Unauthorized - Staff access required" });
-      });
+      }
       
       // Get user's workspace if they have one
       const workspace = await storage.getWorkspaceByOwnerId(userId) || 
@@ -21497,7 +21497,7 @@ Summary:`;
     } catch (error) {
       console.error("Error listing HelpDesk rooms:", error);
       res.status(500).json({ message: "Failed to list rooms" });
-    });
+    }
   });
 
   // Create organization chatroom - Organization owners/managers only
@@ -21509,17 +21509,17 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { name, description, slug } = req.body;
       
       if (!name || !slug) {
         return res.status(400).json({ message: "Room name and slug are required" });
-      });
+      }
       
       // Validate slug format (lowercase, alphanumeric, hyphens only)
       if (!/^[a-z0-9-]+$/.test(slug)) {
         return res.status(400).json({ message: "Invalid slug format. Use lowercase letters, numbers, and hyphens only." });
-      });
+      }
       
       // SECURITY: User must have a workspace (organizations only)
       const workspace = await storage.getWorkspaceByOwnerId(userId) || 
@@ -21527,19 +21527,19 @@ Summary:`;
       
       if (!workspace) {
         return res.status(403).json({ message: "Unauthorized - Organization membership required" });
-      });
+      }
       
       // SECURITY: Only owners and managers can create rooms
       const membership = await storage.getWorkspaceMembership(workspace.id, userId);
       if (!membership || !['owner', 'manager'].includes(membership.role)) {
         return res.status(403).json({ message: "Unauthorized - Owner or Manager role required" });
-      });
+      }
       
       // Check if slug already exists for this workspace
       const existingRoom = await storage.getSupportRoomBySlug(slug);
       if (existingRoom) {
         return res.status(409).json({ message: "A room with this slug already exists" });
-      });
+      }
       
       // Create the organization room
       const room = await storage.createSupportRoom({
@@ -21561,7 +21561,7 @@ Summary:`;
     } catch (error: any) {
       console.error("Error creating organization room:", error);
       res.status(500).json({ message: "Failed to create room" });
-    });
+    }
   });
 
   // Toggle HelpDesk room status (open/closed) - Staff only
@@ -21575,30 +21575,30 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // SECURITY: Only platform staff can toggle room status
       const platformRole = await storage.getUserPlatformRole(userId);
       if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
         return res.status(403).json({ message: "Unauthorized - Staff access required" });
-      });
+      }
       
       // Validate status
       if (!['open', 'closed', 'maintenance'].includes(status)) {
         return res.status(400).json({ message: "Invalid status. Must be 'open', 'closed', or 'maintenance'" });
-      });
+      }
       
       const updated = await storage.updateSupportRoomStatus(slug, status, statusMessage || null, userId);
       
       if (!updated) {
         return res.status(404).json({ message: "HelpDesk room not found" });
-      });
+      }
       
       res.json(updated);
     } catch (error) {
       console.error("Error updating HelpDesk room status:", error);
       res.status(500).json({ message: "Failed to update room status" });
-    });
+    }
   });
 
   // ============================================================================
@@ -21616,32 +21616,32 @@ Summary:`;
       
       if (!employee || !employee.workspaceId) {
         return res.status(403).json({ error: 'Forbidden - No workspace access' });
-      });
+      }
       
       const workspaceId = employee.workspaceId;
       const ticket = await storage.getSupportTicket(ticketId, workspaceId);
       
       if (!ticket) {
         return res.status(404).json({ error: 'Ticket not found' });
-      });
+      }
       
       if (ticket.workspaceId !== workspaceId) {
         return res.status(404).json({ error: 'Ticket not found' });
-      });
+      }
       
       const isStaff = employee && ['root_admin', 'deputy_admin', 'support_manager', 'sysop', 'support_agent'].includes((employee as any).platformRole || '');
       
       if (!isStaff) {
         if (ticket.employeeId !== employee.id && ticket.clientId !== employee.id) {
           return res.status(404).json({ error: 'Ticket not found' });
-        });
-      });
+        }
+      }
       
       let assignedAgent: string | undefined;
       if (ticket.assignedTo) {
         const agent = await storage.getEmployeeById(ticket.assignedTo);
         assignedAgent = agent ? `${agent.firstName} ${agent.lastName}` : undefined;
-      });
+      }
       
       const viewModel = {
         id: ticket.id,
@@ -21660,7 +21660,7 @@ Summary:`;
     } catch (error: any) {
       console.error('Error fetching chat ticket:', error);
       res.status(500).json({ error: 'Failed to fetch ticket' });
-    });
+    }
   });
   
   app.get('/api/chat/tickets', requireAnyAuth, async (req: AuthenticatedRequest, res) => {
@@ -21673,7 +21673,7 @@ Summary:`;
       
       if (!employee || !employee.workspaceId) {
         return res.status(403).json({ error: 'Forbidden - No workspace access' });
-      });
+      }
       
       const workspaceId = employee.workspaceId;
       let tickets = await storage.getSupportTickets(workspaceId);
@@ -21687,7 +21687,7 @@ Summary:`;
         );
       } else {
         tickets = tickets.filter(t => t.workspaceId === workspaceId);
-      });
+      }
       
       const viewModels = await Promise.all(
         tickets.map(async (ticket) => {
@@ -21695,7 +21695,7 @@ Summary:`;
           if (ticket.assignedTo) {
             const agent = await storage.getEmployeeById(ticket.assignedTo);
             assignedAgent = agent ? `${agent.firstName} ${agent.lastName}` : undefined;
-          });
+          }
           
           return {
             id: ticket.id,
@@ -21716,7 +21716,7 @@ Summary:`;
     } catch (error: any) {
       console.error('Error fetching chat tickets:', error);
       res.status(500).json({ error: 'Failed to fetch tickets' });
-    });
+    }
   });
 
   // Get HelpDesk queue data - All authenticated users can view
@@ -21750,7 +21750,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching HelpDesk queue:", error);
       res.status(500).json({ message: "Failed to fetch queue data" });
-    });
+    }
   });
 
   // Toggle HelpAI on/off - Staff only
@@ -21763,28 +21763,28 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // SECURITY: Only platform staff can toggle AI
       const platformRole = await storage.getUserPlatformRole(userId);
       if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
         return res.status(403).json({ message: "Unauthorized - Staff access required" });
-      });
+      }
       
       // Validate parameters
       if (typeof enabled !== 'boolean') {
         return res.status(400).json({ message: "Invalid parameter. 'enabled' must be a boolean." });
-      });
+      }
       
       if (!workspaceId || typeof workspaceId !== 'string') {
         return res.status(400).json({ message: "Invalid parameter. 'workspaceId' is required and must be a string." });
-      });
+      }
       
       // SECURITY: Verify workspace exists (platform staff can manage any workspace)
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
       
       // Toggle AI for the specified workspace
       const helposAI = new HelpAIService(workspaceId);
@@ -21798,7 +21798,7 @@ Summary:`;
     } catch (error) {
       console.error("Error toggling HelpAI:", error);
       res.status(500).json({ message: "Failed to toggle AI" });
-    });
+    }
   });
 
   // Get HelpAI status - Staff only
@@ -21810,25 +21810,25 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { workspaceId } = req.query;
       
       // SECURITY: Only platform staff can view AI status
       const platformRole = await storage.getUserPlatformRole(userId);
       if (!platformRole || !['root', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
         return res.status(403).json({ message: "Unauthorized - Staff access required" });
-      });
+      }
       
       // Validate workspaceId parameter
       if (!workspaceId || typeof workspaceId !== 'string') {
         return res.status(400).json({ message: "Invalid parameter. 'workspaceId' query parameter is required." });
-      });
+      }
       
       // SECURITY: Verify workspace exists (platform staff can view any workspace)
       const workspace = await storage.getWorkspace(workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
       
       // Get AI status for the specified workspace
       const helposAI = new HelpAIService(workspaceId);
@@ -21842,7 +21842,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching HelpAI status:", error);
       res.status(500).json({ message: "Failed to fetch AI status" });
-    });
+    }
   });
 
   // Authenticate customer with ticket number + email (no login required)
@@ -21852,13 +21852,13 @@ Summary:`;
       
       if (!ticketNumber || !email) {
         return res.status(400).json({ message: "Ticket number and email are required" });
-      });
+      }
 
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return res.status(400).json({ message: "Invalid email address" });
-      });
+      }
 
       // Find ticket by ticket number
       const [ticket] = await db
@@ -21868,7 +21868,7 @@ Summary:`;
 
       if (!ticket) {
         return res.status(404).json({ message: "Ticket not found. Please check your ticket number." });
-      });
+      }
 
       // Verify email matches the ticket (extract email from "Name <email>" format)
       const emailMatch = ticket.requestedBy?.match(/<(.+?)>/);
@@ -21876,12 +21876,12 @@ Summary:`;
 
       if (!ticketEmail || ticketEmail.toLowerCase() !== email.toLowerCase()) {
         return res.status(403).json({ message: "Email does not match ticket. Please verify your information." });
-      });
+      }
 
       // Check ticket status
       if (ticket.status === 'closed' || ticket.status === 'resolved') {
         return res.status(403).json({ message: "This ticket has been closed. Please create a new support ticket." });
-      });
+      }
 
       // Create a temporary guest user for this ticket
       // Using ticket number as unique identifier
@@ -21904,7 +21904,7 @@ Summary:`;
           role: 'employee',
           currentWorkspaceId: ticket.workspaceId,
         }).returning();
-      });
+      }
 
       // Create session for guest user
       (req.session as any).userId = guestUser.id;
@@ -21932,7 +21932,7 @@ Summary:`;
     } catch (error) {
       console.error("Error authenticating ticket:", error);
       res.status(500).json({ message: "Failed to authenticate ticket. Please try again." });
-    });
+    }
   });
 
   // Authenticate support staff with work ID + email (no platform login required)
@@ -21942,13 +21942,13 @@ Summary:`;
       
       if (!workId || !email) {
         return res.status(400).json({ message: "Work ID and email are required" });
-      });
+      }
 
       // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return res.status(400).json({ message: "Invalid email address" });
-      });
+      }
 
       // Find user by ID and email
       const [staffUser] = await db
@@ -21958,12 +21958,12 @@ Summary:`;
 
       if (!staffUser) {
         return res.status(404).json({ message: "Work ID not found. Please check your credentials." });
-      });
+      }
 
       // Verify email matches
       if (!staffUser.email || staffUser.email.toLowerCase() !== email.toLowerCase()) {
         return res.status(403).json({ message: "Email does not match work ID. Please verify your information." });
-      });
+      }
 
       // Check if user has platform staff role
       const [roleRecord] = await db
@@ -21975,7 +21975,7 @@ Summary:`;
 
       if (!hasStaffRole) {
         return res.status(403).json({ message: "Unauthorized - Staff access required" });
-      });
+      }
 
       // Create session for staff user
       (req.session as any).userId = staffUser.id;
@@ -21999,7 +21999,7 @@ Summary:`;
     } catch (error) {
       console.error("Error authenticating work ID:", error);
       res.status(500).json({ message: "Failed to authenticate. Please try again." });
-    });
+    }
   });
 
   // Verify ticket and grant chat access (gatekeeper MOMJJ)
@@ -22012,17 +22012,17 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       if (!ticketNumber || !roomSlug) {
         return res.status(400).json({ message: "Ticket number and room slug are required" });
-      });
+      }
       
       // Get the room
       const room = await storage.getSupportRoomBySlug(roomSlug);
       if (!room) {
         return res.status(404).json({ message: "HelpDesk room not found" });
-      });
+      }
       
       // Check if room is open
       if (room.status !== 'open') {
@@ -22030,7 +22030,7 @@ Summary:`;
           message: "HelpDesk room is currently closed",
           statusMessage: room.statusMessage 
         });
-      });
+      }
       
       // SECURITY: Verify ticket ownership and validation
       const ticket = await storage.verifyTicketForChatAccess(ticketNumber, userId);
@@ -22039,7 +22039,7 @@ Summary:`;
         return res.status(403).json({ 
           message: "Invalid ticket or unauthorized access. Ticket must be verified by support staff and belong to you." 
         });
-      });
+      }
       
       // Check if user already has valid access
       let access = await storage.checkTicketAccess(userId, room.id);
@@ -22056,7 +22056,7 @@ Summary:`;
           grantedBy: userId, // Self-granted after ticket verification
           expiresAt,
         });
-      });
+      }
       
       res.json({ 
         access,
@@ -22066,7 +22066,7 @@ Summary:`;
     } catch (error) {
       console.error("Error verifying ticket:", error);
       res.status(500).json({ message: "Failed to verify ticket" });
-    });
+    }
   });
 
   // Accept terms and save acknowledgment for audit compliance
@@ -22091,11 +22091,11 @@ Summary:`;
         userId = null;
         finalUserName = userName || 'Guest';
         finalUserEmail = userEmail || 'guest@email.com';
-      });
+      }
       
       if (!initialsProvided || initialsProvided.trim().length < 2) {
         return res.status(400).json({ message: "Valid initials are required for e-signature" });
-      });
+      }
       
       // Get IP address for audit trail
       const ipAddress = req.ip || req.socket.remoteAddress || 'unknown';
@@ -22122,7 +22122,7 @@ Summary:`;
     } catch (error) {
       console.error("Error saving terms acknowledgment:", error);
       res.status(500).json({ message: "Failed to save terms acceptance" });
-    });
+    }
   });
 
   // Check if user has access to a HelpDesk room
@@ -22135,13 +22135,13 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Get the room
       const room = await storage.getSupportRoomBySlug(roomSlug);
       if (!room) {
         return res.status(404).json({ message: "HelpDesk room not found" });
-      });
+      }
       
       // Check if user is staff (always has access)
       const platformRole = await storage.getUserPlatformRole(userId);
@@ -22153,7 +22153,7 @@ Summary:`;
           accessType: 'staff',
           room 
         });
-      });
+      }
       
       // Check ticket-based access
       const access = await storage.checkTicketAccess(userId, room.id);
@@ -22165,7 +22165,7 @@ Summary:`;
           access,
           room 
         });
-      });
+      }
       
       res.json({ 
         hasAccess: false,
@@ -22174,7 +22174,7 @@ Summary:`;
     } catch (error) {
       console.error("Error checking access:", error);
       res.status(500).json({ message: "Failed to check access" });
-    });
+    }
   });
 
   // Revoke ticket access - Staff only
@@ -22187,29 +22187,29 @@ Summary:`;
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // SECURITY: Only platform staff can revoke access
       const platformRole = await storage.getUserPlatformRole(userId);
       if (!platformRole || !['root_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
         return res.status(403).json({ message: "Unauthorized - Staff access required" });
-      });
+      }
       
       if (!accessId) {
         return res.status(400).json({ message: "Access ID is required" });
-      });
+      }
       
       const revoked = await storage.revokeTicketAccess(accessId, userId, reason || "Revoked by staff");
       
       if (!revoked) {
         return res.status(404).json({ message: "Access record not found" });
-      });
+      }
       
       res.json({ message: "Access revoked successfully" });
     } catch (error) {
       console.error("Error revoking access:", error);
       res.status(500).json({ message: "Failed to revoke access" });
-    });
+    }
   });
 
   // ============================================================================
@@ -22224,7 +22224,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching email templates:", error);
       res.status(500).json({ message: "Failed to fetch email templates" });
-    });
+    }
   });
 
   // Get all leads
@@ -22235,7 +22235,7 @@ Summary:`;
     } catch (error) {
       console.error("Error fetching leads:", error);
       res.status(500).json({ message: "Failed to fetch leads" });
-    });
+    }
   });
 
   // Zod validation schema for lead creation
@@ -22259,7 +22259,7 @@ Summary:`;
           message: "Invalid lead data",
           errors: validationResult.error.errors
         });
-      });
+      }
 
       const validatedData = validationResult.data;
 
@@ -22274,7 +22274,7 @@ Summary:`;
     } catch (error) {
       console.error("Error creating lead:", error);
       res.status(500).json({ message: "Failed to create lead" });
-    });
+    }
   });
 
   // Zod validation schema for sales email
@@ -22314,7 +22314,7 @@ Summary:`;
           message: "Invalid request data",
           errors: validationResult.error.errors
         });
-      });
+      }
 
       const { industry, targetRegion, numberOfLeads } = validationResult.data;
 
@@ -22324,7 +22324,7 @@ Summary:`;
           message: "AI lead generation requires OpenAI API key. Please configure OPENAI_API_KEY.",
           error: "OPENAI_NOT_CONFIGURED"
         });
-      });
+      }
 
       const OpenAI = (await import('openai')).default;
       const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -22364,7 +22364,7 @@ Return ONLY valid JSON array with this exact structure:
     "leadScore": number
   }
 ]`
-          });
+          }
         ],
         temperature: 0.8,
         max_tokens: 2000,
@@ -22381,7 +22381,7 @@ Return ONLY valid JSON array with this exact structure:
       } catch (parseError) {
         console.error("Failed to parse AI response:", aiContent);
         return res.status(500).json({ message: "AI generated invalid response format" });
-      });
+      }
 
       // Validate each generated lead with strict schema
       const insertedLeads = [];
@@ -22396,7 +22396,7 @@ Return ONLY valid JSON array with this exact structure:
             errors: leadValidation.error.errors
           });
           continue; // Skip invalid leads
-        });
+        }
 
         const validLead = leadValidation.data;
 
@@ -22409,7 +22409,7 @@ Return ONLY valid JSON array with this exact structure:
             error: "Email must use synthetic domain (example.com, demo.com, or test.com)"
           });
           continue;
-        });
+        }
 
         // Insert validated lead into database
         const [newLead] = await db.insert(leads).values({
@@ -22426,7 +22426,7 @@ Return ONLY valid JSON array with this exact structure:
         }).returning();
         
         insertedLeads.push(newLead);
-      });
+      }
 
       res.json({ 
         success: true, 
@@ -22438,7 +22438,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error) {
       console.error("Error generating AI leads:", error);
       res.status(500).json({ message: "Failed to generate leads" });
-    });
+    }
   });
 
   // Update lead status and notes
@@ -22458,7 +22458,7 @@ Return ONLY valid JSON array with this exact structure:
       // Update last contacted timestamp if status changed to contacted
       if (leadStatus && ['contacted', 'qualified', 'demo_scheduled', 'proposal_sent'].includes(leadStatus)) {
         updateData.lastContactedAt = new Date();
-      });
+      }
 
       const [updatedLead] = await db
         .update(leads)
@@ -22468,13 +22468,13 @@ Return ONLY valid JSON array with this exact structure:
 
       if (!updatedLead) {
         return res.status(404).json({ message: "Lead not found" });
-      });
+      }
 
       res.json(updatedLead);
     } catch (error) {
       console.error("Error updating lead:", error);
       res.status(500).json({ message: "Failed to update lead" });
-    });
+    }
   });
 
   // Send email with AI personalization
@@ -22487,7 +22487,7 @@ Return ONLY valid JSON array with this exact structure:
           message: "Invalid request data",
           errors: validationResult.error.errors
         });
-      });
+      }
 
       const { templateId, toEmail, toName, companyName, industry } = validationResult.data;
 
@@ -22496,7 +22496,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!template) {
         return res.status(404).json({ message: "Email template not found" });
-      });
+      }
 
       // Get Resend client with error handling
       const { getUncachableResendClient } = await import('./email');
@@ -22512,7 +22512,7 @@ Return ONLY valid JSON array with this exact structure:
           message: "Email service is not configured. Please contact support.",
           error: "RESEND_NOT_CONFIGURED"
         });
-      });
+      }
 
       // Personalize email content
       let subject = template.subject;
@@ -22550,18 +22550,18 @@ Return ONLY valid JSON array with this exact structure:
                 {
                   role: 'user',
                   content: `Company: ${companyName}\nIndustry: ${industry || 'Unknown'}\n\nEmail Body:\n${bodyHtml}`
-                });
+                }
               ],
               max_tokens: 500,
             });
 
             bodyHtml = aiResponse.choices[0]?.message?.content || bodyHtml;
-          });
+          }
         } catch (aiError) {
           console.error("AI personalization failed, using template:", aiError);
           // Continue with template version if AI fails
-        });
-      });
+        }
+      }
 
       // Send email via Resend
       const { data, error } = await client.emails.send({
@@ -22574,7 +22574,7 @@ Return ONLY valid JSON array with this exact structure:
       if (error) {
         console.error("Resend error:", error);
         return res.status(500).json({ message: "Failed to send email", error });
-      });
+      }
 
       // Log email send
       await db.insert(emailSends).values({
@@ -22588,7 +22588,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error) {
       console.error("Error sending email:", error);
       res.status(500).json({ message: "Failed to send email" });
-    });
+    }
   });
 
   // ============================================================================
@@ -22637,19 +22637,19 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const forms = await storage.getCustomFormsByOrganization(workspace.id);
       res.json(forms);
     } catch (error) {
       console.error("Error fetching custom forms:", error);
       res.status(500).json({ message: "Failed to fetch custom forms" });
-    });
+    }
   });
 
   // Get custom form by ID
@@ -22662,29 +22662,29 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const form = await storage.getCustomForm(id);
       
       if (!form) {
         return res.status(404).json({ message: "Form not found" });
-      });
+      }
 
       // Verify form belongs to organization
       if (form.organizationId !== workspace.id) {
         return res.status(403).json({ message: "Access denied" });
-      });
+      }
 
       res.json(form);
     } catch (error) {
       console.error("Error fetching custom form:", error);
       res.status(500).json({ message: "Failed to fetch custom form" });
-    });
+    }
   });
 
   // Create custom form (Platform Staff only)
@@ -22696,7 +22696,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const platformRole = req.platformRole;
       
       // Validate request body
@@ -22706,7 +22706,7 @@ Return ONLY valid JSON array with this exact structure:
           message: "Invalid form data",
           errors: validationResult.error.errors
         });
-      });
+      }
 
       const validatedData = validationResult.data;
 
@@ -22714,7 +22714,7 @@ Return ONLY valid JSON array with this exact structure:
       const workspace = await storage.getWorkspace(validatedData.workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const formData = {
         ...validatedData,
@@ -22728,7 +22728,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error) {
       console.error("Error creating custom form:", error);
       res.status(500).json({ message: "Failed to create custom form" });
-    });
+    }
   });
 
   // Update custom form (Platform Staff only)
@@ -22739,7 +22739,7 @@ Return ONLY valid JSON array with this exact structure:
       const form = await storage.getCustomForm(id);
       if (!form) {
         return res.status(404).json({ message: "Form not found" });
-      });
+      }
 
       // Validate request body - ONLY allow whitelisted fields
       const validationResult = updateCustomFormSchema.safeParse(req.body);
@@ -22748,7 +22748,7 @@ Return ONLY valid JSON array with this exact structure:
           message: "Invalid form data",
           errors: validationResult.error.errors
         });
-      });
+      }
 
       // SECURITY: Use validated data only (prevents organizationId tampering)
       const updated = await storage.updateCustomForm(id, validationResult.data);
@@ -22756,7 +22756,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error) {
       console.error("Error updating custom form:", error);
       res.status(500).json({ message: "Failed to update custom form" });
-    });
+    }
   });
 
   // Delete custom form (Platform Staff only)
@@ -22767,14 +22767,14 @@ Return ONLY valid JSON array with this exact structure:
       const form = await storage.getCustomForm(id);
       if (!form) {
         return res.status(404).json({ message: "Form not found" });
-      });
+      }
 
       await storage.deleteCustomForm(id);
       res.json({ success: true });
     } catch (error) {
       console.error("Error deleting custom form:", error);
       res.status(500).json({ message: "Failed to delete custom form" });
-    });
+    }
   });
 
   // ============================================================================
@@ -22801,19 +22801,19 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const submissions = await storage.getCustomFormSubmissionsByOrganization(workspace.id);
       res.json(submissions);
     } catch (error) {
       console.error("Error fetching form submissions:", error);
       res.status(500).json({ message: "Failed to fetch form submissions" });
-    });
+    }
   });
 
   // Get form submission by ID
@@ -22826,29 +22826,29 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByOwnerId(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const submission = await storage.getCustomFormSubmission(id);
       
       if (!submission) {
         return res.status(404).json({ message: "Submission not found" });
-      });
+      }
 
       // Verify submission belongs to organization
       if (submission.organizationId !== workspace.id) {
         return res.status(403).json({ message: "Access denied" });
-      });
+      }
 
       res.json(submission);
     } catch (error) {
       console.error("Error fetching form submission:", error);
       res.status(500).json({ message: "Failed to fetch form submission" });
-    });
+    }
   });
 
   // Submit custom form
@@ -22860,7 +22860,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Validate request body
       const validationResult = createCustomFormSubmissionSchema.safeParse(req.body);
@@ -22869,7 +22869,7 @@ Return ONLY valid JSON array with this exact structure:
           message: "Invalid submission data",
           errors: validationResult.error.errors
         });
-      });
+      }
 
       const validatedData = validationResult.data;
 
@@ -22877,13 +22877,13 @@ Return ONLY valid JSON array with this exact structure:
       const workspace = await storage.getWorkspace(validatedData.workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       // Verify form exists and belongs to this workspace
       const form = await storage.getCustomForm(validatedData.formId);
       if (!form || form.organizationId !== validatedData.workspaceId) {
         return res.status(404).json({ message: "Form not found or access denied" });
-      });
+      }
 
       // SECURITY: Use validated data only, enforce workspace scoping
       const submissionData = {
@@ -22898,7 +22898,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error) {
       console.error("Error submitting form:", error);
       res.status(500).json({ message: "Failed to submit form" });
-    });
+    }
   });
 
   // ============================================================================
@@ -22925,7 +22925,7 @@ Return ONLY valid JSON array with this exact structure:
       res.json({ success: true });
     } catch (error: any) {
       res.status(400).json({ error: error.message });
-    });
+    }
   });
 
   // Get closed tickets for review (admin/training)
@@ -22935,7 +22935,7 @@ Return ONLY valid JSON array with this exact structure:
       res.json(closedTickets);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Get testimonials (5-star reviews for publicity)
@@ -22945,7 +22945,7 @@ Return ONLY valid JSON array with this exact structure:
       res.json(testimonials);
     } catch (error: any) {
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -22961,7 +22961,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Get active MOTD
       const [motd] = await db
@@ -22985,7 +22985,7 @@ Return ONLY valid JSON array with this exact structure:
 
       if (!motd) {
         return res.json({ motd: null, acknowledged: true });
-      });
+      }
 
       // Check if user has acknowledged this MOTD
       const [acknowledgment] = await db
@@ -23006,7 +23006,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching MOTD:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Create or update MOTD (staff only)
@@ -23018,13 +23018,13 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Check if user is staff
       const platformRole = await storage.getUserPlatformRole(userId);
       if (!platformRole || !['root_admin', 'deputy_admin', 'deputy_assistant', 'sysop'].includes(platformRole)) {
         return res.status(403).json({ error: "Staff access required" });
-      });
+      }
 
       const schema = z.object({
         title: z.string(),
@@ -23044,7 +23044,7 @@ Return ONLY valid JSON array with this exact structure:
           error: "Invalid request",
           details: validationResult.error.errors
         });
-      });
+      }
 
       const data = validationResult.data;
 
@@ -23070,7 +23070,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error creating MOTD:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Acknowledge MOTD
@@ -23082,12 +23082,12 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { motdId } = req.body;
 
       if (!motdId) {
         return res.status(400).json({ error: "MOTD ID required" });
-      });
+      }
 
       // Check if already acknowledged
       const [existing] = await db
@@ -23103,7 +23103,7 @@ Return ONLY valid JSON array with this exact structure:
 
       if (existing) {
         return res.json({ success: true, alreadyAcknowledged: true });
-      });
+      }
 
       // Create acknowledgment
       await db
@@ -23117,7 +23117,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error acknowledging MOTD:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -23141,7 +23141,7 @@ Return ONLY valid JSON array with this exact structure:
           error: "Invalid request",
           details: validationResult.error.errors
         });
-      });
+      }
 
       const { fullName, agreementVersion, roomSlug, ticketId, sessionId } = validationResult.data;
 
@@ -23178,7 +23178,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error recording agreement acceptance:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Check if user has accepted agreement for a room
@@ -23190,16 +23190,16 @@ Return ONLY valid JSON array with this exact structure:
 
       if (!userId && !sessionId) {
         return res.json({ hasAccepted: false });
-      });
+      }
 
       // Check for existing acceptance
       const conditions = [];
       if (userId) {
         conditions.push(eq(chatAgreementAcceptances.userId, userId));
-      });
+      }
       if (sessionId) {
         conditions.push(eq(chatAgreementAcceptances.sessionId, sessionId as string));
-      });
+      }
       conditions.push(eq(chatAgreementAcceptances.roomSlug, roomSlug));
 
       const [acceptance] = await db
@@ -23217,10 +23217,10 @@ Return ONLY valid JSON array with this exact structure:
       // If table doesn't exist (PostgreSQL error code 42P01), return false (user hasn't accepted)
       if (error.code === '42P01' || error.message?.includes('does not exist')) {
         return res.json({ hasAccepted: false, acceptedAt: null });
-      });
+      }
       console.error("Error checking agreement acceptance:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Get complete customer context for support staff (profile, tickets, workspace, chat history)
@@ -23257,7 +23257,7 @@ Return ONLY valid JSON array with this exact structure:
           },
           note: 'This is a simulated/demo user account for testing purposes'
         });
-      });
+      }
 
       // Get user profile
       const user = await storage.getUser(userId);
@@ -23268,7 +23268,7 @@ Return ONLY valid JSON array with this exact structure:
           suggestion: "This user may not exist in the database or may be a guest user with no account",
           userId
         });
-      });
+      }
 
       // Get workspace info (if user owns/belongs to one)
       let workspace = null;
@@ -23288,13 +23288,13 @@ Return ONLY valid JSON array with this exact structure:
               where: eq(workspaces.id, employee.workspaceId)
             });
             workspaceRole = employee.workspaceRole;
-          });
+          }
         } else {
           workspaceRole = 'owner';
-        });
+        }
       } catch (err) {
         console.error("Error fetching workspace:", err);
-      });
+      }
 
       // Get active escalation tickets (temporarily disabled - table doesn't exist)
       const activeTickets = []; // await db.select().from(escalationTickets)...
@@ -23374,7 +23374,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching user context:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -23395,7 +23395,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching active banner:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Get all promotional banners (public - everyone can view active banners)
@@ -23411,7 +23411,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching banners:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Get ALL promotional banners including inactive (staff only - for banner manager)
@@ -23426,7 +23426,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching all banners:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Create promotional banner (staff only)
@@ -23438,7 +23438,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       const schema = z.object({
         message: z.string().min(1, "Message is required"),
@@ -23454,7 +23454,7 @@ Return ONLY valid JSON array with this exact structure:
           message: "Invalid request",
           errors: validationResult.error.errors
         });
-      });
+      }
 
       const { message, ctaText, ctaLink, isActive, priority } = validationResult.data;
 
@@ -23464,7 +23464,7 @@ Return ONLY valid JSON array with this exact structure:
           .update(promotionalBanners)
           .set({ isActive: false })
           .where(eq(promotionalBanners.isActive, true));
-      });
+      }
 
       const [banner] = await db
         .insert(promotionalBanners)
@@ -23482,7 +23482,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error creating banner:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Update promotional banner (staff only)
@@ -23504,7 +23504,7 @@ Return ONLY valid JSON array with this exact structure:
           message: "Invalid request",
           errors: validationResult.error.errors
         });
-      });
+      }
 
       const updates = validationResult.data;
 
@@ -23514,7 +23514,7 @@ Return ONLY valid JSON array with this exact structure:
           .update(promotionalBanners)
           .set({ isActive: false })
           .where(eq(promotionalBanners.isActive, true));
-      });
+      }
 
       const [updatedBanner] = await db
         .update(promotionalBanners)
@@ -23524,13 +23524,13 @@ Return ONLY valid JSON array with this exact structure:
 
       if (!updatedBanner) {
         return res.status(404).json({ error: "Banner not found" });
-      });
+      }
 
       res.json(updatedBanner);
     } catch (error: any) {
       console.error("Error updating banner:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Delete promotional banner (staff only)
@@ -23545,13 +23545,13 @@ Return ONLY valid JSON array with this exact structure:
 
       if (!deletedBanner) {
         return res.status(404).json({ error: "Banner not found" });
-      });
+      }
 
       res.json({ message: "Banner deleted successfully" });
     } catch (error: any) {
       console.error("Error deleting banner:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -23567,7 +23567,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspace?.id;
       
       const schema = z.object({
@@ -23580,7 +23580,7 @@ Return ONLY valid JSON array with this exact structure:
           message: "Invalid request",
           errors: validationResult.error.errors
         });
-      });
+      }
 
       const { query } = validationResult.data;
       const startTime = Date.now();
@@ -23620,7 +23620,7 @@ Return ONLY valid JSON array with this exact structure:
         });
 
         return res.json({ response, articles: relevantArticles });
-      });
+      }
 
       const OpenAI = (await import('openai')).default;
       const openai = new OpenAI({ 
@@ -23638,7 +23638,7 @@ Return ONLY valid JSON array with this exact structure:
           {
             role: 'user',
             content: `Context from knowledge base:\n${context}\n\nEmployee question: ${query}`
-          });
+          }
         ],
         temperature: 0.3,
         max_tokens: 500,
@@ -23660,7 +23660,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error in AI knowledge retrieval:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Get knowledge articles (with search/filter)
@@ -23681,7 +23681,7 @@ Return ONLY valid JSON array with this exact structure:
 
       if (category) {
         query = query.where(eq(knowledgeArticles.category, category as string));
-      });
+      }
 
       const articles = await query;
 
@@ -23694,13 +23694,13 @@ Return ONLY valid JSON array with this exact structure:
           a.content.toLowerCase().includes(searchLower) ||
           (a.tags && a.tags.some(tag => tag.toLowerCase().includes(searchLower)))
         );
-      });
+      }
 
       res.json(results);
     } catch (error: any) {
       console.error("Error fetching knowledge articles:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Create knowledge article (staff only)
@@ -23712,7 +23712,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspace?.id;
       
       const schema = z.object({
@@ -23730,7 +23730,7 @@ Return ONLY valid JSON array with this exact structure:
           message: "Invalid request",
           errors: validationResult.error.errors
         });
-      });
+      }
 
       const data = validationResult.data;
 
@@ -23747,7 +23747,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error creating knowledge article:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Generate Predictive Scheduling Alerts - Detect over-allocation before it happens
@@ -23760,7 +23760,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       // Get all employees with their schedules for the next week
       const nextWeekStart = new Date();
@@ -23798,8 +23798,8 @@ Return ONLY valid JSON array with this exact structure:
             const start = new Date(`1970-01-01T${shift.startTime}`);
             const end = new Date(`1970-01-01T${shift.endTime}`);
             scheduledHours += (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          });
-        });
+          }
+        }
         
         const availableHours = 40; // Standard work week
         const overageHours = Math.max(0, scheduledHours - availableHours);
@@ -23825,8 +23825,8 @@ Return ONLY valid JSON array with this exact structure:
             .returning();
 
           alerts.push(alert);
-        });
-      });
+        }
+      }
 
       res.json({ 
         message: `Generated ${alerts.length} capacity alerts`,
@@ -23835,7 +23835,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error generating capacity alerts:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Get active capacity alerts
@@ -23859,7 +23859,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching capacity alerts:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Generate Automated Status Report for employee
@@ -23871,7 +23871,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId!;
       
       const schema = z.object({
@@ -23885,7 +23885,7 @@ Return ONLY valid JSON array with this exact structure:
           message: "Invalid request",
           errors: validationResult.error.errors
         });
-      });
+      }
 
       const { reportType, period } = validationResult.data;
 
@@ -23932,7 +23932,7 @@ Return ONLY valid JSON array with this exact structure:
               {
                 role: 'user',
                 content: `Generate a professional weekly status summary for an employee who worked ${hoursWorked} hours, completed ${tasksCompleted} tasks, and attended ${meetingsAttended} meetings. Keep it to 2-3 sentences.`
-              });
+              }
             ],
             temperature: 0.5,
             max_tokens: 200,
@@ -23941,8 +23941,8 @@ Return ONLY valid JSON array with this exact structure:
           summary = aiResponse.choices[0]?.message?.content || summary;
         } catch (aiError) {
           console.error("AI generation failed, using fallback:", aiError);
-        });
-      });
+        }
+      }
 
       // Save report
       const [report] = await db
@@ -23967,7 +23967,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error generating auto report:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // Get auto-generated reports
@@ -23979,7 +23979,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId!;
 
       const reports = await db
@@ -23998,7 +23998,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching auto reports:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -24014,7 +24014,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId!;
 
       // Validate input
@@ -24029,7 +24029,7 @@ Return ONLY valid JSON array with this exact structure:
           message: "Invalid request",
           errors: validationResult.error.errors
         });
-      });
+      }
 
       const { payPeriodStart, payPeriodEnd } = validationResult.data;
 
@@ -24044,7 +24044,7 @@ Return ONLY valid JSON array with this exact structure:
         const detected = await detectPayPeriod(workspaceId);
         periodStart = detected.periodStart;
         periodEnd = detected.periodEnd;
-      });
+      }
 
       // Create automated payroll run
       const payrollRun = await createAutomatedPayrollRun({
@@ -24058,7 +24058,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error creating payroll run:", error);
       res.status(500).json({ message: error.message || "Failed to create payroll run" });
-    });
+    }
   });
 
   // Get payroll runs for workspace
@@ -24070,7 +24070,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching payroll runs:", error);
       res.status(500).json({ message: "Failed to fetch payroll runs" });
-    });
+    }
   });
 
   // Get single payroll run with details
@@ -24082,7 +24082,7 @@ Return ONLY valid JSON array with this exact structure:
       const run = await storage.getPayrollRun(id, workspaceId);
       if (!run) {
         return res.status(404).json({ message: "Payroll run not found" });
-      });
+      }
 
       const entries = await storage.getPayrollEntriesByRun(id);
 
@@ -24093,7 +24093,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching payroll run:", error);
       res.status(500).json({ message: "Failed to fetch payroll run" });
-    });
+    }
   });
 
   // Approve payroll run (1% human QC)
@@ -24105,7 +24105,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId!;
       const { id } = req.params;
 
@@ -24113,11 +24113,11 @@ Return ONLY valid JSON array with this exact structure:
       const run = await storage.getPayrollRun(id, workspaceId);
       if (!run) {
         return res.status(404).json({ message: "Payroll run not found" });
-      });
+      }
 
       if (run.status !== 'pending') {
         return res.status(400).json({ message: "Only pending payroll runs can be approved" });
-      });
+      }
 
       // Update status to approved
       const updated = await storage.updatePayrollRunStatus(id, 'approved', userId);
@@ -24126,7 +24126,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error approving payroll run:", error);
       res.status(500).json({ message: "Failed to approve payroll run" });
-    });
+    }
   });
 
   // Process approved payroll run (trigger payment distribution)
@@ -24138,7 +24138,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId!;
       const { id } = req.params;
 
@@ -24146,11 +24146,11 @@ Return ONLY valid JSON array with this exact structure:
       const run = await storage.getPayrollRun(id, workspaceId);
       if (!run) {
         return res.status(404).json({ message: "Payroll run not found" });
-      });
+      }
 
       if (run.status !== 'approved') {
         return res.status(400).json({ message: "Only approved payroll runs can be processed" });
-      });
+      }
 
       // Update status to processed (in real implementation, would trigger payment)
       const updated = await storage.updatePayrollRunStatus(id, 'processed', userId);
@@ -24159,7 +24159,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error processing payroll run:", error);
       res.status(500).json({ message: "Failed to process payroll run" });
-    });
+    }
   });
 
   // Get employee paychecks (employee portal)
@@ -24171,7 +24171,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
 
       // Find employee record for this user
       const allEmployees = await db
@@ -24181,7 +24181,7 @@ Return ONLY valid JSON array with this exact structure:
 
       if (!allEmployees || allEmployees.length === 0) {
         return res.status(404).json({ message: "Employee record not found" });
-      });
+      }
 
       // Use the first employee record (users typically belong to one workspace)
       const employee = allEmployees[0];
@@ -24192,7 +24192,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching paychecks:", error);
       res.status(500).json({ message: "Failed to fetch paychecks" });
-    });
+    }
   });
 
   // ============================================================================
@@ -24207,13 +24207,13 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!employeeId) {
         return res.status(400).json({ message: "employeeId is required" });
-      });
+      }
       
       // Verify employee belongs to workspace
       const employee = await storage.getEmployee(employeeId, workspaceId);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found in your workspace" });
-      });
+      }
       
       // Run AI analysis
       const { PredictionOSEngine } = await import('./services/predictionos');
@@ -24234,7 +24234,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("PredictionOS™ turnover analysis failed:", error);
       res.status(500).json({ message: error.message || "Failed to analyze turnover risk" });
-    });
+    }
   });
   
   // Get turnover predictions for all employees
@@ -24261,7 +24261,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching turnover predictions:", error);
       res.status(500).json({ message: "Failed to fetch predictions" });
-    });
+    }
   });
   
   // Predict schedule cost overrun
@@ -24272,7 +24272,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!scheduleDate || !proposedShifts || !Array.isArray(proposedShifts)) {
         return res.status(400).json({ message: "scheduleDate and proposedShifts array are required" });
-      });
+      }
       
       // Run AI cost variance analysis
       const { PredictionOSEngine } = await import('./services/predictionos');
@@ -24296,7 +24296,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("PredictionOS™ cost variance analysis failed:", error);
       res.status(500).json({ message: error.message || "Failed to analyze cost variance" });
-    });
+    }
   });
 
   // ============================================================================
@@ -24313,7 +24313,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       const validated = insertCustomRuleSchema.parse({
         ...req.body,
@@ -24326,7 +24326,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error creating custom rule:", error);
       res.status(400).json({ message: error.message || "Failed to create rule" });
-    });
+    }
   });
   
   // Get all custom rules for workspace
@@ -24344,7 +24344,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching custom rules:", error);
       res.status(500).json({ message: "Failed to fetch rules" });
-    });
+    }
   });
   
   // Update custom rule
@@ -24357,7 +24357,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { id } = req.params;
       
       // Verify rule belongs to workspace
@@ -24369,11 +24369,11 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!existing[0]) {
         return res.status(404).json({ message: "Rule not found" });
-      });
+      }
       
       if (existing[0].isLocked) {
         return res.status(403).json({ message: "Cannot edit locked rule" });
-      });
+      }
       
       const updated = await db
         .update(customRules)
@@ -24385,7 +24385,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error updating custom rule:", error);
       res.status(400).json({ message: error.message || "Failed to update rule" });
-    });
+    }
   });
   
   // Delete custom rule
@@ -24403,18 +24403,18 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!existing[0]) {
         return res.status(404).json({ message: "Rule not found" });
-      });
+      }
       
       if (existing[0].isLocked) {
         return res.status(403).json({ message: "Cannot delete locked rule" });
-      });
+      }
       
       await db.delete(customRules).where(eq(customRules.id, id));
       res.json({ success: true });
     } catch (error: any) {
       console.error("Error deleting custom rule:", error);
       res.status(500).json({ message: "Failed to delete rule" });
-    });
+    }
   });
   
   // Get rule execution logs
@@ -24437,7 +24437,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching rule executions:", error);
       res.status(500).json({ message: "Failed to fetch executions" });
-    });
+    }
   });
 
   // ============================================================================
@@ -24462,21 +24462,21 @@ Return ONLY valid JSON array with this exact structure:
           eq(auditTrail.workspaceId, workspaceId),
           eq(auditTrail.entityType, entityType as string)
         ));
-      });
+      }
       
       if (entityId) {
         query = query.where(and(
           eq(auditTrail.workspaceId, workspaceId),
           eq(auditTrail.entityId, entityId as string)
         ));
-      });
+      }
       
       const logs = await query;
       res.json(logs);
     } catch (error: any) {
       console.error("Error fetching audit trail:", error);
       res.status(500).json({ message: "Failed to fetch audit trail" });
-    });
+    }
   });
   
   // Get time entry discrepancies (geo-compliance violations)
@@ -24498,7 +24498,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching discrepancies:", error);
       res.status(500).json({ message: "Failed to fetch discrepancies" });
-    });
+    }
   });
   
   // Resolve time entry discrepancy
@@ -24511,7 +24511,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { id } = req.params;
       const { status, resolutionNotes } = req.body;
       
@@ -24524,7 +24524,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!existing[0]) {
         return res.status(404).json({ message: "Discrepancy not found" });
-      });
+      }
       
       const updated = await db
         .update(timeEntryDiscrepancies)
@@ -24542,7 +24542,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error resolving discrepancy:", error);
       res.status(500).json({ message: "Failed to resolve discrepancy" });
-    });
+    }
   });
 
   // ============================================================================
@@ -24561,7 +24561,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       const validatedData = insertPulseSurveyTemplateSchema.parse({
         ...req.body,
@@ -24578,7 +24578,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error creating pulse survey template:", error);
       res.status(500).json({ message: "Failed to create pulse survey template" });
-    });
+    }
   });
   
   // List pulse survey templates
@@ -24598,14 +24598,14 @@ Return ONLY valid JSON array with this exact structure:
           eq(pulseSurveyTemplates.workspaceId, workspaceId),
           eq(pulseSurveyTemplates.isActive, isActive === 'true')
         ));
-      });
+      }
       
       const templates = await query;
       res.json(templates);
     } catch (error: any) {
       console.error("Error fetching pulse survey templates:", error);
       res.status(500).json({ message: "Failed to fetch pulse survey templates" });
-    });
+    }
   });
   
   // Get single pulse survey template
@@ -24625,13 +24625,13 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!template[0]) {
         return res.status(404).json({ message: "Pulse survey template not found" });
-      });
+      }
       
       res.json(template[0]);
     } catch (error: any) {
       console.error("Error fetching pulse survey template:", error);
       res.status(500).json({ message: "Failed to fetch pulse survey template" });
-    });
+    }
   });
   
   // Update pulse survey template
@@ -24651,7 +24651,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!existing[0]) {
         return res.status(404).json({ message: "Pulse survey template not found" });
-      });
+      }
       
       const [updated] = await db
         .update(pulseSurveyTemplates)
@@ -24666,7 +24666,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error updating pulse survey template:", error);
       res.status(500).json({ message: "Failed to update pulse survey template" });
-    });
+    }
   });
   
   // [2] PULSE SURVEY RESPONSES (All Employees)
@@ -24681,7 +24681,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Get employee record
       const employee = await db
@@ -24695,7 +24695,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!employee[0]) {
         return res.status(403).json({ message: "Employee not found" });
-      });
+      }
       
       // Calculate engagement and sentiment scores from actual responses
       const { responses } = req.body;
@@ -24708,7 +24708,7 @@ Return ONLY valid JSON array with this exact structure:
         if (ratingResponses.length > 0) {
           const avgRating = ratingResponses.reduce((sum: number, r: any) => sum + r, 0) / ratingResponses.length;
           engagementScore = (avgRating / 5) * 100; // Convert 1-5 scale to 0-100
-        });
+        }
         
         // Calculate sentiment score from text responses (simplified - in production would use AI)
         const textResponses = Object.values(responses).filter((r: any) => typeof r === 'string' && r.length > 0);
@@ -24738,9 +24738,9 @@ Return ONLY valid JSON array with this exact structure:
             // Score from 0-100: 0 = all negative, 50 = neutral, 100 = all positive
             const ratio = positiveCount / (positiveCount + negativeCount);
             sentimentScore = ratio * 100;
-          });
-        });
-      });
+          }
+        }
+      }
       
       // Clamp scores to 0-100 range
       engagementScore = Math.min(Math.max(engagementScore, 0), 100);
@@ -24767,13 +24767,13 @@ Return ONLY valid JSON array with this exact structure:
         console.log(`[SentimentAnalysis] Pulse survey analyzed - sentiment: ${sentiment}`);
       } catch (err) {
         console.error('[SentimentAnalysis] Pulse survey analysis failed (non-blocking):', err);
-      });
+      }
       
       res.json(response);
     } catch (error: any) {
       console.error("Error submitting pulse survey response:", error);
       res.status(500).json({ message: "Failed to submit pulse survey response" });
-    });
+    }
   });
   
   // Get pulse survey responses (Manager only)
@@ -24793,21 +24793,21 @@ Return ONLY valid JSON array with this exact structure:
           eq(pulseSurveyResponses.workspaceId, workspaceId),
           eq(pulseSurveyResponses.surveyTemplateId, surveyTemplateId as string)
         ));
-      });
+      }
       
       if (sentimentLabel) {
         query = query.where(and(
           eq(pulseSurveyResponses.workspaceId, workspaceId),
           eq(pulseSurveyResponses.sentimentLabel, sentimentLabel as string)
         ));
-      });
+      }
       
       const responses = await query;
       res.json(responses);
     } catch (error: any) {
       console.error("Error fetching pulse survey responses:", error);
       res.status(500).json({ message: "Failed to fetch pulse survey responses" });
-    });
+    }
   });
   
   // [2.5] AUTOMATED PULSE SURVEY DISTRIBUTION
@@ -24821,7 +24821,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching survey distribution summary:", error);
       res.status(500).json({ message: "Failed to fetch survey distribution summary" });
-    });
+    }
   });
   
   // Get all employees due for surveys today (Manager/Owner only)
@@ -24833,7 +24833,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching survey distributions:", error);
       res.status(500).json({ message: "Failed to fetch survey distributions" });
-    });
+    }
   });
   
   // Get pending surveys for specific employee
@@ -24847,7 +24847,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching employee pending surveys:", error);
       res.status(500).json({ message: "Failed to fetch pending surveys" });
-    });
+    }
   });
   
   // Get survey analytics (Manager/Owner only)
@@ -24867,7 +24867,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error calculating survey analytics:", error);
       res.status(500).json({ message: "Failed to calculate survey analytics" });
-    });
+    }
   });
   
   // [3] EMPLOYER RATINGS (All Employees)
@@ -24882,7 +24882,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Get employee record
       const employee = await db
@@ -24896,7 +24896,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!employee[0]) {
         return res.status(403).json({ message: "Employee not found" });
-      });
+      }
       
       const validatedData = insertEmployerRatingSchema.parse({
         ...req.body,
@@ -24915,16 +24915,16 @@ Return ONLY valid JSON array with this exact structure:
         const sentiment = await sentimentAnalyzer.analyzeSentiment(req.body.comment || '', 'employer_rating');
         if (sentiment === 'negative') {
           console.warn(`[SentimentAnalysis] High-risk employer rating detected - workspace: ${workspaceId}`);
-        });
+        }
       } catch (err) {
         console.error('[SentimentAnalysis] Employer rating analysis failed (non-blocking):', err);
-      });
+      }
       
       res.json(rating);
     } catch (error: any) {
       console.error("Error submitting employer rating:", error);
       res.status(500).json({ message: "Failed to submit employer rating" });
-    });
+    }
   });
   
   // Get employer ratings (Manager only)
@@ -24944,21 +24944,21 @@ Return ONLY valid JSON array with this exact structure:
           eq(employerRatings.workspaceId, workspaceId),
           eq(employerRatings.ratingType, ratingType as string)
         ));
-      });
+      }
       
       if (targetId) {
         query = query.where(and(
           eq(employerRatings.workspaceId, workspaceId),
           eq(employerRatings.targetId, targetId as string)
         ));
-      });
+      }
       
       const ratings = await query;
       res.json(ratings);
     } catch (error: any) {
       console.error("Error fetching employer ratings:", error);
       res.status(500).json({ message: "Failed to fetch employer ratings" });
-    });
+    }
   });
   
   // [4] ANONYMOUS SUGGESTIONS (All Employees)
@@ -24973,7 +24973,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Get employee record
       const employee = await db
@@ -24987,7 +24987,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!employee[0]) {
         return res.status(403).json({ message: "Employee not found" });
-      });
+      }
       
       const validatedData = insertAnonymousSuggestionSchema.parse({
         ...req.body,
@@ -25010,13 +25010,13 @@ Return ONLY valid JSON array with this exact structure:
         console.log(`[SentimentAnalysis] Suggestion analyzed - urgency: ${urgencyLevel}, sentiment: ${sentiment}`);
       } catch (err) {
         console.error('[SentimentAnalysis] Suggestion analysis failed (non-blocking):', err);
-      });
+      }
       
       res.json(suggestion);
     } catch (error: any) {
       console.error("Error submitting anonymous suggestion:", error);
       res.status(500).json({ message: "Failed to submit anonymous suggestion" });
-    });
+    }
   });
   
   // List anonymous suggestions (Manager only)
@@ -25036,28 +25036,28 @@ Return ONLY valid JSON array with this exact structure:
           eq(anonymousSuggestions.workspaceId, workspaceId),
           eq(anonymousSuggestions.status, status as string)
         ));
-      });
+      }
       
       if (category) {
         query = query.where(and(
           eq(anonymousSuggestions.workspaceId, workspaceId),
           eq(anonymousSuggestions.category, category as string)
         ));
-      });
+      }
       
       if (urgencyLevel) {
         query = query.where(and(
           eq(anonymousSuggestions.workspaceId, workspaceId),
           eq(anonymousSuggestions.urgencyLevel, urgencyLevel as string)
         ));
-      });
+      }
       
       const suggestions = await query;
       res.json(suggestions);
     } catch (error: any) {
       console.error("Error fetching anonymous suggestions:", error);
       res.status(500).json({ message: "Failed to fetch anonymous suggestions" });
-    });
+    }
   });
   
   // Update suggestion status (Manager only)
@@ -25077,7 +25077,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!existing[0]) {
         return res.status(404).json({ message: "Suggestion not found" });
-      });
+      }
       
       const [updated] = await db
         .update(anonymousSuggestions)
@@ -25093,7 +25093,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error updating suggestion:", error);
       res.status(500).json({ message: "Failed to update suggestion" });
-    });
+    }
   });
   
   // [5] EMPLOYEE RECOGNITION (All Employees + Managers)
@@ -25108,7 +25108,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Get employee record
       const employee = await db
@@ -25122,7 +25122,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!employee[0]) {
         return res.status(403).json({ message: "Employee not found" });
-      });
+      }
       
       // Check if user is manager
       const isManager = req.workspace!.role === 'owner' || req.workspace!.role === 'manager';
@@ -25168,14 +25168,14 @@ Return ONLY valid JSON array with this exact structure:
         } catch (err) {
           console.error('[BonusProcessing] Failed to process monetary reward:', err);
           // Continue - bonus processing is non-blocking
-        });
-      });
+        }
+      }
       
       res.json(recognition);
     } catch (error: any) {
       console.error("Error creating employee recognition:", error);
       res.status(500).json({ message: "Failed to create employee recognition" });
-    });
+    }
   });
   
   // Get employee recognition feed
@@ -25195,21 +25195,21 @@ Return ONLY valid JSON array with this exact structure:
           eq(employeeRecognition.workspaceId, workspaceId),
           eq(employeeRecognition.recognizedEmployeeId, employeeId as string)
         ));
-      });
+      }
       
       if (isPublic !== undefined) {
         query = query.where(and(
           eq(employeeRecognition.workspaceId, workspaceId),
           eq(employeeRecognition.isPublic, isPublic === 'true')
         ));
-      });
+      }
       
       const recognitions = await query;
       res.json(recognitions);
     } catch (error: any) {
       console.error("Error fetching employee recognitions:", error);
       res.status(500).json({ message: "Failed to fetch employee recognitions" });
-    });
+    }
   });
   
   // [6] EMPLOYEE HEALTH SCORES (Manager/Owner Only)
@@ -25231,28 +25231,28 @@ Return ONLY valid JSON array with this exact structure:
           eq(employeeHealthScores.workspaceId, workspaceId),
           eq(employeeHealthScores.employeeId, employeeId as string)
         ));
-      });
+      }
       
       if (riskLevel) {
         query = query.where(and(
           eq(employeeHealthScores.workspaceId, workspaceId),
           eq(employeeHealthScores.riskLevel, riskLevel as string)
         ));
-      });
+      }
       
       if (requiresManagerAction !== undefined) {
         query = query.where(and(
           eq(employeeHealthScores.workspaceId, workspaceId),
           eq(employeeHealthScores.requiresManagerAction, requiresManagerAction === 'true')
         ));
-      });
+      }
       
       const healthScores = await query;
       res.json(healthScores);
     } catch (error: any) {
       console.error("Error fetching employee health scores:", error);
       res.status(500).json({ message: "Failed to fetch employee health scores" });
-    });
+    }
   });
   
   // Take action on employee health score
@@ -25273,7 +25273,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!existing[0]) {
         return res.status(404).json({ message: "Health score not found" });
-      });
+      }
       
       const [updated] = await db
         .update(employeeHealthScores)
@@ -25289,7 +25289,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error updating health score action:", error);
       res.status(500).json({ message: "Failed to update health score action" });
-    });
+    }
   });
   
   // [7] EMPLOYER BENCHMARK SCORES (Manager/Owner Only)
@@ -25311,21 +25311,21 @@ Return ONLY valid JSON array with this exact structure:
           eq(employerBenchmarkScores.workspaceId, workspaceId),
           eq(employerBenchmarkScores.benchmarkType, benchmarkType as string)
         ));
-      });
+      }
       
       if (targetId) {
         query = query.where(and(
           eq(employerBenchmarkScores.workspaceId, workspaceId),
           eq(employerBenchmarkScores.targetId, targetId as string)
         ));
-      });
+      }
       
       const benchmarks = await query;
       res.json(benchmarks);
     } catch (error: any) {
       console.error("Error fetching employer benchmarks:", error);
       res.status(500).json({ message: "Failed to fetch employer benchmarks" });
-    });
+    }
   });
   
   // [8] CALCULATION TRIGGERS (Manager/Owner Only)
@@ -25338,7 +25338,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!employeeId || !periodStart || !periodEnd) {
         return res.status(400).json({ message: "employeeId, periodStart, and periodEnd are required" });
-      });
+      }
       
       const healthScore = await calculateEmployeeHealthScore({
         workspaceId,
@@ -25351,7 +25351,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error calculating health score:", error);
       res.status(500).json({ message: "Failed to calculate health score" });
-    });
+    }
   });
   
   // Batch calculate health scores for all employees
@@ -25362,7 +25362,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!periodStart || !periodEnd) {
         return res.status(400).json({ message: "periodStart and periodEnd are required" });
-      });
+      }
       
       const healthScores = await batchCalculateHealthScores(
         workspaceId,
@@ -25377,7 +25377,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error batch calculating health scores:", error);
       res.status(500).json({ message: "Failed to batch calculate health scores" });
-    });
+    }
   });
   
   // Manually trigger employer benchmark calculation
@@ -25388,7 +25388,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!benchmarkType || !periodStart || !periodEnd) {
         return res.status(400).json({ message: "benchmarkType, periodStart, and periodEnd are required" });
-      });
+      }
       
       const benchmark = await calculateEmployerBenchmark({
         workspaceId,
@@ -25401,13 +25401,13 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!benchmark) {
         return res.status(404).json({ message: "No ratings found for the specified period" });
-      });
+      }
       
       res.json(benchmark);
     } catch (error: any) {
       console.error("Error calculating employer benchmark:", error);
       res.status(500).json({ message: "Failed to calculate employer benchmark" });
-    });
+    }
   });
 
   // ============================================================================
@@ -25433,22 +25433,22 @@ Return ONLY valid JSON array with this exact structure:
       // Apply filters
       if (category) {
         courses = courses.filter(c => c.category === category);
-      });
+      }
       if (difficulty) {
         courses = courses.filter(c => c.difficulty === difficulty);
-      });
+      }
       if (status) {
         courses = courses.filter(c => c.status === status);
-      });
+      }
       if (isRequired !== undefined) {
         courses = courses.filter(c => c.isRequired === (isRequired === 'true'));
-      });
+      }
       
       res.json(courses);
     } catch (error: any) {
       console.error("Error fetching training courses:", error);
       res.status(500).json({ message: "Failed to fetch training courses" });
-    });
+    }
   });
   
   // Get single training course
@@ -25468,13 +25468,13 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!course) {
         return res.status(404).json({ message: "Training course not found" });
-      });
+      }
       
       res.json(course);
     } catch (error: any) {
       console.error("Error fetching training course:", error);
       res.status(500).json({ message: "Failed to fetch training course" });
-    });
+    }
   });
   
   // Create training course (Manager/Owner only)
@@ -25497,9 +25497,9 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating training course:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to create training course" });
-    });
+    }
   });
   
   // Update training course (Manager/Owner only)
@@ -25519,7 +25519,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!existing[0]) {
         return res.status(404).json({ message: "Training course not found" });
-      });
+      }
       
       // Validate partial update
       const validatedData = insertTrainingCourseSchema.partial().parse(req.body);
@@ -25538,9 +25538,9 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error updating training course:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to update training course" });
-    });
+    }
   });
   
   // Delete training course (Manager/Owner only)
@@ -25560,7 +25560,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!existing[0]) {
         return res.status(404).json({ message: "Training course not found" });
-      });
+      }
       
       await db
         .delete(trainingCourses)
@@ -25570,7 +25570,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error deleting training course:", error);
       res.status(500).json({ message: "Failed to delete training course" });
-    });
+    }
   });
   
   // [2] COURSE ENROLLMENTS
@@ -25585,7 +25585,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Get employee record
       const employee = await db
@@ -25599,7 +25599,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!employee[0]) {
         return res.status(403).json({ message: "Employee not found" });
-      });
+      }
       
       // Get enrollments with course details
       const enrollments = await db
@@ -25623,7 +25623,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching training enrollments:", error);
       res.status(500).json({ message: "Failed to fetch training enrollments" });
-    });
+    }
   });
   
   // Enroll in a course
@@ -25636,7 +25636,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { id: courseId } = req.params;
       
       // Get employee record
@@ -25651,7 +25651,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!employee[0]) {
         return res.status(403).json({ message: "Employee not found" });
-      });
+      }
       
       // Check if course exists
       const course = await db
@@ -25665,7 +25665,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!course[0]) {
         return res.status(404).json({ message: "Training course not found" });
-      });
+      }
       
       // Check if already enrolled
       const existing = await db
@@ -25679,7 +25679,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (existing[0]) {
         return res.status(400).json({ message: "Already enrolled in this course" });
-      });
+      }
       
       // Create enrollment
       const [enrollment] = await db
@@ -25698,9 +25698,9 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error enrolling in course:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to enroll in course" });
-    });
+    }
   });
   
   // Update enrollment progress
@@ -25713,7 +25713,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { id } = req.params;
       const { progress, status, score } = req.body;
       
@@ -25729,7 +25729,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!employee[0]) {
         return res.status(403).json({ message: "Employee not found" });
-      });
+      }
       
       // Verify enrollment belongs to this employee
       const enrollment = await db
@@ -25743,7 +25743,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!enrollment[0]) {
         return res.status(404).json({ message: "Enrollment not found" });
-      });
+      }
       
       // Update progress
       const updateData: any = { updatedAt: new Date() };
@@ -25763,9 +25763,9 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error updating enrollment progress:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to update enrollment progress" });
-    });
+    }
   });
   
   // [3] CERTIFICATIONS
@@ -25780,7 +25780,7 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Get employee record
       const employee = await db
@@ -25794,7 +25794,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!employee[0]) {
         return res.status(403).json({ message: "Employee not found" });
-      });
+      }
       
       // Get certifications with course details
       const certifications = await db
@@ -25818,7 +25818,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching certifications:", error);
       res.status(500).json({ message: "Failed to fetch certifications" });
-    });
+    }
   });
   
   // Issue certification (Manager/Owner only)
@@ -25840,7 +25840,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!enrollment[0]) {
         return res.status(400).json({ message: "Employee must complete the course before certification" });
-      });
+      }
       
       const course = await db
         .select()
@@ -25853,7 +25853,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!course[0]) {
         return res.status(404).json({ message: "Course not found" });
-      });
+      }
       
       // Create certification
       const [certification] = await db
@@ -25881,9 +25881,9 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error issuing certification:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to issue certification" });
-    });
+    }
   });
 
   // ============================================================================
@@ -25909,19 +25909,19 @@ Return ONLY valid JSON array with this exact structure:
       // Apply filters
       if (fiscalYear) {
         allBudgets = allBudgets.filter(b => b.fiscalYear === parseInt(fiscalYear as string));
-      });
+      }
       if (department) {
         allBudgets = allBudgets.filter(b => b.department === department);
-      });
+      }
       if (status) {
         allBudgets = allBudgets.filter(b => b.status === status);
-      });
+      }
       
       res.json(allBudgets);
     } catch (error: any) {
       console.error("Error fetching budgets:", error);
       res.status(500).json({ message: "Failed to fetch budgets" });
-    });
+    }
   });
   
   // Get single budget
@@ -25941,13 +25941,13 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!budget) {
         return res.status(404).json({ message: "Budget not found" });
-      });
+      }
       
       res.json(budget);
     } catch (error: any) {
       console.error("Error fetching budget:", error);
       res.status(500).json({ message: "Failed to fetch budget" });
-    });
+    }
   });
   
   // Create budget (Manager/Owner only)
@@ -25970,9 +25970,9 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating budget:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to create budget" });
-    });
+    }
   });
   
   // Update budget (Manager/Owner only)
@@ -25992,7 +25992,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!existing[0]) {
         return res.status(404).json({ message: "Budget not found" });
-      });
+      }
       
       // Validate partial update
       const validatedData = insertBudgetSchema.partial().parse(req.body);
@@ -26011,9 +26011,9 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error updating budget:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to update budget" });
-    });
+    }
   });
   
   // Delete budget (Owner only)
@@ -26033,7 +26033,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!existing[0]) {
         return res.status(404).json({ message: "Budget not found" });
-      });
+      }
       
       await db
         .delete(budgets)
@@ -26043,7 +26043,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error deleting budget:", error);
       res.status(500).json({ message: "Failed to delete budget" });
-    });
+    }
   });
   
   // [2] BUDGET LINE ITEMS
@@ -26066,7 +26066,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!budget[0]) {
         return res.status(404).json({ message: "Budget not found" });
-      });
+      }
       
       const lineItems = await db
         .select()
@@ -26078,7 +26078,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching budget line items:", error);
       res.status(500).json({ message: "Failed to fetch budget line items" });
-    });
+    }
   });
   
   // Create budget line item
@@ -26099,7 +26099,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!budget[0]) {
         return res.status(404).json({ message: "Budget not found" });
-      });
+      }
       
       const validatedData = insertBudgetLineItemSchema.parse({
         ...req.body,
@@ -26116,9 +26116,9 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating budget line item:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to create budget line item" });
-    });
+    }
   });
   
   // Update budget line item
@@ -26139,7 +26139,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!budget[0]) {
         return res.status(404).json({ message: "Budget not found" });
-      });
+      }
       
       const existing = await db
         .select()
@@ -26152,7 +26152,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!existing[0]) {
         return res.status(404).json({ message: "Budget line item not found" });
-      });
+      }
       
       // Validate partial update
       const validatedData = insertBudgetLineItemSchema.partial().parse(req.body);
@@ -26168,9 +26168,9 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error updating budget line item:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to update budget line item" });
-    });
+    }
   });
   
   // Delete budget line item
@@ -26191,7 +26191,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!budget[0]) {
         return res.status(404).json({ message: "Budget not found" });
-      });
+      }
       
       const existing = await db
         .select()
@@ -26204,7 +26204,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!existing[0]) {
         return res.status(404).json({ message: "Budget line item not found" });
-      });
+      }
       
       await db
         .delete(budgetLineItems)
@@ -26214,7 +26214,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error deleting budget line item:", error);
       res.status(500).json({ message: "Failed to delete budget line item" });
-    });
+    }
   });
   
   // [3] BUDGET VARIANCE ANALYSIS
@@ -26238,7 +26238,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!budget[0]) {
         return res.status(404).json({ message: "Budget not found" });
-      });
+      }
       
       let query = db
         .select()
@@ -26250,16 +26250,16 @@ Return ONLY valid JSON array with this exact structure:
       
       if (year) {
         variances = variances.filter(v => v.year === parseInt(year as string));
-      });
+      }
       if (month) {
         variances = variances.filter(v => v.month === parseInt(month as string));
-      });
+      }
       
       res.json(variances);
     } catch (error: any) {
       console.error("Error fetching budget variances:", error);
       res.status(500).json({ message: "Failed to fetch budget variances" });
-    });
+    }
   });
   
   // Create budget variance snapshot
@@ -26280,7 +26280,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!budget[0]) {
         return res.status(404).json({ message: "Budget not found" });
-      });
+      }
       
       const validatedData = insertBudgetVarianceSchema.parse({
         ...req.body,
@@ -26297,9 +26297,9 @@ Return ONLY valid JSON array with this exact structure:
       console.error("Error creating budget variance:", error);
       if (error.name === 'ZodError') {
         return res.status(400).json({ message: "Validation error", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to create budget variance" });
-    });
+    }
   });
 
   // ============================================================================
@@ -26332,7 +26332,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching integrations:", error);
       res.status(500).json({ message: "Failed to fetch integrations" });
-    });
+    }
   });
   
   // [2] CONNECTIONS - Manage workspace integrations (Manager/Owner)
@@ -26350,7 +26350,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching connections:", error);
       res.status(500).json({ message: "Failed to fetch connections" });
-    });
+    }
   });
   
   // Connect to an integration
@@ -26363,12 +26363,12 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { integrationId, connectionName, authType, apiKey, apiSecret } = req.body;
       
       if (!integrationId) {
         return res.status(400).json({ message: "integrationId is required" });
-      });
+      }
       
       // Check if integration exists
       const [integration] = await db
@@ -26379,7 +26379,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!integration) {
         return res.status(404).json({ message: "Integration not found" });
-      });
+      }
       
       // Create connection
       const [connection] = await db
@@ -26410,7 +26410,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error creating connection:", error);
       res.status(500).json({ message: "Failed to create connection" });
-    });
+    }
   });
   
   // Disconnect an integration
@@ -26435,7 +26435,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error disconnecting integration:", error);
       res.status(500).json({ message: "Failed to disconnect integration" });
-    });
+    }
   });
   
   // [3] API KEYS - Developer access management (Owner only)
@@ -26468,7 +26468,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching API keys:", error);
       res.status(500).json({ message: "Failed to fetch API keys" });
-    });
+    }
   });
   
   // Create API key
@@ -26481,12 +26481,12 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { name, description, scopes, rateLimit, expiresAt } = req.body;
       
       if (!name) {
         return res.status(400).json({ message: "name is required" });
-      });
+      }
       
       // Generate API key
       const crypto = await import('crypto');
@@ -26517,7 +26517,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error creating API key:", error);
       res.status(500).json({ message: "Failed to create API key" });
-    });
+    }
   });
   
   // Revoke API key
@@ -26541,7 +26541,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error revoking API key:", error);
       res.status(500).json({ message: "Failed to revoke API key" });
-    });
+    }
   });
   
   // [4] WEBHOOKS - Event subscriptions (Manager/Owner)
@@ -26559,7 +26559,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching webhooks:", error);
       res.status(500).json({ message: "Failed to fetch webhooks" });
-    });
+    }
   });
   
   // Create webhook subscription
@@ -26572,12 +26572,12 @@ Return ONLY valid JSON array with this exact structure:
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const { name, targetUrl, events, filters, authType, authConfig, maxRetries } = req.body;
       
       if (!name || !targetUrl || !events || events.length === 0) {
         return res.status(400).json({ message: "name, targetUrl, and events are required" });
-      });
+      }
       
       const [webhook] = await db
         .insert(webhookSubscriptions)
@@ -26598,7 +26598,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error creating webhook:", error);
       res.status(500).json({ message: "Failed to create webhook" });
-    });
+    }
   });
   
   // Toggle webhook active status
@@ -26618,7 +26618,7 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!webhook) {
         return res.status(404).json({ message: "Webhook not found" });
-      });
+      }
       
       const [updated] = await db
         .update(webhookSubscriptions)
@@ -26633,7 +26633,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error toggling webhook:", error);
       res.status(500).json({ message: "Failed to toggle webhook" });
-    });
+    }
   });
   
   // Delete webhook
@@ -26653,7 +26653,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error deleting webhook:", error);
       res.status(500).json({ message: "Failed to delete webhook" });
-    });
+    }
   });
   
   // Get webhook delivery history
@@ -26676,7 +26676,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error: any) {
       console.error("Error fetching webhook deliveries:", error);
       res.status(500).json({ message: "Failed to fetch webhook deliveries" });
-    });
+    }
   });
 
   // ============================================================================
@@ -26690,7 +26690,7 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       // Validate using Zod schema
       const { createDisputeSchema } = await import('@shared/schema');
@@ -26701,7 +26701,7 @@ Return ONLY valid JSON array with this exact structure:
           message: "Validation failed", 
           errors: validationResult.error.errors 
         });
-      });
+      }
 
       const data = validationResult.data;
       
@@ -26713,7 +26713,7 @@ Return ONLY valid JSON array with this exact structure:
       const employee = await storage.getEmployeeByUserId(userId);
       if (!employee) {
         return res.status(403).json({ message: "Employee not found" });
-      });
+      }
 
       // Validate target entity exists and belongs to workspace
       let targetExists = false;
@@ -26727,7 +26727,7 @@ Return ONLY valid JSON array with this exact structure:
         if (submission) {
           const reportSubmissions = await storage.getReportSubmissions(user.currentWorkspaceId, {});
           targetExists = reportSubmissions.some(s => s.id === data.targetId);
-        });
+        }
       } else if (data.targetType === 'employer_ratings') {
         // Employer ratings feature not yet implemented
         // For now, allow dispute creation (will be validated when feature is added)
@@ -26736,11 +26736,11 @@ Return ONLY valid JSON array with this exact structure:
         // Composite scores feature not yet implemented
         // For now, allow dispute creation (will be validated when feature is added)
         targetExists = true;
-      });
+      }
 
       if (!targetExists) {
         return res.status(404).json({ message: "Target entity not found in workspace" });
-      });
+      }
 
       // Calculate review deadline (7 days from now)
       const reviewDeadline = new Date();
@@ -26769,7 +26769,7 @@ Return ONLY valid JSON array with this exact structure:
       } catch (aiError) {
         console.error('AI analysis failed for dispute creation:', aiError);
         // Continue creating dispute even if AI fails
-      });
+      }
 
       const dispute = await storage.createDispute({
         ...data,
@@ -26814,10 +26814,10 @@ Return ONLY valid JSON array with this exact structure:
             relatedEntityId: dispute.id,
             createdBy: userId,
           });
-        });
+        }
       } catch (notifyError) {
         console.error('Error sending dispute notification:', notifyError);
-      });
+      }
 
       // AUDIT LOG: Dispute filed
       try {
@@ -26836,13 +26836,13 @@ Return ONLY valid JSON array with this exact structure:
         });
       } catch (auditError) {
         console.error('Audit log error:', auditError);
-      });
+      }
 
       res.json(dispute);
     } catch (error) {
       console.error("Error creating dispute:", error);
       res.status(500).json({ message: "Failed to create dispute" });
-    });
+    }
   });
 
   // Get all disputes for current workspace (with filters) - HR/Manager only
@@ -26852,7 +26852,7 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { status, disputeType, assignedTo } = req.query;
       
@@ -26862,14 +26862,14 @@ Return ONLY valid JSON array with this exact structure:
           status: status as string, 
           disputeType: disputeType as string,
           assignedTo: assignedTo as string 
-        });
+        }
       );
 
       res.json(disputes);
     } catch (error) {
       console.error("Error fetching disputes:", error);
       res.status(500).json({ message: "Failed to fetch disputes" });
-    });
+    }
   });
 
   // Get disputes filed by current user
@@ -26879,14 +26879,14 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const disputes = await storage.getDisputesByFiledBy(userId, user.currentWorkspaceId);
       res.json(disputes);
     } catch (error) {
       console.error("Error fetching my disputes:", error);
       res.status(500).json({ message: "Failed to fetch disputes" });
-    });
+    }
   });
 
   // Get disputes for a specific target (e.g., all disputes for a performance review)
@@ -26896,7 +26896,7 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { targetType, targetId } = req.params;
       const disputes = await storage.getDisputesByTarget(targetType, targetId, user.currentWorkspaceId);
@@ -26904,7 +26904,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error) {
       console.error("Error fetching target disputes:", error);
       res.status(500).json({ message: "Failed to fetch disputes" });
-    });
+    }
   });
 
   // Get a single dispute by ID
@@ -26914,14 +26914,14 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { id } = req.params;
       const dispute = await storage.getDispute(id, user.currentWorkspaceId);
       
       if (!dispute) {
         return res.status(404).json({ message: "Dispute not found" });
-      });
+      }
 
       // Check authorization: employees can only see their own disputes
       const employee = await storage.getEmployeeByUserId(userId);
@@ -26929,13 +26929,13 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!isHROrManager && dispute.filedBy !== userId) {
         return res.status(403).json({ message: "You can only view your own disputes" });
-      });
+      }
 
       res.json(dispute);
     } catch (error) {
       console.error("Error fetching dispute:", error);
       res.status(500).json({ message: "Failed to fetch dispute" });
-    });
+    }
   });
 
   // Assign a dispute to an HR/Manager
@@ -26945,26 +26945,26 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { id } = req.params;
       const { assignedTo } = req.body;
 
       if (!assignedTo) {
         return res.status(400).json({ message: "assignedTo is required" });
-      });
+      }
 
       const dispute = await storage.assignDispute(id, user.currentWorkspaceId, assignedTo);
       
       if (!dispute) {
         return res.status(404).json({ message: "Dispute not found" });
-      });
+      }
 
       res.json(dispute);
     } catch (error) {
       console.error("Error assigning dispute:", error);
       res.status(500).json({ message: "Failed to assign dispute" });
-    });
+    }
   });
 
   // Update a dispute (for adding notes, evidence, etc.)
@@ -26974,20 +26974,20 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { id } = req.params;
       const dispute = await storage.updateDispute(id, user.currentWorkspaceId, req.body);
       
       if (!dispute) {
         return res.status(404).json({ message: "Dispute not found" });
-      });
+      }
 
       res.json(dispute);
     } catch (error) {
       console.error("Error updating dispute:", error);
       res.status(500).json({ message: "Failed to update dispute" });
-    });
+    }
   });
 
   // Resolve a dispute
@@ -26997,14 +26997,14 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { id } = req.params;
       const { resolution, resolutionAction } = req.body;
 
       if (!resolution || !resolutionAction) {
         return res.status(400).json({ message: "resolution and resolutionAction are required" });
-      });
+      }
 
       const dispute = await storage.resolveDispute(
         id,
@@ -27016,13 +27016,13 @@ Return ONLY valid JSON array with this exact structure:
       
       if (!dispute) {
         return res.status(404).json({ message: "Dispute not found" });
-      });
+      }
 
       res.json(dispute);
     } catch (error) {
       console.error("Error resolving dispute:", error);
       res.status(500).json({ message: "Failed to resolve dispute" });
-    });
+    }
   });
 
   // Apply changes from a resolved dispute (update the original record)
@@ -27032,7 +27032,7 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { id } = req.params;
       
@@ -27040,11 +27040,11 @@ Return ONLY valid JSON array with this exact structure:
       const dispute = await storage.getDispute(id, user.currentWorkspaceId);
       if (!dispute) {
         return res.status(404).json({ message: "Dispute not found" });
-      });
+      }
 
       if (dispute.status !== 'resolved') {
         return res.status(400).json({ message: "Dispute must be resolved before applying changes" });
-      });
+      }
 
       // Apply changes based on dispute type and resolution
       const targetType = dispute.targetType;
@@ -27056,21 +27056,21 @@ Return ONLY valid JSON array with this exact structure:
         const entry = await storage.getTimeEntry(targetId);
         if (entry) {
           await storage.updateTimeEntry(targetId, { status: 'approved' });
-        });
+        }
       } else if (targetType === 'shift' && resolution === 'reschedule') {
         // Apply rescheduled shift
         await storage.updateShift(targetId, { status: 'rescheduled', updatedAt: new Date() });
       } else if (targetType === 'payroll' && resolution === 'adjust_payment') {
         // Mark payroll entry for manual adjustment
         await storage.updatePayrollEntry(targetId, { status: 'adjusting', updatedAt: new Date() });
-      });
+      }
       
       const updated = await storage.applyDisputeChanges(id, user.currentWorkspaceId);
       res.json(updated);
     } catch (error) {
       console.error("Error applying dispute changes:", error);
       res.status(500).json({ message: "Failed to apply dispute changes" });
-    });
+    }
   });
 
   // ========================================================================
@@ -27084,7 +27084,7 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const disputes = await storage.getDisputesByWorkspace(
         user.currentWorkspaceId,
@@ -27125,8 +27125,8 @@ Return ONLY valid JSON array with this exact structure:
           } catch (error) {
             console.error('Error analyzing dispute:', error);
             return dispute;
-          });
-        });
+          }
+        }
         return dispute;
       }));
 
@@ -27134,7 +27134,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error) {
       console.error("Error fetching pending disputes:", error);
       res.status(500).json({ message: "Failed to fetch pending disputes" });
-    });
+    }
   });
 
   // Manager review and decision on dispute
@@ -27144,19 +27144,19 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { id } = req.params;
       const { decision, reviewerNotes } = req.body;
 
       if (!decision || !reviewerNotes) {
         return res.status(400).json({ message: "decision and reviewerNotes are required" });
-      });
+      }
 
       const validDecisions = ['approve', 'reject', 'escalate'];
       if (!validDecisions.includes(decision)) {
         return res.status(400).json({ message: "Invalid decision. Must be: approve, reject, or escalate" });
-      });
+      }
 
       // Update dispute with manager decision
       const statusMap: { [key: string]: string } = {
@@ -27177,13 +27177,13 @@ Return ONLY valid JSON array with this exact structure:
 
       if (!dispute) {
         return res.status(404).json({ message: "Dispute not found" });
-      });
+      }
 
       res.json(dispute);
     } catch (error) {
       console.error("Error reviewing dispute:", error);
       res.status(500).json({ message: "Failed to review dispute" });
-    });
+    }
   });
 
   // Get employee's complete audit record (read-only view)
@@ -27193,12 +27193,12 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const employee = await storage.getEmployeeByUserId(userId);
       if (!employee) {
         return res.status(403).json({ message: "Employee not found" });
-      });
+      }
 
       // Get all audit data for employee
       const [
@@ -27278,7 +27278,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error) {
       console.error("Error fetching audit record:", error);
       res.status(500).json({ message: "Failed to fetch audit record" });
-    });
+    }
   });
 
   // Get items that can be disputed (for grievance filing form)
@@ -27288,12 +27288,12 @@ Return ONLY valid JSON array with this exact structure:
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const employee = await storage.getEmployeeByUserId(userId);
       if (!employee) {
         return res.status(403).json({ message: "Employee not found" });
-      });
+      }
 
       // Get reviews and write-ups that can be disputed
       const [reviews, writeUps] = await Promise.all([
@@ -27321,7 +27321,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error) {
       console.error("Error fetching disputeable items:", error);
       res.status(500).json({ message: "Failed to fetch disputeable items" });
-    });
+    }
   });
 
   // ============================================================================
@@ -27340,13 +27340,13 @@ Return ONLY valid JSON array with this exact structure:
 
       if (!dispute) {
         return res.status(404).json({ message: "Dispute not found" });
-      });
+      }
 
       // Get employee who filed the dispute
       const employee = await db.select().from(employees).where(eq(employees.id, dispute.filedBy)).limit(1);
       if (!employee.length) {
         return res.status(404).json({ message: "Employee not found" });
-      });
+      }
 
       const employeeData = employee[0];
 
@@ -27499,7 +27499,7 @@ Return ONLY valid JSON array with this exact structure:
     } catch (error) {
       console.error("Error fetching investigation context:", error);
       res.status(500).json({ message: "Failed to fetch investigation context" });
-    });
+    }
   });
 
   // AI-powered dispute analysis (for support staff)
@@ -27511,12 +27511,12 @@ Return ONLY valid JSON array with this exact structure:
       const dispute = await storage.getDispute(id);
       if (!dispute) {
         return res.status(404).json({ message: "Dispute not found" });
-      });
+      }
 
       const employee = await storage.getUser(dispute.employeeId);
       if (!employee) {
         return res.status(404).json({ message: "Employee not found" });
-      });
+      }
 
       const workspace = await storage.getWorkspace(dispute.workspaceId);
       
@@ -27536,7 +27536,7 @@ Return ONLY valid JSON array with this exact structure:
         if (entry.clockIn && entry.clockOut) {
           const hours = (new Date(entry.clockOut).getTime() - new Date(entry.clockIn).getTime()) / (1000 * 60 * 60);
           return sum + hours;
-        });
+        }
         return sum;
       }, 0);
       
@@ -27695,7 +27695,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       if (!openaiResponse.ok) {
         console.error("OpenAI API error:", await openaiResponse.text());
         return res.status(500).json({ message: "Failed to generate AI analysis" });
-      });
+      }
 
       const aiResult = await openaiResponse.json();
       const analysis = JSON.parse(aiResult.choices[0].message.content);
@@ -27708,7 +27708,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error generating AI analysis:", error);
       res.status(500).json({ message: "Failed to generate AI analysis" });
-    });
+    }
   });
 
   // ============================================================================
@@ -27723,7 +27723,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
       if (!explanation) {
         return res.status(400).json({ message: "explanation is required" });
-      });
+      }
 
       // Get the review first
       const review = await db.query.performanceReviews.findFirst({
@@ -27732,7 +27732,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
       if (!review) {
         return res.status(404).json({ message: "Performance review not found" });
-      });
+      }
 
       // Delete the review
       await db.delete(performanceReviews).where(eq(performanceReviews.id, id));
@@ -27752,8 +27752,8 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
             deletedBy: staffUser?.email || 'Platform Support',
             explanation
           }).catch(err => console.error('Failed to send review deleted email:', err));
-        });
-      });
+        }
+      }
 
       res.json({ 
         success: true, 
@@ -27763,7 +27763,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error deleting performance review:", error);
       res.status(500).json({ message: "Failed to delete performance review" });
-    });
+    }
   });
 
   // Edit a performance review (with explanation)
@@ -27774,11 +27774,11 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
       if (!explanation) {
         return res.status(400).json({ message: "explanation is required" });
-      });
+      }
 
       if (!updates) {
         return res.status(400).json({ message: "updates object is required" });
-      });
+      }
 
       // Update the review
       const updatedReview = await db.update(performanceReviews)
@@ -27788,7 +27788,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
       if (!updatedReview.length) {
         return res.status(404).json({ message: "Performance review not found" });
-      });
+      }
 
       // Send email notification (if notifyUserId provided)
       if (notifyUserId) {
@@ -27809,8 +27809,8 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
             changesDescription,
             explanation
           }).catch(err => console.error('Failed to send review edited email:', err));
-        });
-      });
+        }
+      }
 
       res.json({
         success: true,
@@ -27821,7 +27821,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error updating performance review:", error);
       res.status(500).json({ message: "Failed to update performance review" });
-    });
+    }
   });
 
   // Delete an employer rating (with explanation)
@@ -27832,7 +27832,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
       if (!explanation) {
         return res.status(400).json({ message: "explanation is required" });
-      });
+      }
 
       // Get the rating first
       const rating = await db.query.employerRatings.findFirst({
@@ -27841,7 +27841,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
       if (!rating) {
         return res.status(404).json({ message: "Employer rating not found" });
-      });
+      }
 
       // Delete the rating
       await db.delete(employerRatings).where(eq(employerRatings.id, id));
@@ -27867,8 +27867,8 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
             deletedBy: staffUser?.email || 'Platform Support',
             explanation
           }).catch(err => console.error('Failed to send rating deleted email:', err));
-        });
-      });
+        }
+      }
 
       res.json({
         success: true,
@@ -27878,7 +27878,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error deleting employer rating:", error);
       res.status(500).json({ message: "Failed to delete employer rating" });
-    });
+    }
   });
 
   // Edit an employer rating (with explanation)
@@ -27889,11 +27889,11 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
       if (!explanation) {
         return res.status(400).json({ message: "explanation is required" });
-      });
+      }
 
       if (!updates) {
         return res.status(400).json({ message: "updates object is required" });
-      });
+      }
 
       // Update the rating
       const updatedRating = await db.update(employerRatings)
@@ -27903,7 +27903,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
       if (!updatedRating.length) {
         return res.status(404).json({ message: "Employer rating not found" });
-      });
+      }
 
       // Send email notification to workspace (if notifyWorkspaceId provided)
       if (notifyWorkspaceId) {
@@ -27929,8 +27929,8 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
             deletedBy: staffUser?.email || 'Platform Support',
             explanation: `Changes made: ${changesDescription}. ${explanation}`
           }).catch(err => console.error('Failed to send rating updated email:', err));
-        });
-      });
+        }
+      }
 
       res.json({
         success: true,
@@ -27941,7 +27941,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error updating employer rating:", error);
       res.status(500).json({ message: "Failed to update employer rating" });
-    });
+    }
   });
 
   // Delete a report submission (write-up) (with explanation)
@@ -27952,7 +27952,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
       if (!explanation) {
         return res.status(400).json({ message: "explanation is required" });
-      });
+      }
 
       // Get the report first
       const report = await db.query.reportSubmissions.findFirst({
@@ -27961,7 +27961,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
       if (!report) {
         return res.status(404).json({ message: "Report submission not found" });
-      });
+      }
 
       // Get the template for report type name
       const template = await db.query.reportTemplates.findFirst({
@@ -27986,8 +27986,8 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
             deletedBy: staffUser?.email || 'Platform Support',
             explanation
           }).catch(err => console.error('Failed to send write-up deleted email:', err));
-        });
-      });
+        }
+      }
 
       res.json({
         success: true,
@@ -27997,7 +27997,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error deleting report submission:", error);
       res.status(500).json({ message: "Failed to delete report submission" });
-    });
+    }
   });
 
   // Get employee reputation data (visible to hiring managers platform-wide)
@@ -28012,13 +28012,13 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       
       if (!isAuthorized) {
         return res.status(403).json({ message: "Only HR/Managers can view employee reputation data" });
-      });
+      }
 
       // Get employee basic info
       const targetEmployee = await db.select().from(employees).where(eq(employees.id, employeeId)).limit(1);
       if (!targetEmployee.length) {
         return res.status(404).json({ message: "Employee not found" });
-      });
+      }
 
       // Aggregate performance reviews (cross-organizational)
       const performanceReviews = await db.query.performanceReviews.findMany({
@@ -28032,7 +28032,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
           reportsApproved: true,
           reportsRejected: true,
           completedAt: true,
-        });
+        }
       });
 
       // Count write-ups (from reportSubmissions)
@@ -28129,7 +28129,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error fetching employee reputation:", error);
       res.status(500).json({ message: "Failed to fetch employee reputation data" });
-    });
+    }
   });
 
   // ============================================================================
@@ -28147,7 +28147,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         userId = req.session.userId;
       } else {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const progress = await db.select()
         .from(userOnboarding)
@@ -28160,13 +28160,13 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
           .values({ userId })
           .returning();
         return res.json(newProgress[0]);
-      });
+      }
 
       res.json(progress[0]);
     } catch (error) {
       console.error("Error fetching onboarding progress:", error);
       res.status(500).json({ message: "Failed to fetch onboarding progress" });
-    });
+    }
   });
 
   // Mark onboarding as skipped
@@ -28180,7 +28180,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         userId = req.session.userId;
       } else {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const updated = await db.update(userOnboarding)
         .set({
@@ -28201,13 +28201,13 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
           })
           .returning();
         return res.json(created[0]);
-      });
+      }
 
       res.json(updated[0]);
     } catch (error) {
       console.error("Error skipping onboarding:", error);
       res.status(500).json({ message: "Failed to skip onboarding" });
-    });
+    }
   });
 
   // Mark onboarding as complete
@@ -28221,7 +28221,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         userId = req.session.userId;
       } else {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const {
         completedSteps,
@@ -28264,13 +28264,13 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
           })
           .returning();
         return res.json(created[0]);
-      });
+      }
 
       res.json(updated[0]);
     } catch (error) {
       console.error("Error completing onboarding:", error);
       res.status(500).json({ message: "Failed to complete onboarding" });
-    });
+    }
   });
 
   // ==========================================
@@ -28289,7 +28289,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error fetching deals:", error);
       res.status(500).json({ message: "Failed to fetch deals" });
-    });
+    }
   });
 
   // POST /api/sales/deals - Create new deal (RBAC: Manager+ only)
@@ -28309,9 +28309,9 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error creating deal:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid deal data", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to create deal" });
-    });
+    }
   });
 
   // GET /api/sales/rfps - Fetch all RFPs
@@ -28326,7 +28326,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error fetching RFPs:", error);
       res.status(500).json({ message: "Failed to fetch RFPs" });
-    });
+    }
   });
 
   // POST /api/sales/rfps - Create new RFP (RBAC: Manager+ only)
@@ -28346,9 +28346,9 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error creating RFP:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid RFP data", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to create RFP" });
-    });
+    }
   });
 
   // GET /api/sales/leads - Fetch all leads
@@ -28363,7 +28363,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error fetching leads:", error);
       res.status(500).json({ message: "Failed to fetch leads" });
-    });
+    }
   });
 
   // POST /api/sales/leads - Create new lead (RBAC: Manager+ only)
@@ -28383,9 +28383,9 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
       console.error("Error creating lead:", error);
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid lead data", errors: error.errors });
-      });
+      }
       res.status(500).json({ message: "Failed to create lead" });
-    });
+    }
   });
 
   // ============================================================================
@@ -28400,7 +28400,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
       if (!query || query.trim().length === 0) {
         return res.status(400).json({ message: "Search query is required" });
-      });
+      }
 
       const startTime = Date.now();
       let aiTokensUsed = 0;
@@ -28449,10 +28449,10 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         } catch {
           // Fallback to keyword extraction
           searchCriteria = { keywords: query.toLowerCase().split(' ') };
-        });
+        }
 
         console.log('[AI Records™ AI] Search criteria:', searchCriteria);
-      });
+      }
 
       // Perform intelligent searches
       if (searchType === 'all' || searchType === 'employees') {
@@ -28469,7 +28469,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
           limit: 10,
         });
         results.employees = employeeResults;
-      });
+      }
 
       if (searchType === 'all' || searchType === 'clients') {
         const clientResults = await db.query.clients.findMany({
@@ -28484,7 +28484,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
           limit: 10,
         });
         results.clients = clientResults;
-      });
+      }
 
       const executionTimeMs = Date.now() - startTime;
 
@@ -28509,7 +28509,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
           tokensUsed: aiTokensUsed,
           estimatedCost: (aiTokensUsed / 1000) * 0.002, // $0.002 per 1K tokens
         });
-      });
+      }
 
       res.json({
         results,
@@ -28525,7 +28525,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error performing AI search:", error);
       res.status(500).json({ message: "Search failed" });
-    });
+    }
   });
 
   // GET /api/search/history - Get search history
@@ -28543,7 +28543,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error fetching search history:", error);
       res.status(500).json({ message: "Failed to fetch search history" });
-    });
+    }
   });
 
   // ============================================================================
@@ -28583,8 +28583,8 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
         
         if (result[0]) {
           seededKeys.push(result[0].id);
-        });
-      });
+        }
+      }
       
       res.json({
         success: true,
@@ -28596,7 +28596,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error: any) {
       console.error('[DEV] Error seeding expired keys:', error);
       res.status(500).json({ message: 'Failed to seed expired keys' });
-    });
+    }
   });
 
   /**
@@ -28614,7 +28614,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
           message: 'Invalid job type', 
           validJobs 
         });
-      });
+      }
       
       // Trigger the job asynchronously
       const trigger = manualTriggers[jobType as keyof typeof manualTriggers];
@@ -28633,7 +28633,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error: any) {
       console.error('[DEV] Error triggering automation:', error);
       res.status(500).json({ message: 'Failed to trigger automation' });
-    });
+    }
   });
 
   /**
@@ -28680,7 +28680,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error: any) {
       console.error('[DEV] Error fetching automation audit logs:', error);
       res.status(500).json({ message: 'Failed to fetch automation audit logs' });
-    });
+    }
   });
 
   /**
@@ -28715,7 +28715,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error: any) {
       console.error('[DEV] Error fetching idempotency keys:', error);
       res.status(500).json({ message: 'Failed to fetch idempotency keys' });
-    });
+    }
   });
 
   // ============================================================================
@@ -28742,7 +28742,7 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
     } catch (error) {
       console.error("Error fetching insights:", error);
       res.status(500).json({ message: "Failed to fetch insights" });
-    });
+    }
   });
 
   // POST /api/insights/dismiss/:id - Dismiss an insight
@@ -28768,13 +28768,13 @@ ${context.performanceHistory.map((review: any) => `- Overall Rating: ${review.ov
 
       if (updated.length === 0) {
         return res.status(404).json({ message: "Insight not found" });
-      });
+      }
 
       res.json(updated[0]);
     } catch (error) {
       console.error("Error dismissing insight:", error);
       res.status(500).json({ message: "Failed to dismiss insight" });
-    });
+    }
   });
 
   // POST /api/insights/generate - Generate AI insights using GPT-4o (Manager+ only)
@@ -28888,10 +28888,10 @@ Respond with valid JSON array only.`
               isActive: true,
             }).returning();
             insights.push(savedInsight[0]);
-          });
+          }
         } catch (parseError) {
           console.error('[AI Analytics™] Failed to parse AI response:', parseError);
-        });
+        }
 
         // Track AI usage for billing
         if (totalTokensUsed > 0) {
@@ -28903,7 +28903,7 @@ Respond with valid JSON array only.`
             tokensUsed: totalTokensUsed,
             estimatedCost: (totalTokensUsed / 1000) * 0.015, // $0.015 per 1K tokens for GPT-4o
           });
-        });
+        }
       } else {
         // Fallback: Basic insight when AI unavailable
         if (employeeCount[0]?.count > 5) {
@@ -28927,8 +28927,8 @@ Respond with valid JSON array only.`
             isActive: true,
           }).returning();
           insights.push(savingsInsight[0]);
-        });
-      });
+        }
+      }
 
       res.json({
         message: "AI insights generated successfully",
@@ -28940,7 +28940,7 @@ Respond with valid JSON array only.`
     } catch (error) {
       console.error("Error generating AI insights:", error);
       res.status(500).json({ message: "Failed to generate insights" });
-    });
+    }
   });
 
   // GET /api/insights/metrics - Get metrics snapshots
@@ -28962,7 +28962,7 @@ Respond with valid JSON array only.`
     } catch (error) {
       console.error("Error fetching metrics:", error);
       res.status(500).json({ message: "Failed to fetch metrics" });
-    });
+    }
   });
 
   // POST /api/signatures - Save e-signature with immutable object storage
@@ -28974,23 +28974,23 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspace = await storage.getWorkspaceByMembership(userId);
       
       if (!workspace) {
         return res.status(404).json({ message: "Workspace not found" });
-      });
+      }
 
       const { signatureData, documentType, employeeId } = req.body;
       
       if (!signatureData || !documentType) {
         return res.status(400).json({ message: "Signature data and document type are required" });
-      });
+      }
 
       // SECURITY: Verify signature data is PNG
       if (!signatureData.startsWith('data:image/png;base64,')) {
         return res.status(400).json({ message: "Invalid signature format. Must be PNG image." });
-      });
+      }
 
       // Convert base64 to buffer
       const base64Data = signatureData.replace(/^data:image\/png;base64,/, '');
@@ -29000,7 +29000,7 @@ Respond with valid JSON array only.`
       const MAX_SIGNATURE_SIZE = 1 * 1024 * 1024; // 1MB
       if (buffer.length > MAX_SIGNATURE_SIZE) {
         return res.status(400).json({ message: `Signature too large. Maximum size is ${MAX_SIGNATURE_SIZE / 1024 / 1024}MB` });
-      });
+      }
 
       // SECURITY: Verify buffer is valid PNG (check magic number)
       const isPNG = buffer.length >= 8 && 
@@ -29010,14 +29010,14 @@ Respond with valid JSON array only.`
                     buffer[3] === 0x47;
       if (!isPNG) {
         return res.status(400).json({ message: "Invalid PNG signature. Data appears corrupted or forged." });
-      });
+      }
 
       // SECURITY: Verify PRIVATE_OBJECT_DIR is configured
       const privateDir = process.env.PRIVATE_OBJECT_DIR;
       if (!privateDir) {
         console.error('PRIVATE_OBJECT_DIR environment variable not set');
         return res.status(500).json({ message: "Object storage not configured" });
-      });
+      }
 
       // Get user details for audit
       const user = await storage.getUser(userId);
@@ -29089,18 +29089,18 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error saving signature:", error);
       res.status(500).json({ message: error.message || "Failed to save signature" });
-    });
+    }
   });
 
   // Helper function to parse object storage paths
   function parseObjectPath(path: string): { bucketName: string; objectName: string } {
     if (!path.startsWith("/")) {
       path = `/${path}`;
-    });
+    }
     const pathParts = path.split("/");
     if (pathParts.length < 3) {
       throw new Error("Invalid path: must contain at least a bucket name");
-    });
+    }
     return {
       bucketName: pathParts[1],
       objectName: pathParts.slice(2).join("/"),
@@ -29120,7 +29120,7 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId;
       const userRole = req.user!.role;
       const platformRole = (req.user as any)?.platformRole;
@@ -29135,13 +29135,13 @@ Respond with valid JSON array only.`
         rooms = await storage.getOrganizationChatRoomsByWorkspace(workspaceId);
       } else {
         return res.status(400).json({ message: "No workspace found" });
-      });
+      }
 
       res.json(rooms);
     } catch (error: any) {
       console.error("Error fetching chat rooms:", error);
       res.status(500).json({ message: "Failed to fetch chat rooms" });
-    });
+    }
   });
   
   // GET /api/comm-os/rooms/live - Get live room data with WebSocket connections
@@ -29154,7 +29154,7 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId;
       const userRole = req.user!.role;
       const platformRole = (req.user as any)?.platformRole;
@@ -29166,7 +29166,7 @@ Respond with valid JSON array only.`
         orgRooms = await storage.getAllOrganizationChatRooms();
       } else if (workspaceId) {
         orgRooms = await storage.getOrganizationChatRoomsByWorkspace(workspaceId);
-      });
+      }
       // Note: Users without workspace still get platform rooms below
       
       // ALWAYS include platform-wide support rooms (HelpDesk concierge) for ALL authenticated users
@@ -29229,7 +29229,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error fetching live rooms:", error);
       res.status(500).json({ message: "Failed to fetch live rooms" });
-    });
+    }
   });
   
   // POST /api/comm-os/rooms/:id/join - Join a chat room
@@ -29242,7 +29242,7 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       
       // Verify room exists - check both organization chat rooms and support rooms
       let room: any = await storage.getOrganizationChatRoom(roomId);
@@ -29266,12 +29266,12 @@ Respond with valid JSON array only.`
             conversationId: supportRoom.conversationId,
           };
           isSupportRoom = true;
-        });
-      });
+        }
+      }
       
       if (!room) {
         return res.status(404).json({ message: "Room not found" });
-      });
+      }
       
       // Check access permissions
       const workspaceId = req.workspaceId;
@@ -29283,8 +29283,8 @@ Respond with valid JSON array only.`
       if (!isSupportRoom || room.workspaceId !== null) {
         if (!isSupportStaff && room.workspaceId !== workspaceId) {
           return res.status(403).json({ message: "Access denied" });
-        });
-      });
+        }
+      }
       
       // Room join is handled by WebSocket connection
       // This endpoint just validates access
@@ -29297,7 +29297,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error joining room:", error);
       res.status(500).json({ message: "Failed to join room" });
-    });
+    }
   });
   // POST /api/comm-os/rooms/:id/leave - Leave a chat room
   app.post('/api/comm-os/rooms/:id/leave', requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -29314,7 +29314,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error leaving room:", error);
       res.status(500).json({ message: "Failed to leave room" });
-    });
+    }
   });
   
   // GET /api/comm-os/messages/search - Search messages across rooms
@@ -29326,7 +29326,7 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId;
       const userRole = req.user!.role;
       const platformRole = (req.user as any)?.platformRole;
@@ -29337,7 +29337,7 @@ Respond with valid JSON array only.`
       // Allow searches with query, roomId, or date filters
       if (!query && !roomId && !startDate && !endDate) {
         return res.status(400).json({ message: "Must provide at least one filter (query, roomId, or date range)" });
-      });
+      }
       
       // Get all accessible room IDs
       let accessibleRooms;
@@ -29347,7 +29347,7 @@ Respond with valid JSON array only.`
         accessibleRooms = await storage.getOrganizationChatRoomsByWorkspace(workspaceId);
       } else {
         return res.status(400).json({ message: "No workspace found" });
-      });
+      }
       
       const roomIds = roomId ? [roomId as string] : accessibleRooms.map(r => r.id);
       
@@ -29365,17 +29365,17 @@ Respond with valid JSON array only.`
             m.messageContent?.toLowerCase().includes(searchTerm) ||
             m.senderName?.toLowerCase().includes(searchTerm)
           );
-        });
+        }
         
         // Filter by date range
         if (startDate) {
           const start = new Date(startDate as string);
           filteredMessages = filteredMessages.filter(m => new Date(m.createdAt) >= start);
-        });
+        }
         if (endDate) {
           const end = new Date(endDate as string);
           filteredMessages = filteredMessages.filter(m => new Date(m.createdAt) <= end);
-        });
+        }
         
         // Add room context to each message
         const room = accessibleRooms.find(r => r.id === conversationId);
@@ -29386,7 +29386,7 @@ Respond with valid JSON array only.`
         }));
         
         results.push(...messagesWithContext);
-      });
+      }
       
       // Sort by most recent first and limit
       const sortedResults = results
@@ -29401,7 +29401,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error searching messages:", error);
       res.status(500).json({ message: "Failed to search messages" });
-    });
+    }
   });
 
   // GET /api/support/chatrooms - Get formatted chatroom list for support staff (with participant counts, activity, etc.)
@@ -29420,7 +29420,7 @@ Respond with valid JSON array only.`
       
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Only support staff can access this endpoint" });
-      });
+      }
 
       // Fetch all conversations across all workspaces
       const conversations = await db.select().from(chatConversations).execute();
@@ -29469,7 +29469,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error fetching support chatrooms:", error);
       res.status(500).json({ message: "Failed to fetch support chatrooms" });
-    });
+    }
   });
 
   // GET /api/comm-os/onboarding-status - Check organization onboarding status
@@ -29478,18 +29478,18 @@ Respond with valid JSON array only.`
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
-      });
+      }
 
       const onboarding = await storage.getOrganizationRoomOnboarding(workspaceId);
       if (!onboarding) {
         return res.json({ isCompleted: false, currentStep: 0 });
-      });
+      }
 
       res.json(onboarding);
     } catch (error: any) {
       console.error("Error fetching onboarding status:", error);
       res.status(500).json({ message: "Failed to fetch onboarding status" });
-    });
+    }
   });
 
   // POST /api/comm-os/complete-onboarding - Complete onboarding and create room
@@ -29501,17 +29501,17 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
-      });
+      }
 
       const { roomName, roomDescription, channels, allowGuests } = req.body;
 
       if (!roomName || !roomName.trim()) {
         return res.status(400).json({ message: "Room name is required" });
-      });
+      }
 
       // Check room limit (max 10 active rooms per organization)
       const existingRooms = await storage.getOrganizationChatRoomsByWorkspace(workspaceId);
@@ -29520,7 +29520,7 @@ Respond with valid JSON array only.`
         return res.status(400).json({ 
           message: "Organization has reached maximum of 10 active rooms. Please close an existing room before creating a new one." 
         });
-      });
+      }
 
       const room = await storage.completeOrganizationOnboarding(workspaceId, userId, {
         roomName: roomName.trim(),
@@ -29549,7 +29549,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error completing onboarding:", error);
       res.status(500).json({ message: "Failed to complete onboarding" });
-    });
+    }
   });
 
   // POST /api/comm-os/rooms/:id/join - Support staff join room
@@ -29561,7 +29561,7 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const roomId = req.params.id;
       const userRole = req.user!.role;
       const platformRole = (req.user as any)?.platformRole;
@@ -29569,12 +29569,12 @@ Respond with valid JSON array only.`
 
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Only support staff can join organization rooms" });
-      });
+      }
 
       const room = await storage.getOrganizationChatRoom(roomId);
       if (!room) {
         return res.status(404).json({ message: "Room not found" });
-      });
+      }
 
       // Check if already a member
       const existingMembers = await storage.getOrganizationRoomMembers(roomId);
@@ -29582,7 +29582,7 @@ Respond with valid JSON array only.`
 
       if (alreadyMember) {
         return res.json({ message: "Already a member of this room" });
-      });
+      }
 
       // Add support staff as member with admin/owner role
       await storage.addOrganizationRoomMember({
@@ -29627,7 +29627,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error joining room:", error);
       res.status(500).json({ message: "Failed to join room" });
-    });
+    }
   });
 
   // POST /api/comm-os/rooms/:id/suspend - Suspend room (support staff only)
@@ -29639,7 +29639,7 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const roomId = req.params.id;
       const { reason } = req.body;
       const userRole = req.user!.role;
@@ -29648,16 +29648,16 @@ Respond with valid JSON array only.`
 
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Only support staff can suspend rooms" });
-      });
+      }
 
       if (!reason || !reason.trim()) {
         return res.status(400).json({ message: "Suspension reason is required" });
-      });
+      }
 
       const room = await storage.getOrganizationChatRoom(roomId);
       if (!room) {
         return res.status(404).json({ message: "Room not found" });
-      });
+      }
 
       await storage.suspendOrganizationChatRoom(roomId, userId, reason);
 
@@ -29681,7 +29681,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error suspending room:", error);
       res.status(500).json({ message: "Failed to suspend room" });
-    });
+    }
   });
 
   // POST /api/comm-os/rooms/:id/lift-suspension - Lift room suspension (support staff only)
@@ -29693,7 +29693,7 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const roomId = req.params.id;
       const userRole = req.user!.role;
       const platformRole = (req.user as any)?.platformRole;
@@ -29701,12 +29701,12 @@ Respond with valid JSON array only.`
 
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Only support staff can lift room suspensions" });
-      });
+      }
 
       const room = await storage.getOrganizationChatRoom(roomId);
       if (!room) {
         return res.status(404).json({ message: "Room not found" });
-      });
+      }
 
       await storage.liftOrganizationChatRoomSuspension(roomId);
 
@@ -29729,7 +29729,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error lifting suspension:", error);
       res.status(500).json({ message: "Failed to lift suspension" });
-    });
+    }
   });
 
   // ============================================================================
@@ -29745,18 +29745,18 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
-      });
+      }
 
       const conversations = await storage.getPrivateMessageConversations(userId, workspaceId);
       res.json(conversations);
     } catch (error: any) {
       console.error("Error fetching conversations:", error);
       res.status(500).json({ message: "Failed to fetch conversations" });
-    });
+    }
   });
 
   // GET /api/private-messages/:conversationId - Get messages in a conversation
@@ -29768,7 +29768,7 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const conversationId = req.params.conversationId;
 
       const messages = await storage.getPrivateMessages(userId, conversationId);
@@ -29776,7 +29776,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error fetching messages:", error);
       res.status(500).json({ message: "Failed to fetch messages" });
-    });
+    }
   });
 
   // POST /api/private-messages/upload - Upload file for private message
@@ -29785,12 +29785,12 @@ Respond with valid JSON array only.`
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
-      });
+      }
 
       const buffer = await getRawBody(req);
       if (!buffer || buffer.length === 0) {
         return res.status(400).json({ message: "No file provided" });
-      });
+      }
 
       // Generate unique file ID
       const fileId = `${Date.now()}-${Math.random().toString(36).substring(7)}`;
@@ -29830,7 +29830,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error uploading file:", error);
       res.status(500).json({ message: error.message || "Failed to upload file" });
-    });
+    }
   });
 
   // POST /api/private-messages/send - Send a private message
@@ -29842,17 +29842,17 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId;
       const { recipientId, message, attachmentUrl, attachmentName } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
-      });
+      }
 
       if (!recipientId || (!message && !attachmentUrl)) {
         return res.status(400).json({ message: "Recipient and message or attachment are required" });
-      });
+      }
 
       const conversation = await storage.getOrCreatePrivateConversation(workspaceId, userId, recipientId);
 
@@ -29874,7 +29874,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error sending message:", error);
       res.status(500).json({ message: "Failed to send message" });
-    });
+    }
   });
 
   // POST /api/private-messages/start - Start a new conversation
@@ -29886,17 +29886,17 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId;
       const { recipientId } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
-      });
+      }
 
       if (!recipientId) {
         return res.status(400).json({ message: "Recipient is required" });
-      });
+      }
 
       const conversation = await storage.getOrCreatePrivateConversation(workspaceId, userId, recipientId);
 
@@ -29904,7 +29904,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error starting conversation:", error);
       res.status(500).json({ message: "Failed to start conversation" });
-    });
+    }
   });
 
   // POST /api/private-messages/:conversationId/mark-read - Mark messages as read
@@ -29916,7 +29916,7 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const conversationId = req.params.conversationId;
 
       await storage.markPrivateMessagesAsRead(conversationId, userId);
@@ -29925,7 +29925,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error marking messages as read:", error);
       res.status(500).json({ message: "Failed to mark messages as read" });
-    });
+    }
   });
 
   // GET /api/users/search - Search users for new conversations
@@ -29936,18 +29936,18 @@ Respond with valid JSON array only.`
 
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
-      });
+      }
 
       if (!query || query.length < 3) {
         return res.json([]);
-      });
+      }
 
       const users = await storage.searchUsers(workspaceId, query);
       res.json(users);
     } catch (error: any) {
       console.error("Error searching users:", error);
       res.status(500).json({ message: "Failed to search users" });
-    });
+    }
   });
 
   // ============================================================================
@@ -29963,17 +29963,17 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const workspaceId = req.workspaceId;
       const { conversationId, investigationReason, caseNumber } = req.body;
 
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
-      });
+      }
 
       if (!conversationId || !investigationReason) {
         return res.status(400).json({ message: "Conversation ID and investigation reason are required" });
-      });
+      }
 
       const request = await storage.createDmAuditRequest({
         workspaceId,
@@ -29989,7 +29989,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error creating audit request:", error);
       res.status(500).json({ message: "Failed to create audit request" });
-    });
+    }
   });
 
   // GET /api/dm-audit/requests - List all audit requests for workspace
@@ -29998,14 +29998,14 @@ Respond with valid JSON array only.`
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace found" });
-      });
+      }
 
       const requests = await storage.getDmAuditRequests(workspaceId);
       res.json(requests);
     } catch (error: any) {
       console.error("Error fetching audit requests:", error);
       res.status(500).json({ message: "Failed to fetch audit requests" });
-    });
+    }
   });
 
   // POST /api/dm-audit/requests/:id/approve - Approve audit request
@@ -30017,7 +30017,7 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const requestId = req.params.id;
       const { expiresInHours } = req.body;
 
@@ -30025,7 +30025,7 @@ Respond with valid JSON array only.`
       if (expiresInHours && expiresInHours > 0) {
         expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + expiresInHours);
-      });
+      }
 
       const approved = await storage.approveDmAuditRequest({
         requestId,
@@ -30038,7 +30038,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error approving audit request:", error);
       res.status(500).json({ message: "Failed to approve audit request" });
-    });
+    }
   });
 
   // POST /api/dm-audit/requests/:id/deny - Deny audit request
@@ -30049,14 +30049,14 @@ Respond with valid JSON array only.`
 
       if (!deniedReason) {
         return res.status(400).json({ message: "Denial reason is required" });
-      });
+      }
 
       const denied = await storage.denyDmAuditRequest(requestId, deniedReason);
       res.json(denied);
     } catch (error: any) {
       console.error("Error denying audit request:", error);
       res.status(500).json({ message: "Failed to deny audit request" });
-    });
+    }
   });
 
   // GET /api/dm-audit/messages/:conversationId - View DM messages with audit access
@@ -30068,13 +30068,13 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const conversationId = req.params.conversationId;
       const auditRequestId = req.query.auditRequestId as string;
 
       if (!auditRequestId) {
         return res.status(400).json({ message: "Audit request ID is required" });
-      });
+      }
 
       const messages = await storage.getPrivateMessagesWithAuditAccess({
         conversationId,
@@ -30091,7 +30091,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error accessing DM messages:", error);
       res.status(403).json({ message: error.message || "Audit access denied" });
-    });
+    }
   });
 
   // GET /api/dm-audit/access-logs/:conversationId - View access logs for a conversation
@@ -30104,7 +30104,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error fetching access logs:", error);
       res.status(500).json({ message: "Failed to fetch access logs" });
-    });
+    }
   });
 
   // Chat Export Routes for Support Staff
@@ -30117,19 +30117,19 @@ Respond with valid JSON array only.`
       const isSupportStaff = userRole === 'platform_admin' || userRole === 'support_staff' || platformRole === 'root_admin' || platformRole === 'platform_admin' || platformRole === 'support_staff';
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Access denied. Support staff only." });
-      });
+      }
 
       const conversationId = req.params.id;
       const { format } = req.body;
 
       if (!['pdf', 'html'].includes(format)) {
         return res.status(400).json({ message: "Format must be 'pdf' or 'html'" });
-      });
+      }
 
       const data = await storage.getSupportConversationForExport(conversationId);
       if (!data) {
         return res.status(404).json({ message: "Conversation not found" });
-      });
+      }
 
       // Log export action for audit compliance
       await storage.createAuditLog({
@@ -30184,11 +30184,11 @@ Respond with valid JSON array only.`
         const html = generateChatHTML(exportData);
         res.setHeader('Content-Type', 'text/html');
         res.send(html);
-      });
+      }
     } catch (error: any) {
       console.error("Error exporting support conversation:", error);
       res.status(500).json({ message: "Failed to export conversation" });
-    });
+    }
   });
 
   // POST /api/chat-export/comm-room/:id - Export AI Communications room (PDF or HTML)
@@ -30200,19 +30200,19 @@ Respond with valid JSON array only.`
       const isSupportStaff = userRole === 'platform_admin' || userRole === 'support_staff' || platformRole === 'root_admin' || platformRole === 'platform_admin' || platformRole === 'support_staff';
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Access denied. Support staff only." });
-      });
+      }
 
       const roomId = req.params.id;
       const { format } = req.body;
 
       if (!['pdf', 'html'].includes(format)) {
         return res.status(400).json({ message: "Format must be 'pdf' or 'html'" });
-      });
+      }
 
       const data = await storage.getCommRoomForExport(roomId);
       if (!data) {
         return res.status(404).json({ message: "Chat room not found" });
-      });
+      }
 
       // Log export action for audit compliance
       await storage.createAuditLog({
@@ -30269,11 +30269,11 @@ Respond with valid JSON array only.`
         const html = generateChatHTML(exportData);
         res.setHeader('Content-Type', 'text/html');
         res.send(html);
-      });
+      }
     } catch (error: any) {
       console.error("Error exporting chat room:", error);
       res.status(500).json({ message: "Failed to export chat room" });
-    });
+    }
   });
 
   // POST /api/chat-export/private-conversation/:id - Export private DM conversation (requires audit approval)
@@ -30285,7 +30285,7 @@ Respond with valid JSON array only.`
       const isSupportStaff = userRole === 'platform_admin' || userRole === 'support_staff' || platformRole === 'root_admin' || platformRole === 'platform_admin' || platformRole === 'support_staff';
       if (!isSupportStaff) {
         return res.status(403).json({ message: "Access denied. Support staff only." });
-      });
+      }
 
       const authReq = req as AuthenticatedRequest;
       const userId = authReq.user?.id;
@@ -30293,19 +30293,19 @@ Respond with valid JSON array only.`
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
       const conversationId = req.params.id;
       const { format } = req.body;
 
       if (!['pdf', 'html'].includes(format)) {
         return res.status(400).json({ message: "Format must be 'pdf' or 'html'" });
-      });
+      }
 
       // This method handles DM decryption and audit authorization internally
       const data = await storage.getPrivateConversationForExport(conversationId, userId);
       if (!data) {
         return res.status(404).json({ message: "Conversation not found or access denied" });
-      });
+      }
 
       // Log export action for audit compliance
       await storage.createAuditLog({
@@ -30366,11 +30366,11 @@ Respond with valid JSON array only.`
         const html = generateChatHTML(exportData);
         res.setHeader('Content-Type', 'text/html');
         res.send(html);
-      });
+      }
     } catch (error: any) {
       console.error("Error exporting private conversation:", error);
       res.status(403).json({ message: error.message || "Failed to export conversation - audit approval required" });
-    });
+    }
   });
 
   // ============================================================================
@@ -30383,7 +30383,7 @@ Respond with valid JSON array only.`
       const workspaceId = req.user!.currentWorkspaceId;
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
-      });
+      }
 
       const { oversightEvents } = await import('@shared/schema');
       
@@ -30402,7 +30402,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error fetching oversight events:", error);
       res.status(500).json({ message: "Failed to fetch oversight events" });
-    });
+    }
   });
 
   // GET /api/oversight/stats - Get oversight statistics
@@ -30411,7 +30411,7 @@ Respond with valid JSON array only.`
       const workspaceId = req.user!.currentWorkspaceId;
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
-      });
+      }
 
       const { oversightEvents } = await import('@shared/schema');
       
@@ -30444,7 +30444,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error fetching oversight stats:", error);
       res.status(500).json({ message: "Failed to fetch oversight stats" });
-    });
+    }
   });
 
   // PATCH /api/oversight/:id/approve - Approve an oversight event
@@ -30453,7 +30453,7 @@ Respond with valid JSON array only.`
       const workspaceId = req.user!.currentWorkspaceId;
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
-      });
+      }
 
       const eventId = req.params.id;
       const { resolutionNotes } = req.body;
@@ -30471,11 +30471,11 @@ Respond with valid JSON array only.`
 
       if (!event) {
         return res.status(404).json({ message: "Oversight event not found" });
-      });
+      }
 
       if (event.status !== 'pending') {
         return res.status(400).json({ message: "Event already resolved" });
-      });
+      }
 
       const [updated] = await db
         .update(oversightEvents)
@@ -30512,7 +30512,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error approving oversight event:", error);
       res.status(500).json({ message: "Failed to approve oversight event" });
-    });
+    }
   });
 
   // PATCH /api/oversight/:id/reject - Reject an oversight event
@@ -30521,7 +30521,7 @@ Respond with valid JSON array only.`
       const workspaceId = req.user!.currentWorkspaceId;
       if (!workspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
-      });
+      }
 
       const eventId = req.params.id;
       const { resolutionNotes } = req.body;
@@ -30529,7 +30529,7 @@ Respond with valid JSON array only.`
 
       if (!resolutionNotes?.trim()) {
         return res.status(400).json({ message: "Rejection reason required" });
-      });
+      }
 
       const [event] = await db
         .select()
@@ -30543,11 +30543,11 @@ Respond with valid JSON array only.`
 
       if (!event) {
         return res.status(404).json({ message: "Oversight event not found" });
-      });
+      }
 
       if (event.status !== 'pending') {
         return res.status(400).json({ message: "Event already resolved" });
-      });
+      }
 
       const [updated] = await db
         .update(oversightEvents)
@@ -30584,7 +30584,7 @@ Respond with valid JSON array only.`
     } catch (error: any) {
       console.error("Error rejecting oversight event:", error);
       res.status(500).json({ message: "Failed to reject oversight event" });
-    });
+    }
   });
 
   // ============================================================================
@@ -30606,7 +30606,7 @@ Respond with valid JSON array only.`
         success: false, 
         message: error.message 
       });
-    });
+    }
   });
 
   app.post('/api/test/autonomous/schedule', requireAuth, requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -30625,7 +30625,7 @@ Respond with valid JSON array only.`
         success: false, 
         message: error.message 
       });
-    });
+    }
   });
 
   // Trinity AI: Fill open shifts - matches employees to unassigned shifts
@@ -30634,7 +30634,7 @@ Respond with valid JSON array only.`
       const workspaceId = req.query.workspaceId as string || req.body.workspaceId;
       if (!workspaceId) {
         return res.status(400).json({ success: false, message: 'workspaceId required' });
-      });
+      }
       
       console.log('🤖 Trinity: Fill open shifts requested by', req.user?.email, 'for workspace', workspaceId);
       const { scheduleOSAI } = await import('./ai/scheduleos');
@@ -30651,7 +30651,7 @@ Respond with valid JSON array only.`
         success: false, 
         message: error.message 
       });
-    });
+    }
   });
 
   app.post('/api/test/autonomous/payroll', requireAuth, requirePlatformAdmin, async (req: AuthenticatedRequest, res) => {
@@ -30670,7 +30670,7 @@ Respond with valid JSON array only.`
         success: false, 
         message: error.message 
       });
-    });
+    }
   });
 
   // ============================================================================
@@ -30725,7 +30725,7 @@ app.post("/api/sales/invitations/send-enhanced", requireAuth, async (req, res) =
     
     if (!email || !organizationName || !contactName) {
       return res.status(400).json({ error: "email, organizationName, and contactName are required" });
-    });
+    }
     
     const token = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const expiryDays = expiresInDays || 14;
@@ -30785,22 +30785,22 @@ app.get("/api/sales/invitations/lookup/:inviteCode", async (req, res) => {
     
     if (!inviteCode) {
       return res.status(400).json({ error: "Invite code is required" });
-    });
+    }
     
     const [invitation] = await db.select().from(orgInvitations)
       .where(eq(orgInvitations.uniqueInviteCode, inviteCode.toUpperCase()));
     
     if (!invitation) {
       return res.status(404).json({ error: "Invitation not found" });
-    });
+    }
     
     if (invitation.status === 'accepted') {
       return res.status(400).json({ error: "This invitation has already been accepted" });
-    });
+    }
     
     if (invitation.invitationTokenExpiry && new Date(invitation.invitationTokenExpiry) < new Date()) {
       return res.status(400).json({ error: "This invitation has expired" });
-    });
+    }
     
     res.json({
       organizationName: invitation.organizationName,
@@ -30822,7 +30822,7 @@ app.post("/api/sales/invitations/accept", async (req, res) => {
     
     if (!token) {
       return res.status(400).json({ error: "Invitation token is required" });
-    });
+    }
     
     // Find and validate invitation
     const [invitation] = await db.select().from(orgInvitations)
@@ -30830,15 +30830,15 @@ app.post("/api/sales/invitations/accept", async (req, res) => {
     
     if (!invitation) {
       return res.status(404).json({ error: "Invitation not found" });
-    });
+    }
     
     if (invitation.status === 'accepted') {
       return res.status(400).json({ error: "Invitation already accepted" });
-    });
+    }
     
     if (invitation.invitationTokenExpiry && new Date() > new Date(invitation.invitationTokenExpiry)) {
       return res.status(400).json({ error: "Invitation has expired" });
-    });
+    }
     
     // Update invitation status
     await db.update(orgInvitations)
@@ -30861,7 +30861,7 @@ app.post("/api/sales/invitations/accept", async (req, res) => {
         workspaceName: workspaceName || invitation.organizationName,
         ownerName: ownerName || invitation.contactName,
       });
-    });
+    }
     
     res.json({
       success: true,
@@ -30957,7 +30957,7 @@ app.get("/api/onboarding/status", requireAuth, async (req, res) => {
     
     if (!workspaceId) {
       return res.json({ status: 'not_started' });
-    });
+    }
     
     const { onboardingOrchestrator } = await import('./services/ai-brain/subagents/onboardingOrchestrator');
     const status = await onboardingOrchestrator.getOnboardingStatus(workspaceId);
@@ -31009,7 +31009,7 @@ app.post("/api/payroll/calculate-taxes", requireAuth, async (req, res) => {
     
     if (!grossWages || typeof grossWages !== 'number' || grossWages < 0) {
       return res.status(400).json({ error: 'Invalid grossWages amount' });
-    });
+    }
     
     const result = taxCalculator.calculateTaxes({
       grossWages,
@@ -31041,7 +31041,7 @@ app.get("/api/metrics/performance", requirePlatformStaff, async (req: Authentica
       health: {
         isHealthy: metrics.averageResponseTime < 500 && metrics.automationSuccessRate > 95,
         alertLevel: metrics.averageResponseTime > 1000 ? 'critical' : metrics.averageResponseTime > 500 ? 'warning' : 'normal'
-      });
+      }
     });
   } catch (error: any) {
     console.error('Error fetching metrics:', error);
@@ -31080,7 +31080,7 @@ app.post("/api/disputes/analyze-sentiment", requireAuth, async (req: Authenticat
     
     if (!message || typeof message !== 'string' || message.trim().length === 0) {
       return res.status(400).json({ error: 'Message is required' });
-    });
+    }
     
     const analysis = await sentimentAnalyzer.analyzeSentiment(message, context);
     
@@ -31591,7 +31591,7 @@ app.get("/api/payroll/:payrollEntryId/deductions-total", requireAuth, async (req
         totalDeductions: totalDeductions.toString(),
         totalGarnishments: totalGarnishments.toString(),
         combined: totalDeductions.plus(totalGarnishments).toString(),
-      });
+      }
     });
   } catch (error: any) {
     console.error('Error calculating deductions:', error);
@@ -31609,7 +31609,7 @@ app.post("/api/payroll/:payrollEntryId/apply-deductions", requireAuth, mutationL
       success: true, 
       data: { 
         netPayAfterDeductions: netPay.toString(),
-      });
+      }
     });
   } catch (error: any) {
     console.error('Error applying deductions:', error);
@@ -31695,7 +31695,7 @@ app.get("/api/analytics/composite-score", requireAuth, readLimiter, async (req: 
 
     if (!compositeScore) {
       return res.status(404).json({ error: 'Employee not found' });
-    });
+    }
     res.json({ success: true, data: compositeScore });
   } catch (error: any) {
     console.error('Error calculating composite score:', error);
@@ -31717,7 +31717,7 @@ app.get("/api/analytics/composite-scores", requireAuth, requireManager, readLimi
         totalEmployees: scores.length,
         averageScore: scores.length > 0 ? Math.round(scores.reduce((sum, s) => sum + s.compositeScore, 0) / scores.length) : 0,
         topPerformer: scores[0],
-      });
+      }
     });
   } catch (error: any) {
     console.error('Error fetching workspace composite scores:', error);
@@ -31735,7 +31735,7 @@ app.get("/api/analytics/employee-rank/:employeeId", requireAuth, readLimiter, as
 
     if (!rank) {
       return res.status(404).json({ error: 'Employee not found' });
-    });
+    }
     res.json({ success: true, data: rank });
   } catch (error: any) {
     console.error('Error fetching employee rank:', error);
@@ -31832,7 +31832,7 @@ app.patch("/api/employees/:employeeId/metadata", requireAuth, mutationLimiter, a
           skills: skills || [],
           licenses: licenses || [],
           ...metadata
-        });
+        }
       })
       .where(and(
         eq(employees.id, employeeId),
@@ -31881,7 +31881,7 @@ app.get("/api/chat/unread-count", requireAuth, readLimiter, async (req: Authenti
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
     const { conversationId } = req.query;
 
     if (conversationId) {
@@ -31892,7 +31892,7 @@ app.get("/api/chat/unread-count", requireAuth, readLimiter, async (req: Authenti
       // Get total unread across all conversations
       const total = await unreadMessageService.getTotalUnreadCount(userId);
       res.json({ success: true, data: { totalUnreadCount: total } });
-    });
+    }
   } catch (error: any) {
     console.error('Error fetching unread count:', error);
     res.status(500).json({ error: error.message });
@@ -31907,7 +31907,7 @@ app.post("/api/chat/mark-as-read", requireAuth, mutationLimiter, async (req: Aut
       // For unauthenticated users, return success (frontend handles localStorage)
       if (!userId) {
         return res.status(401).json({ message: 'Unauthorized' });
-      });
+      }
     const { conversationId } = req.body;
     if (!conversationId) return res.status(400).json({ error: 'conversationId required' });
 
@@ -31932,7 +31932,7 @@ app.post("/api/shifts/:shiftId/send-reminder", requireAuth, requireManager, muta
 
     if (!result) {
       return res.status(404).json({ error: 'Shift not found' });
-    });
+    }
 
     res.json({ 
       success: result.status === 'sent', 
@@ -31951,7 +31951,7 @@ app.post("/api/shifts/send-reminders/bulk", requireAuth, requireManager, mutatio
 
     if (!startDate || !endDate) {
       return res.status(400).json({ error: 'startDate and endDate required' });
-    });
+    }
 
     const results = await shiftRemindersService.sendBulkShiftReminders(
       workspaceId,
@@ -31968,7 +31968,7 @@ app.post("/api/shifts/send-reminders/bulk", requireAuth, requireManager, mutatio
         successful: successCount,
         failed: results.length - successCount,
         details: results,
-      });
+      }
     });
   } catch (error: any) {
     console.error('Error sending bulk shift reminders:', error);
@@ -31991,7 +31991,7 @@ app.post("/api/shifts/send-reminders/upcoming", requireAuth, requireManager, mut
         successful: successCount,
         failed: results.length - successCount,
         message: `Sent ${successCount} reminders for upcoming shifts`,
-      });
+      }
     });
   } catch (error: any) {
     console.error('Error sending upcoming shift reminders:', error);
@@ -32048,7 +32048,7 @@ app.get("/api/breaks/status/:employeeId", requireAuth, readLimiter, async (req: 
 
     if (!status) {
       return res.status(404).json({ error: 'Employee not found' });
-    });
+    }
     res.json({ success: true, data: status });
   } catch (error: any) {
     console.error('Error fetching break status:', error);
@@ -32070,7 +32070,7 @@ app.get("/api/breaks/workspace-status", requireAuth, requireManager, readLimiter
         onBreak: statuses.filter(s => s.currentStatus === 'on-break').length,
         idle: statuses.filter(s => s.currentStatus === 'idle').length,
         working: statuses.filter(s => s.currentStatus === 'not-on-break').length,
-      });
+      }
     });
   } catch (error: any) {
     console.error('Error fetching workspace break status:', error);
@@ -32130,7 +32130,7 @@ app.get("/api/breaks/rules/:jurisdiction", requireAuth, readLimiter, async (req:
     const rules = await breaksService.getLaborLawRulesByJurisdiction(jurisdiction);
     if (!rules) {
       return res.status(404).json({ error: 'Jurisdiction not found' });
-    });
+    }
     res.json({ success: true, data: rules });
   } catch (error: any) {
     console.error('Error fetching jurisdiction rules:', error);
@@ -32146,17 +32146,17 @@ app.post("/api/breaks/calculate", requireAuth, mutationLimiter, async (req: Auth
 
     if (!shiftStart || !shiftEnd) {
       return res.status(400).json({ error: 'shiftStart and shiftEnd are required' });
-    });
+    }
 
     let rules;
     if (jurisdiction) {
       rules = await breaksService.getLaborLawRulesByJurisdiction(jurisdiction);
       if (!rules) {
         return res.status(404).json({ error: 'Jurisdiction not found' });
-      });
+      }
     } else {
       rules = await breaksService.getWorkspaceLaborLawRules(workspaceId);
-    });
+    }
 
     const calculation = breaksService.calculateRequiredBreaks(
       new Date(shiftStart),
@@ -32178,7 +32178,7 @@ app.post("/api/breaks/auto-schedule", requireAuth, requireManager, mutationLimit
 
     if (!shiftId) {
       return res.status(400).json({ error: 'shiftId is required' });
-    });
+    }
 
     const scheduledBreaks = await breaksService.autoScheduleBreaks(
       workspaceId,
@@ -32205,7 +32205,7 @@ app.post("/api/breaks/auto-schedule/bulk", requireAuth, requireManager, mutation
 
     if (!shiftIds || !Array.isArray(shiftIds) || shiftIds.length === 0) {
       return res.status(400).json({ error: 'shiftIds array is required' });
-    });
+    }
 
     const results = [];
     for (const shiftId of shiftIds) {
@@ -32218,8 +32218,8 @@ app.post("/api/breaks/auto-schedule/bulk", requireAuth, requireManager, mutation
         results.push({ shiftId, success: true, breaks });
       } catch (error: any) {
         results.push({ shiftId, success: false, error: error.message });
-      });
-    });
+      }
+    }
 
     res.json({ 
       success: true, 
@@ -32228,7 +32228,7 @@ app.post("/api/breaks/auto-schedule/bulk", requireAuth, requireManager, mutation
         total: shiftIds.length,
         successful: results.filter(r => r.success).length,
         failed: results.filter(r => !r.success).length,
-      });
+      }
     });
   } catch (error: any) {
     console.error('Error bulk auto-scheduling breaks:', error);
@@ -32263,7 +32263,7 @@ app.get("/api/breaks/compliance", requireAuth, requireManager, readLimiter, asyn
         complianceRate: compliance.length > 0 
           ? Math.round((compliantCount / compliance.length) * 100) 
           : 100,
-      });
+      }
     });
   } catch (error: any) {
     console.error('Error checking shift compliance:', error);
@@ -32293,13 +32293,13 @@ app.patch("/api/breaks/jurisdiction", requireAuth, requireManager, mutationLimit
 
     if (!jurisdiction) {
       return res.status(400).json({ error: 'jurisdiction is required' });
-    });
+    }
 
     // Validate jurisdiction exists
     const rules = await breaksService.getLaborLawRulesByJurisdiction(jurisdiction);
     if (!rules) {
       return res.status(404).json({ error: 'Invalid jurisdiction code' });
-    });
+    }
 
     const updated = await breaksService.updateWorkspaceJurisdiction(workspaceId, jurisdiction);
 
@@ -32323,7 +32323,7 @@ app.post("/api/breaks/seed-rules", requireAuth, mutationLimiter, async (req: Aut
     // Only allow for root/admin users
     if (req.user?.role !== 'root' && req.user?.role !== 'admin') {
       return res.status(403).json({ error: 'Admin access required' });
-    });
+    }
 
     const seededCount = await breaksService.seedLaborLawRules();
 
@@ -32394,7 +32394,7 @@ app.get("/api/metrics/processing/:automationType/average-duration", requireAuth,
         automationType,
         averageDurationMs: avgDuration,
         successRate,
-      });
+      }
     });
   } catch (error: any) {
     console.error('Error fetching processing metrics:', error);
@@ -32433,7 +32433,7 @@ app.get("/api/metrics/payroll/duration", requireAuth, readLimiter, async (req: A
         automationType: 'payroll',
         averageDurationMs: avgPayrollDuration,
         successRate: processingMetricsService.getSuccessRate('payroll'),
-      });
+      }
     });
   } catch (error: any) {
     console.error('Error fetching payroll metrics:', error);
@@ -32499,11 +32499,11 @@ app.post("/api/automation/admin-hourly-rate", requireAuth, requireManager, mutat
     // Validate input
     if (!hourlyRate || typeof hourlyRate !== 'number') {
       return res.status(400).json({ error: "Invalid hourly rate - must be a number" });
-    });
+    }
 
     if (hourlyRate <= 0 || hourlyRate > 500) {
       return res.status(400).json({ error: "Hourly rate must be between $1 and $500" });
-    });
+    }
 
     // Import and call the service
     const { setWorkspaceAdminHourlyRate } = await import("./services/automationMetrics");
@@ -32682,40 +32682,40 @@ app.get("/api/analytics/insights", requireAuth, readLimiter, async (req: Authent
         insights.push("Revenue increased by " + dashboard.comparison.revenueChange + "% compared to the previous period");
       } else if (dashboard.comparison.revenueChange < -10) {
         insights.push("Revenue decreased by " + Math.abs(dashboard.comparison.revenueChange) + "% - consider reviewing pricing or client acquisition");
-      });
+      }
       
       if (dashboard.comparison.hoursChange > 20) {
         insights.push("Hours worked increased by " + dashboard.comparison.hoursChange + "% - great team productivity!");
       } else if (dashboard.comparison.hoursChange < -20) {
         insights.push("Hours worked decreased by " + Math.abs(dashboard.comparison.hoursChange) + "% - check shift scheduling");
-      });
-    });
+      }
+    }
     
     if (dashboard.utilizationRate < 70) {
       insights.push("Utilization rate is at " + dashboard.utilizationRate + "% - consider optimizing shift assignments");
     } else if (dashboard.utilizationRate > 95) {
       insights.push("High utilization rate of " + dashboard.utilizationRate + "% - you may need to hire more staff");
-    });
+    }
     
     if (scheduling.fillRate < 80) {
       insights.push("Shift fill rate is " + scheduling.fillRate + "% - review employee availability");
-    });
+    }
     
     if (scheduling.noShows > 0) {
       insights.push(scheduling.noShows + " no-show(s) detected this period - consider implementing attendance policies");
-    });
+    }
     
     if (revenue.totalOverdue > 0) {
       insights.push("$" + revenue.totalOverdue.toLocaleString() + " in overdue invoices - follow up with clients");
-    });
+    }
     
     if (revenue.collectionRate < 80) {
       insights.push("Collection rate is " + revenue.collectionRate + "% - review invoicing and payment terms");
-    });
+    }
     
     if (timeUsage.overtimeHours > timeUsage.totalHours * 0.1) {
       insights.push("Overtime is " + Math.round((timeUsage.overtimeHours / timeUsage.totalHours) * 100) + "% of total hours - consider hiring or scheduling adjustments");
-    });
+    }
     res.json({ success: true, data: { insights } });
   } catch (error: any) {
     console.error('Error generating analytics insights:', error);
@@ -32736,7 +32736,7 @@ app.get("/api/jobs/by-role/:role", requireAuth, readLimiter, async (req: Authent
 
     if (!job) {
       return res.status(404).json({ error: 'Job role not found' });
-    });
+    }
     res.json({ success: true, data: job });
   } catch (error: any) {
     console.error('Error fetching job info:', error);
@@ -32852,7 +32852,7 @@ app.post("/api/escalation/check-sla", requireAuth, readLimiter, async (req: Auth
     const { priority, ageMinutes } = req.body;
     if (!priority || ageMinutes === undefined) {
       return res.status(400).json({ error: 'priority and ageMinutes required' });
-    });
+    }
 
     const slaStatus = escalationMatrixService.checkSLABreach(priority, ageMinutes);
     const action = escalationMatrixService.getEscalationAction(priority, ageMinutes);
@@ -32916,7 +32916,7 @@ app.get("/api/workflows/:workflowId", requireAuth, readLimiter, async (req: Auth
 
     if (!workflow) {
       return res.status(404).json({ error: 'Workflow not found' });
-    });
+    }
 
     res.json({ 
       success: true, 
@@ -32941,7 +32941,7 @@ app.get("/api/patterns/employee/:employeeId", requireAuth, readLimiter, async (r
 
     if (!pattern) {
       return res.status(404).json({ error: 'Employee not found' });
-    });
+    }
 
     res.json({ 
       success: true, 
@@ -33104,8 +33104,8 @@ app.post("/api/migrations/employee-match", requireAuth, async (req: Authenticate
             track[j - 1][i] + 1,
             track[j - 1][i - 1] + indicator
           );
-        });
-      });
+        }
+      }
       return track[s2.length][s1.length];
     };
 
@@ -33122,7 +33122,7 @@ app.post("/api/migrations/employee-match", requireAuth, async (req: Authenticate
 
     if (!scoredEmployees.length) {
       return res.json({ success: true, data: [], message: 'No matching employees found' });
-    });
+    }
 
     res.json({ 
       success: true, 
@@ -33151,7 +33151,7 @@ app.post("/api/documents/extract", requireAuth, mutationLimiter, async (req: Aut
       return res.status(400).json({
         error: "Missing required fields: documentName, documentType, fileData, fileMimeType",
       });
-    });
+    }
 
     const extracted = await documentExtractionService.extractDocumentData(
       workspaceId,
@@ -33178,7 +33178,7 @@ app.post("/api/documents/batch-extract", requireAuth, mutationLimiter, async (re
 
     if (!Array.isArray(documents) || documents.length === 0) {
       return res.status(400).json({ error: "documents must be a non-empty array" });
-    });
+    }
 
     const results = await documentExtractionService.batchExtractDocuments(
       workspaceId,
@@ -33217,7 +33217,7 @@ app.post("/api/documents/validate", requireAuth, readLimiter, async (req: Authen
       return res.status(400).json({
         error: "Missing required fields: extractedData, targetEntityType",
       });
-    });
+    }
 
     const validation = documentExtractionService.validateExtraction(
       extractedData,
@@ -33249,7 +33249,7 @@ app.post("/api/migration/import-extracted", requireAuth, requireManager, mutatio
       return res.status(400).json({
         error: "Missing required fields: entityType, mappedData",
       });
-    });
+    }
 
     let importedId = "";
     
@@ -33267,7 +33267,7 @@ app.post("/api/migration/import-extracted", requireAuth, requireManager, mutatio
         id: `cli_${Date.now()}`,
       });
       importedId = newClient[0].id;
-    });
+    }
 
     // Send success notification
     await notificationEngine.sendNotification({
@@ -33303,7 +33303,7 @@ app.post("/api/ai-brain/detect-issues", requireAuth, requireManager, readLimiter
       return res.status(400).json({
         error: "Missing required fields: documentType, extractedData",
       });
-    });
+    }
 
     const result = useAIAnalysis
       ? await issueDetectionService.analyzeWithAI(workspaceId, documentType, extractedData, documentId)
@@ -33328,7 +33328,7 @@ app.post("/api/ai-brain/guardrails/validate", requireAuth, requireManager, readL
       return res.status(400).json({
         error: "Missing required fields: ruleType, value",
       });
-    });
+    }
 
     const isViolated = aiBrainConfig.isGuardrailViolated(ruleType, value);
 
@@ -33358,7 +33358,7 @@ app.get("/api/ai-brain/guardrails/config", requireAuth, requireManager, readLimi
 
     if (!workspace) {
       return res.status(403).json({ error: "Workspace not found or access denied" });
-    });
+    }
 
     res.json({
       success: true,
@@ -33379,7 +33379,7 @@ app.get("/api/notifications/user/:userId", requireAuth, readLimiter, async (req:
     // Verify user can access their own notifications
     if (userId !== (req as any).user?.id && (req as any).user?.role !== "admin") {
       return res.status(403).json({ error: "Unauthorized" });
-    });
+    }
 
     const notifications = await notificationEngine.getUserNotifications(
       workspaceId,
@@ -33388,7 +33388,7 @@ app.get("/api/notifications/user/:userId", requireAuth, readLimiter, async (req:
         unreadOnly: unreadOnly === "true",
         limit: limit ? parseInt(limit as string) : 50,
         offset: offset ? parseInt(offset as string) : 0,
-      });
+      }
     );
 
     res.json({
@@ -33497,7 +33497,7 @@ app.get("/api/analytics/heatmap", requireAuth, readLimiter, async (req: Authenti
         period,
         clientId: clientId || 'all',
         generatedAt: new Date().toISOString(),
-      });
+      }
     });
   } catch (error: any) {
     console.error("Error fetching heatmap data:", error);
@@ -33521,7 +33521,7 @@ app.get("/api/analytics/heatmap/by-client", requireAuth, readLimiter, async (req
     const clientData: Record<string, any> = {};
     for (const [clientId, heatmap] of data) {
       clientData[clientId] = heatmap;
-    });
+    }
 
     res.json({
       success: true,
@@ -33530,7 +33530,7 @@ app.get("/api/analytics/heatmap/by-client", requireAuth, readLimiter, async (req
       metadata: {
         period,
         generatedAt: new Date().toISOString(),
-      });
+      }
     });
   } catch (error: any) {
     console.error("Error fetching heatmap by client:", error);
@@ -33558,7 +33558,7 @@ app.get("/api/analytics/heatmap/by-location", requireAuth, readLimiter, async (r
       metadata: {
         period,
         generatedAt: new Date().toISOString(),
-      });
+      }
     });
   } catch (error: any) {
     console.error("Error fetching heatmap by location:", error);
@@ -33585,7 +33585,7 @@ app.get("/api/analytics/heatmap/ai-analysis", requireAuth, readLimiter, async (r
       metadata: {
         period,
         generatedAt: new Date().toISOString(),
-      });
+      }
     });
   } catch (error: any) {
     console.error("Error fetching AI staffing analysis:", error);
@@ -33612,11 +33612,11 @@ app.get("/api/analytics/rooms", requireAuth, readLimiter, async (req: Authentica
 
     if (roomType && !validRoomTypes.includes(roomType as string)) {
       return res.status(400).json({ error: 'Invalid roomType parameter' });
-    });
+    }
 
     if (!validTimeframes.includes(timeframe as string)) {
       return res.status(400).json({ error: 'Invalid timeframe parameter' });
-    });
+    }
 
     const daysNum = Math.min(Math.max(1, parseInt(days as string) || 7), 90); // Clamp between 1-90 days
 
@@ -33637,7 +33637,7 @@ app.get("/api/analytics/rooms", requireAuth, readLimiter, async (req: Authentica
         days: daysNum,
         roomType: roomType || 'all',
         generatedAt: new Date().toISOString(),
-      });
+      }
     });
   } catch (error: any) {
     console.error("Error fetching room analytics:", error);
@@ -33663,7 +33663,7 @@ app.get("/api/alerts/config", requireAuth, async (req: AuthenticatedRequest, res
     // Initialize default configs if none exist
     if (configs.length === 0) {
       configs = await alertService.initializeDefaultConfigs(workspaceId, req.userId!);
-    });
+    }
     res.json({ success: true, data: configs });
   } catch (error: any) {
     console.error("Error fetching alert configs:", error);
@@ -33685,7 +33685,7 @@ app.get("/api/alerts/config/:alertType", requireAuth, async (req: AuthenticatedR
     
     if (!config) {
       return res.status(404).json({ error: "Alert configuration not found" });
-    });
+    }
     res.json({ success: true, data: config });
   } catch (error: any) {
     console.error("Error fetching alert config:", error);
@@ -33708,7 +33708,7 @@ app.put("/api/alerts/config/:alertType", requireAuth, mutationLimiter, async (re
     
     if (!validAlertTypes.includes(alertType)) {
       return res.status(400).json({ error: "Invalid alert type" });
-    });
+    }
     
     const config = await alertService.upsertAlertConfiguration(
       workspaceId,
@@ -33735,7 +33735,7 @@ app.patch("/api/alerts/config/:alertType/toggle", requireAuth, mutationLimiter, 
     
     if (typeof isEnabled !== 'boolean') {
       return res.status(400).json({ error: "isEnabled must be a boolean" });
-    });
+    }
     
     const config = await alertService.upsertAlertConfiguration(
       workspaceId,
@@ -33787,11 +33787,11 @@ app.get("/api/alerts/history/:id", requireAuth, async (req: AuthenticatedRequest
     
     if (!alert) {
       return res.status(404).json({ error: "Alert not found" });
-    });
+    }
     
     if (alert.workspaceId !== req.workspaceId) {
       return res.status(403).json({ error: "Access denied" });
-    });
+    }
     res.json({ success: true, data: alert });
   } catch (error: any) {
     console.error("Error fetching alert:", error);
@@ -33812,10 +33812,10 @@ app.post("/api/alerts/:id/acknowledge", requireAuth, mutationLimiter, async (req
     const existingAlert = await alertService.getAlert(id);
     if (!existingAlert) {
       return res.status(404).json({ error: "Alert not found" });
-    });
+    }
     if (existingAlert.workspaceId !== req.workspaceId) {
       return res.status(403).json({ error: "Access denied" });
-    });
+    }
     
     const alert = await alertService.acknowledgeAlert(id, req.userId!, notes);
     res.json({ success: true, data: alert });
@@ -33838,10 +33838,10 @@ app.post("/api/alerts/:id/resolve", requireAuth, mutationLimiter, async (req: Au
     const existingAlert = await alertService.getAlert(id);
     if (!existingAlert) {
       return res.status(404).json({ error: "Alert not found" });
-    });
+    }
     if (existingAlert.workspaceId !== req.workspaceId) {
       return res.status(403).json({ error: "Access denied" });
-    });
+    }
     
     const alert = await alertService.resolveAlert(id, req.userId!, notes);
     res.json({ success: true, data: alert });
@@ -33883,7 +33883,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     
     if (!alertType || !validAlertTypes.includes(alertType)) {
       return res.status(400).json({ error: "Invalid or missing alert type" });
-    });
+    }
     
     const alert = await alertService.triggerAlert({
       workspaceId,
@@ -33897,7 +33897,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     
     if (!alert) {
       return res.status(400).json({ error: "Alert was not triggered - check if this alert type is enabled" });
-    });
+    }
     res.json({ success: true, data: alert, message: "Test alert triggered successfully" });
   } catch (error: any) {
     console.error("Error triggering test alert:", error);
@@ -33920,17 +33920,17 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       
       if (!title || !description || !type) {
         return res.status(400).json({ success: false, error: "Title, description, and type are required" });
-      });
+      }
       
       const validTypes = ['bug', 'feature_request', 'improvement', 'general', 'question'];
       if (!validTypes.includes(type)) {
         return res.status(400).json({ success: false, error: "Invalid feedback type" });
-      });
+      }
       
       const validPriorities = ['low', 'medium', 'high', 'critical'];
       if (priority && !validPriorities.includes(priority)) {
         return res.status(400).json({ success: false, error: "Invalid priority level" });
-      });
+      }
       
       const feedback = await storage.createFeedback({
         workspaceId: req.workspaceId!,
@@ -33947,7 +33947,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error creating feedback:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to create feedback" });
-    });
+    }
   });
   
   /**
@@ -33983,7 +33983,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error fetching feedback:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to fetch feedback" });
-    });
+    }
   });
   
   /**
@@ -33997,11 +33997,11 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const feedback = await storage.getFeedback(id);
       if (!feedback) {
         return res.status(404).json({ success: false, error: "Feedback not found" });
-      });
+      }
       
       if (feedback.workspaceId !== req.workspaceId) {
         return res.status(403).json({ success: false, error: "Access denied" });
-      });
+      }
       
       const comments = await storage.getFeedbackComments(id);
       const userVote = await storage.getUserFeedbackVote(id, req.userId!);
@@ -34017,7 +34017,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error fetching feedback detail:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to fetch feedback" });
-    });
+    }
   });
   
   /**
@@ -34032,15 +34032,15 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const feedback = await storage.getFeedback(id);
       if (!feedback) {
         return res.status(404).json({ success: false, error: "Feedback not found" });
-      });
+      }
       
       if (feedback.workspaceId !== req.workspaceId) {
         return res.status(403).json({ success: false, error: "Access denied" });
-      });
+      }
       
       if (feedback.userId !== req.userId) {
         return res.status(403).json({ success: false, error: "Only the author can edit this feedback" });
-      });
+      }
       
       const updateData: any = {};
       if (title) updateData.title = title;
@@ -34054,7 +34054,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error updating feedback:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to update feedback" });
-    });
+    }
   });
   
   /**
@@ -34069,23 +34069,23 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const validStatuses = ['submitted', 'under_review', 'planned', 'in_progress', 'completed', 'declined', 'duplicate'];
       if (!status || !validStatuses.includes(status)) {
         return res.status(400).json({ success: false, error: "Invalid status" });
-      });
+      }
       
       const feedback = await storage.getFeedback(id);
       if (!feedback) {
         return res.status(404).json({ success: false, error: "Feedback not found" });
-      });
+      }
       
       if (feedback.workspaceId !== req.workspaceId) {
         return res.status(403).json({ success: false, error: "Access denied" });
-      });
+      }
       
       const updated = await storage.updateFeedbackStatus(id, status, req.userId!, note);
       res.json({ success: true, data: updated });
     } catch (error: any) {
       console.error("Error updating feedback status:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to update status" });
-    });
+    }
   });
   
   /**
@@ -34099,23 +34099,23 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       
       if (!voteType || !['up', 'down'].includes(voteType)) {
         return res.status(400).json({ success: false, error: "Invalid vote type. Use 'up' or 'down'" });
-      });
+      }
       
       const feedback = await storage.getFeedback(id);
       if (!feedback) {
         return res.status(404).json({ success: false, error: "Feedback not found" });
-      });
+      }
       
       if (feedback.workspaceId !== req.workspaceId) {
         return res.status(403).json({ success: false, error: "Access denied" });
-      });
+      }
       
       const result = await storage.voteFeedback(id, req.userId!, voteType);
       res.json({ success: true, data: result });
     } catch (error: any) {
       console.error("Error voting on feedback:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to vote" });
-    });
+    }
   });
   
   /**
@@ -34129,16 +34129,16 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       
       if (!content || content.trim().length === 0) {
         return res.status(400).json({ success: false, error: "Comment content is required" });
-      });
+      }
       
       const feedback = await storage.getFeedback(id);
       if (!feedback) {
         return res.status(404).json({ success: false, error: "Feedback not found" });
-      });
+      }
       
       if (feedback.workspaceId !== req.workspaceId) {
         return res.status(403).json({ success: false, error: "Access denied" });
-      });
+      }
       
       const comment = await storage.createFeedbackComment({
         feedbackId: id,
@@ -34151,7 +34151,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error adding comment:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to add comment" });
-    });
+    }
   });
   
   /**
@@ -34165,18 +34165,18 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const feedback = await storage.getFeedback(id);
       if (!feedback) {
         return res.status(404).json({ success: false, error: "Feedback not found" });
-      });
+      }
       
       if (feedback.workspaceId !== req.workspaceId) {
         return res.status(403).json({ success: false, error: "Access denied" });
-      });
+      }
       
       const comments = await storage.getFeedbackComments(id);
       res.json({ success: true, data: comments });
     } catch (error: any) {
       console.error("Error fetching comments:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to fetch comments" });
-    });
+    }
   });
   
   /**
@@ -34190,18 +34190,18 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const feedback = await storage.getFeedback(id);
       if (!feedback) {
         return res.status(404).json({ success: false, error: "Feedback not found" });
-      });
+      }
       
       if (feedback.workspaceId !== req.workspaceId) {
         return res.status(403).json({ success: false, error: "Access denied" });
-      });
+      }
       
       await storage.deleteFeedbackComment(commentId);
       res.json({ success: true, message: "Comment deleted" });
     } catch (error: any) {
       console.error("Error deleting comment:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to delete comment" });
-    });
+    }
   });
   
   /**
@@ -34215,22 +34215,22 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const feedback = await storage.getFeedback(id);
       if (!feedback) {
         return res.status(404).json({ success: false, error: "Feedback not found" });
-      });
+      }
       
       if (feedback.workspaceId !== req.workspaceId) {
         return res.status(403).json({ success: false, error: "Access denied" });
-      });
+      }
       
       if (feedback.userId !== req.userId) {
         return res.status(403).json({ success: false, error: "Only the author can delete this feedback" });
-      });
+      }
       
       await storage.deleteFeedback(id);
       res.json({ success: true, message: "Feedback deleted" });
     } catch (error: any) {
       console.error("Error deleting feedback:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to delete feedback" });
-    });
+    }
   });
 
   // ============================================================================
@@ -34250,7 +34250,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error getting VAPID key:", error);
       res.status(500).json({ success: false, error: "Failed to get VAPID key" });
-    });
+    }
   });
 
   /**
@@ -34263,7 +34263,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       
       if (!subscription?.endpoint || !subscription?.keys?.p256dh || !subscription?.keys?.auth) {
         return res.status(400).json({ success: false, error: "Invalid subscription data" });
-      });
+      }
       
       const { pushNotificationService } = await import("./services/pushNotificationService");
       const result = await pushNotificationService.registerPushSubscription(
@@ -34276,11 +34276,11 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         res.json({ success: true, subscriptionId: result.subscriptionId });
       } else {
         res.status(500).json({ success: false, error: result.error });
-      });
+      }
     } catch (error: any) {
       console.error("Error subscribing to push:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to subscribe" });
-    });
+    }
   });
 
   /**
@@ -34298,7 +34298,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error unsubscribing from push:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to unsubscribe" });
-    });
+    }
   });
 
   /**
@@ -34313,7 +34313,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error getting subscriptions:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to get subscriptions" });
-    });
+    }
   });
 
   /**
@@ -34339,7 +34339,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error sending test push:", error);
       res.status(500).json({ success: false, error: error.message || "Failed to send test notification" });
-    });
+    }
   });
 
   // SUGGESTED CHANGES REGISTRY - AI Brain Template Library
@@ -34364,12 +34364,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
           category: category as string,
           tag: tag as string,
         });
-      });
+      }
       res.json({ success: true, data: results, total: results.length });
     } catch (error: any) {
       console.error("Error fetching suggested changes:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34382,12 +34382,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const suggestion = suggestedChangesService.getSuggestion(req.params.id);
       if (!suggestion) {
         return res.status(404).json({ success: false, error: "Suggested change not found" });
-      });
+      }
       res.json({ success: true, data: suggestion });
     } catch (error: any) {
       console.error("Error fetching suggested change:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34407,7 +34407,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error staging suggested change:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -34426,7 +34426,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!suggestionId) {
         return res.status(400).json({ success: false, error: "suggestionId required" });
-      });
+      }
 
       const result = await autonomousWorkflowService.executeWorkflow(
         suggestionId,
@@ -34438,7 +34438,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error executing workflow:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34453,7 +34453,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error executing high-priority fixes:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
 
@@ -34472,7 +34472,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!query) {
         return res.status(400).json({ success: false, error: "query required" });
-      });
+      }
 
       const context = {
         userId: req.userId!,
@@ -34487,7 +34487,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error routing query:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34502,7 +34502,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error getting knowledge diagnostics:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34528,7 +34528,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error recording learning:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34556,7 +34556,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("[API] FAST diagnostic failed:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
 
@@ -34580,7 +34580,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34600,7 +34600,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34617,7 +34617,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       
       if (!theme) {
         return res.status(404).json({ success: false, error: "Holiday not found" });
-      });
+      }
       
       res.json({
         success: true,
@@ -34626,7 +34626,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34646,7 +34646,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34663,7 +34663,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       
       if (!preview) {
         return res.status(404).json({ success: false, error: "Holiday not found" });
-      });
+      }
       
       res.json({
         success: true,
@@ -34672,7 +34672,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -34695,7 +34695,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34715,7 +34715,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34734,7 +34734,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34758,7 +34758,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json(result);
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
   /**
    * GET /api/ai-brain/knowledge/insights/:queryType
@@ -34773,7 +34773,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error getting insights:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34787,7 +34787,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!query) {
         return res.status(400).json({ success: false, error: "query required" });
-      });
+      }
 
       const context = {
         userId: req.userId!,
@@ -34800,7 +34800,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error building reasoning chain:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
 
@@ -34868,7 +34868,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error testing orchestration:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -34883,7 +34883,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!issueType) {
         return res.status(400).json({ success: false, error: "issueType required" });
-      });
+      }
 
       const result = await autonomousWorkflowService.searchAndExecuteForIssue(issueType, req.userId!);
 
@@ -34891,7 +34891,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("Error searching and fixing:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
 
@@ -34907,12 +34907,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!actionId || !category) {
         return res.status(400).json({ error: 'actionId and category required' });
-      });
+      }
 
       const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.userId!);
       if (!authCheck.valid) {
         return res.status(403).json({ error: authCheck.reason });
-      });
+      }
 
       const actionAuthCheck = await aiBrainAuthorizationService.canExecuteAction(
         { userId: req.userId!, userRole: authCheck.role! },
@@ -34922,7 +34922,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!actionAuthCheck.isAuthorized) {
         return res.status(403).json({ error: actionAuthCheck.reason });
-      });
+      }
 
       const { helpaiOrchestrator } = await import("./services/helpai/platformActionHub");
       const result = await helpaiOrchestrator.executeAction({
@@ -34948,7 +34948,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error('[AI Brain Command]', error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/ai-brain/workflow/execute-chain", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -34959,18 +34959,18 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!name || !Array.isArray(steps)) {
         return res.status(400).json({ error: 'name and steps required' });
-      });
+      }
 
       const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.userId!);
       if (!authCheck.valid) {
         return res.status(403).json({ error: authCheck.reason });
-      });
+      }
 
       const workflow = await aiBrainMasterOrchestrator.executeWorkflowChain(name, steps, req.userId!, authCheck.role!);
       res.json({ success: workflow.status === 'completed', workflow, executedBy: req.userId, authorizedRole: authCheck.role });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.get("/api/ai-brain/permissions/summary", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -34979,12 +34979,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.userId!);
       if (!authCheck.valid) {
         return res.json({ error: authCheck.reason, isSupported: false });
-      });
+      }
       const summary = aiBrainAuthorizationService.getPermissionSummary(authCheck.role!);
       res.json({ success: true, ...summary });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
 
@@ -35011,7 +35011,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
           error: eligibility.reason || 'Not eligible for session elevation',
           info: 'Only support roles and AI services can receive elevated sessions'
         });
-      });
+      }
 
       const result = await elevatedSessionService.issueElevation(
         userId,
@@ -35031,11 +35031,11 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         });
       } else {
         res.status(500).json({ success: false, error: result.error });
-      });
+      }
     } catch (error: any) {
       console.error('[Elevation Route] Error:', error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -35055,7 +35055,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -35069,7 +35069,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true, revokedCount: count });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -35084,12 +35084,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const authCheck = await aiBrainAuthorizationService.validateSupportStaff(req.userId!);
       if (!authCheck.valid || !['root_admin', 'deputy_admin', 'sysop'].includes(authCheck.role || '')) {
         return res.status(403).json({ success: false, error: 'Insufficient permissions to issue AI service elevations' });
-      });
+      }
 
       const { serviceType, serviceUserId, workflowId } = req.body;
       if (!serviceType || !serviceUserId) {
         return res.status(400).json({ success: false, error: 'serviceType and serviceUserId required' });
-      });
+      }
 
       const result = await elevatedSessionService.issueAIServiceElevation(
         serviceType,
@@ -35100,7 +35100,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json(result);
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -35124,7 +35124,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true, sessions: activeSessions, count: activeSessions.length });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
 
@@ -35154,7 +35154,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true, policy });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.patch("/api/automation-governance/policy/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35166,18 +35166,18 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
       if (!['org_owner', 'org_admin'].includes(access.role || '')) {
         return res.status(403).json({ success: false, error: "Only org owners and admins can modify automation policies" });
-      });
+      }
       const allowedFields = ['currentLevel', 'handHeldThreshold', 'graduatedThreshold', 'highRiskCategories', 'minConfidenceForAutoExecute'];
       const sanitizedBody: Record<string, any> = { workspaceId };
       for (const field of allowedFields) {
         if (req.body[field] !== undefined) sanitizedBody[field] = req.body[field];
-      });
+      }
       const policy = await automationGovernanceService.updatePolicy(sanitizedBody);
       if (!policy) return res.status(404).json({ success: false, error: "Policy not found" });
       res.json({ success: true, policy });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/automation-governance/consent", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35194,7 +35194,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true, consent });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.get("/api/automation-governance/consents/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35208,7 +35208,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true, consents });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/automation-governance/org-consent", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35221,7 +35221,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
       if (access.role !== 'org_owner') {
         return res.status(403).json({ success: false, error: "Only organization owners can grant org-level automation consent" });
-      });
+      }
       const policy = await automationGovernanceService.updatePolicy({
         workspaceId, orgOwnerConsent: true, orgOwnerConsentUserId: userId,
         waiverAccepted: true, waiverVersion: waiverVersion || "1.0",
@@ -35230,7 +35230,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true, policy });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.get("/api/automation-governance/ledger/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35242,7 +35242,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
       if (!['org_owner', 'org_admin', 'department_manager'].includes(access.role || '')) {
         return res.status(403).json({ success: false, error: "Insufficient permissions to view automation ledger" });
-      });
+      }
       const { status, approvalState, limit, offset } = req.query;
       const parsedLimit = Math.min(parseInt(limit as string) || 50, 100);
       const parsedOffset = parseInt(offset as string) || 0;
@@ -35253,7 +35253,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true, entries, count: entries.length });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.get("/api/automation-governance/pending-approvals/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35265,12 +35265,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
       if (!['org_owner', 'org_admin', 'department_manager', 'supervisor'].includes(access.role || '')) {
         return res.status(403).json({ success: false, error: "Insufficient permissions to view pending approvals" });
-      });
+      }
       const approvals = await automationGovernanceService.getPendingApprovals(workspaceId);
       res.json({ success: true, approvals, count: approvals.length });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/automation-governance/approve/:ledgerEntryId", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35287,12 +35287,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied" });
       if (!['org_owner', 'org_admin', 'department_manager'].includes(access.role || '')) {
         return res.status(403).json({ success: false, error: "Insufficient permissions to approve actions" });
-      });
+      }
       const success = await automationGovernanceService.approveLedgerEntry(ledgerEntryId, userId, notes?.substring(0, 500));
       res.json({ success });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/automation-governance/reject/:ledgerEntryId", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35310,12 +35310,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied" });
       if (!['org_owner', 'org_admin', 'department_manager'].includes(access.role || '')) {
         return res.status(403).json({ success: false, error: "Insufficient permissions to reject actions" });
-      });
+      }
       const success = await automationGovernanceService.rejectLedgerEntry(ledgerEntryId, userId, reason.substring(0, 500));
       res.json({ success });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.get("/api/automation-governance/metrics/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35327,14 +35327,14 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       if (!access.hasAccess) return res.status(403).json({ success: false, error: "Access denied to this workspace" });
       if (!['org_owner', 'org_admin'].includes(access.role || '')) {
         return res.status(403).json({ success: false, error: "Insufficient permissions to view metrics" });
-      });
+      }
       const { daysBack } = req.query;
       const parsedDaysBack = Math.min(Math.max(parseInt(daysBack as string) || 30, 1), 365);
       const metrics = await automationGovernanceService.getGovernanceMetrics(workspaceId, parsedDaysBack);
       res.json({ success: true, metrics });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -35350,7 +35350,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true, sessionId: context.sessionId, turnCount: context.turns.length, knowledgeGaps: context.knowledgeGaps, pendingClarifications: context.pendingClarifications });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/trinity/session/:sessionId/turn", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35364,7 +35364,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true, turn });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/trinity/session/:sessionId/escalate", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35381,7 +35381,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/trinity/session/:sessionId/end", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35392,7 +35392,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -35408,13 +35408,13 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
       if (!guruRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Guru mode access required" });
-      });
+      }
       const workspaceId = req.query.workspaceId as string | undefined;
       const topology = await swarmCommanderService.getSwarmTopology(workspaceId);
       res.json({ success: true, topology });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.get("/api/trinity/swarm/summary", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35426,13 +35426,13 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
       if (!guruRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Guru mode access required" });
-      });
+      }
       const workspaceId = req.query.workspaceId as string | undefined;
       const summary = await swarmCommanderService.getGuruModeSummary(workspaceId);
       res.json({ success: true, summary });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.get("/api/trinity/swarm/conflicts", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35444,13 +35444,13 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
       if (!guruRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Guru mode access required" });
-      });
+      }
       const workspaceId = req.query.workspaceId as string | undefined;
       const conflicts = await swarmCommanderService.getPendingConflicts(workspaceId);
       res.json({ success: true, conflicts });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/trinity/swarm/conflicts/:conflictId/resolve", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35462,18 +35462,18 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager"];
       if (!guruRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Insufficient permissions to resolve conflicts" });
-      });
+      }
       const { conflictId } = req.params;
       const { decision, expiresInHours } = req.body;
       if (!decision || !["overrule", "sustain"].includes(decision)) {
         return res.status(400).json({ success: false, error: "decision must be overrule or sustain" });
-      });
+      }
       const resolved = await swarmCommanderService.resolveConflict(conflictId, decision, userId, expiresInHours);
       if (!resolved) return res.status(404).json({ success: false, error: "Conflict not found" });
       res.json({ success: true, conflict: resolved });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/trinity/swarm/estimate-cost", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35482,12 +35482,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const { taskDescription, complexity, dataSize, domain } = req.body;
       if (!taskDescription || !complexity) {
         return res.status(400).json({ success: false, error: "taskDescription and complexity required" });
-      });
+      }
       const estimate = await swarmCommanderService.estimateTaskCost({ taskDescription, complexity, dataSize, domain });
       res.json({ success: true, estimate });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.get("/api/trinity/swarm/roi/:workspaceId", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35502,7 +35502,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true, roi });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.get("/api/trinity/swarm/replay/:workflowId", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35514,14 +35514,14 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
       if (!guruRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Guru mode access required" });
-      });
+      }
       const { workflowId } = req.params;
       const question = req.query.question as string | undefined;
       const replay = swarmCommanderService.getForensicReplay(workflowId, question);
       res.json({ success: true, replay });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
 });
 
   // ============================================================================
@@ -35537,14 +35537,14 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
       if (!guruRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Guru mode access required" });
-      });
+      }
       const summary = await crisisManager.getCrisisSummary();
       const activeCrises = crisisManager.getActiveCrises();
       const blackout = crisisManager.getBlackoutStatus();
       res.json({ success: true, summary, activeCrises, blackout });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/trinity/crisis/lockdown", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35556,16 +35556,16 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
       if (!guruRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Guru mode access required" });
-      });
+      }
       const { targetUserId, reason } = req.body;
       if (!targetUserId || !reason) {
         return res.status(400).json({ success: false, error: "targetUserId and reason required" });
-      });
+      }
       const result = await crisisManager.initiateLockdown(targetUserId, reason, userId, platformRole || "");
       res.json({ success: true, ...result });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/trinity/crisis/lockdown/release", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35577,16 +35577,16 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const rootRoles = ["root_admin", "deputy_admin"];
       if (!rootRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Root admin access required" });
-      });
+      }
       const { targetUserId, verificationCode } = req.body;
       if (!targetUserId || !verificationCode) {
         return res.status(400).json({ success: false, error: "targetUserId and verificationCode required" });
-      });
+      }
       const result = await crisisManager.releaseLockdown(targetUserId, verificationCode, userId, platformRole || "");
       res.json({ success: true, ...result });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/trinity/crisis/blackout", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35598,16 +35598,16 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager"];
       if (!guruRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Elevated Guru mode access required" });
-      });
+      }
       const { level, affectedServices, etaMinutes } = req.body;
       if (!level || !affectedServices || !etaMinutes) {
         return res.status(400).json({ success: false, error: "level, affectedServices, and etaMinutes required" });
-      });
+      }
       const result = await crisisManager.initiateBlackout(level, affectedServices, etaMinutes, userId, platformRole || "");
       res.json({ success: true, blackout: result });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/trinity/crisis/blackout/resolve", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35619,13 +35619,13 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager"];
       if (!guruRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Elevated Guru mode access required" });
-      });
+      }
       const { resolution } = req.body;
       const result = await crisisManager.resolveBlackout(resolution || "Issue resolved", userId, platformRole || "");
       res.json({ success: true, ...result });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/trinity/crisis/dispute", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35637,16 +35637,16 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
       if (!guruRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Guru mode access required" });
-      });
+      }
       const { workspaceId, incidentDescription, claimedAmount } = req.body;
       if (!workspaceId || !claimedAmount) {
         return res.status(400).json({ success: false, error: "workspaceId and claimedAmount required" });
-      });
+      }
       const result = await crisisManager.processDispute(workspaceId, incidentDescription || "", claimedAmount, userId, platformRole || "");
       res.json({ success: true, ...result });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.post("/api/trinity/crisis/purge", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35658,16 +35658,16 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const rootRoles = ["root_admin", "deputy_admin"];
       if (!rootRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Root admin access required for purge" });
-      });
+      }
       const { targetOrgId, confirmPhrase } = req.body;
       if (!targetOrgId || !confirmPhrase) {
         return res.status(400).json({ success: false, error: "targetOrgId and confirmPhrase required" });
-      });
+      }
       const result = await crisisManager.executePurge(targetOrgId, confirmPhrase, userId, platformRole || "");
       res.json({ success: true, ...result });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.get("/api/trinity/crisis/script/:type", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35679,18 +35679,18 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const guruRoles = ["root_admin", "deputy_admin", "sysop", "support_manager", "support_agent"];
       if (!guruRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Guru mode access required" });
-      });
+      }
       const { type } = req.params;
       const context = req.query as Record<string, unknown>;
       const validTypes = ["lockdown", "blackout", "dispute", "purge"];
       if (!validTypes.includes(type)) {
         return res.status(400).json({ success: false, error: "Invalid crisis type" });
-      });
+      }
       const script = crisisManager.getCrisisScript(type as any, context);
       res.json({ success: true, script, type });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   app.get("/api/trinity/crisis/audit", requireAuth, async (req: AuthenticatedRequest, res) => {
@@ -35702,13 +35702,13 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const guruRoles = ["root_admin", "deputy_admin", "sysop"];
       if (!guruRoles.includes(platformRole || "")) {
         return res.status(403).json({ success: false, error: "Elevated access required for audit trail" });
-      });
+      }
       const limit = parseInt(req.query.limit as string) || 50;
       const auditTrail = crisisManager.getAuditTrail(limit);
       res.json({ success: true, auditTrail });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -35726,7 +35726,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       
       if (!workspaceId) {
         return res.status(400).json({ success: false, error: "Workspace ID required" });
-      });
+      }
 
       const graduationStatus = await subagentSupervisor.getGraduationStatus(workspaceId);
       
@@ -35736,12 +35736,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         thresholds: {
           graduationThreshold: 99.9,
           minimumExecutions: 100
-        });
+        }
       });
     } catch (error: any) {
       console.error("[API] Failed to get graduation status:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -35755,14 +35755,14 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!workspaceId || !domain) {
         return res.status(400).json({ success: false, error: "workspaceId and domain required" });
-      });
+      }
 
       const result = await subagentSupervisor.canAutoApprove(workspaceId, domain, actionId);
       res.json({ success: true, ...result });
     } catch (error: any) {
       console.error("[API] Auto-approval check failed:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -35778,11 +35778,11 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
           standard: "4 concurrent actions, 15s SLA, 1.5x credits",
           premium: "8 concurrent actions, 10s SLA, 2x credits, parallel phases",
           enterprise: "16 concurrent actions, 5s SLA, 2.5x credits, parallel phases, skip non-critical validation"
-        });
+        }
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -35800,11 +35800,11 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!workspaceId) {
         return res.status(400).json({ success: false, error: "workspaceId required" });
-      });
+      }
 
       if (!actions || !Array.isArray(actions) || actions.length === 0) {
         return res.status(400).json({ success: false, error: "actions array required" });
-      });
+      }
 
       const platformRole = await getUserPlatformRole(userId) || 'user';
       const fastModeContext = FAST_MODE_TIERS[tier] || FAST_MODE_TIERS.standard;
@@ -35816,7 +35816,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         parameters: action.parameters || {},
         actionHandler: async (params: Record<string, any>) => {
           return { executed: true, params };
-        });
+        }
       }));
 
       const result = await subagentSupervisor.executeWithFastModeContext(
@@ -35839,7 +35839,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("[API] Fast Mode execution failed:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -35852,13 +35852,13 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!workspaceId) {
         return res.status(400).json({ success: false, error: "workspaceId required" });
-      });
+      }
 
       const metrics = await subagentSupervisor.getFastModeMetrics(workspaceId);
       res.json({ success: true, metrics });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -35879,7 +35879,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -35899,12 +35899,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
                                'invoice_generated', 'payroll_processed', 'platform_update', 
                                'support_ticket_confirmation', 'employee_invitation', 'weekly_digest']
         });
-      });
+      }
 
       res.json({ success: true, category, instruction });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -35917,7 +35917,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!category || !data) {
         return res.status(400).json({ success: false, error: "category and data required" });
-      });
+      }
 
       const validation = validateEmailData(category, data);
       res.json({ 
@@ -35928,7 +35928,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -35945,13 +35945,13 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!category || !recipient || !data) {
         return res.status(400).json({ success: false, error: "category, recipient, and data required" });
-      });
+      }
 
       // Validate against mailing instructions
       const instruction = getMailingInstruction(category);
       if (!instruction) {
         return res.status(400).json({ success: false, error: `Unknown email category: ${category}` });
-      });
+      }
 
       const validation = validateEmailData(category, { email: recipient, ...data });
       if (!validation.valid) {
@@ -35960,7 +35960,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
           error: "Email data validation failed",
           errors: validation.errors
         });
-      });
+      }
 
       // Log the email send attempt for telemetry
       console.log(`[MailerSubagent] Sending ${category} email to ${recipient} via AI Brain governance`);
@@ -35990,7 +35990,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("[MailerSubagent] Email send failed:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -36013,7 +36013,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
           success: false, 
           error: "workboardJobId and tasks array required" 
         });
-      });
+      }
 
       console.log(`[API] Executing parallel work orders for job ${workboardJobId}`);
 
@@ -36038,7 +36038,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("[API] Parallel work orders failed:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -36055,7 +36055,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
           success: false, 
           error: `Batch not found: ${batchId}` 
         });
-      });
+      }
 
       res.json({
         success: true,
@@ -36069,11 +36069,11 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
           createdAt: batch.createdAt,
           parallelLimit: batch.parallelLimit,
           totalTokensUsed: batch.totalTokensUsed
-        });
+        }
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -36094,7 +36094,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -36115,11 +36115,11 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
           failureAnalysisModel: "Model used for failure analysis (Pro for deep reasoning)",
           retryThresholdForProEscalation: "Number of retries before escalating to Pro model",
           timeoutThresholdForProEscalation: "Timeout (ms) before escalating to Pro model"
-        });
+        }
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -36155,11 +36155,11 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
             features: ["completion reports", "Trinity integration", "user notifications"]
           },
           fastModeTiers: Object.keys(FAST_MODE_TIERS)
-        });
+        }
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   // ============================================================================
@@ -36177,7 +36177,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("[ChatServerSubagent] Presence error:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -36191,7 +36191,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("[ChatServerSubagent] Diagnostics error:", error);
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -36204,7 +36204,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true, awareness });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -36217,7 +36217,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.json({ success: true, suggestions });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -36239,7 +36239,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   /**
@@ -36269,12 +36269,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
             state: awareness.currentState,
             confidence: awareness.confidenceScore,
             lastDiagnostic: awareness.lastDiagnostic
-          });
-        });
+          }
+        }
       });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
-    });
+    }
   });
 
   // =========================================================================
@@ -36294,7 +36294,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const workspaceId = req.user?.workspaceId;
       if (!workspaceId) {
         return res.json({ status: 'not_started' });
-      });
+      }
 
       // Get active overlays (non-terminal phases)
       const activeOverlays = await orchestrationStateMachine.getActiveOverlays(workspaceId);
@@ -36330,7 +36330,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("[OrchestrationDashboard] Error fetching data:", error);
       res.status(500).json({ error: error.message });
-    });
+    }
   });
 
   // =========================================================================
@@ -36344,12 +36344,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { reportType, startDate, endDate } = req.body;
       if (!reportType) {
         return res.status(400).json({ message: "Report type is required" });
-      });
+      }
 
       const validTypes = [
         'labor_law_violations', 'tax_remittance', 'time_entry_audit',
@@ -36358,7 +36358,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       ];
       if (!validTypes.includes(reportType)) {
         return res.status(400).json({ message: `Invalid report type. Valid types: ${validTypes.join(', ')}` });
-      });
+      }
 
       const { generateComplianceReport } = await import('./services/complianceReports');
       const report = await generateComplianceReport({
@@ -36374,7 +36374,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error) {
       console.error("Error generating compliance report:", error);
       res.status(500).json({ message: "Failed to generate compliance report" });
-    });
+    }
   });
 
   // List all compliance reports for workspace
@@ -36384,7 +36384,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { reportType, status, limit, offset } = req.query;
 
@@ -36400,7 +36400,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error) {
       console.error("Error listing compliance reports:", error);
       res.status(500).json({ message: "Failed to list compliance reports" });
-    });
+    }
   });
 
   // Get a specific compliance report with full data
@@ -36410,24 +36410,24 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(403).json({ message: "No workspace selected" });
-      });
+      }
 
       const { getComplianceReport } = await import('./services/complianceReports');
       const report = await getComplianceReport(req.params.id);
 
       if (!report) {
         return res.status(404).json({ message: "Report not found" });
-      });
+      }
 
       if (report.workspaceId !== user.currentWorkspaceId) {
         return res.status(403).json({ message: "Access denied" });
-      });
+      }
 
       res.json(report);
     } catch (error) {
       console.error("Error fetching compliance report:", error);
       res.status(500).json({ message: "Failed to fetch compliance report" });
-    });
+    }
   });
 
   // Get available report types with descriptions
@@ -36475,7 +36475,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error) {
       console.error("Error fetching report types:", error);
       res.status(500).json({ message: "Failed to fetch report types" });
-    });
+    }
   });
 
   // ============================================================================
@@ -36489,7 +36489,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     let code = '';
     for (let i = 0; i < 8; i++) {
       code += chars.charAt(Math.floor(Math.random() * chars.length));
-    });
+    }
     return code;
   }
 
@@ -36499,12 +36499,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
-      });
+      }
 
       // Verify user is workspace owner or admin
       const workspace = await storage.getWorkspace(user.currentWorkspaceId);
@@ -36513,8 +36513,8 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         const employee = await storage.getEmployeeByUserId(userId);
         if (!employee || !['org_owner', 'org_admin'].includes(employee.workspaceRole || '')) {
           return res.status(403).json({ message: "Only organization owners or admins can create invites" });
-        });
-      });
+        }
+      }
 
       const { inviteeEmail, inviteeRole = 'staff' } = req.body;
 
@@ -36526,7 +36526,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
         if (existing.length === 0) break;
         inviteCode = generateInviteCode();
         attempts++;
-      });
+      }
 
       // Create invite with 7-day expiry
       const expiresAt = new Date();
@@ -36559,7 +36559,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error) {
       console.error("Error creating invite:", error);
       res.status(500).json({ message: "Failed to create invite" });
-    });
+    }
   });
 
   // Accept an invite code (any authenticated user without a workspace)
@@ -36568,22 +36568,22 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const user = await storage.getUser(userId);
       if (!user) {
         return res.status(404).json({ message: "User not found" });
-      });
+      }
 
       // Users with existing workspace shouldn't use this endpoint
       if (user.currentWorkspaceId) {
         return res.status(400).json({ message: "You already belong to an organization" });
-      });
+      }
 
       const { inviteCode } = req.body;
       if (!inviteCode || typeof inviteCode !== 'string') {
         return res.status(400).json({ message: "Invite code is required" });
-      });
+      }
 
       const normalizedCode = inviteCode.toUpperCase().trim();
 
@@ -36594,28 +36594,28 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!invite) {
         return res.status(404).json({ message: "Invalid invite code" });
-      });
+      }
 
       // Check if expired
       if (new Date() > new Date(invite.expiresAt)) {
         return res.status(400).json({ message: "This invite code has expired" });
-      });
+      }
 
       // Check if already used
       if (invite.status !== 'pending') {
         return res.status(400).json({ message: "This invite code has already been used" });
-      });
+      }
 
       // Check if email-restricted
       if (invite.inviteeEmail && invite.inviteeEmail.toLowerCase() !== user.email.toLowerCase()) {
         return res.status(403).json({ message: "This invite code is for a different email address" });
-      });
+      }
 
       // Get workspace info
       const workspace = await storage.getWorkspace(invite.workspaceId);
       if (!workspace) {
         return res.status(404).json({ message: "Organization no longer exists" });
-      });
+      }
 
       // Transaction: Accept invite and assign user to workspace
       await db.transaction(async (tx) => {
@@ -36658,7 +36658,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error) {
       console.error("Error accepting invite:", error);
       res.status(500).json({ message: "Failed to accept invite" });
-    });
+    }
   });
 
   // List invites for current workspace (org owners/admins only)
@@ -36667,12 +36667,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
-      });
+      }
 
       // Verify user has permission
       const workspace = await storage.getWorkspace(user.currentWorkspaceId);
@@ -36682,7 +36682,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!isOwner && !isAdmin) {
         return res.status(403).json({ message: "Access denied" });
-      });
+      }
 
       const invites = await db.select().from(workspaceInvites)
         .where(eq(workspaceInvites.workspaceId, user.currentWorkspaceId))
@@ -36703,7 +36703,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error) {
       console.error("Error listing invites:", error);
       res.status(500).json({ message: "Failed to list invites" });
-    });
+    }
   });
 
   // Revoke an invite (org owners/admins only)
@@ -36712,12 +36712,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
-      });
+      }
 
       const inviteId = req.params.id;
       const [invite] = await db.select().from(workspaceInvites)
@@ -36726,11 +36726,11 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
 
       if (!invite || invite.workspaceId !== user.currentWorkspaceId) {
         return res.status(404).json({ message: "Invite not found" });
-      });
+      }
 
       if (invite.status !== 'pending') {
         return res.status(400).json({ message: "Only pending invites can be revoked" });
-      });
+      }
 
       await db.update(workspaceInvites)
         .set({ status: 'revoked' })
@@ -36742,7 +36742,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error) {
       console.error("Error revoking invite:", error);
       res.status(500).json({ message: "Failed to revoke invite" });
-    });
+    }
   });
 
   // ============================================================================
@@ -36754,12 +36754,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
-      });
+      }
 
       const { scenarioSeederService } = await import('./services/training/scenarioSeeder');
       const status = await scenarioSeederService.getTrainingStatus(user.currentWorkspaceId);
@@ -36768,7 +36768,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error) {
       console.error("[TrinityTraining] Error getting status:", error);
       res.status(500).json({ message: "Failed to get training status" });
-    });
+    }
   });
 
   app.post('/api/trinity-training/seed', isAuthenticated, async (req: AuthenticatedRequest, res) => {
@@ -36777,17 +36777,17 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
-      });
+      }
 
       const { difficulty } = req.body;
       if (!difficulty || !['easy', 'medium', 'hard'].includes(difficulty)) {
         return res.status(400).json({ message: "Invalid difficulty. Must be 'easy', 'medium', or 'hard'" });
-      });
+      }
 
       const { scenarioSeederService } = await import('./services/training/scenarioSeeder');
       const result = await scenarioSeederService.seedScenario(user.currentWorkspaceId, difficulty);
@@ -36802,7 +36802,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error: any) {
       console.error("[TrinityTraining] Error seeding scenario:", error);
       res.status(500).json({ message: error.message || "Failed to seed training scenario" });
-    });
+    }
   });
 
 
@@ -36811,12 +36811,12 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
-      });
+      }
 
       const { scenarioSeederService } = await import('./services/training/scenarioSeeder');
       const result = await scenarioSeederService.clearAssignments(user.currentWorkspaceId);
@@ -36831,19 +36831,19 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error) {
       console.error("[TrinityTraining] Error clearing assignments:", error);
       res.status(500).json({ message: "Failed to clear shift assignments" });
-    });
+    }
   });
   app.post('/api/trinity-training/reset', isAuthenticated, async (req: AuthenticatedRequest, res) => {
     try {
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
-      });
+      }
 
       const { scenarioSeederService } = await import('./services/training/scenarioSeeder');
       const result = await scenarioSeederService.resetTraining(user.currentWorkspaceId);
@@ -36858,7 +36858,7 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
     } catch (error) {
       console.error("[TrinityTraining] Error resetting training:", error);
       res.status(500).json({ message: "Failed to reset training" });
-    });
+    }
   });
 
   app.post('/api/trinity-training/start-run', isAuthenticated, async (req: AuthenticatedRequest, res) => {
@@ -36866,17 +36866,17 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       const userId = req.user?.claims?.sub;
       if (!userId) {
         return res.status(401).json({ message: "Unauthorized" });
-      });
+      }
 
       const user = await storage.getUser(userId);
       if (!user?.currentWorkspaceId) {
         return res.status(400).json({ message: "No workspace selected" });
-      });
+      }
 
       const { runId } = req.body;
       if (!runId) {
         return res.status(400).json({ message: "runId is required" });
-      });
+      }
 
       const { scenarioSeederService } = await import('./services/training/scenarioSeeder');
       await scenarioSeederService.startTrainingRun(user.currentWorkspaceId, runId);
@@ -36890,6 +36890,5 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
       res.status(500).json({ message: "Failed to start training run" });
     }
   });
-
   return server;
 }
