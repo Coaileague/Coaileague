@@ -13,7 +13,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useLocation } from "wouter";
 import { queryClient } from "@/lib/queryClient";
 import { THEME } from "@/config/theme";
-import { CoAIleagueLogo } from "@/components/coaileague-logo";
+import { LoginLogo } from "@/components/unified-brand-logo";
 import { useUniversalAnimation } from "@/contexts/universal-animation-context";
 import { useRecaptcha } from "@/hooks/useRecaptcha";
 
@@ -226,7 +226,7 @@ export default function CustomLogin() {
               className="hover-elevate transition-all shrink-0"
               data-testid="button-logo-login"
             >
-              <CoAIleagueLogo width={120} height={32} showTagline={false} className="sm:w-[150px] sm:h-[40px]" />
+              <LoginLogo />
             </button>
             <button
               onClick={() => setLocation("/")}
