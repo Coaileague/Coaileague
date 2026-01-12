@@ -11,7 +11,6 @@ interface UnifiedBrandLogoProps {
   showTagline?: boolean;
   className?: string;
   theme?: "light" | "dark" | "auto";
-  animated?: boolean;
 }
 
 const SIZE_CONFIG = {
@@ -54,7 +53,6 @@ export function UnifiedBrandLogo({
   showTagline = false,
   className,
   theme = "auto",
-  animated = true,
 }: UnifiedBrandLogoProps) {
   const isDark = theme === "dark" || 
     (theme === "auto" && typeof document !== 'undefined' && 
@@ -77,8 +75,7 @@ export function UnifiedBrandLogo({
       <ColorfulCelticKnot 
         size={config.knot}
         className={cn("shrink-0", className)}
-        animated={animated}
-        animationSpeed="slow"
+        animated={false}
       />
     );
   }
@@ -115,9 +112,7 @@ export function UnifiedBrandLogo({
       <ColorfulCelticKnot 
         size={config.knot}
         className="shrink-0"
-        animated={animated}
-        randomize={animated}
-        randomInterval={8000}
+        animated={false}
       />
 
       <div className="flex flex-col min-w-0">

@@ -50,7 +50,7 @@ export function AskTrinityButton({
         className
       )}
     >
-      <ColorfulCelticKnot size={size === 'sm' ? 14 : size === 'lg' ? 20 : 16} className="mr-2" />
+      <ColorfulCelticKnot size={size === 'sm' ? 14 : size === 'lg' ? 20 : 16} className="mr-2" animated={false} />
       {showLabel && <span>{label}</span>}
     </Button>
   );
@@ -77,7 +77,7 @@ export function TrinityMiniButton({
         className
       )}
     >
-      <ColorfulCelticKnot size={32} animated={true} randomize={true} randomInterval={6000} />
+      <ColorfulCelticKnot size={32} animated={false} />
     </Button>
   );
 }
