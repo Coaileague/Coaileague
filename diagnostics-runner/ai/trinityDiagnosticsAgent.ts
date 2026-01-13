@@ -106,7 +106,21 @@ Respond in this exact JSON format:
       
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
-        const analysis = JSON.parse(jsonMatch[0]) as AIAnalysis;
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        const analysis: AIAnalysis = {
+          rootCause: String(parsed.rootCause || ''),
+          fixRecommendation: Array.isArray(parsed.fixRecommendation) 
+            ? parsed.fixRecommendation.join('\n') 
+            : String(parsed.fixRecommendation || ''),
+          codeSnippet: parsed.codeSnippet,
+          filesLikelyAffected: Array.isArray(parsed.filesLikelyAffected) 
+            ? parsed.filesLikelyAffected 
+            : [],
+          estimatedEffort: parsed.estimatedEffort || 'medium',
+          confidence: typeof parsed.confidence === 'number' ? parsed.confidence : 0.5,
+          relatedIssues: Array.isArray(parsed.relatedIssues) ? parsed.relatedIssues : undefined
+        };
         
         await this.recordThought(
           'deliberation',
@@ -114,9 +128,10 @@ Respond in this exact JSON format:
           analysis.confidence
         );
         
+        const fixPreview = analysis.fixRecommendation.substring(0, 100);
         await this.recordThought(
           'planning',
-          `Fix strategy: ${analysis.fixRecommendation.substring(0, 100)}...`,
+          `Fix strategy: ${fixPreview}...`,
           analysis.confidence
         );
         

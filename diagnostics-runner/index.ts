@@ -33,6 +33,31 @@ import * as path from 'path';
 
 type RunMode = 'crawl' | 'workflows' | 'full' | 'core';
 
+function interpolateWorkflows(workflows: any[]): any[] {
+  const vars: Record<string, string> = {
+    '${BASE_URL}': config.baseUrl,
+    '${TEST_USERNAME}': process.env.TEST_USERNAME || '',
+    '${TEST_PASSWORD}': process.env.TEST_PASSWORD || ''
+  };
+  
+  const interpolate = (str: string): string => {
+    let result = str;
+    for (const [key, value] of Object.entries(vars)) {
+      result = result.split(key).join(value);
+    }
+    return result;
+  };
+  
+  return workflows.map(workflow => ({
+    ...workflow,
+    steps: workflow.steps.map((step: any) => ({
+      ...step,
+      url: step.url ? interpolate(step.url) : step.url,
+      value: step.value ? interpolate(step.value) : step.value
+    }))
+  }));
+}
+
 async function loadWorkflows(useCoreFeatures: boolean = false): Promise<any[]> {
   if (useCoreFeatures) {
     console.log('[Orchestrator] Loading core feature workflows (payroll, scheduling, invoicing)...');
@@ -48,7 +73,8 @@ async function loadWorkflows(useCoreFeatures: boolean = false): Promise<any[]> {
   
   try {
     const content = fs.readFileSync(workflowsPath, 'utf-8');
-    return JSON.parse(content);
+    const workflows = JSON.parse(content);
+    return interpolateWorkflows(workflows);
   } catch (error) {
     console.error('[Orchestrator] Error loading workflows.json:', error);
     return getDefaultWorkflows();

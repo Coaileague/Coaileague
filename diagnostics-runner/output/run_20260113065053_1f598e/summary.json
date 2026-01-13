@@ -1,0 +1,1215 @@
+{
+  "runId": "run_20260113065053_1f598e",
+  "startedAt": "2026-01-13T06:50:53.850Z",
+  "completedAt": "2026-01-13T06:51:31.786Z",
+  "duration": 37936,
+  "mode": "full",
+  "baseUrl": "https://coaileague.com",
+  "totals": {
+    "pagesVisited": 4,
+    "workflowsRun": 5,
+    "issuesFound": 71,
+    "captchaBlockers": 0
+  },
+  "severityCounts": {
+    "critical": 0,
+    "high": 27,
+    "medium": 35,
+    "low": 9,
+    "info": 0
+  },
+  "categoryCounts": {
+    "captcha_blocker": 0,
+    "console_error": 35,
+    "page_error": 0,
+    "network_failure": 27,
+    "broken_image": 0,
+    "broken_link": 0,
+    "workflow_failure": 0,
+    "timeout": 0,
+    "ui_error": 9
+  },
+  "issues": [
+    {
+      "id": "445ae5380b1c9d6e",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "267c2a387ce21439",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "43f489ae7e2c1877",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "d3c118eafe43711f",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "2886b6b5ae272376",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "8e7025c0f3d1eaab",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "0ed3da1c571baf54",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "fbc14cf68cc0df49",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "618dc2de2a954804",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "06511dbca37a010c",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/mascot/holiday returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/holiday",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "43461e0e7020ad99",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "f52d23572733803d",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/user/view-mode returned 401",
+      "requestUrl": "https://coaileague.com/api/user/view-mode",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "a7359006023f36bf",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/workspace/theme returned 401",
+      "requestUrl": "https://coaileague.com/api/workspace/theme",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "17c29f38ca34045b",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "ce73404bdd92d266",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "6fda267fda16d816",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "8c34fdf84b9bfd67",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com",
+      "message": "Found \"error\": ...ng');\n      \n      // Suppress Vite HMR WebSocket errors BEFORE any modules load (development-only)...",
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Review UI for error messages and fix underlying issue"
+    },
+    {
+      "id": "65c91f41e1d42fa4",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com",
+      "message": "Found \"failed\": ...e) : \"\";\n        \n        if (reasonStr.includes(\"Failed to construct 'WebSocket'\") || \n            reason...",
+      "timestamp": "2026-01-13T06:50:57.888Z",
+      "recommendedFix": "Review UI for error messages and fix underlying issue"
+    },
+    {
+      "id": "6a325efbfc89413b",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/pricing",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "217618e65141ab60",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/pricing",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "c61d4605c5757ab1",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/pricing",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "36413f3bb7bd4c1d",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/pricing",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "7b359b313eb34a35",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/pricing",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "41ce42ebea3efdaa",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/pricing",
+      "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "19af7935e1a4f166",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/pricing",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "0371fde27158dedc",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/pricing",
+      "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "c1d16fb1541b0514",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/pricing",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "cafcd31f8f0dee21",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/pricing",
+      "message": "GET https://coaileague.com/api/user/view-mode returned 401",
+      "requestUrl": "https://coaileague.com/api/user/view-mode",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "a854ec40e4f8d2b8",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/pricing",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "4360c37b2c88e7c3",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/pricing",
+      "message": "GET https://coaileague.com/api/mascot/holiday returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/holiday",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "51e523e70fd1d149",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/pricing",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "35590784514b33b8",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/pricing",
+      "message": "GET https://coaileague.com/api/workspace/theme returned 401",
+      "requestUrl": "https://coaileague.com/api/workspace/theme",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "a9270a8124e51be0",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/pricing",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "87107e93ecbd3781",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/pricing",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "fff56e8ea6f02805",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/pricing",
+      "message": "Found \"error\": ...ng');\n      \n      // Suppress Vite HMR WebSocket errors BEFORE any modules load (development-only)...",
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Review UI for error messages and fix underlying issue"
+    },
+    {
+      "id": "cd51e6e7a662003f",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/pricing",
+      "message": "Found \"failed\": ...e) : \"\";\n        \n        if (reasonStr.includes(\"Failed to construct 'WebSocket'\") || \n            reason...",
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Review UI for error messages and fix underlying issue"
+    },
+    {
+      "id": "90312e241a02311a",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/pricing",
+      "message": "Found \"500\": ...1 managerBasic scheduling automationTime tracking500 AI credits for trialEmail supportStarterAI schedu...",
+      "timestamp": "2026-01-13T06:51:02.401Z",
+      "recommendedFix": "Review UI for error messages and fix underlying issue"
+    },
+    {
+      "id": "744593fe6eb105b0",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/support",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "b2d719c713555735",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/support",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "c9379fd4623f361f",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/support",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "181a96de24448afa",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/support",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "11efab357082f38b",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/support",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "3289db55e52daf17",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/support",
+      "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "6e79f0918d4a7e90",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/support",
+      "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "b267128fb242abb4",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/support",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "7fcd14c48389aa8b",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/support",
+      "message": "GET https://coaileague.com/api/user/view-mode returned 401",
+      "requestUrl": "https://coaileague.com/api/user/view-mode",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "9367b2abc86d97ca",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/support",
+      "message": "GET https://coaileague.com/api/mascot/holiday returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/holiday",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "a6af7ccd2c7e52f6",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/support",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "800ee72b60d15c3b",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/support",
+      "message": "GET https://coaileague.com/api/workspace/theme returned 401",
+      "requestUrl": "https://coaileague.com/api/workspace/theme",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "065c32bfdce72a2c",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/support",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "779a86cb47103aa0",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/support",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "e9a9e58c8ba94099",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/support",
+      "message": "Found \"error\": ...ng');\n      \n      // Suppress Vite HMR WebSocket errors BEFORE any modules load (development-only)...",
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Review UI for error messages and fix underlying issue"
+    },
+    {
+      "id": "5f714e8e47681724",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/support",
+      "message": "Found \"failed\": ...e) : \"\";\n        \n        if (reasonStr.includes(\"Failed to construct 'WebSocket'\") || \n            reason...",
+      "timestamp": "2026-01-13T06:51:07.027Z",
+      "recommendedFix": "Review UI for error messages and fix underlying issue"
+    },
+    {
+      "id": "434f046d4fead2f6",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "b15445a92cf125a8",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "3fc88cf67392d062",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "b0b34773326390de",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "572155341df4ce68",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "d9e81cdff1b7237f",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "fa3b70b7b76652bf",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/",
+      "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "1d8d100cbacadfab",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/",
+      "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "703fc6e603a0f840",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "66a1a91c0d3c7116",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "74ed08d5d883d383",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/",
+      "message": "GET https://coaileague.com/api/workspace/theme returned 401",
+      "requestUrl": "https://coaileague.com/api/workspace/theme",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "1d29cca9d281bba6",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/",
+      "message": "GET https://coaileague.com/api/user/view-mode returned 401",
+      "requestUrl": "https://coaileague.com/api/user/view-mode",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "51ba04ea6a25631c",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "c134b48067b291a3",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/",
+      "message": "GET https://coaileague.com/api/mascot/holiday returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/holiday",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "fe26903c13658102",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "d07dab3bf1a36139",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "f832bb941fe7b798",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/",
+      "message": "Found \"error\": ...ng');\n      \n      // Suppress Vite HMR WebSocket errors BEFORE any modules load (development-only)...",
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Review UI for error messages and fix underlying issue"
+    },
+    {
+      "id": "a7dcc807aca03ec1",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/",
+      "message": "Found \"failed\": ...e) : \"\";\n        \n        if (reasonStr.includes(\"Failed to construct 'WebSocket'\") || \n            reason...",
+      "timestamp": "2026-01-13T06:51:11.303Z",
+      "recommendedFix": "Review UI for error messages and fix underlying issue"
+    }
+  ],
+  "pageResults": [
+    {
+      "url": "https://coaileague.com",
+      "statusCode": 200,
+      "loadTime": 3102,
+      "screenshotPath": "diagnostics-runner/output/run_20260113065053_1f598e/screenshots/page_7b479f5a35cd5d47.png",
+      "consoleErrors": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/holiday"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/auth/me"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/user/view-mode"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/workspace/theme"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        },
+        {
+          "type": "error",
+          "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+          "location": "https://coaileague.com/"
+        },
+        {
+          "type": "error",
+          "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+          "location": "https://coaileague.com/"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        }
+      ],
+      "networkFailures": [
+        {
+          "url": "https://coaileague.com/api/mascot/holiday",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/auth/me",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/user/view-mode",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/workspace/theme",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        }
+      ],
+      "brokenImages": [],
+      "brokenLinks": [],
+      "uiErrors": [
+        "Found \"error\": ...ng');\n      \n      // Suppress Vite HMR WebSocket errors BEFORE any modules load (development-only)...",
+        "Found \"failed\": ...e) : \"\";\n        \n        if (reasonStr.includes(\"Failed to construct 'WebSocket'\") || \n            reason..."
+      ],
+      "captchaDetected": false,
+      "timestamp": "2026-01-13T06:50:57.888Z"
+    },
+    {
+      "url": "https://coaileague.com/pricing",
+      "statusCode": 200,
+      "loadTime": 3017,
+      "screenshotPath": "diagnostics-runner/output/run_20260113065053_1f598e/screenshots/page_550c9fea78c73799.png",
+      "consoleErrors": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/user/view-mode"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/auth/me"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/holiday"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/workspace/theme"
+        },
+        {
+          "type": "error",
+          "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+          "location": "https://coaileague.com/pricing"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        },
+        {
+          "type": "error",
+          "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+          "location": "https://coaileague.com/pricing"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        }
+      ],
+      "networkFailures": [
+        {
+          "url": "https://coaileague.com/api/user/view-mode",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/auth/me",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/holiday",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/workspace/theme",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        }
+      ],
+      "brokenImages": [],
+      "brokenLinks": [],
+      "uiErrors": [
+        "Found \"error\": ...ng');\n      \n      // Suppress Vite HMR WebSocket errors BEFORE any modules load (development-only)...",
+        "Found \"failed\": ...e) : \"\";\n        \n        if (reasonStr.includes(\"Failed to construct 'WebSocket'\") || \n            reason...",
+        "Found \"500\": ...1 managerBasic scheduling automationTime tracking500 AI credits for trialEmail supportStarterAI schedu..."
+      ],
+      "captchaDetected": false,
+      "timestamp": "2026-01-13T06:51:02.401Z"
+    },
+    {
+      "url": "https://coaileague.com/support",
+      "statusCode": 200,
+      "loadTime": 2906,
+      "screenshotPath": "diagnostics-runner/output/run_20260113065053_1f598e/screenshots/page_27e6771cfbbfa297.png",
+      "consoleErrors": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/user/view-mode"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/holiday"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/workspace/theme"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/auth/me"
+        },
+        {
+          "type": "error",
+          "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+          "location": "https://coaileague.com/support"
+        },
+        {
+          "type": "error",
+          "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+          "location": "https://coaileague.com/support"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        }
+      ],
+      "networkFailures": [
+        {
+          "url": "https://coaileague.com/api/user/view-mode",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/holiday",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/workspace/theme",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/auth/me",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        }
+      ],
+      "brokenImages": [],
+      "brokenLinks": [],
+      "uiErrors": [
+        "Found \"error\": ...ng');\n      \n      // Suppress Vite HMR WebSocket errors BEFORE any modules load (development-only)...",
+        "Found \"failed\": ...e) : \"\";\n        \n        if (reasonStr.includes(\"Failed to construct 'WebSocket'\") || \n            reason..."
+      ],
+      "captchaDetected": false,
+      "timestamp": "2026-01-13T06:51:07.027Z"
+    },
+    {
+      "url": "https://coaileague.com/",
+      "statusCode": 200,
+      "loadTime": 2563,
+      "screenshotPath": "diagnostics-runner/output/run_20260113065053_1f598e/screenshots/page_998a8d6c37344643.png",
+      "consoleErrors": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/auth/me"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/workspace/theme"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/user/view-mode"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/holiday"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        },
+        {
+          "type": "error",
+          "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+          "location": "https://coaileague.com/"
+        },
+        {
+          "type": "error",
+          "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+          "location": "https://coaileague.com/"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        }
+      ],
+      "networkFailures": [
+        {
+          "url": "https://coaileague.com/api/auth/me",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/workspace/theme",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/user/view-mode",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/holiday",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        }
+      ],
+      "brokenImages": [],
+      "brokenLinks": [],
+      "uiErrors": [
+        "Found \"error\": ...ng');\n      \n      // Suppress Vite HMR WebSocket errors BEFORE any modules load (development-only)...",
+        "Found \"failed\": ...e) : \"\";\n        \n        if (reasonStr.includes(\"Failed to construct 'WebSocket'\") || \n            reason..."
+      ],
+      "captchaDetected": false,
+      "timestamp": "2026-01-13T06:51:11.303Z"
+    }
+  ],
+  "workflowResults": [
+    {
+      "name": "Homepage Load",
+      "success": true,
+      "stepsCompleted": 3,
+      "totalSteps": 3,
+      "duration": 4076,
+      "captchaDetected": false
+    },
+    {
+      "name": "Login Flow",
+      "success": true,
+      "stepsCompleted": 7,
+      "totalSteps": 7,
+      "duration": 3097,
+      "captchaDetected": false
+    },
+    {
+      "name": "Pricing Page",
+      "success": true,
+      "stepsCompleted": 3,
+      "totalSteps": 3,
+      "duration": 3755,
+      "captchaDetected": false
+    },
+    {
+      "name": "Trinity Features",
+      "success": true,
+      "stepsCompleted": 3,
+      "totalSteps": 3,
+      "duration": 4414,
+      "captchaDetected": false
+    },
+    {
+      "name": "Contact Page",
+      "success": true,
+      "stepsCompleted": 3,
+      "totalSteps": 3,
+      "duration": 2862,
+      "captchaDetected": false
+    }
+  ],
+  "blockers": [],
+  "nextSteps": [
+    "Fix 27 API endpoint failures (check server logs)",
+    "Resolve 35 JavaScript console errors"
+  ],
+  "reportPath": "diagnostics-runner/output/run_20260113065053_1f598e/report.html",
+  "artifactsPath": "diagnostics-runner/output/run_20260113065053_1f598e"
+}

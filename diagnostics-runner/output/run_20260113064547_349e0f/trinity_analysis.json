@@ -1,0 +1,261 @@
+{
+  "overallHealth": 0,
+  "criticalPath": [
+    "[HIGH] network_failure: Fix API endpoint returning error status. Check server logs for details....",
+    "[HIGH] network_failure: Fix API endpoint returning error status. Check server logs for details....",
+    "[HIGH] network_failure: Fix API endpoint returning error status. Check server logs for details....",
+    "[HIGH] network_failure: Fix API endpoint returning error status. Check server logs for details....",
+    "[HIGH] network_failure: Fix API endpoint returning error status. Check server logs for details...."
+  ],
+  "prioritizedFixes": [
+    {
+      "issue": {
+        "id": "449801fc2a4a027b",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:45:53.766Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "network_failure detected at https://coaileague.com",
+        "fixRecommendation": "Fix API endpoint returning error status. Check server logs for details.",
+        "filesLikelyAffected": [
+          "server/routes/",
+          "server/services/"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.5
+      }
+    },
+    {
+      "issue": {
+        "id": "a01825589a9bc62b",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/mascot/holiday returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/holiday",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:45:53.766Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "network_failure detected at https://coaileague.com",
+        "fixRecommendation": "Fix API endpoint returning error status. Check server logs for details.",
+        "filesLikelyAffected": [
+          "server/routes/",
+          "server/services/"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.5
+      }
+    },
+    {
+      "issue": {
+        "id": "bd7312440d3e5af8",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/workspace/theme returned 401",
+        "requestUrl": "https://coaileague.com/api/workspace/theme",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:45:53.766Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "network_failure detected at https://coaileague.com",
+        "fixRecommendation": "Fix API endpoint returning error status. Check server logs for details.",
+        "filesLikelyAffected": [
+          "server/routes/",
+          "server/services/"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.5
+      }
+    },
+    {
+      "issue": {
+        "id": "6964bf16276e5696",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/user/view-mode returned 401",
+        "requestUrl": "https://coaileague.com/api/user/view-mode",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:45:53.766Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "network_failure detected at https://coaileague.com",
+        "fixRecommendation": "Fix API endpoint returning error status. Check server logs for details.",
+        "filesLikelyAffected": [
+          "server/routes/",
+          "server/services/"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.5
+      }
+    },
+    {
+      "issue": {
+        "id": "b0b447bde6f58e66",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:45:53.766Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "network_failure detected at https://coaileague.com",
+        "fixRecommendation": "Fix API endpoint returning error status. Check server logs for details.",
+        "filesLikelyAffected": [
+          "server/routes/",
+          "server/services/"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.5
+      }
+    },
+    {
+      "issue": {
+        "id": "f8276695198788c9",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:45:53.766Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "network_failure detected at https://coaileague.com",
+        "fixRecommendation": "Fix API endpoint returning error status. Check server logs for details.",
+        "filesLikelyAffected": [
+          "server/routes/",
+          "server/services/"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.5
+      }
+    },
+    {
+      "issue": {
+        "id": "f0bfec0ee02e9b4b",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:45:53.766Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "The HTTP 401 Unauthorized status code indicates that the request to `GET https://coaileague.com/api/mascot/seasonal/state` lacks valid authentication credentials. This typically means the React frontend is either not sending an authentication token, or the token being sent is invalid, expired, or malformed, preventing the Express.js backend from successfully authenticating the request.",
+        "fixRecommendation": "To resolve this, systematically check both the frontend and backend authentication mechanisms:\n\n1.  **Verify Frontend Authentication Flow (Client-side):**\n    *   **Inspect Network Request:** Use browser developer tools (Network tab) to observe the `GET /api/mascot/seasonal/state` request. Confirm that an `Authorization` header is present and contains a valid token (e.g., `Bearer <YOUR_JWT_TOKEN>`).\n    *   **Token Retrieval Logic:** Review the React frontend's code (e.g., in `client/src/api/axiosConfig.js` or the component making the request) to ensure the authentication token is correctly retrieved (from `localStorage`, `sessionStorage`, or an authentication context) and consistently attached to all protected API requests, preferably via an Axios interceptor.\n    *   **User Login/Session:** Ensure the user is properly logged in and their session has not expired, as an invalid session would lead to an invalid or missing token.\n\n2.  **Inspect Token Validity:**\n    *   If a token is being sent, copy it from the network request and use a JWT debugger tool (like `jwt.io`) to decode it. Check its signature, ensure it's not malformed, and verify its expiration time (`exp` claim). If expired, the user needs to re-authenticate.\n\n3.  **Examine Backend Authentication Middleware (Server-side):**\n    *   **Middleware Application:** In your Express.js `server/` directory, verify that the authentication middleware (e.g., `authMiddleware.js`) is correctly applied to the `/api/mascot/seasonal/state` route *before* the route handler. For example: `router.get('/seasonal/state', protect, getMascotState);`\n    *   **Token Extraction & Validation Logic:** Review the authentication middleware's code (`server/middleware/authMiddleware.js`). Confirm it correctly extracts the 'Bearer' token from the `Authorization` header and uses the correct secret key (from `.env` or config) to validate it (e.g., `jwt.verify`).\n    *   **Server Logs:** Check your Express.js server logs for any errors or warnings related to token parsing, JWT verification, or database lookups during the authentication process when this endpoint is accessed.\n\n4.  **Environment Variable Consistency:**\n    *   Ensure that the `JWT_SECRET` (or equivalent environment variable) used by the backend for token signing and verification is correctly configured and consistent across all environments (development, staging, production) and matches what was used to sign the token.",
+        "codeSnippet": "// Frontend (Example using Axios interceptor in client/src/api/axiosConfig.js)\nimport axios from 'axios';\n\nconst axiosInstance = axios.create({\n  baseURL: 'https://coaileague.com/api',\n  withCredentials: true, // Only if using cookies/sessions; remove if purely token-based\n});\n\naxiosInstance.interceptors.request.use(\n  (config) => {\n    const token = localStorage.getItem('authToken'); // Get token from storage\n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  (error) => {\n    return Promise.reject(error);\n  }\n);\n\nexport default axiosInstance;\n\n// Backend (Example for server/middleware/authMiddleware.js and server/routes/api/mascot.js)\n// server/middleware/authMiddleware.js\nimport jwt from 'jsonwebtoken';\nimport 'dotenv/config'; // Ensure dotenv is configured\n\nexport const protect = (req, res, next) => {\n  let token;\n\n  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {\n    try {\n      token = req.headers.authorization.split(' ')[1];\n      const decoded = jwt.verify(token, process.env.JWT_SECRET); // Verify token with secret\n      // Optionally attach user to request object: req.user = await User.findById(decoded.id).select('-password');\n      next(); // If token is valid, proceed to the next middleware/route handler\n    } catch (error) {\n      console.error('Authentication error:', error.message); // Log the specific error\n      return res.status(401).json({ message: 'Not authorized, token failed or expired' });\n    }\n  }\n\n  if (!token) {\n    return res.status(401).json({ message: 'Not authorized, no token provided' });\n  }\n};\n\n// server/routes/api/mascot.js\nimport express from 'express';\nimport { protect } from '../middleware/authMiddleware';\n// import { getMascotState } from '../controllers/mascotController'; // Your actual controller function\n\nconst router = express.Router();\n\n// Apply the 'protect' middleware to secure the route\nrouter.get('/seasonal/state', protect, (req, res) => {\n    // If we reach here, the token was successfully validated\n    res.status(200).json({ state: 'Current seasonal mascot status' });\n});\n\nexport default router;\n",
+        "filesLikelyAffected": [
+          "client/src/api/axiosConfig.js",
+          "client/src/App.jsx",
+          "client/src/components/MascotDisplay.jsx",
+          "server/middleware/authMiddleware.js",
+          "server/routes/api/mascot.js",
+          "server/config/config.js",
+          ".env"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "User unable to log in due to credential issues",
+          "Expired session tokens or invalid refresh tokens",
+          "Backend JWT secret mismatch or misconfiguration",
+          "CORS preflight failures preventing Authorization header from being sent (less common for 401 directly, but possible)",
+          "API Gateway or reverse proxy not forwarding Authorization headers correctly"
+        ]
+      }
+    },
+    {
+      "issue": {
+        "id": "0bcc07fd5dbd294a",
+        "category": "workflow_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "Workflow \"Homepage Load\" failed",
+        "details": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}\", waiting until \"networkidle\"\u001b[22m\n\nFailed at step: Navigate to homepage\nCompleted: 0/3",
+        "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Homepage_Load_0f359172100639cd.png",
+        "timestamp": "2026-01-13T06:45:59.331Z",
+        "recommendedFix": "Debug the workflow step that failed"
+      },
+      "analysis": {
+        "rootCause": "workflow_failure detected at https://coaileague.com",
+        "fixRecommendation": "Debug the workflow step that failed",
+        "filesLikelyAffected": [
+          "server/routes/",
+          "client/src/pages/"
+        ],
+        "estimatedEffort": "complex",
+        "confidence": 0.5
+      }
+    },
+    {
+      "issue": {
+        "id": "0ca94b4d8a598b48",
+        "category": "workflow_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "Workflow \"Login Flow\" failed",
+        "details": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}/login\", waiting until \"networkidle\"\u001b[22m\n\nFailed at step: Navigate to login page\nCompleted: 0/7",
+        "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Login_Flow_b60e92212c16628a.png",
+        "timestamp": "2026-01-13T06:45:59.331Z",
+        "recommendedFix": "Debug the workflow step that failed"
+      },
+      "analysis": {
+        "rootCause": "workflow_failure detected at https://coaileague.com",
+        "fixRecommendation": "Debug the workflow step that failed",
+        "filesLikelyAffected": [
+          "server/routes/",
+          "client/src/pages/"
+        ],
+        "estimatedEffort": "complex",
+        "confidence": 0.5
+      }
+    },
+    {
+      "issue": {
+        "id": "de428cb9349433bf",
+        "category": "workflow_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "Workflow \"Pricing Page\" failed",
+        "details": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}/pricing\", waiting until \"networkidle\"\u001b[22m\n\nFailed at step: Navigate to pricing\nCompleted: 0/3",
+        "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Pricing_Page_748435b2ad416531.png",
+        "timestamp": "2026-01-13T06:45:59.331Z",
+        "recommendedFix": "Debug the workflow step that failed"
+      },
+      "analysis": {
+        "rootCause": "workflow_failure detected at https://coaileague.com",
+        "fixRecommendation": "Debug the workflow step that failed",
+        "filesLikelyAffected": [
+          "server/routes/",
+          "client/src/pages/"
+        ],
+        "estimatedEffort": "complex",
+        "confidence": 0.5
+      }
+    }
+  ],
+  "estimatedTotalEffort": "4 days",
+  "recommendations": [
+    "Multiple API failures detected - check server logs and database connections",
+    "High JavaScript error count - run ESLint and fix warnings",
+    "Consider running diagnostics nightly to catch regressions early"
+  ]
+}
