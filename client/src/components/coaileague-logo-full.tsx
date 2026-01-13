@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { logoConfig } from "@/config/logoConfig";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotIcon, TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
 
 interface CoAIleagueLogoFullProps {
   size?: "sm" | "md" | "lg" | "xl";
@@ -9,8 +9,8 @@ interface CoAIleagueLogoFullProps {
 }
 
 /**
- * CoAIleague Full Logo with Celtic Knot Icon
- * Uses the colorful 3-ribbon Celtic knot (purple/teal/gold) universally
+ * CoAIleague Full Logo with Trinity Mascot Icon
+ * Uses the glowing flower mascot (cyan/purple/gold) universally
  */
 export function CoAIleagueLogoFull({ 
   size = "md", 
@@ -44,11 +44,17 @@ export function CoAIleagueLogoFull({
       aria-label={logoConfig.accessibility.ariaLabel}
       data-testid={`${logoConfig.accessibility.testIdPrefix}-full`}
     >
-      <ColorfulCelticKnot 
-        size={knotSizeMap[size] || "sm"}
-        animated={animated}
-        animationSpeed="slow"
-      />
+      {animated ? (
+        <TrinityMascotAnimated 
+          size={knotSizeMap[size] || "sm"}
+          state="idle"
+          showSparkles={false}
+        />
+      ) : (
+        <TrinityMascotIcon 
+          size={knotSizeMap[size] || "sm"}
+        />
+      )}
 
       <div className="flex flex-col gap-0.5 min-w-0">
         <div className="flex items-baseline gap-1">

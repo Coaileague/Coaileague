@@ -14,7 +14,7 @@ import { memo, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Bot, Zap, Brain, Shield } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { ColorfulCelticKnot } from '@/components/ui/colorful-celtic-knot';
+import { TrinityMascotIcon, TrinityMascotAnimated } from '@/components/ui/trinity-mascot';
 
 type TrinityVariant = 'badge' | 'compact' | 'standard' | 'hero' | 'inline';
 
@@ -170,13 +170,19 @@ const TrinityMarketingHero = memo(function TrinityMarketingHero({
         />
       )}
       
-      {/* Trinity Symbol - 3-ribbon Celtic Knot (purple/teal/gold) */}
+      {/* Trinity Symbol - Glowing Flower Mascot */}
       <div className="relative z-10 drop-shadow-lg">
-        <ColorfulCelticKnot 
-          size={variant === 'badge' ? 'sm' : variant === 'compact' ? 'md' : variant === 'inline' ? 'sm' : variant === 'hero' ? 'xl' : 'lg'}
-          animated={animated}
-          animationSpeed="slow"
-        />
+        {animated ? (
+          <TrinityMascotAnimated 
+            size={variant === 'badge' ? 'sm' : variant === 'compact' ? 'md' : variant === 'inline' ? 'sm' : variant === 'hero' ? 'xl' : 'lg'}
+            state="idle"
+            showSparkles={false}
+          />
+        ) : (
+          <TrinityMascotIcon 
+            size={variant === 'badge' ? 'sm' : variant === 'compact' ? 'md' : variant === 'inline' ? 'sm' : variant === 'hero' ? 'xl' : 'lg'}
+          />
+        )}
       </div>
       
       {/* Sparkle decorations - using Sparkles icon instead of Star */}

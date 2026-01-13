@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { logoConfig } from "@/config/logoConfig";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
 
 interface CoAIleagueStaticLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";
@@ -10,7 +10,7 @@ interface CoAIleagueStaticLogoProps {
 
 /**
  * CoAIleague Static Logo - Non-Animated
- * Uses the colorful 3-ribbon Celtic knot (purple/teal/gold)
+ * Uses the Trinity Mascot (glowing flower) 
  * Use this in forms, dialogs, modals, and places where animation doesn't fit
  */
 export function CoAIleagueStaticLogo({
@@ -48,9 +48,8 @@ export function CoAIleagueStaticLogo({
         )}
         data-testid="coaileague-static-logo-icon"
       >
-        <ColorfulCelticKnot 
+        <TrinityMascotIcon 
           size={knotSizeMap[size] || "sm"}
-          animated={false}
         />
       </div>
     );
@@ -59,9 +58,8 @@ export function CoAIleagueStaticLogo({
   return (
     <div className={cn("flex items-center gap-4", className)} data-testid="coaileague-static-logo-full">
       <div className="relative inline-flex items-center justify-center shrink-0">
-        <ColorfulCelticKnot 
+        <TrinityMascotIcon 
           size={knotSizeMap[size] || "sm"}
-          animated={false}
         />
       </div>
 

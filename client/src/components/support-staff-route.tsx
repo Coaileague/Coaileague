@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { ShieldAlert, ArrowLeft, HeadphonesIcon } from "lucide-react";
 import { Link } from "wouter";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
 
 const SUPPORT_STAFF_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
 
@@ -18,7 +18,7 @@ export function SupportStaffRoute({ children }: { children: React.ReactNode }) {
   if (isLoading) {
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
-        <ColorfulCelticKnot size="lg" state="focused" animated={true} animationSpeed="fast" />
+        <TrinityMascotAnimated size="lg" state="thinking" showSparkles={true} />
         <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );

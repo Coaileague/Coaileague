@@ -19,7 +19,7 @@ import { Button } from "@/components/ui/button";
 import { ShieldAlert, Lock, ArrowLeft, Home } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { navConfig } from "@/config/navigationConfig";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
 
 export type RBACCapability = 
   | 'authenticated'      
@@ -209,7 +209,7 @@ export function RBACRoute({
     }
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
-        <ColorfulCelticKnot size="lg" state="thinking" animated={true} animationSpeed="fast" />
+        <TrinityMascotAnimated size="lg" state="thinking" showSparkles={true} />
         <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );
@@ -232,7 +232,7 @@ export function RBACRoute({
       }
       return (
         <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
-          <ColorfulCelticKnot size="lg" state="warning" animated={true} animationSpeed="normal" />
+          <TrinityMascotAnimated size="lg" state="loading" showSparkles={false} />
           <span className="text-sm text-muted-foreground">Redirecting...</span>
         </div>
       );
