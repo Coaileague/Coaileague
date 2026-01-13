@@ -8,11 +8,11 @@
  */
 
 import { db } from '../db';
-import { featureFlags, featureFlagChanges, type FeatureFlag, type InsertFeatureFlag, type InsertFeatureFlagChange } from '@shared/schema';
+import { trinityRuntimeFlags, trinityRuntimeFlagChanges, type TrinityRuntimeFlag, type InsertTrinityRuntimeFlag, type InsertTrinityRuntimeFlagChange } from '@shared/schema';
 import { eq, and, inArray, desc, sql } from 'drizzle-orm';
 
 // In-memory cache for fast flag lookups
-const flagCache = new Map<string, { value: any; expiresAt: number; flag: FeatureFlag }>();
+const flagCache = new Map<string, { value: any; expiresAt: number; flag: TrinityRuntimeFlag }>();
 const CACHE_TTL_MS = 30000; // 30 second cache
 
 export type SafetyLevel = 'low_risk' | 'medium_risk' | 'high_risk';
@@ -22,7 +22,7 @@ export type ValueType = 'boolean' | 'string' | 'number' | 'json';
 
 interface FlagUpdateResult {
   success: boolean;
-  flag?: FeatureFlag;
+  flag?: TrinityRuntimeFlag;
   error?: string;
   requiresApproval?: boolean;
 }
@@ -37,7 +37,7 @@ interface FlagValue {
 /**
  * Feature Flags Service - Core operations for Trinity autonomous control
  */
-export const featureFlagsService = {
+export const trinityRuntimeFlagsService = {
   /**
    * Get all feature flags, optionally filtered
    */
@@ -46,42 +46,42 @@ export const featureFlagsService = {
     safetyLevel?: SafetyLevel;
     workspaceId?: string | null;
     includeDisabled?: boolean;
-  }): Promise<FeatureFlag[]> {
-    let query = db.select().from(featureFlags);
+  }): Promise<TrinityRuntimeFlag[]> {
+    let query = db.select().from(trinityRuntimeFlags);
     
     const conditions: any[] = [];
     
     if (filters?.category) {
-      conditions.push(eq(featureFlags.category, filters.category));
+      conditions.push(eq(trinityRuntimeFlags.category, filters.category));
     }
     
     if (filters?.safetyLevel) {
-      conditions.push(eq(featureFlags.safetyLevel, filters.safetyLevel));
+      conditions.push(eq(trinityRuntimeFlags.safetyLevel, filters.safetyLevel));
     }
     
     if (filters?.workspaceId !== undefined) {
       if (filters.workspaceId === null) {
-        conditions.push(sql`${featureFlags.workspaceId} IS NULL`);
+        conditions.push(sql`${trinityRuntimeFlags.workspaceId} IS NULL`);
       } else {
-        conditions.push(eq(featureFlags.workspaceId, filters.workspaceId));
+        conditions.push(eq(trinityRuntimeFlags.workspaceId, filters.workspaceId));
       }
     }
     
     if (!filters?.includeDisabled) {
-      conditions.push(eq(featureFlags.isEnabled, true));
+      conditions.push(eq(trinityRuntimeFlags.isEnabled, true));
     }
     
     if (conditions.length > 0) {
-      return db.select().from(featureFlags).where(and(...conditions));
+      return db.select().from(trinityRuntimeFlags).where(and(...conditions));
     }
     
-    return db.select().from(featureFlags);
+    return db.select().from(trinityRuntimeFlags);
   },
 
   /**
    * Get a single flag by key
    */
-  async getFlagByKey(key: string, workspaceId?: string): Promise<FeatureFlag | null> {
+  async getFlagByKey(key: string, workspaceId?: string): Promise<TrinityRuntimeFlag | null> {
     const cacheKey = workspaceId ? `${key}:${workspaceId}` : key;
     const cached = flagCache.get(cacheKey);
     
@@ -89,13 +89,13 @@ export const featureFlagsService = {
       return cached.flag;
     }
     
-    const conditions = [eq(featureFlags.key, key)];
+    const conditions = [eq(trinityRuntimeFlags.key, key)];
     if (workspaceId) {
-      conditions.push(eq(featureFlags.workspaceId, workspaceId));
+      conditions.push(eq(trinityRuntimeFlags.workspaceId, workspaceId));
     }
     
     const [flag] = await db.select()
-      .from(featureFlags)
+      .from(trinityRuntimeFlags)
       .where(and(...conditions))
       .limit(1);
     
@@ -146,14 +146,14 @@ export const featureFlagsService = {
    * Get multiple flag values in bulk (efficient for frontend runtime)
    */
   async getRuntimeFlags(keys: string[], workspaceId?: string): Promise<FlagValue[]> {
-    const conditions = [inArray(featureFlags.key, keys)];
+    const conditions = [inArray(trinityRuntimeFlags.key, keys)];
     
     if (workspaceId) {
-      conditions.push(eq(featureFlags.workspaceId, workspaceId));
+      conditions.push(eq(trinityRuntimeFlags.workspaceId, workspaceId));
     }
     
     const flags = await db.select()
-      .from(featureFlags)
+      .from(trinityRuntimeFlags)
       .where(and(...conditions));
     
     return flags.map(flag => ({
@@ -192,7 +192,7 @@ export const featureFlagsService = {
     
     // Check if Trinity needs approval for this flag
     if (actor.type === 'trinity' && flag.requiresApproval) {
-      console.log(`[FeatureFlags] Trinity modification of '${key}' requires approval`);
+      console.log(`[TrinityRuntimeFlags] Trinity modification of '${key}' requires approval`);
       return { 
         success: false, 
         requiresApproval: true,
@@ -202,7 +202,7 @@ export const featureFlagsService = {
     
     // Safety level check for Trinity
     if (actor.type === 'trinity' && flag.safetyLevel === 'high_risk') {
-      console.log(`[FeatureFlags] Trinity blocked from modifying high-risk flag '${key}'`);
+      console.log(`[TrinityRuntimeFlags] Trinity blocked from modifying high-risk flag '${key}'`);
       return {
         success: false,
         error: 'Trinity cannot modify high-risk flags autonomously'
@@ -214,18 +214,18 @@ export const featureFlagsService = {
     
     try {
       // Update the flag
-      const [updated] = await db.update(featureFlags)
+      const [updated] = await db.update(trinityRuntimeFlags)
         .set({
           currentValue: newValueJson,
           lastModifiedBy: actor.type === 'admin' ? `admin:${actor.id}` : actor.type,
           lastModifiedReason: reason,
           updatedAt: new Date()
         })
-        .where(eq(featureFlags.id, flag.id))
+        .where(eq(trinityRuntimeFlags.id, flag.id))
         .returning();
       
       // Log the change
-      await db.insert(featureFlagChanges).values({
+      await db.insert(trinityRuntimeFlagChanges).values({
         flagId: flag.id,
         flagKey: key,
         previousValue,
@@ -244,12 +244,12 @@ export const featureFlagsService = {
         flagCache.delete(`${key}:${flag.workspaceId}`);
       }
       
-      console.log(`[FeatureFlags] ${actor.type} updated '${key}': ${previousValue} → ${newValueJson}`);
+      console.log(`[TrinityRuntimeFlags] ${actor.type} updated '${key}': ${previousValue} → ${newValueJson}`);
       
       return { success: true, flag: updated };
     } catch (error: any) {
       // Log failed attempt
-      await db.insert(featureFlagChanges).values({
+      await db.insert(trinityRuntimeFlagChanges).values({
         flagId: flag.id,
         flagKey: key,
         previousValue,
@@ -304,10 +304,10 @@ export const featureFlagsService = {
     allowedActors?: string[];
     requiresApproval?: boolean;
     workspaceId?: string;
-  }): Promise<FeatureFlag> {
+  }): Promise<TrinityRuntimeFlag> {
     const valueJson = JSON.stringify(data.defaultValue);
     
-    const [flag] = await db.insert(featureFlags).values({
+    const [flag] = await db.insert(trinityRuntimeFlags).values({
       key: data.key,
       label: data.label,
       description: data.description,
@@ -324,7 +324,7 @@ export const featureFlagsService = {
       lastModifiedBy: 'system'
     }).returning();
     
-    console.log(`[FeatureFlags] Created new flag '${data.key}'`);
+    console.log(`[TrinityRuntimeFlags] Created new flag '${data.key}'`);
     return flag;
   },
 
@@ -333,9 +333,9 @@ export const featureFlagsService = {
    */
   async getFlagHistory(key: string, limit = 50): Promise<any[]> {
     return db.select()
-      .from(featureFlagChanges)
-      .where(eq(featureFlagChanges.flagKey, key))
-      .orderBy(desc(featureFlagChanges.createdAt))
+      .from(trinityRuntimeFlagChanges)
+      .where(eq(trinityRuntimeFlagChanges.flagKey, key))
+      .orderBy(desc(trinityRuntimeFlagChanges.createdAt))
       .limit(limit);
   },
 
@@ -451,7 +451,7 @@ export const featureFlagsService = {
       }
     }
     
-    console.log('[FeatureFlags] Default flags initialized');
+    console.log('[TrinityRuntimeFlags] Default flags initialized');
   },
 
   /**
@@ -462,4 +462,4 @@ export const featureFlagsService = {
   }
 };
 
-export default featureFlagsService;
+export default trinityRuntimeFlagsService;
