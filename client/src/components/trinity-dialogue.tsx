@@ -38,7 +38,9 @@ import {
   Terminal,
   ListChecks,
 } from 'lucide-react';
-import { TrinityMascotAnimated, TrinityMascotIcon } from '@/components/ui/trinity-mascot';
+import { TrinityMascotIcon } from '@/components/ui/trinity-mascot';
+import TrinityRedesign from '@/components/trinity-redesign';
+import { Suspense } from 'react';
 
 interface Message {
   id: string;
@@ -456,8 +458,10 @@ export function TrinityDialogue({
             ))}
             {isTyping && (
               <div className="flex gap-2 justify-start items-center">
-                <div className="h-8 w-8 shrink-0">
-                  <TrinityMascotAnimated size="sm" state="thinking" showSparkles />
+                <div className="h-8 w-8 shrink-0 flex items-center justify-center">
+                  <Suspense fallback={<div className="w-8 h-8" />}>
+                    <TrinityRedesign size={32} mode="THINKING" />
+                  </Suspense>
                 </div>
                 <div className="bg-muted rounded-lg px-3 py-2">
                   <p className="text-xs text-muted-foreground">Trinity is thinking...</p>

@@ -18,7 +18,9 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { performLogout, setLogoutAnimationContext } from "@/lib/logoutHandler";
 import { useUniversalAnimation } from "@/contexts/universal-animation-context";
-import { TrinityMascotIcon, TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
+import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
+import TrinityRedesign from "@/components/trinity-redesign";
+import { Suspense } from "react";
 
 interface NavItemProps {
   icon: LucideIcon;
@@ -117,7 +119,9 @@ function TrinityMenuItem({ onClose }: { onClose: () => void }) {
       
       <div className="relative mb-1">
         {isPressed ? (
-          <TrinityMascotAnimated size="sm" state="thinking" showSparkles={false} />
+          <Suspense fallback={<div className="w-6 h-6" />}>
+            <TrinityRedesign size={24} mode="THINKING" />
+          </Suspense>
         ) : (
           <TrinityMascotIcon size="sm" />
         )}

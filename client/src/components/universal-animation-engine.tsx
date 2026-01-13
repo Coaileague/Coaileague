@@ -20,7 +20,8 @@
 import { useEffect, useRef, useCallback, useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUniversalLoadingGate } from '@/contexts/universal-loading-gate';
-import { TrinityMascotAnimated } from '@/components/ui/trinity-mascot';
+import TrinityRedesign from '@/components/trinity-redesign';
+import { Suspense } from 'react';
 
 export type AnimationMode = 'idle' | 'search' | 'analyze' | 'voice' | 'warp' | 'success' | 'error';
 
@@ -602,7 +603,7 @@ export function UniversalAnimationEngine({
           onClick={onClick}
           data-testid="universal-animation-overlay"
         >
-          {/* Trinity Celtic Knot Logo - Brand centerpiece */}
+          {/* Trinity Flower Logo - Brand centerpiece */}
           <motion.div
             initial={{ scale: 0.8, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
@@ -610,11 +611,9 @@ export function UniversalAnimationEngine({
             transition={{ type: 'spring', damping: 20, stiffness: 200 }}
             className="flex items-center justify-center"
           >
-            <TrinityMascotAnimated 
-              size="xl" 
-              state="thinking"
-              showSparkles={true}
-            />
+            <Suspense fallback={<div className="w-24 h-24" />}>
+              <TrinityRedesign size={96} mode="THINKING" />
+            </Suspense>
           </motion.div>
 
           <motion.div

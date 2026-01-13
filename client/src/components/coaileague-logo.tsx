@@ -1,5 +1,7 @@
 import { cn } from "@/lib/utils";
-import { TrinityMascotIcon, TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
+import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
+import TrinityRedesign from "@/components/trinity-redesign";
+import { Suspense } from "react";
 
 interface CoAIleagueLogoProps {
   width?: number | string;
@@ -45,13 +47,15 @@ export function CoAIleagueLogo({
   };
 
   if (onlyIcon) {
+    const iconSizeMap = { xs: 20, sm: 24, md: 32, lg: 48, xl: 64 };
+    const iconSize = iconSizeMap[getKnotSize()];
     return (
-      <TrinityMascotAnimated 
-        size={getKnotSize()}
-        className={cn("transition-transform duration-200", className)}
-        state="idle"
-        showSparkles={false}
-      />
+      <Suspense fallback={<div style={{ width: iconSize, height: iconSize }} />}>
+        <TrinityRedesign 
+          size={iconSize}
+          mode="ANALYZING"
+        />
+      </Suspense>
     );
   }
 

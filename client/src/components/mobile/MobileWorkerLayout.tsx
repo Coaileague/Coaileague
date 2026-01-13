@@ -32,7 +32,9 @@ import {
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { performLogout } from "@/lib/logoutHandler";
-import { TrinityMascotIcon, TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
+import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
+import TrinityRedesign from "@/components/trinity-redesign";
+import { Suspense } from "react";
 
 interface NavItemProps {
   icon: LucideIcon;
@@ -119,7 +121,9 @@ function WorkerTrinityMenuItem({ onClose }: { onClose: () => void }) {
       <div className="absolute inset-0 rounded-xl bg-gradient-radial from-cyan-400/10 via-transparent to-transparent pointer-events-none" />
       
       {isPressed ? (
-        <TrinityMascotAnimated size="sm" state="thinking" showSparkles={false} />
+        <Suspense fallback={<div className="w-6 h-6" />}>
+          <TrinityRedesign size={24} mode="THINKING" />
+        </Suspense>
       ) : (
         <TrinityMascotIcon size="sm" />
       )}

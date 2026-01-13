@@ -1,6 +1,8 @@
 import { cn } from "@/lib/utils";
 import { logoConfig, getLogoSize } from "@/config/logoConfig";
-import { TrinityMascotIcon, TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
+import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
+import TrinityRedesign from "@/components/trinity-redesign";
+import { Suspense } from "react";
 
 interface CoAIleagueAFLogoProps {
   size?: "sm" | "md" | "lg" | "xl" | "hero";
@@ -41,6 +43,8 @@ export function CoAIleagueAFLogo({
   }
 
   if (variant === "icon") {
+    const iconSizeMap = { xs: 20, sm: 24, md: 32, lg: 48, xl: 64 };
+    const iconSize = iconSizeMap[knotSizeMap[size] || "sm"];
     return (
       <div
         className={cn(
@@ -50,11 +54,9 @@ export function CoAIleagueAFLogo({
         data-testid="coaileague-logo-icon"
       >
         {animated ? (
-          <TrinityMascotAnimated 
-            size={knotSizeMap[size] || "sm"}
-            state="idle"
-            showSparkles={false}
-          />
+          <Suspense fallback={<div style={{ width: iconSize, height: iconSize }} />}>
+            <TrinityRedesign size={iconSize} mode="ANALYZING" />
+          </Suspense>
         ) : (
           <TrinityMascotIcon 
             size={knotSizeMap[size] || "sm"}
@@ -65,15 +67,15 @@ export function CoAIleagueAFLogo({
   }
 
   // Full variant with text
+  const iconSizeMap = { xs: 20, sm: 24, md: 32, lg: 48, xl: 64 };
+  const iconSize = iconSizeMap[knotSizeMap[size] || "sm"];
   return (
     <div className={cn("flex items-center gap-3 md:gap-4", className)} data-testid="coaileague-logo-full">
       <div className="relative inline-flex items-center justify-center shrink-0">
         {animated ? (
-          <TrinityMascotAnimated 
-            size={knotSizeMap[size] || "sm"}
-            state="idle"
-            showSparkles={false}
-          />
+          <Suspense fallback={<div style={{ width: iconSize, height: iconSize }} />}>
+            <TrinityRedesign size={iconSize} mode="ANALYZING" />
+          </Suspense>
         ) : (
           <TrinityMascotIcon 
             size={knotSizeMap[size] || "sm"}
