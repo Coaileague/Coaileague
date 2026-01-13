@@ -85,6 +85,7 @@ export interface IntegrationTestCase {
   type: 'workflow' | 'websocket' | 'pipeline' | 'data-flow';
   steps: IntegrationStep[];
   critical: boolean;
+  requiresAuth?: boolean;
 }
 
 export interface IntegrationStep {
