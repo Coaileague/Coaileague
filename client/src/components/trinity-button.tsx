@@ -1,11 +1,11 @@
 /**
  * Ask Trinity Button - Branded AI interaction button
- * Uses Colorful Celtic Knot logo (purple/teal/gold triquetra) for consistent platform branding
+ * Uses Trinity Mascot flower logo for consistent platform branding
  */
 
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { ColorfulCelticKnot } from '@/components/ui/colorful-celtic-knot';
+import { TrinityMascotIcon } from '@/components/ui/trinity-mascot';
 
 interface AskTrinityButtonProps {
   onClick?: () => void;
@@ -19,7 +19,7 @@ interface AskTrinityButtonProps {
 }
 
 export function TrinityIconStatic({ size = 16, className }: { size?: number; className?: string }) {
-  return <ColorfulCelticKnot size={size} className={className} animated={false} />;
+  return <TrinityMascotIcon size={size} className={className} />;
 }
 
 export function AskTrinityButton({
@@ -50,7 +50,7 @@ export function AskTrinityButton({
         className
       )}
     >
-      <ColorfulCelticKnot size={size === 'sm' ? 14 : size === 'lg' ? 20 : 16} className="mr-2" animated={false} />
+      <TrinityMascotIcon size={size === 'sm' ? 14 : size === 'lg' ? 20 : 16} className="mr-2" />
       {showLabel && <span>{label}</span>}
     </Button>
   );
@@ -77,7 +77,7 @@ export function TrinityMiniButton({
         className
       )}
     >
-      <ColorfulCelticKnot size={32} animated={false} />
+      <TrinityMascotIcon size={32} />
     </Button>
   );
 }

@@ -7,7 +7,7 @@
  */
 
 import { motion, AnimatePresence } from "framer-motion";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
 import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
 
 export type LoadingScenario = 
@@ -95,16 +95,15 @@ export function CoAIleagueLoader({
           data-testid="coaileague-loader-overlay"
         >
           <div className="flex flex-col items-center gap-6 p-6 text-center">
-            {/* Trinity Celtic Knot - The ONLY loading animation */}
+            {/* Trinity Mascot - The ONLY loading animation */}
             <motion.div
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             >
-              <ColorfulCelticKnot 
+              <TrinityMascotAnimated 
                 size="2xl" 
-                state={scenario === "workspace" || scenario === "onboarding" ? "happy" : scenario === "analytics" ? "focused" : "thinking"} 
-                animated={true}
-                animationSpeed={scenario === "onboarding" ? "fast" : "normal"}
+                state={scenario === "workspace" || scenario === "onboarding" || scenario === "analytics" ? "thinking" : "loading"} 
+                showSparkles={true}
               />
             </motion.div>
 

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
 
 type LogoSize = "xs" | "sm" | "md" | "lg" | "xl";
 type LogoVariant = "full" | "compact" | "icon";
@@ -72,10 +72,9 @@ export function UnifiedBrandLogo({
 
   if (effectiveVariant === "icon") {
     return (
-      <ColorfulCelticKnot 
+      <TrinityMascotIcon 
         size={config.knot}
         className={cn("shrink-0", className)}
-        animated={false}
       />
     );
   }
@@ -109,10 +108,9 @@ export function UnifiedBrandLogo({
       )}
       data-testid="brand-logo"
     >
-      <ColorfulCelticKnot 
+      <TrinityMascotIcon 
         size={config.knot}
         className="shrink-0"
-        animated={false}
       />
 
       <div className="flex flex-col min-w-0">

@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotIcon, TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
 
 interface CoAIleagueLogoProps {
   width?: number | string;
@@ -13,9 +13,8 @@ interface CoAIleagueLogoProps {
 }
 
 /**
- * CoAIleague Logo - Unified Celtic Knot branding
- * Uses the colorful 3-ribbon Celtic knot (purple/teal/gold) universally
- * Same branding as Trinity mascot
+ * CoAIleague Logo - Trinity Mascot branding
+ * Uses the glowing flower mascot (cyan/purple/gold) universally
  */
 export function CoAIleagueLogo({
   width = 200,
@@ -47,11 +46,11 @@ export function CoAIleagueLogo({
 
   if (onlyIcon) {
     return (
-      <ColorfulCelticKnot 
+      <TrinityMascotAnimated 
         size={getKnotSize()}
         className={cn("transition-transform duration-200", className)}
-        animated={true}
-        animationSpeed="slow"
+        state="idle"
+        showSparkles={false}
       />
     );
   }
@@ -61,10 +60,8 @@ export function CoAIleagueLogo({
       className={cn("flex items-center gap-2 md:gap-3", className)}
       style={{ width: typeof width === 'number' ? `${width}px` : width }}
     >
-      <ColorfulCelticKnot 
+      <TrinityMascotIcon 
         size={getKnotSize()}
-        animated={true}
-        animationSpeed="slow"
       />
 
       {showWordmark && (

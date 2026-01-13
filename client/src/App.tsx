@@ -59,16 +59,15 @@ import { CoAIleagueLogo } from "@/components/coaileague-logo";
 // Lazy-loaded seasonal effects (heavy component)
 const SeasonalEffectsLayer = lazy(() => import("@/components/effects/SeasonalEffectsLayer"));
 
-// Page loading fallback - Trinity Celtic Knot (THE ONLY loading animation)
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+// Page loading fallback - Trinity Mascot (THE ONLY loading animation)
+import { TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
 
 const PageLoader = () => (
   <div className="flex flex-col items-center justify-center h-full min-h-[400px] gap-4">
-    <ColorfulCelticKnot 
+    <TrinityMascotAnimated 
       size="xl" 
       state="thinking" 
-      animated={true}
-      animationSpeed="fast"
+      showSparkles={true}
     />
     <span className="text-lg md:text-xl font-semibold bg-gradient-to-r from-purple-500 via-teal-500 to-amber-500 bg-clip-text text-transparent">
       Loading...

@@ -20,7 +20,7 @@
 import { useEffect, useRef, useCallback, useState, memo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUniversalLoadingGate } from '@/contexts/universal-loading-gate';
-import { ColorfulCelticKnot } from '@/components/ui/colorful-celtic-knot';
+import { TrinityMascotAnimated } from '@/components/ui/trinity-mascot';
 
 export type AnimationMode = 'idle' | 'search' | 'analyze' | 'voice' | 'warp' | 'success' | 'error';
 
@@ -610,11 +610,10 @@ export function UniversalAnimationEngine({
             transition={{ type: 'spring', damping: 20, stiffness: 200 }}
             className="flex items-center justify-center"
           >
-            <ColorfulCelticKnot 
-              size={120} 
-              animated 
-              animationSpeed="slow"
+            <TrinityMascotAnimated 
+              size="xl" 
               state="thinking"
+              showSparkles={true}
             />
           </motion.div>
 

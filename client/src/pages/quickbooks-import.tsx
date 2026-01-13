@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { VisuallyHidden } from '@/components/ui/visually-hidden';
-import { ColorfulCelticKnot } from '@/components/ui/colorful-celtic-knot';
+import { TrinityMascotAnimated } from '@/components/ui/trinity-mascot';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, 
@@ -1823,11 +1823,10 @@ export default function QuickBooksImportPage() {
             {/* Header with Trinity Logo */}
             <div className="flex items-center gap-4">
               <div className="relative flex-shrink-0">
-                <ColorfulCelticKnot 
-                  size={64} 
-                  animated={true}
+                <TrinityMascotAnimated 
+                  size="xl" 
                   state={pushProgress === 100 ? "success" : "thinking"}
-                  animationSpeed={pushProgress === 100 ? "instant" : "fast"}
+                  showSparkles={pushProgress !== 100}
                 />
                 {pushProgress === 100 && (
                   <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-1">

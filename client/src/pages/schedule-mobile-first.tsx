@@ -36,7 +36,7 @@ import { WeekStatsBar } from '@/components/schedule/WeekStatsBar';
 import { ConflictAlerts } from '@/components/schedule/ConflictAlerts';
 import { TrinityInsightsPanel } from '@/components/schedule/TrinityInsightsPanel';
 import { TrinityTrainingPanel } from '@/components/schedule/TrinityTrainingPanel';
-import { ColorfulCelticKnot } from '@/components/ui/colorful-celtic-knot';
+import { TrinityMascotIcon } from '@/components/ui/trinity-mascot';
 import { TrinityLoadingSpinner } from '@/components/trinity-loading-overlay';
 import { useSimpleMode } from '@/contexts/SimpleModeContext';
 import type { Shift, Employee, Client } from '@shared/schema';
@@ -946,7 +946,7 @@ export default function ScheduleMobileFirst() {
               }}
               data-testid="tool-trinity"
             >
-              <ColorfulCelticKnot size={24} animated={false} />
+              <TrinityMascotIcon size={24} />
               <span className="text-sm">Trinity AI</span>
             </Button>
           </div>

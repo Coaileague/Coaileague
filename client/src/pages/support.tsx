@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { TrinityBadge } from "@/components/trinity-marketing-hero";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
 import { Loader2, Mail, Send } from "lucide-react";
 import {
   Book,
@@ -242,7 +242,7 @@ export default function Support() {
       <nav className="fixed top-0 left-0 right-0 z-50 h-14 bg-background/95 backdrop-blur-sm border-b border-border flex items-center justify-between px-3 sm:px-6">
         <div className="flex items-center gap-2 min-w-0">
           <div className="relative w-9 h-9 sm:w-10 sm:h-10 rounded-lg bg-gradient-to-br from-violet-500 to-indigo-600 flex items-center justify-center shadow-md shadow-violet-500/20 shrink-0">
-            <ColorfulCelticKnot size="sm" state="idle" />
+            <TrinityMascotIcon size="sm" />
           </div>
           <div className="flex flex-col min-w-0">
             <span className="font-bold text-sm sm:text-base bg-gradient-to-r from-violet-600 to-indigo-600 dark:from-violet-400 dark:to-indigo-400 bg-clip-text text-transparent truncate">

@@ -19,7 +19,7 @@ import { Separator } from "@/components/ui/separator";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { disputeStatusConfig, disputePriorityConfig, disputeTypesConfig, disputeMessages } from "@/config/disputeConfig";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
 
 export default function DisputesPage() {
   const { user } = useAuth();
@@ -145,7 +145,7 @@ export default function DisputesPage() {
     return (
       <div className="h-full flex flex-col">
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
-          <ColorfulCelticKnot size="lg" state="focused" animated={true} animationSpeed="normal" />
+          <TrinityMascotAnimated size="lg" state="thinking" showSparkles={true} />
           <p className="text-muted-foreground">Loading disputes...</p>
         </div>
       </div>

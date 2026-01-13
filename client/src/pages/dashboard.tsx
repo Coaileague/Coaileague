@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
 import { useTransition } from "@/contexts/transition-context";
 import { apiGet } from "@/lib/apiClient";
 import { queryKeys } from "@/config/queryKeys";
@@ -318,7 +318,7 @@ export default function Dashboard() {
   if (isLoading || !isAuthenticated) {
     return (
       <div className="flex flex-col items-center justify-center h-screen gap-4">
-        <ColorfulCelticKnot size="xl" state="thinking" animated={true} animationSpeed="fast" />
+        <TrinityMascotAnimated size="xl" state="thinking" showSparkles={true} />
         <span className="text-muted-foreground">Loading...</span>
       </div>
     );
@@ -475,7 +475,7 @@ export default function Dashboard() {
       {/* Show Trinity loading for initial auth check */}
       {isLoadingDashboard && (
         <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-background/80 backdrop-blur-sm gap-4">
-          <ColorfulCelticKnot size="xl" state="focused" animated={true} animationSpeed="normal" />
+          <TrinityMascotAnimated size="xl" state="thinking" showSparkles={true} />
           <span className="text-muted-foreground">Loading dashboard...</span>
         </div>
       )}

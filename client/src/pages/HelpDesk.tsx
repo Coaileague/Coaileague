@@ -38,7 +38,7 @@ import {
   History, MessageCircle, ArrowUpCircle, Eye, RefreshCw, PackageCheck, FileSearch, Home, Check
 } from "lucide-react";
 import { CoAIleagueAFLogo } from "@/components/coaileague-af-logo";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
 import { SecureRequestDialog } from "@/components/secure-request-dialog";
 import { BrandedConfirmDialog } from "@/components/branded-input-dialog";
 import { KickDialog, SilenceDialog } from "@/components/moderation-dialogs";
@@ -2596,7 +2596,7 @@ export function HelpDesk(props?: HelpDeskProps & any) {
             ) : (
               /* Loading state with Trinity branding */
               <div className="text-center py-8 flex flex-col items-center gap-3">
-                <ColorfulCelticKnot size="lg" state="speaking" animated={true} animationSpeed="normal" />
+                <TrinityMascotAnimated size="lg" state="thinking" showSparkles={true} />
                 <p className="text-gray-600 text-sm font-medium">Loading user information...</p>
               </div>
             )}
