@@ -12,6 +12,7 @@
  * - Two-code approval system for destructive operations
  * - Real-time issue detection and suggested fixes
  * - Push action execution for approved hotpatches
+ * - Trinity metacognition testing (thought engine, learning, scoring, modes)
  * 
  * RBAC Rules:
  * - Support roles: Read diagnostics, suggest fixes
@@ -26,69 +27,65 @@ import { db } from '../../db';
 import { sql } from 'drizzle-orm';
 import crypto from 'crypto';
 
+// Import comprehensive diagnostic types from crawler types
+import type {
+  DiagnosticDomain,
+  DiagnosticIssue,
+  DiagnosticReport,
+  HotpatchType,
+  HotpatchSuggestion,
+  TrinityMetacognitionReport,
+  ReplitAgentReport,
+  CommandCenterView,
+  IssueCategory,
+  UserRole,
+  DeviceContext,
+  BrowserContext,
+  NetworkLogEntry,
+  ConsoleError,
+  PerformanceReport,
+  CoverageReport,
+  PendingFix,
+  ActionItem,
+  RiskAssessment,
+  PastIssueReference,
+  FileChange,
+  TestCase,
+  TrinityThoughtTest,
+  TrinityLearningTest,
+  TrinityScoringTest,
+  TrinityModeTest,
+  TrinityActionTest,
+  TrendData,
+  QuickAction,
+  CrawlerConfig,
+  TestAccount,
+  PerformanceThresholds
+} from './crawlerTypes';
+
+// Re-export for external consumers
+export type {
+  DiagnosticDomain,
+  DiagnosticIssue,
+  DiagnosticReport,
+  HotpatchType,
+  HotpatchSuggestion,
+  TrinityMetacognitionReport,
+  ReplitAgentReport,
+  CommandCenterView,
+  IssueCategory,
+  UserRole
+};
+
 // Constants for security
 const MAX_LOG_SIZE = 50000; // 50KB max for log analysis
 const DESTRUCTIVE_HOTPATCH_TYPES: HotpatchType[] = ['code_edit', 'query_fix', 'permission_fix'];
 
 // ============================================================================
-// TYPES
+// LEGACY TYPES (kept for backward compatibility)
 // ============================================================================
 
-export type DiagnosticDomain = 
-  | 'notifications'
-  | 'scheduling'
-  | 'time_tracking'
-  | 'payroll'
-  | 'authentication'
-  | 'websocket'
-  | 'database'
-  | 'frontend'
-  | 'api'
-  | 'caching'
-  | 'file_storage'
-  | 'ai_brain'
-  | 'gamification'
-  | 'billing';
-
 export type IssueSeverity = 'info' | 'warning' | 'error' | 'critical';
-
-export type HotpatchType = 
-  | 'config_update'
-  | 'cache_clear'
-  | 'service_restart'
-  | 'data_fix'
-  | 'code_edit'
-  | 'query_fix'
-  | 'permission_fix';
-
-export interface DiagnosticIssue {
-  id: string;
-  domain: DiagnosticDomain;
-  severity: IssueSeverity;
-  title: string;
-  description: string;
-  rootCause?: string;
-  stackTrace?: string;
-  affectedUsers?: number;
-  detectedAt: Date;
-  suggestedFix?: HotpatchSuggestion;
-  autoFixable: boolean;
-  geminiAnalysis?: string;
-}
-
-export interface HotpatchSuggestion {
-  id: string;
-  type: HotpatchType;
-  title: string;
-  description: string;
-  code?: string;
-  targetFile?: string;
-  targetFunction?: string;
-  estimatedImpact: 'low' | 'medium' | 'high';
-  requiresTwoCodeApproval: boolean;
-  rbacMinimumRole: string;
-  canAutoExecute: boolean;
-}
 
 export interface HotpatchExecution {
   id: string;
@@ -108,18 +105,6 @@ export interface LogEntry {
   source: string;
   message: string;
   metadata?: Record<string, any>;
-}
-
-export interface DiagnosticReport {
-  id: string;
-  runAt: Date;
-  duration: number;
-  domainsScanned: DiagnosticDomain[];
-  issuesFound: DiagnosticIssue[];
-  hotpatchesSuggested: number;
-  autoFixesApplied: number;
-  overallHealth: 'healthy' | 'degraded' | 'critical';
-  geminiSummary: string;
 }
 
 // ============================================================================
