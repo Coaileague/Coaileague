@@ -39,17 +39,19 @@ const LOADING_MESSAGES = [
  * Distinctly Trinity branding - NOT similar to Claude's starburst
  */
 /**
- * AnimatedTrinityLogo - Uses the Trinity Mascot with spectacular effects
+ * AnimatedTrinityLogo - Uses the REAL Trinity Redesign canvas mascot
  */
-import { TrinityMascotAnimated } from '@/components/ui/trinity-mascot';
+import { Suspense, lazy } from 'react';
+const TrinityRedesign = lazy(() => import('@/components/trinity-redesign'));
 
 function AnimatedTrinityLogo({ size = 80, isAnimating = true }: { size?: number; isAnimating?: boolean }) {
   return (
-    <TrinityMascotAnimated 
-      size={size} 
-      state={isAnimating ? "loading" : "idle"}
-      showSparkles={isAnimating}
-    />
+    <Suspense fallback={<div style={{ width: size, height: size }} />}>
+      <TrinityRedesign 
+        size={size} 
+        mode={isAnimating ? "THINKING" : "IDLE"}
+      />
+    </Suspense>
   );
 }
 

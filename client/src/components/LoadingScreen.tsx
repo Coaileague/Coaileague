@@ -1,20 +1,22 @@
 /**
  * Trinity Loading Screen - Universal branded loading experience
- * Uses the Trinity Mascot with spectacular sparkle effects
+ * Uses the REAL Trinity Redesign canvas mascot with full animations
  */
 
-import { TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
+import { Suspense, lazy } from "react";
+const TrinityRedesign = lazy(() => import("@/components/trinity-redesign"));
 
 export function LoadingScreen() {
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col items-center justify-center z-50">
-      {/* Trinity Mascot - Animated with sparkles */}
+      {/* Trinity Mascot - Real animated canvas mascot */}
       <div className="relative mb-8">
-        <TrinityMascotAnimated 
-          size="2xl" 
-          state="thinking" 
-          showSparkles={true}
-        />
+        <Suspense fallback={<div className="w-24 h-24" />}>
+          <TrinityRedesign 
+            size={96} 
+            mode="THINKING"
+          />
+        </Suspense>
       </div>
 
       {/* Brand Text */}

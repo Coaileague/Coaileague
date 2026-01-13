@@ -7,8 +7,10 @@
  */
 
 import { motion, AnimatePresence } from "framer-motion";
-import { TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
+import { Suspense, lazy } from "react";
 import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
+import { useMinimumLoadingTime, LOADING_DURATIONS } from "@/hooks/useMinimumLoadingTime";
+const TrinityRedesign = lazy(() => import("@/components/trinity-redesign"));
 
 export type LoadingScenario = 
   | "workspace" 
@@ -75,6 +77,9 @@ export function CoAIleagueLoader({
   // CRITICAL: Respect universal loading gate - NEVER show on public routes
   const { isLoadingBlocked } = useUniversalLoadingGate();
   
+  // Ensure minimum display time so users can enjoy Trinity animation
+  const shouldShow = useMinimumLoadingTime(isVisible, LOADING_DURATIONS.standard);
+  
   // If loading is blocked (public route), don't render anything
   if (isLoadingBlocked) {
     return null;
@@ -86,7 +91,7 @@ export function CoAIleagueLoader({
 
   return (
     <AnimatePresence>
-      {isVisible && (
+      {shouldShow && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -95,16 +100,17 @@ export function CoAIleagueLoader({
           data-testid="coaileague-loader-overlay"
         >
           <div className="flex flex-col items-center gap-6 p-6 text-center">
-            {/* Trinity Mascot - The ONLY loading animation */}
+            {/* Trinity Mascot - Real canvas mascot for loading */}
             <motion.div
               animate={{ scale: [1, 1.05, 1] }}
               transition={{ duration: 1.5, repeat: Infinity }}
             >
-              <TrinityMascotAnimated 
-                size="2xl" 
-                state={scenario === "workspace" || scenario === "onboarding" || scenario === "analytics" ? "thinking" : "loading"} 
-                showSparkles={true}
-              />
+              <Suspense fallback={<div className="w-24 h-24" />}>
+                <TrinityRedesign 
+                  size={96} 
+                  mode={scenario === "workspace" || scenario === "onboarding" || scenario === "analytics" ? "THINKING" : "ANALYZING"} 
+                />
+              </Suspense>
             </motion.div>
 
             {/* Messages */}

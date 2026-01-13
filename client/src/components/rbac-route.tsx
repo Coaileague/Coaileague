@@ -19,7 +19,9 @@ import { Button } from "@/components/ui/button";
 import { ShieldAlert, Lock, ArrowLeft, Home } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { navConfig } from "@/config/navigationConfig";
-import { TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
+import { Suspense, lazy } from "react";
+import { useMinimumLoadingTime, LOADING_DURATIONS } from "@/hooks/useMinimumLoadingTime";
+const TrinityRedesign = lazy(() => import("@/components/trinity-redesign"));
 
 export type RBACCapability = 
   | 'authenticated'      
@@ -195,7 +197,10 @@ export function RBACRoute({
   const { isLoadingBlocked } = useUniversalLoadingGate();
   const [, navigate] = useLocation();
   
-  const isLoading = authLoading || workspaceLoading;
+  const isActuallyLoading = authLoading || workspaceLoading;
+  
+  // Ensure minimum loading time so users can enjoy Trinity animation
+  const isLoading = useMinimumLoadingTime(isActuallyLoading, LOADING_DURATIONS.standard);
   
   // CRITICAL FIX: On public routes (isLoadingBlocked=true), always render children
   // This allows unauthenticated users to see the homepage and other public pages
@@ -209,7 +214,9 @@ export function RBACRoute({
     }
     return (
       <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
-        <TrinityMascotAnimated size="lg" state="thinking" showSparkles={true} />
+        <Suspense fallback={<div className="w-16 h-16" />}>
+          <TrinityRedesign size={64} mode="THINKING" />
+        </Suspense>
         <span className="text-sm text-muted-foreground">Loading...</span>
       </div>
     );
@@ -232,7 +239,9 @@ export function RBACRoute({
       }
       return (
         <div className="h-screen flex flex-col items-center justify-center bg-background gap-3">
-          <TrinityMascotAnimated size="lg" state="loading" showSparkles={false} />
+          <Suspense fallback={<div className="w-16 h-16" />}>
+            <TrinityRedesign size={64} mode="ANALYZING" />
+          </Suspense>
           <span className="text-sm text-muted-foreground">Redirecting...</span>
         </div>
       );
