@@ -10,7 +10,7 @@
  * - Grid-based More menu for extra items
  */
 
-import { Calendar, Clock, MessageSquare, Menu, LogOut, Settings, User, HelpCircle, Mail, Home, Bell, Sparkles, type LucideIcon } from "lucide-react";
+import { Calendar, Clock, MessageSquare, Menu, LogOut, Settings, User, HelpCircle, Mail, Home, Bell, type LucideIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { performLogout, setLogoutAnimationContext } from "@/lib/logoutHandler";
 import { useUniversalAnimation } from "@/contexts/universal-animation-context";
+import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
 
 interface NavItemProps {
   icon: LucideIcon;
@@ -90,6 +91,44 @@ function SheetMenuItem({ icon: Icon, label, href, onClose }: {
   );
 }
 
+// Special Trinity-branded menu item with Celtic knot logo
+function TrinityMenuItem({ onClose }: { onClose: () => void }) {
+  const [, setLocation] = useLocation();
+  const [isPressed, setIsPressed] = useState(false);
+  
+  return (
+    <button
+      onClick={() => { setLocation("/trinity"); onClose(); }}
+      onTouchStart={() => setIsPressed(true)}
+      onTouchEnd={() => setIsPressed(false)}
+      onMouseDown={() => setIsPressed(true)}
+      onMouseUp={() => setIsPressed(false)}
+      className={cn(
+        "relative flex flex-col items-center justify-center p-3 rounded-xl transition-all duration-200",
+        "bg-gradient-to-br from-purple-900/40 via-slate-800/60 to-cyan-900/40",
+        "border border-purple-500/20",
+        isPressed ? "scale-95 ring-2 ring-cyan-400/40" : "active:scale-95"
+      )}
+      style={{ WebkitTapHighlightColor: 'transparent' }}
+      data-testid="menu-ask-trinity"
+    >
+      {/* Subtle glow behind the knot */}
+      <div className="absolute inset-0 rounded-xl bg-gradient-radial from-cyan-400/10 via-transparent to-transparent pointer-events-none" />
+      
+      <div className="relative mb-1">
+        <ColorfulCelticKnot 
+          size="sm" 
+          animated={isPressed}
+          state={isPressed ? "thinking" : "idle"}
+        />
+      </div>
+      <span className="text-xs font-medium bg-gradient-to-r from-purple-300 via-cyan-300 to-amber-300 bg-clip-text text-transparent">
+        Ask Trinity
+      </span>
+    </button>
+  );
+}
+
 interface MobileBottomNavProps {
   onMenuOpen?: () => void;
 }
@@ -134,9 +173,8 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
     { icon: MessageSquare, label: "Rooms", href: "/chatrooms" },
   ];
   
-  // Items moved to More menu - Trinity first for priority access
+  // Items moved to More menu - Trinity handled separately with branded component
   const menuItems = [
-    { icon: Sparkles, label: "Ask Trinity", href: "/trinity" },
     { icon: Mail, label: "Inbox", href: "/inbox" },
     { icon: HelpCircle, label: "Help", href: "/support" },
     { icon: User, label: "Profile", href: "/profile" },
@@ -199,7 +237,12 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
           >
             <SheetTitle className="sr-only">More Options</SheetTitle>
             
-            {/* 2x2 Grid for quick access items */}
+            {/* Trinity AI - Featured prominently */}
+            <div className="mb-3">
+              <TrinityMenuItem onClose={() => setMenuOpen(false)} />
+            </div>
+            
+            {/* Grid for other menu items */}
             <div className="grid grid-cols-4 gap-2 mb-4">
               {menuItems.map((item) => (
                 <SheetMenuItem

@@ -28,11 +28,11 @@ import {
   Settings,
   HelpCircle,
   Bell,
-  Sparkles,
   type LucideIcon 
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { performLogout } from "@/lib/logoutHandler";
+import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
 
 interface NavItemProps {
   icon: LucideIcon;
@@ -95,11 +95,45 @@ function WorkerNavItem({ icon: Icon, label, href, isActive, badge, urgent }: Nav
   );
 }
 
+// Trinity-branded menu item for worker layout
+function WorkerTrinityMenuItem({ onClose }: { onClose: () => void }) {
+  const [, setLocation] = useLocation();
+  const [isPressed, setIsPressed] = useState(false);
+  
+  return (
+    <button
+      onClick={() => { setLocation("/trinity"); onClose(); }}
+      onTouchStart={() => setIsPressed(true)}
+      onTouchEnd={() => setIsPressed(false)}
+      onMouseDown={() => setIsPressed(true)}
+      onMouseUp={() => setIsPressed(false)}
+      className={cn(
+        "w-full relative flex items-center justify-center gap-3 p-4 rounded-xl transition-all duration-200",
+        "bg-gradient-to-r from-purple-900/40 via-slate-800/60 to-cyan-900/40",
+        "border border-purple-500/20",
+        isPressed ? "scale-[0.98] ring-2 ring-cyan-400/40" : "active:scale-[0.98]"
+      )}
+      style={{ WebkitTapHighlightColor: 'transparent' }}
+      data-testid="worker-menu-ask-trinity"
+    >
+      <div className="absolute inset-0 rounded-xl bg-gradient-radial from-cyan-400/10 via-transparent to-transparent pointer-events-none" />
+      
+      <ColorfulCelticKnot 
+        size="sm" 
+        animated={isPressed}
+        state={isPressed ? "thinking" : "idle"}
+      />
+      <span className="text-sm font-medium bg-gradient-to-r from-purple-300 via-cyan-300 to-amber-300 bg-clip-text text-transparent">
+        Ask Trinity AI
+      </span>
+    </button>
+  );
+}
+
 function WorkerMoreMenu({ onClose }: { onClose: () => void }) {
   const [, setLocation] = useLocation();
   
   const menuItems = [
-    { icon: Sparkles, label: "Ask Trinity", href: "/trinity" },
     { icon: Bell, label: "Notifications", href: "/mobile-hub" },
     { icon: HelpCircle, label: "Help", href: "/support" },
     { icon: Settings, label: "Settings", href: "/settings" },
@@ -113,7 +147,12 @@ function WorkerMoreMenu({ onClose }: { onClose: () => void }) {
     >
       <SheetTitle className="sr-only">More Options</SheetTitle>
       
-      <div className="grid grid-cols-4 gap-2 mb-4">
+      {/* Trinity AI - Featured prominently */}
+      <div className="mb-3">
+        <WorkerTrinityMenuItem onClose={onClose} />
+      </div>
+      
+      <div className="grid grid-cols-3 gap-3 mb-4">
         {menuItems.map((item) => (
           <button
             key={item.href}
