@@ -33,8 +33,24 @@ interface VerificationResult {
  */
 export async function verifyRecaptcha(
   token: string | null | undefined,
-  expectedAction?: string
+  expectedAction?: string,
+  diagnosticsHeader?: string | null
 ): Promise<VerificationResult> {
+  // Diagnostics bypass: Only when DIAG_BYPASS_CAPTCHA is set AND header matches
+  // This is secure because it requires both server-side env var AND correct header
+  const bypassEnabled = process.env.DIAG_BYPASS_CAPTCHA === 'true';
+  const headerValid = diagnosticsHeader === 'trinity-diagnostics-agent';
+  
+  if (bypassEnabled && headerValid) {
+    console.log('[reCAPTCHA] Diagnostics bypass active - allowing test request');
+    return {
+      success: true,
+      score: 1.0,
+      isHuman: true,
+      action: expectedAction,
+    };
+  }
+  
   // If no secret key configured, skip verification (development mode)
   if (!RECAPTCHA_SECRET_KEY) {
     console.log('[reCAPTCHA] No secret key configured - allowing request');

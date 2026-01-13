@@ -44,7 +44,8 @@ router.post("/api/auth/register", async (req, res) => {
     const data = registerSchema.parse(req.body);
 
     // Verify reCAPTCHA (only blocks obvious bots, gracefully degrades if not configured)
-    const recaptchaResult = await verifyRecaptcha(data.recaptchaToken, 'register');
+    const diagnosticsHeader = req.get('X-Diagnostics-Runner') as string | undefined;
+    const recaptchaResult = await verifyRecaptcha(data.recaptchaToken, 'register', diagnosticsHeader);
     if (!recaptchaResult.isHuman) {
       console.warn(`[Registration] Bot detected - Score: ${recaptchaResult.score}, Email: ${data.email}`);
       return res.status(429).json({ message: "Suspicious activity detected. Please try again later." });
@@ -209,7 +210,8 @@ router.post("/api/auth/login", async (req, res) => {
     const rememberMe = data.rememberMe === true;
 
     // Verify reCAPTCHA (only blocks obvious bots, gracefully degrades if not configured)
-    const recaptchaResult = await verifyRecaptcha(data.recaptchaToken, 'login');
+    const diagnosticsHeader = req.get('X-Diagnostics-Runner') as string | undefined;
+    const recaptchaResult = await verifyRecaptcha(data.recaptchaToken, 'login', diagnosticsHeader);
     if (!recaptchaResult.isHuman) {
       console.warn(`[Login] Bot detected - Score: ${recaptchaResult.score}, Email: ${data.email}`);
       return res.status(429).json({ message: "Suspicious activity detected. Please try again later." });

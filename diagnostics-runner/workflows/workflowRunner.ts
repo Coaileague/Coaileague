@@ -56,7 +56,7 @@ export class WorkflowRunner {
     
     if (config.diagBypassCaptcha) {
       contextOptions.extraHTTPHeaders = {
-        'X-Diagnostics-Runner': 'true'
+        'X-Diagnostics-Runner': 'trinity-diagnostics-agent'
       };
     }
     
