@@ -221,3 +221,14 @@ export interface TriadEvent {
   data: any;
   timestamp: string;
 }
+
+export interface AIIssueAnalysis {
+  rootCause: string;
+  fixRecommendation: string;
+  codeSnippet?: string;
+  affectedComponents: string[];
+  estimatedEffort: 'trivial' | 'easy' | 'medium' | 'hard' | 'complex';
+  priority: number;
+  confidence: number;
+  relatedIssues?: string[];
+}
