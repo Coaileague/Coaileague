@@ -24,7 +24,7 @@ export interface DiagnosticsConfig {
 
 export function loadConfig(): DiagnosticsConfig {
   return {
-    baseUrl: process.env.DIAG_BASE_URL || process.env.BASE_URL || 'https://coaileague.replit.app',
+    baseUrl: process.env.DIAG_BASE_URL || process.env.BASE_URL || 'https://coaileague.com',
     maxPages: parseInt(process.env.MAX_PAGES || '300', 10),
     pageTimeout: parseInt(process.env.PAGE_TIMEOUT || '30000', 10),
     workflowTimeout: parseInt(process.env.WORKFLOW_TIMEOUT || '60000', 10),

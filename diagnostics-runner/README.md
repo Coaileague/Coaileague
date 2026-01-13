@@ -34,6 +34,9 @@ npx tsx diagnostics-runner/index.ts crawl
 # Run workflow tests only
 npx tsx diagnostics-runner/index.ts workflows
 
+# Run CORE features mode (payroll, scheduling, invoicing, time tracking)
+npx tsx diagnostics-runner/index.ts core
+
 # Nightly run with extended settings
 MAX_PAGES=300 ENABLE_TRACE=true npx tsx diagnostics-runner/index.ts full
 ```
@@ -53,7 +56,7 @@ Set these in Replit Secrets:
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `DIAG_BASE_URL` | URL to test | `https://coaileague.replit.app` |
+| `DIAG_BASE_URL` | URL to test | `https://coaileague.com` |
 | `TEST_USERNAME` | Login email for workflow tests | - |
 | `TEST_PASSWORD` | Login password for workflow tests | - |
 | `MAX_PAGES` | Max pages to crawl | `300` |
@@ -61,16 +64,31 @@ Set these in Replit Secrets:
 | `ENABLE_TRACE` | Save Playwright traces | `false` |
 | `ENABLE_SCREENSHOTS` | Capture screenshots | `true` |
 | `DIAG_BYPASS_CAPTCHA` | Send bypass header | `false` |
+| `GEMINI_API_KEY` | For Trinity AI-powered analysis | - |
 
-### CAPTCHA Bypass (Optional)
+### CAPTCHA Bypass (Secure)
 
-For testing environments, you can bypass CAPTCHA:
+For authenticated testing, you can bypass CAPTCHA with dual verification:
 
-1. Set `DIAG_BYPASS_CAPTCHA=true` in the runner
-2. Set `ENABLE_DIAG_BYPASS=true` on the server
-3. Server checks for `X-Diagnostics-Runner: true` header
+1. Set `DIAG_BYPASS_CAPTCHA=true` in the runner environment
+2. Set `DIAG_BYPASS_CAPTCHA=true` on the server (Replit Secrets)
+3. Server validates both the env var AND the `X-Diagnostics-Runner: trinity-diagnostics-agent` header
 
-**Never enable bypass in production!**
+This is secure because both conditions must be true for bypass to work.
+
+### Trinity AI Analysis
+
+When `GEMINI_API_KEY` is available, the runner provides AI-powered analysis:
+
+- **Root cause identification** for each issue
+- **Fix recommendations** with file paths
+- **Effort estimation** (trivial/easy/medium/complex)  
+- **Platform health score** (0-100%)
+- **Critical path** for fastest resolution
+
+Output files:
+- `trinity_analysis.json` - Prioritized fixes with AI recommendations
+- `trinity_thoughts.json` - Trinity's metacognition pipeline log
 
 ## Output Structure
 
