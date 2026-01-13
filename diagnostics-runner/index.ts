@@ -19,6 +19,8 @@ import {
 import { PageCrawler } from './crawlers/pageCrawler';
 import { WorkflowRunner } from './workflows/workflowRunner';
 import { HtmlReporter } from './reporters/htmlReporter';
+import { getCoreFeatureWorkflows } from './workflows/coreFeatureWorkflows';
+import { trinityDiagnosticsAgent } from './ai/trinityDiagnosticsAgent';
 import { 
   generateRunId, 
   ensureDir, 
@@ -29,9 +31,14 @@ import {
 import * as fs from 'fs';
 import * as path from 'path';
 
-type RunMode = 'crawl' | 'workflows' | 'full';
+type RunMode = 'crawl' | 'workflows' | 'full' | 'core';
 
-async function loadWorkflows(): Promise<any[]> {
+async function loadWorkflows(useCoreFeatures: boolean = false): Promise<any[]> {
+  if (useCoreFeatures) {
+    console.log('[Orchestrator] Loading core feature workflows (payroll, scheduling, invoicing)...');
+    return getCoreFeatureWorkflows();
+  }
+  
   const workflowsPath = path.join(process.cwd(), 'diagnostics-runner', 'workflows.json');
   
   if (!fs.existsSync(workflowsPath)) {
@@ -272,7 +279,17 @@ async function run(mode: RunMode = 'full'): Promise<void> {
   
   if (mode === 'workflows' || mode === 'full') {
     console.log('\n[Orchestrator] === WORKFLOW MODE ===');
-    const workflows = await loadWorkflows();
+    const workflows = await loadWorkflows(false);
+    const runner = new WorkflowRunner(runId);
+    await runner.initialize();
+    workflowResults = await runner.runAll(workflows);
+    await runner.close();
+  }
+  
+  if (mode === 'core') {
+    console.log('\n[Orchestrator] === CORE FEATURES MODE ===');
+    console.log('[Orchestrator] Testing: Payroll, Scheduling, Invoicing, Time Tracking');
+    const workflows = await loadWorkflows(true);
     const runner = new WorkflowRunner(runId);
     await runner.initialize();
     workflowResults = await runner.runAll(workflows);
@@ -347,6 +364,26 @@ async function run(mode: RunMode = 'full'): Promise<void> {
   }
   fs.symlinkSync(runId, latestPath);
   console.log(`[Orchestrator] Latest symlink updated`);
+  
+  if (allIssues.length > 0 && process.env.GEMINI_API_KEY) {
+    console.log('\n[Orchestrator] === TRINITY AI ANALYSIS ===');
+    try {
+      const aiAnalysis = await trinityDiagnosticsAgent.analyzeSummary(summary);
+      
+      const aiAnalysisPath = path.join(outputDir, 'trinity_analysis.json');
+      fs.writeFileSync(aiAnalysisPath, JSON.stringify(aiAnalysis, null, 2));
+      console.log(`[Orchestrator] AI analysis saved to: ${aiAnalysisPath}`);
+      
+      const thoughtsPath = path.join(outputDir, 'trinity_thoughts.json');
+      fs.writeFileSync(thoughtsPath, trinityDiagnosticsAgent.exportThoughtsToJson());
+      console.log(`[Orchestrator] Trinity thoughts saved to: ${thoughtsPath}`);
+      
+      console.log(`[Orchestrator] Platform Health Score: ${(aiAnalysis.overallHealth * 100).toFixed(1)}%`);
+      console.log(`[Orchestrator] Estimated Fix Effort: ${aiAnalysis.estimatedTotalEffort}`);
+    } catch (error) {
+      console.error('[Orchestrator] AI analysis failed:', error);
+    }
+  }
   
   console.log('\n╔════════════════════════════════════════════════╗');
   console.log('║     DIAGNOSTICS COMPLETE                       ║');
