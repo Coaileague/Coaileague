@@ -9,7 +9,8 @@ import { useEffect, useRef } from 'react';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, Loader2, X, Circle, Brain } from 'lucide-react';
+import { Check, Loader2, X, Circle } from 'lucide-react';
+import { TrinityMascotAnimated, TrinityMascotIcon } from '@/components/ui/trinity-mascot';
 import type { ThinkingStep } from '@/hooks/use-trinity-state';
 
 interface ThinkingStepsStreamProps {
@@ -67,7 +68,9 @@ export function ThinkingStepsStream({
     return (
       <Card className="bg-muted/30" data-testid="panel-thinking-empty">
         <CardContent className="py-8 text-center">
-          <Brain className="h-8 w-8 mx-auto text-muted-foreground/50 mb-2" />
+          <div className="mx-auto w-12 h-12 mb-2">
+            <TrinityMascotAnimated size="lg" state="idle" showSparkles={false} />
+          </div>
           <p className="text-sm text-muted-foreground">
             Waiting for Trinity to start thinking...
           </p>

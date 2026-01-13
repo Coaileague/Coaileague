@@ -23,7 +23,6 @@ import {
   X,
   Minimize2,
   Maximize2,
-  Brain,
   Sparkles,
   Loader2,
   ChevronDown,
@@ -39,6 +38,7 @@ import {
   Terminal,
   ListChecks,
 } from 'lucide-react';
+import { TrinityMascotAnimated, TrinityMascotIcon } from '@/components/ui/trinity-mascot';
 
 interface Message {
   id: string;
@@ -261,9 +261,9 @@ export function TrinityDialogue({
         data-testid="button-trinity-dialogue-open"
         onClick={() => setIsOpen(true)}
         size="icon"
-        className={`fixed bottom-20 ${positionClasses} z-50 h-14 w-14 rounded-full shadow-lg bg-primary hover-elevate`}
+        className={`fixed bottom-20 ${positionClasses} z-50 h-14 w-14 rounded-full shadow-lg bg-primary/90 hover-elevate`}
       >
-        <Brain className="h-6 w-6" />
+        <TrinityMascotIcon size="md" />
         <span className="sr-only">Open Trinity Chat</span>
         <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-green-500 animate-pulse" />
       </Button>
@@ -279,7 +279,7 @@ export function TrinityDialogue({
       >
         <CardHeader className="p-3 flex flex-row items-center justify-between gap-2">
           <div className="flex items-center gap-2">
-            <Brain className="h-4 w-4 text-primary" />
+            <TrinityMascotIcon size="xs" />
             <span className="font-medium text-sm">Trinity AI</span>
           </div>
           <div className="flex items-center gap-1">
@@ -312,7 +312,7 @@ export function TrinityDialogue({
       <CardHeader className="p-3 border-b flex flex-row items-center justify-between gap-2 shrink-0">
         <div className="flex items-center gap-2">
           <div className="relative">
-            <Brain className="h-5 w-5 text-primary" />
+            <TrinityMascotIcon size="sm" />
             <Sparkles className="h-3 w-3 text-yellow-500 absolute -top-1 -right-1" />
           </div>
           <div>
@@ -455,18 +455,12 @@ export function TrinityDialogue({
               </div>
             ))}
             {isTyping && (
-              <div className="flex gap-2 justify-start">
-                <Avatar className="h-7 w-7 shrink-0">
-                  <AvatarFallback className="bg-primary/10 text-primary">
-                    <Bot className="h-4 w-4" />
-                  </AvatarFallback>
-                </Avatar>
+              <div className="flex gap-2 justify-start items-center">
+                <div className="h-8 w-8 shrink-0">
+                  <TrinityMascotAnimated size="sm" state="thinking" showSparkles />
+                </div>
                 <div className="bg-muted rounded-lg px-3 py-2">
-                  <div className="flex gap-1">
-                    <span className="h-2 w-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="h-2 w-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="h-2 w-2 bg-muted-foreground/50 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                  </div>
+                  <p className="text-xs text-muted-foreground">Trinity is thinking...</p>
                 </div>
               </div>
             )}

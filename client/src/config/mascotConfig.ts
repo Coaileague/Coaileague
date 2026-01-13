@@ -1586,7 +1586,7 @@ export const MASCOT_CONFIG: MascotConfig = {
   },
   
   roaming: {
-    enabled: true,
+    enabled: false, // DISABLED - Trinity no longer flies around pages autonomously
     interval: { min: 15000, max: 28000 }, // 15-28 seconds between moves - much calmer
     moveDuration: 2800, // 2.8 seconds - slower, smoother movement
     pauseDuration: { min: 8000, max: 18000 }, // Longer pauses between roams
@@ -1594,7 +1594,7 @@ export const MASCOT_CONFIG: MascotConfig = {
     avoidEdges: true,
     preferCorners: false,
     transportEffects: {
-      enabled: true,
+      enabled: false, // DISABLED - No transport effects when roaming is off
       randomizeEffect: true,
       effects: [
         { type: 'glide', duration: 2800, trailEnabled: true, sparkleEnabled: true, glowColor: '#38bdf8' },

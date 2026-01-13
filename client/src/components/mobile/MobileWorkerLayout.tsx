@@ -32,7 +32,7 @@ import {
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { performLogout } from "@/lib/logoutHandler";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotIcon, TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
 
 interface NavItemProps {
   icon: LucideIcon;
@@ -118,11 +118,11 @@ function WorkerTrinityMenuItem({ onClose }: { onClose: () => void }) {
     >
       <div className="absolute inset-0 rounded-xl bg-gradient-radial from-cyan-400/10 via-transparent to-transparent pointer-events-none" />
       
-      <ColorfulCelticKnot 
-        size="sm" 
-        animated={isPressed}
-        state={isPressed ? "thinking" : "idle"}
-      />
+      {isPressed ? (
+        <TrinityMascotAnimated size="sm" state="thinking" showSparkles={false} />
+      ) : (
+        <TrinityMascotIcon size="sm" />
+      )}
       <span className="text-sm font-medium bg-gradient-to-r from-purple-300 via-cyan-300 to-amber-300 bg-clip-text text-transparent">
         Ask Trinity AI
       </span>

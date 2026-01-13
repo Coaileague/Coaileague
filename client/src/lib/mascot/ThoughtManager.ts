@@ -161,6 +161,15 @@ export interface ThoughtManagerState {
 
 type ThoughtListener = (thought: Thought | null) => void;
 
+// Notification routing callback type - for routing proactive thoughts to notification system
+export type TrinityNotificationCallback = (notification: {
+  title: string;
+  message: string;
+  priority: 'low' | 'normal' | 'high' | 'critical';
+  source: 'trinity_ai' | 'trinity_insight' | 'trinity_task';
+  metadata?: Record<string, any>;
+}) => void;
+
 // Calculate reading time based on text length (average reading speed: ~60 words/min for SLOW comfortable reading)
 // User feedback: thoughts rotate too fast - increased minimum significantly for leisurely reading
 // Minimum 30 seconds, maximum 90 seconds for long AI thoughts
@@ -198,6 +207,10 @@ class ThoughtManager {
   private warmupPollingActive: boolean = false; // Idempotent guard for polling loop
   private static readonly MIN_WARMUP_DELAY_MS = 2000; // Wait 2s after initialization before first bubble
   
+  // Notification routing - routes proactive thoughts to notification bell instead of bubbles
+  private notificationCallback: TrinityNotificationCallback | null = null;
+  private routeToNotifications: boolean = true; // Default: route AI insights to notifications
+  
   constructor() {
     const holiday = getCurrentHoliday();
     const currentPath = typeof window !== 'undefined' ? window.location.pathname : '/';
@@ -233,6 +246,54 @@ class ThoughtManager {
   
   private notify(): void {
     this.listeners.forEach(listener => listener(this.state.currentThought));
+  }
+  
+  /**
+   * Register a callback for routing proactive Trinity insights to the notification system
+   * This routes AI insights and task suggestions to the notification bell instead of bubbles
+   */
+  setNotificationCallback(callback: TrinityNotificationCallback | null): void {
+    this.notificationCallback = callback;
+  }
+  
+  /**
+   * Enable or disable routing proactive thoughts to notifications
+   */
+  setRouteToNotifications(enabled: boolean): void {
+    this.routeToNotifications = enabled;
+  }
+  
+  /**
+   * Route a thought to the notification system if callback is registered
+   * Returns true if routed to notifications, false if should show as bubble
+   */
+  private routeToNotificationSystem(
+    text: string, 
+    priority: 'low' | 'normal' | 'high' | 'critical',
+    source: 'trinity_ai' | 'trinity_insight' | 'trinity_task'
+  ): boolean {
+    if (!this.routeToNotifications || !this.notificationCallback) {
+      return false;
+    }
+    
+    // Extract title from text (first sentence or first 50 chars)
+    const firstSentence = text.split(/[.!?]/)[0]?.trim() || text;
+    const title = firstSentence.length > 50 
+      ? firstSentence.substring(0, 47) + '...'
+      : firstSentence;
+    
+    this.notificationCallback({
+      title: `Trinity: ${title}`,
+      message: text,
+      priority,
+      source,
+      metadata: {
+        timestamp: Date.now(),
+        trinityMode: this.state.trinityContext?.trinityMode || 'demo',
+      },
+    });
+    
+    return true;
   }
   
   /**
@@ -570,6 +631,12 @@ class ThoughtManager {
   }
   
   triggerAIInsight(text: string, priority: Thought['priority'] = 'normal'): void {
+    // Route high-priority AI insights to notification system
+    const notificationPriority = priority === 'urgent' ? 'critical' : priority;
+    if (this.routeToNotificationSystem(text, notificationPriority, 'trinity_insight')) {
+      return; // Routed to notifications, don't show bubble
+    }
+    
     const thought = this.createThought(text, 'ADVISING', 'ai', priority);
     this.queueThought(thought);
   }
@@ -582,12 +649,14 @@ class ThoughtManager {
   }
   
   triggerTaskSuggestion(taskTitle: string): void {
-    const thought = this.createThought(
-      `New task idea: ${taskTitle}`,
-      'ADVISING',
-      'task',
-      'normal'
-    );
+    const text = `New task idea: ${taskTitle}`;
+    
+    // Route task suggestions to notification system
+    if (this.routeToNotificationSystem(text, 'normal', 'trinity_task')) {
+      return; // Routed to notifications, don't show bubble
+    }
+    
+    const thought = this.createThought(text, 'ADVISING', 'task', 'normal');
     this.queueThought(thought);
   }
   

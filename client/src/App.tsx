@@ -249,6 +249,7 @@ import MASCOT_CONFIG, {
 } from "@/config/mascotConfig";
 import { thoughtManager, type Thought } from "@/lib/mascot/ThoughtManager";
 import { useMascotAIIntegration } from "@/hooks/use-mascot-ai";
+import { useTrinityNotificationRouting } from "@/hooks/use-trinity-notification-routing";
 import { useMascotObserver } from "@/hooks/use-mascot-observer";
 import { useMascotEmotes, setGlobalEmoteTrigger } from "@/hooks/use-mascot-emotes";
 import { useMascotShowcase } from "@/hooks/use-mascot-showcase";
@@ -901,6 +902,13 @@ function AppContent() {
   const [location, setLocation] = useLocation();
   const [showOnboarding, setShowOnboarding] = useState(false);
   const isMobile = useIsMobile();
+  
+  // Route Trinity proactive insights to notification system instead of floating bubbles
+  useTrinityNotificationRouting({
+    enabled: !!user,
+    userId: user?.id,
+    workspaceId: (user as any)?.workspaceId,
+  });
 
   // Query onboarding status for authenticated users
   const { data: onboardingStatus } = useQuery({

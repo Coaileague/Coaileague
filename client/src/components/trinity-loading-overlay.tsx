@@ -39,17 +39,16 @@ const LOADING_MESSAGES = [
  * Distinctly Trinity branding - NOT similar to Claude's starburst
  */
 /**
- * AnimatedTrinityLogo - Centralized import of the colorful Celtic knot
- * Uses the unified ColorfulCelticKnot component with slower animations
+ * AnimatedTrinityLogo - Uses the Trinity Mascot with spectacular effects
  */
-import { ColorfulCelticKnot } from '@/components/ui/colorful-celtic-knot';
+import { TrinityMascotAnimated } from '@/components/ui/trinity-mascot';
 
 function AnimatedTrinityLogo({ size = 80, isAnimating = true }: { size?: number; isAnimating?: boolean }) {
   return (
-    <ColorfulCelticKnot 
+    <TrinityMascotAnimated 
       size={size} 
-      animated={isAnimating} 
       state={isAnimating ? "loading" : "idle"}
+      showSparkles={isAnimating}
     />
   );
 }

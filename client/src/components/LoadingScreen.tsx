@@ -1,20 +1,19 @@
 /**
  * Trinity Loading Screen - Universal branded loading experience
- * Uses the Trinity Celtic knot as the ONLY loading animation
+ * Uses the Trinity Mascot with spectacular sparkle effects
  */
 
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
 
 export function LoadingScreen() {
   return (
     <div className="fixed inset-0 bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col items-center justify-center z-50">
-      {/* Trinity Celtic Knot - The ONLY loading animation */}
+      {/* Trinity Mascot - Animated with sparkles */}
       <div className="relative mb-8">
-        <ColorfulCelticKnot 
+        <TrinityMascotAnimated 
           size="2xl" 
           state="thinking" 
-          animated={true}
-          animationSpeed="normal"
+          showSparkles={true}
         />
       </div>
 

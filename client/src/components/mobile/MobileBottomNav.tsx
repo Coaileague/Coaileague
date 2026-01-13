@@ -18,7 +18,7 @@ import { useState, useEffect } from "react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
 import { performLogout, setLogoutAnimationContext } from "@/lib/logoutHandler";
 import { useUniversalAnimation } from "@/contexts/universal-animation-context";
-import { ColorfulCelticKnot } from "@/components/ui/colorful-celtic-knot";
+import { TrinityMascotIcon, TrinityMascotAnimated } from "@/components/ui/trinity-mascot";
 
 interface NavItemProps {
   icon: LucideIcon;
@@ -116,11 +116,11 @@ function TrinityMenuItem({ onClose }: { onClose: () => void }) {
       <div className="absolute inset-0 rounded-xl bg-gradient-radial from-cyan-400/10 via-transparent to-transparent pointer-events-none" />
       
       <div className="relative mb-1">
-        <ColorfulCelticKnot 
-          size="sm" 
-          animated={isPressed}
-          state={isPressed ? "thinking" : "idle"}
-        />
+        {isPressed ? (
+          <TrinityMascotAnimated size="sm" state="thinking" showSparkles={false} />
+        ) : (
+          <TrinityMascotIcon size="sm" />
+        )}
       </div>
       <span className="text-xs font-medium bg-gradient-to-r from-purple-300 via-cyan-300 to-amber-300 bg-clip-text text-transparent">
         Ask Trinity
