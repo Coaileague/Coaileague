@@ -10,7 +10,7 @@
  * - Grid-based More menu for extra items
  */
 
-import { Calendar, Clock, MessageSquare, Menu, LogOut, Settings, User, HelpCircle, Mail, Home, type LucideIcon } from "lucide-react";
+import { Calendar, Clock, MessageSquare, Menu, LogOut, Settings, User, HelpCircle, Mail, Home, Bell, type LucideIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -126,8 +126,9 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
   }
   
   // Primary nav: 4 essential items only (fits 320px screens)
+  // Notifications/Dashboard is the home hub on mobile (GetSling-style unified dashboard)
   const navItems = [
-    { icon: Home, label: "Home", href: "/dashboard" },
+    { icon: Bell, label: "Dashboard", href: "/mobile-hub" },
     { icon: Clock, label: "Clock", href: "/time-tracking" },
     { icon: Calendar, label: "Schedule", href: "/schedule" },
     { icon: MessageSquare, label: "Rooms", href: "/chatrooms" },
@@ -142,8 +143,8 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
   ];
   
   const isActive = (href: string) => {
-    if (href === '/dashboard') {
-      return location === '/' || location === '/dashboard';
+    if (href === '/mobile-hub') {
+      return location === '/' || location === '/mobile-hub' || location === '/dashboard';
     }
     return location.startsWith(href);
   };
