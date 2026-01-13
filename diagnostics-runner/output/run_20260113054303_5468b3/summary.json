@@ -1,0 +1,102 @@
+{
+  "runId": "run_20260113054303_5468b3",
+  "startedAt": "2026-01-13T05:43:03.305Z",
+  "completedAt": "2026-01-13T05:43:08.022Z",
+  "duration": 4717,
+  "mode": "crawl",
+  "baseUrl": "https://coaileague.replit.app",
+  "totals": {
+    "pagesVisited": 1,
+    "workflowsRun": 0,
+    "issuesFound": 3,
+    "captchaBlockers": 0
+  },
+  "severityCounts": {
+    "critical": 0,
+    "high": 1,
+    "medium": 1,
+    "low": 1,
+    "info": 0
+  },
+  "categoryCounts": {
+    "captcha_blocker": 0,
+    "console_error": 1,
+    "page_error": 0,
+    "network_failure": 1,
+    "broken_image": 0,
+    "broken_link": 0,
+    "workflow_failure": 0,
+    "timeout": 0,
+    "ui_error": 1
+  },
+  "issues": [
+    {
+      "id": "89a6ecc6758fb7a8",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.replit.app",
+      "message": "Failed to load resource: the server responded with a status of 404 ()",
+      "timestamp": "2026-01-13T05:43:07.687Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "38efb3f6273c12dc",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.replit.app",
+      "message": "GET https://coaileague.replit.app/ returned 404",
+      "requestUrl": "https://coaileague.replit.app/",
+      "statusCode": 404,
+      "timestamp": "2026-01-13T05:43:07.687Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "f824fc4a13fad85a",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.replit.app",
+      "message": "Found \"not found\": ...Not Found...",
+      "timestamp": "2026-01-13T05:43:07.687Z",
+      "recommendedFix": "Review UI for error messages and fix underlying issue"
+    }
+  ],
+  "pageResults": [
+    {
+      "url": "https://coaileague.replit.app",
+      "statusCode": 404,
+      "loadTime": 3007,
+      "screenshotPath": "diagnostics-runner/output/run_20260113054303_5468b3/screenshots/page_aaf9e41febddf9b9.png",
+      "consoleErrors": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 404 ()",
+          "location": "https://coaileague.replit.app/"
+        }
+      ],
+      "networkFailures": [
+        {
+          "url": "https://coaileague.replit.app/",
+          "method": "GET",
+          "statusCode": 404,
+          "statusText": "",
+          "resourceType": "document"
+        }
+      ],
+      "brokenImages": [],
+      "brokenLinks": [],
+      "uiErrors": [
+        "Found \"not found\": ...Not Found..."
+      ],
+      "captchaDetected": false,
+      "timestamp": "2026-01-13T05:43:07.687Z"
+    }
+  ],
+  "workflowResults": [],
+  "blockers": [],
+  "nextSteps": [
+    "Fix 1 API endpoint failures (check server logs)",
+    "Resolve 1 JavaScript console errors"
+  ],
+  "reportPath": "diagnostics-runner/output/run_20260113054303_5468b3/report.html",
+  "artifactsPath": "diagnostics-runner/output/run_20260113054303_5468b3"
+}

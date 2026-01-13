@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Diagnostics Report - run_20260113054303_5468b3</title>
+  <style>
+    :root {
+      --bg: #1a1a2e;
+      --card-bg: #16213e;
+      --text: #eee;
+      --text-muted: #888;
+      --critical: #ff4757;
+      --high: #ff7f50;
+      --medium: #ffa502;
+      --low: #2ed573;
+      --info: #5352ed;
+      --border: #333;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      padding: 20px;
+    }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header {
+      background: var(--card-bg);
+      padding: 30px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+    h1 { font-size: 2rem; margin-bottom: 10px; }
+    .meta { color: var(--text-muted); font-size: 0.9rem; }
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin: 30px 0;
+    }
+    .stat-card {
+      background: var(--card-bg);
+      padding: 20px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin-bottom: 5px;
+    }
+    .stat-label { color: var(--text-muted); }
+    .severity-critical { color: var(--critical); }
+    .severity-high { color: var(--high); }
+    .severity-medium { color: var(--medium); }
+    .severity-low { color: var(--low); }
+    .severity-info { color: var(--info); }
+    .section {
+      background: var(--card-bg);
+      padding: 25px;
+      border-radius: 12px;
+      margin-bottom: 20px;
+    }
+    .section h2 {
+      font-size: 1.3rem;
+      margin-bottom: 15px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border);
+    }
+    .issue {
+      background: rgba(0,0,0,0.2);
+      padding: 15px;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      border-left: 4px solid var(--border);
+    }
+    .issue.critical { border-left-color: var(--critical); }
+    .issue.high { border-left-color: var(--high); }
+    .issue.medium { border-left-color: var(--medium); }
+    .issue.low { border-left-color: var(--low); }
+    .issue-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    .issue-title { font-weight: 600; }
+    .issue-badge {
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 0.75rem;
+      font-weight: bold;
+      text-transform: uppercase;
+    }
+    .badge-critical { background: var(--critical); color: white; }
+    .badge-high { background: var(--high); color: white; }
+    .badge-medium { background: var(--medium); color: black; }
+    .badge-low { background: var(--low); color: black; }
+    .issue-url {
+      color: var(--info);
+      font-size: 0.85rem;
+      word-break: break-all;
+    }
+    .issue-message {
+      color: var(--text-muted);
+      font-size: 0.9rem;
+      margin-top: 8px;
+    }
+    .issue-fix {
+      margin-top: 10px;
+      padding: 10px;
+      background: rgba(46, 213, 115, 0.1);
+      border-radius: 4px;
+      font-size: 0.85rem;
+    }
+    .issue-fix strong { color: var(--low); }
+    .screenshot-link {
+      display: inline-block;
+      margin-top: 10px;
+      color: var(--info);
+      text-decoration: none;
+    }
+    .screenshot-link:hover { text-decoration: underline; }
+    .next-steps {
+      background: rgba(83, 82, 237, 0.1);
+      padding: 20px;
+      border-radius: 8px;
+      margin-top: 15px;
+    }
+    .next-steps h3 { margin-bottom: 10px; color: var(--info); }
+    .next-steps ul { padding-left: 20px; }
+    .next-steps li { margin-bottom: 5px; }
+    .empty-state {
+      text-align: center;
+      padding: 40px;
+      color: var(--text-muted);
+    }
+    footer {
+      text-align: center;
+      padding: 20px;
+      color: var(--text-muted);
+      font-size: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Diagnostics Report</h1>
+      <div class="meta">
+        <p><strong>Run ID:</strong> run_20260113054303_5468b3</p>
+        <p><strong>Base URL:</strong> https://coaileague.replit.app</p>
+        <p><strong>Started:</strong> 1/13/2026, 5:43:03 AM</p>
+        <p><strong>Duration:</strong> 4s</p>
+        <p><strong>Mode:</strong> crawl</p>
+      </div>
+    </header>
+    
+    <div class="summary-grid">
+      <div class="stat-card">
+        <div class="stat-value">1</div>
+        <div class="stat-label">Pages Visited</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">0</div>
+        <div class="stat-label">Workflows Run</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value severity-critical">3</div>
+        <div class="stat-label">Issues Found</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value severity-high">0</div>
+        <div class="stat-label">CAPTCHA Blockers</div>
+      </div>
+    </div>
+    
+    <div class="summary-grid">
+      <div class="stat-card">
+        <div class="stat-value severity-critical">0</div>
+        <div class="stat-label">Critical</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value severity-high">1</div>
+        <div class="stat-label">High</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value severity-medium">1</div>
+        <div class="stat-label">Medium</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value severity-low">1</div>
+        <div class="stat-label">Low</div>
+      </div>
+    </div>
+    
+    
+    
+    <div class="section">
+      <h2>Network Failures (4xx/5xx) (1)</h2>
+      
+    <div class="issue high">
+      <div class="issue-header">
+        <span class="issue-title">GET https://coaileague.replit.app/ returned 404</span>
+        <span class="issue-badge badge-high">high</span>
+      </div>
+      <div class="issue-url">https://coaileague.replit.app</div>
+      
+      <div class="issue-message"><strong>Request:</strong> https://coaileague.replit.app/ (404)</div>
+      
+      <div class="issue-fix">
+        <strong>Recommended Fix:</strong> Fix API endpoint returning error status. Check server logs for details.
+      </div>
+      
+      
+    </div>
+    
+    </div>
+    
+    
+    <div class="section">
+      <h2>Console Errors (1)</h2>
+      
+    <div class="issue medium">
+      <div class="issue-header">
+        <span class="issue-title">Failed to load resource: the server responded with a status of 404 ()</span>
+        <span class="issue-badge badge-medium">medium</span>
+      </div>
+      <div class="issue-url">https://coaileague.replit.app</div>
+      
+      
+      
+      <div class="issue-fix">
+        <strong>Recommended Fix:</strong> Check browser console for JavaScript errors and fix the source
+      </div>
+      
+      
+    </div>
+    
+    </div>
+    
+    
+    
+    
+    
+    
+    <div class="section">
+      <h2>UI Errors (1)</h2>
+      
+    <div class="issue low">
+      <div class="issue-header">
+        <span class="issue-title">Found "not found": ...Not Found...</span>
+        <span class="issue-badge badge-low">low</span>
+      </div>
+      <div class="issue-url">https://coaileague.replit.app</div>
+      
+      
+      
+      <div class="issue-fix">
+        <strong>Recommended Fix:</strong> Review UI for error messages and fix underlying issue
+      </div>
+      
+      
+    </div>
+    
+    </div>
+    
+    
+    
+    
+    <div class="section">
+      <h2>Recommended Next Steps</h2>
+      <div class="next-steps">
+        <ul>
+          <li>Fix 1 API endpoint failures (check server logs)</li><li>Resolve 1 JavaScript console errors</li>
+        </ul>
+      </div>
+    </div>
+    
+    
+    <footer>
+      <p>Generated by CoAIleague Diagnostics Runner</p>
+      <p>Report path: diagnostics-runner/output/run_20260113054303_5468b3/report.html</p>
+    </footer>
+  </div>
+</body>
+</html>

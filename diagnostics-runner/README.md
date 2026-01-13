@@ -40,6 +40,15 @@ MAX_PAGES=300 ENABLE_TRACE=true npx tsx diagnostics-runner/index.ts full
 
 ## Environment Variables
 
+**Required for running on Replit:**
+```bash
+# Set before running (required in Replit environment)
+export PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers
+
+# One-time setup: Install Playwright browsers
+PLAYWRIGHT_BROWSERS_PATH=/tmp/pw-browsers npx playwright install chromium
+```
+
 Set these in Replit Secrets:
 
 | Variable | Description | Default |
