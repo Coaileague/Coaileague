@@ -23024,3 +23024,100 @@ export const insertEmailDraftSchema = createInsertSchema(emailDrafts).omit({
 
 export type InsertEmailDraft = z.infer<typeof insertEmailDraftSchema>;
 export type EmailDraft = typeof emailDrafts.$inferSelect;
+
+// ============================================================================
+// TRINITY RUNTIME FLAGS SYSTEM
+// ============================================================================
+
+/**
+ * Trinity Runtime Flags - Live configuration for Trinity autonomous control
+ * Separate from workspace featureFlags (subscription tiers) - this controls
+ * runtime behavior that Trinity can toggle without code deployment
+ */
+export const trinityRuntimeFlags = pgTable("trinity_runtime_flags", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  
+  // Flag identification
+  key: varchar("key", { length: 100 }).notNull().unique(),
+  label: varchar("label", { length: 200 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 50 }).default("general"), // 'ui', 'performance', 'security', 'integration', 'ai', 'general'
+  
+  // Flag type and value
+  flagType: varchar("flag_type", { length: 30 }).default("toggle").notNull(), // 'toggle', 'threshold', 'config', 'percentage'
+  valueType: varchar("value_type", { length: 20 }).default("boolean").notNull(), // 'boolean', 'string', 'number', 'json'
+  currentValue: text("current_value").notNull(), // JSON-encoded value
+  defaultValue: text("default_value").notNull(), // JSON-encoded default
+  
+  // Governance
+  safetyLevel: varchar("safety_level", { length: 20 }).default("low_risk").notNull(), // 'low_risk', 'medium_risk', 'high_risk'
+  allowedActors: text("allowed_actors").array().default(sql`ARRAY['trinity', 'admin']::text[]`), // Who can modify: 'trinity', 'admin', 'system'
+  requiresApproval: boolean("requires_approval").default(false), // If true, Trinity suggests but human approves
+  
+  // Scope (null = global, otherwise workspace-specific)
+  workspaceId: varchar("workspace_id").references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // State
+  isEnabled: boolean("is_enabled").default(true).notNull(), // Master enable/disable for the flag itself
+  lastModifiedBy: varchar("last_modified_by", { length: 50 }), // 'trinity', 'admin:userId', 'system'
+  lastModifiedReason: text("last_modified_reason"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("trinity_runtime_flags_key_idx").on(table.key),
+  index("trinity_runtime_flags_category_idx").on(table.category),
+  index("trinity_runtime_flags_safety_idx").on(table.safetyLevel),
+  index("trinity_runtime_flags_workspace_idx").on(table.workspaceId),
+]);
+
+export const insertTrinityRuntimeFlagSchema = createInsertSchema(trinityRuntimeFlags).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTrinityRuntimeFlag = z.infer<typeof insertTrinityRuntimeFlagSchema>;
+export type TrinityRuntimeFlag = typeof trinityRuntimeFlags.$inferSelect;
+
+/**
+ * Trinity Runtime Flag Changes - Audit log for all flag modifications
+ */
+export const trinityRuntimeFlagChanges = pgTable("trinity_runtime_flag_changes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  flagId: varchar("flag_id").notNull().references(() => trinityRuntimeFlags.id, { onDelete: 'cascade' }),
+  flagKey: varchar("flag_key", { length: 100 }).notNull(), // Denormalized for easy querying
+  
+  // Change details
+  previousValue: text("previous_value"), // JSON-encoded
+  newValue: text("new_value").notNull(), // JSON-encoded
+  changeReason: text("change_reason"),
+  
+  // Actor info
+  actorType: varchar("actor_type", { length: 20 }).notNull(), // 'trinity', 'admin', 'system', 'diagnostics'
+  actorId: varchar("actor_id"), // userId for admins, null for trinity/system
+  
+  // Source tracking
+  source: varchar("source", { length: 50 }).default("manual"), // 'manual', 'diagnostics', 'automation', 'rollback', 'api'
+  sourceDetails: text("source_details"), // JSON with additional context (e.g., diagnostic issue ID)
+  
+  // Outcome
+  wasSuccessful: boolean("was_successful").default(true),
+  errorMessage: text("error_message"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("trinity_flag_changes_flag_id_idx").on(table.flagId),
+  index("trinity_flag_changes_flag_key_idx").on(table.flagKey),
+  index("trinity_flag_changes_actor_idx").on(table.actorType),
+  index("trinity_flag_changes_source_idx").on(table.source),
+  index("trinity_flag_changes_created_idx").on(table.createdAt),
+]);
+
+export const insertTrinityRuntimeFlagChangeSchema = createInsertSchema(trinityRuntimeFlagChanges).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertTrinityRuntimeFlagChange = z.infer<typeof insertTrinityRuntimeFlagChangeSchema>;
+export type TrinityRuntimeFlagChange = typeof trinityRuntimeFlagChanges.$inferSelect;
