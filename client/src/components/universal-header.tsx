@@ -340,7 +340,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                       <Menu className="h-5 w-5" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-[280px] sm:w-[320px] overflow-y-auto">
+                  <SheetContent side="right" className="w-[300px] sm:w-[360px] overflow-y-auto">
                     <SheetHeader>
                       <SheetTitle>Menu</SheetTitle>
                       <SheetDescription>Navigate the CoAIleague platform</SheetDescription>
@@ -367,28 +367,27 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                         <>
                           <Button
                             variant="ghost"
-                            className="justify-start text-base"
+                            className="justify-start text-sm sm:text-base w-full"
                             onClick={() => {
                               setMobileMenuOpen(false);
                               setLocation("/inbox");
                             }}
                             data-testid="mobile-menu-inbox"
                           >
-                            <Mail className="mr-2 h-4 w-4" />
-                            Messages & Inbox
+                            <Mail className="mr-2 h-4 w-4 shrink-0" />
+                            <span className="truncate">Messages & Inbox</span>
                           </Button>
                           <Button
                             variant="ghost"
-                            className="justify-start text-base"
+                            className="justify-start text-sm sm:text-base w-full"
                             onClick={() => {
                               setMobileMenuOpen(false);
-                              // Trigger search by dispatching event
                               window.dispatchEvent(new CustomEvent('open-ai-search'));
                             }}
                             data-testid="mobile-menu-search"
                           >
-                            <Search className="mr-2 h-4 w-4" />
-                            AI Search
+                            <Search className="mr-2 h-4 w-4 shrink-0" />
+                            <span className="truncate">AI Search</span>
                           </Button>
                         </>
                       )}
@@ -529,7 +528,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                       <Menu className="h-5 w-5" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-[300px] sm:w-[340px] overflow-y-auto">
+                  <SheetContent side="right" className="w-[300px] sm:w-[360px] overflow-y-auto">
                     <SheetHeader>
                       <SheetTitle>Workspace Navigation</SheetTitle>
                       <SheetDescription>Navigate to different areas of your workspace</SheetDescription>
