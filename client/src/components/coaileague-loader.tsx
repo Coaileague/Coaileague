@@ -7,7 +7,7 @@
  */
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useState, useEffect } from "react";
 import { useUniversalLoadingGate } from "@/contexts/universal-loading-gate";
 import { useMinimumLoadingTime, LOADING_DURATIONS } from "@/hooks/useMinimumLoadingTime";
 const TrinityRedesign = lazy(() => import("@/components/trinity-redesign"));
@@ -21,6 +21,57 @@ export type LoadingScenario =
   | "email" 
   | "analytics" 
   | "general";
+
+const PROGRESSIVE_MESSAGES: Record<LoadingScenario, string[]> = {
+  workspace: [
+    "Loading your workspace...",
+    "Gathering your data...",
+    "Setting up your environment...",
+    "Almost ready...",
+  ],
+  onboarding: [
+    "Setting up your workspace...",
+    "Configuring your organization...",
+    "Preparing your dashboard...",
+    "Almost there...",
+  ],
+  schedule: [
+    "Optimizing schedule...",
+    "Analyzing availability...",
+    "Finding best shifts...",
+    "Finalizing schedule...",
+  ],
+  invoice: [
+    "Generating invoices...",
+    "Calculating hours...",
+    "Preparing documents...",
+    "Almost done...",
+  ],
+  payroll: [
+    "Processing payroll...",
+    "Computing wages...",
+    "Calculating deductions...",
+    "Finalizing...",
+  ],
+  email: [
+    "Sending notifications...",
+    "Preparing messages...",
+    "Delivering...",
+    "Almost done...",
+  ],
+  analytics: [
+    "Generating analytics...",
+    "Analyzing trends...",
+    "Computing insights...",
+    "Preparing report...",
+  ],
+  general: [
+    "Loading...",
+    "Processing...",
+    "Preparing...",
+    "Almost ready...",
+  ]
+};
 
 interface CoAIleagueLoaderProps {
   isVisible: boolean;
@@ -80,13 +131,33 @@ export function CoAIleagueLoader({
   // Ensure minimum display time so users can enjoy Trinity animation
   const shouldShow = useMinimumLoadingTime(isVisible, LOADING_DURATIONS.standard);
   
+  // Progressive message cycling for premium loading experience
+  const [messageIndex, setMessageIndex] = useState(0);
+  const progressiveMessages = PROGRESSIVE_MESSAGES[scenario];
+  
+  useEffect(() => {
+    if (!shouldShow) {
+      setMessageIndex(0);
+      return;
+    }
+    
+    // Reset message index when scenario changes
+    setMessageIndex(0);
+    
+    const interval = setInterval(() => {
+      setMessageIndex((prev) => (prev + 1) % progressiveMessages.length);
+    }, 700);
+    
+    return () => clearInterval(interval);
+  }, [shouldShow, scenario, progressiveMessages.length]);
+  
   // If loading is blocked (public route), don't render anything
   if (isLoadingBlocked) {
     return null;
   }
 
   const scenarioDefaults = scenarioMessages[scenario];
-  const displayMessage = message || scenarioDefaults.title;
+  const displayMessage = message || progressiveMessages[messageIndex] || scenarioDefaults.title;
   const displaySubmessage = submessage || scenarioDefaults.description;
 
   return (

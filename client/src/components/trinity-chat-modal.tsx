@@ -59,7 +59,9 @@ import {
   Mic,
   Command,
 } from 'lucide-react';
-import { TrinityMascotIcon, TrinityMascotAnimated } from '@/components/ui/trinity-mascot';
+import { TrinityMascotIcon } from '@/components/ui/trinity-mascot';
+import TrinityRedesign from '@/components/trinity-redesign';
+import { Suspense } from 'react';
 import { TrinityAgentPanel } from '@/components/trinity';
 import { useTrinityState } from '@/hooks/use-trinity-state';
 
@@ -273,10 +275,12 @@ function ThinkingVisualization({ steps, mode }: { steps: ThinkingStep[]; mode: C
       animate={{ opacity: 1, y: 0 }}
       className="flex gap-3"
     >
-      {/* Animated Trinity Avatar - SVG for crisp rendering */}
+      {/* Animated Trinity Avatar - Canvas for crisp rendering */}
       <div className="shrink-0">
         <div className="w-10 h-10 flex items-center justify-center">
-          <TrinityMascotAnimated size="md" state="thinking" showSparkles={true} />
+          <Suspense fallback={<div className="w-10 h-10" />}>
+            <TrinityRedesign size={40} mode="THINKING" />
+          </Suspense>
         </div>
       </div>
       
@@ -782,7 +786,9 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             <div className="flex items-center justify-between px-4 pb-2 shrink-0" style={{ touchAction: 'manipulation' }}>
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 flex items-center justify-center">
-                  <TrinityMascotAnimated size="md" state={chatMutation.isPending ? "thinking" : "idle"} showSparkles={chatMutation.isPending} />
+                  <Suspense fallback={<div className="w-10 h-10" />}>
+                    <TrinityRedesign size={40} mode={chatMutation.isPending ? "THINKING" : "ANALYZING"} />
+                  </Suspense>
                 </div>
                 <div>
                   <h1 className="font-semibold text-sm">{TRINITY_BRANDING.displayName}</h1>
@@ -846,7 +852,9 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                 {messages.length === 0 && !isThinking && (
                   <div className="flex flex-col items-center justify-center h-full text-center py-8">
                     <div className="w-20 h-20 flex items-center justify-center mb-4">
-                      <TrinityMascotAnimated size="xl" state="idle" showSparkles={false} />
+                      <Suspense fallback={<div className="w-20 h-20" />}>
+                        <TrinityRedesign size={80} mode="ANALYZING" />
+                      </Suspense>
                     </div>
                     <h3 className="font-semibold text-lg mb-2">Ask Trinity Anything</h3>
                     <p className="text-sm text-muted-foreground max-w-xs">
@@ -961,7 +969,9 @@ function TrinityModal({ onClose }: TrinityModalProps) {
         data-testid="trinity-modal-minimized"
       >
         <div className="w-14 h-14 flex items-center justify-center">
-          <TrinityMascotAnimated size="xl" state="idle" showSparkles={false} />
+          <Suspense fallback={<div className="w-14 h-14" />}>
+            <TrinityRedesign size={56} mode="ANALYZING" />
+          </Suspense>
           {messages.length > 0 && (
             <div className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground rounded-full text-xs flex items-center justify-center">
               {messages.length}
@@ -989,7 +999,9 @@ function TrinityModal({ onClose }: TrinityModalProps) {
           >
             <GripHorizontal className="h-4 w-4 text-muted-foreground shrink-0" />
             <div className="w-10 h-10 flex items-center justify-center shrink-0">
-              <TrinityMascotAnimated size="md" state={chatMutation.isPending ? "thinking" : "idle"} showSparkles={chatMutation.isPending} />
+              <Suspense fallback={<div className="w-10 h-10" />}>
+                <TrinityRedesign size={40} mode={chatMutation.isPending ? "THINKING" : "ANALYZING"} />
+              </Suspense>
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
@@ -1058,7 +1070,9 @@ function TrinityModal({ onClose }: TrinityModalProps) {
               {messages.length === 0 && !isThinking && (
                 <div className="flex flex-col items-center justify-center h-full text-center">
                   <div className="w-14 h-14 flex items-center justify-center mb-3">
-                    <TrinityMascotAnimated size="xl" state="idle" showSparkles={false} />
+                    <Suspense fallback={<div className="w-14 h-14" />}>
+                      <TrinityRedesign size={56} mode="ANALYZING" />
+                    </Suspense>
                   </div>
                   <h3 className="font-semibold mb-1">Ask Trinity Anything</h3>
                   <p className="text-xs text-muted-foreground">
