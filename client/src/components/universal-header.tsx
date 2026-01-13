@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Menu, LogOut, LayoutDashboard, Mail, Bug, ChevronDown, Settings } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, Mail, Bug, ChevronDown, Settings, Search } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { HeaderLogo } from "@/components/unified-brand-logo";
 import { performLogout } from "@/lib/logoutHandler";
@@ -304,41 +304,31 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                 </div>
               </div>
 
-              {/* Mobile Menu - Compact for small screens */}
-              <div className={`flex md:hidden items-center gap-0.5 sm:gap-1 shrink-0`}>
+              {/* Mobile Menu - Truly responsive with overflow menu */}
+              <div className="flex md:hidden items-center gap-1 shrink-0 min-w-0">
+                {/* Priority 1: Only show Trinity + Notifications on mobile - rest goes to menu */}
                 {showNotificationFeatures && (
-                  <div className="flex items-center gap-0.5 sm:gap-1">
+                  <>
                     <TrinityMiniButton 
                       onClick={() => setLocation("/trinity")} 
                       data-testid="mobile-button-trinity"
                     />
-                    <AISearchTrigger />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setLocation("/inbox")}
-                      data-testid="mobile-button-inbox"
-                      aria-label="Inbox"
-                      title="Inbox"
-                      className="h-9 w-9 sm:h-10 sm:w-10"
-                    >
-                      <Mail className="h-5 w-5 sm:h-6 sm:w-6" />
-                    </Button>
                     <NotificationsPopover />
-                  </div>
+                  </>
                 )}
-                {/* Visible Login button for unauthenticated mobile users */}
+                {/* Priority 2: Show login for guests */}
                 {!user && (
                   <Button
                     variant="default"
                     size="sm"
-                    className="h-8 px-2 sm:px-3 text-xs font-semibold"
+                    className="h-8 px-2 text-xs font-semibold whitespace-nowrap"
                     onClick={() => setLocation("/login")}
                     data-testid="mobile-button-login-visible"
                   >
                     Login
                   </Button>
                 )}
+                {/* Hamburger menu contains all other actions */}
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
                     <Button
@@ -371,6 +361,37 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                         </Button>
                       ))}
                       <div className="border-t my-2" />
+                      
+                      {/* Quick access items that don't fit in header */}
+                      {showNotificationFeatures && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            className="justify-start text-base"
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                              setLocation("/inbox");
+                            }}
+                            data-testid="mobile-menu-inbox"
+                          >
+                            <Mail className="mr-2 h-4 w-4" />
+                            Messages & Inbox
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            className="justify-start text-base"
+                            onClick={() => {
+                              setMobileMenuOpen(false);
+                              // Trigger search by dispatching event
+                              window.dispatchEvent(new CustomEvent('open-ai-search'));
+                            }}
+                            data-testid="mobile-menu-search"
+                          >
+                            <Search className="mr-2 h-4 w-4" />
+                            AI Search
+                          </Button>
+                        </>
+                      )}
                       
                       <Button
                         variant="ghost"
