@@ -46,6 +46,7 @@ export class IntegrationCrawler {
   private websocketConnectionsTested = 0;
   private pipelinesTestedCount = 0;
   private crossSurfaceFlowsTested = 0;
+  private isAuthenticated = false;
   
   constructor(config: IntegrationCrawlerConfig) {
     this.config = config;
@@ -77,11 +78,23 @@ export class IntegrationCrawler {
         ignoreHTTPSErrors: true
       });
       
+      // Attempt login if credentials provided
+      if (this.config.credentials?.username && this.config.credentials?.password) {
+        await this.performLogin();
+      }
+      
       const testCases = this.getTestCases();
       const totalTests = testCases.length;
       let completedTests = 0;
       
       for (const testCase of testCases) {
+        // Skip authenticated tests if not logged in
+        if (testCase.requiresAuth && !this.isAuthenticated) {
+          console.log(`[IntegrationCrawler] Skipping ${testCase.name} - requires auth`);
+          completedTests++;
+          continue;
+        }
+        
         this.emitProgress(`Testing: ${testCase.name}`, (completedTests / totalTests) * 100);
         
         const result = await this.executeTest(testCase);
@@ -97,7 +110,7 @@ export class IntegrationCrawler {
       
       await this.testWebSocketConnections();
       
-      console.log(`[IntegrationCrawler] Completed. Tested ${totalTests} integrations, found ${this.issues.length} issues.`);
+      console.log(`[IntegrationCrawler] Completed. Tested ${totalTests} integrations, found ${this.issues.length} issues. Authenticated: ${this.isAuthenticated}`);
       
       return {
         workflowsTestedCount: this.workflowsTestedCount,
@@ -112,6 +125,45 @@ export class IntegrationCrawler {
       if (this.browser) {
         await this.browser.close();
       }
+    }
+  }
+  
+  private async performLogin(): Promise<void> {
+    console.log('[IntegrationCrawler] Attempting authenticated session...');
+    const page = await this.context!.newPage();
+    
+    try {
+      await page.goto(`${this.config.baseUrl}/login`, { 
+        waitUntil: 'networkidle',
+        timeout: 30000 
+      });
+      
+      await page.waitForSelector('input[name="email"], input[type="email"], [data-testid="input-email"]', { timeout: 10000 });
+      
+      const emailInput = await page.$('input[name="email"], input[type="email"], [data-testid="input-email"]');
+      const passwordInput = await page.$('input[name="password"], input[type="password"], [data-testid="input-password"]');
+      
+      if (emailInput && passwordInput) {
+        await emailInput.fill(this.config.credentials!.username);
+        await passwordInput.fill(this.config.credentials!.password);
+        
+        const loginButton = await page.$('button[type="submit"], [data-testid="button-login"], [data-testid="button-submit"]');
+        if (loginButton) {
+          await loginButton.click();
+          
+          try {
+            await page.waitForURL(url => !url.href.includes('/login'), { timeout: 15000 });
+            this.isAuthenticated = true;
+            console.log('[IntegrationCrawler] Login successful! Authenticated session established.');
+          } catch {
+            console.log('[IntegrationCrawler] Login redirect timeout - may not be authenticated');
+          }
+        }
+      }
+    } catch (error: any) {
+      console.log(`[IntegrationCrawler] Login failed: ${error.message}`);
+    } finally {
+      await page.close();
     }
   }
   
@@ -230,6 +282,100 @@ export class IntegrationCrawler {
           { action: 'ui-action', target: '[data-testid="button-mobile-menu"]', description: 'Click mobile menu' },
           { action: 'wait', timeout: 1000, description: 'Wait for menu animation' },
           { action: 'assert', description: 'Menu should be visible' }
+        ]
+      },
+      // AUTHENTICATED WORKSPACE TESTS
+      {
+        id: 'dashboard-loads',
+        name: 'Dashboard Page Loads',
+        description: 'Authenticated user can access dashboard',
+        type: 'workflow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/dashboard', description: 'Navigate to dashboard' },
+          { action: 'wait', timeout: 3000, description: 'Wait for dashboard load' },
+          { action: 'assert', target: 'dashboard', description: 'Dashboard content should be visible' }
+        ]
+      },
+      {
+        id: 'employees-page-loads',
+        name: 'Employees Page Loads',
+        description: 'Authenticated user can access employees page',
+        type: 'workflow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/employees', description: 'Navigate to employees page' },
+          { action: 'wait', timeout: 3000, description: 'Wait for employees load' },
+          { action: 'assert', target: 'employee', description: 'Employees content should be visible' }
+        ]
+      },
+      {
+        id: 'schedule-page-loads',
+        name: 'Schedule Page Loads',
+        description: 'Authenticated user can access schedule page',
+        type: 'workflow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/schedule', description: 'Navigate to schedule page' },
+          { action: 'wait', timeout: 3000, description: 'Wait for schedule load' },
+          { action: 'assert', target: 'schedule', description: 'Schedule content should be visible' }
+        ]
+      },
+      {
+        id: 'employee-invite-dialog',
+        name: 'Employee Invite Dialog Opens',
+        description: 'Owner can open the employee invite dialog',
+        type: 'workflow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/employees', description: 'Navigate to employees page' },
+          { action: 'wait', timeout: 3000, description: 'Wait for page load' },
+          { action: 'ui-action', target: '[data-testid="button-invite-employee"], [data-testid="button-add-employee"]', description: 'Click invite/add employee button' },
+          { action: 'wait', timeout: 2000, description: 'Wait for dialog' },
+          { action: 'assert', target: 'invite', description: 'Invite dialog should be visible' }
+        ]
+      },
+      {
+        id: 'settings-page-loads',
+        name: 'Settings Page Loads',
+        description: 'Authenticated user can access settings',
+        type: 'workflow',
+        critical: false,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/settings', description: 'Navigate to settings page' },
+          { action: 'wait', timeout: 3000, description: 'Wait for settings load' },
+          { action: 'assert', target: 'settings', description: 'Settings content should be visible' }
+        ]
+      },
+      {
+        id: 'clients-page-loads',
+        name: 'Clients Page Loads',
+        description: 'Authenticated user can access clients page',
+        type: 'workflow',
+        critical: false,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/clients', description: 'Navigate to clients page' },
+          { action: 'wait', timeout: 3000, description: 'Wait for clients load' },
+          { action: 'assert', target: 'client', description: 'Clients content should be visible' }
+        ]
+      },
+      {
+        id: 'time-tracking-loads',
+        name: 'Time Tracking Page Loads',
+        description: 'Authenticated user can access time tracking',
+        type: 'workflow',
+        critical: false,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/time-tracking', description: 'Navigate to time tracking' },
+          { action: 'wait', timeout: 3000, description: 'Wait for time tracking load' },
+          { action: 'assert', target: 'time', description: 'Time tracking content should be visible' }
         ]
       }
     ];

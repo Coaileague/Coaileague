@@ -84,6 +84,8 @@ export class UICrawler {
     this.telemetry.currentTask = status;
   }
   
+  private isAuthenticated = false;
+  
   async run(): Promise<UICrawlerResult> {
     console.log('[UICrawler] Starting UI crawl...');
     this.telemetry.status = 'running';
@@ -103,6 +105,11 @@ export class UICrawler {
       const screenshotsDir = path.join(this.config.outputDir, 'screenshots', 'ui');
       ensureDir(screenshotsDir);
       
+      // Attempt login if credentials provided
+      if (this.config.credentials?.username && this.config.credentials?.password) {
+        await this.performLogin();
+      }
+      
       this.queue = this.getSeedUrls();
       
       while (this.queue.length > 0 && this.visited.size < this.config.maxPages) {
@@ -116,7 +123,7 @@ export class UICrawler {
       }
       
       this.telemetry.status = 'completed';
-      console.log(`[UICrawler] Completed. Visited ${this.visited.size} pages, found ${this.issues.length} issues.`);
+      console.log(`[UICrawler] Completed. Visited ${this.visited.size} pages, found ${this.issues.length} issues. Authenticated: ${this.isAuthenticated}`);
       
       return {
         pagesVisited: this.visited.size,
@@ -134,9 +141,57 @@ export class UICrawler {
     }
   }
   
+  private async performLogin(): Promise<void> {
+    console.log('[UICrawler] Attempting authenticated session...');
+    const page = await this.context!.newPage();
+    
+    try {
+      // Navigate to login page
+      await page.goto(`${this.config.baseUrl}/login`, { 
+        waitUntil: 'networkidle',
+        timeout: 30000 
+      });
+      
+      // Wait for login form
+      await page.waitForSelector('input[name="email"], input[type="email"], [data-testid="input-email"]', { timeout: 10000 });
+      
+      // Fill in credentials
+      const emailInput = await page.$('input[name="email"], input[type="email"], [data-testid="input-email"]');
+      const passwordInput = await page.$('input[name="password"], input[type="password"], [data-testid="input-password"]');
+      
+      if (emailInput && passwordInput) {
+        await emailInput.fill(this.config.credentials!.username);
+        await passwordInput.fill(this.config.credentials!.password);
+        
+        // Click login button
+        const loginButton = await page.$('button[type="submit"], [data-testid="button-login"], [data-testid="button-submit"]');
+        if (loginButton) {
+          await loginButton.click();
+          
+          // Wait for redirect or dashboard
+          try {
+            await page.waitForURL(url => !url.href.includes('/login'), { timeout: 15000 });
+            this.isAuthenticated = true;
+            console.log('[UICrawler] Login successful! Authenticated session established.');
+          } catch {
+            console.log('[UICrawler] Login redirect timeout - may not be authenticated');
+          }
+        }
+      } else {
+        console.log('[UICrawler] Could not find login form inputs');
+      }
+    } catch (error: any) {
+      console.log(`[UICrawler] Login failed: ${error.message}`);
+    } finally {
+      await page.close();
+    }
+  }
+  
   private getSeedUrls(): string[] {
     const base = this.config.baseUrl;
-    return [
+    
+    // Public pages
+    const publicUrls = [
       base,
       `${base}/login`,
       `${base}/register`,
@@ -147,6 +202,25 @@ export class UICrawler {
       `${base}/terms`,
       `${base}/privacy`
     ];
+    
+    // Authenticated workspace pages - only include if logged in
+    const workspaceUrls = this.isAuthenticated ? [
+      `${base}/dashboard`,
+      `${base}/schedule`,
+      `${base}/employees`,
+      `${base}/clients`,
+      `${base}/time-tracking`,
+      `${base}/invoices`,
+      `${base}/settings`,
+      `${base}/usage`,
+      `${base}/integrations`,
+      `${base}/notifications`,
+      `${base}/owner-analytics`,
+      `${base}/workflow-approvals`,
+      `${base}/payroll`
+    ] : [];
+    
+    return [...publicUrls, ...workspaceUrls];
   }
   
   private async auditPage(url: string, screenshotsDir: string): Promise<void> {
