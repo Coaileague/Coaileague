@@ -229,12 +229,30 @@ export default function Employees() {
   };
 
   const inviteMutation = useMutation({
-    mutationFn: (employeeId: string) => apiPost('support.createTicket', { employeeId }),
-    onSuccess: () => {
+    mutationFn: async (employee: Employee) => {
+      const response = await fetch('/api/onboarding/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          email: employee.email,
+          firstName: employee.firstName,
+          lastName: employee.lastName,
+          role: employee.role || null,
+          workspaceRole: employee.workspaceRole || 'staff',
+        }),
+      });
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.message || 'Failed to send invitation');
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.employees.all });
       toast({
         title: "Invitation Sent",
-        description: "Onboarding invitation email has been sent successfully",
+        description: `Onboarding invitation email has been sent to ${data.email || selectedEmployee?.email}`,
       });
       setIsInviteDialogOpen(false);
       setSelectedEmployee(null);
@@ -249,8 +267,14 @@ export default function Employees() {
   });
 
   const handleSendInvite = () => {
-    if (selectedEmployee?.id) {
-      inviteMutation.mutate(selectedEmployee.id);
+    if (selectedEmployee && selectedEmployee.email) {
+      inviteMutation.mutate(selectedEmployee);
+    } else {
+      toast({
+        title: "Missing Email",
+        description: "Employee email is required to send an invitation",
+        variant: "destructive",
+      });
     }
   };
 
