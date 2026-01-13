@@ -98,6 +98,7 @@ const TemplatesPage = lazy(() => import("@/pages/templates"));
 const Support = lazy(() => import("@/pages/support"));
 const TermsOfService = lazy(() => import("@/pages/terms-of-service"));
 const PrivacyPolicy = lazy(() => import("@/pages/privacy-policy"));
+const StatusPage = lazy(() => import("@/pages/status"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
 const UniversalSchedule = lazy(() => import("@/pages/universal-schedule"));
 const ScheduleMobileFirst = lazy(() => import("@/pages/schedule-mobile-first"));
@@ -963,6 +964,7 @@ function AppContent() {
         <Route path="/support" component={Support} />
         <Route path="/terms" component={TermsOfService} />
         <Route path="/privacy" component={PrivacyPolicy} />
+        <Route path="/status" component={StatusPage} />
         {/* Legacy chat routes redirect to support page */}
         <Route path="/helpdesk"><Redirect to="/support" /></Route>
         <Route path="/chat"><Redirect to="/support" /></Route>
@@ -1214,6 +1216,7 @@ function AppContent() {
               <Route path="/contact" component={Contact} />
               <Route path="/terms" component={TermsOfService} />
               <Route path="/privacy" component={PrivacyPolicy} />
+        <Route path="/status" component={StatusPage} />
               {/* Org-isolated chat rooms (internal communication) */}
               <Route path="/chatrooms" component={Chatrooms} />
               <Route path="/chatroom"><Redirect to="/chatrooms" /></Route>
@@ -1555,6 +1558,7 @@ function AppContent() {
                 <Route path="/contact" component={Contact} />
                 <Route path="/terms" component={TermsOfService} />
                 <Route path="/privacy" component={PrivacyPolicy} />
+        <Route path="/status" component={StatusPage} />
                 {/* Org chatrooms (internal communication) */}
                 <Route path="/support/chatrooms"><Redirect to="/chatrooms" /></Route>
                 

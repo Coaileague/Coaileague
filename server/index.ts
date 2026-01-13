@@ -129,6 +129,7 @@ import { broadcastToWorkspace } from "./websocket";
 import { initializeSkillsSystem } from "./services/ai-brain/skills/skill-loader";
 import "./services/scheduleLiveNotifier";
 import { tracingMiddleware } from "./services/infrastructure/distributedTracing";
+import { maintenanceMiddleware, maintenanceStatusHeader } from './middleware/maintenanceMiddleware';
 import { rateLimitMiddleware } from "./services/infrastructure/rateLimiting";
 import { initializeTrinityEventSubscriptions } from "./services/trinityEventSubscriptions";
 import { runProductionSeed, runPasswordMigrations, runDataCorrections } from "./services/productionSeed";
@@ -177,6 +178,10 @@ app.use((req, res, next) => {
   }
   tracingHandler(req, res, next);
 });
+
+// Maintenance mode middleware - seals platform during maintenance, allows bypass for crawlers
+app.use(maintenanceMiddleware);
+app.use(maintenanceStatusHeader);
 
 // Rate limiting middleware - applies per-tenant quotas on API routes
 // NOTE: rateLimitMiddleware is a factory function that requires (getTenantId, getPlan) parameters
