@@ -1,0 +1,53 @@
+[
+  {
+    "name": "Homepage Load",
+    "description": "Verify homepage loads correctly with all key elements",
+    "critical": true,
+    "steps": [
+      { "action": "goto", "url": "${BASE_URL}", "description": "Navigate to homepage" },
+      { "action": "waitForSelector", "selector": "body", "description": "Wait for page to load" },
+      { "action": "screenshot", "description": "Capture homepage" }
+    ]
+  },
+  {
+    "name": "Login Flow",
+    "description": "Test user login with credentials",
+    "critical": true,
+    "steps": [
+      { "action": "goto", "url": "${BASE_URL}/login", "description": "Navigate to login page" },
+      { "action": "waitForSelector", "selector": "[data-testid='input-email'], input[type='email'], input[name='email']", "timeout": 10000, "description": "Wait for email input" },
+      { "action": "fill", "selector": "[data-testid='input-email'], input[type='email'], input[name='email']", "value": "${TEST_USERNAME}", "description": "Enter email" },
+      { "action": "fill", "selector": "[data-testid='input-password'], input[type='password'], input[name='password']", "value": "${TEST_PASSWORD}", "description": "Enter password" },
+      { "action": "screenshot", "description": "Capture before submit" },
+      { "action": "click", "selector": "[data-testid='button-login'], button[type='submit']", "description": "Click login" },
+      { "action": "screenshot", "description": "Capture after login attempt" }
+    ]
+  },
+  {
+    "name": "Pricing Page",
+    "description": "Verify pricing page displays correctly",
+    "steps": [
+      { "action": "goto", "url": "${BASE_URL}/pricing", "description": "Navigate to pricing" },
+      { "action": "waitForSelector", "selector": "body", "description": "Wait for page to load" },
+      { "action": "screenshot", "description": "Capture pricing page" }
+    ]
+  },
+  {
+    "name": "Trinity Features",
+    "description": "Test Trinity features page",
+    "steps": [
+      { "action": "goto", "url": "${BASE_URL}/trinity-features", "description": "Navigate to Trinity features" },
+      { "action": "waitForSelector", "selector": "body", "description": "Wait for page to load" },
+      { "action": "screenshot", "description": "Capture features page" }
+    ]
+  },
+  {
+    "name": "Contact Page",
+    "description": "Verify contact page",
+    "steps": [
+      { "action": "goto", "url": "${BASE_URL}/contact", "description": "Navigate to contact" },
+      { "action": "waitForSelector", "selector": "body", "description": "Wait for page to load" },
+      { "action": "screenshot", "description": "Capture contact page" }
+    ]
+  }
+]

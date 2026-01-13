@@ -1,0 +1,147 @@
+CAPTCHA (even “half installed”) is the #1 thing that makes overnight E2E runners hang. So in your prompt to Replit Agent, you want two safeguards:
+
+1. If CAPTCHA appears → record it as a blocker (screenshot + URL + step) and continue, not stall forever.
+
+
+2. Use a test-mode bypass for your own domain (best practice), so the runner can still test logins/workflows.
+
+
+
+Below is the updated exact command to paste to Replit Agent that handles your Replit setup + CAPTCHA gracefully.
+
+
+---
+
+Copy/paste to Replit Agent (CAPTCHA-safe runner)
+
+Build a Diagnostics Subagent that runs overnight E2E audits on my LIVE published website (hosted via Replit) and generates a full diagnostic report with screenshots/video/logs.
+
+Use Node.js + Playwright.
+
+IMPORTANT: CAPTCHA handling
+- The site may show CAPTCHA sometimes (not fully installed). The runner must NEVER hang.
+- Add a CAPTCHA detector:
+  - detect presence of common captcha elements: reCAPTCHA iframe, hcaptcha iframe, elements with id/class containing "captcha", "recaptcha", "hcaptcha"
+  - detect “I’m not a robot” text
+- If CAPTCHA is detected:
+  - take a full-page screenshot
+  - save HTML snapshot of the page
+  - record it in the report as “CAPTCHA BLOCKER”
+  - SKIP that step/page/workflow and continue with remaining tests
+
+Optional bypass (recommended):
+- Add support for a test bypass flag:
+  - If env var DIAG_BYPASS_CAPTCHA=true then include a special header on requests:
+    - X-Diagnostics-Runner: true
+- Provide server-side instructions:
+  - If request header X-Diagnostics-Runner=true AND env ENABLE_DIAG_BYPASS=true, then bypass CAPTCHA validation for test login only.
+  - This bypass must never be enabled in normal production user traffic.
+
+Core behavior
+1) Crawl mode:
+- Start at BASE_URL, discover internal links (same domain) up to MAX_PAGES (default 300)
+- For each visited page:
+  - capture full-page screenshot
+  - record console errors (console + pageerror)
+  - record failed network requests and any responses >= 400 (especially fetch/xhr)
+  - detect broken images (naturalWidth==0 OR asset 4xx/5xx)
+  - detect broken links (optional external check configurable)
+  - detect “error UI” keywords: error, failed, exception, 404, 500, something went wrong
+- Save artifacts per page
+
+2) Workflow mode:
+- Support workflows.json steps: goto, click, fill, waitForURL, waitForSelector, assertVisible, assertText, select, upload
+- Example workflows:
+  - Homepage load
+  - Login with TEST_USERNAME/TEST_PASSWORD
+  - Navigate to 5 key pages
+  - Submit one form with dummy data
+- Each step:
+  - screenshot before/after important actions
+  - on failure, save screenshot + trace + video (if enabled)
+- Continue even if one workflow fails
+
+Artifacts/Report
+- Create /reports/<timestamp>/:
+  - report.html (shareable)
+  - summary.json
+  - screenshots/
+  - videos/ (optional)
+  - traces/ (optional)
+  - logs/ (console + network)
+  - html_snapshots/ (on captcha/fail)
+- HTML report groups failures:
+  - CAPTCHA Blockers
+  - Console Errors
+  - Page Errors
+  - Network/API Failures (4xx/5xx)
+  - Broken Images
+  - Broken Links
+  - Workflow Step Failures
+- Each issue includes:
+  - URL, step name, timestamp
+  - error message/stack
+  - request URL/status for API failures
+  - screenshot link (and video/trace link if present)
+
+Reliability
+- Add timeouts + retries (2 retries) for navigation/click
+- Add “safe-click” guardrail to avoid destructive actions:
+  - never click elements containing: delete, remove, logout, unsubscribe, cancel, destroy, pay, confirm payment
+  - support allowlist selectors in config
+- Never hang: global per-page timeout and per-workflow timeout; on timeout capture screenshot + continue.
+
+Commands
+- Add scripts:
+  - npm run diag
+  - npm run diag:crawl
+  - npm run diag:workflows
+  - npm run diag:nightly
+
+Deliverables
+- /diagnostics-runner/ folder containing runner code
+- workflows.json example
+- README.md with setup:
+  - how to set env vars in Replit Secrets
+  - how to run nightly
+  - where the report files are saved
+- After building, run against BASE_URL once and show me the path to the generated report.
+
+
+---
+
+What to set in Replit (Secrets / env vars)
+
+You’ll give it:
+
+BASE_URL=https://yourdomain.com
+
+TEST_USERNAME=...
+
+TEST_PASSWORD=...
+
+ENABLE_VIDEO=true
+
+ENABLE_TRACE=true
+
+MAX_PAGES=300
+
+
+Optional:
+
+DIAG_BYPASS_CAPTCHA=true
+
+ENABLE_DIAG_BYPASS=true (server side)
+
+
+
+---
+
+If you don’t want any CAPTCHA bypass
+
+That’s fine — the runner will still work, but it will report “CAPTCHA BLOCKER” on login/workflows when encountered. That still gives you the screenshots + proof of what’s stopping completion.
+
+
+---
+
+If you tell me what login page URL is (ex: /login) and your top 3 critical workflows (ex: “signup → create project → checkout”), I’ll add a ready-made workflows.json into the prompt so Replit Agent builds it tailored to your app.
