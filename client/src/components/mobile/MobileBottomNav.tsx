@@ -10,7 +10,7 @@
  * - Grid-based More menu for extra items
  */
 
-import { Calendar, Clock, MessageSquare, Menu, LogOut, Settings, User, HelpCircle, Mail, Home, Bell, type LucideIcon } from "lucide-react";
+import { Calendar, Clock, MessageSquare, Menu, LogOut, Settings, User, HelpCircle, Mail, Home, Bell, Sparkles, type LucideIcon } from "lucide-react";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
@@ -134,8 +134,9 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
     { icon: MessageSquare, label: "Rooms", href: "/chatrooms" },
   ];
   
-  // Items moved to More menu
+  // Items moved to More menu - Trinity first for priority access
   const menuItems = [
+    { icon: Sparkles, label: "Ask Trinity", href: "/trinity" },
     { icon: Mail, label: "Inbox", href: "/inbox" },
     { icon: HelpCircle, label: "Help", href: "/support" },
     { icon: User, label: "Profile", href: "/profile" },

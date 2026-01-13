@@ -28,6 +28,7 @@ import {
   Settings,
   HelpCircle,
   Bell,
+  Sparkles,
   type LucideIcon 
 } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle } from "@/components/ui/sheet";
@@ -98,6 +99,7 @@ function WorkerMoreMenu({ onClose }: { onClose: () => void }) {
   const [, setLocation] = useLocation();
   
   const menuItems = [
+    { icon: Sparkles, label: "Ask Trinity", href: "/trinity" },
     { icon: Bell, label: "Notifications", href: "/mobile-hub" },
     { icon: HelpCircle, label: "Help", href: "/support" },
     { icon: Settings, label: "Settings", href: "/settings" },
@@ -111,7 +113,7 @@ function WorkerMoreMenu({ onClose }: { onClose: () => void }) {
     >
       <SheetTitle className="sr-only">More Options</SheetTitle>
       
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div className="grid grid-cols-4 gap-2 mb-4">
         {menuItems.map((item) => (
           <button
             key={item.href}
