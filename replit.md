@@ -59,6 +59,7 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Trinity Humanized Persona System:** Human-like AI communication patterns with a senior engineer persona.
 - **Platform Support Infrastructure:** 3-tier support hierarchy (root_admin, co_admin, sysops) with cross-org access via support sessions, org freeze capability, and immutable audit logging with severity levels.
 - **Trinity Elite:** Features like Strategic Optimization Engine (employee scoring, client tiering, profit-first scheduling), Go-Live Confidence Check, Resolution Inbox, QuickBooks 99% Automation, and Financial Watchdog for reconciliation with discrepancy alerts.
+- **Diagnostics Subagent:** Playwright-based E2E site auditor for pre-launch bug detection. Crawls up to 300 pages, tests user workflows, detects console errors, broken images/links, network failures, and CAPTCHAs. Generates HTML report and summary.json for agent-driven bug fixing.
 
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
