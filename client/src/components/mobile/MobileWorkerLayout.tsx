@@ -98,7 +98,7 @@ function WorkerMoreMenu({ onClose }: { onClose: () => void }) {
   const [, setLocation] = useLocation();
   
   const menuItems = [
-    { icon: Bell, label: "Notifications", href: "/inbox" },
+    { icon: Bell, label: "Notifications", href: "/mobile-hub" },
     { icon: HelpCircle, label: "Help", href: "/support" },
     { icon: Settings, label: "Settings", href: "/settings" },
   ];

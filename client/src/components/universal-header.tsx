@@ -306,17 +306,9 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
 
               {/* Mobile Menu - Truly responsive with overflow menu */}
               <div className="flex md:hidden items-center gap-1 shrink-0 min-w-0">
-                {/* Priority 1: Only show Trinity + Notifications on mobile - rest goes to menu */}
-                {showNotificationFeatures && (
-                  <>
-                    <TrinityMiniButton 
-                      onClick={() => setLocation("/trinity")} 
-                      data-testid="mobile-button-trinity"
-                    />
-                    <NotificationsPopover />
-                  </>
-                )}
-                {/* Priority 2: Show login for guests */}
+                {/* Mobile: No Trinity button here - uses floating bottom drawer instead */}
+                {/* Mobile: No Notifications bell here - uses GetSling-style hub via bottom nav */}
+                {/* Priority 1: Show login for guests */}
                 {!user && (
                   <Button
                     variant="default"
@@ -511,12 +503,9 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
               </div>
 
               {/* Mobile workspace navigation - Compact for small screens */}
+              {/* Mobile: No Trinity button - uses floating bottom drawer */}
+              {/* Mobile: No Notifications bell - uses GetSling-style hub via bottom nav */}
               <div className="flex md:hidden items-center gap-0.5 sm:gap-1">
-                <TrinityMiniButton 
-                  onClick={() => setLocation("/trinity")} 
-                  data-testid="mobile-button-trinity-workspace"
-                />
-                <NotificationsPopover />
                 <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
                   <SheetTrigger asChild>
                     <Button
