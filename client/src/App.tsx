@@ -1634,10 +1634,9 @@ export default function App() {
                             <SetupGuidePanel />
                           </div>
                         </Suspense>
-                        {/* Trinity AI Mascot - UNIVERSAL visibility on ALL pages including public/guest routes */}
-                        <MascotRenderer />
-                        {/* REMOVED: FloatingSupportChat - Trinity button handles all support */}
-                        {/* Floating Trinity Button - Inside TrinityModalProvider */}
+                        {/* DISABLED: Trinity floating mascot body - removed from screen */}
+                        {/* <MascotRenderer /> */}
+                        {/* Floating Trinity Button - access point for Trinity chat */}
                         <FloatingTrinityButton />
                         </TrinityModalProvider>
                         </SimpleModeProvider>
