@@ -1,0 +1,444 @@
+{
+  "runId": "run_20260113064547_349e0f",
+  "startedAt": "2026-01-13T06:45:47.789Z",
+  "completedAt": "2026-01-13T06:45:59.331Z",
+  "duration": 11542,
+  "mode": "full",
+  "baseUrl": "https://coaileague.com",
+  "totals": {
+    "pagesVisited": 1,
+    "workflowsRun": 5,
+    "issuesFound": 23,
+    "captchaBlockers": 0
+  },
+  "severityCounts": {
+    "critical": 0,
+    "high": 12,
+    "medium": 9,
+    "low": 2,
+    "info": 0
+  },
+  "categoryCounts": {
+    "captcha_blocker": 0,
+    "console_error": 9,
+    "page_error": 0,
+    "network_failure": 7,
+    "broken_image": 0,
+    "broken_link": 0,
+    "workflow_failure": 5,
+    "timeout": 0,
+    "ui_error": 2
+  },
+  "issues": [
+    {
+      "id": "d2241d09c32f7626",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "d14e62857a56c640",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "48466b987031c765",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "e89d3444c15faf54",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "226ea69e59882f3c",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "bca834637eb1e93e",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "554d1cd94e706416",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "97d497470b6cc042",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "10a70fc480fc5082",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Check browser console for JavaScript errors and fix the source"
+    },
+    {
+      "id": "449801fc2a4a027b",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "a01825589a9bc62b",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/mascot/holiday returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/holiday",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "bd7312440d3e5af8",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/workspace/theme returned 401",
+      "requestUrl": "https://coaileague.com/api/workspace/theme",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "6964bf16276e5696",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/user/view-mode returned 401",
+      "requestUrl": "https://coaileague.com/api/user/view-mode",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "b0b447bde6f58e66",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "f8276695198788c9",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "f0bfec0ee02e9b4b",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+    },
+    {
+      "id": "8e83ca07aa7baef1",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com",
+      "message": "Found \"error\": ...ng');\n      \n      // Suppress Vite HMR WebSocket errors BEFORE any modules load (development-only)...",
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Review UI for error messages and fix underlying issue"
+    },
+    {
+      "id": "fc2c5ac4566c735d",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com",
+      "message": "Found \"failed\": ...e) : \"\";\n        \n        if (reasonStr.includes(\"Failed to construct 'WebSocket'\") || \n            reason...",
+      "timestamp": "2026-01-13T06:45:53.766Z",
+      "recommendedFix": "Review UI for error messages and fix underlying issue"
+    },
+    {
+      "id": "0bcc07fd5dbd294a",
+      "category": "workflow_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "Workflow \"Homepage Load\" failed",
+      "details": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}\", waiting until \"networkidle\"\u001b[22m\n\nFailed at step: Navigate to homepage\nCompleted: 0/3",
+      "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Homepage_Load_0f359172100639cd.png",
+      "timestamp": "2026-01-13T06:45:59.331Z",
+      "recommendedFix": "Debug the workflow step that failed"
+    },
+    {
+      "id": "0ca94b4d8a598b48",
+      "category": "workflow_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "Workflow \"Login Flow\" failed",
+      "details": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}/login\", waiting until \"networkidle\"\u001b[22m\n\nFailed at step: Navigate to login page\nCompleted: 0/7",
+      "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Login_Flow_b60e92212c16628a.png",
+      "timestamp": "2026-01-13T06:45:59.331Z",
+      "recommendedFix": "Debug the workflow step that failed"
+    },
+    {
+      "id": "de428cb9349433bf",
+      "category": "workflow_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "Workflow \"Pricing Page\" failed",
+      "details": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}/pricing\", waiting until \"networkidle\"\u001b[22m\n\nFailed at step: Navigate to pricing\nCompleted: 0/3",
+      "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Pricing_Page_748435b2ad416531.png",
+      "timestamp": "2026-01-13T06:45:59.331Z",
+      "recommendedFix": "Debug the workflow step that failed"
+    },
+    {
+      "id": "879f58f2621ef1a3",
+      "category": "workflow_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "Workflow \"Trinity Features\" failed",
+      "details": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}/trinity-features\", waiting until \"networkidle\"\u001b[22m\n\nFailed at step: Navigate to Trinity features\nCompleted: 0/3",
+      "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Trinity_Features_cb25461d0fb3c0d4.png",
+      "timestamp": "2026-01-13T06:45:59.331Z",
+      "recommendedFix": "Debug the workflow step that failed"
+    },
+    {
+      "id": "496f1db13628ac59",
+      "category": "workflow_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "Workflow \"Contact Page\" failed",
+      "details": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}/contact\", waiting until \"networkidle\"\u001b[22m\n\nFailed at step: Navigate to contact\nCompleted: 0/3",
+      "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Contact_Page_c80be1dcef55c205.png",
+      "timestamp": "2026-01-13T06:45:59.331Z",
+      "recommendedFix": "Debug the workflow step that failed"
+    }
+  ],
+  "pageResults": [
+    {
+      "url": "https://coaileague.com",
+      "statusCode": 200,
+      "loadTime": 4368,
+      "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/page_2fbbf54af1f92a09.png",
+      "consoleErrors": [
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/auth/me"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/holiday"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/workspace/theme"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/user/view-mode"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        },
+        {
+          "type": "error",
+          "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+          "location": "https://coaileague.com/"
+        },
+        {
+          "type": "error",
+          "message": "WebSocket connection to 'wss://coaileague.com/ws' failed: Error during WebSocket handshake: Unexpected response code: 400",
+          "location": "https://coaileague.com/"
+        },
+        {
+          "type": "error",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "location": "https://coaileague.com/api/mascot/seasonal/state"
+        }
+      ],
+      "networkFailures": [
+        {
+          "url": "https://coaileague.com/api/auth/me",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/holiday",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/workspace/theme",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/user/view-mode",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        },
+        {
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "method": "GET",
+          "statusCode": 401,
+          "statusText": "",
+          "resourceType": "fetch"
+        }
+      ],
+      "brokenImages": [],
+      "brokenLinks": [],
+      "uiErrors": [
+        "Found \"error\": ...ng');\n      \n      // Suppress Vite HMR WebSocket errors BEFORE any modules load (development-only)...",
+        "Found \"failed\": ...e) : \"\";\n        \n        if (reasonStr.includes(\"Failed to construct 'WebSocket'\") || \n            reason..."
+      ],
+      "captchaDetected": false,
+      "timestamp": "2026-01-13T06:45:53.766Z"
+    }
+  ],
+  "workflowResults": [
+    {
+      "name": "Homepage Load",
+      "success": false,
+      "stepsCompleted": 0,
+      "totalSteps": 3,
+      "failedStep": "Navigate to homepage",
+      "error": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}\", waiting until \"networkidle\"\u001b[22m\n",
+      "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Homepage_Load_0f359172100639cd.png",
+      "duration": 1236,
+      "captchaDetected": false
+    },
+    {
+      "name": "Login Flow",
+      "success": false,
+      "stepsCompleted": 0,
+      "totalSteps": 7,
+      "failedStep": "Navigate to login page",
+      "error": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}/login\", waiting until \"networkidle\"\u001b[22m\n",
+      "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Login_Flow_b60e92212c16628a.png",
+      "duration": 452,
+      "captchaDetected": false
+    },
+    {
+      "name": "Pricing Page",
+      "success": false,
+      "stepsCompleted": 0,
+      "totalSteps": 3,
+      "failedStep": "Navigate to pricing",
+      "error": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}/pricing\", waiting until \"networkidle\"\u001b[22m\n",
+      "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Pricing_Page_748435b2ad416531.png",
+      "duration": 425,
+      "captchaDetected": false
+    },
+    {
+      "name": "Trinity Features",
+      "success": false,
+      "stepsCompleted": 0,
+      "totalSteps": 3,
+      "failedStep": "Navigate to Trinity features",
+      "error": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}/trinity-features\", waiting until \"networkidle\"\u001b[22m\n",
+      "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Trinity_Features_cb25461d0fb3c0d4.png",
+      "duration": 389,
+      "captchaDetected": false
+    },
+    {
+      "name": "Contact Page",
+      "success": false,
+      "stepsCompleted": 0,
+      "totalSteps": 3,
+      "failedStep": "Navigate to contact",
+      "error": "page.goto: Protocol error (Page.navigate): Cannot navigate to invalid URL\nCall log:\n\u001b[2m  - navigating to \"${BASE_URL}/contact\", waiting until \"networkidle\"\u001b[22m\n",
+      "screenshotPath": "diagnostics-runner/output/run_20260113064547_349e0f/screenshots/error_Contact_Page_c80be1dcef55c205.png",
+      "duration": 423,
+      "captchaDetected": false
+    }
+  ],
+  "blockers": [],
+  "nextSteps": [
+    "Fix 7 API endpoint failures (check server logs)",
+    "Resolve 9 JavaScript console errors",
+    "Debug 5 failed user workflows"
+  ],
+  "reportPath": "diagnostics-runner/output/run_20260113064547_349e0f/report.html",
+  "artifactsPath": "diagnostics-runner/output/run_20260113064547_349e0f"
+}

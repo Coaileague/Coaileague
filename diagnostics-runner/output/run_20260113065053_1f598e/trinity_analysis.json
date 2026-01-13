@@ -1,0 +1,375 @@
+{
+  "overallHealth": 0,
+  "criticalPath": [
+    "[HIGH] network_failure: **1. Client-Side Investigation (React/Vite Frontend):**\n   *   **Verify User Log...",
+    "[HIGH] network_failure: **1. Verify Token Presence and Validity on Frontend (React/Vite):**\n   - Check `...",
+    "[HIGH] network_failure: **1. Verify Client-Side Authentication State:** Before making the request to `/a...",
+    "[HIGH] network_failure: **1. Frontend Authentication Token Verification (React Client):**\n   *   Check t...",
+    "[HIGH] network_failure: **1. Inspect Client-Side Request Headers (Frontend - React):**\n   - Use browser ..."
+  ],
+  "prioritizedFixes": [
+    {
+      "issue": {
+        "id": "06511dbca37a010c",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/mascot/holiday returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/holiday",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:50:57.888Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "The `401 Unauthorized` status code indicates that the request to `https://coaileague.com/api/mascot/holiday` was rejected by the server because the client did not provide valid authentication credentials. This is typically due to a missing, expired, or invalid authentication token (e.g., a JWT) in the request's `Authorization` header, or a misconfiguration in the server-side authentication middleware.",
+        "fixRecommendation": "**1. Client-Side Investigation (React/Vite Frontend):**\n   *   **Verify User Login State:** Ensure the user is authenticated and a valid session is expected. If not, the user should be prompted to log in.\n   *   **Check for Authentication Token:** Confirm that an authentication token (likely a JWT) is stored client-side (e.g., in `localStorage`, `sessionStorage`, or an HTTP-only cookie) after a successful login.\n   *   **Inspect Network Request:** Open browser developer tools (Network tab) and re-trigger the request to `/api/mascot/holiday`. Examine the request headers to verify that an `Authorization` header is present and contains a valid-looking bearer token (e.g., `Authorization: Bearer <your_jwt_token>`).\n   *   **Token Expiration:** If a token is present in the request, decode it (e.g., using jwt.io for JWTs) to check its expiration date (`exp` claim). If it's expired, the frontend needs to handle token refresh or force a re-login.\n   *   **API Client Configuration:** Ensure your frontend's API client (e.g., Axios instance or custom `fetch` wrapper) is correctly configured to attach the authentication token to *all* protected requests, specifically before making calls to `/api/mascot/holiday`.\n**2. Backend-Side Investigation (Express.js Backend):**\n   *   **Review Authentication Middleware:** Examine the Express.js authentication middleware (likely in `server/middleware/auth.js` or similar) that protects the `/api/mascot/holiday` endpoint. Debug its execution.\n   *   **Token Extraction & Validation Logic:** Confirm that the middleware correctly extracts the token from the `Authorization` header, verifies its signature (e.g., using `jsonwebtoken.verify`), and checks for expiration or other invalid states.\n   *   **Route Protection:** Ensure that the `/api/mascot/holiday` route handler in `server/routes/mascotRoutes.js` (or wherever it's defined) is correctly using the authentication middleware *before* attempting to access any protected resources.\n   *   **Logging:** Add temporary logging within the authentication middleware to log the received `Authorization` header, the extracted token, and any errors encountered during token verification to pinpoint the exact failure.\n**3. Testing & Remediation:**\n   *   As a quick test, try logging out and logging back in to ensure a fresh token is issued and used.\n   *   If the issue is client-side, update the API client to consistently attach the token. If backend-side, correct the token validation logic in the middleware.",
+        "codeSnippet": "// client/src/services/api.js (Example using Axios interceptor)\nimport axios from 'axios';\n\nconst api = axios.create({\n  baseURL: 'https://coaileague.com/api',\n  headers: {\n    'Content-Type': 'application/json',\n  },\n});\n\n// Add a request interceptor to attach the authentication token\napi.interceptors.request.use(\n  (config) => {\n    const token = localStorage.getItem('jwt_token'); // Or from a state/context\n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  (error) => {\n    return Promise.reject(error);\n  }\n);\n\nexport const getMascotHolidayData = async () => {\n  try {\n    const response = await api.get('/mascot/holiday');\n    return response.data;\n  } catch (error) {\n    console.error('Failed to fetch holiday mascot data:', error);\n    // Handle 401 specifically, e.g., redirect to login\n    if (error.response && error.response.status === 401) {\n      console.warn('Authentication required. Redirecting to login...');\n      // window.location.href = '/login'; // Example redirection\n    }\n    throw error; // Re-throw to be caught by calling component\n  }\n};\n\n// server/middleware/auth.js (Example JWT verification middleware)\n// import jwt from 'jsonwebtoken';\n// import { ACCESS_TOKEN_SECRET } from '../config'; // Your secret key\n\n// export const protect = (req, res, next) => {\n//   let token;\n\n//   if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {\n//     try {\n//       token = req.headers.authorization.split(' ')[1];\n//       const decoded = jwt.verify(token, ACCESS_TOKEN_SECRET);\n//       req.user = decoded; // Attach user info to request\n//       next();\n//     } catch (error) {\n//       console.error('Token verification failed:', error);\n//       return res.status(401).json({ message: 'Not authorized, token failed' });\n//     }\n//   }\n\n//   if (!token) {\n//     return res.status(401).json({ message: 'Not authorized, no token' });\n//   }\n// };\n\n// server/routes/mascotRoutes.js (Example route usage)\n// import express from 'express';\n// import { protect } from '../middleware/auth';\n// import { getMascotHoliday } from '../controllers/mascotController';\n\n// const router = express.Router();\n\n// router.get('/holiday', protect, getMascotHoliday);\n\n// export default router;",
+        "filesLikelyAffected": [
+          "client/src/services/api.js",
+          "client/src/hooks/useAuth.js",
+          "client/src/context/AuthContext.jsx",
+          "server/middleware/auth.js",
+          "server/routes/mascotRoutes.js",
+          "server/config.js (for JWT secret)"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "User unable to log in (due to token generation issues)",
+          "Session expiration leading to repeated 401s",
+          "Other API endpoints returning 401 or 403 errors"
+        ]
+      }
+    },
+    {
+      "issue": {
+        "id": "43461e0e7020ad99",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:50:57.888Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "The client-side request to '/api/auth/me' is not sending valid authentication credentials (e.g., a JWT token). This prevents the Express.js backend from identifying and authorizing the user, resulting in a 401 Unauthorized status.",
+        "fixRecommendation": "**1. Verify Token Presence and Validity on Frontend (React/Vite):**\n   - Check `localStorage` or `sessionStorage` in the browser's developer tools (Application tab) to confirm that an authentication token (like a JWT) is present after a successful user login.\n   - Ensure the token has not expired client-side (if expiry is tracked there) or been prematurely cleared by any client-side logic.\n   - Confirm that API requests, specifically to `/api/auth/me`, are correctly attaching the token to the `Authorization` header as a `Bearer` token.\n   - Inspect network requests in the browser's developer tools (Network tab -> Headers tab for the failed request) to verify the `Authorization` header is present and correctly formatted (e.g., `Authorization: Bearer <your_jwt_token>`).\n**2. Inspect Authentication Middleware on Backend (Express.js):**\n   - Review the Express.js authentication middleware (e.g., a custom JWT verification middleware, or a library like `passport-jwt`) responsible for validating tokens on protected routes.\n   - Ensure this middleware is correctly applied to the `/api/auth/me` route within `server/src/routes/auth.routes.js`.\n   - Verify that the middleware is correctly parsing the `Authorization: Bearer ...` header from incoming requests.\n   - Check the token validation logic: Is the JWT secret used for verification correct and consistent with the secret used for signing? Is the token's signature valid? Is the token expired according to the server's clock?\n   - Add temporary logging within the middleware (e.g., `console.log('Auth Header:', req.headers.authorization);` and `console.log('Decoded Token:', decodedPayload);`) to inspect incoming headers and the outcome of token verification.\n**3. Review Login/Token Issuance Flow:**\n   - Confirm that upon a successful user login, the backend correctly issues a valid JWT token that includes necessary claims (e.g., user ID, roles, expiration time).\n   - Ensure the frontend successfully receives and stores this token in a secure and accessible manner (e.g., `localStorage`).",
+        "codeSnippet": "```javascript\n// Example of how the frontend (React/Vite) might attach a JWT token using Axios interceptors\n// File: client/src/api/axiosInstance.js (or similar utility for API calls)\n\nimport axios from 'axios';\n\nconst apiClient = axios.create({\n  baseURL: 'https://coaileague.com/api', // Ensure this is correct\n  headers: {\n    'Content-Type': 'application/json',\n  },\n});\n\n// Add a request interceptor to attach the authorization token\napient.interceptors.request.use(\n  (config) => {\n    const token = localStorage.getItem('jwtToken'); // Retrieve token from local storage\n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  (error) => {\n    return Promise.reject(error);\n  }\n);\n\nexport default apiClient;\n\n// Ensure your '/api/auth/me' call uses this configured instance:\n// For example, in client/src/services/authService.js:\n// import apiClient from '../api/axiosInstance';\n// export const fetchCurrentUser = () => apiClient.get('/auth/me');\n```",
+        "filesLikelyAffected": [
+          "client/src/api/axiosInstance.js",
+          "client/src/utils/auth.js",
+          "client/src/App.jsx",
+          "server/src/middleware/auth.middleware.js",
+          "server/src/routes/auth.routes.js",
+          "server/src/config/jwt.config.js",
+          "server/src/controllers/auth.controller.js"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.9,
+        "relatedIssues": [
+          "Authentication token expired",
+          "Missing Authorization header in protected API requests",
+          "Incorrect JWT secret configured on backend server",
+          "Corrupted or malformed authentication token",
+          "Frontend token storage issue (e.g., token cleared prematurely)",
+          "Backend authentication middleware misconfiguration",
+          "Cross-Origin Resource Sharing (CORS) preflight issues preventing header transmission"
+        ]
+      }
+    },
+    {
+      "issue": {
+        "id": "f52d23572733803d",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/user/view-mode returned 401",
+        "requestUrl": "https://coaileague.com/api/user/view-mode",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:50:57.888Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "The client's request to `GET https://coaileague.com/api/user/view-mode` was rejected with a 401 Unauthorized status. This indicates that the request did not include valid authentication credentials, meaning the user is likely not logged in, their session has expired, or the authentication token was not correctly attached to the request by the frontend.",
+        "fixRecommendation": "**1. Verify Client-Side Authentication State:** Before making the request to `/api/user/view-mode`, ensure the React frontend confirms the user is currently authenticated (e.g., by checking for a valid token in local storage, session storage, or a cookie). If not authenticated, the user should be redirected to the login page.\n**2. Ensure Client-Side Token Attachment:** Confirm that the authentication token (e.g., a JWT received upon login) is correctly retrieved and consistently included in the `Authorization` header of all protected API requests, formatted as `Authorization: Bearer <your_token>`. An `axios` interceptor is highly recommended for this.\n**3. Inspect Backend Authentication Middleware:** Review the Express.js authentication middleware, typically located in `server/src/middleware/auth.middleware.js` (or similar). Verify the following:\n    *   The middleware correctly extracts the token from the `Authorization` header.\n    *   The JWT `secret` used for token verification (`jwt.verify()`) matches the `secret` used for signing tokens during user login.\n    *   The token validation logic properly handles expired, malformed, or invalid tokens and returns the appropriate 401 Unauthorized or 403 Forbidden status.\n**4. Implement Graceful 401 Handling on Client:** Add logic to your React frontend (e.g., in `axios` response interceptors or `fetch` error handling) to catch `401 Unauthorized` responses. Upon receiving a 401, clear any stored invalid tokens and redirect the user to the login page to re-authenticate.",
+        "codeSnippet": "```javascript\n// client/src/api/axiosInstance.js\n// Configure Axios to automatically attach tokens and handle 401 responses\nimport axios from 'axios';\n\nconst axiosInstance = axios.create({\n  baseURL: 'https://coaileague.com/api',\n  timeout: 10000,\n  headers: {\n    'Content-Type': 'application/json',\n  },\n});\n\n// Request interceptor to attach Authorization header\naxiosInstance.interceptors.request.use(\n  (config) => {\n    const token = localStorage.getItem('authToken'); // Adjust if storing in sessionStorage/cookies\n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  (error) => {\n    return Promise.reject(error);\n  }\n);\n\n// Response interceptor to handle 401 errors globally\naxiosInstance.interceptors.response.use(\n  (response) => response,\n  (error) => {\n    if (error.response && error.response.status === 401) {\n      console.error('Unauthorized request. Clearing token and redirecting to login.');\n      localStorage.removeItem('authToken'); // Clear potentially invalid/expired token\n      // Redirect to login page - adjust '/login' to your actual login route\n      window.location.href = '/login'; \n    }\n    return Promise.reject(error);\n  }\n);\n\nexport default axiosInstance;\n\n// --- Example of backend middleware (server/src/middleware/auth.middleware.js) ---\n/*\nimport jwt from 'jsonwebtoken';\n\nexport const authenticateToken = (req, res, next) => {\n  const authHeader = req.headers['authorization'];\n  const token = authHeader && authHeader.split(' ')[1]; // Expects 'Bearer TOKEN'\n\n  if (token == null) {\n    return res.sendStatus(401); // No token provided\n  }\n\n  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {\n    if (err) {\n      console.error('JWT verification failed:', err.message);\n      return res.sendStatus(403); // Token is invalid or expired\n    }\n    // req.user = user; // Attach user payload to request for further use\n    next(); // Token is valid, proceed\n  });\n};\n\n// Example route usage (server/src/routes/user.routes.js)\n// router.get('/view-mode', authenticateToken, getUserViewMode);\n*/\n```",
+        "filesLikelyAffected": [
+          "client/src/api/axiosInstance.js",
+          "client/src/App.jsx",
+          "server/src/middleware/auth.middleware.js",
+          "server/src/routes/user.routes.js",
+          ".env"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 1,
+        "relatedIssues": [
+          "Users are frequently logged out unexpectedly",
+          "Authentication token not found or invalid on backend",
+          "Login redirect loops or failures",
+          "Incorrect JWT_SECRET configured in production"
+        ]
+      }
+    },
+    {
+      "issue": {
+        "id": "a7359006023f36bf",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/workspace/theme returned 401",
+        "requestUrl": "https://coaileague.com/api/workspace/theme",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:50:57.888Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "The GET request to `https://coaileague.com/api/workspace/theme` returned a 401 Unauthorized status because the authentication credentials (most likely a JWT in the 'Authorization: Bearer' header) were either missing, invalid, or expired. This endpoint is designed to be protected, requiring a properly authenticated user to access it.",
+        "fixRecommendation": "**1. Frontend Authentication Token Verification (React Client):**\n   *   Check the React frontend code (e.g., in `client/src/services/api.js` or an Axios interceptor) to ensure that the authentication token (JWT) is being retrieved from `localStorage` or `sessionStorage` and correctly attached to the `Authorization: Bearer <token>` header for outgoing API requests.\n   *   Verify that the token is not `null`, `undefined`, or an empty string before being sent.\n   *   Confirm the frontend has logic to handle token expiration (e.g., refreshing the token or prompting for re-login if a refresh token is not used).\n**2. Backend Authentication Middleware Inspection (Express.js Server):**\n   *   Examine the Express.js authentication middleware (likely in `server/src/middleware/auth.js` or similar) that protects routes like `/api/workspace/theme`.\n   *   Ensure the middleware correctly extracts the token from the `Authorization` header.\n   *   Verify that `jwt.verify()` is using the correct `JWT_SECRET` (or public key) and that the token's signature and expiration are being validated properly.\n   *   Check for any errors or 'catch' blocks in the middleware that might be prematurely rejecting valid tokens or silently failing to process them.\n**3. Token Issuance and Expiration Logic:**\n   *   Review the backend code responsible for issuing JWTs during user login (`server/src/routes/auth.js` or similar). Confirm the token generation process is correct and that the `exp` (expiration time) claim is set to a reasonable duration.\n   *   Ensure the `JWT_SECRET` used for signing tokens is consistent across all server instances and is securely stored (e.g., via environment variables).\n**4. Browser Developer Tools Inspection:**\n   *   Open browser developer tools (Network tab) and re-trigger the request to `https://coaileague.com/api/workspace/theme`.\n   *   Inspect the request headers and confirm that an `Authorization: Bearer <your_jwt_token>` header is present and that the token itself appears valid (you can paste it into `jwt.io` to decode and check its claims and expiration).\n   *   Check the console for any client-side errors related to token retrieval or API calls.",
+        "codeSnippet": "```javascript\n// server/src/middleware/auth.js (Example Express.js JWT authentication middleware)\nconst jwt = require('jsonwebtoken');\nconst asyncHandler = require('express-async-handler'); // For async error handling\n\n// Assuming a configuration file for JWT_SECRET\nconst config = require('../config'); \n\nconst protect = asyncHandler(async (req, res, next) => {\n  let token;\n\n  if (\n    req.headers.authorization &&\n    req.headers.authorization.startsWith('Bearer')\n  ) {\n    try {\n      // Get token from header\n      token = req.headers.authorization.split(' ')[1];\n\n      // Verify token\n      const decoded = jwt.verify(token, config.JWT_SECRET);\n\n      // Attach user information to the request (e.g., from DB lookup using decoded.id)\n      // In CoAIleague, this might involve fetching user details from PostgreSQL/Drizzle ORM\n      // req.user = await db.select().from(users).where(eq(users.id, decoded.id)).limit(1);\n      // Ensure req.user exists after this operation for subsequent middleware/route handlers\n\n      next(); // Proceed to the next middleware/route handler\n    } catch (error) {\n      console.error('Authentication Error:', error.message);\n      return res.status(401).json({ message: 'Not authorized, token failed or expired' });\n    }\n  }\n\n  if (!token) {\n    return res.status(401).json({ message: 'Not authorized, no token provided' });\n  }\n});\n\nmodule.exports = protect;\n\n// Example usage in a route file (e.g., server/src/routes/workspace.js)\n// const express = require('express');\n// const router = express.Router();\n// const protect = require('../middleware/auth');\n//\n// router.get('/theme', protect, (req, res) => {\n//   // Only authenticated users can reach here\n//   res.json({ theme: 'dark', primaryColor: '#007bff' });\n// });\n```",
+        "filesLikelyAffected": [
+          "client/src/services/api.js",
+          "client/src/context/AuthContext.jsx",
+          "client/src/hooks/useAuth.js",
+          "server/src/middleware/auth.js",
+          "server/src/routes/workspace.js",
+          "server/src/routes/auth.js",
+          "server/src/config/index.js"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "User unable to log in (incorrect token issuance)",
+          "Session expiration issues (short-lived tokens or no refresh mechanism)",
+          "Data not loading after user login (other protected endpoints failing)",
+          "403 Forbidden errors (if auth succeeds but user lacks specific permissions)"
+        ]
+      }
+    },
+    {
+      "issue": {
+        "id": "17c29f38ca34045b",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:50:57.888Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "The client-side request to `https://coaileague.com/api/mascot/seasonal/state` is failing due to a `401 Unauthorized` status code. This indicates that the request was received by the server but was rejected because it lacked valid authentication credentials, or the provided credentials (e.g., JWT, session token) were missing, invalid, or expired. The Express.js backend's authentication middleware is therefore failing to authorize the request.",
+        "fixRecommendation": "**1. Inspect Client-Side Request Headers (Frontend - React):**\n   - Use browser developer tools (Network tab) to re-create the `GET https://coaileague.com/api/mascot/seasonal/state` request.\n   - Examine the request headers to confirm if an `Authorization` header (e.g., `Bearer <YOUR_TOKEN>`) or any relevant authentication cookie is being sent with the request.\n   - If no token/cookie is present, the frontend is failing to attach the credentials.\n**2. Verify Client-Side Token Storage & Retrieval (Frontend - React):**\n   - Check the React application's code (`client/src/auth/authService.js` or similar) where authentication tokens are stored (e.g., `localStorage`, `sessionStorage`, or state management).\n   - Ensure the token is correctly retrieved before making API calls and is not `null`, `undefined`, or an empty string.\n   - Confirm that the mechanism to include this token in API requests (e.g., an Axios interceptor) is correctly configured and active.\n**3. Review Backend Authentication Middleware (Backend - Express.js):**\n   - Locate the authentication middleware in the Express.js backend (likely `server/middleware/auth.js` or similar).\n   - Add temporary logging within this middleware to output:\n     - The full `Authorization` header received (`req.headers.authorization`).\n     - The extracted token after splitting `Bearer ` (if applicable).\n     - The result of `jwt.verify()` (e.g., decoded payload or any error thrown).\n   - Ensure the middleware correctly extracts the token and uses the **correct secret key** (`config.jwtSecret` or environment variable) for JWT verification.\n   - Verify that the error handling in the middleware distinguishes between missing tokens, invalid tokens, and expired tokens, returning appropriate `401` messages.\n**4. Check Token Expiration & Refresh Logic:**\n   - On the frontend, ensure there is robust logic to handle token expiration. This might involve automatically refreshing tokens before they expire or prompting the user to re-authenticate if a refresh fails.\n   - On the backend, confirm that the `jwt.verify` call correctly checks the token's `exp` claim and returns an error if expired. If `TokenExpiredError` is caught, ensure an appropriate response is sent.\n**5. Examine Route Protection Configuration (Backend - Express.js):**\n   - Go to the route definition for `/api/mascot/seasonal/state` (e.g., `server/routes/api/mascot.js`).\n   - Confirm that the authentication middleware is correctly applied to this specific route. It's possible the route is accidentally public or bypasses the authentication middleware.",
+        "codeSnippet": "// server/middleware/auth.js (Example with added logging)\nconst jwt = require('jsonwebtoken');\nconst config = require('../config'); // Assuming config.jwtSecret is defined\n\nmodule.exports = (req, res, next) => {\n  const authHeader = req.headers.authorization;\n\n  if (!authHeader || !authHeader.startsWith('Bearer ')) {\n    console.warn('AUTH_FAIL: Missing or malformed Authorization header.');\n    return res.status(401).json({ message: 'Authentication required.' });\n  }\n\n  const token = authHeader.split(' ')[1];\n  console.log(`AUTH_DEBUG: Received token (first 15 chars): ${token.substring(0, 15)}...`);\n\n  try {\n    const decoded = jwt.verify(token, config.jwtSecret); // Ensure 'config.jwtSecret' is the correct secret\n    req.user = decoded; // Attach user payload\n    console.log(`AUTH_DEBUG: Token valid for user ${decoded.id || decoded.userId}`);\n    next();\n  } catch (err) {\n    if (err.name === 'TokenExpiredError') {\n      console.error('AUTH_FAIL: Token expired.', err.message);\n      return res.status(401).json({ message: 'Authentication token expired. Please log in again.' });\n    } else {\n      console.error('AUTH_FAIL: Invalid token.', err.message);\n      return res.status(401).json({ message: 'Invalid authentication token.' });\n    }\n  }\n};",
+        "filesLikelyAffected": [
+          "client/src/api/mascot.js",
+          "client/src/auth/authService.js",
+          "client/src/utils/axiosInstance.js",
+          "server/middleware/auth.js",
+          "server/routes/api/mascot.js",
+          "server/config/index.js"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "User unable to log in after session timeout",
+          "API calls intermittently failing with 401",
+          "Frontend not refreshing authentication token",
+          "Incorrect JWT secret configured in production"
+        ]
+      }
+    },
+    {
+      "issue": {
+        "id": "ce73404bdd92d266",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:50:57.888Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "The client attempted to access the '/api/mascot/seasonal/state' endpoint without valid authentication credentials, or the provided credentials (likely a JWT in the Authorization header) were expired, invalid, or malformed. The server correctly identified the request as unauthorized, resulting in a 401 status code.",
+        "fixRecommendation": "**1. Client-Side (React) - Verify Token Handling:**\n   *   **Check Token Presence:** Ensure that after a user logs in successfully, an authentication token (e.g., JWT) is correctly stored (e.g., in `localStorage` or `sessionStorage`).\n   *   **Attach Token to Requests:** Confirm that the stored token is being retrieved and consistently attached to the `Authorization` header of all protected API requests, specifically for calls to `/api/mascot/seasonal/state`. The format should typically be `Authorization: Bearer <your_token>`. This often happens in an Axios interceptor or a custom fetch wrapper.\n   *   **Token Expiration:** Implement client-side logic to check for token expiration. If the token is expired or close to expiring, attempt to refresh it (if a refresh token mechanism exists) or prompt the user to re-authenticate.\n**2. Server-Side (Express.js) - Inspect Authentication Middleware:**\n   *   **Middleware Application:** Verify that the authentication middleware is correctly applied to the `/api/mascot/seasonal/state` route in `server/routes/api/mascotRoutes.js` or globally in `server/app.js`.\n   *   **Token Validation Logic:** Examine the authentication middleware (e.g., `server/middleware/authMiddleware.js`) responsible for verifying JWTs. Ensure it correctly:\n       *   Extracts the token from the `Authorization` header.\n       *   Uses the correct secret key/public key for `jwt.verify()`.\n       *   Handles token expiration checks correctly.\n   *   **Error Handling:** Confirm that the middleware explicitly returns a `401 Unauthorized` response when validation fails, rather than another error type.\n**3. Environment & Configuration:**\n   *   **JWT Secret Consistency:** Ensure that the JWT secret key used to sign tokens on login is identical to the key used by the authentication middleware to verify tokens. This is often an environment variable (e.g., `process.env.JWT_SECRET`).\n   *   **Database User Status:** While less likely for a 401 (more for 403), confirm the user associated with the token still exists and is active in the PostgreSQL database via Drizzle ORM.",
+        "codeSnippet": "```javascript\n// Example of Express.js authentication middleware (server/middleware/authMiddleware.js)\nconst jwt = require('jsonwebtoken');\nconst asyncHandler = require('express-async-handler');\n\nconst protect = asyncHandler(async (req, res, next) => {\n  let token;\n\n  if (req.headers.authorization && req.headers.authorization.startsWith('Bearer')) {\n    try {\n      // Get token from header\n      token = req.headers.authorization.split(' ')[1];\n\n      // Verify token\n      const decoded = jwt.verify(token, process.env.JWT_SECRET);\n\n      // Attach user to the request object (assuming user ID is in token payload)\n      // In a real CoAIleague app, you might fetch user from DB using Drizzle here\n      // req.user = await db.query.users.findFirst({ where: eq(users.id, decoded.id) });\n      req.userId = decoded.id; // Or attach full user object\n\n      next();\n    } catch (error) {\n      console.error('Token verification failed:', error.message);\n      res.status(401).json({ message: 'Not authorized, token failed' });\n    }\n  }\n\n  if (!token) {\n    res.status(401).json({ message: 'Not authorized, no token' });\n  }\n});\n\nmodule.exports = { protect };\n\n// Example of applying middleware in a route file (server/routes/api/mascotRoutes.js)\nconst express = require('express');\nconst router = express.Router();\nconst { protect } = require('../middleware/authMiddleware');\nconst mascotController = require('../../controllers/mascotController');\n\nrouter.get('/seasonal/state', protect, mascotController.getSeasonalMascotState);\n\nmodule.exports = router;\n```",
+        "filesLikelyAffected": [
+          "client/src/utils/api.js",
+          "client/src/services/authService.js",
+          "client/src/App.jsx",
+          "server/routes/api/mascotRoutes.js",
+          "server/middleware/authMiddleware.js",
+          "server/config/jwtConfig.js",
+          "server/.env",
+          "server/app.js"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 1,
+        "relatedIssues": [
+          "Expired JWT tokens are not being refreshed",
+          "Authorization header is missing from API requests",
+          "Incorrect JWT secret configured on server",
+          "User session data is not persisting on client-side",
+          "Frontend and backend time discrepancies causing premature token expiration"
+        ]
+      }
+    },
+    {
+      "issue": {
+        "id": "6fda267fda16d816",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:50:57.888Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "The CoAIleague frontend is attempting to access the '/api/mascot/seasonal/state' endpoint, which is likely an authenticated resource. However, the GET request is not including a valid authentication token (e.g., a JSON Web Token - JWT) in the 'Authorization' header, or the token provided is expired/invalid. This causes the Express.js backend's authentication middleware to reject the request with a 401 Unauthorized status.",
+        "fixRecommendation": "**1. Inspect Client-Side Request Headers:** Open your browser's developer tools (F12), navigate to the 'Network' tab, and reproduce the issue. Examine the 'Headers' for the failed GET request to `https://coaileague.com/api/mascot/seasonal/state`. Verify if an 'Authorization' header is present and if its value (typically 'Bearer <JWT_TOKEN>') looks correct, is not empty, or malformed.\n**2. Verify Token Storage and Retrieval (Client-Side):** If the 'Authorization' header is missing or invalid, ensure that the React frontend is correctly storing the authentication token (e.g., after successful login, in `localStorage` or a secure cookie). Crucially, confirm that the logic responsible for making API calls retrieves this token and includes it in the `Authorization: Bearer <token>` header for all authenticated requests.\n**3. Implement/Correct API Interceptor (Client-Side):** If your frontend uses a library like Axios for API calls, implement or review a request interceptor to automatically attach the stored authentication token to all outgoing requests. This prevents developers from manually adding the header to every call.\n**4. Validate Token Expiration/Validity (Client-Side):** Check if the authentication token stored on the client has expired. If the token is old, the user may need to re-authenticate (log in again) to obtain a fresh token. Consider implementing token refresh logic if your backend supports it.\n**5. Review Server-Side Authentication Middleware (Express.js):** If the client *is* sending a valid token, examine the Express.js backend code. Focus on the authentication middleware applied to the `/api/mascot/seasonal/state` route (e.g., in `server/src/middleware/auth.js` or directly within `server/src/routes/api/mascot.js`). Ensure it correctly parses the 'Authorization' header, verifies the token's signature (using the correct `JWT_SECRET`), and hasn't introduced any recent changes that could cause valid tokens to be rejected. Add logging to the middleware to diagnose token parsing or verification failures.\n**6. Check Environment Variables (Server-Side):** Confirm that the `JWT_SECRET` (or equivalent key) used by your Express.js server for token verification is correctly loaded and matches the secret used to sign tokens during user login. Inconsistencies in these environment variables (e.g., between development and production) will cause tokens to fail validation.",
+        "codeSnippet": "```javascript\n// client/src/utils/axiosInstance.js (or a similar central API utility file)\nimport axios from 'axios';\n\n// Create an Axios instance with a base URL for CoAIleague API\nconst axiosInstance = axios.create({\n  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://coaileague.com/api',\n  headers: {\n    'Content-Type': 'application/json',\n  },\n});\n\n// Add a request interceptor to automatically attach the authentication token\naxiosInstance.interceptors.request.use(\n  (config) => {\n    // Retrieve the token from localStorage (or sessionStorage/cookies)\n    const token = localStorage.getItem('authToken'); \n    if (token) {\n      // Attach the token to the Authorization header\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  (error) => {\n    // Handle request errors (e.g., network issues before sending)\n    return Promise.reject(error);\n  }\n);\n\nexport default axiosInstance;\n\n// Example of how to use it in a React component or service:\n// import axiosInstance from './utils/axiosInstance';\n// \n// const fetchMascotState = async () => {\n//   try {\n//     const response = await axiosInstance.get('/mascot/seasonal/state');\n//     console.log('Mascot State:', response.data);\n//   } catch (error) {\n//     console.error('Failed to fetch mascot state:', error);\n//   }\n// };\n```",
+        "filesLikelyAffected": [
+          "client/src/utils/axiosInstance.js",
+          "client/src/services/apiService.js",
+          "client/src/components/MascotDisplay.jsx",
+          "server/src/middleware/auth.js",
+          "server/src/routes/api/mascot.js",
+          "server/.env",
+          "client/.env"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.9,
+        "relatedIssues": [
+          "User login failures",
+          "Session expiration issues leading to re-authentication prompts",
+          "Other authenticated API calls failing with 401/403",
+          "Incorrect JWT_SECRET environment variable on server leading to token validation errors"
+        ]
+      }
+    },
+    {
+      "issue": {
+        "id": "cafcd31f8f0dee21",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/pricing",
+        "message": "GET https://coaileague.com/api/user/view-mode returned 401",
+        "requestUrl": "https://coaileague.com/api/user/view-mode",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:51:02.401Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "The '401 Unauthorized' status indicates that the request to `GET https://coaileague.com/api/user/view-mode` was made without valid authentication credentials. This typically occurs when a user is not logged in, their session has expired, or the authentication token (e.g., JWT) is missing, invalid, or incorrectly attached to the request, preventing the Express.js backend from identifying or authenticating the user for a resource that requires it. A component rendered on the `/pricing` page (likely a global element such as a header, navigation bar, or a user context provider) is attempting to fetch user-specific data that requires an authenticated user.",
+        "fixRecommendation": "**1. Verify Frontend Authentication Flow (client/):**\n   *   **Check Token Storage & Retrieval:** Confirm that the authentication token (e.g., JWT) is correctly stored (e.g., in `localStorage`, `sessionStorage`, or secure HTTP-only cookies) upon successful login and is consistently retrieved for subsequent authenticated API calls.\n   *   **Inspect API Request Headers:** Using browser developer tools (Network tab), examine the failing request to `/api/user/view-mode`. Ensure that an `Authorization` header (e.g., `Authorization: Bearer <your_token>`) is present and contains a valid, non-expired token.\n   *   **Component Logic Review:** Identify the React component on the `/pricing` page (or a global parent component like `App.jsx`, `Header.jsx`, or an `AuthContext` provider) that initiates the call to `/api/user/view-mode`. Verify its logic: does it check for a valid, present token *before* making the call, or handle a lack of token gracefully (e.g., by redirecting to login or showing a 'Login' prompt)?\n   *   **Session/Token Expiry Handling:** Implement or review frontend logic to detect expired tokens (by catching `401` responses, specifically checking for 'TokenExpiredError' if your backend provides such detail) and prompt the user to re-authenticate or refresh their token.\n**2. Review Backend Authentication Middleware (server/):**\n   *   **Auth Middleware Logic:** Examine the Express.js authentication middleware applied to the `/api/user/view-mode` route (or any route under `/api/user`). Ensure it correctly extracts the token from the `Authorization` header, verifies its signature against `process.env.JWT_SECRET`, and checks its expiry.\n   *   **Error Handling in Middleware:** Confirm that the middleware explicitly sends a `401` status only when authentication fails due to invalid/missing credentials, and not for other server-side errors (which should typically be `5xx`). Differentiate between 'missing token', 'invalid token', and 'expired token' messages for better debugging.\n   *   **Environment Variables:** Verify that the `JWT_SECRET` environment variable used for signing tokens during login (backend) matches the `JWT_SECRET` used for token validation in the authentication middleware (backend).\n**3. Test User Login/Session Persistence:**\n   *   Perform a full user login flow. Check if the token is issued and stored correctly on the client, and if subsequent authenticated requests work immediately after login. Then, test after a period of time to see if session expiry causes a similar `401` error, indicating an issue with token refresh or re-authentication.",
+        "codeSnippet": "```javascript\n// server/src/middleware/authMiddleware.js (Example Express.js JWT authentication middleware)\nconst jwt = require('jsonwebtoken');\n\nmodule.exports = (req, res, next) => {\n  const authHeader = req.headers.authorization;\n\n  if (!authHeader || !authHeader.startsWith('Bearer ')) {\n    return res.status(401).json({ message: 'Authentication token missing or malformed.' });\n  }\n\n  const token = authHeader.split(' ')[1];\n\n  try {\n    // Verify token using your JWT secret from environment variables\n    const decoded = jwt.verify(token, process.env.JWT_SECRET);\n    req.user = decoded; // Attach user payload to request\n    next(); // Proceed to the next middleware/route handler\n  } catch (error) {\n    if (error.name === 'TokenExpiredError') {\n      return res.status(401).json({ message: 'Authentication token expired. Please log in again.' });\n    } else if (error.name === 'JsonWebTokenError') {\n      return res.status(401).json({ message: 'Invalid authentication token. Access denied.' });\n    } else {\n      // Catch other potential errors during verification\n      return res.status(401).json({ message: 'Authentication failed. Unexpected error.' });\n    }\n  }\n};\n\n// client/src/utils/api.js (Example Axios interceptor for attaching tokens)\nimport axios from 'axios';\n\nconst apiClient = axios.create({\n  baseURL: 'https://coaileague.com/api',\n  timeout: 10000,\n});\n\napient.interceptors.request.use(\n  config => {\n    // Retrieve token from localStorage, sessionStorage, or a cookie management utility\n    const token = localStorage.getItem('jwtToken'); \n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  error => {\n    return Promise.reject(error);\n  }\n);\n\n// Add an interceptor to handle 401 responses globally (optional but recommended)\napient.interceptors.response.use(\n  response => response,\n  error => {\n    if (error.response && error.response.status === 401) {\n      console.error('Unauthorized request:', error.response.data.message);\n      // Optionally redirect to login, clear token, or show a re-login modal\n      // window.location.href = '/login'; \n      localStorage.removeItem('jwtToken');\n    }\n    return Promise.reject(error);\n  }\n);\n\nexport default apiClient;\n```",
+        "filesLikelyAffected": [
+          "server/src/middleware/authMiddleware.js",
+          "server/src/routes/userRoutes.js",
+          "server/src/controllers/userController.js",
+          "client/src/App.jsx",
+          "client/src/components/Header/Header.jsx",
+          "client/src/contexts/AuthContext.jsx",
+          "client/src/hooks/useAuth.js",
+          "client/src/utils/api.js",
+          "client/src/pages/Auth/Login.jsx",
+          ".env"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.9,
+        "relatedIssues": [
+          "User not redirected to login on session expiry",
+          "Incorrect token handling during API calls",
+          "JWT_SECRET mismatch between services or environments",
+          "Login functionality failing to issue or persist tokens",
+          "CSRF token issues if using cookies for authentication"
+        ]
+      }
+    },
+    {
+      "issue": {
+        "id": "a854ec40e4f8d2b8",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/pricing",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:51:02.401Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "The client-side application is attempting to access the protected `/api/auth/me` endpoint without a valid authentication token, or the token provided is expired/invalid. This results in the Express.js backend's authentication middleware rejecting the request with a 401 Unauthorized status, indicating a failure in establishing the user's identity.",
+        "fixRecommendation": "**1. Frontend (React/Vite): Verify Authentication Token Handling**\n    *   Open your browser's developer tools (Network tab) and inspect the `GET https://coaileague.com/api/auth/me` request.\n    *   **Check Request Headers:** Confirm if an `Authorization` header is present and if it contains a `Bearer` token (e.g., `Authorization: Bearer <your-jwt-token>`).\n    *   **Check Token Storage:** Look into `localStorage`, `sessionStorage`, or your application's cookie storage to see if an authentication token is present and valid. If a token is sent in the request, compare it to the one stored locally.\n    *   **Axios/Fetch Configuration:** If no token is being sent, ensure your API client (e.g., an Axios instance) is correctly configured with an interceptor to attach the authentication token from storage to all outgoing requests to protected endpoints.\n    *   **Token Expiration/Refresh Logic:** If a token is present but expired or invalid, debug why a stale token is being used and ensure your application has logic to refresh tokens or prompt for re-authentication when a token expires.\n**2. Backend (Express.js): Inspect Authentication Middleware**\n    *   Locate your authentication middleware (likely in `server/src/middleware/auth.ts` or similar). This middleware is responsible for extracting and verifying the JWT.\n    *   **Token Extraction:** Verify that the middleware correctly extracts the token from the `Authorization` header (e.g., by splitting 'Bearer ' from the header value).\n    *   **JWT Verification:** Confirm the JWT verification logic (`jwt.verify`):\n        *   **JWT Secret:** Ensure that the `JWT_SECRET` environment variable used for verification matches the exact secret key used when signing (issuing) tokens during user login. Inconsistency here is a common cause of 401s.\n        *   **Add Logging:** Temporarily add `console.log` statements within the middleware to trace the token value, the `JWT_SECRET` being used, and the outcome of the `jwt.verify` call (errors, decoded payload).\n    *   **Route Application:** Ensure that this authentication middleware is correctly applied to the `/api/auth/me` route definition (e.g., `server/src/routes/auth.ts` or `server/src/routes/user.ts`).\n**3. Environment Variables Consistency**\n    *   Confirm that the `JWT_SECRET` environment variable is consistently set and available to the Express.js backend across all relevant deployment environments (development, staging, production). Misconfiguration of environment variables is a frequent cause of such issues.",
+        "codeSnippet": "```typescript\n// server/src/middleware/auth.ts (Example Express.js Auth Middleware)\nimport { Request, Response, NextFunction } from 'express';\nimport jwt from 'jsonwebtoken';\n\ninterface AuthenticatedRequest extends Request {\n  user?: any; // Extend Request type to include 'user' property after authentication\n}\n\nexport const authenticateToken = (req: AuthenticatedRequest, res: Response, next: NextFunction) => {\n  const authHeader = req.headers['authorization'];\n  const token = authHeader && authHeader.split(' ')[1]; // Expects 'Bearer TOKEN'\n\n  if (token == null) {\n    console.log('Auth Middleware: No token provided, returning 401.');\n    return res.status(401).json({ message: 'Authentication token required' });\n  }\n\n  const jwtSecret = process.env.JWT_SECRET;\n  if (!jwtSecret) {\n    console.error('Auth Middleware: JWT_SECRET is not defined in environment variables. Critical configuration missing.');\n    return res.status(500).json({ message: 'Server configuration error: JWT secret missing' });\n  }\n\n  jwt.verify(token, jwtSecret, (err: any, user: any) => {\n    if (err) {\n      console.log('Auth Middleware: Token verification failed:', err.message, 'Returning 401.');\n      // Log specific error details from 'err' for debugging (e.g., TokenExpiredError, JsonWebTokenError)\n      return res.status(401).json({ message: 'Invalid or expired authentication token' });\n    }\n    req.user = user; // Attach decoded user payload to the request object\n    next();\n  });\n};\n```\n\n```javascript\n// client/src/api/axiosInstance.js (Example React Axios Interceptor)\nimport axios from 'axios';\n\nconst api = axios.create({\n  baseURL: 'https://coaileague.com/api', // Ensure this matches your backend API URL\n  withCredentials: true, // Important if using HTTP-only cookies for authentication\n});\n\napi.interceptors.request.use(\n  (config) => {\n    // Retrieve token from localStorage, sessionStorage, or a cookie\n    const token = localStorage.getItem('jwt_token'); \n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  (error) => {\n    return Promise.reject(error);\n  }\n);\n\napi.interceptors.response.use(\n  (response) => response,\n  (error) => {\n    if (error.response && error.response.status === 401) {\n      console.warn('API Interceptor: 401 Unauthorized response received. User session might be invalid or expired.');\n      // Handle 401: e.g., redirect to login page, clear local token, show notification\n      localStorage.removeItem('jwt_token'); // Clear potentially stale token\n      // Example: window.location.href = '/login'; // Redirect to login page\n    }\n    return Promise.reject(error);\n  }\n);\n\nexport default api;\n```",
+        "filesLikelyAffected": [
+          "server/src/middleware/auth.ts",
+          "server/src/routes/auth.ts",
+          "server/src/routes/user.ts",
+          "client/src/api/axiosInstance.js",
+          "client/src/contexts/AuthContext.jsx",
+          "client/src/hooks/useAuth.js",
+          "client/src/pages/PricingPage.jsx",
+          ".env",
+          ".env.development",
+          ".env.production"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.9,
+        "relatedIssues": [
+          "User unable to log in (if token issuance is failing)",
+          "Session expiring unexpectedly for users",
+          "Incorrect JWT_SECRET configuration across environments",
+          "Client-side errors related to missing user data after login"
+        ]
+      }
+    },
+    {
+      "issue": {
+        "id": "4360c37b2c88e7c3",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/pricing",
+        "message": "GET https://coaileague.com/api/mascot/holiday returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/holiday",
+        "statusCode": 401,
+        "timestamp": "2026-01-13T06:51:02.401Z",
+        "recommendedFix": "Fix API endpoint returning error status. Check server logs for details."
+      },
+      "analysis": {
+        "rootCause": "The client (React frontend) is attempting to access the `/api/mascot/holiday` endpoint, which is a protected resource, without providing valid authentication credentials. This typically means the authentication token is either missing from the request, expired, or malformed.",
+        "fixRecommendation": "**1. Inspect Frontend Request in Browser DevTools:**\n   - Navigate to `https://coaileague.com/pricing` in your browser.\n   - Open Developer Tools (F12) and go to the 'Network' tab.\n   - Reload the page and filter for requests to `/api/mascot/holiday`.\n   - Select the failed request and check its 'Headers' tab, specifically the 'Request Headers'. Look for an `Authorization` header (e.g., `Authorization: Bearer <token>`).\n   - If the `Authorization` header is missing or the token looks invalid/expired, proceed to step 2.\n   - If the header is present and the token seems valid, proceed to step 3.\n**2. Verify Frontend Authentication Token Handling:**\n   - **Check Token Storage:** Ensure the user's authentication token (e.g., JWT) is correctly stored (e.g., in `localStorage`, `sessionStorage`, or a secure cookie) after a successful login.\n   - **Check Axios/Fetch Interceptors:** Verify that your `axios` instance (or `fetch` wrapper) has an interceptor configured to automatically attach the `Authorization: Bearer <token>` header to *all* outgoing API requests for authenticated users. The component making the call to `/api/mascot/holiday` should be using this configured instance.\n   - **Token Expiration/Refresh:** If the token is present but expired, ensure your frontend has a mechanism to detect expired tokens and silently request a new one (token refresh) before retrying the failed request.\n**3. Review Backend Authentication Middleware:**\n   - **Route Protection:** In the Express.js backend, locate the definition for the `/api/mascot/holiday` route. Confirm that it is correctly guarded by an authentication middleware (e.g., `authenticateToken`).\n   - **Middleware Configuration:** If the middleware is in place, review its implementation (`server/src/middleware/auth.js` or similar). Ensure it correctly extracts the token from the `Authorization` header, verifies its signature (using `JWT_SECRET` from `.env`), and handles expiration correctly.\n   - **Endpoint Accessibility (if applicable):** If `/api/mascot/holiday` is *not* intended to be an authenticated endpoint (which is less common for a 401 but possible if misconfigured), then remove the authentication middleware from this specific route. However, a 401 status strongly implies intentional protection.\n**4. Validate JWT Secret:**\n   - Ensure the `JWT_SECRET` environment variable used by the backend for token verification is consistent and correct. Mismatched secrets can cause valid tokens to be rejected.",
+        "codeSnippet": "```javascript\n// client/src/utils/axiosInstance.js (Ensuring token is sent)\nimport axios from 'axios';\n\nconst axiosInstance = axios.create({\n  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://coaileague.com/api',\n  timeout: 10000,\n  headers: {\n    'Content-Type': 'application/json',\n  },\n});\n\naxiosInstance.interceptors.request.use(\n  (config) => {\n    const token = localStorage.getItem('authToken'); // Or from Redux/Context API\n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  (error) => {\n    return Promise.reject(error);\n  }\n);\n\n// server/src/routes/mascotRoutes.js (Example of protected route)\nconst express = require('express');\nconst router = express.Router();\nconst authenticateToken = require('../middleware/auth'); // Your JWT auth middleware\n\n// Apply authentication middleware to the specific route\nrouter.get('/holiday', authenticateToken, async (req, res) => {\n  try {\n    // Access req.user for authenticated user info if needed\n    // Example: const holidays = await getMascotHolidays(req.user.id);\n    const holidays = ['Christmas', 'New Year', 'Halloween']; // Placeholder data\n    res.status(200).json({ data: holidays });\n  } catch (error) {\n    console.error('Failed to fetch mascot holidays:', error);\n    res.status(500).json({ message: 'Internal server error' });\n  }\n});\n\nmodule.exports = router;\n```",
+        "filesLikelyAffected": [
+          "client/src/utils/axiosInstance.js",
+          "client/src/components/PricingPage.jsx",
+          "client/src/services/mascotService.js",
+          "server/src/routes/mascotRoutes.js",
+          "server/src/middleware/auth.js",
+          "server/.env"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "Expired JWT token handling",
+          "Missing 'Authorization' header in API requests",
+          "Incorrect JWT secret on backend",
+          "CORS preflight failures (if authentication headers are blocked)",
+          "Session management issues"
+        ]
+      }
+    }
+  ],
+  "estimatedTotalEffort": "3 days",
+  "recommendations": [
+    "Multiple API failures detected - check server logs and database connections",
+    "High JavaScript error count - run ESLint and fix warnings",
+    "Consider running diagnostics nightly to catch regressions early"
+  ]
+}
