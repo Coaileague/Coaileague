@@ -340,17 +340,17 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                       <Menu className="h-5 w-5" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-[300px] sm:w-[360px] overflow-y-auto">
-                    <SheetHeader>
-                      <SheetTitle>Menu</SheetTitle>
-                      <SheetDescription>Navigate the CoAIleague platform</SheetDescription>
+                  <SheetContent side="right" className="w-[240px] sm:w-[280px] overflow-y-auto p-4">
+                    <SheetHeader className="pb-2">
+                      <SheetTitle className="text-sm">Menu</SheetTitle>
+                      <SheetDescription className="text-xs">Navigate the platform</SheetDescription>
                     </SheetHeader>
-                    <nav className="flex flex-col gap-4 mt-4 pb-8">
+                    <nav className="flex flex-col gap-2 mt-3 pb-6">
                       {HEADER_CONFIG.public.navItems.map((item) => (
                         <Button
                           key={item.href}
                           variant="ghost"
-                          className="justify-start text-base"
+                          className="justify-start text-xs sm:text-sm h-auto py-2 px-2 whitespace-normal text-left"
                           onClick={() => {
                             setMobileMenuOpen(false);
                             item.isSpecial ? handleFeaturesClick() : setLocation(item.href);
@@ -360,14 +360,14 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                           {item.label}
                         </Button>
                       ))}
-                      <div className="border-t my-2" />
+                      <div className="border-t my-1" />
                       
                       {/* Quick access items that don't fit in header */}
                       {showNotificationFeatures && (
                         <>
                           <Button
                             variant="ghost"
-                            className="justify-start text-sm sm:text-base w-full"
+                            className="justify-start text-xs sm:text-sm w-full h-auto py-2 px-2"
                             onClick={() => {
                               setMobileMenuOpen(false);
                               setLocation("/inbox");
@@ -375,11 +375,11 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                             data-testid="mobile-menu-inbox"
                           >
                             <Mail className="mr-2 h-4 w-4 shrink-0" />
-                            <span className="truncate">Messages & Inbox</span>
+                            <span className="whitespace-normal break-words">Messages</span>
                           </Button>
                           <Button
                             variant="ghost"
-                            className="justify-start text-sm sm:text-base w-full"
+                            className="justify-start text-xs sm:text-sm w-full h-auto py-2 px-2"
                             onClick={() => {
                               setMobileMenuOpen(false);
                               window.dispatchEvent(new CustomEvent('open-ai-search'));
@@ -387,31 +387,31 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                             data-testid="mobile-menu-search"
                           >
                             <Search className="mr-2 h-4 w-4 shrink-0" />
-                            <span className="truncate">AI Search</span>
+                            <span className="whitespace-normal break-words">AI Search</span>
                           </Button>
                         </>
                       )}
                       
                       <Button
                         variant="ghost"
-                        className="justify-start text-base"
+                        className="justify-start text-xs sm:text-sm h-auto py-2 px-2"
                         onClick={() => {
                           setMobileMenuOpen(false);
                           setLocation("/support");
                         }}
                         data-testid="mobile-button-support"
                       >
-                        <Bug className="mr-2 h-4 w-4" />
-                        Get Help
+                        <Bug className="mr-2 h-4 w-4 shrink-0" />
+                        <span className="whitespace-normal break-words">Get Help</span>
                       </Button>
                       
-                      <div className="border-t my-2" />
+                      <div className="border-t my-1" />
                       
                       {!user ? (
                         <>
                           <Button
                             variant="outline"
-                            className="justify-center"
+                            className="justify-center text-xs sm:text-sm h-auto py-2"
                             onClick={() => {
                               setMobileMenuOpen(false);
                               setLocation("/login");
@@ -421,7 +421,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                             Login
                           </Button>
                           <Button
-                            className="justify-center"
+                            className="justify-center text-xs sm:text-sm h-auto py-2"
                             onClick={() => {
                               setMobileMenuOpen(false);
                               setLocation("/register");
@@ -435,27 +435,27 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                         <>
                           <Button
                             variant="outline"
-                            className="justify-center w-full"
+                            className="justify-center w-full text-xs sm:text-sm h-auto py-2"
                             onClick={() => {
                               setMobileMenuOpen(false);
                               setLocation("/dashboard");
                             }}
                             data-testid="mobile-button-dashboard"
                           >
-                            <LayoutDashboard className="mr-2 h-4 w-4" />
-                            Go to Dashboard
+                            <LayoutDashboard className="mr-2 h-4 w-4 shrink-0" />
+                            <span className="whitespace-normal">Dashboard</span>
                           </Button>
                           <Button
                             variant="destructive"
-                            className="justify-center w-full"
+                            className="justify-center w-full text-xs sm:text-sm h-auto py-2"
                             onClick={() => {
                               setMobileMenuOpen(false);
                               handleLogout();
                             }}
                             data-testid="mobile-button-logout"
                           >
-                            <LogOut className="mr-2 h-4 w-4" />
-                            Sign Out
+                            <LogOut className="mr-2 h-4 w-4 shrink-0" />
+                            <span>Sign Out</span>
                           </Button>
                         </>
                       )}
@@ -528,22 +528,22 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                       <Menu className="h-5 w-5" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="right" className="w-[300px] sm:w-[360px] overflow-y-auto">
-                    <SheetHeader>
-                      <SheetTitle>Workspace Navigation</SheetTitle>
-                      <SheetDescription>Navigate to different areas of your workspace</SheetDescription>
+                  <SheetContent side="right" className="w-[240px] sm:w-[280px] overflow-y-auto p-4">
+                    <SheetHeader className="pb-2">
+                      <SheetTitle className="text-sm">Navigation</SheetTitle>
+                      <SheetDescription className="text-xs">Workspace areas</SheetDescription>
                     </SheetHeader>
-                    <div className="flex flex-col gap-4 mt-4">
+                    <div className="flex flex-col gap-2 mt-3">
                       
                       {workspaceFamilies.length > 0 ? (
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                           {workspaceFamilies.map((family) => (
                             <Collapsible key={family.id} defaultOpen={family.routes.some(r => location === r.href)}>
-                              <CollapsibleTrigger className="flex items-center justify-between w-full px-3 py-2 rounded-md bg-muted/50 hover-elevate">
-                                <span className="text-sm font-semibold">{family.label}</span>
-                                <ChevronDown className="h-4 w-4 transition-transform data-[state=open]:rotate-180" />
+                              <CollapsibleTrigger className="flex items-center justify-between w-full px-2 py-1.5 rounded-md bg-muted/50 hover-elevate">
+                                <span className="text-xs font-semibold whitespace-normal break-words">{family.label}</span>
+                                <ChevronDown className="h-3 w-3 shrink-0 transition-transform data-[state=open]:rotate-180" />
                               </CollapsibleTrigger>
-                              <CollapsibleContent className="pt-2 space-y-1">
+                              <CollapsibleContent className="pt-1 space-y-0.5">
                                 {family.routes.map((route) => {
                                   const isActive = location === route.href;
                                   const Icon = route.icon;
@@ -551,22 +551,19 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                                     <Button
                                       key={route.id}
                                       variant={isActive ? "default" : "ghost"}
-                                      className="w-full justify-start gap-3 h-auto py-3"
+                                      className="w-full justify-start gap-2 h-auto py-2 px-2 min-h-0"
                                       onClick={() => {
                                         setLocation(route.href);
                                         setMobileMenuOpen(false);
                                       }}
                                       data-testid={`mobile-workspace-route-${route.id}`}
                                     >
-                                      <Icon className="h-5 w-5" />
-                                      <div className="flex flex-col items-start gap-0.5">
-                                        <span className="font-medium">{route.label}</span>
-                                        {route.description && (
-                                          <span className="text-xs text-muted-foreground">{route.description}</span>
-                                        )}
+                                      <Icon className="h-4 w-4 shrink-0" />
+                                      <div className="flex flex-col items-start gap-0 min-w-0">
+                                        <span className="text-xs font-medium whitespace-normal break-words leading-tight">{route.label}</span>
                                       </div>
                                       {route.badge && (
-                                        <span className="ml-auto px-2 py-1 text-xs bg-primary text-primary-foreground rounded-full">
+                                        <span className="ml-auto px-1.5 py-0.5 text-[10px] bg-primary text-primary-foreground rounded-full shrink-0">
                                           {route.badge}
                                         </span>
                                       )}
@@ -578,47 +575,47 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                           ))}
                         </div>
                       ) : (
-                        <div className="text-sm text-muted-foreground p-3">
-                          Loading navigation...
+                        <div className="text-xs text-muted-foreground p-2">
+                          Loading...
                         </div>
                       )}
                       
-                      <div className="border-t pt-4 mt-2 space-y-2">
+                      <div className="border-t pt-3 mt-2 space-y-1">
                         <Button
                           variant="outline"
-                          className="w-full justify-start gap-3"
+                          className="w-full justify-start gap-2 text-xs h-auto py-2 px-2"
                           onClick={() => {
                             setMobileMenuOpen(false);
                             setLocation("/support");
                           }}
                           data-testid="mobile-workspace-help"
                         >
-                          <Bug className="h-4 w-4" />
-                          Get Help
+                          <Bug className="h-4 w-4 shrink-0" />
+                          <span className="whitespace-normal break-words">Help</span>
                         </Button>
                         <Button
                           variant="outline"
-                          className="w-full justify-start gap-3"
+                          className="w-full justify-start gap-2 text-xs h-auto py-2 px-2"
                           onClick={() => {
                             setMobileMenuOpen(false);
                             setLocation("/settings");
                           }}
                           data-testid="mobile-workspace-settings"
                         >
-                          <Settings className="h-4 w-4" />
-                          Settings
+                          <Settings className="h-4 w-4 shrink-0" />
+                          <span className="whitespace-normal break-words">Settings</span>
                         </Button>
                         <Button
                           variant="destructive"
-                          className="w-full justify-center gap-2"
+                          className="w-full justify-center gap-2 text-xs h-auto py-2"
                           onClick={() => {
                             setMobileMenuOpen(false);
                             handleLogout();
                           }}
                           data-testid="mobile-workspace-logout"
                         >
-                          <LogOut className="h-4 w-4" />
-                          Sign Out
+                          <LogOut className="h-4 w-4 shrink-0" />
+                          <span>Sign Out</span>
                         </Button>
                       </div>
                     </div>
