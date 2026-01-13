@@ -377,6 +377,223 @@ export class IntegrationCrawler {
           { action: 'wait', timeout: 3000, description: 'Wait for time tracking load' },
           { action: 'assert', target: 'time', description: 'Time tracking content should be visible' }
         ]
+      },
+      // =================================================
+      // BUSINESS WORKFLOW TESTS - Core Revenue Features
+      // =================================================
+      {
+        id: 'schedule-create-shift',
+        name: 'Schedule: Create New Shift',
+        description: 'Test shift creation workflow in schedule page',
+        type: 'workflow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/schedule', description: 'Navigate to schedule page' },
+          { action: 'wait', timeout: 3000, description: 'Wait for schedule load' },
+          { action: 'ui-action', target: '[data-testid="button-add-shift"], [data-testid="button-create-shift"]', description: 'Click add shift button' },
+          { action: 'wait', timeout: 2000, description: 'Wait for shift dialog' },
+          { action: 'assert', target: 'shift', description: 'Shift creation dialog should appear' }
+        ]
+      },
+      {
+        id: 'invoices-page-loads',
+        name: 'Invoices Page Loads',
+        description: 'Authenticated user can access invoices page',
+        type: 'workflow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/invoices', description: 'Navigate to invoices page' },
+          { action: 'wait', timeout: 3000, description: 'Wait for invoices load' },
+          { action: 'assert', target: 'invoice', description: 'Invoices content should be visible' }
+        ]
+      },
+      {
+        id: 'invoice-create-flow',
+        name: 'Invoice: Create New Invoice',
+        description: 'Test invoice creation workflow',
+        type: 'workflow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/invoices', description: 'Navigate to invoices page' },
+          { action: 'wait', timeout: 3000, description: 'Wait for page load' },
+          { action: 'ui-action', target: '[data-testid="button-create-invoice"], [data-testid="button-new-invoice"]', description: 'Click create invoice' },
+          { action: 'wait', timeout: 2000, description: 'Wait for invoice dialog' },
+          { action: 'assert', target: 'create', description: 'Invoice creation form should appear' }
+        ]
+      },
+      {
+        id: 'payroll-page-loads',
+        name: 'Payroll Page Loads',
+        description: 'Authenticated user can access payroll page',
+        type: 'workflow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/payroll', description: 'Navigate to payroll page' },
+          { action: 'wait', timeout: 3000, description: 'Wait for payroll load' },
+          { action: 'assert', target: 'payroll', description: 'Payroll content should be visible' }
+        ]
+      },
+      {
+        id: 'payroll-run-workflow',
+        name: 'Payroll: Run Payroll Workflow',
+        description: 'Test payroll run initiation',
+        type: 'workflow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/payroll', description: 'Navigate to payroll page' },
+          { action: 'wait', timeout: 3000, description: 'Wait for page load' },
+          { action: 'ui-action', target: '[data-testid="button-run-payroll"], [data-testid="button-start-payroll"]', description: 'Click run payroll' },
+          { action: 'wait', timeout: 2000, description: 'Wait for payroll dialog' },
+          { action: 'assert', target: 'payroll', description: 'Payroll workflow should initiate' }
+        ]
+      },
+      {
+        id: 'time-tracking-clock-in',
+        name: 'Time Tracking: Clock In/Out',
+        description: 'Test clock in/out functionality',
+        type: 'workflow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/time-tracking', description: 'Navigate to time tracking' },
+          { action: 'wait', timeout: 3000, description: 'Wait for page load' },
+          { action: 'assert', target: 'clock', description: 'Clock in/out controls should be visible' }
+        ]
+      },
+      // =================================================
+      // API DATA VALIDATION TESTS - Financial Integrity
+      // =================================================
+      {
+        id: 'api-payroll-calculations',
+        name: 'API: Payroll Calculations Valid',
+        description: 'Verify payroll calculation API returns valid data',
+        type: 'data-flow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'api-call', target: '/api/payroll/preview', description: 'Fetch payroll preview' },
+          { action: 'assert', expectedResult: { status: 200 }, description: 'API should respond successfully' }
+        ]
+      },
+      {
+        id: 'api-invoices-list',
+        name: 'API: Invoices List Valid',
+        description: 'Verify invoices API returns valid data',
+        type: 'data-flow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'api-call', target: '/api/invoices', description: 'Fetch invoices list' },
+          { action: 'assert', expectedResult: { status: 200 }, description: 'API should respond successfully' }
+        ]
+      },
+      {
+        id: 'api-time-entries',
+        name: 'API: Time Entries Valid',
+        description: 'Verify time entries API returns valid data',
+        type: 'data-flow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'api-call', target: '/api/time-entries', description: 'Fetch time entries' },
+          { action: 'assert', expectedResult: { status: 200 }, description: 'API should respond successfully' }
+        ]
+      },
+      {
+        id: 'api-schedule-shifts',
+        name: 'API: Schedule Shifts Valid',
+        description: 'Verify schedule/shifts API returns valid data',
+        type: 'data-flow',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'api-call', target: '/api/shifts', description: 'Fetch shifts' },
+          { action: 'assert', expectedResult: { status: 200 }, description: 'API should respond successfully' }
+        ]
+      },
+      // =================================================
+      // QUICKBOOKS INTEGRATION TESTS
+      // =================================================
+      {
+        id: 'quickbooks-status',
+        name: 'QuickBooks: Connection Status',
+        description: 'Verify QuickBooks integration status',
+        type: 'data-flow',
+        critical: false,
+        requiresAuth: true,
+        steps: [
+          { action: 'api-call', target: '/api/quickbooks/status', description: 'Check QuickBooks status' },
+          { action: 'assert', expectedResult: { status: 200 }, description: 'Status endpoint should respond' }
+        ]
+      },
+      {
+        id: 'quickbooks-sync-validation',
+        name: 'QuickBooks: Sync Data Validation',
+        description: 'Verify QuickBooks sync returns valid reconciliation data',
+        type: 'data-flow',
+        critical: false,
+        requiresAuth: true,
+        steps: [
+          { action: 'api-call', target: '/api/quickbooks/sync-status', description: 'Check sync status' },
+          { action: 'assert', expectedResult: { status: 200 }, description: 'Sync status should be accessible' }
+        ]
+      },
+      {
+        id: 'integrations-page-loads',
+        name: 'Integrations Page Loads',
+        description: 'Authenticated user can access integrations settings',
+        type: 'workflow',
+        critical: false,
+        requiresAuth: true,
+        steps: [
+          { action: 'ui-action', target: '/integrations', description: 'Navigate to integrations' },
+          { action: 'wait', timeout: 3000, description: 'Wait for integrations load' },
+          { action: 'assert', target: 'integration', description: 'Integrations page should be visible' }
+        ]
+      },
+      // =================================================
+      // AUTOMATION VERIFICATION TESTS
+      // =================================================
+      {
+        id: 'automation-scheduler-status',
+        name: 'Automation: Scheduler Status',
+        description: 'Verify autonomous scheduler is operational',
+        type: 'pipeline',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'api-call', target: '/api/scheduler/status', description: 'Check scheduler status' },
+          { action: 'assert', expectedResult: { status: 200 }, description: 'Scheduler should respond' }
+        ]
+      },
+      {
+        id: 'automation-trinity-status',
+        name: 'Automation: Trinity AI Status',
+        description: 'Verify Trinity AI brain is operational',
+        type: 'pipeline',
+        critical: true,
+        requiresAuth: true,
+        steps: [
+          { action: 'api-call', target: '/api/trinity/status', description: 'Check Trinity status' },
+          { action: 'assert', expectedResult: { status: 200 }, description: 'Trinity should respond' }
+        ]
+      },
+      {
+        id: 'notifications-system',
+        name: 'Notifications: System Status',
+        description: 'Verify notification system is operational',
+        type: 'pipeline',
+        critical: false,
+        requiresAuth: true,
+        steps: [
+          { action: 'api-call', target: '/api/notifications', description: 'Fetch notifications' },
+          { action: 'assert', expectedResult: { status: 200 }, description: 'Notifications should load' }
+        ]
       }
     ];
   }

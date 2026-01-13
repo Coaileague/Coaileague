@@ -136,6 +136,7 @@ import aiSchedulingRoutes from "./routes/aiSchedulingRoutes";
 import infrastructureRoutes from "./routes/infrastructureRoutes"; // Q1 2026 Infrastructure
 import sandboxRoutes from "./routes/sandbox-routes"; // Sandbox Simulation Testing
 import featureFlagsRoutes from "./routes/featureFlagsRoutes"; // Trinity Runtime Flags
+import maintenanceRoutes from "./routes/maintenanceRoutes"; // Maintenance Mode
 import resendWebhooksRouter from "./routes/resendWebhooks"; // Resend email webhooks
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
@@ -3257,6 +3258,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/infrastructure', requireAuth, infrastructureRoutes);
   app.use("/api/sandbox", sandboxRoutes); // Sandbox Simulation Testing
   app.use(featureFlagsRoutes); // Trinity Runtime Flags API
+  app.use(maintenanceRoutes); // Maintenance Mode API
 
 
   // Register CoAIleague Autonomous Scheduler API
