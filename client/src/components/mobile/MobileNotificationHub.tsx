@@ -230,10 +230,7 @@ export function MobileNotificationHub() {
   
   const actionMutation = useMutation({
     mutationFn: async ({ action, id, data }: { action: string; id: string; data?: any }) => {
-      return apiRequest(`/api/notifications/${id}/action`, {
-        method: 'POST',
-        body: JSON.stringify({ action, data }),
-      });
+      return apiRequest('POST', `/api/notifications/${id}/action`, { action, data });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
@@ -247,7 +244,7 @@ export function MobileNotificationHub() {
   // Delete single notification
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      return apiRequest(`/api/notifications/${id}`, { method: 'DELETE' });
+      return apiRequest('DELETE', `/api/notifications/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
@@ -261,7 +258,7 @@ export function MobileNotificationHub() {
   // Mark all as read
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      return apiRequest('/api/notifications/mark-all-read', { method: 'POST' });
+      return apiRequest('POST', '/api/notifications/mark-all-read');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });

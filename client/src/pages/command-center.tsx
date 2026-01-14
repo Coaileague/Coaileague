@@ -32,14 +32,14 @@ export default function CommandCenterPage() {
   const totalServices = healthData?.services?.length || 0;
 
   return (
-    <WorkspaceLayout title="Command Center">
-      <WorkspaceSection>
+    <WorkspaceLayout>
+      <WorkspaceSection title="Command Center">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
             <UNSCommandCenter 
               className="w-full" 
-              platformRole={user?.platformRole}
-              workspaceRole={user?.workspaceRole}
+              platformRole={user?.platformRole ?? undefined}
+              workspaceRole={user?.workspaceRole ?? undefined}
             />
           </div>
           

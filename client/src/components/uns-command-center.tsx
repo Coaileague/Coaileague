@@ -3,6 +3,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { X, Sparkles, CheckCircle2, ExternalLink } from "lucide-react";
 
 type NotificationCategory = 'all' | 'alerts' | 'workflows' | 'system' | 'ai';
 type NotificationPriority = 'critical' | 'high' | 'medium' | 'low';
@@ -14,6 +18,10 @@ interface UNSNotification {
   priority: NotificationPriority;
   title: string;
   message: string;
+  detailedInfo?: string;
+  issue?: string;
+  solution?: string;
+  fixedByTrinity?: boolean;
   time: string;
   read: boolean;
   action?: {
@@ -28,6 +36,117 @@ interface UNSNotification {
     warnings?: number;
     endUserSummary?: string;
   };
+}
+
+// Notification Detail Modal Component
+function NotificationDetailModal({
+  notification,
+  isOpen,
+  onClose,
+}: {
+  notification: UNSNotification | null;
+  isOpen: boolean;
+  onClose: () => void;
+}) {
+  if (!notification) return null;
+
+  return (
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
+        <DialogHeader>
+          <div className="flex items-center gap-3">
+            <div className={cn(
+              "w-10 h-10 rounded-xl flex items-center justify-center",
+              PRIORITY_BG[notification.priority],
+              PRIORITY_TEXT[notification.priority]
+            )}>
+              {getTypeIcon(notification.type)}
+            </div>
+            <div className="flex-1">
+              <DialogTitle className="text-white text-lg">{notification.title}</DialogTitle>
+              <DialogDescription className="text-slate-400 text-sm">
+                {formatDistanceToNow(parseISO(notification.time), { addSuffix: true })}
+              </DialogDescription>
+            </div>
+          </div>
+        </DialogHeader>
+        
+        <div className="space-y-4 mt-2">
+          {/* Priority Badge */}
+          <div className="flex items-center gap-2">
+            <Badge className={cn(
+              "capitalize",
+              notification.priority === 'critical' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
+              notification.priority === 'high' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
+              notification.priority === 'medium' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
+              'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+            )}>
+              {notification.priority}
+            </Badge>
+            <Badge variant="outline" className="capitalize text-slate-400 border-slate-600">
+              {notification.type}
+            </Badge>
+          </div>
+          
+          {/* Message */}
+          <div className="bg-slate-800/50 rounded-lg p-3">
+            <p className="text-slate-300 text-sm leading-relaxed">{notification.message}</p>
+          </div>
+          
+          {/* Detailed Info */}
+          {notification.detailedInfo && (
+            <div className="bg-slate-800/50 rounded-lg p-3">
+              <h4 className="text-slate-400 text-xs font-medium uppercase mb-1">Details</h4>
+              <p className="text-slate-300 text-sm">{notification.detailedInfo}</p>
+            </div>
+          )}
+          
+          {/* Issue */}
+          {notification.issue && (
+            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+              <h4 className="text-red-400 text-xs font-medium uppercase mb-1">Issue Detected</h4>
+              <p className="text-slate-300 text-sm">{notification.issue}</p>
+            </div>
+          )}
+          
+          {/* Solution */}
+          {notification.solution && (
+            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
+              <h4 className="text-emerald-400 text-xs font-medium uppercase mb-1">Solution</h4>
+              <p className="text-slate-300 text-sm">{notification.solution}</p>
+            </div>
+          )}
+          
+          {/* Fixed by Trinity Badge */}
+          {notification.fixedByTrinity && (
+            <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
+              <Sparkles className="w-5 h-5 text-purple-400" />
+              <div>
+                <span className="text-purple-300 font-medium text-sm">Fixed by Trinity AI</span>
+                <p className="text-slate-400 text-xs">This issue was automatically resolved</p>
+              </div>
+              <CheckCircle2 className="w-5 h-5 text-emerald-400 ml-auto" />
+            </div>
+          )}
+          
+          {/* Action Button */}
+          {notification.action && (
+            <Button 
+              className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500"
+              onClick={() => {
+                if (notification.action?.target) {
+                  window.location.href = notification.action.target;
+                }
+              }}
+            >
+              {notification.action.label}
+              <ExternalLink className="w-4 h-4 ml-2" />
+            </Button>
+          )}
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 // Platform roles from schema - these are global platform-level roles
@@ -168,8 +287,10 @@ const getRoleBasedNotificationFilter = (
 };
 
 export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrinity, platformRole, workspaceRole }: UNSCommandCenterProps) {
-  const [activeTab, setActiveTab] = useState<NotificationCategory>('all');
+  const [activeTab, setActiveTab] = useState<NotificationCategory>('alerts');
   const [pulseActive, setPulseActive] = useState(true);
+  const [selectedNotification, setSelectedNotification] = useState<UNSNotification | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   
   const { data: notificationsData, isLoading } = useQuery<{
     platformUpdates: any[];
@@ -191,7 +312,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest('/api/notifications/mark-all-read', { method: 'POST' });
+      await apiRequest('POST', '/api/notifications/mark-all-read');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
@@ -200,7 +321,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
 
   const clearAllMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest('/api/notifications/clear-all', { method: 'POST' });
+      await apiRequest('POST', '/api/notifications/clear-all');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
@@ -312,9 +433,17 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
     return time;
   };
 
+  // Dynamic guards count from employees data
+  const { data: employeesData } = useQuery<any[]>({
+    queryKey: ['/api/employees'],
+  });
+  const activeGuards = useMemo(() => {
+    if (!employeesData) return 0;
+    return employeesData.filter((e: any) => e.isActive && e.status === 'active').length;
+  }, [employeesData]);
+
   const isQuickBooksOnline = healthData?.services?.find(s => s.service === 'quickbooks')?.status === 'operational';
   const isTrinityOnline = healthData?.overall === 'operational';
-  const activeGuards = 3;
 
   if (!isOpen) return null;
 
@@ -460,6 +589,10 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
             {filteredNotifications.map((notification, index) => (
               <div
                 key={notification.id}
+                onClick={() => {
+                  setSelectedNotification(notification);
+                  setIsDetailModalOpen(true);
+                }}
                 className={cn(
                   "relative p-4 hover:bg-slate-700/30 transition-all duration-200 cursor-pointer group",
                   !notification.read ? 'bg-slate-700/20' : ''
