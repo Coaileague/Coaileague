@@ -62,8 +62,8 @@ function NotificationDetailModal({
               "shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl",
               notification.priority === 'critical' ? 'bg-red-500/20 text-red-400' :
               notification.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
-              notification.priority === 'medium' ? 'bg-[#9333EA]/20 text-[#A855F7]' : 
-              'bg-[#0D9488]/20 text-[#14B8A6]'
+              notification.priority === 'medium' ? 'bg-[#06b6d4]/20 text-[#22d3ee]' : 
+              'bg-[#2dd4bf]/20 text-[#2dd4bf]'
             )}>
               <div className="scale-125">{getTypeIcon(notification.type)}</div>
             </div>
@@ -84,8 +84,8 @@ function NotificationDetailModal({
               "capitalize px-4 py-1.5 text-xs font-black tracking-widest shadow-lg border-0",
               notification.priority === 'critical' ? 'bg-red-600 text-white' :
               notification.priority === 'high' ? 'bg-orange-500 text-white' :
-              notification.priority === 'medium' ? 'bg-[#9333EA] text-white' :
-              'bg-[#0D9488] text-white'
+              notification.priority === 'medium' ? 'bg-[#06b6d4] text-white' :
+              'bg-[#2dd4bf] text-white'
             )}>
               {notification.priority}
             </Badge>
@@ -101,7 +101,7 @@ function NotificationDetailModal({
           
           {/* Main Content Card */}
           <div className="bg-[#1E293B] rounded-2xl p-6 border border-slate-700/50 shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#9333EA] to-[#0D9488] opacity-50" />
+            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#06b6d4] to-[#2dd4bf] opacity-50" />
             <p className="text-slate-100 text-lg leading-relaxed font-medium">{notification.message}</p>
           </div>
           
@@ -125,8 +125,8 @@ function NotificationDetailModal({
               )}
               
               {notification.solution && (
-                <div className="bg-[#0D9488]/5 border border-[#0D9488]/20 rounded-2xl p-5">
-                  <h4 className="text-[#14B8A6] text-[10px] font-black uppercase tracking-[0.2em] mb-2">Recommended Fix</h4>
+                <div className="bg-[#2dd4bf]/5 border border-[#2dd4bf]/20 rounded-2xl p-5">
+                  <h4 className="text-[#2dd4bf] text-[10px] font-black uppercase tracking-[0.2em] mb-2">Recommended Fix</h4>
                   <p className="text-slate-300 text-sm leading-relaxed">{notification.solution}</p>
                 </div>
               )}
@@ -135,18 +135,18 @@ function NotificationDetailModal({
           
           {/* Trinity Intelligence Block */}
           {notification.fixedByTrinity && (
-            <div className="relative group p-6 rounded-2xl bg-gradient-to-br from-[#9333EA]/10 to-[#0D9488]/10 border border-white/5 shadow-2xl overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#9333EA]/5 via-transparent to-[#0D9488]/5 animate-gradient-x" />
+            <div className="relative group p-6 rounded-2xl bg-gradient-to-br from-[#06b6d4]/10 to-[#2dd4bf]/10 border border-white/5 shadow-2xl overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#06b6d4]/5 via-transparent to-[#2dd4bf]/5 animate-gradient-x" />
               <div className="relative flex items-center gap-5">
                 <div className="bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/10">
-                  <Sparkles className="w-8 h-8 text-[#A855F7] animate-pulse" />
+                  <Sparkles className="w-8 h-8 text-[#22d3ee] animate-pulse" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <h3 className="text-white font-black text-lg tracking-tight">Autonomous Resolution</h3>
                   <p className="text-slate-400 text-sm font-medium mt-1">This event was intercepted and resolved by Trinity AI Engine.</p>
                 </div>
-                <div className="shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-[#14B8A6]/20 border border-[#14B8A6]/30">
-                  <CheckCircle2 className="w-7 h-7 text-[#14B8A6]" />
+                <div className="shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-[#2dd4bf]/20 border border-[#2dd4bf]/30">
+                  <CheckCircle2 className="w-7 h-7 text-[#2dd4bf]" />
                 </div>
               </div>
             </div>
@@ -156,7 +156,7 @@ function NotificationDetailModal({
           {notification.action && (
             <div className="pt-4">
               <Button 
-                className="group relative w-full h-14 bg-gradient-to-r from-[#9333EA] via-[#7C3AED] to-[#0D9488] hover:scale-[1.01] active:scale-[0.99] transition-all shadow-[0_20px_40px_-15px_rgba(147,51,234,0.3)] text-white font-black text-base rounded-2xl border-0 overflow-hidden"
+                className="group relative w-full h-14 bg-gradient-to-r from-[#06b6d4] via-[#0891b2] to-[#3b82f6] hover:scale-[1.01] active:scale-[0.99] transition-all shadow-[0_20px_40px_-15px_rgba(6,182,212,0.3)] text-white font-black text-base rounded-2xl border-0 overflow-hidden"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (notification.action?.target) {
@@ -209,22 +209,22 @@ const normalizePriority = (priority: any): NotificationPriority => {
 const PRIORITY_GRADIENTS: Record<NotificationPriority, string> = {
   critical: 'from-red-500 to-red-600',
   high: 'from-orange-500 to-amber-500',
-  medium: 'from-[#9333EA] to-[#7C3AED]', // Fortune 500 Purple
-  low: 'from-[#0D9488] to-[#14B8A6]' // Fortune 500 Teal
+  medium: 'from-[#06b6d4] to-[#3b82f6]', // Blue/Cyan Gradient
+  low: 'from-[#2dd4bf] to-[#06b6d4]' // Teal/Cyan Gradient
 };
 
 const PRIORITY_BG: Record<NotificationPriority, string> = {
   critical: 'bg-red-500/20',
   high: 'bg-orange-500/20',
-  medium: 'bg-[#9333EA]/20',
-  low: 'bg-[#0D9488]/20'
+  medium: 'bg-[#06b6d4]/20',
+  low: 'bg-[#2dd4bf]/20'
 };
 
 const PRIORITY_TEXT: Record<NotificationPriority, string> = {
   critical: 'text-red-400',
   high: 'text-orange-400',
-  medium: 'text-[#A855F7]',
-  low: 'text-[#14B8A6]'
+  medium: 'text-[#22d3ee]', // cyan-400
+  low: 'text-[#2dd4bf]' // teal-400
 };
 
 const AlertIcon = () => (
@@ -488,7 +488,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-cyan-600/10 animate-pulse pointer-events-none" />
       
       {/* Header */}
-      <div className="relative bg-gradient-to-r from-[#9333EA] via-[#7C3AED] to-[#0D9488] p-4">
+      <div className="relative bg-gradient-to-r from-[#06b6d4] via-[#0891b2] to-[#3b82f6] p-4">
         {/* Animated mesh background */}
         <div className="absolute inset-0 opacity-30 pointer-events-none">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[length:20px_20px]" />
@@ -512,7 +512,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
               <div className="flex items-center gap-2">
                 <span className={cn(
                   "w-2 h-2 rounded-full animate-pulse",
-                  pulseActive ? 'bg-[#14B8A6]' : 'bg-[#0D9488]'
+                  pulseActive ? 'bg-[#2dd4bf]' : 'bg-[#06b6d4]'
                 )} />
                 <span className="text-white/90 text-xs font-medium">Live &bull; Real-time sync</span>
               </div>
@@ -538,15 +538,15 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
         {/* Status Bar */}
         <div className="relative mt-4 flex items-center gap-2 text-xs flex-wrap">
           <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/5">
-            <span className={cn("w-1.5 h-1.5 rounded-full", isTrinityOnline ? 'bg-[#14B8A6]' : 'bg-red-400')} />
+            <span className={cn("w-1.5 h-1.5 rounded-full", isTrinityOnline ? 'bg-[#2dd4bf]' : 'bg-red-400')} />
             <span className="text-white/90 font-medium">Trinity Online</span>
           </div>
           <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/5">
-            <span className={cn("w-1.5 h-1.5 rounded-full", isQuickBooksOnline ? 'bg-blue-400' : 'bg-yellow-400')} />
+            <span className={cn("w-1.5 h-1.5 rounded-full", isQuickBooksOnline ? 'bg-[#3b82f6]' : 'bg-[#eab308]')} />
             <span className="text-white/90 font-medium">QB Synced</span>
           </div>
           <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#EAB308] animate-pulse" />
+            <span className="w-1.5 h-1.5 rounded-full bg-[#ffd700] animate-pulse" />
             <span className="text-white/90 font-medium">{activeGuards} Guards Active</span>
           </div>
         </div>
@@ -562,7 +562,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
               className={cn(
                 "relative flex items-center gap-2 px-4 py-3 text-sm font-semibold whitespace-nowrap transition-all duration-200",
                 activeTab === tab.id
-                  ? 'text-[#A855F7] bg-[#9333EA]/5'
+                  ? 'text-[#22d3ee] bg-[#06b6d4]/5'
                   : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
               )}
               data-testid={`tab-${tab.id}`}
@@ -575,14 +575,14 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
                 <span className={cn(
                   "text-xs px-1.5 py-0.5 rounded-full",
                   activeTab === tab.id
-                    ? 'bg-[#9333EA]/20 text-[#A855F7]'
+                    ? 'bg-[#06b6d4]/20 text-[#22d3ee]'
                     : 'bg-slate-700 text-slate-400'
                 )}>
                   {tab.count}
                 </span>
               )}
               {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#9333EA] to-[#0D9488]" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#06b6d4] to-[#2dd4bf]" />
               )}
             </button>
           ))}
