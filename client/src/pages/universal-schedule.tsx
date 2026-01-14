@@ -916,11 +916,11 @@ export default function UniversalSchedule() {
   if (isLoading) {
     return (
       <WorkspaceLayout>
-        <div className="flex h-screen items-center justify-center">
-          <div className="text-center">
-            <Sparkles className="h-12 w-12 mx-auto mb-4 animate-pulse" style={{ color: '#3b82f6' }} />
-            <p className="text-muted-foreground">Loading schedule...</p>
-          </div>
+        <div className="p-4 space-y-3">
+          {[1, 2, 3, 4].map(i => (
+            <div key={i} className="h-20 bg-muted/50 rounded-lg animate-pulse" />
+          ))}
+          <p className="text-center text-sm text-muted-foreground">Loading schedule...</p>
         </div>
       </WorkspaceLayout>
     );
