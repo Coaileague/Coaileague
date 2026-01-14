@@ -497,7 +497,7 @@ export default function Employees() {
           
             <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
               <DialogTrigger asChild>
-                <Button data-testid="button-add-employee">
+                <Button data-testid="button-add-employee" data-testid-alt="button-invite-employee">
                   <Plus className="mr-2 h-4 w-4" />
                   <span className="hidden sm:inline">Add Employee</span>
                   <span className="sm:hidden">Add</span>

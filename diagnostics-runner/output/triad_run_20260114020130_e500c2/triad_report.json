@@ -1,0 +1,4140 @@
+{
+  "runId": "run_20260114020130_e9f94b",
+  "startedAt": "2026-01-14T02:01:30.578Z",
+  "completedAt": "2026-01-14T02:02:24.967Z",
+  "duration": 54389,
+  "baseUrl": "https://coaileague.com",
+  "mode": "full-triad",
+  "crawlerResults": {
+    "ui": {
+      "pagesVisited": 10,
+      "pageResults": [
+        {
+          "url": "https://coaileague.com",
+          "statusCode": 200,
+          "loadTime": 1746,
+          "screenshotPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260114020130_e500c2/screenshots/ui/page_acf39f56fb9e9be1.png",
+          "consoleErrors": [
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/auth/me"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/mascot/seasonal/state"
+            }
+          ],
+          "networkFailures": [
+            {
+              "url": "https://coaileague.com/api/auth/me",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            },
+            {
+              "url": "https://coaileague.com/api/mascot/seasonal/state",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            }
+          ],
+          "brokenImages": [],
+          "brokenLinks": [],
+          "uiErrors": [
+            "12 elements have horizontal overflow"
+          ],
+          "captchaDetected": false,
+          "timestamp": "2026-01-14T02:01:53.654Z"
+        },
+        {
+          "url": "https://coaileague.com/login",
+          "statusCode": 200,
+          "loadTime": 1215,
+          "screenshotPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260114020130_e500c2/screenshots/ui/page_b030aa4862002560.png",
+          "consoleErrors": [
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/login"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/auth/me"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/login"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/login"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/login"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf"
+            }
+          ],
+          "networkFailures": [
+            {
+              "url": "https://coaileague.com/api/auth/me",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            }
+          ],
+          "brokenImages": [],
+          "brokenLinks": [],
+          "uiErrors": [
+            "1 buttons have no visible content"
+          ],
+          "captchaDetected": false,
+          "timestamp": "2026-01-14T02:01:56.195Z"
+        },
+        {
+          "url": "https://coaileague.com/register",
+          "statusCode": 200,
+          "loadTime": 1266,
+          "screenshotPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260114020130_e500c2/screenshots/ui/page_648fe5afbbfdb834.png",
+          "consoleErrors": [
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/register"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/auth/me"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/register"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/register"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/register"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf"
+            }
+          ],
+          "networkFailures": [
+            {
+              "url": "https://coaileague.com/api/auth/me",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            }
+          ],
+          "brokenImages": [],
+          "brokenLinks": [],
+          "uiErrors": [
+            "11 elements have horizontal overflow"
+          ],
+          "captchaDetected": false,
+          "timestamp": "2026-01-14T02:01:58.291Z"
+        },
+        {
+          "url": "https://coaileague.com/pricing",
+          "statusCode": 200,
+          "loadTime": 1972,
+          "screenshotPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260114020130_e500c2/screenshots/ui/page_7eb9139cbcb29de8.png",
+          "consoleErrors": [
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/pricing"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/auth/me"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/pricing"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/pricing"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/pricing"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/mascot/seasonal/state"
+            }
+          ],
+          "networkFailures": [
+            {
+              "url": "https://coaileague.com/api/auth/me",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            },
+            {
+              "url": "https://coaileague.com/api/mascot/seasonal/state",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            }
+          ],
+          "brokenImages": [],
+          "brokenLinks": [],
+          "uiErrors": [
+            "26 elements have horizontal overflow"
+          ],
+          "captchaDetected": false,
+          "timestamp": "2026-01-14T02:02:01.830Z"
+        },
+        {
+          "url": "https://coaileague.com/trinity-features",
+          "statusCode": 200,
+          "loadTime": 2322,
+          "screenshotPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260114020130_e500c2/screenshots/ui/page_fe2b83b92c384aee.png",
+          "consoleErrors": [
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/trinity-features"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/auth/me"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/trinity-features"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/trinity-features"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/trinity-features"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/mascot/seasonal/state"
+            }
+          ],
+          "networkFailures": [
+            {
+              "url": "https://coaileague.com/api/auth/me",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            },
+            {
+              "url": "https://coaileague.com/api/mascot/seasonal/state",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            }
+          ],
+          "brokenImages": [],
+          "brokenLinks": [],
+          "uiErrors": [
+            "24 elements have horizontal overflow"
+          ],
+          "captchaDetected": false,
+          "timestamp": "2026-01-14T02:02:07.785Z"
+        },
+        {
+          "url": "https://coaileague.com/contact",
+          "statusCode": 200,
+          "loadTime": 3244,
+          "screenshotPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260114020130_e500c2/screenshots/ui/page_d3e954b4da48e07b.png",
+          "consoleErrors": [
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/contact"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/auth/me"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/contact"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/contact"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/contact"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/contact"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/mascot/seasonal/state"
+            }
+          ],
+          "networkFailures": [
+            {
+              "url": "https://coaileague.com/api/auth/me",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            },
+            {
+              "url": "https://coaileague.com/api/mascot/seasonal/state",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            }
+          ],
+          "brokenImages": [],
+          "brokenLinks": [],
+          "uiErrors": [
+            "19 elements have horizontal overflow"
+          ],
+          "captchaDetected": false,
+          "timestamp": "2026-01-14T02:02:12.827Z"
+        },
+        {
+          "url": "https://coaileague.com/support",
+          "statusCode": 200,
+          "loadTime": 1360,
+          "screenshotPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260114020130_e500c2/screenshots/ui/page_289d9e15008f433d.png",
+          "consoleErrors": [
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/support"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/auth/me"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/support"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/support"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/support"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf"
+            }
+          ],
+          "networkFailures": [
+            {
+              "url": "https://coaileague.com/api/auth/me",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            }
+          ],
+          "brokenImages": [],
+          "brokenLinks": [],
+          "uiErrors": [
+            "28 elements have horizontal overflow"
+          ],
+          "captchaDetected": false,
+          "timestamp": "2026-01-14T02:02:16.142Z"
+        },
+        {
+          "url": "https://coaileague.com/terms",
+          "statusCode": 200,
+          "loadTime": 1461,
+          "screenshotPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260114020130_e500c2/screenshots/ui/page_69e0e11b0ad6631a.png",
+          "consoleErrors": [
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/terms"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/terms"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/terms"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/terms"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/auth/me"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/mascot/seasonal/state"
+            }
+          ],
+          "networkFailures": [
+            {
+              "url": "https://coaileague.com/api/auth/me",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            },
+            {
+              "url": "https://coaileague.com/api/mascot/seasonal/state",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            }
+          ],
+          "brokenImages": [],
+          "brokenLinks": [],
+          "uiErrors": [
+            "12 elements have horizontal overflow"
+          ],
+          "captchaDetected": false,
+          "timestamp": "2026-01-14T02:02:19.175Z"
+        },
+        {
+          "url": "https://coaileague.com/privacy",
+          "statusCode": 200,
+          "loadTime": 1363,
+          "screenshotPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260114020130_e500c2/screenshots/ui/page_e367fe72c577362b.png",
+          "consoleErrors": [
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/privacy"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/auth/me"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/privacy"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/privacy"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/privacy"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/mascot/seasonal/state"
+            }
+          ],
+          "networkFailures": [
+            {
+              "url": "https://coaileague.com/api/auth/me",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            },
+            {
+              "url": "https://coaileague.com/api/mascot/seasonal/state",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            }
+          ],
+          "brokenImages": [],
+          "brokenLinks": [],
+          "uiErrors": [
+            "12 elements have horizontal overflow"
+          ],
+          "captchaDetected": false,
+          "timestamp": "2026-01-14T02:02:21.918Z"
+        },
+        {
+          "url": "https://coaileague.com/chat",
+          "statusCode": 200,
+          "loadTime": 1753,
+          "screenshotPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260114020130_e500c2/screenshots/ui/page_fcad90e854910187.png",
+          "consoleErrors": [
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/support"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/support"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/support"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/auth/me"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/internal-email/mailbox/auto-create"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: the server responded with a status of 401 ()",
+              "location": "https://coaileague.com/api/ai-brain/system-status"
+            },
+            {
+              "type": "error",
+              "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+              "location": "https://coaileague.com/support"
+            },
+            {
+              "type": "error",
+              "message": "Failed to load resource: net::ERR_FAILED",
+              "location": "https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf"
+            }
+          ],
+          "networkFailures": [
+            {
+              "url": "https://coaileague.com/api/auth/me",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            },
+            {
+              "url": "https://coaileague.com/api/internal-email/mailbox/auto-create",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            },
+            {
+              "url": "https://coaileague.com/api/ai-brain/system-status",
+              "method": "GET",
+              "statusCode": 401,
+              "statusText": "",
+              "resourceType": "fetch"
+            }
+          ],
+          "brokenImages": [],
+          "brokenLinks": [],
+          "uiErrors": [
+            "28 elements have horizontal overflow"
+          ],
+          "captchaDetected": false,
+          "timestamp": "2026-01-14T02:02:24.844Z"
+        }
+      ],
+      "issues": [
+        {
+          "id": "44f4ea5509791da3",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:01:53.654Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "da5d2100eee3930e",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:01:53.654Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "2cf314fe39399143",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:01:53.654Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "aa87522140e0b71b",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:01:53.654Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "11f7a2665e0dda0e",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:01:53.654Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "28d894ba6ebd223c",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:01:53.654Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "f7bcc6f772cd3c85",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:01:53.654Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "56d3ccb1802ea32a",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:01:53.654Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "ef0c588d81585c46",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:01:53.654Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "b6e959cb652f31bf",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:01:53.654Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "be9038855d2bed71",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com",
+          "message": "GET https://coaileague.com/api/auth/me returned 401",
+          "requestUrl": "https://coaileague.com/api/auth/me",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:01:53.654Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "668c7a0e45f0888b",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com",
+          "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+          "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:01:53.654Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "3ceac8bceefe827e",
+          "category": "ui_error",
+          "severity": "low",
+          "url": "https://coaileague.com/login",
+          "message": "Button has no accessible label",
+          "timestamp": "2026-01-14T02:01:55.439Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "5fc9873d2323a15f",
+          "category": "ui_error",
+          "severity": "low",
+          "url": "https://coaileague.com/login",
+          "message": "Button has no accessible label",
+          "timestamp": "2026-01-14T02:01:55.468Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "d6dd3cba9934b093",
+          "category": "ui_error",
+          "severity": "low",
+          "url": "https://coaileague.com/login",
+          "message": "Form input \"unknown\" lacks accessible label",
+          "timestamp": "2026-01-14T02:01:56.057Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "2a3474e16823e74f",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/login",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:01:56.195Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "3fe3f0174d161c11",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/login",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:01:56.195Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "5b3d231fd2c7ca3e",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/login",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:01:56.195Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "aa2d1f56e34f0888",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/login",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:01:56.195Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "5815296968e37f28",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/login",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:01:56.195Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "b6af035bc9c7dd13",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/login",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:01:56.195Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "c5db6f2c985f092f",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/login",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:01:56.195Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "ccef584f9ca1edd9",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/login",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:01:56.195Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "293acdd791904366",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/login",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:01:56.195Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "97fa49047611cdb8",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/login",
+          "message": "GET https://coaileague.com/api/auth/me returned 401",
+          "requestUrl": "https://coaileague.com/api/auth/me",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:01:56.195Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "2e65e74c5f00cc41",
+          "category": "ui_error",
+          "severity": "low",
+          "url": "https://coaileague.com/register",
+          "message": "Button has no accessible label",
+          "timestamp": "2026-01-14T02:01:57.816Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "3f8bfac18008a71f",
+          "category": "ui_error",
+          "severity": "low",
+          "url": "https://coaileague.com/register",
+          "message": "Button has no accessible label",
+          "timestamp": "2026-01-14T02:01:57.840Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "02294403171c29a3",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/register",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:01:58.291Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "0855fb14682777b8",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/register",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:01:58.291Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "222d744333a0ea72",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/register",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:01:58.291Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "a405e152cc109e4c",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/register",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:01:58.291Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "a80bd79cb485162b",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/register",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:01:58.291Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "58e946a9dbcde919",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/register",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:01:58.291Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "605a07381db156d7",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/register",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:01:58.291Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "6b407a9aec780d20",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/register",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:01:58.291Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "1368678dcd381d95",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/register",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:01:58.291Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "65db705aa760c6fc",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/register",
+          "message": "GET https://coaileague.com/api/auth/me returned 401",
+          "requestUrl": "https://coaileague.com/api/auth/me",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:01:58.291Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "3b8e4eebe6e654eb",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/pricing",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:01.830Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "fed8045659c8732c",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/pricing",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:01.830Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "746c7a25617724ab",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/pricing",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:01.830Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "c6d81fa4c0b4c967",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/pricing",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:01.830Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "ee18a067aeffd4cc",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/pricing",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:01.830Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "71f6ca16cb2e0568",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/pricing",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:01.830Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "8d260ded342fad7f",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/pricing",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:01.830Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "2c997b9a57c831d3",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/pricing",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:01.830Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "2f81195ba755db19",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/pricing",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:01.830Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "bc1c2f4eac23abd6",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/pricing",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:01.830Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "d1bab45f964473d4",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/pricing",
+          "message": "GET https://coaileague.com/api/auth/me returned 401",
+          "requestUrl": "https://coaileague.com/api/auth/me",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:01.830Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "ca02126aedd3292f",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/pricing",
+          "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+          "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:01.830Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "2a80794fb6ab57f3",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/trinity-features",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:07.785Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "0a408367e52a2d66",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/trinity-features",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:07.785Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "6db6c14bf519b9c1",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/trinity-features",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:07.785Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "587b3407b70b74ca",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/trinity-features",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:07.785Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "07a3417b256691c8",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/trinity-features",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:07.785Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "797a0a38d326c245",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/trinity-features",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:07.785Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "bbf505136c4c177e",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/trinity-features",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:07.785Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "30b7df5048c9d4a7",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/trinity-features",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:07.785Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "28d8cd30f0334c22",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/trinity-features",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:07.785Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "bb59b0ff6f0706c1",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/trinity-features",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:07.785Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "1d5bdd0dda3a6639",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/trinity-features",
+          "message": "GET https://coaileague.com/api/auth/me returned 401",
+          "requestUrl": "https://coaileague.com/api/auth/me",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:07.785Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "b019268594228118",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/trinity-features",
+          "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+          "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:07.785Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "76f208cd9e64249c",
+          "category": "ui_error",
+          "severity": "low",
+          "url": "https://coaileague.com/contact",
+          "message": "Form input \"unknown\" lacks accessible label",
+          "timestamp": "2026-01-14T02:02:12.282Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "354fb329c23ba8d6",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/contact",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "5a32b5e4c5235293",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/contact",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "41ba37ac03d49992",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/contact",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "862c2c94bc463551",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/contact",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "868a6e6fcce2d65d",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/contact",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "ec7a18d96eb2f73c",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/contact",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "db2f1dce9f78b14f",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/contact",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "863a93e4fbf701b7",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/contact",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "4db8bb13c4b1418f",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/contact",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "2e4d36376b404dbe",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/contact",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "97d06c18457eb5f4",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/contact",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "91bc16268a2d8f5c",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/contact",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "9b1a0cf44baea263",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/contact",
+          "message": "GET https://coaileague.com/api/auth/me returned 401",
+          "requestUrl": "https://coaileague.com/api/auth/me",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "975b8220fc59c093",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/contact",
+          "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+          "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:12.827Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "2c614551f280f5a3",
+          "category": "ui_error",
+          "severity": "low",
+          "url": "https://coaileague.com/support",
+          "message": "Button has no accessible label",
+          "timestamp": "2026-01-14T02:02:14.600Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "86e0f509f3c6453d",
+          "category": "ui_error",
+          "severity": "low",
+          "url": "https://coaileague.com/support",
+          "message": "Button has no accessible label",
+          "timestamp": "2026-01-14T02:02:14.760Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "3a4a180098bb90b6",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/support",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:16.142Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "a6f9b28efc3bd1de",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/support",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:16.142Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "39690d698369c239",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/support",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:16.142Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "e9b40efe01572ca5",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/support",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:16.142Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "4a938138162fe06e",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/support",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:16.142Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "b104c1749cfba002",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/support",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:16.142Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "7eecbe9e930a01aa",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/support",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:16.142Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "c885a2b84f16cef8",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/support",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:16.142Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "654f1377f7ff4e22",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/support",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:16.142Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "99af1ea6d356df65",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/support",
+          "message": "GET https://coaileague.com/api/auth/me returned 401",
+          "requestUrl": "https://coaileague.com/api/auth/me",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:16.142Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "17ea0682b20fbcf4",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/terms",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:19.175Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "96c5310173fee44b",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/terms",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:19.175Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "e44b50b0cf6b9948",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/terms",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:19.175Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "3986ee9e4df032d8",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/terms",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:19.175Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "57104bacc4c843b7",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/terms",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:19.175Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "9942fa7b1b9e125d",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/terms",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:19.175Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "e9b44bc3573d5f95",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/terms",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:19.175Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "d07ca88130241f1c",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/terms",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:19.175Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "bba58b4cc5a04081",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/terms",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:19.175Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "8302731810e112a5",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/terms",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:19.175Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "023925003e7f4297",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/terms",
+          "message": "GET https://coaileague.com/api/auth/me returned 401",
+          "requestUrl": "https://coaileague.com/api/auth/me",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:19.175Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "ce300a5987865af8",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/terms",
+          "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+          "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:19.175Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "9111c069e82a204a",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/privacy",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:21.918Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "aefb025f07942554",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/privacy",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:21.918Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "707908bd82a5e28f",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/privacy",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:21.918Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "19452097118d1c3c",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/privacy",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:21.918Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "d91d64b01c367fbe",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/privacy",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:21.918Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "d8d0bdda110f6ed3",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/privacy",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:21.918Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "6c20bcdc01139d4f",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/privacy",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:21.918Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "908f5d427da53488",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/privacy",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:21.918Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "665010d1aa9d9975",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/privacy",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:21.918Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "3cec87016c5098e7",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/privacy",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:21.918Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "9ebeadbf58aa69f2",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/privacy",
+          "message": "GET https://coaileague.com/api/auth/me returned 401",
+          "requestUrl": "https://coaileague.com/api/auth/me",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:21.918Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "0cee7962bb931663",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/privacy",
+          "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+          "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:21.918Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "498d099fb4008b45",
+          "category": "ui_error",
+          "severity": "low",
+          "url": "https://coaileague.com/chat",
+          "message": "Button has no accessible label",
+          "timestamp": "2026-01-14T02:02:24.064Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "548f20cb92b1a687",
+          "category": "ui_error",
+          "severity": "low",
+          "url": "https://coaileague.com/chat",
+          "message": "Button has no accessible label",
+          "timestamp": "2026-01-14T02:02:24.118Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "735bbd8d39a72760",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/chat",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "8fa635f8bf4f61ea",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/chat",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "61b3f15caf079147",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/chat",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuFuYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "18cd26d6488b5e07",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/chat",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "f41d0a2303d19be6",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/chat",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuLyfMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "594f770f8a83f2b4",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/chat",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "1abe3fc8fc2939c3",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/chat",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "ba8fd42e9a46b408",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/chat",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "4f53eeafa1209d9a",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/chat",
+          "message": "Failed to load resource: the server responded with a status of 401 ()",
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "2675b67fc31ad0ef",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/chat",
+          "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "7baddd6f9e29bf12",
+          "category": "console_error",
+          "severity": "medium",
+          "url": "https://coaileague.com/chat",
+          "message": "Failed to load resource: net::ERR_FAILED",
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "f33f8e1a1d0113c2",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/chat",
+          "message": "GET https://coaileague.com/api/auth/me returned 401",
+          "requestUrl": "https://coaileague.com/api/auth/me",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "91d165a16a70f9bd",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/chat",
+          "message": "GET https://coaileague.com/api/internal-email/mailbox/auto-create returned 401",
+          "requestUrl": "https://coaileague.com/api/internal-email/mailbox/auto-create",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "4c2565d20123f2f5",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/chat",
+          "message": "GET https://coaileague.com/api/ai-brain/system-status returned 401",
+          "requestUrl": "https://coaileague.com/api/ai-brain/system-status",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:02:24.844Z",
+          "crawlerType": "ui",
+          "subsystem": "backend",
+          "reproducible": true
+        }
+      ],
+      "buttonsTestedCount": 174,
+      "formsTestedCount": 5,
+      "linksCheckedCount": 12
+    },
+    "api": {
+      "endpointsTestedCount": 15,
+      "testResults": [
+        {
+          "testCase": {
+            "id": "health-check",
+            "name": "Health Check Endpoint",
+            "endpoint": "/api/health",
+            "method": "GET",
+            "expectedStatus": 200,
+            "requiresAuth": false,
+            "description": "Basic server health check"
+          },
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 552,
+          "responseBody": {
+            "status": "healthy",
+            "timestamp": "2026-01-14T02:01:31.428Z",
+            "uptime": 508.843336137,
+            "version": "1.0.0",
+            "services": {
+              "database": {
+                "status": "up",
+                "message": "Database responding normally"
+              },
+              "websocket": {
+                "status": "up",
+                "message": "Chat WebSocket server ready (awaiting connections)"
+              },
+              "stripe": {
+                "status": "up",
+                "message": "Stripe API responding normally"
+              },
+              "gemini": {
+                "status": "up",
+                "message": "Gemini AI configured"
+              },
+              "resend": {
+                "status": "up"
+              }
+            }
+          },
+          "timestamp": "2026-01-14T02:01:31.532Z"
+        },
+        {
+          "testCase": {
+            "id": "health-summary",
+            "name": "Health Summary",
+            "endpoint": "/api/health/summary",
+            "method": "GET",
+            "expectedStatus": 200,
+            "requiresAuth": false,
+            "description": "Detailed health summary"
+          },
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 174,
+          "responseBody": {
+            "overall": "operational",
+            "services": [
+              {
+                "service": "database",
+                "status": "operational",
+                "isCritical": true,
+                "message": "Database responding normally",
+                "lastChecked": "2026-01-14T02:01:31.150Z",
+                "latencyMs": 20
+              },
+              {
+                "service": "chat_websocket",
+                "status": "operational",
+                "isCritical": true,
+                "message": "Chat WebSocket server ready (awaiting connections)",
+                "lastChecked": "2026-01-14T02:01:31.150Z",
+                "metadata": {
+                  "activeConnections": 0,
+                  "averageMessageCount": 0,
+                  "averageConnectionDuration": 0
+                }
+              },
+              {
+                "service": "gemini_ai",
+                "status": "operational",
+                "isCritical": true,
+                "message": "Gemini AI configured",
+                "lastChecked": "2026-01-14T02:01:31.428Z"
+              },
+              {
+                "service": "object_storage",
+                "status": "operational",
+                "isCritical": false,
+                "message": "Object storage responding normally (files present)",
+                "lastChecked": "2026-01-14T02:01:31.665Z",
+                "latencyMs": 31,
+                "metadata": {
+                  "bucketId": "replit-objstore-ba88e5c1-1507-4dff-af10-a268378161f6",
+                  "hasFiles": true
+                }
+              },
+              {
+                "service": "stripe",
+                "status": "operational",
+                "isCritical": false,
+                "message": "Stripe API responding normally",
+                "lastChecked": "2026-01-14T02:01:31.428Z",
+                "latencyMs": 278
+              },
+              {
+                "service": "email",
+                "status": "operational",
+                "isCritical": false,
+                "message": "Email service configured",
+                "lastChecked": "2026-01-14T02:01:31.635Z"
+              },
+              {
+                "service": "quickbooks",
+                "status": "operational",
+                "isCritical": false,
+                "message": "QuickBooks integration ready (no active connections)",
+                "lastChecked": "2026-01-14T02:01:31.657Z",
+                "metadata": {
+                  "connectedAccounts": 0
+                }
+              },
+              {
+                "service": "gusto",
+                "status": "operational",
+                "isCritical": false,
+                "message": "Gusto integration ready (no active connections)",
+                "lastChecked": "2026-01-14T02:01:31.658Z",
+                "metadata": {
+                  "connectedAccounts": 0
+                }
+              }
+            ],
+            "timestamp": "2026-01-14T02:01:31.665Z",
+            "criticalServicesCount": 3,
+            "operationalServicesCount": 8
+          },
+          "timestamp": "2026-01-14T02:01:31.715Z"
+        },
+        {
+          "testCase": {
+            "id": "auth-check",
+            "name": "Auth Status Check",
+            "endpoint": "/api/auth/check",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": false,
+            "description": "Check authentication status"
+          },
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 155,
+          "responseBody": null,
+          "timestamp": "2026-01-14T02:01:31.877Z"
+        },
+        {
+          "testCase": {
+            "id": "mascot-seasonal",
+            "name": "Seasonal State",
+            "endpoint": "/api/mascot/seasonal/state",
+            "method": "GET",
+            "expectedStatus": 200,
+            "requiresAuth": false,
+            "description": "Trinity mascot seasonal state"
+          },
+          "success": false,
+          "statusCode": 401,
+          "responseTime": 88,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-14T02:01:31.975Z"
+        },
+        {
+          "testCase": {
+            "id": "runtime-flags",
+            "name": "Runtime Flags",
+            "endpoint": "/api/runtime-flags",
+            "method": "GET",
+            "expectedStatus": 200,
+            "requiresAuth": false,
+            "description": "Trinity runtime configuration flags"
+          },
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 139,
+          "responseBody": {
+            "success": true,
+            "flags": []
+          },
+          "timestamp": "2026-01-14T02:01:32.121Z"
+        },
+        {
+          "testCase": {
+            "id": "workspaces-list",
+            "name": "List Workspaces",
+            "endpoint": "/api/workspaces/all",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get user workspaces"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 100,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-14T02:01:32.233Z"
+        },
+        {
+          "testCase": {
+            "id": "current-workspace",
+            "name": "Current Workspace",
+            "endpoint": "/api/workspaces/current",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401,
+              404
+            ],
+            "requiresAuth": true,
+            "description": "Get current workspace context"
+          },
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 106,
+          "responseBody": null,
+          "timestamp": "2026-01-14T02:01:32.348Z"
+        },
+        {
+          "testCase": {
+            "id": "employees-list",
+            "name": "List Employees",
+            "endpoint": "/api/employees",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get employee list"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 70,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-14T02:01:32.485Z"
+        },
+        {
+          "testCase": {
+            "id": "schedules-current",
+            "name": "Current Schedules",
+            "endpoint": "/api/shifts",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get current schedules/shifts"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 92,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-14T02:01:32.579Z"
+        },
+        {
+          "testCase": {
+            "id": "notifications-list",
+            "name": "Notifications",
+            "endpoint": "/api/notifications",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get user notifications"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 95,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-14T02:01:32.678Z"
+        },
+        {
+          "testCase": {
+            "id": "invoices-list",
+            "name": "Invoices List",
+            "endpoint": "/api/invoices",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get invoice list"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 101,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-14T02:01:32.779Z"
+        },
+        {
+          "testCase": {
+            "id": "billing-config",
+            "name": "Billing Configuration",
+            "endpoint": "/api/billing/status",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401,
+              404
+            ],
+            "requiresAuth": true,
+            "description": "Get billing configuration"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 92,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-14T02:01:32.877Z"
+        },
+        {
+          "testCase": {
+            "id": "ai-brain-status",
+            "name": "AI Brain Status",
+            "endpoint": "/api/trinity/status",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401,
+              404
+            ],
+            "requiresAuth": true,
+            "description": "Trinity AI Brain system status"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 79,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-14T02:01:32.958Z"
+        },
+        {
+          "testCase": {
+            "id": "stripe-config",
+            "name": "Stripe Configuration",
+            "endpoint": "/api/stripe/config",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": false,
+            "description": "Public Stripe configuration"
+          },
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 285,
+          "responseBody": {
+            "publishableKey": "mk_1SK1lG8XHrr8nNEqxDWh8ctS",
+            "isConfigured": true
+          },
+          "timestamp": "2026-01-14T02:01:33.247Z"
+        },
+        {
+          "testCase": {
+            "id": "pricing-tiers",
+            "name": "Pricing Tiers",
+            "endpoint": "/api/billing/plans",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              404
+            ],
+            "requiresAuth": false,
+            "description": "Get subscription pricing tiers"
+          },
+          "success": false,
+          "statusCode": 401,
+          "responseTime": 142,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-14T02:01:33.429Z"
+        }
+      ],
+      "issues": [
+        {
+          "id": "6dcac240227e7cc9",
+          "category": "workflow_failure",
+          "severity": "critical",
+          "url": "https://coaileague.com/api/auth/login",
+          "message": "Authentication failed: 401",
+          "details": "{\"message\":\"Invalid email or password\"}",
+          "statusCode": 401,
+          "timestamp": "2026-01-14T02:01:30.976Z",
+          "crawlerType": "api",
+          "subsystem": "auth",
+          "reproducible": true
+        },
+        {
+          "id": "6f38f383e00eb754",
+          "category": "workflow_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/api/mascot/seasonal/state",
+          "message": "Seasonal State - Unexpected status 401",
+          "details": "{\"message\":\"Unauthorized - Please login\"}",
+          "statusCode": 401,
+          "requestUrl": "/api/mascot/seasonal/state",
+          "timestamp": "2026-01-14T02:01:31.975Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "838d5c8281500992",
+          "category": "workflow_failure",
+          "severity": "high",
+          "url": "https://coaileague.com/api/billing/plans",
+          "message": "Pricing Tiers - Unexpected status 401",
+          "details": "{\"message\":\"Unauthorized - Please login\"}",
+          "statusCode": 401,
+          "requestUrl": "/api/billing/plans",
+          "timestamp": "2026-01-14T02:01:33.429Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true
+        }
+      ],
+      "authFlowsTestedCount": 2,
+      "averageResponseTime": 151.33333333333334,
+      "slowestEndpoints": [
+        {
+          "endpoint": "/api/health",
+          "responseTime": 552
+        },
+        {
+          "endpoint": "/api/stripe/config",
+          "responseTime": 285
+        },
+        {
+          "endpoint": "/api/health/summary",
+          "responseTime": 174
+        },
+        {
+          "endpoint": "/api/auth/check",
+          "responseTime": 155
+        },
+        {
+          "endpoint": "/api/runtime-flags",
+          "responseTime": 139
+        }
+      ]
+    },
+    "integration": {
+      "workflowsTestedCount": 6,
+      "testResults": [
+        {
+          "testCase": {
+            "id": "homepage-to-register",
+            "name": "Homepage to Registration Flow",
+            "description": "User navigates from homepage to registration",
+            "type": "workflow",
+            "critical": true,
+            "steps": [
+              {
+                "action": "ui-action",
+                "target": "/",
+                "description": "Load homepage"
+              },
+              {
+                "action": "wait",
+                "timeout": 2000,
+                "description": "Wait for page load"
+              },
+              {
+                "action": "ui-action",
+                "target": "[data-testid=\"button-get-started\"]",
+                "description": "Click Get Started"
+              },
+              {
+                "action": "assert",
+                "target": "/register",
+                "description": "Should be on register page"
+              }
+            ]
+          },
+          "success": true,
+          "stepsCompleted": 4,
+          "duration": 4065,
+          "timestamp": "2026-01-14T02:01:54.943Z"
+        },
+        {
+          "testCase": {
+            "id": "homepage-to-login",
+            "name": "Homepage to Login Flow",
+            "description": "User navigates from homepage to login",
+            "type": "workflow",
+            "critical": true,
+            "steps": [
+              {
+                "action": "ui-action",
+                "target": "/",
+                "description": "Load homepage"
+              },
+              {
+                "action": "wait",
+                "timeout": 2000,
+                "description": "Wait for page load"
+              },
+              {
+                "action": "ui-action",
+                "target": "[data-testid=\"button-login\"]",
+                "description": "Click Login"
+              },
+              {
+                "action": "assert",
+                "target": "/login",
+                "description": "Should be on login page"
+              }
+            ]
+          },
+          "success": true,
+          "stepsCompleted": 4,
+          "duration": 4017,
+          "timestamp": "2026-01-14T02:01:58.971Z"
+        },
+        {
+          "testCase": {
+            "id": "pricing-page-flow",
+            "name": "Pricing Page CTA Flow",
+            "description": "User views pricing and clicks CTA",
+            "type": "workflow",
+            "critical": true,
+            "steps": [
+              {
+                "action": "ui-action",
+                "target": "/pricing",
+                "description": "Load pricing page"
+              },
+              {
+                "action": "wait",
+                "timeout": 2000,
+                "description": "Wait for page load"
+              },
+              {
+                "action": "assert",
+                "target": "pricing",
+                "description": "Verify pricing content loaded"
+              }
+            ]
+          },
+          "success": true,
+          "stepsCompleted": 3,
+          "duration": 4219,
+          "timestamp": "2026-01-14T02:02:03.208Z"
+        },
+        {
+          "testCase": {
+            "id": "support-page-flow",
+            "name": "Support Page Access",
+            "description": "User can access support/help page",
+            "type": "workflow",
+            "critical": false,
+            "steps": [
+              {
+                "action": "ui-action",
+                "target": "/support",
+                "description": "Load support page"
+              },
+              {
+                "action": "wait",
+                "timeout": 2000,
+                "description": "Wait for page load"
+              },
+              {
+                "action": "assert",
+                "target": "support",
+                "description": "Verify support page loaded"
+              }
+            ]
+          },
+          "success": true,
+          "stepsCompleted": 3,
+          "duration": 3907,
+          "timestamp": "2026-01-14T02:02:07.130Z"
+        },
+        {
+          "testCase": {
+            "id": "trinity-features-flow",
+            "name": "Trinity Features Page",
+            "description": "User views Trinity AI features page",
+            "type": "workflow",
+            "critical": false,
+            "steps": [
+              {
+                "action": "ui-action",
+                "target": "/trinity-features",
+                "description": "Load Trinity features"
+              },
+              {
+                "action": "wait",
+                "timeout": 2000,
+                "description": "Wait for page load"
+              },
+              {
+                "action": "assert",
+                "target": "trinity",
+                "description": "Verify Trinity features loaded"
+              }
+            ]
+          },
+          "success": true,
+          "stepsCompleted": 3,
+          "duration": 4503,
+          "timestamp": "2026-01-14T02:02:11.645Z"
+        },
+        {
+          "testCase": {
+            "id": "api-health-check",
+            "name": "API Health Integration",
+            "description": "Frontend correctly fetches API health status",
+            "type": "data-flow",
+            "critical": true,
+            "steps": [
+              {
+                "action": "api-call",
+                "target": "/api/health",
+                "description": "Call health endpoint"
+              },
+              {
+                "action": "assert",
+                "expectedResult": {
+                  "status": 200
+                },
+                "description": "Health should return 200"
+              }
+            ]
+          },
+          "success": true,
+          "stepsCompleted": 2,
+          "duration": 272,
+          "timestamp": "2026-01-14T02:02:11.935Z"
+        },
+        {
+          "testCase": {
+            "id": "websocket-main",
+            "name": "Main WebSocket Connection",
+            "description": "WebSocket server accepts connections",
+            "type": "websocket",
+            "critical": true,
+            "steps": [
+              {
+                "action": "websocket-connect",
+                "target": "/ws",
+                "description": "Connect to main WebSocket"
+              },
+              {
+                "action": "wait",
+                "timeout": 3000,
+                "description": "Wait for connection"
+              },
+              {
+                "action": "assert",
+                "description": "Connection should be established"
+              }
+            ]
+          },
+          "success": true,
+          "stepsCompleted": 3,
+          "duration": 3178,
+          "timestamp": "2026-01-14T02:02:15.125Z"
+        },
+        {
+          "testCase": {
+            "id": "mobile-menu-navigation",
+            "name": "Mobile Menu Navigation",
+            "description": "Mobile hamburger menu works correctly",
+            "type": "workflow",
+            "critical": false,
+            "steps": [
+              {
+                "action": "ui-action",
+                "target": "/",
+                "data": {
+                  "viewport": {
+                    "width": 375,
+                    "height": 667
+                  }
+                },
+                "description": "Load homepage on mobile"
+              },
+              {
+                "action": "ui-action",
+                "target": "[data-testid=\"button-mobile-menu\"]",
+                "description": "Click mobile menu"
+              },
+              {
+                "action": "wait",
+                "timeout": 1000,
+                "description": "Wait for menu animation"
+              },
+              {
+                "action": "assert",
+                "description": "Menu should be visible"
+              }
+            ]
+          },
+          "success": true,
+          "stepsCompleted": 4,
+          "duration": 3275,
+          "timestamp": "2026-01-14T02:02:18.438Z"
+        }
+      ],
+      "issues": [
+        {
+          "id": "b50ee96c7fa60933",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "wss://coaileague.com/ws",
+          "message": "WebSocket Main WebSocket failed to connect",
+          "timestamp": "2026-01-14T02:02:18.458Z",
+          "crawlerType": "integration",
+          "subsystem": "websocket",
+          "reproducible": true
+        },
+        {
+          "id": "54c0c8213dee5797",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "wss://coaileague.com/ws/chat",
+          "message": "WebSocket Chat WebSocket failed to connect",
+          "timestamp": "2026-01-14T02:02:18.459Z",
+          "crawlerType": "integration",
+          "subsystem": "websocket",
+          "reproducible": true
+        }
+      ],
+      "websocketConnectionsTested": 3,
+      "pipelinesTestedCount": 0,
+      "crossSurfaceFlowsTested": 1
+    }
+  },
+  "allIssues": [
+    {
+      "id": "6dcac240227e7cc9",
+      "category": "workflow_failure",
+      "severity": "critical",
+      "url": "https://coaileague.com/api/auth/login",
+      "message": "Authentication failed: 401",
+      "details": "{\"message\":\"Invalid email or password\"}",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:01:30.976Z",
+      "crawlerType": "api",
+      "subsystem": "auth",
+      "reproducible": true
+    },
+    {
+      "id": "be9038855d2bed71",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:01:53.654Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "668c7a0e45f0888b",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:01:53.654Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "97fa49047611cdb8",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/login",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:01:56.195Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "65db705aa760c6fc",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/register",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:01:58.291Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "d1bab45f964473d4",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/pricing",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:01.830Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "ca02126aedd3292f",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/pricing",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:01.830Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "1d5bdd0dda3a6639",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/trinity-features",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:07.785Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "b019268594228118",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/trinity-features",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:07.785Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "9b1a0cf44baea263",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/contact",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:12.827Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "975b8220fc59c093",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/contact",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:12.827Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "99af1ea6d356df65",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/support",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:16.142Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "023925003e7f4297",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/terms",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:19.175Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "ce300a5987865af8",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/terms",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:19.175Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "9ebeadbf58aa69f2",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/privacy",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:21.918Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "0cee7962bb931663",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/privacy",
+      "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:21.918Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "f33f8e1a1d0113c2",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/chat",
+      "message": "GET https://coaileague.com/api/auth/me returned 401",
+      "requestUrl": "https://coaileague.com/api/auth/me",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:24.844Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "91d165a16a70f9bd",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/chat",
+      "message": "GET https://coaileague.com/api/internal-email/mailbox/auto-create returned 401",
+      "requestUrl": "https://coaileague.com/api/internal-email/mailbox/auto-create",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:24.844Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "4c2565d20123f2f5",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/chat",
+      "message": "GET https://coaileague.com/api/ai-brain/system-status returned 401",
+      "requestUrl": "https://coaileague.com/api/ai-brain/system-status",
+      "statusCode": 401,
+      "timestamp": "2026-01-14T02:02:24.844Z",
+      "crawlerType": "ui",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "6f38f383e00eb754",
+      "category": "workflow_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/api/mascot/seasonal/state",
+      "message": "Seasonal State - Unexpected status 401",
+      "details": "{\"message\":\"Unauthorized - Please login\"}",
+      "statusCode": 401,
+      "requestUrl": "/api/mascot/seasonal/state",
+      "timestamp": "2026-01-14T02:01:31.975Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "838d5c8281500992",
+      "category": "workflow_failure",
+      "severity": "high",
+      "url": "https://coaileague.com/api/billing/plans",
+      "message": "Pricing Tiers - Unexpected status 401",
+      "details": "{\"message\":\"Unauthorized - Please login\"}",
+      "statusCode": 401,
+      "requestUrl": "/api/billing/plans",
+      "timestamp": "2026-01-14T02:01:33.429Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "b50ee96c7fa60933",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "wss://coaileague.com/ws",
+      "message": "WebSocket Main WebSocket failed to connect",
+      "timestamp": "2026-01-14T02:02:18.458Z",
+      "crawlerType": "integration",
+      "subsystem": "websocket",
+      "reproducible": true
+    },
+    {
+      "id": "54c0c8213dee5797",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "wss://coaileague.com/ws/chat",
+      "message": "WebSocket Chat WebSocket failed to connect",
+      "timestamp": "2026-01-14T02:02:18.459Z",
+      "crawlerType": "integration",
+      "subsystem": "websocket",
+      "reproducible": true
+    },
+    {
+      "id": "44f4ea5509791da3",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "timestamp": "2026-01-14T02:01:53.654Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "da5d2100eee3930e",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: net::ERR_FAILED",
+      "timestamp": "2026-01-14T02:01:53.654Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "2cf314fe39399143",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-14T02:01:53.654Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "2a3474e16823e74f",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/login",
+      "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "timestamp": "2026-01-14T02:01:56.195Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "3fe3f0174d161c11",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/login",
+      "message": "Failed to load resource: net::ERR_FAILED",
+      "timestamp": "2026-01-14T02:01:56.195Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "5b3d231fd2c7ca3e",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/login",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-14T02:01:56.195Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "02294403171c29a3",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/register",
+      "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "timestamp": "2026-01-14T02:01:58.291Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "0855fb14682777b8",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/register",
+      "message": "Failed to load resource: net::ERR_FAILED",
+      "timestamp": "2026-01-14T02:01:58.291Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "222d744333a0ea72",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/register",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-14T02:01:58.291Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "3b8e4eebe6e654eb",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/pricing",
+      "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "timestamp": "2026-01-14T02:02:01.830Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "fed8045659c8732c",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/pricing",
+      "message": "Failed to load resource: net::ERR_FAILED",
+      "timestamp": "2026-01-14T02:02:01.830Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "746c7a25617724ab",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/pricing",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-14T02:02:01.830Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "2a80794fb6ab57f3",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/trinity-features",
+      "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "timestamp": "2026-01-14T02:02:07.785Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "0a408367e52a2d66",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/trinity-features",
+      "message": "Failed to load resource: net::ERR_FAILED",
+      "timestamp": "2026-01-14T02:02:07.785Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "6db6c14bf519b9c1",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/trinity-features",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-14T02:02:07.785Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "354fb329c23ba8d6",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/contact",
+      "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "timestamp": "2026-01-14T02:02:12.827Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "5a32b5e4c5235293",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/contact",
+      "message": "Failed to load resource: net::ERR_FAILED",
+      "timestamp": "2026-01-14T02:02:12.827Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "41ba37ac03d49992",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/contact",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-14T02:02:12.827Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "2e4d36376b404dbe",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/contact",
+      "message": "Access to font at 'https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbY2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKxjPQ.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "timestamp": "2026-01-14T02:02:12.827Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "3a4a180098bb90b6",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/support",
+      "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "timestamp": "2026-01-14T02:02:16.142Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "a6f9b28efc3bd1de",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/support",
+      "message": "Failed to load resource: net::ERR_FAILED",
+      "timestamp": "2026-01-14T02:02:16.142Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "39690d698369c239",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/support",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-14T02:02:16.142Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "17ea0682b20fbcf4",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/terms",
+      "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "timestamp": "2026-01-14T02:02:19.175Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "96c5310173fee44b",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/terms",
+      "message": "Failed to load resource: net::ERR_FAILED",
+      "timestamp": "2026-01-14T02:02:19.175Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "bba58b4cc5a04081",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/terms",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-14T02:02:19.175Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "9111c069e82a204a",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/privacy",
+      "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "timestamp": "2026-01-14T02:02:21.918Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "aefb025f07942554",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/privacy",
+      "message": "Failed to load resource: net::ERR_FAILED",
+      "timestamp": "2026-01-14T02:02:21.918Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "707908bd82a5e28f",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/privacy",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-14T02:02:21.918Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "735bbd8d39a72760",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/chat",
+      "message": "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuI6fMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "timestamp": "2026-01-14T02:02:24.844Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "8fa635f8bf4f61ea",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/chat",
+      "message": "Failed to load resource: net::ERR_FAILED",
+      "timestamp": "2026-01-14T02:02:24.844Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "1abe3fc8fc2939c3",
+      "category": "console_error",
+      "severity": "medium",
+      "url": "https://coaileague.com/chat",
+      "message": "Failed to load resource: the server responded with a status of 401 ()",
+      "timestamp": "2026-01-14T02:02:24.844Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "3ceac8bceefe827e",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/login",
+      "message": "Button has no accessible label",
+      "timestamp": "2026-01-14T02:01:55.439Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "d6dd3cba9934b093",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/login",
+      "message": "Form input \"unknown\" lacks accessible label",
+      "timestamp": "2026-01-14T02:01:56.057Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "2e65e74c5f00cc41",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/register",
+      "message": "Button has no accessible label",
+      "timestamp": "2026-01-14T02:01:57.816Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "76f208cd9e64249c",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/contact",
+      "message": "Form input \"unknown\" lacks accessible label",
+      "timestamp": "2026-01-14T02:02:12.282Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "2c614551f280f5a3",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/support",
+      "message": "Button has no accessible label",
+      "timestamp": "2026-01-14T02:02:14.600Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "498d099fb4008b45",
+      "category": "ui_error",
+      "severity": "low",
+      "url": "https://coaileague.com/chat",
+      "message": "Button has no accessible label",
+      "timestamp": "2026-01-14T02:02:24.064Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    }
+  ],
+  "summary": {
+    "totalIssuesFound": 60,
+    "criticalCount": 1,
+    "highCount": 22,
+    "mediumCount": 31,
+    "lowCount": 6,
+    "bySubsystem": {
+      "auth": 1,
+      "backend": 20,
+      "websocket": 2,
+      "frontend": 37
+    },
+    "byCrawler": {
+      "api": 3,
+      "ui": 55,
+      "integration": 2
+    },
+    "readinessScore": 0,
+    "blockers": [
+      "Authentication failed: 401"
+    ]
+  },
+  "prioritizedFixes": [
+    {
+      "rank": 1,
+      "issue": {
+        "id": "6dcac240227e7cc9",
+        "category": "workflow_failure",
+        "severity": "critical",
+        "url": "https://coaileague.com/api/auth/login",
+        "message": "Authentication failed: 401",
+        "details": "{\"message\":\"Invalid email or password\"}",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:01:30.976Z",
+        "crawlerType": "api",
+        "subsystem": "auth",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 2,
+      "issue": {
+        "id": "be9038855d2bed71",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:01:53.654Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 3,
+      "issue": {
+        "id": "668c7a0e45f0888b",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com",
+        "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:01:53.654Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 4,
+      "issue": {
+        "id": "97fa49047611cdb8",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/login",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:01:56.195Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 5,
+      "issue": {
+        "id": "65db705aa760c6fc",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/register",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:01:58.291Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 6,
+      "issue": {
+        "id": "d1bab45f964473d4",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/pricing",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:01.830Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 7,
+      "issue": {
+        "id": "ca02126aedd3292f",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/pricing",
+        "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:01.830Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 8,
+      "issue": {
+        "id": "1d5bdd0dda3a6639",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/trinity-features",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:07.785Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 9,
+      "issue": {
+        "id": "b019268594228118",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/trinity-features",
+        "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:07.785Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 10,
+      "issue": {
+        "id": "9b1a0cf44baea263",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/contact",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:12.827Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 11,
+      "issue": {
+        "id": "975b8220fc59c093",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/contact",
+        "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:12.827Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 12,
+      "issue": {
+        "id": "99af1ea6d356df65",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/support",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:16.142Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 13,
+      "issue": {
+        "id": "023925003e7f4297",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/terms",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:19.175Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 14,
+      "issue": {
+        "id": "ce300a5987865af8",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/terms",
+        "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:19.175Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 15,
+      "issue": {
+        "id": "9ebeadbf58aa69f2",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/privacy",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:21.918Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 16,
+      "issue": {
+        "id": "0cee7962bb931663",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/privacy",
+        "message": "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+        "requestUrl": "https://coaileague.com/api/mascot/seasonal/state",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:21.918Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 17,
+      "issue": {
+        "id": "f33f8e1a1d0113c2",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/chat",
+        "message": "GET https://coaileague.com/api/auth/me returned 401",
+        "requestUrl": "https://coaileague.com/api/auth/me",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:24.844Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 18,
+      "issue": {
+        "id": "91d165a16a70f9bd",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/chat",
+        "message": "GET https://coaileague.com/api/internal-email/mailbox/auto-create returned 401",
+        "requestUrl": "https://coaileague.com/api/internal-email/mailbox/auto-create",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:24.844Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 19,
+      "issue": {
+        "id": "4c2565d20123f2f5",
+        "category": "network_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/chat",
+        "message": "GET https://coaileague.com/api/ai-brain/system-status returned 401",
+        "requestUrl": "https://coaileague.com/api/ai-brain/system-status",
+        "statusCode": 401,
+        "timestamp": "2026-01-14T02:02:24.844Z",
+        "crawlerType": "ui",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 20,
+      "issue": {
+        "id": "6f38f383e00eb754",
+        "category": "workflow_failure",
+        "severity": "high",
+        "url": "https://coaileague.com/api/mascot/seasonal/state",
+        "message": "Seasonal State - Unexpected status 401",
+        "details": "{\"message\":\"Unauthorized - Please login\"}",
+        "statusCode": 401,
+        "requestUrl": "/api/mascot/seasonal/state",
+        "timestamp": "2026-01-14T02:01:31.975Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    }
+  ],
+  "trinityInsights": {
+    "overallAssessment": "1 critical blocker(s) must be fixed before launch.",
+    "topPriorities": [
+      "Authentication failed: 401",
+      "GET https://coaileague.com/api/auth/me returned 401",
+      "GET https://coaileague.com/api/mascot/seasonal/state returned 401",
+      "GET https://coaileague.com/api/auth/me returned 401",
+      "GET https://coaileague.com/api/auth/me returned 401"
+    ],
+    "quickWins": [],
+    "technicalDebt": [
+      "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "Failed to load resource: net::ERR_FAILED",
+      "Failed to load resource: the server responded with a status of 401 ()",
+      "Access to font at 'https://fonts.gstatic.com/s/inter/v20/UcCO3FwrK3iLTeHuS_nVMrMxCp50SjIw2boKoduKmMEVuGKYMZg.ttf' from origin 'https://coaileague.com' has been blocked by CORS policy: Request header field x-diagnostics-runner is not allowed by Access-Control-Allow-Headers in preflight response.",
+      "Failed to load resource: net::ERR_FAILED"
+    ],
+    "launchReadiness": "not-ready",
+    "confidenceScore": 10
+  },
+  "artifactsPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260114020130_e500c2",
+  "reportPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260114020130_e500c2/triad_report.json"
+}

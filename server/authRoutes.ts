@@ -340,6 +340,32 @@ router.post("/api/auth/login", async (req, res) => {
 });
 
 // ============================================================================
+// Auth Status Check (for diagnostics/crawlers)
+// ============================================================================
+
+router.get("/api/auth/check", async (req, res) => {
+  try {
+    if (!req.session?.userId) {
+      return res.json({ authenticated: false });
+    }
+    
+    const [user] = await db
+      .select({ id: users.id, email: users.email })
+      .from(users)
+      .where(eq(users.id, req.session.userId))
+      .limit(1);
+    
+    if (!user) {
+      return res.json({ authenticated: false });
+    }
+    
+    res.json({ authenticated: true, userId: user.id });
+  } catch (error) {
+    res.json({ authenticated: false, error: 'Check failed' });
+  }
+});
+
+// ============================================================================
 // Logout
 // ============================================================================
 

@@ -96,10 +96,19 @@ export class UICrawler {
         args: ['--no-sandbox', '--disable-setuid-sandbox']
       });
       
+      // Add bypass headers for diagnostics access
+      const extraHTTPHeaders: Record<string, string> = {
+        'X-Diagnostics-Runner': 'true'
+      };
+      if (this.config.credentials?.bypassSecret) {
+        extraHTTPHeaders['X-Diagnostics-Runner'] = this.config.credentials.bypassSecret;
+      }
+      
       this.context = await this.browser.newContext({
         viewport: { width: 1280, height: 720 },
         userAgent: 'TrinityDiagnosticsTriad/1.0 UICrawler',
-        ignoreHTTPSErrors: true
+        ignoreHTTPSErrors: true,
+        extraHTTPHeaders
       });
       
       const screenshotsDir = path.join(this.config.outputDir, 'screenshots', 'ui');

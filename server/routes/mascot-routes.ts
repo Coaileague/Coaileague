@@ -1306,9 +1306,9 @@ router.delete('/preferences', requireAuth, requireTrinityAccess, async (req, res
  * Get current seasonal profile with theme, effects, and mascot hints
  * Public endpoint - no auth required for theme detection
  */
-router.get('/seasonal/state', requireAuth, requireTrinityAccess, async (req, res) => {
+router.get('/seasonal/state', async (req, res) => {
   try {
-    const workspaceId = (req as any).session?.activeWorkspaceId;
+    const workspaceId = (req as any).session?.activeWorkspaceId || null;
     const profile = await generateSeasonalProfile(workspaceId);
     
     res.json({

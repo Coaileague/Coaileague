@@ -55,6 +55,8 @@ integrations = [
 TRINITY_DIALOGUE_ENABLED = "false"
 QUICKBOOKS_ENVIRONMENT = "sandbox"
 EMAIL_SIMULATION_MODE = "true"
+TEST_USERNAME = "statewide-qa@test.local"
+TEST_PASSWORD = "TestPassword123!"
 
 [userenv.shared]
 DISABLE_SEASONAL_THEMING = "true"

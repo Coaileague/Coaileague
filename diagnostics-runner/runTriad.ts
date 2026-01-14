@@ -29,7 +29,11 @@ async function main() {
   };
   
   const mode = getArg('mode') as TriadOrchestratorConfig['mode'] || 'full-triad';
-  const baseUrl = getArg('url') || process.env.DIAGNOSTICS_BASE_URL || 'https://coaileague.com';
+  // Use local dev URL by default for testing with dev database
+  const defaultUrl = process.env.REPL_SLUG 
+    ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
+    : 'http://localhost:5000';
+  const baseUrl = getArg('url') || process.env.DIAGNOSTICS_BASE_URL || defaultUrl;
   const parallel = !hasFlag('sequential');
   const maxPages = parseInt(getArg('max-pages') || '50', 10);
   const noAI = hasFlag('no-ai');

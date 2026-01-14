@@ -231,6 +231,8 @@ export default function PayrollDashboard() {
               disabled={createRunMutation.isPending}
               className="bg-gradient-to-r from-teal-500 to-cyan-500 hover:from-teal-600 hover:to-cyan-600 text-white shadow-lg shadow-cyan-500/25 border-0"
               data-testid="button-create-payroll"
+              data-testid-run="button-run-payroll"
+              data-testid-start="button-start-payroll"
             >
               {createRunMutation.isPending ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />

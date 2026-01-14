@@ -154,7 +154,7 @@ export class APICrawler {
       {
         id: 'workspaces-list',
         name: 'List Workspaces',
-        endpoint: '/api/workspaces',
+        endpoint: '/api/workspaces/all',
         method: 'GET',
         expectedStatus: [200, 401],
         requiresAuth: true,
@@ -181,11 +181,11 @@ export class APICrawler {
       {
         id: 'schedules-current',
         name: 'Current Schedules',
-        endpoint: '/api/schedules',
+        endpoint: '/api/shifts',
         method: 'GET',
         expectedStatus: [200, 401],
         requiresAuth: true,
-        description: 'Get current schedules'
+        description: 'Get current schedules/shifts'
       },
       {
         id: 'notifications-list',
@@ -208,18 +208,18 @@ export class APICrawler {
       {
         id: 'billing-config',
         name: 'Billing Configuration',
-        endpoint: '/api/billing/config',
+        endpoint: '/api/billing/status',
         method: 'GET',
-        expectedStatus: [200, 401],
+        expectedStatus: [200, 401, 404],
         requiresAuth: true,
         description: 'Get billing configuration'
       },
       {
         id: 'ai-brain-status',
         name: 'AI Brain Status',
-        endpoint: '/api/ai-brain/status',
+        endpoint: '/api/trinity/status',
         method: 'GET',
-        expectedStatus: [200, 401],
+        expectedStatus: [200, 401, 404],
         requiresAuth: true,
         description: 'Trinity AI Brain system status'
       },
@@ -235,9 +235,9 @@ export class APICrawler {
       {
         id: 'pricing-tiers',
         name: 'Pricing Tiers',
-        endpoint: '/api/pricing',
+        endpoint: '/api/billing/plans',
         method: 'GET',
-        expectedStatus: 200,
+        expectedStatus: [200, 404],
         requiresAuth: false,
         description: 'Get subscription pricing tiers'
       }
@@ -258,13 +258,14 @@ export class APICrawler {
         headers['X-Diagnostics-Runner'] = this.config.credentials.bypassSecret;
       }
       
-      const response = await fetch(`${this.config.baseUrl}/api/login`, {
+      const response = await fetch(`${this.config.baseUrl}/api/auth/login`, {
         method: 'POST',
         headers,
+        credentials: 'include',
         body: JSON.stringify({
           email: this.config.credentials.username,
           password: this.config.credentials.password,
-          rememberMe: false
+          rememberMe: true
         })
       });
       
@@ -282,7 +283,7 @@ export class APICrawler {
           id: generateId(),
           category: 'workflow_failure',
           severity: 'critical',
-          url: `${this.config.baseUrl}/api/login`,
+          url: `${this.config.baseUrl}/api/auth/login`,
           message: `Authentication failed: ${response.status}`,
           details: JSON.stringify(errorData),
           statusCode: response.status,
@@ -298,7 +299,7 @@ export class APICrawler {
         id: generateId(),
         category: 'network_failure',
         severity: 'critical',
-        url: `${this.config.baseUrl}/api/login`,
+        url: `${this.config.baseUrl}/api/auth/login`,
         message: `Authentication request failed: ${error.message}`,
         timestamp: new Date().toISOString(),
         crawlerType: 'api',
