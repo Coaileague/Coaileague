@@ -24,14 +24,14 @@ export function setLogoutAnimationContext(context: any) {
  * Usage: await performLogout()
  */
 export async function performLogout() {
-  // STEP 1: Show visual feedback with graceful animation
+  // STEP 1: Show visual feedback with graceful animation (10 seconds for users to enjoy)
   const showAnimation = animationContextRef?.show;
   if (showAnimation) {
     showAnimation({
       mode: 'warp',
       mainText: 'Signing Out...',
       subText: 'See you soon!',
-      duration: 2500,
+      duration: 10000,
       source: 'system'
     });
   }
@@ -58,8 +58,8 @@ export async function performLogout() {
   // STEP 5: Invalidate queries
   await queryClient.invalidateQueries().catch(() => {});
 
-  // STEP 6: Graceful redirect with time for animation to complete
-  const redirectDelay = showAnimation ? 2000 : 500;
+  // STEP 6: Graceful redirect with time for animation to complete (10 seconds)
+  const redirectDelay = showAnimation ? 10000 : 500;
   setTimeout(() => {
     window.location.href = LOGOUT_CONFIG.redirectPath;
   }, redirectDelay);

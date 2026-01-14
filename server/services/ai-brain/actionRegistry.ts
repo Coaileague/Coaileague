@@ -588,7 +588,60 @@ class AIBrainActionRegistry {
       },
     };
 
+    const clearAllNotifications: ActionHandler = {
+      actionId: 'notifications.clear_all',
+      name: 'Clear All Notifications',
+      category: 'notifications',
+      description: 'Clear all notifications for the current user. Use when user asks Trinity to clear their notifications.',
+      requiredRoles: ['employee', 'manager', 'owner', 'support_agent', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { storage } = await import('../../storage');
+        const aiNotificationService = await import('../aiNotificationService').then(m => m.default);
+        
+        const userId = request.userId;
+        if (!userId) {
+          return createResult(request.actionId, false, 'User ID required to clear notifications', null, start);
+        }
+        
+        // Clear both regular notifications and AI maintenance alerts
+        const clearedNotifications = await storage.clearAllNotifications(userId);
+        const clearedAlerts = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId);
+        
+        const totalCleared = clearedNotifications + clearedAlerts;
+        return createResult(
+          request.actionId, 
+          true, 
+          `Successfully cleared ${totalCleared} notifications for user`, 
+          { clearedNotifications, clearedAlerts, totalCleared },
+          start
+        );
+      },
+    };
+
+    const markAllRead: ActionHandler = {
+      actionId: 'notifications.mark_all_read',
+      name: 'Mark All Notifications Read',
+      category: 'notifications',
+      description: 'Mark all notifications as read for the current user.',
+      requiredRoles: ['employee', 'manager', 'owner', 'support_agent', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { storage } = await import('../../storage');
+        
+        const userId = request.userId;
+        if (!userId) {
+          return createResult(request.actionId, false, 'User ID required', null, start);
+        }
+        
+        await storage.markAllNotificationsRead(userId);
+        return createResult(request.actionId, true, `All notifications marked as read`, null, start);
+      },
+    };
+
     helpaiOrchestrator.registerAction(sendNotification);
+    helpaiOrchestrator.registerAction(clearAllNotifications);
+    helpaiOrchestrator.registerAction(markAllRead);
   }
 
   // ============================================================================
