@@ -55,98 +55,123 @@ function NotificationDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-slate-900 border-slate-700 text-white max-w-md">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
+      <DialogContent className="bg-[#0F172A] border-slate-700/50 text-white max-w-2xl w-[95vw] sm:w-[85vw] md:w-[70vw] lg:w-[60vw] max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-4 border-b border-slate-700/30">
+          <div className="flex items-start gap-4">
             <div className={cn(
-              "w-10 h-10 rounded-xl flex items-center justify-center",
-              PRIORITY_BG[notification.priority],
-              PRIORITY_TEXT[notification.priority]
+              "shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl",
+              notification.priority === 'critical' ? 'bg-red-500/20 text-red-400' :
+              notification.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
+              notification.priority === 'medium' ? 'bg-[#9333EA]/20 text-[#A855F7]' : 
+              'bg-[#0D9488]/20 text-[#14B8A6]'
             )}>
-              {getTypeIcon(notification.type)}
+              <div className="scale-125">{getTypeIcon(notification.type)}</div>
             </div>
-            <div className="flex-1">
-              <DialogTitle className="text-white text-lg">{notification.title}</DialogTitle>
-              <DialogDescription className="text-slate-400 text-sm">
+            <div className="flex-1 min-w-0">
+              <DialogTitle className="text-white text-2xl font-black tracking-tight leading-tight">{notification.title}</DialogTitle>
+              <DialogDescription className="text-slate-400 text-sm font-semibold mt-1 flex items-center gap-2">
+                <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
                 {formatDistanceToNow(parseISO(notification.time), { addSuffix: true })}
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
         
-        <div className="space-y-4 mt-2">
-          {/* Priority Badge */}
-          <div className="flex items-center gap-2">
+        <div className="space-y-8 mt-6">
+          {/* Status Section */}
+          <div className="flex flex-wrap items-center gap-3">
             <Badge className={cn(
-              "capitalize",
-              notification.priority === 'critical' ? 'bg-red-500/20 text-red-400 border-red-500/30' :
-              notification.priority === 'high' ? 'bg-orange-500/20 text-orange-400 border-orange-500/30' :
-              notification.priority === 'medium' ? 'bg-blue-500/20 text-blue-400 border-blue-500/30' :
-              'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+              "capitalize px-4 py-1.5 text-xs font-black tracking-widest shadow-lg border-0",
+              notification.priority === 'critical' ? 'bg-red-600 text-white' :
+              notification.priority === 'high' ? 'bg-orange-500 text-white' :
+              notification.priority === 'medium' ? 'bg-[#9333EA] text-white' :
+              'bg-[#0D9488] text-white'
             )}>
               {notification.priority}
             </Badge>
-            <Badge variant="outline" className="capitalize text-slate-400 border-slate-600">
+            <Badge variant="outline" className="capitalize px-4 py-1.5 text-xs font-black tracking-widest text-slate-300 border-slate-700 bg-slate-800/50">
               {notification.type}
             </Badge>
+            {notification.read && (
+              <Badge variant="outline" className="px-3 py-1 text-[10px] font-bold text-emerald-400 border-emerald-500/30 bg-emerald-500/5">
+                Archived
+              </Badge>
+            )}
           </div>
           
-          {/* Message */}
-          <div className="bg-slate-800/50 rounded-lg p-3">
-            <p className="text-slate-300 text-sm leading-relaxed">{notification.message}</p>
+          {/* Main Content Card */}
+          <div className="bg-[#1E293B] rounded-2xl p-6 border border-slate-700/50 shadow-2xl relative overflow-hidden group">
+            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#9333EA] to-[#0D9488] opacity-50" />
+            <p className="text-slate-100 text-lg leading-relaxed font-medium">{notification.message}</p>
           </div>
           
-          {/* Detailed Info */}
-          {notification.detailedInfo && (
-            <div className="bg-slate-800/50 rounded-lg p-3">
-              <h4 className="text-slate-400 text-xs font-medium uppercase mb-1">Details</h4>
-              <p className="text-slate-300 text-sm">{notification.detailedInfo}</p>
-            </div>
-          )}
-          
-          {/* Issue */}
-          {notification.issue && (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
-              <h4 className="text-red-400 text-xs font-medium uppercase mb-1">Issue Detected</h4>
-              <p className="text-slate-300 text-sm">{notification.issue}</p>
-            </div>
-          )}
-          
-          {/* Solution */}
-          {notification.solution && (
-            <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3">
-              <h4 className="text-emerald-400 text-xs font-medium uppercase mb-1">Solution</h4>
-              <p className="text-slate-300 text-sm">{notification.solution}</p>
-            </div>
-          )}
-          
-          {/* Fixed by Trinity Badge */}
-          {notification.fixedByTrinity && (
-            <div className="flex items-center gap-2 bg-purple-500/10 border border-purple-500/20 rounded-lg p-3">
-              <Sparkles className="w-5 h-5 text-purple-400" />
-              <div>
-                <span className="text-purple-300 font-medium text-sm">Fixed by Trinity AI</span>
-                <p className="text-slate-400 text-xs">This issue was automatically resolved</p>
+          {/* Contextual Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Detailed Info */}
+            {notification.detailedInfo && (
+              <div className="bg-slate-800/40 rounded-2xl p-5 border border-slate-700/30">
+                <h4 className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mb-3">Diagnostic Context</h4>
+                <p className="text-slate-300 text-sm leading-relaxed font-medium">{notification.detailedInfo}</p>
               </div>
-              <CheckCircle2 className="w-5 h-5 text-emerald-400 ml-auto" />
+            )}
+            
+            {/* Resolution/Issue Pair */}
+            <div className="space-y-4">
+              {notification.issue && (
+                <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5">
+                  <h4 className="text-red-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Issue Vector</h4>
+                  <p className="text-slate-300 text-sm leading-relaxed">{notification.issue}</p>
+                </div>
+              )}
+              
+              {notification.solution && (
+                <div className="bg-[#0D9488]/5 border border-[#0D9488]/20 rounded-2xl p-5">
+                  <h4 className="text-[#14B8A6] text-[10px] font-black uppercase tracking-[0.2em] mb-2">Recommended Fix</h4>
+                  <p className="text-slate-300 text-sm leading-relaxed">{notification.solution}</p>
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {/* Trinity Intelligence Block */}
+          {notification.fixedByTrinity && (
+            <div className="relative group p-6 rounded-2xl bg-gradient-to-br from-[#9333EA]/10 to-[#0D9488]/10 border border-white/5 shadow-2xl overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#9333EA]/5 via-transparent to-[#0D9488]/5 animate-gradient-x" />
+              <div className="relative flex items-center gap-5">
+                <div className="bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/10">
+                  <Sparkles className="w-8 h-8 text-[#A855F7] animate-pulse" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-white font-black text-lg tracking-tight">Autonomous Resolution</h3>
+                  <p className="text-slate-400 text-sm font-medium mt-1">This event was intercepted and resolved by Trinity AI Engine.</p>
+                </div>
+                <div className="shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-[#14B8A6]/20 border border-[#14B8A6]/30">
+                  <CheckCircle2 className="w-7 h-7 text-[#14B8A6]" />
+                </div>
+              </div>
             </div>
           )}
           
-          {/* Action Button */}
+          {/* Footer Actions */}
           {notification.action && (
-            <Button 
-              className="w-full bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-500 hover:to-cyan-500"
-              onClick={(e) => {
-                e.stopPropagation();
-                if (notification.action?.target) {
-                  onClose();
-                  onNavigate(notification.action.target);
-                }
-              }}
-            >
-              {notification.action.label}
-              <ExternalLink className="w-4 h-4 ml-2" />
-            </Button>
+            <div className="pt-4">
+              <Button 
+                className="group relative w-full h-14 bg-gradient-to-r from-[#9333EA] via-[#7C3AED] to-[#0D9488] hover:scale-[1.01] active:scale-[0.99] transition-all shadow-[0_20px_40px_-15px_rgba(147,51,234,0.3)] text-white font-black text-base rounded-2xl border-0 overflow-hidden"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (notification.action?.target) {
+                    onClose();
+                    onNavigate(notification.action.target);
+                  }
+                }}
+              >
+                <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-10 transition-opacity" />
+                <span className="flex items-center justify-center gap-3">
+                  {notification.action.label}
+                  <ExternalLink className="w-5 h-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
+                </span>
+              </Button>
+            </div>
           )}
         </div>
       </DialogContent>
@@ -184,22 +209,22 @@ const normalizePriority = (priority: any): NotificationPriority => {
 const PRIORITY_GRADIENTS: Record<NotificationPriority, string> = {
   critical: 'from-red-500 to-red-600',
   high: 'from-orange-500 to-amber-500',
-  medium: 'from-blue-500 to-cyan-500',
-  low: 'from-emerald-500 to-green-500'
+  medium: 'from-[#9333EA] to-[#7C3AED]', // Fortune 500 Purple
+  low: 'from-[#0D9488] to-[#14B8A6]' // Fortune 500 Teal
 };
 
 const PRIORITY_BG: Record<NotificationPriority, string> = {
   critical: 'bg-red-500/20',
   high: 'bg-orange-500/20',
-  medium: 'bg-blue-500/20',
-  low: 'bg-emerald-500/20'
+  medium: 'bg-[#9333EA]/20',
+  low: 'bg-[#0D9488]/20'
 };
 
 const PRIORITY_TEXT: Record<NotificationPriority, string> = {
   critical: 'text-red-400',
   high: 'text-orange-400',
-  medium: 'text-blue-400',
-  low: 'text-emerald-400'
+  medium: 'text-[#A855F7]',
+  low: 'text-[#14B8A6]'
 };
 
 const AlertIcon = () => (
@@ -463,7 +488,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
       <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-cyan-600/10 animate-pulse pointer-events-none" />
       
       {/* Header */}
-      <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-4">
+      <div className="relative bg-gradient-to-r from-[#9333EA] via-[#7C3AED] to-[#0D9488] p-4">
         {/* Animated mesh background */}
         <div className="absolute inset-0 opacity-30 pointer-events-none">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[length:20px_20px]" />
@@ -487,9 +512,9 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
               <div className="flex items-center gap-2">
                 <span className={cn(
                   "w-2 h-2 rounded-full animate-pulse",
-                  pulseActive ? 'bg-emerald-400' : 'bg-emerald-500'
+                  pulseActive ? 'bg-[#14B8A6]' : 'bg-[#0D9488]'
                 )} />
-                <span className="text-blue-100 text-xs font-medium">Live &bull; Real-time sync</span>
+                <span className="text-white/90 text-xs font-medium">Live &bull; Real-time sync</span>
               </div>
             </div>
           </div>
@@ -497,67 +522,67 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
           {/* Notification Badge with Unread label */}
           <div className="flex items-center gap-2">
             {criticalCount > 0 && (
-              <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
+              <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse shadow-lg">
                 {criticalCount} Critical
               </div>
             )}
             <div className="flex flex-col items-center">
-              <div className="bg-white/20 backdrop-blur-sm text-white text-lg font-bold w-10 h-10 rounded-full flex items-center justify-center border border-white/30">
+              <div className="bg-white/20 backdrop-blur-sm text-white text-lg font-bold w-10 h-10 rounded-full flex items-center justify-center border border-white/30 shadow-inner">
                 {unreadCount}
               </div>
-              <span className="text-white/60 text-[10px] mt-0.5">Unread</span>
+              <span className="text-white/60 text-[10px] mt-0.5 font-medium">Unread</span>
             </div>
           </div>
         </div>
 
         {/* Status Bar */}
         <div className="relative mt-4 flex items-center gap-2 text-xs flex-wrap">
-          <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5">
-            <span className={cn("w-1.5 h-1.5 rounded-full", isTrinityOnline ? 'bg-emerald-400' : 'bg-red-400')} />
-            <span className="text-white/90">Trinity Online</span>
+          <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/5">
+            <span className={cn("w-1.5 h-1.5 rounded-full", isTrinityOnline ? 'bg-[#14B8A6]' : 'bg-red-400')} />
+            <span className="text-white/90 font-medium">Trinity Online</span>
           </div>
-          <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5">
+          <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/5">
             <span className={cn("w-1.5 h-1.5 rounded-full", isQuickBooksOnline ? 'bg-blue-400' : 'bg-yellow-400')} />
-            <span className="text-white/90">QB Synced</span>
+            <span className="text-white/90 font-medium">QB Synced</span>
           </div>
-          <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5">
-            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-            <span className="text-white/90">{activeGuards} Guards Active</span>
+          <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/5">
+            <span className="w-1.5 h-1.5 rounded-full bg-[#EAB308] animate-pulse" />
+            <span className="text-white/90 font-medium">{activeGuards} Guards Active</span>
           </div>
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="relative border-b border-slate-700/50">
+      <div className="relative border-b border-slate-700/50 bg-slate-900/40">
         <div className="flex overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "relative flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-all duration-200",
+                "relative flex items-center gap-2 px-4 py-3 text-sm font-semibold whitespace-nowrap transition-all duration-200",
                 activeTab === tab.id
-                  ? 'text-blue-400'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'text-[#A855F7] bg-[#9333EA]/5'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
               )}
               data-testid={`tab-${tab.id}`}
             >
               {tab.pulse && pulseActive && (
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full animate-ping" />
+                <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
               )}
               <span>{tab.label}</span>
               {tab.count > 0 && (
                 <span className={cn(
                   "text-xs px-1.5 py-0.5 rounded-full",
                   activeTab === tab.id
-                    ? 'bg-blue-500/20 text-blue-400'
+                    ? 'bg-[#9333EA]/20 text-[#A855F7]'
                     : 'bg-slate-700 text-slate-400'
                 )}>
                   {tab.count}
                 </span>
               )}
               {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-blue-500 to-purple-500" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#9333EA] to-[#0D9488]" />
               )}
             </button>
           ))}
