@@ -13,7 +13,8 @@ import { MobileNotificationHub } from "./MobileNotificationHub";
 interface NotificationsData {
   userNotifications: any[];
   platformUpdates: any[];
-  unreadCount: number;
+  totalUnread: number;
+  unreadCount?: number;
 }
 
 export function MobileNotificationSheet() {
@@ -24,7 +25,7 @@ export function MobileNotificationSheet() {
     refetchInterval: 30000,
   });
   
-  const unreadCount = notificationsData?.unreadCount || 0;
+  const unreadCount = notificationsData?.totalUnread ?? notificationsData?.unreadCount ?? 0;
   
   return (
     <>
