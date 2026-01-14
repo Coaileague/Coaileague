@@ -383,6 +383,20 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
     },
   });
   
+  // Clear all notifications
+  const clearAllMutation = useMutation({
+    mutationFn: async () => {
+      return apiRequest('POST', '/api/notifications/clear-all');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      toast({ title: "All notifications cleared" });
+    },
+    onError: () => {
+      toast({ title: "Failed to clear notifications", variant: "destructive" });
+    },
+  });
+  
   const handleAction = (action: string, id: string, data?: any) => {
     actionMutation.mutate({ action, id, data });
   };
@@ -393,6 +407,10 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   
   const handleMarkAllRead = () => {
     markAllReadMutation.mutate();
+  };
+  
+  const handleClearAll = () => {
+    clearAllMutation.mutate();
   };
   
   const userNotifications = notificationsData?.userNotifications || [];
@@ -482,6 +500,18 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
                 data-testid="button-mark-all-read"
               >
                 <CheckCheck className="w-4 h-4" />
+              </Button>
+            )}
+            {allNotifications.length > 0 && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-white hover:bg-white/20"
+                onClick={handleClearAll}
+                disabled={clearAllMutation.isPending}
+                data-testid="button-clear-all"
+              >
+                <Trash2 className="w-4 h-4" />
               </Button>
             )}
           </div>
