@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Sparkles, CheckCircle2, ExternalLink } from "lucide-react";
+import { Sparkles, CheckCircle2, ExternalLink, Check, X, Trash2, GripHorizontal } from "lucide-react";
 
 type NotificationCategory = 'all' | 'alerts' | 'workflows' | 'system' | 'ai';
 type NotificationPriority = 'critical' | 'high' | 'medium' | 'low';
@@ -39,49 +39,52 @@ interface UNSNotification {
   };
 }
 
-// Notification Detail Modal Component
+// Compact Notification Detail Modal with Acknowledge/Clear Actions
 function NotificationDetailModal({
   notification,
   isOpen,
   onClose,
   onNavigate,
+  onAcknowledge,
+  onClear,
 }: {
   notification: UNSNotification | null;
   isOpen: boolean;
   onClose: () => void;
   onNavigate: (path: string) => void;
+  onAcknowledge: (id: string) => void;
+  onClear: (id: string) => void;
 }) {
   if (!notification) return null;
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-[#0F172A] border-slate-700/50 text-white max-w-2xl w-[95vw] sm:w-[85vw] md:w-[70vw] lg:w-[60vw] max-h-[90vh] overflow-y-auto">
-        <DialogHeader className="pb-4 border-b border-slate-700/30">
-          <div className="flex items-start gap-4">
+      <DialogContent className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-foreground max-w-lg w-[90vw] max-h-[80vh] overflow-y-auto p-0">
+        <DialogHeader className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+          <div className="flex items-start gap-3">
             <div className={cn(
-              "shrink-0 w-14 h-14 rounded-2xl flex items-center justify-center shadow-2xl",
-              notification.priority === 'critical' ? 'bg-red-500/20 text-red-400' :
-              notification.priority === 'high' ? 'bg-orange-500/20 text-orange-400' :
-              notification.priority === 'medium' ? 'bg-[#06b6d4]/20 text-[#22d3ee]' : 
-              'bg-[#2dd4bf]/20 text-[#2dd4bf]'
+              "shrink-0 w-10 h-10 rounded-lg flex items-center justify-center",
+              notification.priority === 'critical' ? 'bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400' :
+              notification.priority === 'high' ? 'bg-orange-100 text-orange-600 dark:bg-orange-900/30 dark:text-orange-400' :
+              notification.priority === 'medium' ? 'bg-cyan-100 text-cyan-600 dark:bg-cyan-900/30 dark:text-cyan-400' : 
+              'bg-teal-100 text-teal-600 dark:bg-teal-900/30 dark:text-teal-400'
             )}>
-              <div className="scale-125">{getTypeIcon(notification.type)}</div>
+              {getTypeIcon(notification.type)}
             </div>
             <div className="flex-1 min-w-0">
-              <DialogTitle className="text-white text-2xl font-black tracking-tight leading-tight">{notification.title}</DialogTitle>
-              <DialogDescription className="text-slate-400 text-sm font-semibold mt-1 flex items-center gap-2">
-                <span className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+              <DialogTitle className="text-foreground text-base font-bold leading-tight">{notification.title}</DialogTitle>
+              <DialogDescription className="text-muted-foreground text-xs mt-1 flex items-center gap-2">
                 {formatDistanceToNow(parseISO(notification.time), { addSuffix: true })}
               </DialogDescription>
             </div>
           </div>
         </DialogHeader>
         
-        <div className="space-y-8 mt-6">
-          {/* Status Section */}
-          <div className="flex flex-wrap items-center gap-3">
+        <div className="p-4 space-y-4">
+          {/* Status Badges */}
+          <div className="flex flex-wrap items-center gap-2">
             <Badge className={cn(
-              "capitalize px-4 py-1.5 text-xs font-black tracking-widest shadow-lg border-0",
+              "capitalize text-xs font-semibold",
               notification.priority === 'critical' ? 'bg-red-600 text-white' :
               notification.priority === 'high' ? 'bg-orange-500 text-white' :
               notification.priority === 'medium' ? 'bg-[#06b6d4] text-white' :
@@ -89,74 +92,45 @@ function NotificationDetailModal({
             )}>
               {notification.priority}
             </Badge>
-            <Badge variant="outline" className="capitalize px-4 py-1.5 text-xs font-black tracking-widest text-slate-300 border-slate-700 bg-slate-800/50">
+            <Badge variant="outline" className="capitalize text-xs">
               {notification.type}
             </Badge>
             {notification.read && (
-              <Badge variant="outline" className="px-3 py-1 text-[10px] font-bold text-emerald-400 border-emerald-500/30 bg-emerald-500/5">
+              <Badge variant="outline" className="text-xs text-emerald-600 border-emerald-300 dark:text-emerald-400 dark:border-emerald-600">
                 Archived
               </Badge>
             )}
           </div>
           
-          {/* Main Content Card */}
-          <div className="bg-[#1E293B] rounded-2xl p-6 border border-slate-700/50 shadow-2xl relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-[#06b6d4] to-[#2dd4bf] opacity-50" />
-            <p className="text-slate-100 text-lg leading-relaxed font-medium">{notification.message}</p>
+          {/* Message */}
+          <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+            <p className="text-foreground text-sm leading-relaxed">{notification.message}</p>
           </div>
           
-          {/* Contextual Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Detailed Info */}
-            {notification.detailedInfo && (
-              <div className="bg-slate-800/40 rounded-2xl p-5 border border-slate-700/30">
-                <h4 className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mb-3">Diagnostic Context</h4>
-                <p className="text-slate-300 text-sm leading-relaxed font-medium">{notification.detailedInfo}</p>
-              </div>
-            )}
-            
-            {/* Resolution/Issue Pair */}
-            <div className="space-y-4">
-              {notification.issue && (
-                <div className="bg-red-500/5 border border-red-500/20 rounded-2xl p-5">
-                  <h4 className="text-red-400 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Issue Vector</h4>
-                  <p className="text-slate-300 text-sm leading-relaxed">{notification.issue}</p>
-                </div>
-              )}
-              
-              {notification.solution && (
-                <div className="bg-[#2dd4bf]/5 border border-[#2dd4bf]/20 rounded-2xl p-5">
-                  <h4 className="text-[#2dd4bf] text-[10px] font-black uppercase tracking-[0.2em] mb-2">Recommended Fix</h4>
-                  <p className="text-slate-300 text-sm leading-relaxed">{notification.solution}</p>
-                </div>
-              )}
-            </div>
-          </div>
-          
-          {/* Trinity Intelligence Block */}
-          {notification.fixedByTrinity && (
-            <div className="relative group p-6 rounded-2xl bg-gradient-to-br from-[#06b6d4]/10 to-[#2dd4bf]/10 border border-white/5 shadow-2xl overflow-hidden">
-              <div className="absolute inset-0 bg-gradient-to-r from-[#06b6d4]/5 via-transparent to-[#2dd4bf]/5 animate-gradient-x" />
-              <div className="relative flex items-center gap-5">
-                <div className="bg-white/10 p-3 rounded-xl backdrop-blur-md border border-white/10">
-                  <Sparkles className="w-8 h-8 text-[#22d3ee] animate-pulse" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-white font-black text-lg tracking-tight">Autonomous Resolution</h3>
-                  <p className="text-slate-400 text-sm font-medium mt-1">This event was intercepted and resolved by Trinity AI Engine.</p>
-                </div>
-                <div className="shrink-0 flex items-center justify-center w-12 h-12 rounded-full bg-[#2dd4bf]/20 border border-[#2dd4bf]/30">
-                  <CheckCircle2 className="w-7 h-7 text-[#2dd4bf]" />
-                </div>
-              </div>
+          {/* Detailed Info (compact) */}
+          {notification.detailedInfo && (
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-lg p-3 border border-slate-200 dark:border-slate-700">
+              <h4 className="text-muted-foreground text-xs font-semibold uppercase tracking-wide mb-1">Details</h4>
+              <p className="text-foreground text-sm">{notification.detailedInfo}</p>
             </div>
           )}
           
-          {/* Footer Actions */}
-          {notification.action && (
-            <div className="pt-4">
+          {/* Trinity Resolution */}
+          {notification.fixedByTrinity && (
+            <div className="flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-cyan-50 to-teal-50 dark:from-cyan-900/20 dark:to-teal-900/20 border border-cyan-200 dark:border-cyan-700">
+              <Sparkles className="w-5 h-5 text-[#06b6d4]" />
+              <div className="flex-1">
+                <span className="text-sm font-medium text-foreground">Resolved by Trinity AI</span>
+              </div>
+              <CheckCircle2 className="w-5 h-5 text-[#2dd4bf]" />
+            </div>
+          )}
+          
+          {/* Action Buttons */}
+          <div className="flex flex-wrap gap-2 pt-2 border-t border-slate-200 dark:border-slate-700">
+            {notification.action && (
               <Button 
-                className="group relative w-full h-14 bg-gradient-to-r from-[#06b6d4] via-[#0891b2] to-[#3b82f6] hover:scale-[1.01] active:scale-[0.99] transition-all shadow-[0_20px_40px_-15px_rgba(6,182,212,0.3)] text-white font-black text-base rounded-2xl border-0 overflow-hidden"
+                size="sm"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (notification.action?.target) {
@@ -164,15 +138,39 @@ function NotificationDetailModal({
                     onNavigate(notification.action.target);
                   }
                 }}
+                data-testid="button-notification-action"
               >
-                <div className="absolute inset-0 bg-white/20 opacity-0 group-hover:opacity-10 transition-opacity" />
-                <span className="flex items-center justify-center gap-3">
-                  {notification.action.label}
-                  <ExternalLink className="w-5 h-5 transition-transform group-hover:translate-x-1 group-hover:-translate-y-1" />
-                </span>
+                <ExternalLink className="w-4 h-4 mr-1" />
+                {notification.action.label}
               </Button>
-            </div>
-          )}
+            )}
+            <Button 
+              size="sm"
+              variant="outline"
+              onClick={(e) => {
+                e.stopPropagation();
+                onAcknowledge(notification.id);
+                onClose();
+              }}
+              data-testid="button-acknowledge-notification"
+            >
+              <Check className="w-4 h-4 mr-1" />
+              Acknowledge
+            </Button>
+            <Button 
+              size="sm"
+              variant="ghost"
+              onClick={(e) => {
+                e.stopPropagation();
+                onClear(notification.id);
+                onClose();
+              }}
+              data-testid="button-clear-notification"
+            >
+              <Trash2 className="w-4 h-4 mr-1" />
+              Clear
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
@@ -206,25 +204,25 @@ const normalizePriority = (priority: any): NotificationPriority => {
   return 'medium';
 };
 
-const PRIORITY_GRADIENTS: Record<NotificationPriority, string> = {
-  critical: 'from-red-500 to-red-600',
-  high: 'from-orange-500 to-amber-500',
-  medium: 'from-[#06b6d4] to-[#3b82f6]', // Blue/Cyan Gradient
-  low: 'from-[#2dd4bf] to-[#06b6d4]' // Teal/Cyan Gradient
-};
-
 const PRIORITY_BG: Record<NotificationPriority, string> = {
-  critical: 'bg-red-500/20',
-  high: 'bg-orange-500/20',
-  medium: 'bg-[#06b6d4]/20',
-  low: 'bg-[#2dd4bf]/20'
+  critical: 'bg-red-100 dark:bg-red-900/30',
+  high: 'bg-orange-100 dark:bg-orange-900/30',
+  medium: 'bg-cyan-100 dark:bg-cyan-900/30',
+  low: 'bg-teal-100 dark:bg-teal-900/30'
 };
 
 const PRIORITY_TEXT: Record<NotificationPriority, string> = {
-  critical: 'text-red-400',
-  high: 'text-orange-400',
-  medium: 'text-[#22d3ee]', // cyan-400
-  low: 'text-[#2dd4bf]' // teal-400
+  critical: 'text-red-600 dark:text-red-400',
+  high: 'text-orange-600 dark:text-orange-400',
+  medium: 'text-[#06b6d4]',
+  low: 'text-[#2dd4bf]'
+};
+
+const PRIORITY_BORDER: Record<NotificationPriority, string> = {
+  critical: 'border-l-red-500',
+  high: 'border-l-orange-500',
+  medium: 'border-l-[#06b6d4]',
+  low: 'border-l-[#2dd4bf]'
 };
 
 const AlertIcon = () => (
@@ -253,7 +251,7 @@ const AIIcon = () => (
 );
 
 const BellIcon = () => (
-  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
   </svg>
 );
@@ -273,45 +271,29 @@ const PLATFORM_SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_
 // Workspace management roles that see business notifications
 const WORKSPACE_MANAGEMENT_ROLES = ['org_owner', 'co_owner', 'org_admin', 'manager', 'department_manager', 'supervisor'];
 
-// Role-based notification filtering - determines which notification types each role sees
+// Role-based notification filtering
 const getRoleBasedNotificationFilter = (
   platformRole: string | undefined,
   workspaceRole: string | undefined
 ): ((notification: UNSNotification) => boolean) => {
-  // Platform support staff and admins see ALL notifications
   if (platformRole && PLATFORM_SUPPORT_ROLES.includes(platformRole)) {
     return () => true;
   }
-  
-  // Org owners, managers, and supervisors see all business notifications
   if (workspaceRole && WORKSPACE_MANAGEMENT_ROLES.includes(workspaceRole)) {
-    return () => true; // Owners/managers see everything in their workspace
+    return () => true;
   }
-  
-  // End users (staff) primarily see shift-related and personal notifications
   return (n) => {
     const title = n.title?.toLowerCase() || '';
     const message = n.message?.toLowerCase() || '';
-    
-    // Show shift-related notifications (accept/deny/swap)
     if (title.includes('shift') || message.includes('shift')) return true;
-    // Show schedule notifications
     if (title.includes('schedule') || message.includes('schedule')) return true;
-    // Show time tracking notifications
     if (title.includes('time') || title.includes('clock')) return true;
-    // Show personal notifications (addressed to the user)
     if (n.metadata?.employeeName) return true;
-    // Show document notifications
     if (title.includes('document') || title.includes('handbook')) return true;
-    // Show critical alerts
     if (n.priority === 'critical') return true;
-    // Hide workflow approvals (management only)
     if (n.type === 'workflow' && (title.includes('approval') || title.includes('payroll'))) return false;
-    // Hide system maintenance alerts from staff
     if (n.type === 'system' && title.includes('maintenance')) return false;
-    // Show general updates
     if (n.type !== 'workflow' && n.type !== 'system') return true;
-    
     return false;
   };
 };
@@ -322,6 +304,30 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
   const [pulseActive, setPulseActive] = useState(true);
   const [selectedNotification, setSelectedNotification] = useState<UNSNotification | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  
+  // Draggable state
+  const [position, setPosition] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const containerRef = useRef<HTMLDivElement>(null);
+  
+  const handleDragStart = useCallback((e: React.PointerEvent) => {
+    setIsDragging(true);
+    dragStartRef.current = { x: e.clientX - position.x, y: e.clientY - position.y };
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+  }, [position]);
+  
+  const handleDragMove = useCallback((e: React.PointerEvent) => {
+    if (!isDragging) return;
+    setPosition({
+      x: e.clientX - dragStartRef.current.x,
+      y: e.clientY - dragStartRef.current.y
+    });
+  }, [isDragging]);
+  
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+  }, []);
   
   const { data: notificationsData, isLoading } = useQuery<{
     platformUpdates: any[];
@@ -353,6 +359,26 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
   const clearAllMutation = useMutation({
     mutationFn: async () => {
       await apiRequest('POST', '/api/notifications/clear-all');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
+    }
+  });
+
+  // Single notification acknowledge
+  const acknowledgeMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('POST', `/api/notifications/${id}/mark-read`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
+    }
+  });
+
+  // Single notification clear/delete
+  const clearMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/notifications/${id}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
@@ -430,7 +456,6 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
     });
   }, [notificationsData]);
 
-  // Apply role-based filtering first
   const roleFilter = getRoleBasedNotificationFilter(platformRole, workspaceRole);
   const roleFilteredNotifications = notifications.filter(roleFilter);
   
@@ -443,7 +468,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
     if (activeTab === 'workflows') return n.type === 'workflow';
     if (activeTab === 'system') return n.type === 'system';
     if (activeTab === 'ai') return n.type === 'ai';
-    return true; // fallback to showing all
+    return true;
   });
 
   const tabs = [
@@ -464,7 +489,6 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
     return time;
   };
 
-  // Dynamic guards count from employees data
   const { data: employeesData } = useQuery<any[]>({
     queryKey: ['/api/employees'],
   });
@@ -479,110 +503,117 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
   if (!isOpen) return null;
 
   return (
-    <div className={cn(
-      "relative bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden w-full",
-      className
-    )} data-testid="uns-command-center">
+    <div 
+      ref={containerRef}
+      className={cn(
+        "relative bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden w-full flex flex-col",
+        isDragging ? 'cursor-grabbing' : '',
+        className
+      )} 
+      style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+      data-testid="uns-command-center"
+    >
       
-      {/* Animated Background Gradient */}
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-cyan-600/10 animate-pulse pointer-events-none" />
-      
-      {/* Header */}
-      <div className="relative bg-gradient-to-r from-[#06b6d4] via-[#0891b2] to-[#3b82f6] p-4">
-        {/* Animated mesh background */}
-        <div className="absolute inset-0 opacity-30 pointer-events-none">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[length:20px_20px]" />
+      {/* Draggable Header */}
+      <div 
+        className="relative bg-gradient-to-r from-[#06b6d4] via-[#0891b2] to-[#22d3ee] p-4 cursor-grab select-none"
+        onPointerDown={handleDragStart}
+        onPointerMove={handleDragMove}
+        onPointerUp={handleDragEnd}
+        onPointerCancel={handleDragEnd}
+      >
+        {/* Drag Handle */}
+        <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1 opacity-50">
+          <GripHorizontal className="w-4 h-4 text-white" />
         </div>
         
-        <div className="relative flex items-center justify-between">
+        <div className="relative flex items-center justify-between mt-2">
           <div className="flex items-center gap-3">
-            {/* Animated Bell Icon */}
             <div className="relative">
               <div className={cn(
                 "absolute inset-0 bg-white/30 rounded-full blur-md",
                 pulseActive && unreadCount > 0 ? 'animate-ping' : ''
               )} />
-              <div className="relative bg-white/20 backdrop-blur-sm rounded-full p-2.5">
+              <div className="relative bg-white/20 backdrop-blur-sm rounded-full p-2">
                 <BellIcon />
               </div>
             </div>
             
             <div>
-              <h2 className="text-white font-bold text-lg tracking-tight">Command Center</h2>
+              <h2 className="text-white font-bold text-base tracking-tight">Command Center</h2>
               <div className="flex items-center gap-2">
                 <span className={cn(
-                  "w-2 h-2 rounded-full animate-pulse",
-                  pulseActive ? 'bg-[#2dd4bf]' : 'bg-[#06b6d4]'
+                  "w-1.5 h-1.5 rounded-full animate-pulse",
+                  pulseActive ? 'bg-white' : 'bg-white/70'
                 )} />
                 <span className="text-white/90 text-xs font-medium">Live &bull; Real-time sync</span>
               </div>
             </div>
           </div>
           
-          {/* Notification Badge with Unread label */}
           <div className="flex items-center gap-2">
             {criticalCount > 0 && (
-              <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse shadow-lg">
+              <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
                 {criticalCount} Critical
               </div>
             )}
             <div className="flex flex-col items-center">
-              <div className="bg-white/20 backdrop-blur-sm text-white text-lg font-bold w-10 h-10 rounded-full flex items-center justify-center border border-white/30 shadow-inner">
+              <div className="bg-white/20 backdrop-blur-sm text-white text-lg font-bold w-9 h-9 rounded-full flex items-center justify-center border border-white/30">
                 {unreadCount}
               </div>
-              <span className="text-white/60 text-[10px] mt-0.5 font-medium">Unread</span>
+              <span className="text-white/70 text-[10px] mt-0.5">Unread</span>
             </div>
           </div>
         </div>
 
         {/* Status Bar */}
-        <div className="relative mt-4 flex items-center gap-2 text-xs flex-wrap">
-          <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/5">
-            <span className={cn("w-1.5 h-1.5 rounded-full", isTrinityOnline ? 'bg-[#2dd4bf]' : 'bg-red-400')} />
+        <div className="relative mt-3 flex items-center gap-2 text-xs flex-wrap">
+          <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-full px-2.5 py-1">
+            <span className={cn("w-1.5 h-1.5 rounded-full", isTrinityOnline ? 'bg-white' : 'bg-red-400')} />
             <span className="text-white/90 font-medium">Trinity Online</span>
           </div>
-          <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/5">
-            <span className={cn("w-1.5 h-1.5 rounded-full", isQuickBooksOnline ? 'bg-[#3b82f6]' : 'bg-[#eab308]')} />
+          <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-full px-2.5 py-1">
+            <span className={cn("w-1.5 h-1.5 rounded-full", isQuickBooksOnline ? 'bg-white' : 'bg-yellow-400')} />
             <span className="text-white/90 font-medium">QB Synced</span>
           </div>
-          <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5 border border-white/5">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#ffd700] animate-pulse" />
+          <div className="flex items-center gap-1.5 bg-white/15 backdrop-blur-sm rounded-full px-2.5 py-1">
+            <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
             <span className="text-white/90 font-medium">{activeGuards} Guards Active</span>
           </div>
         </div>
       </div>
 
       {/* Tab Navigation */}
-      <div className="relative border-b border-slate-700/50 bg-slate-900/40">
+      <div className="relative border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
         <div className="flex overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn(
-                "relative flex items-center gap-2 px-4 py-3 text-sm font-semibold whitespace-nowrap transition-all duration-200",
+                "relative flex items-center gap-2 px-4 py-2.5 text-sm font-semibold whitespace-nowrap transition-all",
                 activeTab === tab.id
-                  ? 'text-[#22d3ee] bg-[#06b6d4]/5'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/30'
+                  ? 'text-[#06b6d4] bg-white dark:bg-slate-900'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-slate-100 dark:hover:bg-slate-800'
               )}
               data-testid={`tab-${tab.id}`}
             >
               {tab.pulse && pulseActive && (
-                <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                <span className="absolute top-2 right-2 w-1.5 h-1.5 bg-red-500 rounded-full animate-pulse" />
               )}
               <span>{tab.label}</span>
               {tab.count > 0 && (
                 <span className={cn(
                   "text-xs px-1.5 py-0.5 rounded-full",
                   activeTab === tab.id
-                    ? 'bg-[#06b6d4]/20 text-[#22d3ee]'
-                    : 'bg-slate-700 text-slate-400'
+                    ? 'bg-[#06b6d4]/20 text-[#06b6d4]'
+                    : 'bg-slate-200 dark:bg-slate-700 text-muted-foreground'
                 )}>
                   {tab.count}
                 </span>
               )}
               {activeTab === tab.id && (
-                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-[#06b6d4] to-[#2dd4bf]" />
+                <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-[#06b6d4]" />
               )}
             </button>
           ))}
@@ -590,21 +621,21 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
       </div>
 
       {/* Quick Actions Bar */}
-      <div className="relative flex items-center justify-between px-4 py-2 bg-slate-800/30 border-b border-slate-700/30">
-        <span className="text-slate-500 text-xs font-medium">
+      <div className="flex items-center justify-between px-4 py-2 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700">
+        <span className="text-muted-foreground text-xs font-medium">
           {filteredNotifications.length} {filteredNotifications.length === 1 ? 'item' : 'items'}
         </span>
         <div className="flex items-center gap-2">
           <button 
             onClick={() => markAllReadMutation.mutate()}
-            className="text-xs text-slate-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-slate-700/50"
+            className="text-xs text-muted-foreground hover:text-[#06b6d4] transition-colors px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
             data-testid="button-mark-all-read"
           >
             Mark all read
           </button>
           <button 
             onClick={() => clearAllMutation.mutate()}
-            className="text-xs text-slate-400 hover:text-white transition-colors px-2 py-1 rounded hover:bg-slate-700/50"
+            className="text-xs text-muted-foreground hover:text-red-500 transition-colors px-2 py-1 rounded hover:bg-slate-100 dark:hover:bg-slate-800"
             data-testid="button-clear-all"
           >
             Clear all
@@ -612,15 +643,15 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
         </div>
       </div>
 
-      {/* Notifications List */}
-      <div className="relative max-h-96 overflow-y-auto">
+      {/* Notifications List - Fixed height, scrollable */}
+      <div className="flex-1 max-h-72 overflow-y-auto bg-white dark:bg-slate-900">
         {isLoading ? (
           <div className="flex items-center justify-center py-12">
-            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-[#06b6d4] border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filteredNotifications.length > 0 ? (
-          <div className="divide-y divide-slate-700/30">
-            {filteredNotifications.map((notification, index) => (
+          <div className="divide-y divide-slate-100 dark:divide-slate-800">
+            {filteredNotifications.map((notification) => (
               <div
                 key={notification.id}
                 onClick={() => {
@@ -628,78 +659,51 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
                   setIsDetailModalOpen(true);
                 }}
                 className={cn(
-                  "relative p-4 hover:bg-slate-700/30 transition-all duration-200 cursor-pointer group",
-                  !notification.read ? 'bg-slate-700/20' : ''
+                  "relative p-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all cursor-pointer group border-l-2",
+                  !notification.read ? PRIORITY_BORDER[notification.priority] : 'border-l-transparent',
+                  !notification.read ? 'bg-slate-50/50 dark:bg-slate-800/30' : ''
                 )}
-                style={{ animationDelay: `${index * 50}ms` }}
                 data-testid={`notification-${notification.id}`}
               >
-                {/* Unread Indicator - Priority colored left border */}
-                {!notification.read && (
-                  <div className={cn(
-                    "absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b",
-                    PRIORITY_GRADIENTS[notification.priority]
-                  )} />
-                )}
-                
                 <div className="flex gap-3">
-                  {/* Priority Icon */}
                   <div className={cn(
-                    "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center",
+                    "flex-shrink-0 w-8 h-8 rounded-lg flex items-center justify-center",
                     PRIORITY_BG[notification.priority],
                     PRIORITY_TEXT[notification.priority]
                   )}>
                     {getTypeIcon(notification.type)}
                   </div>
                   
-                  {/* Content */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className={cn(
-                        "font-semibold text-sm truncate",
-                        !notification.read ? 'text-white' : 'text-slate-300'
+                        "font-medium text-sm truncate",
+                        !notification.read ? 'text-foreground' : 'text-muted-foreground'
                       )}>
                         {notification.title}
                       </h3>
-                      <span className="text-slate-500 text-xs whitespace-nowrap flex-shrink-0">
+                      <span className="text-muted-foreground text-xs whitespace-nowrap flex-shrink-0">
                         {formatTime(notification.time)}
                       </span>
                     </div>
                     
-                    <p className="text-slate-400 text-sm mt-0.5 line-clamp-2">
+                    <p className="text-muted-foreground text-xs mt-0.5 line-clamp-1">
                       {notification.message}
                     </p>
-                    
-                    {/* Action Button */}
-                    {notification.action && (
-                      <button className={cn(
-                        "mt-2 inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg transition-all",
-                        "bg-gradient-to-r hover:brightness-110",
-                        PRIORITY_GRADIENTS[notification.priority],
-                        "text-white"
-                      )}>
-                        {notification.action.label}
-                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
             ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center py-12 px-4">
-            <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mb-4">
-              <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
+          <div className="flex flex-col items-center justify-center py-10 px-4">
+            <div className="w-12 h-12 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center mb-3">
+              <CheckCircle2 className="w-6 h-6 text-[#2dd4bf]" />
             </div>
-            <h3 className="text-slate-300 font-medium text-lg">No {activeTab === 'all' ? 'notifications' : activeTab}</h3>
-            <p className="text-slate-500 text-sm text-center mt-1">
-              {activeTab === 'alerts' ? 'No payroll, schedule, or employee alerts at this time' :
-               activeTab === 'workflows' ? 'No pending workflow approvals' :
+            <h3 className="text-foreground font-medium text-sm">No {activeTab === 'all' ? 'notifications' : activeTab}</h3>
+            <p className="text-muted-foreground text-xs text-center mt-1">
+              {activeTab === 'alerts' ? 'No alerts at this time' :
+               activeTab === 'workflows' ? 'No pending tasks' :
                activeTab === 'system' ? 'All systems running smoothly' :
                activeTab === 'ai' ? 'Trinity AI has no new insights' :
                'You\'re all caught up!'}
@@ -708,17 +712,17 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
         )}
       </div>
 
-      {/* Ask Trinity AI Footer */}
-      <div className="relative p-4 border-t border-slate-700/50 bg-slate-800/50">
+      {/* Ask Trinity AI Footer - Fixed position, never pushed down */}
+      <div className="p-3 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
         <button
           onClick={onAskTrinity}
-          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-purple-500/25"
+          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-semibold py-2.5 px-4 rounded-lg transition-all shadow-lg hover:shadow-purple-500/25"
           data-testid="button-ask-trinity"
         >
-          <AIIcon />
+          <Sparkles className="w-4 h-4" />
           <span>Ask Trinity AI</span>
         </button>
-        <p className="text-center text-slate-500 text-xs mt-2">
+        <p className="text-center text-muted-foreground text-[10px] mt-1.5">
           Powered by Trinity &bull; Response time: ~2s
         </p>
       </div>
@@ -729,6 +733,8 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
         onNavigate={setLocation}
+        onAcknowledge={(id) => acknowledgeMutation.mutate(id)}
+        onClear={(id) => clearMutation.mutate(id)}
       />
     </div>
   );
