@@ -4,7 +4,7 @@ import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
 
-type NotificationCategory = 'all' | 'alerts' | 'workflows' | 'system' | 'ai';
+type NotificationCategory = 'alerts' | 'workflows' | 'system' | 'ai';
 type NotificationPriority = 'critical' | 'high' | 'medium' | 'low';
 type NotificationType = 'alert' | 'workflow' | 'system' | 'ai';
 
@@ -168,18 +168,22 @@ const getRoleBasedNotificationFilter = (
 };
 
 export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrinity, platformRole, workspaceRole }: UNSCommandCenterProps) {
-  const [activeTab, setActiveTab] = useState<NotificationCategory>('all');
+  const [activeTab, setActiveTab] = useState<NotificationCategory>('alerts');
   const [pulseActive, setPulseActive] = useState(true);
   
-  const { data: notificationsData, isLoading } = useQuery<{
+  const { data: notificationsData, isLoading, isFetching } = useQuery<{
     platformUpdates: any[];
     maintenanceAlerts: any[];
     notifications: any[];
+    userNotifications: any[];
     totalUnread: number;
   }>({
     queryKey: ['/api/notifications/combined'],
     refetchInterval: 30000,
   });
+  
+  // Show loading during initial load or refetch without data
+  const showLoading = isLoading || (isFetching && !notificationsData);
 
   const { data: healthData } = useQuery<{
     overall: string;
@@ -286,7 +290,6 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
   const criticalCount = roleFilteredNotifications.filter(n => n.priority === 'critical').length;
 
   const filteredNotifications = roleFilteredNotifications.filter(n => {
-    if (activeTab === 'all') return true;
     if (activeTab === 'alerts') return n.type === 'alert' || n.priority === 'critical';
     if (activeTab === 'workflows') return n.type === 'workflow';
     if (activeTab === 'system') return n.type === 'system';
@@ -295,7 +298,6 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
   });
 
   const tabs = [
-    { id: 'all' as const, label: 'All', count: roleFilteredNotifications.length },
     { id: 'alerts' as const, label: 'Alerts', count: roleFilteredNotifications.filter(n => n.type === 'alert').length, pulse: criticalCount > 0 },
     { id: 'workflows' as const, label: 'Workflows', count: roleFilteredNotifications.filter(n => n.type === 'workflow').length },
     { id: 'system' as const, label: 'System', count: roleFilteredNotifications.filter(n => n.type === 'system').length },
@@ -314,7 +316,15 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
 
   const isQuickBooksOnline = healthData?.services?.find(s => s.service === 'quickbooks')?.status === 'operational';
   const isTrinityOnline = healthData?.overall === 'operational';
-  const activeGuards = 3;
+  
+  // Dynamic guards count from employees data
+  const { data: employeesData } = useQuery<any[]>({
+    queryKey: ['/api/employees'],
+  });
+  const activeGuards = useMemo(() => {
+    if (!employeesData) return 0;
+    return employeesData.filter((e: any) => e.isActive && e.status === 'active').length;
+  }, [employeesData]);
 
   if (!isOpen) return null;
 
@@ -451,7 +461,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
 
       {/* Notifications List */}
       <div className="relative max-h-96 overflow-y-auto">
-        {isLoading ? (
+        {showLoading ? (
           <div className="flex items-center justify-center py-12">
             <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           </div>
@@ -489,17 +499,17 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
                   <div className="flex-1 min-w-0">
                     <div className="flex items-start justify-between gap-2">
                       <h3 className={cn(
-                        "font-semibold text-sm truncate",
+                        "font-semibold text-sm break-words",
                         !notification.read ? 'text-white' : 'text-slate-300'
-                      )}>
+                      )} title={notification.title}>
                         {notification.title}
                       </h3>
-                      <span className="text-slate-500 text-xs whitespace-nowrap flex-shrink-0">
+                      <span className="text-slate-500 text-xs whitespace-nowrap flex-shrink-0 ml-2">
                         {formatTime(notification.time)}
                       </span>
                     </div>
                     
-                    <p className="text-slate-400 text-sm mt-0.5 line-clamp-2">
+                    <p className="text-slate-400 text-sm mt-0.5 break-words">
                       {notification.message}
                     </p>
                     
@@ -529,13 +539,16 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h3 className="text-slate-300 font-medium text-lg">No {activeTab === 'all' ? '' : activeTab}</h3>
+            <h3 className="text-slate-300 font-medium text-lg">
+              No {activeTab === 'alerts' ? 'alerts' : 
+                  activeTab === 'workflows' ? 'workflows' : 
+                  activeTab === 'system' ? 'system updates' : 'Trinity messages'}
+            </h3>
             <p className="text-slate-500 text-sm text-center mt-1">
-              {activeTab === 'alerts' ? 'No payroll, schedule, or employee alerts at this time' :
-               activeTab === 'workflows' ? 'No pending workflow approvals' :
+              {activeTab === 'alerts' ? 'No schedule, shift, or employee alerts at this time' :
+               activeTab === 'workflows' ? 'No pending AI automation approvals' :
                activeTab === 'system' ? 'All systems running smoothly' :
-               activeTab === 'ai' ? 'Trinity AI has no new insights' :
-               'You\'re all caught up!'}
+               'Trinity AI has no new insights or messages'}
             </p>
           </div>
         )}
