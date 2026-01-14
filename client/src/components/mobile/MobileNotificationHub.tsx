@@ -454,7 +454,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
             </Button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-white text-sm">
+          <div className="flex items-center gap-2 text-white text-sm pr-24">
             <Bell className="w-4 h-4 flex-shrink-0" />
             <span className="flex-1 font-bold tracking-tight truncate">
               {unreadCount === 0 
