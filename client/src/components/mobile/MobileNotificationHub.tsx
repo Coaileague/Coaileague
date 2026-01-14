@@ -1,13 +1,16 @@
 import { useState, useRef, useCallback, type TouchEvent } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Calendar, ChevronRight, ChevronDown, Check, X, Wrench, CheckCircle2, Bell, Trash2, RefreshCw, CheckCheck } from "lucide-react";
+import { Calendar, ChevronRight, ChevronDown, Check, X, Wrench, CheckCircle2, Bell, Trash2, RefreshCw, CheckCheck, Sparkles } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow, startOfDay, endOfDay, parseISO, isToday } from "date-fns";
 import { useToast } from "@/hooks/use-toast";
+import { TrinityMascotIcon } from "@/components/ui/trinity-mascot";
+import { cn } from "@/lib/utils";
 
 interface UserNotification {
   id: string;
@@ -174,10 +177,15 @@ function ExpandableNotificationCard({
   );
 }
 
-export function MobileNotificationHub() {
+interface MobileNotificationHubProps {
+  onClose?: () => void;
+}
+
+export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'alerts' | 'updates' | 'platform'>('all');
   const pullStartY = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -305,6 +313,20 @@ export function MobileNotificationHub() {
   );
   const nextShift = todayShifts[0];
   
+  // Filter notifications based on active filter
+  const filteredNotifications = allNotifications.filter(n => {
+    if (activeFilter === 'all') return true;
+    if (activeFilter === 'platform') return n.type === 'platform';
+    if (activeFilter === 'alerts') return n.priority === 'urgent' || n.priority === 'high';
+    if (activeFilter === 'updates') return n.type !== 'platform' && n.priority !== 'urgent' && n.priority !== 'high';
+    return true;
+  });
+  
+  const handleAskTrinity = () => {
+    if (onClose) onClose();
+    setLocation('/trinity');
+  };
+  
   return (
     <div className="flex flex-col h-full bg-muted/30">
       {/* Header with sync and clear actions */}
@@ -340,6 +362,42 @@ export function MobileNotificationHub() {
             </Button>
           )}
         </div>
+      </div>
+      
+      {/* Ask Trinity Button */}
+      <button
+        onClick={handleAskTrinity}
+        className="mx-2 mt-3 flex items-center gap-3 p-3 rounded-xl bg-gradient-to-r from-purple-900/40 via-slate-800/60 to-cyan-900/40 border border-purple-500/20 active:scale-[0.98] transition-transform"
+        data-testid="button-ask-trinity-notifications"
+      >
+        <TrinityMascotIcon size="sm" />
+        <div className="flex-1 text-left">
+          <p className="text-sm font-medium bg-gradient-to-r from-purple-300 via-cyan-300 to-amber-300 bg-clip-text text-transparent">
+            Ask Trinity
+          </p>
+          <p className="text-xs text-muted-foreground">Get help with notifications</p>
+        </div>
+        <Sparkles className="w-4 h-4 text-purple-400" />
+      </button>
+      
+      {/* Filter Tabs */}
+      <div className="flex gap-1 px-2 py-2 overflow-x-auto">
+        {(['all', 'alerts', 'updates', 'platform'] as const).map(filter => (
+          <Badge
+            key={filter}
+            variant={activeFilter === filter ? 'default' : 'outline'}
+            className={cn(
+              "cursor-pointer whitespace-nowrap capitalize transition-colors",
+              activeFilter === filter 
+                ? "bg-[#0095FF] hover:bg-[#0095FF]/90" 
+                : "hover:bg-muted"
+            )}
+            onClick={() => setActiveFilter(filter)}
+            data-testid={`filter-${filter}`}
+          >
+            {filter === 'all' ? 'All' : filter}
+          </Badge>
+        ))}
       </div>
       
       {/* Pull to refresh indicator */}
@@ -402,14 +460,16 @@ export function MobileNotificationHub() {
               </Card>
             ))}
           </div>
-        ) : allNotifications.length === 0 ? (
+        ) : filteredNotifications.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <Bell className="w-10 h-10 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">No notifications</p>
+            <p className="text-sm">
+              {activeFilter === 'all' ? 'No notifications' : `No ${activeFilter} notifications`}
+            </p>
           </div>
         ) : (
           <div className="space-y-2">
-            {allNotifications.slice(0, 30).map(notification => (
+            {filteredNotifications.slice(0, 30).map(notification => (
               <ExpandableNotificationCard 
                 key={notification.id} 
                 notification={notification}

@@ -178,11 +178,12 @@ export function MobileBottomNav({ onMenuOpen }: MobileBottomNavProps) {
   ];
   
   // Items moved to More menu - Trinity handled separately with branded component
+  // Notifications removed - now accessed via bell icon in header
   const menuItems = [
-    { icon: Bell, label: "Alerts", href: "/command-center" },
     { icon: Mail, label: "Inbox", href: "/inbox" },
     { icon: User, label: "Profile", href: "/profile" },
     { icon: Settings, label: "Settings", href: "/settings" },
+    { icon: HelpCircle, label: "Help", href: "/support" },
   ];
   
   const isActive = (href: string) => {

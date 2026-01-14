@@ -137,8 +137,8 @@ function WorkerTrinityMenuItem({ onClose }: { onClose: () => void }) {
 function WorkerMoreMenu({ onClose }: { onClose: () => void }) {
   const [, setLocation] = useLocation();
   
+  // Notifications removed - now accessed via bell icon in header
   const menuItems = [
-    { icon: Bell, label: "Notifications", href: "/mobile-hub" },
     { icon: HelpCircle, label: "Help", href: "/support" },
     { icon: Settings, label: "Settings", href: "/settings" },
   ];

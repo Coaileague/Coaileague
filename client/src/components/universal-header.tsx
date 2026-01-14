@@ -8,11 +8,13 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { Sheet, SheetContent, SheetTrigger, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { Menu, LogOut, LayoutDashboard, Mail, Bug, ChevronDown, Settings, Search } from "lucide-react";
+import { Menu, LogOut, LayoutDashboard, Mail, Bug, ChevronDown, Settings, Search, Bell } from "lucide-react";
 import { useState, useEffect, useMemo } from "react";
 import { HeaderLogo } from "@/components/unified-brand-logo";
 import { performLogout } from "@/lib/logoutHandler";
 import { NotificationsPopover } from "@/components/notifications-popover";
+import { MobileNotificationSheet } from "@/components/mobile/MobileNotificationSheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { AISearchTrigger } from "@/components/ai-search";
 import { TrinityMiniButton } from "@/components/trinity-button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -46,6 +48,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
   const [location, setLocation] = useLocation();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [isChristmas, setIsChristmas] = useState(false);
+  const isMobile = useIsMobile();
   
   // Close mobile menu on route change
   useEffect(() => {
@@ -306,8 +309,10 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
 
               {/* Mobile Menu - Truly responsive with overflow menu */}
               <div className="flex md:hidden items-center gap-1 shrink-0 min-w-0">
-                {/* Mobile: No Trinity button here - uses floating bottom drawer instead */}
-                {/* Mobile: No Notifications bell here - uses GetSling-style hub via bottom nav */}
+                {/* Mobile notification bell - opens pull-up notification hub */}
+                {user && showNotificationFeatures && (
+                  <MobileNotificationSheet />
+                )}
                 {/* Priority 1: Show login for guests */}
                 {!user && (
                   <Button
