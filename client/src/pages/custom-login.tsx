@@ -188,13 +188,13 @@ export default function CustomLogin() {
       // Users without a workspace need to choose: create org or join with invite
       const redirectTo = result.user.currentWorkspaceId ? "/dashboard" : "/onboarding/start";
 
-      // Hide animation and redirect after welcome notification completes
+      // Hide animation and redirect after welcome notification completes (10 seconds for users to enjoy)
       setTimeout(() => {
         if (animationContext?.hide) {
           animationContext.hide();
         }
         setLocation(redirectTo);
-      }, 4500);
+      }, 10000);
     } catch (error: any) {
       // Show error animation
       if (animationContext?.show) {
