@@ -393,24 +393,24 @@ export default function ScheduleMobileFirst() {
 
   return (
     <div className="flex flex-col h-screen bg-background">
-      {/* GetSling-style Header */}
+      {/* GetSling-style Header - Mobile Optimized */}
       <div className="bg-primary text-primary-foreground">
-        {/* Month Header with Navigation */}
-        <div className="flex items-center justify-between px-4 py-3">
+        {/* Month Header with Navigation - Compact visuals, accessible touch */}
+        <div className="flex items-center justify-between px-1 py-0.5">
           <Button
             variant="ghost"
             size="icon"
             onClick={handlePreviousWeek}
-            className="h-9 w-9 text-primary-foreground hover:bg-primary-foreground/20"
+            className="min-h-[44px] min-w-[44px] text-primary-foreground hover:bg-primary-foreground/20"
             data-testid="button-prev-week"
           >
             <ChevronLeft className="h-5 w-5" />
           </Button>
           
           <div className="text-center">
-            <div className="font-bold text-lg flex items-center gap-1">
+            <div className="font-bold text-base flex items-center gap-0.5">
               {format(weekStart, 'MMMM')}
-              <ChevronRight className="h-4 w-4 rotate-90 opacity-70" />
+              <ChevronRight className="h-3 w-3 rotate-90 opacity-70" />
             </div>
           </div>
           
@@ -418,40 +418,40 @@ export default function ScheduleMobileFirst() {
             variant="ghost"
             size="icon"
             onClick={handleNextWeek}
-            className="h-9 w-9 text-primary-foreground hover:bg-primary-foreground/20"
+            className="min-h-[44px] min-w-[44px] text-primary-foreground hover:bg-primary-foreground/20"
             data-testid="button-next-week"
           >
             <ChevronRight className="h-5 w-5" />
           </Button>
         </div>
 
-        {/* GetSling-style 3-Tab Switcher */}
+        {/* GetSling-style 3-Tab Switcher - Compact visuals, accessible touch */}
         <div className="flex border-b border-primary-foreground/20">
           <button
             onClick={() => setViewMode('my')}
-            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+            className={`flex-1 min-h-[44px] text-xs font-medium transition-colors whitespace-nowrap ${
               viewMode === 'my' 
                 ? 'border-b-2 border-primary-foreground text-primary-foreground' 
                 : 'text-primary-foreground/70 hover:text-primary-foreground'
             }`}
             data-testid="tab-my-schedule"
           >
-            My schedule
+            My
           </button>
           <button
             onClick={() => setViewMode('full')}
-            className={`flex-1 py-2.5 text-sm font-medium transition-colors ${
+            className={`flex-1 min-h-[44px] text-xs font-medium transition-colors whitespace-nowrap ${
               viewMode === 'full' 
                 ? 'border-b-2 border-primary-foreground text-primary-foreground' 
                 : 'text-primary-foreground/70 hover:text-primary-foreground'
             }`}
             data-testid="tab-full-schedule"
           >
-            Full schedule
+            Full
           </button>
           <button
             onClick={() => setViewMode('pending')}
-            className={`flex-1 py-2.5 text-sm font-medium transition-colors relative ${
+            className={`flex-1 min-h-[44px] text-xs font-medium transition-colors whitespace-nowrap relative ${
               viewMode === 'pending' 
                 ? 'border-b-2 border-primary-foreground text-primary-foreground' 
                 : 'text-primary-foreground/70 hover:text-primary-foreground'
@@ -460,7 +460,7 @@ export default function ScheduleMobileFirst() {
           >
             Pending
             {pendingShifts.length > 0 && (
-              <span className="absolute -top-0.5 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full h-4 min-w-4 px-1 flex items-center justify-center">
+              <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-[9px] font-bold rounded-full h-3.5 min-w-3.5 px-0.5 flex items-center justify-center">
                 {pendingShifts.length}
               </span>
             )}
@@ -468,10 +468,10 @@ export default function ScheduleMobileFirst() {
         </div>
       </div>
 
-      {/* GetSling-style Day Picker with Shift Indicators */}
+      {/* GetSling-style Day Picker - Compact Mobile */}
       <div className="border-b border-border bg-muted/30">
-        {/* Horizontal Day Scroller */}
-        <div className="flex justify-around py-3 px-2">
+        {/* Horizontal Day Scroller - Compact visuals, accessible touch (min 44px height) */}
+        <div className="flex justify-around py-0.5 px-0.5">
           {weekDays.map((day) => {
             const isSelected = format(day, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
             const dayIsToday = isToday(day);
@@ -483,30 +483,30 @@ export default function ScheduleMobileFirst() {
               <button
                 key={day.toISOString()}
                 onClick={() => setSelectedDate(day)}
-                className={`flex flex-col items-center min-w-[40px] py-1 px-2 rounded-lg transition-colors ${
+                className={`flex flex-col items-center justify-center min-w-[40px] min-h-[44px] py-1 rounded transition-colors ${
                   isSelected ? 'bg-primary/10' : ''
                 }`}
                 data-testid={`day-tab-${format(day, 'yyyy-MM-dd')}`}
               >
-                <span className={`text-lg font-bold ${
+                <span className={`text-sm font-bold ${
                   isSelected ? 'text-primary' : dayIsToday ? 'text-primary' : 'text-foreground'
                 }`}>
                   {format(day, 'd')}
                 </span>
                 {/* Shift indicator dots */}
-                <div className="flex gap-0.5 mt-1 h-2">
+                <div className="flex gap-0.5 h-1.5">
                   {dayShiftCount > 0 && (
-                    <div className={`w-1.5 h-1.5 rounded-full ${
+                    <div className={`w-1 h-1 rounded-full ${
                       isSelected ? 'bg-primary' : dayIsToday ? 'bg-primary/70' : 'bg-muted-foreground/50'
                     }`} />
                   )}
                   {dayShiftCount > 1 && (
-                    <div className={`w-1.5 h-1.5 rounded-full ${
+                    <div className={`w-1 h-1 rounded-full ${
                       isSelected ? 'bg-primary' : dayIsToday ? 'bg-primary/70' : 'bg-muted-foreground/50'
                     }`} />
                   )}
                   {dayShiftCount > 2 && (
-                    <div className={`w-1.5 h-1.5 rounded-full ${
+                    <div className={`w-1 h-1 rounded-full ${
                       isSelected ? 'bg-primary' : dayIsToday ? 'bg-primary/70' : 'bg-muted-foreground/50'
                     }`} />
                   )}
@@ -516,8 +516,8 @@ export default function ScheduleMobileFirst() {
           })}
         </div>
         
-        {/* Week Range + Hours Summary */}
-        <div className="flex items-center justify-between px-4 py-1.5 text-xs border-t border-border/50">
+        {/* Week Range + Hours Summary - Compact */}
+        <div className="flex items-center justify-between px-2 py-1 text-[10px] border-t border-border/50">
           <span className="text-muted-foreground">
             {format(weekStart, 'd')} - {format(addDays(weekStart, 6), 'd MMM')}
           </span>
@@ -527,11 +527,11 @@ export default function ScheduleMobileFirst() {
         </div>
       </div>
 
-      {/* Selected Day Header - GetSling Style */}
-      <div className="bg-primary text-primary-foreground px-4 py-2">
-        <div className="flex items-center gap-3">
-          <div className="text-2xl font-bold">{format(selectedDate, 'd')}</div>
-          <div className="text-lg font-medium uppercase">{format(selectedDate, 'EEE')}</div>
+      {/* Selected Day Header - Compact */}
+      <div className="bg-primary text-primary-foreground px-2 py-1">
+        <div className="flex items-center gap-2">
+          <div className="text-lg font-bold">{format(selectedDate, 'd')}</div>
+          <div className="text-sm font-medium uppercase">{format(selectedDate, 'EEE')}</div>
         </div>
       </div>
       
@@ -568,24 +568,24 @@ export default function ScheduleMobileFirst() {
         </div>
       )}
 
-      {/* Shift Cards - Scrollable */}
+      {/* Shift Cards - Scrollable - Compact Mobile */}
       <ScrollArea className="flex-1">
-        <div className="pb-28">
+        <div className="pb-24">
           {shiftsLoading || (viewMode === 'my' && !currentEmployee?.id) ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <TrinityLoadingSpinner size={48} className="mx-auto mb-3" />
-              <div className="text-sm font-medium bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 bg-clip-text text-transparent">
+            <div className="text-center py-6 text-muted-foreground">
+              <TrinityLoadingSpinner size={36} className="mx-auto mb-2" />
+              <div className="text-xs font-medium bg-gradient-to-r from-teal-500 via-cyan-500 to-blue-500 bg-clip-text text-transparent">
                 {shiftsLoading ? 'Loading shifts...' : 'Loading your schedule...'}
               </div>
             </div>
           ) : viewMode === 'pending' ? (
-            /* Pending View - GetSling style list */
+            /* Pending View - Compact list */
             <div className="divide-y divide-border">
               {pendingShifts.length === 0 ? (
-                <div className="text-center py-12 text-muted-foreground">
-                  <CheckCircle className="w-12 h-12 mx-auto mb-3 text-green-500 opacity-50" />
-                  <div className="font-medium">All caught up!</div>
-                  <div className="text-sm">No pending shifts to review</div>
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckCircle className="w-10 h-10 mx-auto mb-2 text-green-500 opacity-50" />
+                  <div className="font-medium text-sm">All caught up!</div>
+                  <div className="text-xs">No pending shifts</div>
                 </div>
               ) : (
                 pendingShifts.map(shift => {
@@ -599,21 +599,21 @@ export default function ScheduleMobileFirst() {
                     <div
                       key={shift.id}
                       onClick={() => handleViewShift(shift)}
-                      className="flex items-stretch cursor-pointer active:bg-muted/50"
+                      className="flex items-stretch min-h-[44px] cursor-pointer active:bg-muted/50"
                       data-testid={`pending-shift-${shift.id}`}
                     >
-                      <div className="w-16 py-3 flex flex-col items-center justify-center text-primary flex-shrink-0">
-                        <span className="text-xl font-bold">{format(start, 'd')}</span>
-                        <span className="text-xs uppercase">{format(start, 'EEE')}</span>
+                      <div className="w-10 py-1.5 flex flex-col items-center justify-center text-primary flex-shrink-0">
+                        <span className="text-base font-bold">{format(start, 'd')}</span>
+                        <span className="text-[9px] uppercase">{format(start, 'EEE')}</span>
                       </div>
-                      <div className="flex-1 py-3 pr-3 bg-amber-100 dark:bg-amber-900/30 rounded-r-lg my-1">
-                        <div className="font-bold text-sm">
-                          {format(start, 'h:mm a')} - {format(end, 'h:mm a')} · {hours.toFixed(0)}h
+                      <div className="flex-1 py-1.5 pr-2 bg-amber-100 dark:bg-amber-900/30 rounded-r my-0.5">
+                        <div className="font-bold text-xs">
+                          {format(start, 'h:mma')}-{format(end, 'h:mma')} · {hours.toFixed(0)}h
                         </div>
-                        <div className="text-sm font-medium">
+                        <div className="text-xs font-medium truncate">
                           {emp ? `${emp.firstName} ${emp.lastName}` : 'Unassigned'}
                         </div>
-                        <div className="text-xs text-muted-foreground">
+                        <div className="text-[10px] text-muted-foreground truncate">
                           {client?.companyName || 'No client'} · {shift.title || 'No position'}
                         </div>
                       </div>
@@ -623,15 +623,15 @@ export default function ScheduleMobileFirst() {
               )}
             </div>
           ) : displayEmployees.length === 0 && openShifts.length === 0 && viewMode === 'full' ? (
-            <Card className="p-6 mx-3 mt-3">
+            <Card className="p-4 mx-2 mt-2">
               <div className="text-center text-muted-foreground">
-                <Users className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <div className="font-medium mb-1">No employees found</div>
-                <div className="text-sm">Add employees to start scheduling</div>
+                <Users className="w-10 h-10 mx-auto mb-2 opacity-30" />
+                <div className="font-medium text-sm mb-0.5">No employees found</div>
+                <div className="text-xs">Add employees to start scheduling</div>
               </div>
             </Card>
           ) : viewMode === 'my' ? (
-            /* My Schedule View - Shows all days with current user's shifts */
+            /* My Schedule View - Compact */
             <div className="divide-y divide-border">
               {weekDays.map(day => {
                 const dayStr = format(day, 'yyyy-MM-dd');
@@ -659,22 +659,22 @@ export default function ScheduleMobileFirst() {
                           <div
                             key={shift.id}
                             onClick={() => handleViewShift(shift)}
-                            className="flex items-stretch cursor-pointer active:bg-muted/50"
+                            className="flex items-stretch min-h-[44px] cursor-pointer active:bg-muted/50"
                             data-testid={`my-shift-${shift.id}`}
                           >
-                            <div className={`w-16 py-3 flex flex-col items-center justify-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
+                            <div className={`w-10 py-1.5 flex flex-col items-center justify-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
                               {idx === 0 && (
                                 <>
-                                  <span className="text-xl font-bold">{format(day, 'd')}</span>
-                                  <span className="text-xs uppercase">{format(day, 'EEE')}</span>
+                                  <span className="text-base font-bold">{format(day, 'd')}</span>
+                                  <span className="text-[9px] uppercase">{format(day, 'EEE')}</span>
                                 </>
                               )}
                             </div>
-                            <div className={`flex-1 py-3 pr-3 ${bgColor} rounded-r-lg my-1`}>
-                              <div className="font-bold text-sm">
-                                {format(start, 'h:mm a')} - {format(end, 'h:mm a')} · {hours.toFixed(0)}h
+                            <div className={`flex-1 py-1.5 pr-2 ${bgColor} rounded-r my-0.5`}>
+                              <div className="font-bold text-xs">
+                                {format(start, 'h:mma')}-{format(end, 'h:mma')} · {hours.toFixed(0)}h
                               </div>
-                              <div className="text-xs text-muted-foreground">
+                              <div className="text-[10px] text-muted-foreground truncate">
                                 {client?.companyName || 'No client'} · {shift.title || 'No position'}
                               </div>
                             </div>
@@ -682,13 +682,13 @@ export default function ScheduleMobileFirst() {
                         );
                       })
                     ) : (
-                      <div className="flex items-center py-4 px-3">
-                        <div className={`w-12 text-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
-                          <div className="text-xl font-bold">{format(day, 'd')}</div>
-                          <div className="text-xs uppercase">{format(day, 'EEE')}</div>
+                      <div className="flex items-center py-2 px-2">
+                        <div className={`w-10 text-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
+                          <div className="text-base font-bold">{format(day, 'd')}</div>
+                          <div className="text-[9px] uppercase">{format(day, 'EEE')}</div>
                         </div>
-                        <div className="flex-1 ml-3">
-                          <span className="text-muted-foreground text-sm">
+                        <div className="flex-1 ml-2">
+                          <span className="text-muted-foreground text-xs">
                             {dayIsToday ? 'No shift today' : 'Day off'}
                           </span>
                         </div>
@@ -699,7 +699,7 @@ export default function ScheduleMobileFirst() {
               })}
             </div>
           ) : (
-            /* Full Schedule View - Shows all shifts for the week grouped by day */
+            /* Full Schedule View - Compact */
             <div className="divide-y divide-border">
               {weekDays.map(day => {
                 const dayStr = format(day, 'yyyy-MM-dd');
@@ -714,13 +714,13 @@ export default function ScheduleMobileFirst() {
                 
                 if (allDayShifts.length === 0) {
                   return (
-                    <div key={dayStr} className="flex items-center py-4 px-3">
-                      <div className={`w-12 text-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
-                        <div className="text-xl font-bold">{format(day, 'd')}</div>
-                        <div className="text-xs uppercase">{format(day, 'EEE')}</div>
+                    <div key={dayStr} className="flex items-center py-2 px-2">
+                      <div className={`w-10 text-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
+                        <div className="text-base font-bold">{format(day, 'd')}</div>
+                        <div className="text-[9px] uppercase">{format(day, 'EEE')}</div>
                       </div>
-                      <div className="flex-1 ml-3">
-                        <span className="text-muted-foreground text-sm">No shifts scheduled</span>
+                      <div className="flex-1 ml-2">
+                        <span className="text-muted-foreground text-xs">No shifts scheduled</span>
                       </div>
                     </div>
                   );
@@ -728,7 +728,7 @@ export default function ScheduleMobileFirst() {
                 
                 return (
                   <div key={dayStr}>
-                    {/* Open Shifts for this day */}
+                    {/* Open Shifts for this day - Compact */}
                     {dayOpenShifts.map((shift, idx) => {
                       const start = new Date(shift.startTime);
                       const end = new Date(shift.endTime);
@@ -739,31 +739,31 @@ export default function ScheduleMobileFirst() {
                         <div
                           key={shift.id}
                           onClick={() => handleViewShift(shift)}
-                          className="flex items-stretch cursor-pointer active:bg-muted/50"
+                          className="flex items-stretch min-h-[44px] cursor-pointer active:bg-muted/50"
                           data-testid={`shift-row-${shift.id}`}
                         >
-                          <div className={`w-16 py-3 flex flex-col items-center justify-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
+                          <div className={`w-10 py-1.5 flex flex-col items-center justify-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
                             {idx === 0 && dayAssignedShifts.length === 0 && (
                               <>
-                                <span className="text-xl font-bold">{format(day, 'd')}</span>
-                                <span className="text-xs uppercase">{format(day, 'EEE')}</span>
+                                <span className="text-base font-bold">{format(day, 'd')}</span>
+                                <span className="text-[9px] uppercase">{format(day, 'EEE')}</span>
                               </>
                             )}
                           </div>
-                          <div className="flex-1 py-3 pr-3 bg-amber-100 dark:bg-amber-900/30 rounded-r-lg my-1">
-                            <div className="font-bold text-sm text-amber-800 dark:text-amber-200">
-                              {format(start, 'h:mm a')} - {format(end, 'h:mm a')} · {hours.toFixed(0)}h
+                          <div className="flex-1 py-1.5 pr-1 bg-amber-100 dark:bg-amber-900/30 rounded-r my-0.5">
+                            <div className="font-bold text-xs text-amber-800 dark:text-amber-200">
+                              {format(start, 'h:mma')}-{format(end, 'h:mma')} · {hours.toFixed(0)}h
                             </div>
-                            <div className="text-sm font-medium text-amber-700 dark:text-amber-300">
+                            <div className="text-[10px] font-medium text-amber-700 dark:text-amber-300">
                               OPEN SHIFT
                             </div>
-                            <div className="text-xs text-amber-600 dark:text-amber-400">
+                            <div className="text-[10px] text-amber-600 dark:text-amber-400 truncate">
                               {client?.companyName || 'No client'} · {shift.title || 'Position needed'}
                             </div>
                           </div>
                           <Button
                             size="sm"
-                            className="self-center mr-2 bg-amber-600 hover:bg-amber-700"
+                            className="self-center mr-1 min-h-[44px] text-xs bg-amber-600 hover:bg-amber-700"
                             disabled={!currentEmployee?.id}
                             onClick={(e) => {
                               e.stopPropagation();
@@ -776,7 +776,7 @@ export default function ScheduleMobileFirst() {
                       );
                     })}
                     
-                    {/* Assigned Shifts for this day */}
+                    {/* Assigned Shifts for this day - Compact */}
                     {dayAssignedShifts.map((shift, idx) => {
                       const start = new Date(shift.startTime);
                       const end = new Date(shift.endTime);
@@ -793,30 +793,30 @@ export default function ScheduleMobileFirst() {
                         <div
                           key={shift.id}
                           onClick={() => handleViewShift(shift)}
-                          className="flex items-stretch cursor-pointer active:bg-muted/50"
+                          className="flex items-stretch min-h-[44px] cursor-pointer active:bg-muted/50"
                           data-testid={`shift-row-${shift.id}`}
                         >
-                          <div className={`w-16 py-3 flex flex-col items-center justify-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
+                          <div className={`w-10 py-1.5 flex flex-col items-center justify-center flex-shrink-0 ${dayIsToday ? 'text-primary' : ''}`}>
                             {idx === 0 && (
                               <>
-                                <span className="text-xl font-bold">{format(day, 'd')}</span>
-                                <span className="text-xs uppercase">{format(day, 'EEE')}</span>
+                                <span className="text-base font-bold">{format(day, 'd')}</span>
+                                <span className="text-[9px] uppercase">{format(day, 'EEE')}</span>
                               </>
                             )}
                           </div>
-                          <div className={`flex-1 py-3 pr-3 ${bgColor} rounded-r-lg my-1`}>
-                            <div className="font-bold text-sm">
-                              {format(start, 'h:mm a')} - {format(end, 'h:mm a')} · {hours.toFixed(0)}h
+                          <div className={`flex-1 py-1.5 pr-2 ${bgColor} rounded-r my-0.5`}>
+                            <div className="font-bold text-xs">
+                              {format(start, 'h:mma')}-{format(end, 'h:mma')} · {hours.toFixed(0)}h
                             </div>
-                            <div className="text-sm font-medium truncate">
+                            <div className="text-xs font-medium truncate">
                               {emp ? `${emp.firstName} ${emp.lastName}` : 'Unassigned'}
                             </div>
-                            <div className="text-xs text-muted-foreground truncate">
+                            <div className="text-[10px] text-muted-foreground truncate">
                               {client?.companyName || 'No client'} · {shift.title || 'No position'}
                             </div>
                           </div>
-                          <div className="self-center pr-2">
-                            <ArrowRightLeft className="w-4 h-4 text-muted-foreground" />
+                          <div className="self-center pr-1">
+                            <ArrowRightLeft className="w-3 h-3 text-muted-foreground" />
                           </div>
                         </div>
                       );
@@ -829,13 +829,13 @@ export default function ScheduleMobileFirst() {
         </div>
       </ScrollArea>
 
-      {/* Floating Action Buttons */}
-      <div className="fixed bottom-20 left-4 right-4 z-40 flex justify-between pointer-events-none">
+      {/* Floating Action Buttons - Accessible touch targets */}
+      <div className="fixed bottom-16 left-2 right-2 z-40 flex justify-between pointer-events-none">
         {/* Add Shift FAB - Left side */}
         {canEdit && (
           <Button
             size="icon"
-            className="h-12 w-12 rounded-full shadow-lg pointer-events-auto"
+            className="h-11 w-11 rounded-full shadow-lg pointer-events-auto"
             onClick={() => {
               setSelectedEmployee(undefined);
               setEditingShift(undefined);
@@ -847,46 +847,46 @@ export default function ScheduleMobileFirst() {
           </Button>
         )}
         
-        {/* Manager Tools FAB - Right side */}
+        {/* Manager Tools FAB - Right side - Accessible touch */}
         {isManagerOrSupervisor && (
           <Button
             size="icon"
-            className="h-12 w-12 rounded-full shadow-lg pointer-events-auto bg-secondary text-secondary-foreground hover:bg-secondary/90"
+            className="h-11 w-11 rounded-full shadow-lg pointer-events-auto bg-secondary text-secondary-foreground hover:bg-secondary/90"
             onClick={() => setShowManagerTools(true)}
             data-testid="fab-manager-tools"
           >
-            <Menu className="h-5 w-5" />
+            <Menu className="h-4 w-4" />
           </Button>
         )}
       </div>
 
-      {/* Manager Tools Drawer */}
+      {/* Manager Tools Drawer - Compact */}
       <Sheet open={showManagerTools} onOpenChange={setShowManagerTools}>
-        <SheetContent side="bottom" className="h-auto max-h-[50vh]">
+        <SheetContent side="bottom" className="h-auto max-h-[45vh]">
           <SheetHeader>
-            <SheetTitle>Schedule Tools</SheetTitle>
+            <SheetTitle className="text-sm">Schedule Tools</SheetTitle>
           </SheetHeader>
-          <div className="grid grid-cols-2 gap-3 py-4">
+          <div className="grid grid-cols-2 gap-2 py-2">
             <Button
               variant="outline"
-              className="h-20 flex-col gap-2"
+              className="h-14 flex-col gap-1"
               onClick={() => {
                 setShowManagerTools(false);
                 setShowApprovals(true);
               }}
               data-testid="tool-approvals"
             >
-              <Clock className="h-6 w-6 text-amber-600" />
-              <span className="text-sm">Approvals</span>
+              <Clock className="h-4 w-4 text-amber-600" />
+              <span className="text-xs">Approvals</span>
               {pendingShifts.length > 0 && (
-                <Badge variant="destructive" className="text-[10px] px-1.5 h-4">
+                <Badge variant="destructive" className="text-[9px] px-1 h-3.5">
                   {pendingShifts.length}
                 </Badge>
               )}
             </Button>
             <Button
               variant="outline"
-              className="h-20 flex-col gap-2"
+              className="h-14 flex-col gap-1"
               onClick={() => {
                 setShowManagerTools(false);
                 setSwapShift(null);
@@ -894,60 +894,60 @@ export default function ScheduleMobileFirst() {
               }}
               data-testid="tool-swaps"
             >
-              <ArrowRightLeft className="h-6 w-6 text-cyan-600" />
-              <span className="text-sm">Swaps</span>
+              <ArrowRightLeft className="h-4 w-4 text-cyan-600" />
+              <span className="text-xs">Swaps</span>
             </Button>
             {!isSimpleMode && (
               <>
                 <Button
                   variant="outline"
-                  className="h-20 flex-col gap-2"
+                  className="h-14 flex-col gap-1"
                   onClick={() => {
                     setShowManagerTools(false);
                     setShowTemplates(true);
                   }}
                   data-testid="tool-templates"
                 >
-                  <LayoutTemplate className="h-6 w-6 text-purple-600" />
-                  <span className="text-sm">Templates</span>
+                  <LayoutTemplate className="h-4 w-4 text-purple-600" />
+                  <span className="text-xs">Templates</span>
                 </Button>
                 <Button
                   variant="outline"
-                  className="h-20 flex-col gap-2"
+                  className="h-14 flex-col gap-1"
                   onClick={() => {
                     setShowManagerTools(false);
                     setShowReports(true);
                   }}
                   data-testid="tool-reports"
                 >
-                  <BarChart3 className="h-6 w-6 text-blue-600" />
-                  <span className="text-sm">Reports</span>
+                  <BarChart3 className="h-4 w-4 text-blue-600" />
+                  <span className="text-xs">Reports</span>
                 </Button>
               </>
             )}
             <Button
               variant="outline"
-              className="h-20 flex-col gap-2"
+              className="h-14 flex-col gap-1"
               onClick={() => {
                 setShowManagerTools(false);
                 setShowCalendarSync(true);
               }}
               data-testid="tool-export"
             >
-              <Download className="h-6 w-6 text-indigo-600" />
-              <span className="text-sm">Export</span>
+              <Download className="h-4 w-4 text-indigo-600" />
+              <span className="text-xs">Export</span>
             </Button>
             <Button
               variant="outline"
-              className="h-20 flex-col gap-2"
+              className="h-14 flex-col gap-1"
               onClick={() => {
                 setShowManagerTools(false);
                 setShowTrinityInsights(!showTrinityInsights);
               }}
               data-testid="tool-trinity"
             >
-              <TrinityMascotIcon size={24} />
-              <span className="text-sm">Trinity AI</span>
+              <TrinityMascotIcon size={16} />
+              <span className="text-xs">Trinity AI</span>
             </Button>
           </div>
         </SheetContent>
