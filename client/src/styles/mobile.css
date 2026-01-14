@@ -559,3 +559,152 @@
     box-shadow: none;
   }
 }
+
+/* ============================================================
+   AUTO-RESPONSIVE ELEMENTS - Global fixes for overflow
+   These apply automatically to prevent horizontal overflow
+   ============================================================ */
+
+/* Responsive icons - scale with viewport */
+.responsive-icon {
+  width: clamp(16px, 4vw, 24px);
+  height: clamp(16px, 4vw, 24px);
+  flex-shrink: 0;
+}
+
+.responsive-icon-sm {
+  width: clamp(12px, 3vw, 16px);
+  height: clamp(12px, 3vw, 16px);
+  flex-shrink: 0;
+}
+
+.responsive-icon-lg {
+  width: clamp(20px, 5vw, 32px);
+  height: clamp(20px, 5vw, 32px);
+  flex-shrink: 0;
+}
+
+/* Responsive borders - thinner on mobile */
+.responsive-border {
+  border-width: clamp(1px, 0.2vw, 2px);
+}
+
+.responsive-border-radius {
+  border-radius: clamp(4px, 1vw, 8px);
+}
+
+/* Auto-stack utility - forces column layout on mobile */
+.auto-stack {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+@media (max-width: 639px) {
+  .auto-stack {
+    flex-direction: column;
+  }
+}
+
+/* Responsive button text */
+.responsive-btn-text {
+  font-size: clamp(12px, 2.5vw, 14px);
+  white-space: nowrap;
+}
+
+/* Force all containers to respect viewport */
+.viewport-contain {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Mobile-safe flex row - wraps and adds gap */
+.flex-row-safe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+/* Responsive card padding */
+.responsive-card-p {
+  padding: clamp(8px, 2vw, 16px);
+}
+
+/* ============================================================
+   OPT-IN MOBILE OVERFLOW PREVENTION
+   Add these classes to containers that need overflow control
+   ============================================================ */
+.no-overflow-mobile {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Long text truncation for badges/labels */
+.truncate-mobile {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ============================================================
+   OPT-IN TOUCH TARGETS (WCAG 2.5.5 compliant)
+   Use .touch-target or .tap classes for 44px minimum
+   ============================================================ */
+.touch-target,
+.tap {
+  min-height: 44px;
+  min-width: 44px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.touch-target-lg,
+.tap-lg {
+  min-height: 48px;
+  min-width: 48px;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ============================================================
+   RESPONSIVE LAYOUT UTILITIES
+   ============================================================ */
+
+/* Stack on small screens, row on larger */
+.stack-to-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+@media (min-width: 640px) {
+  .stack-to-row {
+    flex-direction: row;
+    align-items: center;
+  }
+}
+
+/* Row on small screens, stack on larger (for sidebars) */
+.row-to-stack {
+  display: flex;
+  flex-direction: row;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+@media (min-width: 1024px) {
+  .row-to-stack {
+    flex-direction: column;
+  }
+}
+
+/* Full width on mobile, auto on larger */
+.mobile-full {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .mobile-full {
+    width: auto;
+  }
+}

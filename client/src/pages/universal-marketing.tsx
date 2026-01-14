@@ -229,16 +229,17 @@ export default function UniversalMarketing() {
                 const isAnnual = billingCycle === 'annual';
                 const monthlyPrice = tier.monthlyPrice / 100;
                 const annualMonthlyPrice = Math.round(monthlyPrice * 0.8);
+                const tierId = tier.id as string;
                 const displayPrice = tier.monthlyPrice === 0 
                   ? '$0' 
-                  : tier.id === 'enterprise' 
+                  : tierId === 'enterprise' 
                     ? 'Custom' 
                     : isAnnual 
                       ? `$${annualMonthlyPrice.toLocaleString()}` 
                       : `$${monthlyPrice.toLocaleString()}`;
-                const priceSubtext = tier.id === 'free' 
+                const priceSubtext = tierId === 'free' 
                   ? '14-day free trial' 
-                  : tier.id === 'enterprise' 
+                  : tierId === 'enterprise' 
                     ? 'starts at $3,500/mo' 
                     : isAnnual 
                       ? '/month billed annually' 

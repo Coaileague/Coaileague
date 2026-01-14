@@ -7,7 +7,7 @@
 @tailwind utilities;
 
 /* ============================================================================
-   BASE RESETS - Minimal necessary defaults
+   BASE RESETS - Minimal responsive defaults
    Component-level styles take precedence for sizing/layout
    ============================================================================ */
 @layer base {
@@ -19,6 +19,12 @@
   img, video, iframe, embed, object {
     max-width: 100%;
     height: auto;
+  }
+  
+  /* Pre and code blocks scroll instead of overflow */
+  pre, code {
+    overflow-x: auto;
+    max-width: 100%;
   }
 }
 
