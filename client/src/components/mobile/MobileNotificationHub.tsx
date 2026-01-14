@@ -1,8 +1,8 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Calendar, ChevronRight, Check, X, Wrench, CheckCircle2 } from "lucide-react";
+import { Calendar, ChevronRight, Check, X, Wrench, CheckCircle2, Bell, Plus } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { formatDistanceToNow, startOfDay, endOfDay, parseISO, isToday } from "date-fns";
@@ -47,7 +47,7 @@ interface Shift {
   location?: string;
 }
 
-function NotificationRow({ 
+function NotificationCard({ 
   notification, 
   onAction 
 }: { 
@@ -56,98 +56,96 @@ function NotificationRow({
 }) {
   const { actionType, actionData, id } = notification;
   const hasAction = actionType && actionType !== '';
-  const initials = notification.title?.substring(0, 2).toUpperCase() || 'N';
+  const isUrgent = notification.priority === 'high' || notification.priority === 'urgent';
   
   return (
-    <div 
-      className="flex items-start gap-3 px-4 py-3 border-b border-border/50"
-      data-testid={`notification-row-${notification.id}`}
+    <Card 
+      className={`p-3 ${isUrgent ? 'border-l-2 border-l-amber-500' : ''}`}
+      data-testid={`notification-card-${notification.id}`}
     >
-      <Avatar className="h-10 w-10 flex-shrink-0">
-        <AvatarFallback className="bg-muted text-muted-foreground text-sm">
-          {initials}
-        </AvatarFallback>
-      </Avatar>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm text-foreground line-clamp-2">
-          {notification.title}
-        </p>
-        <p className="text-xs text-muted-foreground mt-0.5">
-          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: false })}
-        </p>
-        
-        {hasAction && (
-          <div className="flex gap-2 mt-2">
-            {(actionType === 'shift_request' || actionType === 'swap_request') && (
-              <>
-                <Button 
-                  size="sm" 
-                  className="h-8 px-3 bg-emerald-600 hover:bg-emerald-700"
-                  onClick={() => onAction('approve', id, actionData)}
-                  data-testid={`button-approve-${id}`}
-                >
-                  <Check className="w-3 h-3 mr-1" />
-                  Approve
-                </Button>
+      <div className="flex items-start gap-2">
+        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isUrgent ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
+          <Bell className={`w-4 h-4 ${isUrgent ? 'text-amber-600' : 'text-blue-500'}`} />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <p className="text-sm font-medium text-foreground truncate flex-1">
+              {notification.title}
+            </p>
+            <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
+              {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: false })}
+            </span>
+          </div>
+          
+          {hasAction && (
+            <div className="flex flex-wrap gap-2 mt-2">
+              {(actionType === 'shift_request' || actionType === 'swap_request') && (
+                <>
+                  <Button 
+                    size="sm" 
+                    className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700"
+                    onClick={() => onAction('approve', id, actionData)}
+                    data-testid={`button-approve-${id}`}
+                  >
+                    <Check className="w-3 h-3 mr-1" />
+                    Approve
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="outline"
+                    className="h-7 px-2 text-xs border-red-500/50 text-red-500"
+                    onClick={() => onAction('deny', id, actionData)}
+                    data-testid={`button-deny-${id}`}
+                  >
+                    <X className="w-3 h-3 mr-1" />
+                    Deny
+                  </Button>
+                </>
+              )}
+              {actionType === 'acknowledge' && (
                 <Button 
                   size="sm" 
                   variant="outline"
-                  className="h-8 px-3 border-red-500/50 text-red-500"
-                  onClick={() => onAction('deny', id, actionData)}
-                  data-testid={`button-deny-${id}`}
+                  className="h-7 px-2 text-xs"
+                  onClick={() => onAction('acknowledge', id)}
+                  data-testid={`button-acknowledge-${id}`}
                 >
-                  <X className="w-3 h-3 mr-1" />
-                  Deny
+                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  Acknowledge
                 </Button>
-              </>
-            )}
-            {actionType === 'acknowledge' && (
-              <Button 
-                size="sm" 
-                variant="outline"
-                className="h-8 px-3"
-                onClick={() => onAction('acknowledge', id)}
-                data-testid={`button-acknowledge-${id}`}
-              >
-                <CheckCircle2 className="w-3 h-3 mr-1" />
-                Acknowledge
-              </Button>
-            )}
-            {(actionType === 'hotpatch' || actionType === 'trinity_fix') && (
-              <>
-                <Button 
-                  size="sm" 
-                  className="h-8 px-3 bg-purple-600 hover:bg-purple-700"
-                  onClick={() => onAction('run_hotpatch', id, actionData)}
-                  data-testid={`button-hotpatch-${id}`}
-                >
-                  <Wrench className="w-3 h-3 mr-1" />
-                  Run Fix
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="ghost"
-                  className="h-8 px-3"
-                  onClick={() => onAction('dismiss', id)}
-                  data-testid={`button-dismiss-${id}`}
-                >
-                  Dismiss
-                </Button>
-              </>
-            )}
-          </div>
-        )}
+              )}
+              {(actionType === 'hotpatch' || actionType === 'trinity_fix') && (
+                <>
+                  <Button 
+                    size="sm" 
+                    className="h-7 px-2 text-xs bg-purple-600 hover:bg-purple-700"
+                    onClick={() => onAction('run_hotpatch', id, actionData)}
+                    data-testid={`button-hotpatch-${id}`}
+                  >
+                    <Wrench className="w-3 h-3 mr-1" />
+                    Fix
+                  </Button>
+                  <Button 
+                    size="sm" 
+                    variant="ghost"
+                    className="h-7 px-2 text-xs"
+                    onClick={() => onAction('dismiss', id)}
+                    data-testid={`button-dismiss-${id}`}
+                  >
+                    Dismiss
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+        </div>
       </div>
-    </div>
+    </Card>
   );
 }
 
 export function MobileNotificationHub() {
   const [, setLocation] = useLocation();
-  
-  const { data: userData } = useQuery<any>({
-    queryKey: ["/api/auth/me"],
-  });
   
   const { data: notificationsData, isLoading: notificationsLoading } = useQuery<NotificationsData>({
     queryKey: ["/api/notifications/combined"],
@@ -205,100 +203,77 @@ export function MobileNotificationHub() {
     s.employeeId === myEmployeeId && isToday(parseISO(s.date))
   );
   const nextShift = todayShifts[0];
-
-  const userName = userData?.user?.firstName || 
-                   userData?.user?.name?.split(' ')[0] || 
-                   employeeData?.firstName ||
-                   '';
-  const userRole = userData?.user?.platformRole || userData?.user?.role || employeeData?.position || '';
-  
-  const displayName = userRole && userName 
-    ? `(${userRole.replace(/_/g, ' ')}) ${userName}`
-    : userName || 'User';
-
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   
   return (
-    <div className="flex flex-col h-full bg-background">
-      <div className="bg-[#0095FF] text-white">
-        <div className="flex items-center justify-between px-4 py-3">
-          <Avatar className="h-10 w-10 border-2 border-white/30">
-            <AvatarImage src={userData?.user?.avatar} />
-            <AvatarFallback className="bg-white/20 text-white">
-              {(userName || 'U').charAt(0).toUpperCase()}
-            </AvatarFallback>
-          </Avatar>
-          <button className="p-2" data-testid="button-menu">
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-              <circle cx="10" cy="4" r="2"/>
-              <circle cx="10" cy="10" r="2"/>
-              <circle cx="10" cy="16" r="2"/>
-            </svg>
-          </button>
-        </div>
-        
-        <div className="px-4 pb-2">
-          <h1 className="text-xl font-semibold" data-testid="text-greeting">
-            {greeting} {displayName}
-          </h1>
-          <p className="text-sm text-white/80 mt-1" data-testid="text-notification-summary">
+    <div className="flex flex-col h-full bg-muted/30">
+      <div className="bg-[#0095FF] px-3 py-3">
+        <div className="flex items-center gap-2 text-white text-sm">
+          <Bell className="w-4 h-4" />
+          <span>
             {unreadCount === 0 
               ? "You have no unread notifications"
-              : `You have ${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`
+              : `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`
             }
-          </p>
-        </div>
-        
-        <div 
-          className="mx-4 mb-4 px-4 py-3 bg-[#0077CC] rounded-lg flex items-center gap-3 cursor-pointer min-h-[48px]"
-          onClick={() => setLocation('/schedule')}
-          data-testid="card-shift-status"
-        >
-          <div className="w-8 h-8 rounded flex items-center justify-center bg-white/10">
-            <Calendar className="w-5 h-5" />
-          </div>
-          <span className="text-sm font-medium">
-            {shiftsLoading ? (
-              "Loading..."
-            ) : nextShift ? (
-              `${nextShift.client?.name || 'Shift'} at ${nextShift.startTime}`
-            ) : (
-              "You don't have any shifts scheduled"
-            )}
           </span>
         </div>
       </div>
       
-      <button
-        onClick={() => setLocation('/schedule')}
-        className="w-full py-3 text-center text-[#0095FF] text-sm font-medium border-b border-border min-h-[44px]"
-        data-testid="link-roster"
-      >
-        Today's roster<ChevronRight className="inline w-4 h-4 ml-0.5" />
-      </button>
-      
-      <div className="flex-1 overflow-auto bg-background">
+      <div className="flex-1 overflow-auto px-3 py-3 pb-24 space-y-3">
+        <Card 
+          className="p-3 flex items-center gap-3 cursor-pointer"
+          onClick={() => setLocation('/schedule')}
+          data-testid="card-shift-status"
+        >
+          <div className="w-8 h-8 rounded flex items-center justify-center bg-blue-50 dark:bg-blue-900/20">
+            <Calendar className="w-4 h-4 text-blue-500" />
+          </div>
+          <div className="flex-1 min-w-0">
+            {shiftsLoading ? (
+              <Skeleton className="h-4 w-40" />
+            ) : nextShift ? (
+              <p className="text-sm text-foreground truncate">
+                {nextShift.client?.name || 'Shift'} at {nextShift.startTime}
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                You don't have any shifts scheduled today
+              </p>
+            )}
+          </div>
+          <ChevronRight className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+        </Card>
+        
+        <button
+          onClick={() => setLocation('/schedule')}
+          className="w-full py-2 text-center text-[#0095FF] text-sm font-medium min-h-[44px]"
+          data-testid="link-roster"
+        >
+          Today's roster <ChevronRight className="inline w-4 h-4" />
+        </button>
+        
         {notificationsLoading ? (
-          <div className="p-4 space-y-4">
+          <div className="space-y-3">
             {[1, 2, 3].map(i => (
-              <div key={i} className="flex gap-3">
-                <Skeleton className="w-10 h-10 rounded-full" />
-                <div className="flex-1 space-y-2">
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-3 w-1/4" />
+              <Card key={i} className="p-3">
+                <div className="flex gap-2">
+                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-3/4" />
+                    <Skeleton className="h-3 w-1/4" />
+                  </div>
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         ) : allNotifications.length === 0 ? (
-          <div className="text-center py-16 text-muted-foreground">
+          <div className="text-center py-12 text-muted-foreground">
+            <Bell className="w-10 h-10 mx-auto mb-2 opacity-30" />
             <p className="text-sm">No notifications</p>
           </div>
         ) : (
-          <div>
+          <div className="space-y-2">
             {allNotifications.slice(0, 30).map(notification => (
-              <NotificationRow 
+              <NotificationCard 
                 key={notification.id} 
                 notification={notification}
                 onAction={handleAction}
@@ -307,6 +282,14 @@ export function MobileNotificationHub() {
           </div>
         )}
       </div>
+      
+      <button
+        onClick={() => setLocation('/trinity-insights')}
+        className="fixed bottom-20 right-4 w-12 h-12 rounded-full bg-[#0095FF] text-white shadow-lg flex items-center justify-center z-50"
+        data-testid="button-quick-action"
+      >
+        <Plus className="w-6 h-6" />
+      </button>
     </div>
   );
 }
