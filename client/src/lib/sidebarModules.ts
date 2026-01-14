@@ -103,6 +103,7 @@ export interface ModuleRoute {
   order?: number;
   excludeForCapabilities?: Capability[]; // Hide route if user has any of these capabilities
   groupId?: RouteGroupId; // For organizing Platform routes into categories
+  mobileOnly?: boolean; // Only show this route on mobile devices
 }
 
 export interface SidebarModule {
@@ -314,10 +315,11 @@ export const sidebarModules: SidebarModule[] = [
         label: 'Command Center',
         href: '/command-center',
         icon: Bell,
-        description: 'Unified notification and command center',
+        description: 'Unified notification and command center (mobile only)',
         familyId: 'platform',
         isPrimary: false,
         order: 1,
+        mobileOnly: true, // Desktop users access notifications via header bell
       },
     ],
   },
