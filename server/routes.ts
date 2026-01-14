@@ -1369,7 +1369,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         default:
           // Generic action - just mark as read
           await storage.markNotificationAsRead(id, userId);
-          actionResult = { success: true, message: \`Action '\${action}' processed\` };
+          actionResult = { success: true, message: `Action '${action}' processed` };
       }
       
       // Broadcast updated count
