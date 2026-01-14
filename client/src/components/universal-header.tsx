@@ -308,10 +308,17 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
               </div>
 
               {/* Mobile Menu - Truly responsive with overflow menu */}
-              <div className="flex md:hidden items-center gap-1 shrink-0 min-w-0">
-                {/* Mobile notification bell - opens pull-up notification hub */}
+              <div className="flex md:hidden items-center gap-2 shrink-0 min-w-0">
+                {/* Mobile quick actions for logged-in users: Trinity + Notifications */}
                 {user && showNotificationFeatures && (
-                  <MobileNotificationSheet />
+                  <>
+                    <TrinityMiniButton 
+                      onClick={() => setLocation("/trinity")} 
+                      className="h-9 w-9"
+                      data-testid="button-mobile-trinity"
+                    />
+                    <MobileNotificationSheet />
+                  </>
                 )}
                 {/* Priority 1: Show login for guests */}
                 {!user && (

@@ -310,17 +310,6 @@ export const sidebarModules: SidebarModule[] = [
         // Hide from platform staff who have Control Center instead
         excludeForCapabilities: ['support_dashboard'],
       },
-      {
-        id: 'command-center',
-        label: 'Command Center',
-        href: '/command-center',
-        icon: Bell,
-        description: 'Unified notification and command center (mobile only)',
-        familyId: 'platform',
-        isPrimary: false,
-        order: 1,
-        mobileOnly: true, // Desktop users access notifications via header bell
-      },
     ],
   },
   {
