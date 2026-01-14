@@ -2,15 +2,18 @@
  * EmployeeShiftCard - Employee with their shifts displayed as gradient cards
  * Mobile-first with tap-to-view-details support
  * Includes break visualization and compliance indicators
+ * Actions hidden in expandable section for mobile space efficiency
  */
 
+import { useState } from 'react';
 import { format } from 'date-fns';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { MapPin, Clock, Edit2, Trash2, Plus, ChevronRight, Calendar, Coffee, AlertTriangle, Copy, ArrowRightLeft } from 'lucide-react';
+import { MapPin, Clock, Edit2, Trash2, Plus, ChevronRight, ChevronDown, Calendar, Coffee, AlertTriangle, Copy, ArrowRightLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn, formatRoleDisplay } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import type { Employee, Shift, ScheduledBreak } from '@shared/schema';
 
 interface ShiftWithBreaks extends Shift {
@@ -73,25 +76,24 @@ export function EmployeeShiftCard({
 
   return (
     <Card className="overflow-hidden touch-manipulation" data-testid={`employee-card-${employee.id}`}>
-      <CardHeader className="bg-muted/50 border-b p-3 sm:p-4">
+      <CardHeader className="bg-muted/50 border-b p-2 sm:p-3">
         <div className="flex items-center justify-between gap-2">
           <div className="flex-1 min-w-0">
-            <div className="font-semibold text-base truncate">
+            <div className="font-semibold text-sm sm:text-base truncate">
               {employee.firstName} {employee.lastName}
             </div>
-            <div className="text-sm text-muted-foreground capitalize truncate">
+            <div className="text-xs sm:text-sm text-muted-foreground capitalize truncate">
               {role}
             </div>
           </div>
-          <div className="flex items-center gap-2 flex-shrink-0">
-            <Badge variant="secondary" className="font-semibold text-xs">
-              {weeklyHours.toFixed(1)} hrs
+          <div className="flex items-center gap-1.5 flex-shrink-0">
+            <Badge variant="secondary" className="font-semibold text-xs px-1.5 py-0.5">
+              {weeklyHours.toFixed(1)}h
             </Badge>
             {canEdit && onAddShift && (
               <Button
                 size="icon"
                 variant="ghost"
-                className="h-8 w-8"
                 onClick={() => onAddShift(employee)}
                 data-testid={`button-add-shift-${employee.id}`}
               >
@@ -101,16 +103,15 @@ export function EmployeeShiftCard({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="p-3 sm:p-4 space-y-2">
+      <CardContent className="p-2 sm:p-3 space-y-2">
         {shifts.length === 0 ? (
-          <div className="text-center py-6 text-muted-foreground">
-            <Calendar className="w-10 h-10 mx-auto mb-2 opacity-30" />
-            <div className="text-sm mb-3">No shift scheduled</div>
+          <div className="text-center py-4 text-muted-foreground">
+            <Calendar className="w-8 h-8 mx-auto mb-2 opacity-30" />
+            <div className="text-xs sm:text-sm mb-2">No shift scheduled</div>
             {canEdit && onAddShift && (
               <Button
                 onClick={() => onAddShift(employee)}
-                size="sm"
-                className="bg-primary"
+                size="default"
                 data-testid={`button-add-empty-shift-${employee.id}`}
               >
                 <Plus className="h-4 w-4 mr-1" />
@@ -152,6 +153,7 @@ interface ShiftBlockProps {
 }
 
 function ShiftBlock({ shift, role, onView, onEdit, onDelete, onDuplicate, onSwap, canEdit, showBreakCompliance = true }: ShiftBlockProps) {
+  const [actionsOpen, setActionsOpen] = useState(false);
   const start = new Date(shift.startTime);
   const end = new Date(shift.endTime);
   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
@@ -160,178 +162,162 @@ function ShiftBlock({ shift, role, onView, onEdit, onDelete, onDuplicate, onSwap
   const gradient = getRoleGradient(role);
   const isOpen = !shift.employeeId;
   const isPending = shift.status === 'draft';
-  const isToday = format(start, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+  const isTodayShift = format(start, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
   
   const hasScheduledBreaks = shift.scheduledBreaks && shift.scheduledBreaks.length > 0;
   const isCompliant = shift.breakCompliance?.isCompliant ?? true;
   const missingBreaks = shift.breakCompliance?.missingBreaks || [];
+  
+  const hasActions = canEdit || onSwap;
 
-  const handleClick = (e: React.MouseEvent) => {
+  const handleMainClick = (e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest('button')) return;
-    onView?.();
+    if (hasActions) {
+      setActionsOpen(!actionsOpen);
+    } else if (onView) {
+      onView();
+    }
   };
 
   return (
-    <div
-      className={cn(
-        "relative rounded-xl p-3 sm:p-4 text-white shadow-lg cursor-pointer active:scale-[0.98] transition-transform touch-manipulation",
-        isOpen
-          ? "border-2 border-dashed border-amber-500 bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/30 dark:to-amber-800/30 text-amber-900 dark:text-amber-100"
-          : `bg-gradient-to-br ${gradient}`
-      )}
-      onClick={handleClick}
-      data-testid={`shift-block-${shift.id}`}
-    >
-      {/* Time Display - Prominent */}
-      <div className="text-lg sm:text-xl font-bold mb-1.5">{timeDisplay}</div>
-      
-      {/* Details Row */}
-      <div className="flex items-center gap-3 text-xs sm:text-sm opacity-95 flex-wrap">
-        {shift.title && (
-          <div className="flex items-center gap-1">
-            <MapPin className="h-3.5 w-3.5" />
-            <span className="truncate max-w-[120px]">{shift.title}</span>
-          </div>
+    <Collapsible open={actionsOpen} onOpenChange={setActionsOpen}>
+      <div
+        className={cn(
+          "relative rounded-lg overflow-hidden text-white shadow-md cursor-pointer active:scale-[0.99] transition-transform touch-manipulation",
+          isOpen
+            ? "border-2 border-dashed border-amber-500 bg-gradient-to-br from-amber-100 to-amber-200 dark:from-amber-900/30 dark:to-amber-800/30 text-amber-900 dark:text-amber-100"
+            : `bg-gradient-to-br ${gradient}`
         )}
-        <div className="flex items-center gap-1">
-          <Clock className="h-3.5 w-3.5" />
-          <span>{hours.toFixed(1)} hrs</span>
-        </div>
-        
-        {/* Break Indicator */}
-        {showBreakCompliance && hasScheduledBreaks && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <div className="flex items-center gap-1" data-testid={`break-indicator-${shift.id}`}>
-                <Coffee className="h-3.5 w-3.5" />
-                <span>{shift.scheduledBreaks?.length} break{shift.scheduledBreaks?.length !== 1 ? 's' : ''}</span>
+        data-testid={`shift-block-${shift.id}`}
+      >
+        <CollapsibleTrigger asChild>
+          <button className="w-full p-2.5 sm:p-3 text-left" onClick={handleMainClick}>
+            <div className="flex items-start justify-between gap-2">
+              <div className="flex-1 min-w-0">
+                <div className="text-base sm:text-lg font-bold truncate">{timeDisplay}</div>
+                <div className="flex items-center gap-2 text-xs opacity-90 mt-0.5 flex-wrap">
+                  {shift.title && (
+                    <span className="flex items-center gap-0.5 truncate max-w-[100px]">
+                      <MapPin className="h-3 w-3 flex-shrink-0" />
+                      <span className="truncate">{shift.title}</span>
+                    </span>
+                  )}
+                  <span className="flex items-center gap-0.5">
+                    <Clock className="h-3 w-3" />
+                    {hours.toFixed(1)}h
+                  </span>
+                  {showBreakCompliance && hasScheduledBreaks && (
+                    <span className="flex items-center gap-0.5">
+                      <Coffee className="h-3 w-3" />
+                      {shift.scheduledBreaks?.length}
+                    </span>
+                  )}
+                </div>
               </div>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-[200px]">
-              <div className="text-xs space-y-1">
-                {shift.scheduledBreaks?.map((brk, idx) => (
-                  <div key={idx} className="flex items-center gap-1">
-                    <span className="capitalize">{brk.breakType}:</span>
-                    <span>{brk.durationMinutes} min</span>
-                    {brk.isPaid && <Badge variant="secondary" className="text-[10px] px-1 py-0">Paid</Badge>}
-                  </div>
+              
+              <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                <div className="flex gap-1 flex-wrap justify-end">
+                  {showBreakCompliance && !isCompliant && (
+                    <Badge className="bg-red-500/80 text-white text-[10px] px-1.5 py-0">
+                      <AlertTriangle className="h-2.5 w-2.5 mr-0.5" />
+                      Break
+                    </Badge>
+                  )}
+                  {isOpen && (
+                    <Badge className="bg-white/25 text-[10px] px-1.5 py-0">OPEN</Badge>
+                  )}
+                  {isPending && (
+                    <Badge variant="secondary" className="text-[10px] px-1.5 py-0">Pending</Badge>
+                  )}
+                  {isTodayShift && !isOpen && !isPending && (
+                    <Badge className="bg-white/25 text-[10px] px-1.5 py-0">TODAY</Badge>
+                  )}
+                </div>
+                {hasActions ? (
+                  <ChevronDown className={cn("h-4 w-4 opacity-70 transition-transform", actionsOpen && "rotate-180")} />
+                ) : onView && (
+                  <ChevronRight className="h-4 w-4 opacity-70" />
+                )}
+              </div>
+            </div>
+          </button>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent>
+          <div className="px-2.5 pb-2.5 sm:px-3 sm:pb-3 border-t border-white/20">
+            {showBreakCompliance && !isCompliant && missingBreaks.length > 0 && (
+              <div className="text-xs bg-red-500/20 rounded p-2 mt-2 mb-2">
+                <span className="font-medium">Missing breaks: </span>
+                {missingBreaks.map((b, i) => (
+                  <span key={i}>{b.durationMinutes}min {b.type}{i < missingBreaks.length - 1 ? ', ' : ''}</span>
                 ))}
               </div>
-            </TooltipContent>
-          </Tooltip>
-        )}
-      </div>
-      
-      {/* Status Badges - Top Right */}
-      <div className="absolute top-2 right-2 flex gap-1.5">
-        {/* Compliance Warning Badge */}
-        {showBreakCompliance && !isCompliant && missingBreaks.length > 0 && (
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Badge 
-                className="bg-red-500/80 backdrop-blur-md border-red-400/50 text-white text-xs px-2 py-0.5 cursor-help"
-                data-testid={`compliance-warning-${shift.id}`}
-              >
-                <AlertTriangle className="h-3 w-3 mr-1" />
-                Break
-              </Badge>
-            </TooltipTrigger>
-            <TooltipContent side="top" className="max-w-[250px]">
-              <div className="text-xs space-y-1">
-                <div className="font-semibold text-red-500">Missing Required Breaks:</div>
-                {missingBreaks.map((brk, idx) => (
-                  <div key={idx} className="text-muted-foreground">
-                    {brk.durationMinutes} min {brk.type} break - {brk.reason}
-                  </div>
-                ))}
-              </div>
-            </TooltipContent>
-          </Tooltip>
-        )}
-        
-        {isOpen && (
-          <Badge className="bg-white/25 backdrop-blur-md border-white/30 text-xs px-2 py-0.5">
-            OPEN
-          </Badge>
-        )}
-        {isPending && (
-          <Badge variant="secondary" className="text-xs px-2 py-0.5">
-            Pending
-          </Badge>
-        )}
-        {isToday && !isOpen && !isPending && (
-          <Badge className="bg-white/25 backdrop-blur-md border-white/30 text-xs px-2 py-0.5">
-            TODAY
-          </Badge>
-        )}
-      </div>
-      
-      {/* Tap Indicator (on mobile when not editing) */}
-      {onView && !canEdit && (
-        <div className="absolute bottom-3 right-3 opacity-60">
-          <ChevronRight className="h-5 w-5" />
-        </div>
-      )}
-      
-      {/* Action Buttons */}
-      {(canEdit || onSwap) && (
-        <div className="absolute bottom-2 right-2 flex gap-1.5">
-          {onSwap && !isOpen && (
-            <Tooltip>
-              <TooltipTrigger asChild>
+            )}
+            
+            <div className="flex flex-wrap gap-2 mt-2">
+              {onView && (
                 <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 bg-white/20 hover:bg-white/30 text-current border-0"
-                  onClick={(e) => { e.stopPropagation(); onSwap(); }}
+                  size="default"
+                  variant="secondary"
+                  className="flex-1 min-w-[70px] bg-white/20 hover:bg-white/30 text-current border-0"
+                  onClick={onView}
+                  data-testid={`button-view-shift-${shift.id}`}
+                >
+                  Details
+                </Button>
+              )}
+              {onSwap && !isOpen && (
+                <Button
+                  size="default"
+                  variant="secondary"
+                  className="flex-1 min-w-[70px] bg-white/20 hover:bg-white/30 text-current border-0"
+                  onClick={onSwap}
                   data-testid={`button-swap-shift-${shift.id}`}
                 >
-                  <ArrowRightLeft className="h-3.5 w-3.5" />
+                  <ArrowRightLeft className="h-4 w-4 mr-1" />
+                  Swap
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Request Swap</TooltipContent>
-            </Tooltip>
-          )}
-          {canEdit && onDuplicate && (
-            <Tooltip>
-              <TooltipTrigger asChild>
+              )}
+              {canEdit && onDuplicate && (
                 <Button
-                  size="icon"
-                  variant="ghost"
-                  className="h-7 w-7 bg-white/20 hover:bg-white/30 text-current border-0"
-                  onClick={(e) => { e.stopPropagation(); onDuplicate(); }}
+                  size="default"
+                  variant="secondary"
+                  className="flex-1 min-w-[70px] bg-white/20 hover:bg-white/30 text-current border-0"
+                  onClick={onDuplicate}
                   data-testid={`button-duplicate-shift-${shift.id}`}
                 >
-                  <Copy className="h-3.5 w-3.5" />
+                  <Copy className="h-4 w-4 mr-1" />
+                  Copy
                 </Button>
-              </TooltipTrigger>
-              <TooltipContent side="top">Duplicate</TooltipContent>
-            </Tooltip>
-          )}
-          {canEdit && onEdit && (
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 bg-white/20 hover:bg-white/30 text-current border-0"
-              onClick={(e) => { e.stopPropagation(); onEdit(); }}
-              data-testid={`button-edit-shift-${shift.id}`}
-            >
-              <Edit2 className="h-3.5 w-3.5" />
-            </Button>
-          )}
-          {canEdit && onDelete && (
-            <Button
-              size="icon"
-              variant="ghost"
-              className="h-7 w-7 bg-white/20 hover:bg-white/30 text-current border-0"
-              onClick={(e) => { e.stopPropagation(); onDelete(); }}
-              data-testid={`button-delete-shift-${shift.id}`}
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
+              )}
+              {canEdit && onEdit && (
+                <Button
+                  size="default"
+                  variant="secondary"
+                  className="flex-1 min-w-[70px] bg-white/20 hover:bg-white/30 text-current border-0"
+                  onClick={onEdit}
+                  data-testid={`button-edit-shift-${shift.id}`}
+                >
+                  <Edit2 className="h-4 w-4 mr-1" />
+                  Edit
+                </Button>
+              )}
+              {canEdit && onDelete && (
+                <Button
+                  size="default"
+                  variant="secondary"
+                  className="min-w-[70px] bg-red-500/20 hover:bg-red-500/30 text-current border-0"
+                  onClick={onDelete}
+                  data-testid={`button-delete-shift-${shift.id}`}
+                >
+                  <Trash2 className="h-4 w-4 mr-1" />
+                  Delete
+                </Button>
+              )}
+            </div>
+          </div>
+        </CollapsibleContent>
+      </div>
+    </Collapsible>
   );
 }

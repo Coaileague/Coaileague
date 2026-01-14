@@ -650,10 +650,11 @@ export default function ScheduleMobileFirst() {
                         </div>
                         {/* Workflow actions for draft/pending shifts */}
                         {shift.status === 'draft' && (
-                          <div className="flex gap-2 mt-2">
+                          <div className="flex flex-wrap gap-2 mt-2">
                             <Button
-                              size="lg"
+                              size="default"
                               variant="default"
+                              className="flex-1 min-w-[80px]"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleAcceptShift(shift);
@@ -664,8 +665,9 @@ export default function ScheduleMobileFirst() {
                               Accept
                             </Button>
                             <Button
-                              size="lg"
+                              size="default"
                               variant="outline"
+                              className="flex-1 min-w-[80px]"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleDeclineShift(shift);
@@ -740,9 +742,9 @@ export default function ScheduleMobileFirst() {
                               </div>
                               {/* Workflow actions for My Schedule draft shifts */}
                               {shift.status === 'draft' && (
-                                <div className="flex gap-2 mt-2">
+                                <div className="flex flex-wrap gap-2 mt-2">
                                   <Button
-                                    size="lg"
+                                    size="default"
                                     variant="default"
                                     onClick={(e) => {
                                       e.stopPropagation();

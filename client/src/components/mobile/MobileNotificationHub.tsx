@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Calendar, ChevronRight, Check, X, Wrench, CheckCircle2, Bell, Plus } from "lucide-react";
+import { Calendar, ChevronRight, ChevronDown, Check, X, Wrench, CheckCircle2, Bell, Plus } from "lucide-react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -47,88 +48,103 @@ interface Shift {
   location?: string;
 }
 
-function NotificationCard({ 
+function ExpandableNotificationCard({ 
   notification, 
   onAction 
 }: { 
   notification: UserNotification; 
   onAction: (action: string, id: string, data?: any) => void;
 }) {
+  const [expanded, setExpanded] = useState(false);
   const { actionType, actionData, id } = notification;
   const hasAction = actionType && actionType !== '';
   const isUrgent = notification.priority === 'high' || notification.priority === 'urgent';
   
   return (
     <Card 
-      className={`p-3 ${isUrgent ? 'border-l-2 border-l-amber-500' : ''}`}
+      className={`overflow-hidden ${isUrgent ? 'border-l-2 border-l-amber-500' : ''}`}
       data-testid={`notification-card-${notification.id}`}
     >
-      <div className="flex items-start gap-2">
-        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${isUrgent ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
-          <Bell className={`w-4 h-4 ${isUrgent ? 'text-amber-600' : 'text-blue-500'}`} />
+      <button
+        className="w-full p-3 text-left flex items-center gap-2 min-h-[48px]"
+        onClick={() => setExpanded(!expanded)}
+        data-testid={`button-expand-${notification.id}`}
+      >
+        <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${isUrgent ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
+          <Bell className={`w-3.5 h-3.5 ${isUrgent ? 'text-amber-600' : 'text-blue-500'}`} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <p className="text-sm font-medium text-foreground truncate flex-1">
-              {notification.title}
+          <p className="text-sm font-medium text-foreground truncate">
+            {notification.title}
+          </p>
+        </div>
+        <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
+          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: false })}
+        </span>
+        {(hasAction || notification.message) && (
+          <ChevronDown className={`w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
+        )}
+      </button>
+      
+      {expanded && (
+        <div className="px-3 pb-3 pt-0 border-t border-border/50">
+          {notification.message && (
+            <p className="text-xs text-muted-foreground mt-2 break-words whitespace-normal">
+              {notification.message}
             </p>
-            <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
-              {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: false })}
-            </span>
-          </div>
+          )}
           
           {hasAction && (
-            <div className="flex flex-wrap gap-2 mt-2">
+            <div className="flex flex-wrap gap-2 mt-3">
               {(actionType === 'shift_request' || actionType === 'swap_request') && (
                 <>
                   <Button 
-                    size="sm" 
-                    className="h-7 px-2 text-xs bg-emerald-600 hover:bg-emerald-700"
+                    size="default" 
+                    className="bg-emerald-600 hover:bg-emerald-700 flex-1 min-w-[80px]"
                     onClick={() => onAction('approve', id, actionData)}
                     data-testid={`button-approve-${id}`}
                   >
-                    <Check className="w-3 h-3 mr-1" />
+                    <Check className="w-4 h-4 mr-1" />
                     Approve
                   </Button>
                   <Button 
-                    size="sm" 
+                    size="default" 
                     variant="outline"
-                    className="h-7 px-2 text-xs border-red-500/50 text-red-500"
+                    className="border-red-500/50 text-red-500 flex-1 min-w-[80px]"
                     onClick={() => onAction('deny', id, actionData)}
                     data-testid={`button-deny-${id}`}
                   >
-                    <X className="w-3 h-3 mr-1" />
+                    <X className="w-4 h-4 mr-1" />
                     Deny
                   </Button>
                 </>
               )}
               {actionType === 'acknowledge' && (
                 <Button 
-                  size="sm" 
+                  size="default" 
                   variant="outline"
-                  className="h-7 px-2 text-xs"
+                  className="flex-1"
                   onClick={() => onAction('acknowledge', id)}
                   data-testid={`button-acknowledge-${id}`}
                 >
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
+                  <CheckCircle2 className="w-4 h-4 mr-1" />
                   Acknowledge
                 </Button>
               )}
               {(actionType === 'hotpatch' || actionType === 'trinity_fix') && (
                 <>
                   <Button 
-                    size="sm" 
-                    className="h-7 px-2 text-xs bg-purple-600 hover:bg-purple-700"
+                    size="default" 
+                    className="bg-purple-600 hover:bg-purple-700 flex-1 min-w-[80px]"
                     onClick={() => onAction('run_hotpatch', id, actionData)}
                     data-testid={`button-hotpatch-${id}`}
                   >
-                    <Wrench className="w-3 h-3 mr-1" />
-                    Fix
+                    <Wrench className="w-4 h-4 mr-1" />
+                    Run Fix
                   </Button>
                   <Button 
-                    size="sm" 
+                    size="default" 
                     variant="ghost"
-                    className="h-7 px-2 text-xs"
                     onClick={() => onAction('dismiss', id)}
                     data-testid={`button-dismiss-${id}`}
                   >
@@ -139,7 +155,7 @@ function NotificationCard({
             </div>
           )}
         </div>
-      </div>
+      )}
     </Card>
   );
 }
@@ -208,8 +224,8 @@ export function MobileNotificationHub() {
     <div className="flex flex-col h-full bg-muted/30">
       <div className="bg-[#0095FF] px-3 py-3">
         <div className="flex items-center gap-2 text-white text-sm">
-          <Bell className="w-4 h-4" />
-          <span>
+          <Bell className="w-4 h-4 flex-shrink-0" />
+          <span className="truncate">
             {unreadCount === 0 
               ? "You have no unread notifications"
               : `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`
@@ -218,24 +234,24 @@ export function MobileNotificationHub() {
         </div>
       </div>
       
-      <div className="flex-1 overflow-auto px-3 py-3 pb-24 space-y-3">
+      <div className="flex-1 overflow-auto px-2 py-3 pb-24 space-y-2">
         <Card 
-          className="p-3 flex items-center gap-3 cursor-pointer"
+          className="p-3 flex items-center gap-2 cursor-pointer min-h-[48px]"
           onClick={() => setLocation('/schedule')}
           data-testid="card-shift-status"
         >
-          <div className="w-8 h-8 rounded flex items-center justify-center bg-blue-50 dark:bg-blue-900/20">
+          <div className="w-7 h-7 rounded flex items-center justify-center bg-blue-50 dark:bg-blue-900/20 flex-shrink-0">
             <Calendar className="w-4 h-4 text-blue-500" />
           </div>
           <div className="flex-1 min-w-0">
             {shiftsLoading ? (
-              <Skeleton className="h-4 w-40" />
+              <Skeleton className="h-4 w-32" />
             ) : nextShift ? (
               <p className="text-sm text-foreground truncate">
                 {nextShift.client?.name || 'Shift'} at {nextShift.startTime}
               </p>
             ) : (
-              <p className="text-sm text-muted-foreground">
+              <p className="text-xs text-muted-foreground break-words">
                 You don't have any shifts scheduled today
               </p>
             )}
@@ -252,11 +268,11 @@ export function MobileNotificationHub() {
         </button>
         
         {notificationsLoading ? (
-          <div className="space-y-3">
+          <div className="space-y-2">
             {[1, 2, 3].map(i => (
               <Card key={i} className="p-3">
                 <div className="flex gap-2">
-                  <Skeleton className="w-8 h-8 rounded-full" />
+                  <Skeleton className="w-7 h-7 rounded-full flex-shrink-0" />
                   <div className="flex-1 space-y-2">
                     <Skeleton className="h-4 w-3/4" />
                     <Skeleton className="h-3 w-1/4" />
@@ -273,7 +289,7 @@ export function MobileNotificationHub() {
         ) : (
           <div className="space-y-2">
             {allNotifications.slice(0, 30).map(notification => (
-              <NotificationCard 
+              <ExpandableNotificationCard 
                 key={notification.id} 
                 notification={notification}
                 onAction={handleAction}
@@ -285,7 +301,7 @@ export function MobileNotificationHub() {
       
       <button
         onClick={() => setLocation('/trinity-insights')}
-        className="fixed bottom-20 right-4 w-12 h-12 rounded-full bg-[#0095FF] text-white shadow-lg flex items-center justify-center z-50"
+        className="fixed bottom-20 right-3 w-12 h-12 rounded-full bg-[#0095FF] text-white shadow-lg flex items-center justify-center z-50"
         data-testid="button-quick-action"
       >
         <Plus className="w-6 h-6" />
