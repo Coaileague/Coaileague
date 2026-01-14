@@ -628,14 +628,24 @@ class AIBrainActionRegistry {
       handler: async (request: ActionRequest): Promise<ActionResult> => {
         const start = Date.now();
         const { storage } = await import('../../storage');
+        const aiNotificationService = await import('../aiNotificationService').then(m => m.default);
         
         const userId = request.userId;
         if (!userId) {
           return createResult(request.actionId, false, 'User ID required', null, start);
         }
         
+        // Mark both regular notifications and AI maintenance alerts as read
         await storage.markAllNotificationsRead(userId);
-        return createResult(request.actionId, true, `All notifications marked as read`, null, start);
+        const acknowledgedAlerts = await aiNotificationService.acknowledgeAllMaintenanceAlerts(userId);
+        
+        return createResult(
+          request.actionId, 
+          true, 
+          `All notifications marked as read (including ${acknowledgedAlerts} AI alerts)`, 
+          { acknowledgedAlerts },
+          start
+        );
       },
     };
 
