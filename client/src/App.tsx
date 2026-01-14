@@ -101,6 +101,7 @@ const PrivacyPolicy = lazy(() => import("@/pages/privacy-policy"));
 const StatusPage = lazy(() => import("@/pages/status"));
 const MobileHubPage = lazy(() => import("@/pages/mobile-hub"));
 const Dashboard = lazy(() => import("@/pages/dashboard"));
+const CommandCenter = lazy(() => import("@/pages/command-center"));
 const UniversalSchedule = lazy(() => import("@/pages/universal-schedule"));
 const ScheduleMobileFirst = lazy(() => import("@/pages/schedule-mobile-first"));
 const WorkspaceSales = lazy(() => import("@/pages/workspace-sales"));
@@ -1033,6 +1034,7 @@ function AppContent() {
               <Route path="/mobile-dashboard"><Redirect to="/mobile-hub" /></Route>
               <Route path="/mobile-hub" component={MobileHubPage} />
               <Route path="/dashboard" component={Dashboard} />
+              <Route path="/command-center" component={CommandCenter} />
               <Route path="/worker" component={WorkerDashboard} />
               <Route path="/worker/schedule"><Redirect to="/schedule" /></Route>
               <Route path="/worker/incidents" component={WorkerIncidents} />
@@ -1382,6 +1384,7 @@ function AppContent() {
                 </Route>
                 <Route path="/mobile-dashboard"><Redirect to="/dashboard" /></Route>
                 <Route path="/dashboard" component={Dashboard} />
+                <Route path="/command-center" component={CommandCenter} />
                 <Route path="/worker" component={WorkerDashboard} />
                 <Route path="/worker/schedule"><Redirect to="/schedule" /></Route>
                 <Route path="/worker/incidents" component={WorkerIncidents} />

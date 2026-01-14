@@ -34,6 +34,7 @@ import {
   UserCog,
   Server,
   ArrowRightLeft,
+  Bell,
   type LucideIcon,
 } from "lucide-react";
 import { isRouteVisibleInMVP } from "@/config/mvpFeatures";
@@ -307,6 +308,16 @@ export const sidebarModules: SidebarModule[] = [
         order: 0,
         // Hide from platform staff who have Control Center instead
         excludeForCapabilities: ['support_dashboard'],
+      },
+      {
+        id: 'command-center',
+        label: 'Command Center',
+        href: '/command-center',
+        icon: Bell,
+        description: 'Unified notification and command center',
+        familyId: 'platform',
+        isPrimary: false,
+        order: 1,
       },
     ],
   },
