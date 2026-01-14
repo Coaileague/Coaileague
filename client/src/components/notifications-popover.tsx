@@ -34,6 +34,7 @@ import { useNotificationSync } from "@/hooks/use-notification-sync";
 import { humanizeTitle, humanizeText, generateEndUserSummary } from "@shared/utils/humanFriendlyCopy";
 import { Suspense, lazy } from "react";
 const TrinityRedesign = lazy(() => import("@/components/trinity-redesign"));
+import { UNSCommandCenter } from "./uns-command-center";
 
 // Priority levels for UNS cards
 type Priority = 'critical' | 'high' | 'medium' | 'info';
@@ -1766,6 +1767,13 @@ function NotificationsPopoverInner({ user }: { user: any }) {
     );
   }
 
+  const handleAskTrinityFromUNS = () => {
+    setOpen(false);
+    setTimeout(() => {
+      window.location.href = "/trinity-insights";
+    }, 100);
+  };
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -1777,8 +1785,8 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[420px] max-w-[min(calc(100vw-1rem),420px)] p-0 shadow-xl border-muted flex flex-col overflow-hidden" 
-        style={{ maxHeight: 'min(75vh, 560px)', minWidth: '380px' }}
+        className="w-[420px] max-w-[min(calc(100vw-1rem),420px)] p-0 shadow-2xl border-0 flex flex-col overflow-hidden bg-transparent" 
+        style={{ maxHeight: 'min(85vh, 650px)', minWidth: '400px' }}
         align="end"
         sideOffset={8}
         data-testid="notification-popover-content"
@@ -1793,10 +1801,11 @@ function NotificationsPopoverInner({ user }: { user: any }) {
           }
         }}
       >
-        <div className="flex flex-col h-full">
-          {DesktopNotificationsContent}
-          <Footer compact={false} />
-        </div>
+        <UNSCommandCenter 
+          isOpen={true}
+          onClose={() => setOpen(false)}
+          onAskTrinity={handleAskTrinityFromUNS}
+        />
       </PopoverContent>
     </Popover>
   );
