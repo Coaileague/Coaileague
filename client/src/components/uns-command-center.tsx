@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { cn } from "@/lib/utils";
@@ -8,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Sparkles, CheckCircle2, ExternalLink } from "lucide-react";
 
-type NotificationCategory = 'alerts' | 'workflows' | 'system' | 'ai';
+type NotificationCategory = 'all' | 'alerts' | 'workflows' | 'system' | 'ai';
 type NotificationPriority = 'critical' | 'high' | 'medium' | 'low';
 type NotificationType = 'alert' | 'workflow' | 'system' | 'ai';
 
@@ -43,10 +44,12 @@ function NotificationDetailModal({
   notification,
   isOpen,
   onClose,
+  onNavigate,
 }: {
   notification: UNSNotification | null;
   isOpen: boolean;
   onClose: () => void;
+  onNavigate: (path: string) => void;
 }) {
   if (!notification) return null;
 
@@ -137,7 +140,7 @@ function NotificationDetailModal({
                 e.stopPropagation();
                 if (notification.action?.target) {
                   onClose();
-                  window.location.href = notification.action.target;
+                  onNavigate(notification.action.target);
                 }
               }}
             >
@@ -289,7 +292,8 @@ const getRoleBasedNotificationFilter = (
 };
 
 export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrinity, platformRole, workspaceRole }: UNSCommandCenterProps) {
-  const [activeTab, setActiveTab] = useState<NotificationCategory>('alerts');
+  const [, setLocation] = useLocation();
+  const [activeTab, setActiveTab] = useState<NotificationCategory>('all');
   const [pulseActive, setPulseActive] = useState(true);
   const [selectedNotification, setSelectedNotification] = useState<UNSNotification | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -409,18 +413,20 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
   const criticalCount = roleFilteredNotifications.filter(n => n.priority === 'critical').length;
 
   const filteredNotifications = roleFilteredNotifications.filter(n => {
+    if (activeTab === 'all') return true;
     if (activeTab === 'alerts') return n.type === 'alert' || n.priority === 'critical';
     if (activeTab === 'workflows') return n.type === 'workflow';
     if (activeTab === 'system') return n.type === 'system';
     if (activeTab === 'ai') return n.type === 'ai';
-    return n.type === 'alert' || n.priority === 'critical'; // default to alerts
+    return true; // fallback to showing all
   });
 
   const tabs = [
-    { id: 'alerts' as const, label: 'Alerts', count: roleFilteredNotifications.filter(n => n.type === 'alert').length, pulse: criticalCount > 0 },
-    { id: 'workflows' as const, label: 'Workflows', count: roleFilteredNotifications.filter(n => n.type === 'workflow').length },
+    { id: 'all' as const, label: 'All', count: roleFilteredNotifications.length },
+    { id: 'alerts' as const, label: 'Alerts', count: roleFilteredNotifications.filter(n => n.type === 'alert' || n.priority === 'critical').length, pulse: criticalCount > 0 },
+    { id: 'workflows' as const, label: 'Tasks', count: roleFilteredNotifications.filter(n => n.type === 'workflow').length },
     { id: 'system' as const, label: 'System', count: roleFilteredNotifications.filter(n => n.type === 'system').length },
-    { id: 'ai' as const, label: 'Trinity AI', count: roleFilteredNotifications.filter(n => n.type === 'ai').length }
+    { id: 'ai' as const, label: 'AI', count: roleFilteredNotifications.filter(n => n.type === 'ai').length }
   ];
 
   const formatTime = (time: string) => {
@@ -665,7 +671,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
               </svg>
             </div>
-            <h3 className="text-slate-300 font-medium text-lg">No {activeTab}</h3>
+            <h3 className="text-slate-300 font-medium text-lg">No {activeTab === 'all' ? 'notifications' : activeTab}</h3>
             <p className="text-slate-500 text-sm text-center mt-1">
               {activeTab === 'alerts' ? 'No payroll, schedule, or employee alerts at this time' :
                activeTab === 'workflows' ? 'No pending workflow approvals' :
@@ -697,6 +703,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
         notification={selectedNotification}
         isOpen={isDetailModalOpen}
         onClose={() => setIsDetailModalOpen(false)}
+        onNavigate={setLocation}
       />
     </div>
   );
