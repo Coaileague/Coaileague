@@ -1,0 +1,2448 @@
+{
+  "runId": "run_20260114030020_b5f92d",
+  "startedAt": "2026-01-14T03:00:20.981Z",
+  "completedAt": "2026-01-14T03:03:31.475Z",
+  "duration": 190494,
+  "baseUrl": "https://workspace.DrillConsult360.repl.co",
+  "mode": "full-triad",
+  "crawlerResults": {
+    "ui": {
+      "pagesVisited": 9,
+      "pageResults": [],
+      "issues": [
+        {
+          "id": "d405fe6c647f8af3",
+          "category": "page_error",
+          "severity": "high",
+          "url": "https://workspace.DrillConsult360.repl.co",
+          "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+          "timestamp": "2026-01-14T03:00:23.181Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "0a6334d49f24401b",
+          "category": "page_error",
+          "severity": "high",
+          "url": "https://workspace.DrillConsult360.repl.co/login",
+          "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/login\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/login\", waiting until \"networkidle\"\u001b[22m\n",
+          "timestamp": "2026-01-14T03:00:23.583Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "e59a5031b62275ac",
+          "category": "page_error",
+          "severity": "high",
+          "url": "https://workspace.DrillConsult360.repl.co/register",
+          "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/register\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/register\", waiting until \"networkidle\"\u001b[22m\n",
+          "timestamp": "2026-01-14T03:00:23.909Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "af1a664877ed3b7c",
+          "category": "page_error",
+          "severity": "high",
+          "url": "https://workspace.DrillConsult360.repl.co/pricing",
+          "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/pricing\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/pricing\", waiting until \"networkidle\"\u001b[22m\n",
+          "timestamp": "2026-01-14T03:00:24.314Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "a538f0e1ff3c32d9",
+          "category": "page_error",
+          "severity": "high",
+          "url": "https://workspace.DrillConsult360.repl.co/trinity-features",
+          "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/trinity-features\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/trinity-features\", waiting until \"networkidle\"\u001b[22m\n",
+          "timestamp": "2026-01-14T03:00:24.684Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "9c4904af2a8f9f36",
+          "category": "page_error",
+          "severity": "high",
+          "url": "https://workspace.DrillConsult360.repl.co/contact",
+          "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/contact\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/contact\", waiting until \"networkidle\"\u001b[22m\n",
+          "timestamp": "2026-01-14T03:00:24.885Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "72073e968d981ba0",
+          "category": "page_error",
+          "severity": "high",
+          "url": "https://workspace.DrillConsult360.repl.co/support",
+          "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/support\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/support\", waiting until \"networkidle\"\u001b[22m\n",
+          "timestamp": "2026-01-14T03:00:25.043Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "f8261bf60d23c350",
+          "category": "page_error",
+          "severity": "high",
+          "url": "https://workspace.DrillConsult360.repl.co/terms",
+          "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/terms\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/terms\", waiting until \"networkidle\"\u001b[22m\n",
+          "timestamp": "2026-01-14T03:00:25.221Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        },
+        {
+          "id": "09bfc511927671f9",
+          "category": "page_error",
+          "severity": "high",
+          "url": "https://workspace.DrillConsult360.repl.co/privacy",
+          "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/privacy\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/privacy\", waiting until \"networkidle\"\u001b[22m\n",
+          "timestamp": "2026-01-14T03:00:25.495Z",
+          "crawlerType": "ui",
+          "subsystem": "frontend",
+          "reproducible": true
+        }
+      ],
+      "buttonsTestedCount": 0,
+      "formsTestedCount": 0,
+      "linksCheckedCount": 0
+    },
+    "api": {
+      "endpointsTestedCount": 15,
+      "testResults": [
+        {
+          "testCase": {
+            "id": "health-check",
+            "name": "Health Check Endpoint",
+            "endpoint": "/api/health",
+            "method": "GET",
+            "expectedStatus": 200,
+            "requiresAuth": false,
+            "description": "Basic server health check"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 106,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.201Z"
+        },
+        {
+          "testCase": {
+            "id": "health-summary",
+            "name": "Health Summary",
+            "endpoint": "/api/health/summary",
+            "method": "GET",
+            "expectedStatus": 200,
+            "requiresAuth": false,
+            "description": "Detailed health summary"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 11,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.213Z"
+        },
+        {
+          "testCase": {
+            "id": "auth-check",
+            "name": "Auth Status Check",
+            "endpoint": "/api/auth/check",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": false,
+            "description": "Check authentication status"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 11,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.224Z"
+        },
+        {
+          "testCase": {
+            "id": "mascot-seasonal",
+            "name": "Seasonal State",
+            "endpoint": "/api/mascot/seasonal/state",
+            "method": "GET",
+            "expectedStatus": 200,
+            "requiresAuth": false,
+            "description": "Trinity mascot seasonal state"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 15,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.239Z"
+        },
+        {
+          "testCase": {
+            "id": "runtime-flags",
+            "name": "Runtime Flags",
+            "endpoint": "/api/runtime-flags",
+            "method": "GET",
+            "expectedStatus": 200,
+            "requiresAuth": false,
+            "description": "Trinity runtime configuration flags"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 29,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.268Z"
+        },
+        {
+          "testCase": {
+            "id": "workspaces-list",
+            "name": "List Workspaces",
+            "endpoint": "/api/workspaces/all",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get user workspaces"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 28,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.298Z"
+        },
+        {
+          "testCase": {
+            "id": "current-workspace",
+            "name": "Current Workspace",
+            "endpoint": "/api/workspaces/current",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401,
+              404
+            ],
+            "requiresAuth": true,
+            "description": "Get current workspace context"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 22,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.322Z"
+        },
+        {
+          "testCase": {
+            "id": "employees-list",
+            "name": "List Employees",
+            "endpoint": "/api/employees",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get employee list"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 27,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.350Z"
+        },
+        {
+          "testCase": {
+            "id": "schedules-current",
+            "name": "Current Schedules",
+            "endpoint": "/api/shifts",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get current schedules/shifts"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 16,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.368Z"
+        },
+        {
+          "testCase": {
+            "id": "notifications-list",
+            "name": "Notifications",
+            "endpoint": "/api/notifications",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get user notifications"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 25,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.397Z"
+        },
+        {
+          "testCase": {
+            "id": "invoices-list",
+            "name": "Invoices List",
+            "endpoint": "/api/invoices",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get invoice list"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 20,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.417Z"
+        },
+        {
+          "testCase": {
+            "id": "billing-config",
+            "name": "Billing Configuration",
+            "endpoint": "/api/billing/status",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401,
+              404
+            ],
+            "requiresAuth": true,
+            "description": "Get billing configuration"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 25,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.443Z"
+        },
+        {
+          "testCase": {
+            "id": "ai-brain-status",
+            "name": "AI Brain Status",
+            "endpoint": "/api/trinity/status",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401,
+              404
+            ],
+            "requiresAuth": true,
+            "description": "Trinity AI Brain system status"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 27,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.471Z"
+        },
+        {
+          "testCase": {
+            "id": "stripe-config",
+            "name": "Stripe Configuration",
+            "endpoint": "/api/stripe/config",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": false,
+            "description": "Public Stripe configuration"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 28,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.499Z"
+        },
+        {
+          "testCase": {
+            "id": "pricing-tiers",
+            "name": "Pricing Tiers",
+            "endpoint": "/api/billing/plans",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              404
+            ],
+            "requiresAuth": false,
+            "description": "Get subscription pricing tiers"
+          },
+          "success": false,
+          "statusCode": 0,
+          "responseTime": 15,
+          "error": "fetch failed",
+          "timestamp": "2026-01-14T03:00:21.516Z"
+        }
+      ],
+      "issues": [
+        {
+          "id": "b587fd6b132a5442",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/auth/login",
+          "message": "Authentication request failed: fetch failed",
+          "timestamp": "2026-01-14T03:00:21.094Z",
+          "crawlerType": "api",
+          "subsystem": "auth",
+          "reproducible": true,
+          "aiAnalysis": {
+            "rootCause": "The Express.js backend server is likely not running, has crashed, or is not properly exposed/accessible within the Replit environment at the specified URL (https://workspace.DrillConsult360.repl.co). The 'fetch failed' message indicates that the client application could not establish a connection to the server at all, rather than receiving an HTTP response with an error status.",
+            "fixRecommendation": "**1. Verify Backend Server Status on Replit:** Go to the Replit workspace for 'DrillConsult360'. Check the console output for the backend (usually the 'Run' tab or the specific backend service tab if separate) to see if the Express.js server process is active, has started successfully, or if there are any errors during startup (e.g., port conflicts, missing dependencies, syntax errors).\n**2. Restart Backend Server:** If the server appears to have crashed or is not running, initiate a manual restart of the backend service within Replit. This often resolves transient issues.\n**3. Check Server Port Configuration (`server/index.js`):** Ensure the Express.js application is configured to listen on the correct port. Replit typically assigns a port dynamically, often available via `process.env.PORT`. The `server/index.js` (or similar entry file for the backend) should listen on this variable. If it's hardcoded, it might conflict with Replit's environment.\n**4. Review Replit's `.replit` and `package.json` Start Scripts:**\n   - **`.replit` file:** Ensure the `run` command in your `.replit` file correctly executes your backend's start script (e.g., `node server/index.js` or `npm start`).\n   - **`package.json`:** Verify the `start` script in `server/package.json` (or the root `package.json` if monolithic) correctly launches the Express server.\n**5. Confirm Client API Base URL Configuration (`client/.env` or `client/vite.config.js`):** The React frontend needs to know where to send API requests. Ensure that the `VITE_API_URL` (or similar environment variable) used by the client is correctly set to `https://workspace.DrillConsult360.repl.co` and not a `localhost` address, especially when deployed or running within Replit's hosted environment. Make sure this variable is accessible during the client's build process.\n**6. Replit Environment Specifics:** Sometimes Replit itself can have temporary network glitches. If all configurations seem correct, try 'Forking' the repl or creating a new one to see if the issue persists, which might indicate a deeper Replit platform issue.\n**7. Basic Network Check (within Replit):** If you have shell access in Replit, try `curl https://workspace.DrillConsult360.repl.co/api/auth/login` from the shell itself to see if the network path is blocked internally.",
+            "codeSnippet": "```javascript\n// server/index.js (or similar main server file)\n\n// ... other imports and middleware\n\nconst PORT = process.env.PORT || 3000; // Use process.env.PORT for Replit compatibility\n\napp.listen(PORT, () => {\n  console.log(`CoAIleague Backend running on port ${PORT}`);\n  console.log(`Access at http://localhost:${PORT} or via Replit URL`);\n});\n\n// ... other routes and error handling\n\n// client/.env (example)\n// VITE_API_URL=https://workspace.DrillConsult360.repl.co\n```",
+            "filesLikelyAffected": [
+              "server/index.js",
+              "server/package.json",
+              "client/.env",
+              "client/vite.config.js",
+              ".replit"
+            ],
+            "estimatedEffort": "easy",
+            "confidence": 0.95,
+            "relatedIssues": [
+              "server_startup_failure",
+              "environment_variable_misconfiguration",
+              "cors_policy_violation"
+            ]
+          }
+        },
+        {
+          "id": "7b72620b719f87af",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/health",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/health",
+          "timestamp": "2026-01-14T03:00:21.201Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true,
+          "aiAnalysis": {
+            "rootCause": "The Express.js backend server, deployed on Replit at `https://workspace.DrillConsult360.repl.co`, is currently unreachable or not running correctly. The 'fetch failed' message with an N/A status code indicates a network-level failure to establish a connection to the server, rather than an HTTP error response from the server itself. This prevents the frontend from accessing critical API endpoints like `/api/health`.",
+            "fixRecommendation": "**1. Verify Backend Server Status on Replit:**\n   - Navigate to the `workspace.DrillConsult360` project in Replit.\n   - Check the console and logs for the `server/` process. Ensure the Express.js application is actively running and has not crashed. Look for messages indicating successful server startup (e.g., 'CoAIleague Backend Server running on port X').\n   - If the server is stopped or has crashed, attempt to restart the Replit project or the `server/` process explicitly.\n**2. Confirm Server Port Configuration:**\n   - Inspect the main Express.js entry file (e.g., `server/index.js` or `server/src/app.js`). Ensure the server is configured to listen on `process.env.PORT` which Replit typically provides, or a default like `3000` if `PORT` is not set.\n   - Example: `app.listen(process.env.PORT || 3000, () => { console.log('Server running...'); });`\n**3. Examine Backend Startup Logs for Errors:**\n   - Even if the server appears 'running' in Replit, carefully review the logs for any errors that might prevent it from fully initializing or becoming accessible (e.g., database connection failures using Drizzle ORM, module loading errors, or misconfigurations that cause the Express app to exit prematurely).\n**4. Verify Frontend API Base URL Configuration:**\n   - In the `client/` directory, locate where the API base URL is configured (e.g., in `client/src/config.js`, `client/src/utils/api.js`, or via Vite environment variables like `VITE_APP_API_URL` in `.env` or `.env.production`).\n   - Ensure the API base URL is correctly set to `https://workspace.DrillConsult360.repl.co` for the deployed environment. A common mistake is using `localhost` in a deployed environment.\n**5. Perform Basic Connectivity Test:**\n   - From your local terminal or a separate Replit shell, try to `curl` the problematic endpoint: `curl https://workspace.DrillConsult360.repl.co/api/health`.\n   - A successful response (e.g., `{\"status\":\"ok\"}` or similar) would indicate the server is now accessible. If `curl` also fails or hangs, it strongly confirms the server unreachability persists and further investigation into the Replit environment itself or deeper server issues is needed.",
+            "codeSnippet": "// Example of server listening setup in server/index.js\nconst express = require('express');\nconst app = express();\n\n// ... other middleware, routes, Drizzle ORM setup\n\nconst PORT = process.env.PORT || 3000;\napp.listen(PORT, () => {\n  console.log(`CoAIleague Backend Server running on port ${PORT}`);\n});\n\n// Example of frontend API base URL setup in client/.env\n// VITE_APP_API_URL=https://workspace.DrillConsult360.repl.co\n\n// Example of frontend API usage (e.g., in client/src/utils/api.js)\n// const API_BASE_URL = import.meta.env.VITE_APP_API_URL || 'http://localhost:3000';\n// export const fetchHealthStatus = async () => {\n//   const response = await fetch(`${API_BASE_URL}/api/health`);\n//   if (!response.ok) {\n//     throw new Error('Network response was not ok');\n//   }\n//   return response.json();\n// };",
+            "filesLikelyAffected": [
+              "server/index.js",
+              "server/src/app.js",
+              "client/.env",
+              "client/.env.production",
+              "client/src/config.js",
+              "client/src/utils/api.js",
+              ".replit"
+            ],
+            "estimatedEffort": "easy",
+            "confidence": 0.95,
+            "relatedIssues": [
+              "Backend server failed to start due to configuration errors",
+              "Incorrect environment variable configuration for API URL in frontend",
+              "Replit deployment misconfiguration or transient issues",
+              "Database connection error preventing server startup",
+              "Firewall or network restrictions blocking outbound requests (less common for Replit-hosted services)"
+            ]
+          }
+        },
+        {
+          "id": "f1ca227b07aca815",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/health/summary",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/health/summary",
+          "timestamp": "2026-01-14T03:00:21.213Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true,
+          "aiAnalysis": {
+            "rootCause": "The Express.js backend server is either not running, has crashed, or is not correctly exposed/listening at the specified 'repl.co' URL. The 'fetch failed' error with a 'N/A' status code indicates a fundamental inability for the client to establish a network connection to the server, rather than an application-level error.",
+            "fixRecommendation": "1. **Verify Backend Server Status:** Log into your Replit workspace for `DrillConsult360`. Check the console/shell to ensure the Express.js backend process (usually `npm start` or a direct node command) is actively running and has not crashed or stopped. \n2. **Review Backend Logs:** Examine the server's output for any error messages during startup or runtime that might indicate a crash, port binding failure, or other critical issues. \n3. **Validate Server Port and Host Configuration:** Ensure your Express.js application is configured to listen on `0.0.0.0` and the port specified by `process.env.PORT`. Replit often sets this environment variable. If it's listening on `localhost` or a hardcoded port that isn't `process.env.PORT`, it might not be reachable. \n4. **Check Replit's `.replit` Configuration:** Verify the `run` command in your `.replit` file correctly starts your backend application. \n5. **Confirm Frontend API URL:** While less likely to cause a 'fetch failed' (it would typically try and connect to the wrong place), double-check that the `VITE_APP_API_URL` or equivalent environment variable in your React frontend is pointing to the correct base URL of your Replit deployment (`https://workspace.DrillConsult360.repl.co`). \n6. **Restart Application:** If the server appears to be running but is unresponsive, try restarting the entire Replit workspace or just the backend process.",
+            "codeSnippet": "```javascript\n// In your main Express.js entry file (e.g., server/src/index.ts or server/src/app.ts)\n\nimport express from 'express';\n// ... other imports\n\nconst app = express();\nconst PORT = process.env.PORT || 3000; // Replit often provides PORT env var\n\n// ... your middleware and route definitions\n\napp.listen(PORT, '0.0.0.0', () => {\n  console.log(`Server running on http://0.0.0.0:${PORT}`);\n  console.log(`Access your Replit app at: ${process.env.REPL_URL || 'Unknown URL'}`); // For debugging Replit URLs\n});\n```",
+            "filesLikelyAffected": [
+              "server/src/index.ts",
+              "server/src/app.ts",
+              "package.json",
+              ".replit",
+              "client/.env",
+              "client/.env.production"
+            ],
+            "estimatedEffort": "easy",
+            "confidence": 0.95,
+            "relatedIssues": [
+              "Backend server not starting",
+              "Incorrect port binding on server",
+              "Replit environment variable misconfiguration",
+              "Server application crash"
+            ]
+          }
+        },
+        {
+          "id": "8199a921f4f6bdd1",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/auth/check",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/auth/check",
+          "timestamp": "2026-01-14T03:00:21.224Z",
+          "crawlerType": "api",
+          "subsystem": "auth",
+          "reproducible": true,
+          "aiAnalysis": {
+            "rootCause": "network_failure detected at https://workspace.DrillConsult360.repl.co/api/auth/check",
+            "fixRecommendation": "Review and fix the underlying issue",
+            "filesLikelyAffected": [
+              "server/routes/",
+              "server/services/"
+            ],
+            "estimatedEffort": "medium",
+            "confidence": 0.5
+          }
+        },
+        {
+          "id": "67a02e718dcc2050",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/mascot/seasonal/state",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/mascot/seasonal/state",
+          "timestamp": "2026-01-14T03:00:21.239Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true,
+          "aiAnalysis": {
+            "rootCause": "The Express.js backend server is likely not running, has crashed, or is not correctly exposed/accessible within the Replit environment. The 'fetch failed' message with a 'Status Code: N/A' indicates that the client's network request could not establish a connection to the server at the specified URL, rather than receiving an error response from a running server.",
+            "fixRecommendation": "**1. Verify Replit Workspace Status:** Navigate to the Replit workspace 'DrillConsult360'. Ensure the workspace is active and running. Replit workspaces often go to sleep when inactive, and may need to be manually woken up or restarted.\n**2. Check Replit Console Logs:** Open the console or logs within your Replit workspace. Look for any errors during the startup of your Express.js backend (e.g., 'port already in use', 'module not found', unhandled exceptions, or 'Application not running' messages). This is the most crucial step to understand why the server might not be operational.\n**3. Ensure Server is Running and Listening:** Confirm that your `server/` application's `npm start` script (or equivalent) is executing successfully and that the Express app is actively listening on a port. Replit typically injects a `PORT` environment variable that your application should use.\n**4. Validate Port Configuration in Backend:** In your Express.js entry file (e.g., `server/index.js` or `server/app.js`), ensure that the server is configured to listen on `process.env.PORT`. If `process.env.PORT` is not set by Replit, provide a sensible fallback port (e.g., 3000).\n**5. Restart Replit Workspace:** If logs appear inconclusive or show transient issues, perform a full restart of the Replit workspace. This can resolve temporary network glitches or hung processes.\n**6. Internal Network Test (Replit Shell):** From the Replit shell, once you believe the server *should* be running, try to `curl` the API endpoint locally to confirm it responds. For example, if your server listens on `process.env.PORT` (let's assume 3000 for local test): `curl http://localhost:3000/api/mascot/seasonal/state`. This helps differentiate between an internal server issue and an issue with Replit's external exposure.",
+            "codeSnippet": "// In your server's main entry file (e.g., server/index.js)\n\nconst express = require('express');\nconst app = express();\n\n// ... other middleware and routes ...\n\n// Use the PORT environment variable provided by Replit\n// Fallback to a common port (e.g., 3000) if not set, though Replit usually provides it.\nconst PORT = process.env.PORT || 3000; \n\napp.listen(PORT, () => {\n  console.log(`CoAIleague Express server listening on port ${PORT}`);\n});\n",
+            "filesLikelyAffected": [
+              "server/index.js",
+              "server/package.json",
+              ".replit"
+            ],
+            "estimatedEffort": "easy",
+            "confidence": 0.95,
+            "relatedIssues": [
+              "server_crash_on_startup",
+              "misconfigured_environment_variables",
+              "replit_workspace_sleep_mode",
+              "frontend_api_base_url_misconfiguration"
+            ]
+          }
+        },
+        {
+          "id": "4da181320da8bd09",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/runtime-flags",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/runtime-flags",
+          "timestamp": "2026-01-14T03:00:21.268Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true,
+          "aiAnalysis": {
+            "rootCause": "The Express.js backend server for DrillConsult360, hosted on Replit at `https://workspace.DrillConsult360.repl.co`, is currently down, unresponsive, or unreachable. The 'API request failed: fetch failed' message with a 'N/A' status code indicates that the client-side `fetch` request could not establish or maintain a network connection to the server, meaning the request never received any meaningful response from the target host. This is a fundamental network connectivity issue, not an application-level error on the server or a client-side logical error.",
+            "fixRecommendation": "1. Verify Server Status on Replit: Log into Replit and navigate to the `workspace.DrillConsult360` project. Check the console and logs for the `server/index.js` application. Ensure the Express.js server is actively running and hasn't crashed or gone dormant. Look for server startup messages (e.g., 'Server listening on port XXXX'). If not running, attempt to manually restart the application within Replit. 2. Test Server Reachability: Directly access the full API endpoint `https://workspace.DrillConsult360.repl.co/api/runtime-flags` or the base URL `https://workspace.DrillConsult360.repl.co` in a web browser. If you receive a 'Site can't be reached' or a similar browser error page, it confirms the server is not accessible from the internet. 3. Review Replit Logs and Resources: Examine Replit's project logs for any critical errors or warnings that occurred during server startup or operation. Ensure the Replit project isn't experiencing resource limits or has been idled/stopped due to inactivity. 4. Frontend API Base URL Check (Secondary): While less likely to be the primary cause given 'fetch failed' with 'N/A', quickly verify the frontend configuration (client/) to ensure the API base URL is correctly set to `https://workspace.DrillConsult360.repl.co`. Incorrect configuration here could lead to requests being sent to the wrong, non-existent, or unresolvable location.",
+            "codeSnippet": null,
+            "filesLikelyAffected": [
+              "server/index.js",
+              "client/.env",
+              "client/vite.config.js",
+              "client/src/api/config.js"
+            ],
+            "estimatedEffort": "easy",
+            "confidence": 0.9,
+            "relatedIssues": [
+              "Server process crashed or stopped unexpectedly",
+              "Replit project dormant or resource limits reached",
+              "DNS resolution issues for repl.co domain",
+              "Network firewall blocking outgoing connections from client"
+            ]
+          }
+        },
+        {
+          "id": "7284f6376ea9bf28",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/workspaces/all",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/workspaces/all",
+          "timestamp": "2026-01-14T03:00:21.298Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true,
+          "aiAnalysis": {
+            "rootCause": "The Express.js backend server, which is responsible for serving the `/api` endpoints, is either not running, has crashed, or is otherwise inaccessible from the frontend application environment. The 'API request failed: fetch failed' message with an 'N/A' status code is a strong indicator of a fundamental network connection failure at a low level, preventing the browser from even establishing a connection to the server or receiving an HTTP response. This most commonly occurs when the target server (expected to be running on the same origin as the frontend in a Replit deployment, i.e., `https://workspace.DrillConsult360.repl.co`) is unavailable, not listening on the expected port, or refusing connections.",
+            "fixRecommendation": "**1. Verify Backend Server Status & Logs (Replit Console):** The first step is to check the Replit workspace console. Look for any errors or messages from the `server/` Express.js application. Ensure the backend process is actively running and hasn't terminated unexpectedly. If the server has crashed or stopped, restart it. Common issues include unhandled exceptions or resource limits being hit.\n**2. Inspect Server Entry Point Configuration (`server/index.js`):** Confirm that your `server/index.js` (or main Express app file) is correctly configured to start the Express application and listen on the appropriate port. For Replit, it's best practice to use `process.env.PORT` to allow Replit to assign a dynamic port. Example: `const PORT = process.env.PORT || 3000; app.listen(PORT, () => console.log(`Server running on port ${PORT}`));`\n**3. Check Database Connectivity (PostgreSQL/Drizzle ORM):** A common cause for a backend server crashing shortly after startup (which could lead to 'fetch failed') is a critical dependency failing, such as the database connection. Verify that your PostgreSQL database is running and accessible, and that your Express server has correct credentials and can establish a connection via Drizzle ORM. Look for database-related errors in the server logs.\n**4. Review Frontend API Base URL (Client-side environment variables):** Although the `Request URL: /api/workspaces/all` is relative (implying same-origin), it's worth checking if the frontend has an explicit `VITE_APP_API_BASE_URL` or similar environment variable defined in `client/.env` files (e.g., `client/.env.production`). Ensure it's correctly set to the Replit deployment URL (e.g., `https://workspace.DrillConsult360.repl.co`) or removed if relative paths are intended for same-origin communication.\n**5. Replit Environment Health Check:** Sometimes, Replit instances can experience temporary issues. If all code and configuration appear correct, try a full Replit restart or re-deploy to refresh the environment.",
+            "codeSnippet": "/* Example of robust server startup in server/index.js to catch common errors */\nconst express = require('express');\nconst app = express();\nconst { db } = require('./db'); // Assuming Drizzle DB connection setup\n\n// ... other middleware and routes ...\n\nconst PORT = process.env.PORT || 3000; // Use Replit's provided PORT or a default\n\nasync function startServer() {\n  try {\n    // Optional: Test DB connection on startup (e.g., ping database)\n    await db.query('SELECT 1'); \n    console.log('✅ Database connected successfully.');\n    \n    app.listen(PORT, () => {\n      console.log(`🚀 CoAIleague Backend Server running on port ${PORT}`);\n      console.log(`🌐 Accessible at: http://localhost:${PORT} (or Replit's public URL)`);\n    });\n  } catch (error) {\n    console.error('❌ Failed to start server or connect to database:', error.message, error.stack);\n    process.exit(1); // Exit if server can't start due to a critical error\n  }\n}\n\nstartServer();\n",
+            "filesLikelyAffected": [
+              "server/index.js",
+              "server/db/index.js",
+              "client/.env",
+              "client/.env.production",
+              "Replit workspace console/logs"
+            ],
+            "estimatedEffort": "easy",
+            "confidence": 0.95,
+            "relatedIssues": [
+              "Backend server crashing on startup due to unhandled exceptions.",
+              "Incorrect port configuration for the Express.js application on Replit.",
+              "PostgreSQL database not running or inaccessible from the backend server.",
+              "Replit environment misconfiguration preventing public exposure of the backend service.",
+              "CORS policy issues (less likely if same-origin request is intended, but possible if a proxy is misconfigured)."
+            ]
+          }
+        },
+        {
+          "id": "beaa7d9ae81fe71a",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/workspaces/current",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/workspaces/current",
+          "timestamp": "2026-01-14T03:00:21.322Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true,
+          "aiAnalysis": {
+            "rootCause": "The `fetch failed` error with an 'N/A' status code on a Replit deployment indicates a fundamental network connection failure. This most commonly occurs when the Express.js backend server is either not running, has crashed, or is not correctly configured to listen on the host (`0.0.0.0`) and port (`process.env.PORT`) that Replit expects to proxy public traffic to. As a result, the frontend application is unable to establish a connection to the API endpoint `https://workspace.DrillConsult360.repl.co/api/workspaces/current`.",
+            "fixRecommendation": "**1. Check Replit Logs for Backend Errors:**\n   - Navigate to the Replit console for the `DrillConsult360` project.\n   - Review the output logs for the Express.js server (typically the main `run` command). Look for any startup errors, unhandled exceptions, or signs that the server is not starting successfully (e.g., 'Port already in use', database connection failures, missing environment variables).\n   - If the server is repeatedly crashing, address the underlying error causing the crash (e.g., database connection string, Drizzle ORM configuration issues, missing `NODE_ENV`).\n**2. Verify Express Server Port and Host Configuration:**\n   - Open your main Express server entry file (e.g., `server/index.js`).\n   - Ensure the server is listening on `process.env.PORT` and binding to `0.0.0.0`. Replit assigns a dynamic `PORT` environment variable that your application must use, and `0.0.0.0` ensures it's accessible from outside the container.\n   - If a fallback port is used (e.g., `3000`), ensure `process.env.PORT` takes precedence.\n**3. Confirm Replit Run Command:**\n   - Examine the `.replit` file in your project root.\n   - Ensure the `run` command (e.g., `node server/index.js` or `npm start` if your `package.json` script starts the server) correctly initiates the Express.js backend. If you have both client and server in the same Repl, ensure the setup correctly launches the backend service.\n**4. Restart the Replit Application:**\n   - After making any configuration or code changes, perform a full restart of your Replit application to ensure all configurations are reloaded and the server attempts to start cleanly.\n**5. Test Connectivity:**\n   - Once the server appears to be running successfully in the Replit console (indicated by its 'listening' message), refresh the frontend application and retry the API call. Also, try accessing the API endpoint directly via your browser (e.g., `https://workspace.DrillConsult360.repl.co/api/workspaces/current`) to see if you get any response (even an error message, which would be an improvement over `fetch failed`).",
+            "codeSnippet": "```javascript\n// server/index.js (or your main Express server entry file)\n\nimport express from 'express';\nimport dotenv from 'dotenv';\nimport cors from 'cors'; // Assuming CORS is needed\n// ... other imports for Drizzle, routes, etc.\n\ndotenv.config(); // Load environment variables\n\nconst app = express();\n\n// Apply middleware\napp.use(express.json());\napp.use(cors()); // Configure CORS as needed for your frontend\n// ... other middleware\n\n// Example route (assuming your API routes are set up elsewhere)\n// app.use('/api', apiRouter);\n\n// Core fix: Ensure server listens on 0.0.0.0 and process.env.PORT\nconst PORT = process.env.PORT || 3000; // Use environment variable, fallback to 3000 for local dev\nconst HOST = '0.0.0.0'; // Essential for Replit accessibility\n\napp.listen(PORT, HOST, () => {\n  console.log(`CoAIleague Backend Server running on http://${HOST}:${PORT}`);\n  console.log(`Access through Replit's public URL: https://workspace.DrillConsult360.repl.co`);\n});\n```",
+            "filesLikelyAffected": [
+              "server/index.js",
+              ".replit",
+              "package.json (for npm start script if used)",
+              "Replit console logs (for diagnosis)"
+            ],
+            "estimatedEffort": "easy",
+            "confidence": 0.95,
+            "relatedIssues": [
+              "Backend server crashing on startup (e.g., due to database connection issues, unhandled exceptions)",
+              "Incorrect `VITE_APP_API_BASE_URL` in client environment, causing frontend to target wrong host (less likely given N/A status and same domain in URL)",
+              "CORS preflight request failure (though 'fetch failed' usually indicates a problem before CORS headers are processed)"
+            ]
+          }
+        },
+        {
+          "id": "8049549ac364380d",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/employees",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/employees",
+          "timestamp": "2026-01-14T03:00:21.350Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true,
+          "aiAnalysis": {
+            "rootCause": "The backend Express.js server hosted on Replit at `https://workspace.DrillConsult360.repl.co` is likely unreachable, not running, or has crashed. The 'fetch failed' message with 'Status Code: N/A' indicates that the frontend was unable to establish a connection to the backend API endpoint, rather than receiving an HTTP response (e.g., 4xx or 5xx error). This points to an infrastructure or deployment issue preventing the server from being accessible.",
+            "fixRecommendation": "[object Object]\n[object Object]\n[object Object]\n[object Object]\n[object Object]",
+            "codeSnippet": "```javascript\n// client/src/utils/apiClient.js (or similar file configuring API requests)\n\n// Ensure this base URL is correctly picked up from your .env file\n// For Replit deployments, it should point to your Replit project's URL.\nconst API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';\n\nexport const fetchEmployees = async () => {\n  try {\n    // The fetch request should use the full absolute URL\n    const response = await fetch(`${API_BASE_URL}/api/employees`);\n    \n    if (!response.ok) {\n      // This block would only be reached if a connection was made but returned an error status\n      const errorData = await response.text();\n      throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorData}`);\n    }\n    \n    const data = await response.json();\n    return data;\n  } catch (error) {\n    // This catch block would handle 'fetch failed' errors (e.g., network issues, server unreachable)\n    console.error('API request to /api/employees failed:', error);\n    throw error; // Re-throw to propagate the error to the UI\n  }\n};\n```\n\n```dotenv\n# client/.env.production (example for a production Replit deployment)\nVITE_API_BASE_URL=https://workspace.DrillConsult360.repl.co\n```",
+            "filesLikelyAffected": [
+              "server/index.js",
+              "client/.env",
+              "client/.env.production",
+              "client/src/main.jsx",
+              "client/src/utils/apiClient.js",
+              "package.json",
+              ".replit"
+            ],
+            "estimatedEffort": "easy",
+            "confidence": 0.9,
+            "relatedIssues": [
+              "Server not starting due to database connection error",
+              "Incorrect environment variable configuration for API base URL",
+              "Replit deployment issues (project not running or going to sleep)",
+              "Backend crash on startup"
+            ]
+          }
+        },
+        {
+          "id": "42cf44fe3907d83c",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/shifts",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/shifts",
+          "timestamp": "2026-01-14T03:00:21.368Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true,
+          "aiAnalysis": {
+            "rootCause": "The React frontend is attempting to make an API request to a relative path (`/api/shifts`) without a properly configured base URL for the backend. In the CoAIleague deployment environment, the frontend and backend are likely served from different origins (e.g., different subdomains or ports on Repl.it). Consequently, the relative request resolves to the frontend's own origin, which does not host the backend API, leading to a network connection failure before an HTTP status could be received.",
+            "fixRecommendation": "**1. Verify Backend Availability:** Before modifying the frontend, ensure the Express.js backend is running and accessible at `https://workspace.DrillConsult360.repl.co`. You can test this by navigating to `https://workspace.DrillConsult360.repl.co/api/shifts` in your browser (if it's a GET endpoint) or using `curl https://workspace.DrillConsult360.repl.co/api/shifts` from a terminal.\n**2. Configure Frontend Environment Variable:** In your React/Vite frontend's `client/` directory, create or update a `.env` file (e.g., `.env.development` or `.env.production`) to define the backend API base URL.\n**3. Update API Calls in Frontend:** Modify all frontend API calls that currently use relative paths (`/api/shifts`) to prepend the configured base URL. This ensures requests are correctly directed to the Express.js backend.",
+            "codeSnippet": "// client/.env (or .env.production, .env.development)\nVITE_API_BASE_URL=https://workspace.DrillConsult360.repl.co\n\n// client/src/api/index.js (or wherever API calls are made)\n\n// Get the base URL from environment variables\nconst API_BASE_URL = import.meta.env.VITE_API_BASE_URL;\n\n// Ensure base URL is available before making requests\nif (!API_BASE_URL) {\n  console.error('VITE_API_BASE_URL is not defined. API requests may fail.');\n  // You might want to throw an error or handle this more gracefully\n}\n\n// Example using fetch:\nexport const fetchShifts = async () => {\n  try {\n    // Original (problematic): fetch('/api/shifts')\n    const response = await fetch(`${API_BASE_URL}/api/shifts`);\n    if (!response.ok) {\n      throw new Error(`HTTP error! status: ${response.status}`);\n    }\n    return await response.json();\n  } catch (error) {\n    console.error('Failed to fetch shifts:', error);\n    throw error;\n  }\n};\n\n// If using Axios:\n// import axios from 'axios';\n// export const apiClient = axios.create({\n//   baseURL: API_BASE_URL,\n//   headers: { 'Content-Type': 'application/json' },\n// });\n//\n// apiClient.get('/api/shifts') // This would now automatically prepend baseURL\n//   .then(response => console.log(response.data))\n//   .catch(error => console.error('Axios request failed:', error));",
+            "filesLikelyAffected": [
+              "client/.env",
+              "client/.env.development",
+              "client/.env.production",
+              "client/src/api/index.js",
+              "client/src/services/shiftService.js",
+              "client/src/components/ShiftManager.jsx"
+            ],
+            "estimatedEffort": "easy",
+            "confidence": 0.95,
+            "relatedIssues": [
+              "frontend_cors_error",
+              "backend_service_unreachable",
+              "incorrect_deployment_configuration"
+            ]
+          }
+        },
+        {
+          "id": "1b330a92d7acce8a",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/notifications",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/notifications",
+          "timestamp": "2026-01-14T03:00:21.397Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "316a417d3ca1df01",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/invoices",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/invoices",
+          "timestamp": "2026-01-14T03:00:21.417Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "33f13a688ec1eed1",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/billing/status",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/billing/status",
+          "timestamp": "2026-01-14T03:00:21.443Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "3657c1db4015eaa0",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/trinity/status",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/trinity/status",
+          "timestamp": "2026-01-14T03:00:21.471Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true
+        },
+        {
+          "id": "b64037e2d619f2ff",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/stripe/config",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/stripe/config",
+          "timestamp": "2026-01-14T03:00:21.499Z",
+          "crawlerType": "api",
+          "subsystem": "integration",
+          "reproducible": true
+        },
+        {
+          "id": "9c73aeba0dfbe65a",
+          "category": "network_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co/api/billing/plans",
+          "message": "API request failed: fetch failed",
+          "details": "fetch failed",
+          "statusCode": 0,
+          "requestUrl": "/api/billing/plans",
+          "timestamp": "2026-01-14T03:00:21.516Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true
+        }
+      ],
+      "authFlowsTestedCount": 2,
+      "averageResponseTime": 27,
+      "slowestEndpoints": []
+    },
+    "integration": {
+      "workflowsTestedCount": 6,
+      "testResults": [
+        {
+          "testCase": {
+            "id": "homepage-to-register",
+            "name": "Homepage to Registration Flow",
+            "description": "User navigates from homepage to registration",
+            "type": "workflow",
+            "critical": true,
+            "steps": [
+              {
+                "action": "ui-action",
+                "target": "/",
+                "description": "Load homepage"
+              },
+              {
+                "action": "wait",
+                "timeout": 2000,
+                "description": "Wait for page load"
+              },
+              {
+                "action": "ui-action",
+                "target": "[data-testid=\"button-get-started\"]",
+                "description": "Click Get Started"
+              },
+              {
+                "action": "assert",
+                "target": "/register",
+                "description": "Should be on register page"
+              }
+            ]
+          },
+          "success": false,
+          "stepsCompleted": 0,
+          "failedStep": "Load homepage",
+          "error": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+          "duration": 453,
+          "timestamp": "2026-01-14T03:00:22.898Z"
+        },
+        {
+          "testCase": {
+            "id": "homepage-to-login",
+            "name": "Homepage to Login Flow",
+            "description": "User navigates from homepage to login",
+            "type": "workflow",
+            "critical": true,
+            "steps": [
+              {
+                "action": "ui-action",
+                "target": "/",
+                "description": "Load homepage"
+              },
+              {
+                "action": "wait",
+                "timeout": 2000,
+                "description": "Wait for page load"
+              },
+              {
+                "action": "ui-action",
+                "target": "[data-testid=\"button-login\"]",
+                "description": "Click Login"
+              },
+              {
+                "action": "assert",
+                "target": "/login",
+                "description": "Should be on login page"
+              }
+            ]
+          },
+          "success": false,
+          "stepsCompleted": 0,
+          "failedStep": "Load homepage",
+          "error": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+          "duration": 277,
+          "timestamp": "2026-01-14T03:00:23.322Z"
+        },
+        {
+          "testCase": {
+            "id": "pricing-page-flow",
+            "name": "Pricing Page CTA Flow",
+            "description": "User views pricing and clicks CTA",
+            "type": "workflow",
+            "critical": true,
+            "steps": [
+              {
+                "action": "ui-action",
+                "target": "/pricing",
+                "description": "Load pricing page"
+              },
+              {
+                "action": "wait",
+                "timeout": 2000,
+                "description": "Wait for page load"
+              },
+              {
+                "action": "assert",
+                "target": "pricing",
+                "description": "Verify pricing content loaded"
+              }
+            ]
+          },
+          "success": false,
+          "stepsCompleted": 0,
+          "failedStep": "Load pricing page",
+          "error": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/pricing\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/pricing\", waiting until \"networkidle\"\u001b[22m\n",
+          "duration": 181,
+          "timestamp": "2026-01-14T03:00:23.534Z"
+        },
+        {
+          "testCase": {
+            "id": "support-page-flow",
+            "name": "Support Page Access",
+            "description": "User can access support/help page",
+            "type": "workflow",
+            "critical": false,
+            "steps": [
+              {
+                "action": "ui-action",
+                "target": "/support",
+                "description": "Load support page"
+              },
+              {
+                "action": "wait",
+                "timeout": 2000,
+                "description": "Wait for page load"
+              },
+              {
+                "action": "assert",
+                "target": "support",
+                "description": "Verify support page loaded"
+              }
+            ]
+          },
+          "success": false,
+          "stepsCompleted": 0,
+          "failedStep": "Load support page",
+          "error": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/support\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/support\", waiting until \"networkidle\"\u001b[22m\n",
+          "duration": 270,
+          "timestamp": "2026-01-14T03:00:23.866Z"
+        },
+        {
+          "testCase": {
+            "id": "trinity-features-flow",
+            "name": "Trinity Features Page",
+            "description": "User views Trinity AI features page",
+            "type": "workflow",
+            "critical": false,
+            "steps": [
+              {
+                "action": "ui-action",
+                "target": "/trinity-features",
+                "description": "Load Trinity features"
+              },
+              {
+                "action": "wait",
+                "timeout": 2000,
+                "description": "Wait for page load"
+              },
+              {
+                "action": "assert",
+                "target": "trinity",
+                "description": "Verify Trinity features loaded"
+              }
+            ]
+          },
+          "success": false,
+          "stepsCompleted": 0,
+          "failedStep": "Load Trinity features",
+          "error": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/trinity-features\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/trinity-features\", waiting until \"networkidle\"\u001b[22m\n",
+          "duration": 269,
+          "timestamp": "2026-01-14T03:00:24.163Z"
+        },
+        {
+          "testCase": {
+            "id": "api-health-check",
+            "name": "API Health Integration",
+            "description": "Frontend correctly fetches API health status",
+            "type": "data-flow",
+            "critical": true,
+            "steps": [
+              {
+                "action": "api-call",
+                "target": "/api/health",
+                "description": "Call health endpoint"
+              },
+              {
+                "action": "assert",
+                "expectedResult": {
+                  "status": 200
+                },
+                "description": "Health should return 200"
+              }
+            ]
+          },
+          "success": false,
+          "stepsCompleted": 0,
+          "failedStep": "Call health endpoint",
+          "error": "fetch failed",
+          "duration": 233,
+          "timestamp": "2026-01-14T03:00:24.454Z"
+        },
+        {
+          "testCase": {
+            "id": "websocket-main",
+            "name": "Main WebSocket Connection",
+            "description": "WebSocket server accepts connections",
+            "type": "websocket",
+            "critical": true,
+            "steps": [
+              {
+                "action": "websocket-connect",
+                "target": "/ws",
+                "description": "Connect to main WebSocket"
+              },
+              {
+                "action": "wait",
+                "timeout": 3000,
+                "description": "Wait for connection"
+              },
+              {
+                "action": "assert",
+                "description": "Connection should be established"
+              }
+            ]
+          },
+          "success": true,
+          "stepsCompleted": 3,
+          "duration": 3182,
+          "timestamp": "2026-01-14T03:00:27.655Z"
+        },
+        {
+          "testCase": {
+            "id": "mobile-menu-navigation",
+            "name": "Mobile Menu Navigation",
+            "description": "Mobile hamburger menu works correctly",
+            "type": "workflow",
+            "critical": false,
+            "steps": [
+              {
+                "action": "ui-action",
+                "target": "/",
+                "data": {
+                  "viewport": {
+                    "width": 375,
+                    "height": 667
+                  }
+                },
+                "description": "Load homepage on mobile"
+              },
+              {
+                "action": "ui-action",
+                "target": "[data-testid=\"button-mobile-menu\"]",
+                "description": "Click mobile menu"
+              },
+              {
+                "action": "wait",
+                "timeout": 1000,
+                "description": "Wait for menu animation"
+              },
+              {
+                "action": "assert",
+                "description": "Menu should be visible"
+              }
+            ]
+          },
+          "success": false,
+          "stepsCompleted": 0,
+          "failedStep": "Load homepage on mobile",
+          "error": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+          "duration": 234,
+          "timestamp": "2026-01-14T03:00:27.918Z"
+        }
+      ],
+      "issues": [
+        {
+          "id": "3150efd4773de089",
+          "category": "workflow_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co",
+          "message": "Homepage to Registration Flow failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+          "details": "Failed at step: Load homepage. Completed 0/4 steps.",
+          "timestamp": "2026-01-14T03:00:22.898Z",
+          "crawlerType": "integration",
+          "subsystem": "workflow",
+          "reproducible": true
+        },
+        {
+          "id": "308a7d72ab0710ca",
+          "category": "workflow_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co",
+          "message": "Homepage to Login Flow failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+          "details": "Failed at step: Load homepage. Completed 0/4 steps.",
+          "timestamp": "2026-01-14T03:00:23.322Z",
+          "crawlerType": "integration",
+          "subsystem": "workflow",
+          "reproducible": true
+        },
+        {
+          "id": "17366181fbf025d9",
+          "category": "workflow_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co",
+          "message": "Pricing Page CTA Flow failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/pricing\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/pricing\", waiting until \"networkidle\"\u001b[22m\n",
+          "details": "Failed at step: Load pricing page. Completed 0/3 steps.",
+          "timestamp": "2026-01-14T03:00:23.534Z",
+          "crawlerType": "integration",
+          "subsystem": "workflow",
+          "reproducible": true
+        },
+        {
+          "id": "5f3faa2be363ac4b",
+          "category": "workflow_failure",
+          "severity": "high",
+          "url": "https://workspace.DrillConsult360.repl.co",
+          "message": "Support Page Access failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/support\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/support\", waiting until \"networkidle\"\u001b[22m\n",
+          "details": "Failed at step: Load support page. Completed 0/3 steps.",
+          "timestamp": "2026-01-14T03:00:23.866Z",
+          "crawlerType": "integration",
+          "subsystem": "workflow",
+          "reproducible": true
+        },
+        {
+          "id": "d730eaf50c8348fd",
+          "category": "workflow_failure",
+          "severity": "high",
+          "url": "https://workspace.DrillConsult360.repl.co",
+          "message": "Trinity Features Page failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/trinity-features\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/trinity-features\", waiting until \"networkidle\"\u001b[22m\n",
+          "details": "Failed at step: Load Trinity features. Completed 0/3 steps.",
+          "timestamp": "2026-01-14T03:00:24.163Z",
+          "crawlerType": "integration",
+          "subsystem": "workflow",
+          "reproducible": true
+        },
+        {
+          "id": "8d86a942c49df652",
+          "category": "workflow_failure",
+          "severity": "critical",
+          "url": "https://workspace.DrillConsult360.repl.co",
+          "message": "API Health Integration failed: fetch failed",
+          "details": "Failed at step: Call health endpoint. Completed 0/2 steps.",
+          "timestamp": "2026-01-14T03:00:24.454Z",
+          "crawlerType": "integration",
+          "subsystem": "integration",
+          "reproducible": true
+        },
+        {
+          "id": "213ba0785df6a879",
+          "category": "workflow_failure",
+          "severity": "high",
+          "url": "https://workspace.DrillConsult360.repl.co",
+          "message": "Mobile Menu Navigation failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+          "details": "Failed at step: Load homepage on mobile. Completed 0/4 steps.",
+          "timestamp": "2026-01-14T03:00:27.918Z",
+          "crawlerType": "integration",
+          "subsystem": "workflow",
+          "reproducible": true
+        },
+        {
+          "id": "08247d76bedab24e",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "wss://workspace.DrillConsult360.repl.co/ws",
+          "message": "WebSocket Main WebSocket failed to connect",
+          "timestamp": "2026-01-14T03:00:27.953Z",
+          "crawlerType": "integration",
+          "subsystem": "websocket",
+          "reproducible": true
+        },
+        {
+          "id": "608c5b6ab061cac9",
+          "category": "network_failure",
+          "severity": "high",
+          "url": "wss://workspace.DrillConsult360.repl.co/ws/chat",
+          "message": "WebSocket Chat WebSocket failed to connect",
+          "timestamp": "2026-01-14T03:00:27.953Z",
+          "crawlerType": "integration",
+          "subsystem": "websocket",
+          "reproducible": true
+        }
+      ],
+      "websocketConnectionsTested": 3,
+      "pipelinesTestedCount": 0,
+      "crossSurfaceFlowsTested": 1
+    }
+  },
+  "allIssues": [
+    {
+      "id": "b587fd6b132a5442",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/auth/login",
+      "message": "Authentication request failed: fetch failed",
+      "timestamp": "2026-01-14T03:00:21.094Z",
+      "crawlerType": "api",
+      "subsystem": "auth",
+      "reproducible": true,
+      "aiAnalysis": {
+        "rootCause": "The Express.js backend server is likely not running, has crashed, or is not properly exposed/accessible within the Replit environment at the specified URL (https://workspace.DrillConsult360.repl.co). The 'fetch failed' message indicates that the client application could not establish a connection to the server at all, rather than receiving an HTTP response with an error status.",
+        "fixRecommendation": "**1. Verify Backend Server Status on Replit:** Go to the Replit workspace for 'DrillConsult360'. Check the console output for the backend (usually the 'Run' tab or the specific backend service tab if separate) to see if the Express.js server process is active, has started successfully, or if there are any errors during startup (e.g., port conflicts, missing dependencies, syntax errors).\n**2. Restart Backend Server:** If the server appears to have crashed or is not running, initiate a manual restart of the backend service within Replit. This often resolves transient issues.\n**3. Check Server Port Configuration (`server/index.js`):** Ensure the Express.js application is configured to listen on the correct port. Replit typically assigns a port dynamically, often available via `process.env.PORT`. The `server/index.js` (or similar entry file for the backend) should listen on this variable. If it's hardcoded, it might conflict with Replit's environment.\n**4. Review Replit's `.replit` and `package.json` Start Scripts:**\n   - **`.replit` file:** Ensure the `run` command in your `.replit` file correctly executes your backend's start script (e.g., `node server/index.js` or `npm start`).\n   - **`package.json`:** Verify the `start` script in `server/package.json` (or the root `package.json` if monolithic) correctly launches the Express server.\n**5. Confirm Client API Base URL Configuration (`client/.env` or `client/vite.config.js`):** The React frontend needs to know where to send API requests. Ensure that the `VITE_API_URL` (or similar environment variable) used by the client is correctly set to `https://workspace.DrillConsult360.repl.co` and not a `localhost` address, especially when deployed or running within Replit's hosted environment. Make sure this variable is accessible during the client's build process.\n**6. Replit Environment Specifics:** Sometimes Replit itself can have temporary network glitches. If all configurations seem correct, try 'Forking' the repl or creating a new one to see if the issue persists, which might indicate a deeper Replit platform issue.\n**7. Basic Network Check (within Replit):** If you have shell access in Replit, try `curl https://workspace.DrillConsult360.repl.co/api/auth/login` from the shell itself to see if the network path is blocked internally.",
+        "codeSnippet": "```javascript\n// server/index.js (or similar main server file)\n\n// ... other imports and middleware\n\nconst PORT = process.env.PORT || 3000; // Use process.env.PORT for Replit compatibility\n\napp.listen(PORT, () => {\n  console.log(`CoAIleague Backend running on port ${PORT}`);\n  console.log(`Access at http://localhost:${PORT} or via Replit URL`);\n});\n\n// ... other routes and error handling\n\n// client/.env (example)\n// VITE_API_URL=https://workspace.DrillConsult360.repl.co\n```",
+        "filesLikelyAffected": [
+          "server/index.js",
+          "server/package.json",
+          "client/.env",
+          "client/vite.config.js",
+          ".replit"
+        ],
+        "estimatedEffort": "easy",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "server_startup_failure",
+          "environment_variable_misconfiguration",
+          "cors_policy_violation"
+        ]
+      }
+    },
+    {
+      "id": "7b72620b719f87af",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/health",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/health",
+      "timestamp": "2026-01-14T03:00:21.201Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true,
+      "aiAnalysis": {
+        "rootCause": "The Express.js backend server, deployed on Replit at `https://workspace.DrillConsult360.repl.co`, is currently unreachable or not running correctly. The 'fetch failed' message with an N/A status code indicates a network-level failure to establish a connection to the server, rather than an HTTP error response from the server itself. This prevents the frontend from accessing critical API endpoints like `/api/health`.",
+        "fixRecommendation": "**1. Verify Backend Server Status on Replit:**\n   - Navigate to the `workspace.DrillConsult360` project in Replit.\n   - Check the console and logs for the `server/` process. Ensure the Express.js application is actively running and has not crashed. Look for messages indicating successful server startup (e.g., 'CoAIleague Backend Server running on port X').\n   - If the server is stopped or has crashed, attempt to restart the Replit project or the `server/` process explicitly.\n**2. Confirm Server Port Configuration:**\n   - Inspect the main Express.js entry file (e.g., `server/index.js` or `server/src/app.js`). Ensure the server is configured to listen on `process.env.PORT` which Replit typically provides, or a default like `3000` if `PORT` is not set.\n   - Example: `app.listen(process.env.PORT || 3000, () => { console.log('Server running...'); });`\n**3. Examine Backend Startup Logs for Errors:**\n   - Even if the server appears 'running' in Replit, carefully review the logs for any errors that might prevent it from fully initializing or becoming accessible (e.g., database connection failures using Drizzle ORM, module loading errors, or misconfigurations that cause the Express app to exit prematurely).\n**4. Verify Frontend API Base URL Configuration:**\n   - In the `client/` directory, locate where the API base URL is configured (e.g., in `client/src/config.js`, `client/src/utils/api.js`, or via Vite environment variables like `VITE_APP_API_URL` in `.env` or `.env.production`).\n   - Ensure the API base URL is correctly set to `https://workspace.DrillConsult360.repl.co` for the deployed environment. A common mistake is using `localhost` in a deployed environment.\n**5. Perform Basic Connectivity Test:**\n   - From your local terminal or a separate Replit shell, try to `curl` the problematic endpoint: `curl https://workspace.DrillConsult360.repl.co/api/health`.\n   - A successful response (e.g., `{\"status\":\"ok\"}` or similar) would indicate the server is now accessible. If `curl` also fails or hangs, it strongly confirms the server unreachability persists and further investigation into the Replit environment itself or deeper server issues is needed.",
+        "codeSnippet": "// Example of server listening setup in server/index.js\nconst express = require('express');\nconst app = express();\n\n// ... other middleware, routes, Drizzle ORM setup\n\nconst PORT = process.env.PORT || 3000;\napp.listen(PORT, () => {\n  console.log(`CoAIleague Backend Server running on port ${PORT}`);\n});\n\n// Example of frontend API base URL setup in client/.env\n// VITE_APP_API_URL=https://workspace.DrillConsult360.repl.co\n\n// Example of frontend API usage (e.g., in client/src/utils/api.js)\n// const API_BASE_URL = import.meta.env.VITE_APP_API_URL || 'http://localhost:3000';\n// export const fetchHealthStatus = async () => {\n//   const response = await fetch(`${API_BASE_URL}/api/health`);\n//   if (!response.ok) {\n//     throw new Error('Network response was not ok');\n//   }\n//   return response.json();\n// };",
+        "filesLikelyAffected": [
+          "server/index.js",
+          "server/src/app.js",
+          "client/.env",
+          "client/.env.production",
+          "client/src/config.js",
+          "client/src/utils/api.js",
+          ".replit"
+        ],
+        "estimatedEffort": "easy",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "Backend server failed to start due to configuration errors",
+          "Incorrect environment variable configuration for API URL in frontend",
+          "Replit deployment misconfiguration or transient issues",
+          "Database connection error preventing server startup",
+          "Firewall or network restrictions blocking outbound requests (less common for Replit-hosted services)"
+        ]
+      }
+    },
+    {
+      "id": "f1ca227b07aca815",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/health/summary",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/health/summary",
+      "timestamp": "2026-01-14T03:00:21.213Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true,
+      "aiAnalysis": {
+        "rootCause": "The Express.js backend server is either not running, has crashed, or is not correctly exposed/listening at the specified 'repl.co' URL. The 'fetch failed' error with a 'N/A' status code indicates a fundamental inability for the client to establish a network connection to the server, rather than an application-level error.",
+        "fixRecommendation": "1. **Verify Backend Server Status:** Log into your Replit workspace for `DrillConsult360`. Check the console/shell to ensure the Express.js backend process (usually `npm start` or a direct node command) is actively running and has not crashed or stopped. \n2. **Review Backend Logs:** Examine the server's output for any error messages during startup or runtime that might indicate a crash, port binding failure, or other critical issues. \n3. **Validate Server Port and Host Configuration:** Ensure your Express.js application is configured to listen on `0.0.0.0` and the port specified by `process.env.PORT`. Replit often sets this environment variable. If it's listening on `localhost` or a hardcoded port that isn't `process.env.PORT`, it might not be reachable. \n4. **Check Replit's `.replit` Configuration:** Verify the `run` command in your `.replit` file correctly starts your backend application. \n5. **Confirm Frontend API URL:** While less likely to cause a 'fetch failed' (it would typically try and connect to the wrong place), double-check that the `VITE_APP_API_URL` or equivalent environment variable in your React frontend is pointing to the correct base URL of your Replit deployment (`https://workspace.DrillConsult360.repl.co`). \n6. **Restart Application:** If the server appears to be running but is unresponsive, try restarting the entire Replit workspace or just the backend process.",
+        "codeSnippet": "```javascript\n// In your main Express.js entry file (e.g., server/src/index.ts or server/src/app.ts)\n\nimport express from 'express';\n// ... other imports\n\nconst app = express();\nconst PORT = process.env.PORT || 3000; // Replit often provides PORT env var\n\n// ... your middleware and route definitions\n\napp.listen(PORT, '0.0.0.0', () => {\n  console.log(`Server running on http://0.0.0.0:${PORT}`);\n  console.log(`Access your Replit app at: ${process.env.REPL_URL || 'Unknown URL'}`); // For debugging Replit URLs\n});\n```",
+        "filesLikelyAffected": [
+          "server/src/index.ts",
+          "server/src/app.ts",
+          "package.json",
+          ".replit",
+          "client/.env",
+          "client/.env.production"
+        ],
+        "estimatedEffort": "easy",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "Backend server not starting",
+          "Incorrect port binding on server",
+          "Replit environment variable misconfiguration",
+          "Server application crash"
+        ]
+      }
+    },
+    {
+      "id": "8199a921f4f6bdd1",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/auth/check",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/auth/check",
+      "timestamp": "2026-01-14T03:00:21.224Z",
+      "crawlerType": "api",
+      "subsystem": "auth",
+      "reproducible": true,
+      "aiAnalysis": {
+        "rootCause": "network_failure detected at https://workspace.DrillConsult360.repl.co/api/auth/check",
+        "fixRecommendation": "Review and fix the underlying issue",
+        "filesLikelyAffected": [
+          "server/routes/",
+          "server/services/"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.5
+      }
+    },
+    {
+      "id": "67a02e718dcc2050",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/mascot/seasonal/state",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/mascot/seasonal/state",
+      "timestamp": "2026-01-14T03:00:21.239Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true,
+      "aiAnalysis": {
+        "rootCause": "The Express.js backend server is likely not running, has crashed, or is not correctly exposed/accessible within the Replit environment. The 'fetch failed' message with a 'Status Code: N/A' indicates that the client's network request could not establish a connection to the server at the specified URL, rather than receiving an error response from a running server.",
+        "fixRecommendation": "**1. Verify Replit Workspace Status:** Navigate to the Replit workspace 'DrillConsult360'. Ensure the workspace is active and running. Replit workspaces often go to sleep when inactive, and may need to be manually woken up or restarted.\n**2. Check Replit Console Logs:** Open the console or logs within your Replit workspace. Look for any errors during the startup of your Express.js backend (e.g., 'port already in use', 'module not found', unhandled exceptions, or 'Application not running' messages). This is the most crucial step to understand why the server might not be operational.\n**3. Ensure Server is Running and Listening:** Confirm that your `server/` application's `npm start` script (or equivalent) is executing successfully and that the Express app is actively listening on a port. Replit typically injects a `PORT` environment variable that your application should use.\n**4. Validate Port Configuration in Backend:** In your Express.js entry file (e.g., `server/index.js` or `server/app.js`), ensure that the server is configured to listen on `process.env.PORT`. If `process.env.PORT` is not set by Replit, provide a sensible fallback port (e.g., 3000).\n**5. Restart Replit Workspace:** If logs appear inconclusive or show transient issues, perform a full restart of the Replit workspace. This can resolve temporary network glitches or hung processes.\n**6. Internal Network Test (Replit Shell):** From the Replit shell, once you believe the server *should* be running, try to `curl` the API endpoint locally to confirm it responds. For example, if your server listens on `process.env.PORT` (let's assume 3000 for local test): `curl http://localhost:3000/api/mascot/seasonal/state`. This helps differentiate between an internal server issue and an issue with Replit's external exposure.",
+        "codeSnippet": "// In your server's main entry file (e.g., server/index.js)\n\nconst express = require('express');\nconst app = express();\n\n// ... other middleware and routes ...\n\n// Use the PORT environment variable provided by Replit\n// Fallback to a common port (e.g., 3000) if not set, though Replit usually provides it.\nconst PORT = process.env.PORT || 3000; \n\napp.listen(PORT, () => {\n  console.log(`CoAIleague Express server listening on port ${PORT}`);\n});\n",
+        "filesLikelyAffected": [
+          "server/index.js",
+          "server/package.json",
+          ".replit"
+        ],
+        "estimatedEffort": "easy",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "server_crash_on_startup",
+          "misconfigured_environment_variables",
+          "replit_workspace_sleep_mode",
+          "frontend_api_base_url_misconfiguration"
+        ]
+      }
+    },
+    {
+      "id": "4da181320da8bd09",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/runtime-flags",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/runtime-flags",
+      "timestamp": "2026-01-14T03:00:21.268Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true,
+      "aiAnalysis": {
+        "rootCause": "The Express.js backend server for DrillConsult360, hosted on Replit at `https://workspace.DrillConsult360.repl.co`, is currently down, unresponsive, or unreachable. The 'API request failed: fetch failed' message with a 'N/A' status code indicates that the client-side `fetch` request could not establish or maintain a network connection to the server, meaning the request never received any meaningful response from the target host. This is a fundamental network connectivity issue, not an application-level error on the server or a client-side logical error.",
+        "fixRecommendation": "1. Verify Server Status on Replit: Log into Replit and navigate to the `workspace.DrillConsult360` project. Check the console and logs for the `server/index.js` application. Ensure the Express.js server is actively running and hasn't crashed or gone dormant. Look for server startup messages (e.g., 'Server listening on port XXXX'). If not running, attempt to manually restart the application within Replit. 2. Test Server Reachability: Directly access the full API endpoint `https://workspace.DrillConsult360.repl.co/api/runtime-flags` or the base URL `https://workspace.DrillConsult360.repl.co` in a web browser. If you receive a 'Site can't be reached' or a similar browser error page, it confirms the server is not accessible from the internet. 3. Review Replit Logs and Resources: Examine Replit's project logs for any critical errors or warnings that occurred during server startup or operation. Ensure the Replit project isn't experiencing resource limits or has been idled/stopped due to inactivity. 4. Frontend API Base URL Check (Secondary): While less likely to be the primary cause given 'fetch failed' with 'N/A', quickly verify the frontend configuration (client/) to ensure the API base URL is correctly set to `https://workspace.DrillConsult360.repl.co`. Incorrect configuration here could lead to requests being sent to the wrong, non-existent, or unresolvable location.",
+        "codeSnippet": null,
+        "filesLikelyAffected": [
+          "server/index.js",
+          "client/.env",
+          "client/vite.config.js",
+          "client/src/api/config.js"
+        ],
+        "estimatedEffort": "easy",
+        "confidence": 0.9,
+        "relatedIssues": [
+          "Server process crashed or stopped unexpectedly",
+          "Replit project dormant or resource limits reached",
+          "DNS resolution issues for repl.co domain",
+          "Network firewall blocking outgoing connections from client"
+        ]
+      }
+    },
+    {
+      "id": "7284f6376ea9bf28",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/workspaces/all",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/workspaces/all",
+      "timestamp": "2026-01-14T03:00:21.298Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true,
+      "aiAnalysis": {
+        "rootCause": "The Express.js backend server, which is responsible for serving the `/api` endpoints, is either not running, has crashed, or is otherwise inaccessible from the frontend application environment. The 'API request failed: fetch failed' message with an 'N/A' status code is a strong indicator of a fundamental network connection failure at a low level, preventing the browser from even establishing a connection to the server or receiving an HTTP response. This most commonly occurs when the target server (expected to be running on the same origin as the frontend in a Replit deployment, i.e., `https://workspace.DrillConsult360.repl.co`) is unavailable, not listening on the expected port, or refusing connections.",
+        "fixRecommendation": "**1. Verify Backend Server Status & Logs (Replit Console):** The first step is to check the Replit workspace console. Look for any errors or messages from the `server/` Express.js application. Ensure the backend process is actively running and hasn't terminated unexpectedly. If the server has crashed or stopped, restart it. Common issues include unhandled exceptions or resource limits being hit.\n**2. Inspect Server Entry Point Configuration (`server/index.js`):** Confirm that your `server/index.js` (or main Express app file) is correctly configured to start the Express application and listen on the appropriate port. For Replit, it's best practice to use `process.env.PORT` to allow Replit to assign a dynamic port. Example: `const PORT = process.env.PORT || 3000; app.listen(PORT, () => console.log(`Server running on port ${PORT}`));`\n**3. Check Database Connectivity (PostgreSQL/Drizzle ORM):** A common cause for a backend server crashing shortly after startup (which could lead to 'fetch failed') is a critical dependency failing, such as the database connection. Verify that your PostgreSQL database is running and accessible, and that your Express server has correct credentials and can establish a connection via Drizzle ORM. Look for database-related errors in the server logs.\n**4. Review Frontend API Base URL (Client-side environment variables):** Although the `Request URL: /api/workspaces/all` is relative (implying same-origin), it's worth checking if the frontend has an explicit `VITE_APP_API_BASE_URL` or similar environment variable defined in `client/.env` files (e.g., `client/.env.production`). Ensure it's correctly set to the Replit deployment URL (e.g., `https://workspace.DrillConsult360.repl.co`) or removed if relative paths are intended for same-origin communication.\n**5. Replit Environment Health Check:** Sometimes, Replit instances can experience temporary issues. If all code and configuration appear correct, try a full Replit restart or re-deploy to refresh the environment.",
+        "codeSnippet": "/* Example of robust server startup in server/index.js to catch common errors */\nconst express = require('express');\nconst app = express();\nconst { db } = require('./db'); // Assuming Drizzle DB connection setup\n\n// ... other middleware and routes ...\n\nconst PORT = process.env.PORT || 3000; // Use Replit's provided PORT or a default\n\nasync function startServer() {\n  try {\n    // Optional: Test DB connection on startup (e.g., ping database)\n    await db.query('SELECT 1'); \n    console.log('✅ Database connected successfully.');\n    \n    app.listen(PORT, () => {\n      console.log(`🚀 CoAIleague Backend Server running on port ${PORT}`);\n      console.log(`🌐 Accessible at: http://localhost:${PORT} (or Replit's public URL)`);\n    });\n  } catch (error) {\n    console.error('❌ Failed to start server or connect to database:', error.message, error.stack);\n    process.exit(1); // Exit if server can't start due to a critical error\n  }\n}\n\nstartServer();\n",
+        "filesLikelyAffected": [
+          "server/index.js",
+          "server/db/index.js",
+          "client/.env",
+          "client/.env.production",
+          "Replit workspace console/logs"
+        ],
+        "estimatedEffort": "easy",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "Backend server crashing on startup due to unhandled exceptions.",
+          "Incorrect port configuration for the Express.js application on Replit.",
+          "PostgreSQL database not running or inaccessible from the backend server.",
+          "Replit environment misconfiguration preventing public exposure of the backend service.",
+          "CORS policy issues (less likely if same-origin request is intended, but possible if a proxy is misconfigured)."
+        ]
+      }
+    },
+    {
+      "id": "beaa7d9ae81fe71a",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/workspaces/current",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/workspaces/current",
+      "timestamp": "2026-01-14T03:00:21.322Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true,
+      "aiAnalysis": {
+        "rootCause": "The `fetch failed` error with an 'N/A' status code on a Replit deployment indicates a fundamental network connection failure. This most commonly occurs when the Express.js backend server is either not running, has crashed, or is not correctly configured to listen on the host (`0.0.0.0`) and port (`process.env.PORT`) that Replit expects to proxy public traffic to. As a result, the frontend application is unable to establish a connection to the API endpoint `https://workspace.DrillConsult360.repl.co/api/workspaces/current`.",
+        "fixRecommendation": "**1. Check Replit Logs for Backend Errors:**\n   - Navigate to the Replit console for the `DrillConsult360` project.\n   - Review the output logs for the Express.js server (typically the main `run` command). Look for any startup errors, unhandled exceptions, or signs that the server is not starting successfully (e.g., 'Port already in use', database connection failures, missing environment variables).\n   - If the server is repeatedly crashing, address the underlying error causing the crash (e.g., database connection string, Drizzle ORM configuration issues, missing `NODE_ENV`).\n**2. Verify Express Server Port and Host Configuration:**\n   - Open your main Express server entry file (e.g., `server/index.js`).\n   - Ensure the server is listening on `process.env.PORT` and binding to `0.0.0.0`. Replit assigns a dynamic `PORT` environment variable that your application must use, and `0.0.0.0` ensures it's accessible from outside the container.\n   - If a fallback port is used (e.g., `3000`), ensure `process.env.PORT` takes precedence.\n**3. Confirm Replit Run Command:**\n   - Examine the `.replit` file in your project root.\n   - Ensure the `run` command (e.g., `node server/index.js` or `npm start` if your `package.json` script starts the server) correctly initiates the Express.js backend. If you have both client and server in the same Repl, ensure the setup correctly launches the backend service.\n**4. Restart the Replit Application:**\n   - After making any configuration or code changes, perform a full restart of your Replit application to ensure all configurations are reloaded and the server attempts to start cleanly.\n**5. Test Connectivity:**\n   - Once the server appears to be running successfully in the Replit console (indicated by its 'listening' message), refresh the frontend application and retry the API call. Also, try accessing the API endpoint directly via your browser (e.g., `https://workspace.DrillConsult360.repl.co/api/workspaces/current`) to see if you get any response (even an error message, which would be an improvement over `fetch failed`).",
+        "codeSnippet": "```javascript\n// server/index.js (or your main Express server entry file)\n\nimport express from 'express';\nimport dotenv from 'dotenv';\nimport cors from 'cors'; // Assuming CORS is needed\n// ... other imports for Drizzle, routes, etc.\n\ndotenv.config(); // Load environment variables\n\nconst app = express();\n\n// Apply middleware\napp.use(express.json());\napp.use(cors()); // Configure CORS as needed for your frontend\n// ... other middleware\n\n// Example route (assuming your API routes are set up elsewhere)\n// app.use('/api', apiRouter);\n\n// Core fix: Ensure server listens on 0.0.0.0 and process.env.PORT\nconst PORT = process.env.PORT || 3000; // Use environment variable, fallback to 3000 for local dev\nconst HOST = '0.0.0.0'; // Essential for Replit accessibility\n\napp.listen(PORT, HOST, () => {\n  console.log(`CoAIleague Backend Server running on http://${HOST}:${PORT}`);\n  console.log(`Access through Replit's public URL: https://workspace.DrillConsult360.repl.co`);\n});\n```",
+        "filesLikelyAffected": [
+          "server/index.js",
+          ".replit",
+          "package.json (for npm start script if used)",
+          "Replit console logs (for diagnosis)"
+        ],
+        "estimatedEffort": "easy",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "Backend server crashing on startup (e.g., due to database connection issues, unhandled exceptions)",
+          "Incorrect `VITE_APP_API_BASE_URL` in client environment, causing frontend to target wrong host (less likely given N/A status and same domain in URL)",
+          "CORS preflight request failure (though 'fetch failed' usually indicates a problem before CORS headers are processed)"
+        ]
+      }
+    },
+    {
+      "id": "8049549ac364380d",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/employees",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/employees",
+      "timestamp": "2026-01-14T03:00:21.350Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true,
+      "aiAnalysis": {
+        "rootCause": "The backend Express.js server hosted on Replit at `https://workspace.DrillConsult360.repl.co` is likely unreachable, not running, or has crashed. The 'fetch failed' message with 'Status Code: N/A' indicates that the frontend was unable to establish a connection to the backend API endpoint, rather than receiving an HTTP response (e.g., 4xx or 5xx error). This points to an infrastructure or deployment issue preventing the server from being accessible.",
+        "fixRecommendation": "[object Object]\n[object Object]\n[object Object]\n[object Object]\n[object Object]",
+        "codeSnippet": "```javascript\n// client/src/utils/apiClient.js (or similar file configuring API requests)\n\n// Ensure this base URL is correctly picked up from your .env file\n// For Replit deployments, it should point to your Replit project's URL.\nconst API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';\n\nexport const fetchEmployees = async () => {\n  try {\n    // The fetch request should use the full absolute URL\n    const response = await fetch(`${API_BASE_URL}/api/employees`);\n    \n    if (!response.ok) {\n      // This block would only be reached if a connection was made but returned an error status\n      const errorData = await response.text();\n      throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorData}`);\n    }\n    \n    const data = await response.json();\n    return data;\n  } catch (error) {\n    // This catch block would handle 'fetch failed' errors (e.g., network issues, server unreachable)\n    console.error('API request to /api/employees failed:', error);\n    throw error; // Re-throw to propagate the error to the UI\n  }\n};\n```\n\n```dotenv\n# client/.env.production (example for a production Replit deployment)\nVITE_API_BASE_URL=https://workspace.DrillConsult360.repl.co\n```",
+        "filesLikelyAffected": [
+          "server/index.js",
+          "client/.env",
+          "client/.env.production",
+          "client/src/main.jsx",
+          "client/src/utils/apiClient.js",
+          "package.json",
+          ".replit"
+        ],
+        "estimatedEffort": "easy",
+        "confidence": 0.9,
+        "relatedIssues": [
+          "Server not starting due to database connection error",
+          "Incorrect environment variable configuration for API base URL",
+          "Replit deployment issues (project not running or going to sleep)",
+          "Backend crash on startup"
+        ]
+      }
+    },
+    {
+      "id": "42cf44fe3907d83c",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/shifts",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/shifts",
+      "timestamp": "2026-01-14T03:00:21.368Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true,
+      "aiAnalysis": {
+        "rootCause": "The React frontend is attempting to make an API request to a relative path (`/api/shifts`) without a properly configured base URL for the backend. In the CoAIleague deployment environment, the frontend and backend are likely served from different origins (e.g., different subdomains or ports on Repl.it). Consequently, the relative request resolves to the frontend's own origin, which does not host the backend API, leading to a network connection failure before an HTTP status could be received.",
+        "fixRecommendation": "**1. Verify Backend Availability:** Before modifying the frontend, ensure the Express.js backend is running and accessible at `https://workspace.DrillConsult360.repl.co`. You can test this by navigating to `https://workspace.DrillConsult360.repl.co/api/shifts` in your browser (if it's a GET endpoint) or using `curl https://workspace.DrillConsult360.repl.co/api/shifts` from a terminal.\n**2. Configure Frontend Environment Variable:** In your React/Vite frontend's `client/` directory, create or update a `.env` file (e.g., `.env.development` or `.env.production`) to define the backend API base URL.\n**3. Update API Calls in Frontend:** Modify all frontend API calls that currently use relative paths (`/api/shifts`) to prepend the configured base URL. This ensures requests are correctly directed to the Express.js backend.",
+        "codeSnippet": "// client/.env (or .env.production, .env.development)\nVITE_API_BASE_URL=https://workspace.DrillConsult360.repl.co\n\n// client/src/api/index.js (or wherever API calls are made)\n\n// Get the base URL from environment variables\nconst API_BASE_URL = import.meta.env.VITE_API_BASE_URL;\n\n// Ensure base URL is available before making requests\nif (!API_BASE_URL) {\n  console.error('VITE_API_BASE_URL is not defined. API requests may fail.');\n  // You might want to throw an error or handle this more gracefully\n}\n\n// Example using fetch:\nexport const fetchShifts = async () => {\n  try {\n    // Original (problematic): fetch('/api/shifts')\n    const response = await fetch(`${API_BASE_URL}/api/shifts`);\n    if (!response.ok) {\n      throw new Error(`HTTP error! status: ${response.status}`);\n    }\n    return await response.json();\n  } catch (error) {\n    console.error('Failed to fetch shifts:', error);\n    throw error;\n  }\n};\n\n// If using Axios:\n// import axios from 'axios';\n// export const apiClient = axios.create({\n//   baseURL: API_BASE_URL,\n//   headers: { 'Content-Type': 'application/json' },\n// });\n//\n// apiClient.get('/api/shifts') // This would now automatically prepend baseURL\n//   .then(response => console.log(response.data))\n//   .catch(error => console.error('Axios request failed:', error));",
+        "filesLikelyAffected": [
+          "client/.env",
+          "client/.env.development",
+          "client/.env.production",
+          "client/src/api/index.js",
+          "client/src/services/shiftService.js",
+          "client/src/components/ShiftManager.jsx"
+        ],
+        "estimatedEffort": "easy",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "frontend_cors_error",
+          "backend_service_unreachable",
+          "incorrect_deployment_configuration"
+        ]
+      }
+    },
+    {
+      "id": "1b330a92d7acce8a",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/notifications",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/notifications",
+      "timestamp": "2026-01-14T03:00:21.397Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "316a417d3ca1df01",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/invoices",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/invoices",
+      "timestamp": "2026-01-14T03:00:21.417Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "33f13a688ec1eed1",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/billing/status",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/billing/status",
+      "timestamp": "2026-01-14T03:00:21.443Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "3657c1db4015eaa0",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/trinity/status",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/trinity/status",
+      "timestamp": "2026-01-14T03:00:21.471Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "b64037e2d619f2ff",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/stripe/config",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/stripe/config",
+      "timestamp": "2026-01-14T03:00:21.499Z",
+      "crawlerType": "api",
+      "subsystem": "integration",
+      "reproducible": true
+    },
+    {
+      "id": "9c73aeba0dfbe65a",
+      "category": "network_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co/api/billing/plans",
+      "message": "API request failed: fetch failed",
+      "details": "fetch failed",
+      "statusCode": 0,
+      "requestUrl": "/api/billing/plans",
+      "timestamp": "2026-01-14T03:00:21.516Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true
+    },
+    {
+      "id": "3150efd4773de089",
+      "category": "workflow_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co",
+      "message": "Homepage to Registration Flow failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+      "details": "Failed at step: Load homepage. Completed 0/4 steps.",
+      "timestamp": "2026-01-14T03:00:22.898Z",
+      "crawlerType": "integration",
+      "subsystem": "workflow",
+      "reproducible": true
+    },
+    {
+      "id": "308a7d72ab0710ca",
+      "category": "workflow_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co",
+      "message": "Homepage to Login Flow failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+      "details": "Failed at step: Load homepage. Completed 0/4 steps.",
+      "timestamp": "2026-01-14T03:00:23.322Z",
+      "crawlerType": "integration",
+      "subsystem": "workflow",
+      "reproducible": true
+    },
+    {
+      "id": "17366181fbf025d9",
+      "category": "workflow_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co",
+      "message": "Pricing Page CTA Flow failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/pricing\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/pricing\", waiting until \"networkidle\"\u001b[22m\n",
+      "details": "Failed at step: Load pricing page. Completed 0/3 steps.",
+      "timestamp": "2026-01-14T03:00:23.534Z",
+      "crawlerType": "integration",
+      "subsystem": "workflow",
+      "reproducible": true
+    },
+    {
+      "id": "8d86a942c49df652",
+      "category": "workflow_failure",
+      "severity": "critical",
+      "url": "https://workspace.DrillConsult360.repl.co",
+      "message": "API Health Integration failed: fetch failed",
+      "details": "Failed at step: Call health endpoint. Completed 0/2 steps.",
+      "timestamp": "2026-01-14T03:00:24.454Z",
+      "crawlerType": "integration",
+      "subsystem": "integration",
+      "reproducible": true
+    },
+    {
+      "id": "d405fe6c647f8af3",
+      "category": "page_error",
+      "severity": "high",
+      "url": "https://workspace.DrillConsult360.repl.co",
+      "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+      "timestamp": "2026-01-14T03:00:23.181Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "0a6334d49f24401b",
+      "category": "page_error",
+      "severity": "high",
+      "url": "https://workspace.DrillConsult360.repl.co/login",
+      "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/login\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/login\", waiting until \"networkidle\"\u001b[22m\n",
+      "timestamp": "2026-01-14T03:00:23.583Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "e59a5031b62275ac",
+      "category": "page_error",
+      "severity": "high",
+      "url": "https://workspace.DrillConsult360.repl.co/register",
+      "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/register\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/register\", waiting until \"networkidle\"\u001b[22m\n",
+      "timestamp": "2026-01-14T03:00:23.909Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "af1a664877ed3b7c",
+      "category": "page_error",
+      "severity": "high",
+      "url": "https://workspace.DrillConsult360.repl.co/pricing",
+      "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/pricing\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/pricing\", waiting until \"networkidle\"\u001b[22m\n",
+      "timestamp": "2026-01-14T03:00:24.314Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "a538f0e1ff3c32d9",
+      "category": "page_error",
+      "severity": "high",
+      "url": "https://workspace.DrillConsult360.repl.co/trinity-features",
+      "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/trinity-features\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/trinity-features\", waiting until \"networkidle\"\u001b[22m\n",
+      "timestamp": "2026-01-14T03:00:24.684Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "9c4904af2a8f9f36",
+      "category": "page_error",
+      "severity": "high",
+      "url": "https://workspace.DrillConsult360.repl.co/contact",
+      "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/contact\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/contact\", waiting until \"networkidle\"\u001b[22m\n",
+      "timestamp": "2026-01-14T03:00:24.885Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "72073e968d981ba0",
+      "category": "page_error",
+      "severity": "high",
+      "url": "https://workspace.DrillConsult360.repl.co/support",
+      "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/support\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/support\", waiting until \"networkidle\"\u001b[22m\n",
+      "timestamp": "2026-01-14T03:00:25.043Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "f8261bf60d23c350",
+      "category": "page_error",
+      "severity": "high",
+      "url": "https://workspace.DrillConsult360.repl.co/terms",
+      "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/terms\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/terms\", waiting until \"networkidle\"\u001b[22m\n",
+      "timestamp": "2026-01-14T03:00:25.221Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "09bfc511927671f9",
+      "category": "page_error",
+      "severity": "high",
+      "url": "https://workspace.DrillConsult360.repl.co/privacy",
+      "message": "Page failed to load: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/privacy\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/privacy\", waiting until \"networkidle\"\u001b[22m\n",
+      "timestamp": "2026-01-14T03:00:25.495Z",
+      "crawlerType": "ui",
+      "subsystem": "frontend",
+      "reproducible": true
+    },
+    {
+      "id": "5f3faa2be363ac4b",
+      "category": "workflow_failure",
+      "severity": "high",
+      "url": "https://workspace.DrillConsult360.repl.co",
+      "message": "Support Page Access failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/support\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/support\", waiting until \"networkidle\"\u001b[22m\n",
+      "details": "Failed at step: Load support page. Completed 0/3 steps.",
+      "timestamp": "2026-01-14T03:00:23.866Z",
+      "crawlerType": "integration",
+      "subsystem": "workflow",
+      "reproducible": true
+    },
+    {
+      "id": "d730eaf50c8348fd",
+      "category": "workflow_failure",
+      "severity": "high",
+      "url": "https://workspace.DrillConsult360.repl.co",
+      "message": "Trinity Features Page failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/trinity-features\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/trinity-features\", waiting until \"networkidle\"\u001b[22m\n",
+      "details": "Failed at step: Load Trinity features. Completed 0/3 steps.",
+      "timestamp": "2026-01-14T03:00:24.163Z",
+      "crawlerType": "integration",
+      "subsystem": "workflow",
+      "reproducible": true
+    },
+    {
+      "id": "213ba0785df6a879",
+      "category": "workflow_failure",
+      "severity": "high",
+      "url": "https://workspace.DrillConsult360.repl.co",
+      "message": "Mobile Menu Navigation failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+      "details": "Failed at step: Load homepage on mobile. Completed 0/4 steps.",
+      "timestamp": "2026-01-14T03:00:27.918Z",
+      "crawlerType": "integration",
+      "subsystem": "workflow",
+      "reproducible": true
+    },
+    {
+      "id": "08247d76bedab24e",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "wss://workspace.DrillConsult360.repl.co/ws",
+      "message": "WebSocket Main WebSocket failed to connect",
+      "timestamp": "2026-01-14T03:00:27.953Z",
+      "crawlerType": "integration",
+      "subsystem": "websocket",
+      "reproducible": true
+    },
+    {
+      "id": "608c5b6ab061cac9",
+      "category": "network_failure",
+      "severity": "high",
+      "url": "wss://workspace.DrillConsult360.repl.co/ws/chat",
+      "message": "WebSocket Chat WebSocket failed to connect",
+      "timestamp": "2026-01-14T03:00:27.953Z",
+      "crawlerType": "integration",
+      "subsystem": "websocket",
+      "reproducible": true
+    }
+  ],
+  "summary": {
+    "totalIssuesFound": 34,
+    "criticalCount": 20,
+    "highCount": 14,
+    "mediumCount": 0,
+    "lowCount": 0,
+    "bySubsystem": {
+      "auth": 2,
+      "backend": 13,
+      "integration": 2,
+      "workflow": 6,
+      "frontend": 9,
+      "websocket": 2
+    },
+    "byCrawler": {
+      "api": 16,
+      "integration": 9,
+      "ui": 9
+    },
+    "readinessScore": 0,
+    "blockers": [
+      "Authentication request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "Homepage to Registration Flow failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+      "Homepage to Login Flow failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+      "Pricing Page CTA Flow failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/pricing\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/pricing\", waiting until \"networkidle\"\u001b[22m\n",
+      "API Health Integration failed: fetch failed"
+    ]
+  },
+  "prioritizedFixes": [
+    {
+      "rank": 1,
+      "issue": {
+        "id": "b587fd6b132a5442",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/auth/login",
+        "message": "Authentication request failed: fetch failed",
+        "timestamp": "2026-01-14T03:00:21.094Z",
+        "crawlerType": "api",
+        "subsystem": "auth",
+        "reproducible": true,
+        "aiAnalysis": {
+          "rootCause": "The Express.js backend server is likely not running, has crashed, or is not properly exposed/accessible within the Replit environment at the specified URL (https://workspace.DrillConsult360.repl.co). The 'fetch failed' message indicates that the client application could not establish a connection to the server at all, rather than receiving an HTTP response with an error status.",
+          "fixRecommendation": "**1. Verify Backend Server Status on Replit:** Go to the Replit workspace for 'DrillConsult360'. Check the console output for the backend (usually the 'Run' tab or the specific backend service tab if separate) to see if the Express.js server process is active, has started successfully, or if there are any errors during startup (e.g., port conflicts, missing dependencies, syntax errors).\n**2. Restart Backend Server:** If the server appears to have crashed or is not running, initiate a manual restart of the backend service within Replit. This often resolves transient issues.\n**3. Check Server Port Configuration (`server/index.js`):** Ensure the Express.js application is configured to listen on the correct port. Replit typically assigns a port dynamically, often available via `process.env.PORT`. The `server/index.js` (or similar entry file for the backend) should listen on this variable. If it's hardcoded, it might conflict with Replit's environment.\n**4. Review Replit's `.replit` and `package.json` Start Scripts:**\n   - **`.replit` file:** Ensure the `run` command in your `.replit` file correctly executes your backend's start script (e.g., `node server/index.js` or `npm start`).\n   - **`package.json`:** Verify the `start` script in `server/package.json` (or the root `package.json` if monolithic) correctly launches the Express server.\n**5. Confirm Client API Base URL Configuration (`client/.env` or `client/vite.config.js`):** The React frontend needs to know where to send API requests. Ensure that the `VITE_API_URL` (or similar environment variable) used by the client is correctly set to `https://workspace.DrillConsult360.repl.co` and not a `localhost` address, especially when deployed or running within Replit's hosted environment. Make sure this variable is accessible during the client's build process.\n**6. Replit Environment Specifics:** Sometimes Replit itself can have temporary network glitches. If all configurations seem correct, try 'Forking' the repl or creating a new one to see if the issue persists, which might indicate a deeper Replit platform issue.\n**7. Basic Network Check (within Replit):** If you have shell access in Replit, try `curl https://workspace.DrillConsult360.repl.co/api/auth/login` from the shell itself to see if the network path is blocked internally.",
+          "codeSnippet": "```javascript\n// server/index.js (or similar main server file)\n\n// ... other imports and middleware\n\nconst PORT = process.env.PORT || 3000; // Use process.env.PORT for Replit compatibility\n\napp.listen(PORT, () => {\n  console.log(`CoAIleague Backend running on port ${PORT}`);\n  console.log(`Access at http://localhost:${PORT} or via Replit URL`);\n});\n\n// ... other routes and error handling\n\n// client/.env (example)\n// VITE_API_URL=https://workspace.DrillConsult360.repl.co\n```",
+          "filesLikelyAffected": [
+            "server/index.js",
+            "server/package.json",
+            "client/.env",
+            "client/vite.config.js",
+            ".replit"
+          ],
+          "estimatedEffort": "easy",
+          "confidence": 0.95,
+          "relatedIssues": [
+            "server_startup_failure",
+            "environment_variable_misconfiguration",
+            "cors_policy_violation"
+          ]
+        }
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "**1. Verify Backend Server Status on Replit:** Go to the Replit workspace for 'DrillConsult360'. Check the console output for the backend (usually the 'Run' tab or the specific backend service tab if separate) to see if the Express.js server process is active, has started successfully, or if there are any errors during startup (e.g., port conflicts, missing dependencies, syntax errors).\n**2. Restart Backend Server:** If the server appears to have crashed or is not running, initiate a manual restart of the backend service within Replit. This often resolves transient issues.\n**3. Check Server Port Configuration (`server/index.js`):** Ensure the Express.js application is configured to listen on the correct port. Replit typically assigns a port dynamically, often available via `process.env.PORT`. The `server/index.js` (or similar entry file for the backend) should listen on this variable. If it's hardcoded, it might conflict with Replit's environment.\n**4. Review Replit's `.replit` and `package.json` Start Scripts:**\n   - **`.replit` file:** Ensure the `run` command in your `.replit` file correctly executes your backend's start script (e.g., `node server/index.js` or `npm start`).\n   - **`package.json`:** Verify the `start` script in `server/package.json` (or the root `package.json` if monolithic) correctly launches the Express server.\n**5. Confirm Client API Base URL Configuration (`client/.env` or `client/vite.config.js`):** The React frontend needs to know where to send API requests. Ensure that the `VITE_API_URL` (or similar environment variable) used by the client is correctly set to `https://workspace.DrillConsult360.repl.co` and not a `localhost` address, especially when deployed or running within Replit's hosted environment. Make sure this variable is accessible during the client's build process.\n**6. Replit Environment Specifics:** Sometimes Replit itself can have temporary network glitches. If all configurations seem correct, try 'Forking' the repl or creating a new one to see if the issue persists, which might indicate a deeper Replit platform issue.\n**7. Basic Network Check (within Replit):** If you have shell access in Replit, try `curl https://workspace.DrillConsult360.repl.co/api/auth/login` from the shell itself to see if the network path is blocked internally."
+    },
+    {
+      "rank": 2,
+      "issue": {
+        "id": "7b72620b719f87af",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/health",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/health",
+        "timestamp": "2026-01-14T03:00:21.201Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true,
+        "aiAnalysis": {
+          "rootCause": "The Express.js backend server, deployed on Replit at `https://workspace.DrillConsult360.repl.co`, is currently unreachable or not running correctly. The 'fetch failed' message with an N/A status code indicates a network-level failure to establish a connection to the server, rather than an HTTP error response from the server itself. This prevents the frontend from accessing critical API endpoints like `/api/health`.",
+          "fixRecommendation": "**1. Verify Backend Server Status on Replit:**\n   - Navigate to the `workspace.DrillConsult360` project in Replit.\n   - Check the console and logs for the `server/` process. Ensure the Express.js application is actively running and has not crashed. Look for messages indicating successful server startup (e.g., 'CoAIleague Backend Server running on port X').\n   - If the server is stopped or has crashed, attempt to restart the Replit project or the `server/` process explicitly.\n**2. Confirm Server Port Configuration:**\n   - Inspect the main Express.js entry file (e.g., `server/index.js` or `server/src/app.js`). Ensure the server is configured to listen on `process.env.PORT` which Replit typically provides, or a default like `3000` if `PORT` is not set.\n   - Example: `app.listen(process.env.PORT || 3000, () => { console.log('Server running...'); });`\n**3. Examine Backend Startup Logs for Errors:**\n   - Even if the server appears 'running' in Replit, carefully review the logs for any errors that might prevent it from fully initializing or becoming accessible (e.g., database connection failures using Drizzle ORM, module loading errors, or misconfigurations that cause the Express app to exit prematurely).\n**4. Verify Frontend API Base URL Configuration:**\n   - In the `client/` directory, locate where the API base URL is configured (e.g., in `client/src/config.js`, `client/src/utils/api.js`, or via Vite environment variables like `VITE_APP_API_URL` in `.env` or `.env.production`).\n   - Ensure the API base URL is correctly set to `https://workspace.DrillConsult360.repl.co` for the deployed environment. A common mistake is using `localhost` in a deployed environment.\n**5. Perform Basic Connectivity Test:**\n   - From your local terminal or a separate Replit shell, try to `curl` the problematic endpoint: `curl https://workspace.DrillConsult360.repl.co/api/health`.\n   - A successful response (e.g., `{\"status\":\"ok\"}` or similar) would indicate the server is now accessible. If `curl` also fails or hangs, it strongly confirms the server unreachability persists and further investigation into the Replit environment itself or deeper server issues is needed.",
+          "codeSnippet": "// Example of server listening setup in server/index.js\nconst express = require('express');\nconst app = express();\n\n// ... other middleware, routes, Drizzle ORM setup\n\nconst PORT = process.env.PORT || 3000;\napp.listen(PORT, () => {\n  console.log(`CoAIleague Backend Server running on port ${PORT}`);\n});\n\n// Example of frontend API base URL setup in client/.env\n// VITE_APP_API_URL=https://workspace.DrillConsult360.repl.co\n\n// Example of frontend API usage (e.g., in client/src/utils/api.js)\n// const API_BASE_URL = import.meta.env.VITE_APP_API_URL || 'http://localhost:3000';\n// export const fetchHealthStatus = async () => {\n//   const response = await fetch(`${API_BASE_URL}/api/health`);\n//   if (!response.ok) {\n//     throw new Error('Network response was not ok');\n//   }\n//   return response.json();\n// };",
+          "filesLikelyAffected": [
+            "server/index.js",
+            "server/src/app.js",
+            "client/.env",
+            "client/.env.production",
+            "client/src/config.js",
+            "client/src/utils/api.js",
+            ".replit"
+          ],
+          "estimatedEffort": "easy",
+          "confidence": 0.95,
+          "relatedIssues": [
+            "Backend server failed to start due to configuration errors",
+            "Incorrect environment variable configuration for API URL in frontend",
+            "Replit deployment misconfiguration or transient issues",
+            "Database connection error preventing server startup",
+            "Firewall or network restrictions blocking outbound requests (less common for Replit-hosted services)"
+          ]
+        }
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "**1. Verify Backend Server Status on Replit:**\n   - Navigate to the `workspace.DrillConsult360` project in Replit.\n   - Check the console and logs for the `server/` process. Ensure the Express.js application is actively running and has not crashed. Look for messages indicating successful server startup (e.g., 'CoAIleague Backend Server running on port X').\n   - If the server is stopped or has crashed, attempt to restart the Replit project or the `server/` process explicitly.\n**2. Confirm Server Port Configuration:**\n   - Inspect the main Express.js entry file (e.g., `server/index.js` or `server/src/app.js`). Ensure the server is configured to listen on `process.env.PORT` which Replit typically provides, or a default like `3000` if `PORT` is not set.\n   - Example: `app.listen(process.env.PORT || 3000, () => { console.log('Server running...'); });`\n**3. Examine Backend Startup Logs for Errors:**\n   - Even if the server appears 'running' in Replit, carefully review the logs for any errors that might prevent it from fully initializing or becoming accessible (e.g., database connection failures using Drizzle ORM, module loading errors, or misconfigurations that cause the Express app to exit prematurely).\n**4. Verify Frontend API Base URL Configuration:**\n   - In the `client/` directory, locate where the API base URL is configured (e.g., in `client/src/config.js`, `client/src/utils/api.js`, or via Vite environment variables like `VITE_APP_API_URL` in `.env` or `.env.production`).\n   - Ensure the API base URL is correctly set to `https://workspace.DrillConsult360.repl.co` for the deployed environment. A common mistake is using `localhost` in a deployed environment.\n**5. Perform Basic Connectivity Test:**\n   - From your local terminal or a separate Replit shell, try to `curl` the problematic endpoint: `curl https://workspace.DrillConsult360.repl.co/api/health`.\n   - A successful response (e.g., `{\"status\":\"ok\"}` or similar) would indicate the server is now accessible. If `curl` also fails or hangs, it strongly confirms the server unreachability persists and further investigation into the Replit environment itself or deeper server issues is needed."
+    },
+    {
+      "rank": 3,
+      "issue": {
+        "id": "f1ca227b07aca815",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/health/summary",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/health/summary",
+        "timestamp": "2026-01-14T03:00:21.213Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true,
+        "aiAnalysis": {
+          "rootCause": "The Express.js backend server is either not running, has crashed, or is not correctly exposed/listening at the specified 'repl.co' URL. The 'fetch failed' error with a 'N/A' status code indicates a fundamental inability for the client to establish a network connection to the server, rather than an application-level error.",
+          "fixRecommendation": "1. **Verify Backend Server Status:** Log into your Replit workspace for `DrillConsult360`. Check the console/shell to ensure the Express.js backend process (usually `npm start` or a direct node command) is actively running and has not crashed or stopped. \n2. **Review Backend Logs:** Examine the server's output for any error messages during startup or runtime that might indicate a crash, port binding failure, or other critical issues. \n3. **Validate Server Port and Host Configuration:** Ensure your Express.js application is configured to listen on `0.0.0.0` and the port specified by `process.env.PORT`. Replit often sets this environment variable. If it's listening on `localhost` or a hardcoded port that isn't `process.env.PORT`, it might not be reachable. \n4. **Check Replit's `.replit` Configuration:** Verify the `run` command in your `.replit` file correctly starts your backend application. \n5. **Confirm Frontend API URL:** While less likely to cause a 'fetch failed' (it would typically try and connect to the wrong place), double-check that the `VITE_APP_API_URL` or equivalent environment variable in your React frontend is pointing to the correct base URL of your Replit deployment (`https://workspace.DrillConsult360.repl.co`). \n6. **Restart Application:** If the server appears to be running but is unresponsive, try restarting the entire Replit workspace or just the backend process.",
+          "codeSnippet": "```javascript\n// In your main Express.js entry file (e.g., server/src/index.ts or server/src/app.ts)\n\nimport express from 'express';\n// ... other imports\n\nconst app = express();\nconst PORT = process.env.PORT || 3000; // Replit often provides PORT env var\n\n// ... your middleware and route definitions\n\napp.listen(PORT, '0.0.0.0', () => {\n  console.log(`Server running on http://0.0.0.0:${PORT}`);\n  console.log(`Access your Replit app at: ${process.env.REPL_URL || 'Unknown URL'}`); // For debugging Replit URLs\n});\n```",
+          "filesLikelyAffected": [
+            "server/src/index.ts",
+            "server/src/app.ts",
+            "package.json",
+            ".replit",
+            "client/.env",
+            "client/.env.production"
+          ],
+          "estimatedEffort": "easy",
+          "confidence": 0.95,
+          "relatedIssues": [
+            "Backend server not starting",
+            "Incorrect port binding on server",
+            "Replit environment variable misconfiguration",
+            "Server application crash"
+          ]
+        }
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "1. **Verify Backend Server Status:** Log into your Replit workspace for `DrillConsult360`. Check the console/shell to ensure the Express.js backend process (usually `npm start` or a direct node command) is actively running and has not crashed or stopped. \n2. **Review Backend Logs:** Examine the server's output for any error messages during startup or runtime that might indicate a crash, port binding failure, or other critical issues. \n3. **Validate Server Port and Host Configuration:** Ensure your Express.js application is configured to listen on `0.0.0.0` and the port specified by `process.env.PORT`. Replit often sets this environment variable. If it's listening on `localhost` or a hardcoded port that isn't `process.env.PORT`, it might not be reachable. \n4. **Check Replit's `.replit` Configuration:** Verify the `run` command in your `.replit` file correctly starts your backend application. \n5. **Confirm Frontend API URL:** While less likely to cause a 'fetch failed' (it would typically try and connect to the wrong place), double-check that the `VITE_APP_API_URL` or equivalent environment variable in your React frontend is pointing to the correct base URL of your Replit deployment (`https://workspace.DrillConsult360.repl.co`). \n6. **Restart Application:** If the server appears to be running but is unresponsive, try restarting the entire Replit workspace or just the backend process."
+    },
+    {
+      "rank": 4,
+      "issue": {
+        "id": "8199a921f4f6bdd1",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/auth/check",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/auth/check",
+        "timestamp": "2026-01-14T03:00:21.224Z",
+        "crawlerType": "api",
+        "subsystem": "auth",
+        "reproducible": true,
+        "aiAnalysis": {
+          "rootCause": "network_failure detected at https://workspace.DrillConsult360.repl.co/api/auth/check",
+          "fixRecommendation": "Review and fix the underlying issue",
+          "filesLikelyAffected": [
+            "server/routes/",
+            "server/services/"
+          ],
+          "estimatedEffort": "medium",
+          "confidence": 0.5
+        }
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Review and fix the underlying issue"
+    },
+    {
+      "rank": 5,
+      "issue": {
+        "id": "67a02e718dcc2050",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/mascot/seasonal/state",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/mascot/seasonal/state",
+        "timestamp": "2026-01-14T03:00:21.239Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true,
+        "aiAnalysis": {
+          "rootCause": "The Express.js backend server is likely not running, has crashed, or is not correctly exposed/accessible within the Replit environment. The 'fetch failed' message with a 'Status Code: N/A' indicates that the client's network request could not establish a connection to the server at the specified URL, rather than receiving an error response from a running server.",
+          "fixRecommendation": "**1. Verify Replit Workspace Status:** Navigate to the Replit workspace 'DrillConsult360'. Ensure the workspace is active and running. Replit workspaces often go to sleep when inactive, and may need to be manually woken up or restarted.\n**2. Check Replit Console Logs:** Open the console or logs within your Replit workspace. Look for any errors during the startup of your Express.js backend (e.g., 'port already in use', 'module not found', unhandled exceptions, or 'Application not running' messages). This is the most crucial step to understand why the server might not be operational.\n**3. Ensure Server is Running and Listening:** Confirm that your `server/` application's `npm start` script (or equivalent) is executing successfully and that the Express app is actively listening on a port. Replit typically injects a `PORT` environment variable that your application should use.\n**4. Validate Port Configuration in Backend:** In your Express.js entry file (e.g., `server/index.js` or `server/app.js`), ensure that the server is configured to listen on `process.env.PORT`. If `process.env.PORT` is not set by Replit, provide a sensible fallback port (e.g., 3000).\n**5. Restart Replit Workspace:** If logs appear inconclusive or show transient issues, perform a full restart of the Replit workspace. This can resolve temporary network glitches or hung processes.\n**6. Internal Network Test (Replit Shell):** From the Replit shell, once you believe the server *should* be running, try to `curl` the API endpoint locally to confirm it responds. For example, if your server listens on `process.env.PORT` (let's assume 3000 for local test): `curl http://localhost:3000/api/mascot/seasonal/state`. This helps differentiate between an internal server issue and an issue with Replit's external exposure.",
+          "codeSnippet": "// In your server's main entry file (e.g., server/index.js)\n\nconst express = require('express');\nconst app = express();\n\n// ... other middleware and routes ...\n\n// Use the PORT environment variable provided by Replit\n// Fallback to a common port (e.g., 3000) if not set, though Replit usually provides it.\nconst PORT = process.env.PORT || 3000; \n\napp.listen(PORT, () => {\n  console.log(`CoAIleague Express server listening on port ${PORT}`);\n});\n",
+          "filesLikelyAffected": [
+            "server/index.js",
+            "server/package.json",
+            ".replit"
+          ],
+          "estimatedEffort": "easy",
+          "confidence": 0.95,
+          "relatedIssues": [
+            "server_crash_on_startup",
+            "misconfigured_environment_variables",
+            "replit_workspace_sleep_mode",
+            "frontend_api_base_url_misconfiguration"
+          ]
+        }
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "**1. Verify Replit Workspace Status:** Navigate to the Replit workspace 'DrillConsult360'. Ensure the workspace is active and running. Replit workspaces often go to sleep when inactive, and may need to be manually woken up or restarted.\n**2. Check Replit Console Logs:** Open the console or logs within your Replit workspace. Look for any errors during the startup of your Express.js backend (e.g., 'port already in use', 'module not found', unhandled exceptions, or 'Application not running' messages). This is the most crucial step to understand why the server might not be operational.\n**3. Ensure Server is Running and Listening:** Confirm that your `server/` application's `npm start` script (or equivalent) is executing successfully and that the Express app is actively listening on a port. Replit typically injects a `PORT` environment variable that your application should use.\n**4. Validate Port Configuration in Backend:** In your Express.js entry file (e.g., `server/index.js` or `server/app.js`), ensure that the server is configured to listen on `process.env.PORT`. If `process.env.PORT` is not set by Replit, provide a sensible fallback port (e.g., 3000).\n**5. Restart Replit Workspace:** If logs appear inconclusive or show transient issues, perform a full restart of the Replit workspace. This can resolve temporary network glitches or hung processes.\n**6. Internal Network Test (Replit Shell):** From the Replit shell, once you believe the server *should* be running, try to `curl` the API endpoint locally to confirm it responds. For example, if your server listens on `process.env.PORT` (let's assume 3000 for local test): `curl http://localhost:3000/api/mascot/seasonal/state`. This helps differentiate between an internal server issue and an issue with Replit's external exposure."
+    },
+    {
+      "rank": 6,
+      "issue": {
+        "id": "4da181320da8bd09",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/runtime-flags",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/runtime-flags",
+        "timestamp": "2026-01-14T03:00:21.268Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true,
+        "aiAnalysis": {
+          "rootCause": "The Express.js backend server for DrillConsult360, hosted on Replit at `https://workspace.DrillConsult360.repl.co`, is currently down, unresponsive, or unreachable. The 'API request failed: fetch failed' message with a 'N/A' status code indicates that the client-side `fetch` request could not establish or maintain a network connection to the server, meaning the request never received any meaningful response from the target host. This is a fundamental network connectivity issue, not an application-level error on the server or a client-side logical error.",
+          "fixRecommendation": "1. Verify Server Status on Replit: Log into Replit and navigate to the `workspace.DrillConsult360` project. Check the console and logs for the `server/index.js` application. Ensure the Express.js server is actively running and hasn't crashed or gone dormant. Look for server startup messages (e.g., 'Server listening on port XXXX'). If not running, attempt to manually restart the application within Replit. 2. Test Server Reachability: Directly access the full API endpoint `https://workspace.DrillConsult360.repl.co/api/runtime-flags` or the base URL `https://workspace.DrillConsult360.repl.co` in a web browser. If you receive a 'Site can't be reached' or a similar browser error page, it confirms the server is not accessible from the internet. 3. Review Replit Logs and Resources: Examine Replit's project logs for any critical errors or warnings that occurred during server startup or operation. Ensure the Replit project isn't experiencing resource limits or has been idled/stopped due to inactivity. 4. Frontend API Base URL Check (Secondary): While less likely to be the primary cause given 'fetch failed' with 'N/A', quickly verify the frontend configuration (client/) to ensure the API base URL is correctly set to `https://workspace.DrillConsult360.repl.co`. Incorrect configuration here could lead to requests being sent to the wrong, non-existent, or unresolvable location.",
+          "codeSnippet": null,
+          "filesLikelyAffected": [
+            "server/index.js",
+            "client/.env",
+            "client/vite.config.js",
+            "client/src/api/config.js"
+          ],
+          "estimatedEffort": "easy",
+          "confidence": 0.9,
+          "relatedIssues": [
+            "Server process crashed or stopped unexpectedly",
+            "Replit project dormant or resource limits reached",
+            "DNS resolution issues for repl.co domain",
+            "Network firewall blocking outgoing connections from client"
+          ]
+        }
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "1. Verify Server Status on Replit: Log into Replit and navigate to the `workspace.DrillConsult360` project. Check the console and logs for the `server/index.js` application. Ensure the Express.js server is actively running and hasn't crashed or gone dormant. Look for server startup messages (e.g., 'Server listening on port XXXX'). If not running, attempt to manually restart the application within Replit. 2. Test Server Reachability: Directly access the full API endpoint `https://workspace.DrillConsult360.repl.co/api/runtime-flags` or the base URL `https://workspace.DrillConsult360.repl.co` in a web browser. If you receive a 'Site can't be reached' or a similar browser error page, it confirms the server is not accessible from the internet. 3. Review Replit Logs and Resources: Examine Replit's project logs for any critical errors or warnings that occurred during server startup or operation. Ensure the Replit project isn't experiencing resource limits or has been idled/stopped due to inactivity. 4. Frontend API Base URL Check (Secondary): While less likely to be the primary cause given 'fetch failed' with 'N/A', quickly verify the frontend configuration (client/) to ensure the API base URL is correctly set to `https://workspace.DrillConsult360.repl.co`. Incorrect configuration here could lead to requests being sent to the wrong, non-existent, or unresolvable location."
+    },
+    {
+      "rank": 7,
+      "issue": {
+        "id": "7284f6376ea9bf28",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/workspaces/all",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/workspaces/all",
+        "timestamp": "2026-01-14T03:00:21.298Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true,
+        "aiAnalysis": {
+          "rootCause": "The Express.js backend server, which is responsible for serving the `/api` endpoints, is either not running, has crashed, or is otherwise inaccessible from the frontend application environment. The 'API request failed: fetch failed' message with an 'N/A' status code is a strong indicator of a fundamental network connection failure at a low level, preventing the browser from even establishing a connection to the server or receiving an HTTP response. This most commonly occurs when the target server (expected to be running on the same origin as the frontend in a Replit deployment, i.e., `https://workspace.DrillConsult360.repl.co`) is unavailable, not listening on the expected port, or refusing connections.",
+          "fixRecommendation": "**1. Verify Backend Server Status & Logs (Replit Console):** The first step is to check the Replit workspace console. Look for any errors or messages from the `server/` Express.js application. Ensure the backend process is actively running and hasn't terminated unexpectedly. If the server has crashed or stopped, restart it. Common issues include unhandled exceptions or resource limits being hit.\n**2. Inspect Server Entry Point Configuration (`server/index.js`):** Confirm that your `server/index.js` (or main Express app file) is correctly configured to start the Express application and listen on the appropriate port. For Replit, it's best practice to use `process.env.PORT` to allow Replit to assign a dynamic port. Example: `const PORT = process.env.PORT || 3000; app.listen(PORT, () => console.log(`Server running on port ${PORT}`));`\n**3. Check Database Connectivity (PostgreSQL/Drizzle ORM):** A common cause for a backend server crashing shortly after startup (which could lead to 'fetch failed') is a critical dependency failing, such as the database connection. Verify that your PostgreSQL database is running and accessible, and that your Express server has correct credentials and can establish a connection via Drizzle ORM. Look for database-related errors in the server logs.\n**4. Review Frontend API Base URL (Client-side environment variables):** Although the `Request URL: /api/workspaces/all` is relative (implying same-origin), it's worth checking if the frontend has an explicit `VITE_APP_API_BASE_URL` or similar environment variable defined in `client/.env` files (e.g., `client/.env.production`). Ensure it's correctly set to the Replit deployment URL (e.g., `https://workspace.DrillConsult360.repl.co`) or removed if relative paths are intended for same-origin communication.\n**5. Replit Environment Health Check:** Sometimes, Replit instances can experience temporary issues. If all code and configuration appear correct, try a full Replit restart or re-deploy to refresh the environment.",
+          "codeSnippet": "/* Example of robust server startup in server/index.js to catch common errors */\nconst express = require('express');\nconst app = express();\nconst { db } = require('./db'); // Assuming Drizzle DB connection setup\n\n// ... other middleware and routes ...\n\nconst PORT = process.env.PORT || 3000; // Use Replit's provided PORT or a default\n\nasync function startServer() {\n  try {\n    // Optional: Test DB connection on startup (e.g., ping database)\n    await db.query('SELECT 1'); \n    console.log('✅ Database connected successfully.');\n    \n    app.listen(PORT, () => {\n      console.log(`🚀 CoAIleague Backend Server running on port ${PORT}`);\n      console.log(`🌐 Accessible at: http://localhost:${PORT} (or Replit's public URL)`);\n    });\n  } catch (error) {\n    console.error('❌ Failed to start server or connect to database:', error.message, error.stack);\n    process.exit(1); // Exit if server can't start due to a critical error\n  }\n}\n\nstartServer();\n",
+          "filesLikelyAffected": [
+            "server/index.js",
+            "server/db/index.js",
+            "client/.env",
+            "client/.env.production",
+            "Replit workspace console/logs"
+          ],
+          "estimatedEffort": "easy",
+          "confidence": 0.95,
+          "relatedIssues": [
+            "Backend server crashing on startup due to unhandled exceptions.",
+            "Incorrect port configuration for the Express.js application on Replit.",
+            "PostgreSQL database not running or inaccessible from the backend server.",
+            "Replit environment misconfiguration preventing public exposure of the backend service.",
+            "CORS policy issues (less likely if same-origin request is intended, but possible if a proxy is misconfigured)."
+          ]
+        }
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "**1. Verify Backend Server Status & Logs (Replit Console):** The first step is to check the Replit workspace console. Look for any errors or messages from the `server/` Express.js application. Ensure the backend process is actively running and hasn't terminated unexpectedly. If the server has crashed or stopped, restart it. Common issues include unhandled exceptions or resource limits being hit.\n**2. Inspect Server Entry Point Configuration (`server/index.js`):** Confirm that your `server/index.js` (or main Express app file) is correctly configured to start the Express application and listen on the appropriate port. For Replit, it's best practice to use `process.env.PORT` to allow Replit to assign a dynamic port. Example: `const PORT = process.env.PORT || 3000; app.listen(PORT, () => console.log(`Server running on port ${PORT}`));`\n**3. Check Database Connectivity (PostgreSQL/Drizzle ORM):** A common cause for a backend server crashing shortly after startup (which could lead to 'fetch failed') is a critical dependency failing, such as the database connection. Verify that your PostgreSQL database is running and accessible, and that your Express server has correct credentials and can establish a connection via Drizzle ORM. Look for database-related errors in the server logs.\n**4. Review Frontend API Base URL (Client-side environment variables):** Although the `Request URL: /api/workspaces/all` is relative (implying same-origin), it's worth checking if the frontend has an explicit `VITE_APP_API_BASE_URL` or similar environment variable defined in `client/.env` files (e.g., `client/.env.production`). Ensure it's correctly set to the Replit deployment URL (e.g., `https://workspace.DrillConsult360.repl.co`) or removed if relative paths are intended for same-origin communication.\n**5. Replit Environment Health Check:** Sometimes, Replit instances can experience temporary issues. If all code and configuration appear correct, try a full Replit restart or re-deploy to refresh the environment."
+    },
+    {
+      "rank": 8,
+      "issue": {
+        "id": "beaa7d9ae81fe71a",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/workspaces/current",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/workspaces/current",
+        "timestamp": "2026-01-14T03:00:21.322Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true,
+        "aiAnalysis": {
+          "rootCause": "The `fetch failed` error with an 'N/A' status code on a Replit deployment indicates a fundamental network connection failure. This most commonly occurs when the Express.js backend server is either not running, has crashed, or is not correctly configured to listen on the host (`0.0.0.0`) and port (`process.env.PORT`) that Replit expects to proxy public traffic to. As a result, the frontend application is unable to establish a connection to the API endpoint `https://workspace.DrillConsult360.repl.co/api/workspaces/current`.",
+          "fixRecommendation": "**1. Check Replit Logs for Backend Errors:**\n   - Navigate to the Replit console for the `DrillConsult360` project.\n   - Review the output logs for the Express.js server (typically the main `run` command). Look for any startup errors, unhandled exceptions, or signs that the server is not starting successfully (e.g., 'Port already in use', database connection failures, missing environment variables).\n   - If the server is repeatedly crashing, address the underlying error causing the crash (e.g., database connection string, Drizzle ORM configuration issues, missing `NODE_ENV`).\n**2. Verify Express Server Port and Host Configuration:**\n   - Open your main Express server entry file (e.g., `server/index.js`).\n   - Ensure the server is listening on `process.env.PORT` and binding to `0.0.0.0`. Replit assigns a dynamic `PORT` environment variable that your application must use, and `0.0.0.0` ensures it's accessible from outside the container.\n   - If a fallback port is used (e.g., `3000`), ensure `process.env.PORT` takes precedence.\n**3. Confirm Replit Run Command:**\n   - Examine the `.replit` file in your project root.\n   - Ensure the `run` command (e.g., `node server/index.js` or `npm start` if your `package.json` script starts the server) correctly initiates the Express.js backend. If you have both client and server in the same Repl, ensure the setup correctly launches the backend service.\n**4. Restart the Replit Application:**\n   - After making any configuration or code changes, perform a full restart of your Replit application to ensure all configurations are reloaded and the server attempts to start cleanly.\n**5. Test Connectivity:**\n   - Once the server appears to be running successfully in the Replit console (indicated by its 'listening' message), refresh the frontend application and retry the API call. Also, try accessing the API endpoint directly via your browser (e.g., `https://workspace.DrillConsult360.repl.co/api/workspaces/current`) to see if you get any response (even an error message, which would be an improvement over `fetch failed`).",
+          "codeSnippet": "```javascript\n// server/index.js (or your main Express server entry file)\n\nimport express from 'express';\nimport dotenv from 'dotenv';\nimport cors from 'cors'; // Assuming CORS is needed\n// ... other imports for Drizzle, routes, etc.\n\ndotenv.config(); // Load environment variables\n\nconst app = express();\n\n// Apply middleware\napp.use(express.json());\napp.use(cors()); // Configure CORS as needed for your frontend\n// ... other middleware\n\n// Example route (assuming your API routes are set up elsewhere)\n// app.use('/api', apiRouter);\n\n// Core fix: Ensure server listens on 0.0.0.0 and process.env.PORT\nconst PORT = process.env.PORT || 3000; // Use environment variable, fallback to 3000 for local dev\nconst HOST = '0.0.0.0'; // Essential for Replit accessibility\n\napp.listen(PORT, HOST, () => {\n  console.log(`CoAIleague Backend Server running on http://${HOST}:${PORT}`);\n  console.log(`Access through Replit's public URL: https://workspace.DrillConsult360.repl.co`);\n});\n```",
+          "filesLikelyAffected": [
+            "server/index.js",
+            ".replit",
+            "package.json (for npm start script if used)",
+            "Replit console logs (for diagnosis)"
+          ],
+          "estimatedEffort": "easy",
+          "confidence": 0.95,
+          "relatedIssues": [
+            "Backend server crashing on startup (e.g., due to database connection issues, unhandled exceptions)",
+            "Incorrect `VITE_APP_API_BASE_URL` in client environment, causing frontend to target wrong host (less likely given N/A status and same domain in URL)",
+            "CORS preflight request failure (though 'fetch failed' usually indicates a problem before CORS headers are processed)"
+          ]
+        }
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "**1. Check Replit Logs for Backend Errors:**\n   - Navigate to the Replit console for the `DrillConsult360` project.\n   - Review the output logs for the Express.js server (typically the main `run` command). Look for any startup errors, unhandled exceptions, or signs that the server is not starting successfully (e.g., 'Port already in use', database connection failures, missing environment variables).\n   - If the server is repeatedly crashing, address the underlying error causing the crash (e.g., database connection string, Drizzle ORM configuration issues, missing `NODE_ENV`).\n**2. Verify Express Server Port and Host Configuration:**\n   - Open your main Express server entry file (e.g., `server/index.js`).\n   - Ensure the server is listening on `process.env.PORT` and binding to `0.0.0.0`. Replit assigns a dynamic `PORT` environment variable that your application must use, and `0.0.0.0` ensures it's accessible from outside the container.\n   - If a fallback port is used (e.g., `3000`), ensure `process.env.PORT` takes precedence.\n**3. Confirm Replit Run Command:**\n   - Examine the `.replit` file in your project root.\n   - Ensure the `run` command (e.g., `node server/index.js` or `npm start` if your `package.json` script starts the server) correctly initiates the Express.js backend. If you have both client and server in the same Repl, ensure the setup correctly launches the backend service.\n**4. Restart the Replit Application:**\n   - After making any configuration or code changes, perform a full restart of your Replit application to ensure all configurations are reloaded and the server attempts to start cleanly.\n**5. Test Connectivity:**\n   - Once the server appears to be running successfully in the Replit console (indicated by its 'listening' message), refresh the frontend application and retry the API call. Also, try accessing the API endpoint directly via your browser (e.g., `https://workspace.DrillConsult360.repl.co/api/workspaces/current`) to see if you get any response (even an error message, which would be an improvement over `fetch failed`)."
+    },
+    {
+      "rank": 9,
+      "issue": {
+        "id": "8049549ac364380d",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/employees",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/employees",
+        "timestamp": "2026-01-14T03:00:21.350Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true,
+        "aiAnalysis": {
+          "rootCause": "The backend Express.js server hosted on Replit at `https://workspace.DrillConsult360.repl.co` is likely unreachable, not running, or has crashed. The 'fetch failed' message with 'Status Code: N/A' indicates that the frontend was unable to establish a connection to the backend API endpoint, rather than receiving an HTTP response (e.g., 4xx or 5xx error). This points to an infrastructure or deployment issue preventing the server from being accessible.",
+          "fixRecommendation": "[object Object]\n[object Object]\n[object Object]\n[object Object]\n[object Object]",
+          "codeSnippet": "```javascript\n// client/src/utils/apiClient.js (or similar file configuring API requests)\n\n// Ensure this base URL is correctly picked up from your .env file\n// For Replit deployments, it should point to your Replit project's URL.\nconst API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000';\n\nexport const fetchEmployees = async () => {\n  try {\n    // The fetch request should use the full absolute URL\n    const response = await fetch(`${API_BASE_URL}/api/employees`);\n    \n    if (!response.ok) {\n      // This block would only be reached if a connection was made but returned an error status\n      const errorData = await response.text();\n      throw new Error(`HTTP error! Status: ${response.status}, Details: ${errorData}`);\n    }\n    \n    const data = await response.json();\n    return data;\n  } catch (error) {\n    // This catch block would handle 'fetch failed' errors (e.g., network issues, server unreachable)\n    console.error('API request to /api/employees failed:', error);\n    throw error; // Re-throw to propagate the error to the UI\n  }\n};\n```\n\n```dotenv\n# client/.env.production (example for a production Replit deployment)\nVITE_API_BASE_URL=https://workspace.DrillConsult360.repl.co\n```",
+          "filesLikelyAffected": [
+            "server/index.js",
+            "client/.env",
+            "client/.env.production",
+            "client/src/main.jsx",
+            "client/src/utils/apiClient.js",
+            "package.json",
+            ".replit"
+          ],
+          "estimatedEffort": "easy",
+          "confidence": 0.9,
+          "relatedIssues": [
+            "Server not starting due to database connection error",
+            "Incorrect environment variable configuration for API base URL",
+            "Replit deployment issues (project not running or going to sleep)",
+            "Backend crash on startup"
+          ]
+        }
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "[object Object]\n[object Object]\n[object Object]\n[object Object]\n[object Object]"
+    },
+    {
+      "rank": 10,
+      "issue": {
+        "id": "42cf44fe3907d83c",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/shifts",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/shifts",
+        "timestamp": "2026-01-14T03:00:21.368Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true,
+        "aiAnalysis": {
+          "rootCause": "The React frontend is attempting to make an API request to a relative path (`/api/shifts`) without a properly configured base URL for the backend. In the CoAIleague deployment environment, the frontend and backend are likely served from different origins (e.g., different subdomains or ports on Repl.it). Consequently, the relative request resolves to the frontend's own origin, which does not host the backend API, leading to a network connection failure before an HTTP status could be received.",
+          "fixRecommendation": "**1. Verify Backend Availability:** Before modifying the frontend, ensure the Express.js backend is running and accessible at `https://workspace.DrillConsult360.repl.co`. You can test this by navigating to `https://workspace.DrillConsult360.repl.co/api/shifts` in your browser (if it's a GET endpoint) or using `curl https://workspace.DrillConsult360.repl.co/api/shifts` from a terminal.\n**2. Configure Frontend Environment Variable:** In your React/Vite frontend's `client/` directory, create or update a `.env` file (e.g., `.env.development` or `.env.production`) to define the backend API base URL.\n**3. Update API Calls in Frontend:** Modify all frontend API calls that currently use relative paths (`/api/shifts`) to prepend the configured base URL. This ensures requests are correctly directed to the Express.js backend.",
+          "codeSnippet": "// client/.env (or .env.production, .env.development)\nVITE_API_BASE_URL=https://workspace.DrillConsult360.repl.co\n\n// client/src/api/index.js (or wherever API calls are made)\n\n// Get the base URL from environment variables\nconst API_BASE_URL = import.meta.env.VITE_API_BASE_URL;\n\n// Ensure base URL is available before making requests\nif (!API_BASE_URL) {\n  console.error('VITE_API_BASE_URL is not defined. API requests may fail.');\n  // You might want to throw an error or handle this more gracefully\n}\n\n// Example using fetch:\nexport const fetchShifts = async () => {\n  try {\n    // Original (problematic): fetch('/api/shifts')\n    const response = await fetch(`${API_BASE_URL}/api/shifts`);\n    if (!response.ok) {\n      throw new Error(`HTTP error! status: ${response.status}`);\n    }\n    return await response.json();\n  } catch (error) {\n    console.error('Failed to fetch shifts:', error);\n    throw error;\n  }\n};\n\n// If using Axios:\n// import axios from 'axios';\n// export const apiClient = axios.create({\n//   baseURL: API_BASE_URL,\n//   headers: { 'Content-Type': 'application/json' },\n// });\n//\n// apiClient.get('/api/shifts') // This would now automatically prepend baseURL\n//   .then(response => console.log(response.data))\n//   .catch(error => console.error('Axios request failed:', error));",
+          "filesLikelyAffected": [
+            "client/.env",
+            "client/.env.development",
+            "client/.env.production",
+            "client/src/api/index.js",
+            "client/src/services/shiftService.js",
+            "client/src/components/ShiftManager.jsx"
+          ],
+          "estimatedEffort": "easy",
+          "confidence": 0.95,
+          "relatedIssues": [
+            "frontend_cors_error",
+            "backend_service_unreachable",
+            "incorrect_deployment_configuration"
+          ]
+        }
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "**1. Verify Backend Availability:** Before modifying the frontend, ensure the Express.js backend is running and accessible at `https://workspace.DrillConsult360.repl.co`. You can test this by navigating to `https://workspace.DrillConsult360.repl.co/api/shifts` in your browser (if it's a GET endpoint) or using `curl https://workspace.DrillConsult360.repl.co/api/shifts` from a terminal.\n**2. Configure Frontend Environment Variable:** In your React/Vite frontend's `client/` directory, create or update a `.env` file (e.g., `.env.development` or `.env.production`) to define the backend API base URL.\n**3. Update API Calls in Frontend:** Modify all frontend API calls that currently use relative paths (`/api/shifts`) to prepend the configured base URL. This ensures requests are correctly directed to the Express.js backend."
+    },
+    {
+      "rank": 11,
+      "issue": {
+        "id": "1b330a92d7acce8a",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/notifications",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/notifications",
+        "timestamp": "2026-01-14T03:00:21.397Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 12,
+      "issue": {
+        "id": "316a417d3ca1df01",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/invoices",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/invoices",
+        "timestamp": "2026-01-14T03:00:21.417Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 13,
+      "issue": {
+        "id": "33f13a688ec1eed1",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/billing/status",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/billing/status",
+        "timestamp": "2026-01-14T03:00:21.443Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 14,
+      "issue": {
+        "id": "3657c1db4015eaa0",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/trinity/status",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/trinity/status",
+        "timestamp": "2026-01-14T03:00:21.471Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 15,
+      "issue": {
+        "id": "b64037e2d619f2ff",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/stripe/config",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/stripe/config",
+        "timestamp": "2026-01-14T03:00:21.499Z",
+        "crawlerType": "api",
+        "subsystem": "integration",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 16,
+      "issue": {
+        "id": "9c73aeba0dfbe65a",
+        "category": "network_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co/api/billing/plans",
+        "message": "API request failed: fetch failed",
+        "details": "fetch failed",
+        "statusCode": 0,
+        "requestUrl": "/api/billing/plans",
+        "timestamp": "2026-01-14T03:00:21.516Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 17,
+      "issue": {
+        "id": "3150efd4773de089",
+        "category": "workflow_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co",
+        "message": "Homepage to Registration Flow failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+        "details": "Failed at step: Load homepage. Completed 0/4 steps.",
+        "timestamp": "2026-01-14T03:00:22.898Z",
+        "crawlerType": "integration",
+        "subsystem": "workflow",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 18,
+      "issue": {
+        "id": "308a7d72ab0710ca",
+        "category": "workflow_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co",
+        "message": "Homepage to Login Flow failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/\", waiting until \"networkidle\"\u001b[22m\n",
+        "details": "Failed at step: Load homepage. Completed 0/4 steps.",
+        "timestamp": "2026-01-14T03:00:23.322Z",
+        "crawlerType": "integration",
+        "subsystem": "workflow",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 19,
+      "issue": {
+        "id": "17366181fbf025d9",
+        "category": "workflow_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co",
+        "message": "Pricing Page CTA Flow failed: page.goto: net::ERR_NAME_NOT_RESOLVED at https://workspace.drillconsult360.repl.co/pricing\nCall log:\n\u001b[2m  - navigating to \"https://workspace.drillconsult360.repl.co/pricing\", waiting until \"networkidle\"\u001b[22m\n",
+        "details": "Failed at step: Load pricing page. Completed 0/3 steps.",
+        "timestamp": "2026-01-14T03:00:23.534Z",
+        "crawlerType": "integration",
+        "subsystem": "workflow",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    },
+    {
+      "rank": 20,
+      "issue": {
+        "id": "8d86a942c49df652",
+        "category": "workflow_failure",
+        "severity": "critical",
+        "url": "https://workspace.DrillConsult360.repl.co",
+        "message": "API Health Integration failed: fetch failed",
+        "details": "Failed at step: Call health endpoint. Completed 0/2 steps.",
+        "timestamp": "2026-01-14T03:00:24.454Z",
+        "crawlerType": "integration",
+        "subsystem": "integration",
+        "reproducible": true
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "Manual investigation required"
+    }
+  ],
+  "trinityInsights": {
+    "overallAssessment": "20 critical blocker(s) must be fixed before launch.",
+    "topPriorities": [
+      "Authentication request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed"
+    ],
+    "quickWins": [
+      "Authentication request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed",
+      "API request failed: fetch failed"
+    ],
+    "technicalDebt": [],
+    "launchReadiness": "not-ready",
+    "confidenceScore": 10
+  },
+  "artifactsPath": "/home/runner/workspace/diagnostics-runner/diagnostics-runner/output/triad_run_20260114030020_de0696",
+  "reportPath": "/home/runner/workspace/diagnostics-runner/diagnostics-runner/output/triad_run_20260114030020_de0696/triad_report.json"
+}

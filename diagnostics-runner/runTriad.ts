@@ -29,10 +29,8 @@ async function main() {
   };
   
   const mode = getArg('mode') as TriadOrchestratorConfig['mode'] || 'full-triad';
-  // Use local dev URL by default for testing with dev database
-  const defaultUrl = process.env.REPL_SLUG 
-    ? `https://${process.env.REPL_SLUG}.${process.env.REPL_OWNER}.repl.co`
-    : 'http://localhost:5000';
+  // Always use localhost for dev testing - crawlers run in same environment
+  const defaultUrl = 'http://localhost:5000';
   const baseUrl = getArg('url') || process.env.DIAGNOSTICS_BASE_URL || defaultUrl;
   const parallel = !hasFlag('sequential');
   const maxPages = parseInt(getArg('max-pages') || '50', 10);
