@@ -89,12 +89,13 @@ export default function CustomLogin() {
     setIsLoading(true);
     const startTime = Date.now();
 
-    // Show login animation
+    // Show login animation (10 seconds for users to enjoy Trinity loader)
     if (animationContext?.show) {
       animationContext.show({
         mode: 'search',
         mainText: 'Verifying',
         subText: 'Authenticating your credentials...',
+        duration: 10000,
         source: 'system'
       });
     }
