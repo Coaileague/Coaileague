@@ -1,7 +1,8 @@
 import { useState, useRef, useCallback, type TouchEvent } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Calendar, ChevronRight, ChevronDown, Check, X, Wrench, CheckCircle2, Bell, Trash2, RefreshCw, CheckCheck, Sparkles } from "lucide-react";
+import { Calendar, ChevronRight, ChevronDown, Check, X, Wrench, CheckCircle2, Bell, Trash2, RefreshCw, CheckCheck, Sparkles, ListChecks } from "lucide-react";
 import { useLocation } from "wouter";
+import { useTrinityModal } from "@/components/trinity-chat-modal";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -237,6 +238,7 @@ interface MobileNotificationHubProps {
 export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+  const { openModal: openTrinityModal } = useTrinityModal();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'alerts' | 'updates' | 'platform'>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -448,7 +450,14 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   
   const handleAskTrinity = () => {
     if (onClose) onClose();
-    setLocation('/trinity');
+    openTrinityModal();
+  };
+  
+  // Enter selection mode with first item
+  const handleEnterSelectionMode = () => {
+    if (filteredNotifications.length > 0) {
+      setSelectedIds(new Set([filteredNotifications[0].id]));
+    }
   };
   
   return (
@@ -472,7 +481,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
             </Button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 text-white text-sm pr-24">
+          <div className="flex items-center gap-1.5 text-white text-sm">
             <Bell className="w-4 h-4 flex-shrink-0" />
             <span className="flex-1 font-bold tracking-tight truncate">
               {unreadCount === 0 
@@ -480,36 +489,55 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
                 : `${unreadCount} Unread`
               }
             </span>
+            {/* Sync/Refresh */}
             <Button
               size="icon"
               variant="ghost"
-              className="text-white hover:bg-white/20"
+              className="text-white hover:bg-white/20 h-8 w-8"
               onClick={handleRefresh}
               disabled={isRefreshing}
               data-testid="button-sync-notifications"
+              title="Sync"
             >
               <RefreshCw className={cn("w-4 h-4", isRefreshing ? 'animate-spin' : '')} />
             </Button>
-            {unreadCount > 0 && (
-              <Button
-                size="icon"
-                variant="ghost"
-                className="text-white hover:bg-white/20"
-                onClick={handleMarkAllRead}
-                disabled={markAllReadMutation.isPending}
-                data-testid="button-mark-all-read"
-              >
-                <CheckCheck className="w-4 h-4" />
-              </Button>
-            )}
+            {/* Select All - enter selection mode */}
             {allNotifications.length > 0 && (
               <Button
                 size="icon"
                 variant="ghost"
-                className="text-white hover:bg-white/20"
+                className="text-white hover:bg-white/20 h-8 w-8"
+                onClick={handleSelectAll}
+                data-testid="button-select-all"
+                title="Select All"
+              >
+                <ListChecks className="w-4 h-4" />
+              </Button>
+            )}
+            {/* Mark All Read */}
+            {unreadCount > 0 && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-white hover:bg-white/20 h-8 w-8"
+                onClick={handleMarkAllRead}
+                disabled={markAllReadMutation.isPending}
+                data-testid="button-mark-all-read"
+                title="Mark All Read"
+              >
+                <CheckCheck className="w-4 h-4" />
+              </Button>
+            )}
+            {/* Clear All/Delete All */}
+            {allNotifications.length > 0 && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-white hover:bg-white/20 h-8 w-8"
                 onClick={handleClearAll}
                 disabled={clearAllMutation.isPending}
                 data-testid="button-clear-all"
+                title="Delete All"
               >
                 <Trash2 className="w-4 h-4" />
               </Button>
