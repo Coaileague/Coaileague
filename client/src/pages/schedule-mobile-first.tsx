@@ -929,15 +929,16 @@ export default function ScheduleMobileFirst() {
       {/* Sticky Bottom Action Bar - Clean, no overlaps */}
       {(canEdit || isManagerOrSupervisor) && (
         <div 
-          className="fixed left-0 right-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm border-t border-slate-200 dark:border-slate-700 px-4 py-2"
-          style={{ bottom: 'calc(64px + env(safe-area-inset-bottom, 0px))' }}
+          className="fixed left-0 right-0 z-40 bg-background/95 backdrop-blur-sm border-t px-4 py-2"
+          style={{ bottom: 'calc(80px + env(safe-area-inset-bottom, 0px))' }}
           data-testid="schedule-action-bar"
         >
           <div className="flex items-center justify-between gap-2">
-            {/* Add Shift Button - Primary action with Blue/Cyan branding */}
+            {/* Add Shift Button - Primary action */}
             {canEdit && (
               <Button
-                className="flex-1 h-11 bg-gradient-to-r from-cyan-600 to-cyan-500 hover:from-cyan-700 hover:to-cyan-600 text-white font-medium shadow-sm"
+                size="lg"
+                className="flex-1"
                 onClick={() => {
                   setSelectedEmployee(undefined);
                   setEditingShift(undefined);
@@ -953,15 +954,15 @@ export default function ScheduleMobileFirst() {
             {/* Manager Tools Button - Secondary action */}
             {isManagerOrSupervisor && (
               <Button
+                size="lg"
                 variant="outline"
-                className="h-11 px-4 border-slate-300 dark:border-slate-600"
                 onClick={() => setShowManagerTools(true)}
                 data-testid="btn-manager-tools"
               >
                 <Menu className="h-4 w-4 mr-2" />
                 Tools
                 {pendingShifts.length > 0 && (
-                  <Badge variant="destructive" className="ml-2 text-[10px] px-1.5 h-4">
+                  <Badge variant="destructive" className="ml-2 text-[10px] px-1.5">
                     {pendingShifts.length}
                   </Badge>
                 )}
