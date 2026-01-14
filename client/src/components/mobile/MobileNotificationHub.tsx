@@ -52,122 +52,175 @@ interface Shift {
   location?: string;
 }
 
+interface ExpandableNotificationCardProps {
+  notification: UserNotification;
+  onAction: (action: string, id: string, data?: any) => void;
+  onDelete: (id: string) => void;
+  isSelected?: boolean;
+  onSelect?: (id: string, selected: boolean) => void;
+  selectionMode?: boolean;
+}
+
 function ExpandableNotificationCard({ 
   notification, 
   onAction,
-  onDelete
-}: { 
-  notification: UserNotification; 
-  onAction: (action: string, id: string, data?: any) => void;
-  onDelete: (id: string) => void;
-}) {
+  onDelete,
+  isSelected,
+  onSelect,
+  selectionMode
+}: ExpandableNotificationCardProps) {
   const [expanded, setExpanded] = useState(false);
   const { actionType, actionData, id } = notification;
-  const hasAction = actionType && actionType !== '';
   const isUrgent = notification.priority === 'high' || notification.priority === 'urgent';
   
+  const handleSelect = (e: React.MouseEvent) => {
+    if (selectionMode && onSelect) {
+      e.stopPropagation();
+      onSelect(id, !isSelected);
+    }
+  };
+
+  const handleLongPress = () => {
+    if (!selectionMode && onSelect) {
+      onSelect(id, true);
+    }
+  };
+
+  // Simple long press implementation
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const onTouchStart = () => {
+    timerRef.current = setTimeout(handleLongPress, 500);
+  };
+  const onTouchEnd = () => {
+    if (timerRef.current) clearTimeout(timerRef.current);
+  };
+
   return (
     <Card 
-      className={`overflow-hidden ${isUrgent ? 'border-l-2 border-l-amber-500' : ''}`}
+      className={cn(
+        "overflow-hidden transition-all duration-200",
+        isUrgent ? 'border-l-2 border-l-[#06b6d4]' : 'border-l-2 border-l-transparent',
+        isSelected ? 'ring-2 ring-[#06b6d4] bg-blue-50/50 dark:bg-blue-900/10' : '',
+        notification.read ? 'opacity-70' : ''
+      )}
       data-testid={`notification-card-${notification.id}`}
+      onClick={handleSelect}
+      onTouchStart={onTouchStart}
+      onTouchEnd={onTouchEnd}
     >
-      <button
-        className="w-full p-3 text-left flex items-center gap-2 min-h-[48px]"
-        onClick={() => setExpanded(!expanded)}
-        data-testid={`button-expand-${notification.id}`}
-      >
-        <div className={`flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center ${isUrgent ? 'bg-amber-100 dark:bg-amber-900/30' : 'bg-blue-50 dark:bg-blue-900/20'}`}>
-          <Bell className={`w-3.5 h-3.5 ${isUrgent ? 'text-amber-600' : 'text-blue-500'}`} />
-        </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground truncate">
-            {notification.title}
-          </p>
-        </div>
-        <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">
-          {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: false })}
-        </span>
-        <ChevronDown className={`w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform ${expanded ? 'rotate-180' : ''}`} />
-      </button>
+      <div className="flex items-center">
+        {selectionMode && (
+          <div className="pl-3">
+            <div className={cn(
+              "w-5 h-5 rounded-full border-2 flex items-center justify-center transition-colors",
+              isSelected ? "bg-[#06b6d4] border-[#06b6d4]" : "border-muted-foreground/30"
+            )}>
+              {isSelected && <Check className="w-3 h-3 text-white" />}
+            </div>
+          </div>
+        )}
+        <button
+          className="flex-1 p-3 text-left flex items-center gap-2 min-h-[48px]"
+          onClick={(e) => {
+            if (selectionMode) {
+              handleSelect(e);
+            } else {
+              setExpanded(!expanded);
+            }
+          }}
+          data-testid={`button-expand-${notification.id}`}
+        >
+          <div className={cn(
+            "flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center",
+            isUrgent ? 'bg-[#06b6d4]/10' : 'bg-slate-100 dark:bg-slate-800'
+          )}>
+            <Bell className={cn("w-4 h-4", isUrgent ? 'text-[#06b6d4]' : 'text-slate-500')} />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className={cn(
+              "text-sm tracking-tight",
+              notification.read ? "font-normal text-muted-foreground" : "font-semibold text-foreground"
+            )}>
+              {notification.title}
+            </p>
+          </div>
+          <span className="text-[10px] font-medium text-muted-foreground flex-shrink-0 whitespace-nowrap bg-muted/50 px-1.5 py-0.5 rounded">
+            {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: false })}
+          </span>
+          {!selectionMode && (
+            <ChevronDown className={cn(
+              "w-4 h-4 text-muted-foreground flex-shrink-0 transition-transform duration-200",
+              expanded ? 'rotate-180' : ''
+            )} />
+          )}
+        </button>
+      </div>
       
-      {expanded && (
-        <div className="px-3 pb-3 pt-0 border-t border-border/50">
+      {expanded && !selectionMode && (
+        <div className="px-3 pb-3 pt-2 border-t border-border/50 bg-slate-50/30 dark:bg-slate-900/30">
           {notification.message && (
-            <p className="text-xs text-muted-foreground mt-2 break-words whitespace-normal">
+            <p className="text-xs text-muted-foreground leading-relaxed">
               {notification.message}
             </p>
           )}
           
-          <div className="flex flex-wrap gap-2 mt-3">
-            {(actionType === 'shift_request' || actionType === 'swap_request') && (
+          <div className="flex flex-wrap gap-2 mt-4">
+            {(actionType === 'shift_request' || actionType === 'swap_request' || actionType === 'approval') && (
               <>
                 <Button 
-                  size="default" 
-                  className="bg-emerald-600 hover:bg-emerald-700 flex-1 min-w-[80px]"
-                  onClick={() => onAction('approve', id, actionData)}
+                  size="sm" 
+                  className="bg-[#06b6d4] hover:bg-[#0891b2] text-white font-bold flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAction('approve', id, actionData);
+                  }}
                   data-testid={`button-approve-${id}`}
                 >
-                  <Check className="w-4 h-4 mr-1" />
+                  <Check className="w-3.5 h-3.5 mr-1.5" />
                   Approve
                 </Button>
                 <Button 
-                  size="default" 
+                  size="sm" 
                   variant="outline"
-                  className="border-red-500/50 text-red-500 flex-1 min-w-[80px]"
-                  onClick={() => onAction('deny', id, actionData)}
+                  className="border-red-200 text-red-600 hover:bg-red-50 flex-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAction('deny', id, actionData);
+                  }}
                   data-testid={`button-deny-${id}`}
                 >
-                  <X className="w-4 h-4 mr-1" />
+                  <X className="w-3.5 h-3.5 mr-1.5" />
                   Deny
                 </Button>
               </>
             )}
             {actionType === 'acknowledge' && (
               <Button 
-                size="default" 
+                size="sm" 
                 variant="outline"
-                className="flex-1"
-                onClick={() => onAction('acknowledge', id)}
+                className="flex-1 border-[#06b6d4]/30 text-[#06b6d4] font-bold"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onAction('acknowledge', id);
+                }}
                 data-testid={`button-acknowledge-${id}`}
               >
-                <CheckCircle2 className="w-4 h-4 mr-1" />
+                <CheckCircle2 className="w-3.5 h-3.5 mr-1.5" />
                 Acknowledge
               </Button>
             )}
-            {(actionType === 'hotpatch' || actionType === 'trinity_fix') && (
-              <>
-                <Button 
-                  size="default" 
-                  className="bg-purple-600 hover:bg-purple-700 flex-1 min-w-[80px]"
-                  onClick={() => onAction('run_hotpatch', id, actionData)}
-                  data-testid={`button-hotpatch-${id}`}
-                >
-                  <Wrench className="w-4 h-4 mr-1" />
-                  Run Fix
-                </Button>
-                <Button 
-                  size="default" 
-                  variant="ghost"
-                  onClick={() => onAction('dismiss', id)}
-                  data-testid={`button-dismiss-${id}`}
-                >
-                  Dismiss
-                </Button>
-              </>
-            )}
             
-            {/* Delete button - always shown when expanded */}
             <Button 
-              size="default" 
+              size="sm" 
               variant="ghost"
-              className="text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20"
+              className="text-muted-foreground hover:text-red-500 transition-colors"
               onClick={(e) => {
                 e.stopPropagation();
                 onDelete(id);
               }}
               data-testid={`button-delete-${id}`}
             >
-              <Trash2 className="w-4 h-4 mr-1" />
+              <Trash2 className="w-3.5 h-3.5 mr-1.5" />
               Delete
             </Button>
           </div>
@@ -186,6 +239,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   const { toast } = useToast();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'alerts' | 'updates' | 'platform'>('all');
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const pullStartY = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -193,6 +247,58 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
     queryKey: ["/api/notifications/combined"],
     refetchInterval: 30000,
   });
+
+  const selectionMode = selectedIds.size > 0;
+  
+  const handleSelect = (id: string, selected: boolean) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (selected) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const handleClearSelection = () => setSelectedIds(new Set());
+  
+  const handleSelectAll = () => {
+    const allIds = filteredNotifications.map(n => n.id);
+    setSelectedIds(new Set(allIds));
+  };
+  
+  const deleteBatchMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      // Assuming a batch delete endpoint exists or calling multiple times if needed
+      // For now, let's call DELETE for each if batch isn't ready
+      await Promise.all(ids.map(id => apiRequest('DELETE', `/api/notifications/${id}`)));
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      toast({ title: `Deleted ${selectedIds.size} notifications` });
+      handleClearSelection();
+    }
+  });
+
+  const markReadBatchMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      await apiRequest('POST', '/api/notifications/mark-read-batch', { ids });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      toast({ title: "Notifications marked as read" });
+      handleClearSelection();
+    }
+  });
+
+  const handleBatchDelete = () => {
+    if (selectedIds.size === 0) return;
+    deleteBatchMutation.mutate(Array.from(selectedIds));
+  };
+
+  const handleBatchMarkRead = () => {
+    if (selectedIds.size === 0) return;
+    markReadBatchMutation.mutate(Array.from(selectedIds));
+  };
   
   const today = new Date();
   const dayStart = startOfDay(today).toISOString();
@@ -329,39 +435,57 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   
   return (
     <div className="flex flex-col h-full bg-muted/30">
-      {/* Header with sync and clear actions */}
-      <div className="bg-[#0095FF] px-3 py-3">
-        <div className="flex items-center gap-2 text-white text-sm">
-          <Bell className="w-4 h-4 flex-shrink-0" />
-          <span className="flex-1 truncate">
-            {unreadCount === 0 
-              ? "You have no unread notifications"
-              : `${unreadCount} unread notification${unreadCount !== 1 ? 's' : ''}`
-            }
-          </span>
-          <Button
-            size="icon"
-            variant="ghost"
-            className="text-white hover:bg-white/20"
-            onClick={handleRefresh}
-            disabled={isRefreshing}
-            data-testid="button-sync-notifications"
-          >
-            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-          </Button>
-          {unreadCount > 0 && (
+      {/* Header with sync and selection actions */}
+      <div className="bg-[#06b6d4] px-3 py-3 shadow-lg">
+        {selectionMode ? (
+          <div className="flex items-center gap-3 text-white">
+            <Button size="icon" variant="ghost" className="text-white" onClick={handleClearSelection}>
+              <X className="w-5 h-5" />
+            </Button>
+            <span className="flex-1 font-bold">{selectedIds.size} Selected</span>
+            <Button size="icon" variant="ghost" className="text-white" onClick={handleSelectAll}>
+              <CheckCheck className="w-5 h-5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="text-white" onClick={handleBatchMarkRead}>
+              <CheckCircle2 className="w-5 h-5" />
+            </Button>
+            <Button size="icon" variant="ghost" className="text-white" onClick={handleBatchDelete}>
+              <Trash2 className="w-5 h-5" />
+            </Button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 text-white text-sm">
+            <Bell className="w-4 h-4 flex-shrink-0" />
+            <span className="flex-1 font-bold tracking-tight truncate">
+              {unreadCount === 0 
+                ? "Inbox Clear"
+                : `${unreadCount} Unread`
+              }
+            </span>
             <Button
               size="icon"
               variant="ghost"
               className="text-white hover:bg-white/20"
-              onClick={handleMarkAllRead}
-              disabled={markAllReadMutation.isPending}
-              data-testid="button-mark-all-read"
+              onClick={handleRefresh}
+              disabled={isRefreshing}
+              data-testid="button-sync-notifications"
             >
-              <CheckCheck className="w-4 h-4" />
+              <RefreshCw className={cn("w-4 h-4", isRefreshing ? 'animate-spin' : '')} />
             </Button>
-          )}
-        </div>
+            {unreadCount > 0 && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="text-white hover:bg-white/20"
+                onClick={handleMarkAllRead}
+                disabled={markAllReadMutation.isPending}
+                data-testid="button-mark-all-read"
+              >
+                <CheckCheck className="w-4 h-4" />
+              </Button>
+            )}
+          </div>
+        )}
       </div>
       
       {/* Ask Trinity Button */}
@@ -381,21 +505,21 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
       </button>
       
       {/* Filter Tabs */}
-      <div className="flex gap-1 px-2 py-2 overflow-x-auto">
+      <div className="flex gap-1 px-2 py-2 overflow-x-auto bg-white/60 dark:bg-slate-900/60 sticky top-0 z-10 backdrop-blur-md border-b">
         {(['all', 'alerts', 'updates', 'platform'] as const).map(filter => (
           <Badge
             key={filter}
             variant={activeFilter === filter ? 'default' : 'outline'}
             className={cn(
-              "cursor-pointer whitespace-nowrap capitalize transition-colors",
-              activeFilter === filter 
-                ? "bg-[#0095FF] hover:bg-[#0095FF]/90" 
-                : "hover:bg-muted"
+              "cursor-pointer whitespace-nowrap capitalize transition-all duration-200 px-4 py-1.5 font-bold tracking-tight",
+              activeTab === filter 
+                ? "bg-[#06b6d4] text-white shadow-lg scale-105" 
+                : "bg-transparent text-muted-foreground border-slate-200"
             )}
             onClick={() => setActiveFilter(filter)}
             data-testid={`filter-${filter}`}
           >
-            {filter === 'all' ? 'All' : filter}
+            {filter}
           </Badge>
         ))}
       </div>
@@ -461,10 +585,10 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
             ))}
           </div>
         ) : filteredNotifications.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <Bell className="w-10 h-10 mx-auto mb-2 opacity-30" />
-            <p className="text-sm">
-              {activeFilter === 'all' ? 'No notifications' : `No ${activeFilter} notifications`}
+          <div className="text-center py-12 text-muted-foreground bg-white/40 dark:bg-slate-900/40 rounded-2xl border border-dashed">
+            <Bell className="w-10 h-10 mx-auto mb-2 opacity-20" />
+            <p className="text-sm font-medium">
+              {activeFilter === 'all' ? 'Your inbox is empty' : `No ${activeFilter} notifications found`}
             </p>
           </div>
         ) : (
@@ -475,6 +599,9 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
                 notification={notification}
                 onAction={handleAction}
                 onDelete={handleDelete}
+                isSelected={selectedIds.has(notification.id)}
+                onSelect={handleSelect}
+                selectionMode={selectionMode}
               />
             ))}
           </div>
