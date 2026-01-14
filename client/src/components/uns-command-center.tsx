@@ -191,7 +191,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
 
   const markAllReadMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest('/api/notifications/mark-all-read', { method: 'POST' });
+      await apiRequest('POST', '/api/notifications/mark-all-read');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
@@ -200,7 +200,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
 
   const clearAllMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest('/api/notifications/clear-all', { method: 'POST' });
+      await apiRequest('POST', '/api/notifications/clear-all');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
