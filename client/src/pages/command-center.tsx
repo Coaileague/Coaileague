@@ -12,6 +12,7 @@ import { formatDistanceToNow, parseISO, isValid } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { cn } from "@/lib/utils";
+import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
 
 interface NotificationItem {
   id: string;
@@ -158,12 +159,15 @@ function MobileNotificationCard({ notification, onDismiss, onNavigate }: {
 
 export default function CommandCenterPage() {
   const isMobile = useIsMobile();
-  const { user } = useAuth();
+  const { user, workspaceId } = useAuth();
   const [, navigate] = useLocation();
+  
+  // WebSocket for real-time notification sync
+  const { isConnected } = useNotificationWebSocket(user?.id, workspaceId || user?.workspaceId);
   
   const { data: notificationsData, isLoading } = useQuery<NotificationsData>({
     queryKey: ['/api/notifications/combined'],
-    refetchInterval: 30000,
+    refetchInterval: isConnected ? 60000 : 30000, // Slower polling when WS connected
   });
   
   const { data: trinityStatus } = useQuery<{ status: string; activeAgents?: number }>({
@@ -196,11 +200,54 @@ export default function CommandCenterPage() {
     },
   });
 
-  const allNotifications: NotificationItem[] = [
+  // Platform support roles that see all notifications
+  const PLATFORM_SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
+  // Workspace management roles that see business notifications
+  const WORKSPACE_MANAGEMENT_ROLES = ['org_owner', 'co_owner', 'org_admin', 'manager', 'department_manager', 'supervisor'];
+
+  // Role-based filter for mobile notifications
+  const applyRoleFilter = (notifications: NotificationItem[]): NotificationItem[] => {
+    const platformRole = user?.platformRole;
+    const wsRole = user?.workspaceRole;
+    
+    // Platform support staff see ALL notifications
+    if (platformRole && PLATFORM_SUPPORT_ROLES.includes(platformRole)) {
+      return notifications;
+    }
+    
+    // Org owners, managers, supervisors see all business notifications
+    if (wsRole && WORKSPACE_MANAGEMENT_ROLES.includes(wsRole)) {
+      return notifications;
+    }
+    
+    // End users (staff) see shift-related and personal notifications
+    return notifications.filter(n => {
+      const title = n.title?.toLowerCase() || '';
+      const message = (n.message || n.description || '')?.toLowerCase() || '';
+      
+      // Show shift-related notifications
+      if (title.includes('shift') || message.includes('shift')) return true;
+      // Show schedule notifications
+      if (title.includes('schedule') || message.includes('schedule')) return true;
+      // Show time tracking notifications
+      if (title.includes('time') || title.includes('clock')) return true;
+      // Show document notifications
+      if (title.includes('document') || title.includes('handbook')) return true;
+      // Show critical alerts
+      if (n.priority === 'critical') return true;
+      // Hide system maintenance from staff
+      if (n.category === 'system' && title.includes('maintenance')) return false;
+      // Show most non-system notifications
+      if (n.category !== 'system') return true;
+      return false;
+    });
+  };
+
+  const allNotifications: NotificationItem[] = applyRoleFilter([
     ...(notificationsData?.notifications || []),
     ...(notificationsData?.platformUpdates || []),
     ...(notificationsData?.maintenanceAlerts || []),
-  ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  ]).sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
   
   const unreadCount = allNotifications.filter(n => !n.isRead && !n.isViewed).length;
 
@@ -216,9 +263,17 @@ export default function CommandCenterPage() {
                 </div>
                 <div>
                   <h1 className="text-lg font-bold text-white">Notifications</h1>
-                  <p className="text-sm text-white/80">
-                    {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm text-white/80">
+                      {unreadCount > 0 ? `${unreadCount} unread` : 'All caught up'}
+                    </p>
+                    {isConnected && (
+                      <span className="inline-flex items-center gap-1 text-xs text-white/70">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                        Live
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
               {unreadCount > 0 && (
@@ -293,7 +348,11 @@ export default function CommandCenterPage() {
       <WorkspaceSection>
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2">
-            <UNSCommandCenter className="w-full" />
+            <UNSCommandCenter 
+              className="w-full" 
+              platformRole={user?.platformRole}
+              workspaceRole={user?.workspaceRole}
+            />
           </div>
           
           <div className="space-y-4">

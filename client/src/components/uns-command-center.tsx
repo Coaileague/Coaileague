@@ -30,11 +30,18 @@ interface UNSNotification {
   };
 }
 
+// Platform roles from schema - these are global platform-level roles
+type PlatformRole = 'root_admin' | 'deputy_admin' | 'sysop' | 'support_manager' | 'support_agent' | 'compliance_officer' | 'none';
+// Workspace roles - tenant-level roles within an organization
+type WorkspaceRole = 'org_owner' | 'co_owner' | 'org_admin' | 'manager' | 'department_manager' | 'supervisor' | 'staff';
+
 interface UNSCommandCenterProps {
   isOpen?: boolean;
   onClose?: () => void;
   className?: string;
   onAskTrinity?: () => void;
+  platformRole?: PlatformRole | string;
+  workspaceRole?: WorkspaceRole | string;
 }
 
 const normalizePriority = (priority: any): NotificationPriority => {
@@ -112,7 +119,55 @@ const getTypeIcon = (type: NotificationType) => {
   }
 };
 
-export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrinity }: UNSCommandCenterProps) {
+// Platform support roles that see all notifications
+const PLATFORM_SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent', 'compliance_officer'];
+// Workspace management roles that see business notifications
+const WORKSPACE_MANAGEMENT_ROLES = ['org_owner', 'co_owner', 'org_admin', 'manager', 'department_manager', 'supervisor'];
+
+// Role-based notification filtering - determines which notification types each role sees
+const getRoleBasedNotificationFilter = (
+  platformRole: string | undefined,
+  workspaceRole: string | undefined
+): ((notification: UNSNotification) => boolean) => {
+  // Platform support staff and admins see ALL notifications
+  if (platformRole && PLATFORM_SUPPORT_ROLES.includes(platformRole)) {
+    return () => true;
+  }
+  
+  // Org owners, managers, and supervisors see all business notifications
+  if (workspaceRole && WORKSPACE_MANAGEMENT_ROLES.includes(workspaceRole)) {
+    return () => true; // Owners/managers see everything in their workspace
+  }
+  
+  // End users (staff) primarily see shift-related and personal notifications
+  return (n) => {
+    const title = n.title?.toLowerCase() || '';
+    const message = n.message?.toLowerCase() || '';
+    
+    // Show shift-related notifications (accept/deny/swap)
+    if (title.includes('shift') || message.includes('shift')) return true;
+    // Show schedule notifications
+    if (title.includes('schedule') || message.includes('schedule')) return true;
+    // Show time tracking notifications
+    if (title.includes('time') || title.includes('clock')) return true;
+    // Show personal notifications (addressed to the user)
+    if (n.metadata?.employeeName) return true;
+    // Show document notifications
+    if (title.includes('document') || title.includes('handbook')) return true;
+    // Show critical alerts
+    if (n.priority === 'critical') return true;
+    // Hide workflow approvals (management only)
+    if (n.type === 'workflow' && (title.includes('approval') || title.includes('payroll'))) return false;
+    // Hide system maintenance alerts from staff
+    if (n.type === 'system' && title.includes('maintenance')) return false;
+    // Show general updates
+    if (n.type !== 'workflow' && n.type !== 'system') return true;
+    
+    return false;
+  };
+};
+
+export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrinity, platformRole, workspaceRole }: UNSCommandCenterProps) {
   const [activeTab, setActiveTab] = useState<NotificationCategory>('all');
   const [pulseActive, setPulseActive] = useState(true);
   
@@ -223,10 +278,14 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
     });
   }, [notificationsData]);
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-  const criticalCount = notifications.filter(n => n.priority === 'critical').length;
+  // Apply role-based filtering first
+  const roleFilter = getRoleBasedNotificationFilter(platformRole, workspaceRole);
+  const roleFilteredNotifications = notifications.filter(roleFilter);
+  
+  const unreadCount = roleFilteredNotifications.filter(n => !n.read).length;
+  const criticalCount = roleFilteredNotifications.filter(n => n.priority === 'critical').length;
 
-  const filteredNotifications = notifications.filter(n => {
+  const filteredNotifications = roleFilteredNotifications.filter(n => {
     if (activeTab === 'all') return true;
     if (activeTab === 'alerts') return n.type === 'alert' || n.priority === 'critical';
     if (activeTab === 'workflows') return n.type === 'workflow';
@@ -236,11 +295,11 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
   });
 
   const tabs = [
-    { id: 'all' as const, label: 'All', count: notifications.length },
-    { id: 'alerts' as const, label: 'Alerts', count: notifications.filter(n => n.type === 'alert').length, pulse: criticalCount > 0 },
-    { id: 'workflows' as const, label: 'Workflows', count: notifications.filter(n => n.type === 'workflow').length },
-    { id: 'system' as const, label: 'System', count: notifications.filter(n => n.type === 'system').length },
-    { id: 'ai' as const, label: 'Trinity AI', count: notifications.filter(n => n.type === 'ai').length }
+    { id: 'all' as const, label: 'All', count: roleFilteredNotifications.length },
+    { id: 'alerts' as const, label: 'Alerts', count: roleFilteredNotifications.filter(n => n.type === 'alert').length, pulse: criticalCount > 0 },
+    { id: 'workflows' as const, label: 'Workflows', count: roleFilteredNotifications.filter(n => n.type === 'workflow').length },
+    { id: 'system' as const, label: 'System', count: roleFilteredNotifications.filter(n => n.type === 'system').length },
+    { id: 'ai' as const, label: 'Trinity AI', count: roleFilteredNotifications.filter(n => n.type === 'ai').length }
   ];
 
   const formatTime = (time: string) => {
