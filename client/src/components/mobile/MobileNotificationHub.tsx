@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { Calendar, ChevronRight, ChevronDown, Check, X, Wrench, CheckCircle2, Bell, Trash2, RefreshCw, CheckCheck, Sparkles, ListChecks } from "lucide-react";
 import { useLocation } from "wouter";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
+import { useNotificationSync } from "@/hooks/use-notification-sync";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -239,6 +240,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { openModal: openTrinityModal } = useTrinityModal();
+  const { syncClearAll, syncNotificationCleared } = useNotificationSync();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<'all' | 'alerts' | 'updates' | 'platform'>('all');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -362,8 +364,9 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
     mutationFn: async (id: string) => {
       return apiRequest('DELETE', `/api/notifications/${id}`);
     },
-    onSuccess: () => {
+    onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      syncNotificationCleared(id);
       toast({ title: "Notification deleted" });
     },
     onError: () => {
@@ -378,6 +381,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      syncClearAll(); // Broadcast to sync other tabs/desktop
       toast({ title: "All marked as read" });
     },
     onError: () => {
@@ -392,6 +396,7 @@ export function MobileNotificationHub({ onClose }: MobileNotificationHubProps) {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/notifications/combined"] });
+      syncClearAll(); // Broadcast to sync other tabs/desktop
       toast({ title: "All notifications cleared" });
     },
     onError: () => {
