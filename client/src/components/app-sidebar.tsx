@@ -37,9 +37,15 @@ export function AppSidebar() {
     return null;
   }
 
-  const families = isLoading 
+  const rawFamilies = isLoading 
     ? [] 
     : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
+  
+  // Filter out mobileOnly routes since sidebar is desktop-only
+  const families = rawFamilies.map(family => ({
+    ...family,
+    routes: family.routes.filter(route => !route.mobileOnly)
+  }));
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>(() => {
     const initial: Record<string, boolean> = {};

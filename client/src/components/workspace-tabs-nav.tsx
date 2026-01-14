@@ -289,9 +289,17 @@ export function WorkspaceTabsNav() {
   const [expandedTab, setExpandedTab] = useState<boolean>(false);
 
   // Get sidebar families with RBAC filtering
-  const families = isLoading 
+  const rawFamilies = isLoading 
     ? [] 
     : selectSidebarFamilies(workspaceRole, subscriptionTier, isPlatformStaff);
+  
+  // Filter out mobileOnly routes on desktop
+  const families = isMobile 
+    ? rawFamilies 
+    : rawFamilies.map(family => ({
+        ...family,
+        routes: family.routes.filter(route => !route.mobileOnly)
+      }));
 
   // DEBUG: Log families and routes for troubleshooting
   useEffect(() => {

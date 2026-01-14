@@ -455,7 +455,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrini
 
   return (
     <div className={cn(
-      "relative bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden w-full max-w-md",
+      "relative bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden w-full",
       className
     )} data-testid="uns-command-center">
       

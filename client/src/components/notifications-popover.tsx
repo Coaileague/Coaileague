@@ -1785,8 +1785,8 @@ function NotificationsPopoverInner({ user }: { user: any }) {
         </div>
       </PopoverTrigger>
       <PopoverContent 
-        className="w-[420px] max-w-[min(calc(100vw-1rem),420px)] p-0 shadow-2xl border-0 flex flex-col overflow-hidden bg-transparent" 
-        style={{ maxHeight: 'min(85vh, 650px)', minWidth: '400px' }}
+        className="w-[min(420px,calc(100vw-2rem))] p-0 shadow-2xl border-0 flex flex-col overflow-hidden bg-transparent" 
+        style={{ maxHeight: 'min(85vh, 650px)' }}
         align="end"
         sideOffset={8}
         data-testid="notification-popover-content"
