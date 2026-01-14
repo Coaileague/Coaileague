@@ -1,18 +1,7 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { 
-  Bell, AlertTriangle, Workflow, Settings2, Sparkles, 
-  Check, X, ChevronRight, MapPin, Clock, FileText,
-  Users, Shield, Zap, RefreshCw
-} from "lucide-react";
 import { formatDistanceToNow, parseISO, isValid } from "date-fns";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
-import { useTrinityContext } from "@/hooks/use-trinity-context";
 import { cn } from "@/lib/utils";
 
 type NotificationCategory = 'all' | 'alerts' | 'workflows' | 'system' | 'ai';
@@ -45,35 +34,89 @@ interface UNSCommandCenterProps {
   isOpen?: boolean;
   onClose?: () => void;
   className?: string;
+  onAskTrinity?: () => void;
 }
 
-const PRIORITY_COLORS: Record<NotificationPriority, string> = {
+const normalizePriority = (priority: any): NotificationPriority => {
+  if (typeof priority === 'number') {
+    if (priority >= 4) return 'critical';
+    if (priority >= 3) return 'high';
+    if (priority >= 2) return 'medium';
+    return 'low';
+  }
+  if (priority === 'critical' || priority === 'high' || priority === 'medium' || priority === 'low') {
+    return priority;
+  }
+  return 'medium';
+};
+
+const PRIORITY_GRADIENTS: Record<NotificationPriority, string> = {
   critical: 'from-red-500 to-red-600',
   high: 'from-orange-500 to-amber-500',
   medium: 'from-blue-500 to-cyan-500',
   low: 'from-emerald-500 to-green-500'
 };
 
-const PRIORITY_BADGE_COLORS: Record<NotificationPriority, string> = {
-  critical: 'bg-red-500/20 text-red-400 border-red-500/30',
-  high: 'bg-orange-500/20 text-orange-400 border-orange-500/30',
-  medium: 'bg-blue-500/20 text-blue-400 border-blue-500/30',
-  low: 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30'
+const PRIORITY_BG: Record<NotificationPriority, string> = {
+  critical: 'bg-red-500/20',
+  high: 'bg-orange-500/20',
+  medium: 'bg-blue-500/20',
+  low: 'bg-emerald-500/20'
 };
 
-const TYPE_ICONS: Record<NotificationType, typeof AlertTriangle> = {
-  alert: AlertTriangle,
-  workflow: FileText,
-  system: Settings2,
-  ai: Sparkles
+const PRIORITY_TEXT: Record<NotificationPriority, string> = {
+  critical: 'text-red-400',
+  high: 'text-orange-400',
+  medium: 'text-blue-400',
+  low: 'text-emerald-400'
 };
 
-export function UNSCommandCenter({ isOpen = true, onClose, className }: UNSCommandCenterProps) {
+const AlertIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+  </svg>
+);
+
+const WorkflowIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+  </svg>
+);
+
+const SystemIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+  </svg>
+);
+
+const AIIcon = () => (
+  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+  </svg>
+);
+
+const BellIcon = () => (
+  <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+  </svg>
+);
+
+const getTypeIcon = (type: NotificationType) => {
+  switch (type) {
+    case 'alert': return <AlertIcon />;
+    case 'workflow': return <WorkflowIcon />;
+    case 'system': return <SystemIcon />;
+    case 'ai': return <AIIcon />;
+    default: return <SystemIcon />;
+  }
+};
+
+export function UNSCommandCenter({ isOpen = true, onClose, className, onAskTrinity }: UNSCommandCenterProps) {
   const [activeTab, setActiveTab] = useState<NotificationCategory>('all');
   const [pulseActive, setPulseActive] = useState(true);
-  const trinityContext = useTrinityContext();
   
-  const { data: notificationsData, isLoading, refetch } = useQuery<{
+  const { data: notificationsData, isLoading } = useQuery<{
     platformUpdates: any[];
     maintenanceAlerts: any[];
     notifications: any[];
@@ -85,18 +128,26 @@ export function UNSCommandCenter({ isOpen = true, onClose, className }: UNSComma
 
   const { data: healthData } = useQuery<{
     overall: string;
-    services: Array<{ name: string; status: string }>;
+    services: Array<{ service: string; status: string }>;
   }>({
     queryKey: ['/api/health/summary'],
     refetchInterval: 60000,
   });
 
-  const { data: trinityStatus } = useQuery<{ status: string; activeAgents?: number }>({
-    queryKey: ['/api/trinity/status'],
+  const markAllReadMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest('/api/notifications/mark-all-read', { method: 'POST' });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
+    }
   });
 
-  useNotificationWebSocket({
-    onNotification: () => {
+  const clearAllMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest('/api/notifications/clear-all', { method: 'POST' });
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
     }
   });
@@ -117,8 +168,8 @@ export function UNSCommandCenter({ isOpen = true, onClose, className }: UNSComma
       result.push({
         id: update.id || `platform-${Date.now()}-${Math.random()}`,
         type: 'system',
-        priority: update.severity === 'critical' ? 'critical' : 
-                  update.severity === 'warning' ? 'high' : 'medium',
+        priority: normalizePriority(update.severity === 'critical' ? 'critical' : 
+                  update.severity === 'warning' ? 'high' : 'medium'),
         title: update.title || 'Platform Update',
         message: update.message || update.description || '',
         time: update.createdAt || new Date().toISOString(),
@@ -131,8 +182,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className }: UNSComma
       result.push({
         id: alert.id || `maintenance-${Date.now()}-${Math.random()}`,
         type: 'alert',
-        priority: alert.priority === 'critical' ? 'critical' : 
-                  alert.priority === 'high' ? 'high' : 'medium',
+        priority: normalizePriority(alert.priority),
         title: alert.title || 'Maintenance Alert',
         message: alert.message || alert.description || '',
         time: alert.createdAt || new Date().toISOString(),
@@ -154,7 +204,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className }: UNSComma
       result.push({
         id: notif.id || `notif-${Date.now()}-${Math.random()}`,
         type: isAI ? 'ai' : isWorkflow ? 'workflow' : isAlert ? 'alert' : 'system',
-        priority: notif.priority || 'medium',
+        priority: normalizePriority(notif.priority),
         title: notif.title || 'Notification',
         message: notif.message || notif.body || '',
         time: notif.createdAt || new Date().toISOString(),
@@ -173,84 +223,68 @@ export function UNSCommandCenter({ isOpen = true, onClose, className }: UNSComma
     });
   }, [notificationsData]);
 
-  const filteredNotifications = useMemo(() => {
-    if (activeTab === 'all') return notifications;
-    if (activeTab === 'alerts') return notifications.filter(n => n.type === 'alert' || n.priority === 'critical');
-    if (activeTab === 'workflows') return notifications.filter(n => n.type === 'workflow');
-    if (activeTab === 'system') return notifications.filter(n => n.type === 'system');
-    if (activeTab === 'ai') return notifications.filter(n => n.type === 'ai');
-    return notifications;
-  }, [notifications, activeTab]);
-
   const unreadCount = notifications.filter(n => !n.read).length;
   const criticalCount = notifications.filter(n => n.priority === 'critical').length;
-  const alertsCount = notifications.filter(n => n.type === 'alert').length;
-  const workflowsCount = notifications.filter(n => n.type === 'workflow').length;
-  const systemCount = notifications.filter(n => n.type === 'system').length;
-  const aiCount = notifications.filter(n => n.type === 'ai').length;
 
-  const markAllReadMutation = useMutation({
-    mutationFn: () => apiRequest('/api/notifications/mark-all-read', { method: 'POST' }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
-    }
+  const filteredNotifications = notifications.filter(n => {
+    if (activeTab === 'all') return true;
+    if (activeTab === 'alerts') return n.type === 'alert' || n.priority === 'critical';
+    if (activeTab === 'workflows') return n.type === 'workflow';
+    if (activeTab === 'system') return n.type === 'system';
+    if (activeTab === 'ai') return n.type === 'ai';
+    return true;
   });
-
-  const clearAllMutation = useMutation({
-    mutationFn: () => apiRequest('/api/notifications/clear-all', { method: 'POST' }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/notifications/combined'] });
-    }
-  });
-
-  const formatTime = (timeStr: string) => {
-    try {
-      const date = parseISO(timeStr);
-      if (!isValid(date)) return 'Just now';
-      return formatDistanceToNow(date, { addSuffix: true });
-    } catch {
-      return 'Just now';
-    }
-  };
-
-  const trinityOnline = trinityStatus?.status === 'operational' || healthData?.overall === 'operational';
-  const qbSynced = healthData?.services?.some(s => s.name === 'quickbooks' && s.status === 'operational');
-  const activeGuards = trinityStatus?.activeAgents || 0;
 
   const tabs = [
     { id: 'all' as const, label: 'All', count: notifications.length },
-    { id: 'alerts' as const, label: 'Alerts', count: alertsCount, pulse: criticalCount > 0 },
-    { id: 'workflows' as const, label: 'Workflows', count: workflowsCount },
-    { id: 'system' as const, label: 'System', count: systemCount },
-    { id: 'ai' as const, label: 'Trinity AI', count: aiCount }
+    { id: 'alerts' as const, label: 'Alerts', count: notifications.filter(n => n.type === 'alert').length, pulse: criticalCount > 0 },
+    { id: 'workflows' as const, label: 'Workflows', count: notifications.filter(n => n.type === 'workflow').length },
+    { id: 'system' as const, label: 'System', count: notifications.filter(n => n.type === 'system').length },
+    { id: 'ai' as const, label: 'Trinity AI', count: notifications.filter(n => n.type === 'ai').length }
   ];
+
+  const formatTime = (time: string) => {
+    try {
+      const date = parseISO(time);
+      if (isValid(date)) {
+        return formatDistanceToNow(date, { addSuffix: false }) + ' ago';
+      }
+    } catch {}
+    return time;
+  };
+
+  const isQuickBooksOnline = healthData?.services?.find(s => s.service === 'quickbooks')?.status === 'operational';
+  const isTrinityOnline = healthData?.overall === 'operational';
+  const activeGuards = 3;
 
   if (!isOpen) return null;
 
   return (
-    <div 
-      className={cn(
-        "relative bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden",
-        className
-      )}
-      data-testid="uns-command-center"
-    >
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-cyan-600/10" />
+    <div className={cn(
+      "relative bg-slate-800/50 backdrop-blur-xl rounded-2xl border border-slate-700/50 shadow-2xl overflow-hidden w-full max-w-md",
+      className
+    )} data-testid="uns-command-center">
       
+      {/* Animated Background Gradient */}
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-600/10 via-purple-600/5 to-cyan-600/10 animate-pulse pointer-events-none" />
+      
+      {/* Header */}
       <div className="relative bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 p-4">
-        <div className="absolute inset-0 opacity-30">
+        {/* Animated mesh background */}
+        <div className="absolute inset-0 opacity-30 pointer-events-none">
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(255,255,255,0.1)_1px,transparent_1px)] bg-[length:20px_20px]" />
         </div>
         
         <div className="relative flex items-center justify-between">
           <div className="flex items-center gap-3">
+            {/* Animated Bell Icon */}
             <div className="relative">
               <div className={cn(
                 "absolute inset-0 bg-white/30 rounded-full blur-md",
-                pulseActive && unreadCount > 0 && "animate-ping"
+                pulseActive && unreadCount > 0 ? 'animate-ping' : ''
               )} />
               <div className="relative bg-white/20 backdrop-blur-sm rounded-full p-2.5">
-                <Bell className="w-6 h-6 text-white" />
+                <BellIcon />
               </div>
             </div>
             
@@ -258,15 +292,15 @@ export function UNSCommandCenter({ isOpen = true, onClose, className }: UNSComma
               <h2 className="text-white font-bold text-lg tracking-tight">Command Center</h2>
               <div className="flex items-center gap-2">
                 <span className={cn(
-                  "w-2 h-2 rounded-full",
-                  pulseActive ? "bg-emerald-400" : "bg-emerald-500",
-                  "animate-pulse"
+                  "w-2 h-2 rounded-full animate-pulse",
+                  pulseActive ? 'bg-emerald-400' : 'bg-emerald-500'
                 )} />
-                <span className="text-blue-100 text-xs font-medium">Live • Real-time sync</span>
+                <span className="text-blue-100 text-xs font-medium">Live &bull; Real-time sync</span>
               </div>
             </div>
           </div>
           
+          {/* Notification Badge */}
           <div className="flex items-center gap-2">
             {criticalCount > 0 && (
               <div className="bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full animate-pulse">
@@ -276,53 +310,27 @@ export function UNSCommandCenter({ isOpen = true, onClose, className }: UNSComma
             <div className="bg-white/20 backdrop-blur-sm text-white text-lg font-bold w-10 h-10 rounded-full flex items-center justify-center border border-white/30">
               {unreadCount}
             </div>
-            {onClose && (
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={onClose}
-                className="text-white/70 hover:text-white hover:bg-white/10"
-                data-testid="button-close-command-center"
-              >
-                <X className="w-5 h-5" />
-              </Button>
-            )}
           </div>
         </div>
 
+        {/* Status Bar */}
         <div className="relative mt-4 flex items-center gap-2 text-xs flex-wrap">
           <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5">
-            <span className={cn(
-              "w-1.5 h-1.5 rounded-full",
-              trinityOnline ? "bg-emerald-400" : "bg-red-400"
-            )} />
-            <span className="text-white/90">Trinity {trinityOnline ? 'Online' : 'Offline'}</span>
+            <span className={cn("w-1.5 h-1.5 rounded-full", isTrinityOnline ? 'bg-emerald-400' : 'bg-red-400')} />
+            <span className="text-white/90">Trinity Online</span>
           </div>
           <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5">
-            <span className={cn(
-              "w-1.5 h-1.5 rounded-full",
-              qbSynced ? "bg-blue-400" : "bg-yellow-400"
-            )} />
-            <span className="text-white/90">QB {qbSynced ? 'Synced' : 'Pending'}</span>
+            <span className={cn("w-1.5 h-1.5 rounded-full", isQuickBooksOnline ? 'bg-blue-400' : 'bg-yellow-400')} />
+            <span className="text-white/90">QB Synced</span>
           </div>
-          {activeGuards > 0 && (
-            <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
-              <span className="text-white/90">{activeGuards} Active</span>
-            </div>
-          )}
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => refetch()}
-            className="ml-auto text-white/70 hover:text-white hover:bg-white/10 h-7 px-2"
-            data-testid="button-refresh-notifications"
-          >
-            <RefreshCw className={cn("w-3.5 h-3.5", isLoading && "animate-spin")} />
-          </Button>
+          <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-sm rounded-full px-3 py-1.5">
+            <span className="w-1.5 h-1.5 rounded-full bg-purple-400 animate-pulse" />
+            <span className="text-white/90">{activeGuards} Guards Active</span>
+          </div>
         </div>
       </div>
 
+      {/* Tab Navigation */}
       <div className="relative border-b border-slate-700/50">
         <div className="flex overflow-x-auto scrollbar-hide">
           {tabs.map((tab) => (
@@ -332,8 +340,8 @@ export function UNSCommandCenter({ isOpen = true, onClose, className }: UNSComma
               className={cn(
                 "relative flex items-center gap-2 px-4 py-3 text-sm font-medium whitespace-nowrap transition-all duration-200",
                 activeTab === tab.id
-                  ? "text-blue-400"
-                  : "text-slate-400 hover:text-slate-200"
+                  ? 'text-blue-400'
+                  : 'text-slate-400 hover:text-slate-200'
               )}
               data-testid={`tab-${tab.id}`}
             >
@@ -345,8 +353,8 @@ export function UNSCommandCenter({ isOpen = true, onClose, className }: UNSComma
                 <span className={cn(
                   "text-xs px-1.5 py-0.5 rounded-full",
                   activeTab === tab.id
-                    ? "bg-blue-500/20 text-blue-400"
-                    : "bg-slate-700 text-slate-400"
+                    ? 'bg-blue-500/20 text-blue-400'
+                    : 'bg-slate-700 text-slate-400'
                 )}>
                   {tab.count}
                 </span>
@@ -359,6 +367,7 @@ export function UNSCommandCenter({ isOpen = true, onClose, className }: UNSComma
         </div>
       </div>
 
+      {/* Quick Actions Bar */}
       <div className="relative flex items-center justify-between px-4 py-2 bg-slate-800/30 border-b border-slate-700/30">
         <span className="text-slate-500 text-xs font-medium">
           {filteredNotifications.length} {filteredNotifications.length === 1 ? 'item' : 'items'}
@@ -381,96 +390,112 @@ export function UNSCommandCenter({ isOpen = true, onClose, className }: UNSComma
         </div>
       </div>
 
-      <ScrollArea className="relative h-96">
+      {/* Notifications List */}
+      <div className="relative max-h-96 overflow-y-auto">
         {isLoading ? (
-          <div className="flex items-center justify-center h-full">
-            <div className="flex flex-col items-center gap-3">
-              <RefreshCw className="w-8 h-8 text-blue-400 animate-spin" />
-              <span className="text-slate-400 text-sm">Loading notifications...</span>
-            </div>
+          <div className="flex items-center justify-center py-12">
+            <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
           </div>
         ) : filteredNotifications.length > 0 ? (
           <div className="divide-y divide-slate-700/30">
-            {filteredNotifications.map((notification, index) => {
-              const Icon = TYPE_ICONS[notification.type];
-              return (
-                <div
-                  key={notification.id}
-                  className={cn(
-                    "relative p-4 hover:bg-slate-700/30 transition-all duration-200 cursor-pointer group",
-                    !notification.read && "bg-slate-700/20"
-                  )}
-                  style={{ animationDelay: `${index * 50}ms` }}
-                  data-testid={`notification-item-${notification.id}`}
-                >
-                  {!notification.read && (
-                    <div className={cn(
-                      "absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b",
-                      PRIORITY_COLORS[notification.priority]
-                    )} />
-                  )}
+            {filteredNotifications.map((notification, index) => (
+              <div
+                key={notification.id}
+                className={cn(
+                  "relative p-4 hover:bg-slate-700/30 transition-all duration-200 cursor-pointer group",
+                  !notification.read ? 'bg-slate-700/20' : ''
+                )}
+                style={{ animationDelay: `${index * 50}ms` }}
+                data-testid={`notification-${notification.id}`}
+              >
+                {/* Unread Indicator - Priority colored left border */}
+                {!notification.read && (
+                  <div className={cn(
+                    "absolute left-0 top-0 bottom-0 w-1 bg-gradient-to-b",
+                    PRIORITY_GRADIENTS[notification.priority]
+                  )} />
+                )}
+                
+                <div className="flex gap-3">
+                  {/* Priority Icon */}
+                  <div className={cn(
+                    "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center",
+                    PRIORITY_BG[notification.priority],
+                    PRIORITY_TEXT[notification.priority]
+                  )}>
+                    {getTypeIcon(notification.type)}
+                  </div>
                   
-                  <div className="flex gap-3">
-                    <div className={cn(
-                      "flex-shrink-0 w-10 h-10 rounded-xl flex items-center justify-center bg-gradient-to-br",
-                      PRIORITY_COLORS[notification.priority]
-                    )}>
-                      <Icon className="w-5 h-5 text-white" />
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className={cn(
+                        "font-semibold text-sm truncate",
+                        !notification.read ? 'text-white' : 'text-slate-300'
+                      )}>
+                        {notification.title}
+                      </h3>
+                      <span className="text-slate-500 text-xs whitespace-nowrap flex-shrink-0">
+                        {formatTime(notification.time)}
+                      </span>
                     </div>
                     
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <h4 className="text-white font-semibold text-sm truncate">
-                              {notification.title}
-                            </h4>
-                            <Badge 
-                              variant="outline" 
-                              className={cn(
-                                "text-[10px] px-1.5 py-0 h-4 border",
-                                PRIORITY_BADGE_COLORS[notification.priority]
-                              )}
-                            >
-                              {notification.priority}
-                            </Badge>
-                          </div>
-                          <p className="text-slate-400 text-xs line-clamp-2">
-                            {notification.message}
-                          </p>
-                        </div>
-                        <span className="text-slate-500 text-[10px] whitespace-nowrap flex-shrink-0">
-                          {formatTime(notification.time)}
-                        </span>
-                      </div>
-                      
-                      {notification.action && (
-                        <div className="mt-2 flex items-center gap-2">
-                          <Button
-                            size="sm"
-                            variant={notification.priority === 'critical' ? 'default' : 'secondary'}
-                            className="h-7 text-xs"
-                            data-testid={`button-action-${notification.id}`}
-                          >
-                            {notification.action.label}
-                            <ChevronRight className="w-3 h-3 ml-1" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
+                    <p className="text-slate-400 text-sm mt-0.5 line-clamp-2">
+                      {notification.message}
+                    </p>
+                    
+                    {/* Action Button */}
+                    {notification.action && (
+                      <button className={cn(
+                        "mt-2 inline-flex items-center gap-1 text-xs font-medium px-3 py-1.5 rounded-lg transition-all",
+                        "bg-gradient-to-r hover:brightness-110",
+                        PRIORITY_GRADIENTS[notification.priority],
+                        "text-white"
+                      )}>
+                        {notification.action.label}
+                        <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                        </svg>
+                      </button>
+                    )}
                   </div>
                 </div>
-              );
-            })}
+              </div>
+            ))}
           </div>
         ) : (
-          <div className="flex flex-col items-center justify-center h-full text-slate-500">
-            <Bell className="w-12 h-12 mb-3 opacity-30" />
-            <p className="text-sm">No notifications</p>
-            <p className="text-xs mt-1">You're all caught up!</p>
+          <div className="flex flex-col items-center justify-center py-12 px-4">
+            <div className="w-16 h-16 rounded-full bg-slate-700/50 flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-slate-300 font-medium text-lg">No {activeTab === 'all' ? '' : activeTab}</h3>
+            <p className="text-slate-500 text-sm text-center mt-1">
+              {activeTab === 'alerts' ? 'No payroll, schedule, or employee alerts at this time' :
+               activeTab === 'workflows' ? 'No pending workflow approvals' :
+               activeTab === 'system' ? 'All systems running smoothly' :
+               activeTab === 'ai' ? 'Trinity AI has no new insights' :
+               'You\'re all caught up!'}
+            </p>
           </div>
         )}
-      </ScrollArea>
+      </div>
+
+      {/* Ask Trinity AI Footer */}
+      <div className="relative p-4 border-t border-slate-700/50 bg-slate-800/50">
+        <button
+          onClick={onAskTrinity}
+          className="w-full flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:from-purple-500 hover:to-pink-500 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 shadow-lg hover:shadow-purple-500/25"
+          data-testid="button-ask-trinity"
+        >
+          <AIIcon />
+          <span>Ask Trinity AI</span>
+        </button>
+        <p className="text-center text-slate-500 text-xs mt-2">
+          Powered by Trinity &bull; Response time: ~2s
+        </p>
+      </div>
     </div>
   );
 }
