@@ -12,6 +12,7 @@ import { db } from '../db';
 import { exceptionTriageQueue, partnerDataMappings, partnerConnections } from '@shared/schema';
 import { eq, and, desc, sql, count } from 'drizzle-orm';
 import { requireAuth, type AuthenticatedRequest } from '../auth';
+import { quickbooksOAuthService } from '../services/oauth/quickbooks';
 
 const router = Router();
 
@@ -38,7 +39,7 @@ interface AutomationHealth {
 router.get('/api/exceptions', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
-    const workspaceId = user?.claims?.metadata?.currentWorkspaceId;
+    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ message: 'No workspace context' });
@@ -68,7 +69,7 @@ router.get('/api/exceptions', requireAuth, async (req: AuthenticatedRequest, res
 router.get('/api/exceptions/stats', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
-    const workspaceId = user?.claims?.metadata?.currentWorkspaceId;
+    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ message: 'No workspace context' });
@@ -110,7 +111,7 @@ router.get('/api/exceptions/stats', requireAuth, async (req: AuthenticatedReques
 router.get('/api/quickbooks/automation-health', requireAuth, async (req: AuthenticatedRequest, res) => {
   try {
     const user = req.user;
-    const workspaceId = user?.claims?.metadata?.currentWorkspaceId;
+    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
     
     if (!workspaceId) {
       return res.status(400).json({ message: 'No workspace context' });
@@ -141,7 +142,8 @@ router.get('/api/quickbooks/automation-health', requireAuth, async (req: Authent
     let autopilotEnabled = false;
 
     if (connection) {
-      const tokenExpiry = connection.tokenExpiresAt ? new Date(connection.tokenExpiresAt) : null;
+      const tokenExpiry = connection.expiresAt ? new Date(connection.expiresAt) : null;
+      const refreshTokenExpiry = connection.refreshTokenExpiresAt ? new Date(connection.refreshTokenExpiresAt) : null;
       const now = new Date();
       
       if (tokenExpiry) {
@@ -155,7 +157,7 @@ router.get('/api/quickbooks/automation-health', requireAuth, async (req: Authent
         }
       }
 
-      autopilotEnabled = connection.syncEnabled === true;
+      autopilotEnabled = (connection.metadata as any)?.syncEnabled === true;
     }
 
     const mappings = await db.select()
@@ -211,7 +213,7 @@ router.post('/api/exceptions/:id/resolve', requireAuth, async (req: Authenticate
     const { id } = req.params;
     const { action, notes } = req.body;
     const user = req.user;
-    const workspaceId = user?.claims?.metadata?.currentWorkspaceId;
+    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
     const userId = user?.claims?.sub;
 
     if (!workspaceId) {
@@ -253,7 +255,7 @@ router.post('/api/exceptions/:id/retry', requireAuth, async (req: AuthenticatedR
   try {
     const { id } = req.params;
     const user = req.user;
-    const workspaceId = user?.claims?.metadata?.currentWorkspaceId;
+    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
 
     if (!workspaceId) {
       return res.status(400).json({ message: 'No workspace context' });
@@ -289,6 +291,194 @@ router.post('/api/exceptions/:id/retry', requireAuth, async (req: AuthenticatedR
   } catch (error) {
     console.error('[IntegrationRoutes] Error retrying exception:', error);
     res.status(500).json({ message: 'Failed to retry exception' });
+  }
+});
+
+/**
+ * Get detailed QuickBooks connection status
+ */
+router.get('/api/quickbooks/connection-status', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = req.user;
+    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ message: 'No workspace context' });
+    }
+
+    const [connection] = await db.select()
+      .from(partnerConnections)
+      .where(
+        and(
+          eq(partnerConnections.workspaceId, workspaceId),
+          eq(partnerConnections.partnerType, 'quickbooks')
+        )
+      )
+      .limit(1);
+
+    if (!connection) {
+      return res.json({
+        connected: false,
+        status: 'not_connected',
+        message: 'QuickBooks is not connected. Click "Connect" to authorize.',
+        canRefresh: false,
+        needsReauthorization: false,
+      });
+    }
+
+    const now = new Date();
+    const accessTokenExpiry = connection.expiresAt ? new Date(connection.expiresAt) : null;
+    const refreshTokenExpiry = connection.refreshTokenExpiresAt ? new Date(connection.refreshTokenExpiresAt) : null;
+    
+    const accessTokenExpired = accessTokenExpiry ? now > accessTokenExpiry : true;
+    const refreshTokenExpired = refreshTokenExpiry ? now > refreshTokenExpiry : true;
+    const refreshTokenValid = !refreshTokenExpired && connection.refreshToken;
+    
+    let status: string;
+    let message: string;
+    let canRefresh = false;
+    let needsReauthorization = false;
+
+    if (!accessTokenExpired) {
+      const hoursRemaining = accessTokenExpiry 
+        ? Math.round((accessTokenExpiry.getTime() - now.getTime()) / (1000 * 60 * 60))
+        : 0;
+      status = hoursRemaining > 24 ? 'connected' : 'expiring_soon';
+      message = hoursRemaining > 24 
+        ? 'QuickBooks is connected and working properly.'
+        : `Access token expires in ${hoursRemaining} hours. Will auto-refresh when needed.`;
+      canRefresh = true;
+    } else if (refreshTokenValid) {
+      status = 'token_expired';
+      message = 'Access token expired. Click "Refresh" to reconnect automatically.';
+      canRefresh = true;
+      needsReauthorization = false;
+    } else {
+      status = 'needs_reauthorization';
+      message = 'Both tokens have expired. You need to reconnect to QuickBooks.';
+      canRefresh = false;
+      needsReauthorization = true;
+    }
+
+    // If status is disconnected, check if we can still refresh
+    if (connection.status === 'disconnected' && refreshTokenValid) {
+      status = 'disconnected_recoverable';
+      message = 'QuickBooks was disconnected. Click "Refresh" to try reconnecting.';
+      canRefresh = true;
+    }
+
+    res.json({
+      connected: !accessTokenExpired && connection.status !== 'disconnected',
+      status,
+      message,
+      canRefresh,
+      needsReauthorization,
+      connectionId: connection.id,
+      companyName: (connection.metadata as any)?.companyName || 'Unknown Company',
+      lastSync: connection.lastSyncAt,
+      lastError: connection.lastError,
+      accessTokenExpiresAt: accessTokenExpiry?.toISOString(),
+      refreshTokenExpiresAt: refreshTokenExpiry?.toISOString(),
+    });
+  } catch (error) {
+    console.error('[IntegrationRoutes] Error getting connection status:', error);
+    res.status(500).json({ message: 'Failed to get connection status' });
+  }
+});
+
+/**
+ * Attempt to refresh QuickBooks token
+ */
+router.post('/api/quickbooks/refresh-token', requireAuth, async (req: AuthenticatedRequest, res) => {
+  try {
+    const user = req.user;
+    const workspaceId = user?.currentWorkspaceId || (req as any).workspaceId;
+    
+    if (!workspaceId) {
+      return res.status(400).json({ message: 'No workspace context' });
+    }
+
+    const [connection] = await db.select()
+      .from(partnerConnections)
+      .where(
+        and(
+          eq(partnerConnections.workspaceId, workspaceId),
+          eq(partnerConnections.partnerType, 'quickbooks')
+        )
+      )
+      .limit(1);
+
+    if (!connection) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'No QuickBooks connection found. Please connect first.' 
+      });
+    }
+
+    // Check if refresh token is still valid
+    const now = new Date();
+    const refreshTokenExpiry = connection.refreshTokenExpiresAt 
+      ? new Date(connection.refreshTokenExpiresAt) 
+      : null;
+    
+    if (refreshTokenExpiry && now > refreshTokenExpiry) {
+      return res.status(400).json({
+        success: false,
+        needsReauthorization: true,
+        message: 'Refresh token has expired. You need to reconnect to QuickBooks.',
+      });
+    }
+
+    if (!connection.refreshToken) {
+      return res.status(400).json({
+        success: false,
+        needsReauthorization: true,
+        message: 'No refresh token available. Please reconnect to QuickBooks.',
+      });
+    }
+
+    // Attempt token refresh
+    try {
+      await quickbooksOAuthService.refreshAccessToken(connection.id);
+      
+      // Update connection status to connected
+      await db.update(partnerConnections)
+        .set({ 
+          status: 'connected',
+          lastError: null,
+          lastErrorAt: null,
+          updatedAt: new Date(),
+        })
+        .where(eq(partnerConnections.id, connection.id));
+
+      res.json({
+        success: true,
+        message: 'Token refreshed successfully! QuickBooks is now connected.',
+      });
+    } catch (refreshError: any) {
+      console.error('[IntegrationRoutes] Token refresh failed:', refreshError);
+      
+      // Check if it's an invalid_grant error (needs reauthorization)
+      const errorMessage = refreshError.message || '';
+      if (errorMessage.includes('invalid_grant') || errorMessage.includes('token')) {
+        return res.status(400).json({
+          success: false,
+          needsReauthorization: true,
+          message: 'Token refresh failed. Please reconnect to QuickBooks.',
+        });
+      }
+      
+      return res.status(500).json({
+        success: false,
+        message: `Token refresh failed: ${errorMessage}`,
+      });
+    }
+  } catch (error: any) {
+    console.error('[IntegrationRoutes] Error refreshing token:', error);
+    res.status(500).json({ 
+      success: false, 
+      message: error.message || 'Failed to refresh token' 
+    });
   }
 });
 
