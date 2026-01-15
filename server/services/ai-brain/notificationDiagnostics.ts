@@ -63,7 +63,7 @@ async function collectNotificationMetrics(): Promise<Record<string, any>> {
   try {
     // Count unread notifications
     const unreadResult = await db.execute(sql`
-      SELECT COUNT(*) as count FROM notifications WHERE read = false
+      SELECT COUNT(*) as count FROM notifications WHERE is_read = false
     `);
     
     // Count notifications by type in last 24h
@@ -145,7 +145,7 @@ async function collectClearOperationMetrics(): Promise<Record<string, any>> {
     // Recent read notifications
     const recentReads = await db.execute(sql`
       SELECT COUNT(*) as count FROM notifications 
-      WHERE read = true AND updated_at > NOW() - INTERVAL '1 hour'
+      WHERE is_read = true AND updated_at > NOW() - INTERVAL '1 hour'
     `);
 
     return {

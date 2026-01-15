@@ -139,7 +139,7 @@ async function collectNotificationMetrics(): Promise<Record<string, any>> {
   try {
     const result = await db.execute(sql`
       SELECT COUNT(*) as count FROM notifications 
-      WHERE read = false AND created_at > NOW() - INTERVAL '7 days'
+      WHERE is_read = false AND created_at > NOW() - INTERVAL '7 days'
     `);
 
     return {
