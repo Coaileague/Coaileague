@@ -22,8 +22,9 @@ export const BILLING = {
   },
 
   // ==========================================================================
-  // SUBSCRIPTION TIERS - PREMIUM VALUE-BASED PRICING (Jan 2026)
+  // SUBSCRIPTION TIERS - PREMIUM VALUE-BASED PRICING (Jan 2026 Restructure)
   // Trinity AI replaces 3-5 admin positions. Pricing reflects 40-50% of value.
+  // Updated: New tier pricing, employee limits, AI credits, and overage rates
   // ==========================================================================
   tiers: {
     free: {
@@ -34,45 +35,67 @@ export const BILLING = {
       yearlyPrice: 0,
       maxEmployees: 5,
       maxManagers: 1,
-      monthlyCredits: 500,
+      monthlyCredits: 500, // Trial credits only - no overage allowed
       trialDays: 14,
       adminReplacementValue: 0,
+      allowCreditOverage: false, // Must upgrade to continue
       features: [
         "Up to 5 employees, 1 manager",
-        "Basic scheduling automation",
-        "Time tracking",
+        "Basic scheduling (manual, no AI optimization)",
+        "Basic time tracking (no GPS)",
+        "Dashboard access",
         "500 AI credits for trial",
-        "Email support",
+        "Email support only",
       ],
       limitations: [
-        "Limited to 5 employees",
-        "No payroll automation",
-        "No client billing",
-        "No advanced analytics",
+        "No GPS time tracking",
+        "No mobile app",
+        "No automation",
+        "No integrations",
+        "No compliance features",
+        "No contract pipeline",
       ],
     },
     
     starter: {
       id: "starter",
       name: "Starter",
-      description: "AI scheduling for small security companies (5-25 guards)",
-      monthlyPrice: 49900, // $499/month in cents
-      yearlyPrice: 499000, // $4,990/year (17% discount)
+      description: "AI scheduling for small service companies (5-25 employees)",
+      monthlyPrice: 69900, // $699/month in cents
+      yearlyPrice: 670800, // $6,708/year ($559/mo - 20% savings)
       maxEmployees: 15,
       maxManagers: 2,
-      monthlyCredits: 2000,
-      adminReplacementValue: 10000, // Saves ~$10K/year in admin time
-      overagePerEmployee: 1500, // $15/employee after 15
+      monthlyCredits: 2500, // 2,500 AI credits/month
+      adminReplacementValue: 12000, // Saves ~$12K/year in admin time
+      overagePerEmployee: 2200, // $22/employee after 15
+      allowCreditOverage: false, // Must upgrade or purchase add-on
       features: [
         "Up to 15 employees included",
-        "+$15/employee after 15",
-        "Trinity AI scheduling",
+        "+$22/employee after 15",
+        "Trinity AI scheduling (basic optimization)",
         "GPS time tracking",
-        "Basic compliance alerts",
         "Mobile app for guards",
+        "Shift swapping",
+        "Basic compliance alerts",
         "Email/SMS notifications",
-        "2,000 AI credits/month",
+        "Basic reporting & analytics",
+        "Employee onboarding tools",
+        "2,500 AI credits/month",
         "Email support (72hr response)",
+      ],
+      excludedFeatures: [
+        "QuickBooks integration",
+        "Payroll automation",
+        "Billing/invoice automation",
+        "P&L Financial Dashboard",
+        "Contract Pipeline",
+        "Document vault",
+        "E-signatures",
+        "Advanced compliance (SOX)",
+        "Incident management",
+        "Strategic business insights",
+        "Per-client profitability",
+        "Predictive insights",
       ],
       popular: false,
     },
@@ -80,27 +103,41 @@ export const BILLING = {
     professional: {
       id: "professional",
       name: "Professional",
-      description: "Full automation for growing security companies (25-150 guards)",
-      monthlyPrice: 149900, // $1,499/month in cents
-      yearlyPrice: 1439000, // $14,390/year (20% discount)
+      description: "Full automation for growing service companies (25-150 employees)",
+      monthlyPrice: 249900, // $2,499/month in cents
+      yearlyPrice: 2398800, // $23,988/year ($1,999/mo - 20% savings)
       maxEmployees: 50,
       maxManagers: 5,
-      monthlyCredits: 10000,
-      adminReplacementValue: 35000, // Saves ~$35K/year in admin time
-      overagePerEmployee: 1200, // $12/employee after 50
+      monthlyCredits: 15000, // 15,000 AI credits/month
+      adminReplacementValue: 45000, // Saves ~$45K/year in admin time
+      overagePerEmployee: 2000, // $20/employee after 50
+      allowCreditOverage: true, // Auto-charge $59/5,000 credits
+      creditOveragePackPrice: 5900, // $59 per 5,000 additional credits
+      creditOveragePackAmount: 5000, // 5,000 credits per pack
       features: [
         "Up to 50 employees included",
-        "+$12/employee after 50",
+        "+$20/employee after 50",
         "FULL Trinity AI automation",
         "Profit-first scheduling optimization",
         "Automated payroll processing",
         "Client billing automation",
-        "QuickBooks integration",
+        "Invoice generation & management",
+        "QuickBooks integration (full sync)",
+        "P&L Financial Dashboard",
+        "Contract Pipeline (create, send, track)",
+        "E-signature capture (typed + drawn)",
+        "Document vault with audit trail",
         "Advanced compliance (SOX audit trails)",
-        "Incident management",
+        "Incident management & reporting",
         "Strategic business insights",
-        "10,000 AI credits/month",
+        "15,000 AI credits/month",
         "Priority support (24hr response)",
+      ],
+      addonsAvailable: [
+        "client_profitability",
+        "predictive_insights",
+        "ai_credits",
+        "additional_location",
       ],
       popular: true,
     },
@@ -108,29 +145,87 @@ export const BILLING = {
     enterprise: {
       id: "enterprise",
       name: "Enterprise",
-      description: "Custom solutions for large security companies (150+ guards)",
-      monthlyPrice: 0, // Contact sales (starts at $3,500/month)
-      yearlyPrice: 0, // Contact sales
-      maxEmployees: 999999, // Unlimited
+      description: "Custom solutions for large service companies (150+ employees)",
+      monthlyPrice: 550000, // $5,500/month starting price in cents
+      yearlyPrice: 0, // Custom pricing - contact sales
+      maxEmployees: 999999, // Unlimited (150+ included)
       maxManagers: 999999, // Unlimited
       monthlyCredits: -1, // Unlimited
       adminReplacementValue: 250000, // Saves ~$250K+/year in admin time
       isContactSales: true,
-      startsAt: 350000, // Starts at $3,500/month
-      overagePerEmployee: 0, // Negotiated
+      startsAt: 550000, // Starts at $5,500/month
+      overagePerEmployee: 0, // Negotiated (custom)
+      allowCreditOverage: true, // N/A - unlimited
       features: [
-        "150+ employees",
-        "Multi-location management",
-        "Strategic profit optimization",
-        "Custom integrations (ADP, Workday, etc.)",
+        "150+ employees included",
+        "Everything in Professional, plus:",
+        "Per-client profitability analysis (included)",
+        "Trinity predictive insights (included)",
+        "Cash flow forecasting",
+        "Multi-location management (unlimited)",
         "White-label options",
-        "API access",
+        "Full API access",
+        "Custom integrations (ADP, Workday, Paychex, etc.)",
+        "Bulk contract generation",
+        "Custom contract templates",
         "Dedicated account manager",
         "Custom SLAs",
         "Unlimited AI credits",
-        "On-demand support",
+        "On-demand support (phone + video)",
       ],
       popular: false,
+    },
+  },
+
+  // ==========================================================================
+  // ADD-ON PRODUCTS (Available to Professional tier only)
+  // Separate Stripe products for premium features
+  // ==========================================================================
+  addons: {
+    client_profitability: {
+      id: "addon_client_profitability",
+      name: "Per-Client Profitability Analysis",
+      description: "Client margin reports, contract profitability ranking, revenue per client analysis",
+      monthlyPrice: 19900, // $199/month
+      isRecurring: true,
+      availableTiers: ["professional"],
+      features: [
+        "Client margin reports",
+        "Contract profitability ranking",
+        "Revenue per client analysis",
+      ],
+    },
+    predictive_insights: {
+      id: "addon_predictive_insights",
+      name: "Trinity Predictive Insights",
+      description: "AI-powered cash flow forecasting and financial predictions",
+      monthlyPrice: 24900, // $249/month
+      isRecurring: true,
+      availableTiers: ["professional"],
+      features: [
+        "Cash flow forecasting",
+        "What-if scenarios",
+        "AI financial predictions",
+        "Seasonal pattern alerts",
+      ],
+    },
+    ai_credits: {
+      id: "addon_ai_credits_5000",
+      name: "Additional AI Credits Pack",
+      description: "5,000 credits added immediately to account balance",
+      price: 5900, // $59 one-time
+      credits: 5000,
+      isRecurring: false, // One-time purchase
+      availableTiers: ["starter", "professional"], // Available to both
+    },
+    additional_location: {
+      id: "addon_location",
+      name: "Additional Location",
+      description: "Multi-location management per location added",
+      monthlyPrice: 14900, // $149/month per location
+      isRecurring: true,
+      isMetered: true, // Per-unit billing
+      availableTiers: ["professional"],
     },
   },
 
@@ -153,14 +248,82 @@ export const BILLING = {
   },
 
   // ==========================================================================
-  // TIERED OVERAGE PRICING (Per-tier employee overage rates)
+  // TIERED OVERAGE PRICING (Per-tier employee overage rates - Jan 2026)
   // ==========================================================================
   overages: {
-    starter: 1500, // $15/employee after 15 (Starter tier)
-    professional: 1200, // $12/employee after 50 (Professional tier)
+    starter: 2200, // $22/employee after 15 (Starter tier)
+    professional: 2000, // $20/employee after 50 (Professional tier)
     enterprise: 0, // Negotiated (Enterprise tier)
     description: "Additional employees beyond plan limit - rate based on tier",
     billingCycle: "monthly",
+  },
+
+  // ==========================================================================
+  // FEATURE MATRIX BY TIER - Comprehensive tier-based feature gating
+  // ==========================================================================
+  featureMatrix: {
+    // Core scheduling
+    basic_scheduling: { free: true, starter: true, professional: true, enterprise: true },
+    ai_scheduling: { free: false, starter: true, professional: true, enterprise: true },
+    profit_first_scheduling: { free: false, starter: false, professional: true, enterprise: true },
+    
+    // Time tracking
+    basic_time_tracking: { free: true, starter: true, professional: true, enterprise: true },
+    gps_time_tracking: { free: false, starter: true, professional: true, enterprise: true },
+    
+    // Mobile & Apps
+    mobile_app: { free: false, starter: true, professional: true, enterprise: true },
+    shift_swapping: { free: false, starter: true, professional: true, enterprise: true },
+    
+    // Compliance
+    basic_compliance: { free: false, starter: true, professional: true, enterprise: true },
+    advanced_compliance_sox: { free: false, starter: false, professional: true, enterprise: true },
+    
+    // Notifications
+    email_notifications: { free: true, starter: true, professional: true, enterprise: true },
+    sms_notifications: { free: false, starter: true, professional: true, enterprise: true },
+    
+    // Reporting
+    basic_reporting: { free: false, starter: true, professional: true, enterprise: true },
+    advanced_analytics: { free: false, starter: false, professional: true, enterprise: true },
+    strategic_insights: { free: false, starter: false, professional: true, enterprise: true },
+    
+    // Payroll & Billing
+    payroll_automation: { free: false, starter: false, professional: true, enterprise: true },
+    client_billing: { free: false, starter: false, professional: true, enterprise: true },
+    invoice_generation: { free: false, starter: false, professional: true, enterprise: true },
+    
+    // Integrations
+    quickbooks_integration: { free: false, starter: false, professional: true, enterprise: true },
+    api_access: { free: false, starter: false, professional: false, enterprise: true },
+    custom_integrations: { free: false, starter: false, professional: false, enterprise: true },
+    
+    // Financial Dashboard
+    pl_financial_dashboard: { free: false, starter: false, professional: true, enterprise: true },
+    cash_flow_forecasting: { free: false, starter: false, professional: false, enterprise: true },
+    
+    // Contract Pipeline
+    contract_pipeline: { free: false, starter: false, professional: true, enterprise: true },
+    e_signatures: { free: false, starter: false, professional: true, enterprise: true },
+    document_vault: { free: false, starter: false, professional: true, enterprise: true },
+    bulk_contracts: { free: false, starter: false, professional: false, enterprise: true },
+    custom_templates: { free: false, starter: false, professional: false, enterprise: true },
+    
+    // Premium Add-ons (included in Enterprise, add-on for Professional)
+    client_profitability: { free: false, starter: false, professional: "addon", enterprise: true },
+    predictive_insights: { free: false, starter: false, professional: "addon", enterprise: true },
+    multi_location: { free: false, starter: false, professional: "addon", enterprise: true },
+    
+    // Enterprise-only
+    white_label: { free: false, starter: false, professional: false, enterprise: true },
+    dedicated_account_manager: { free: false, starter: false, professional: false, enterprise: true },
+    custom_slas: { free: false, starter: false, professional: false, enterprise: true },
+    
+    // Incident Management
+    incident_management: { free: false, starter: false, professional: true, enterprise: true },
+    
+    // Onboarding
+    employee_onboarding: { free: false, starter: true, professional: true, enterprise: true },
   },
 
   // ==========================================================================

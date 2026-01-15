@@ -182,14 +182,14 @@ export default function UniversalMarketing() {
           <div className="container mx-auto max-w-7xl">
             <div className="text-center mb-8">
               <Badge className="inline-block mb-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0">
-                The AI That Runs Your Security Business
+                AI-Powered Workforce Management for Service Companies
               </Badge>
               <h1 className="text-2xl md:text-4xl font-bold mb-4">
                 Premium AI Workforce Automation
               </h1>
               <p className="text-muted-foreground max-w-2xl mx-auto">
                 Trinity AI autonomously schedules, processes payroll, bills clients, and optimizes profit while you sleep. 
-                Security companies save 30-40 hours/month and increase profit margins by 2-5%.
+                Service companies save 30-40 hours/month and increase profit margins by 2-5%.
               </p>
             </div>
 
@@ -233,17 +233,22 @@ export default function UniversalMarketing() {
                 const displayPrice = tier.monthlyPrice === 0 
                   ? '$0' 
                   : tierId === 'enterprise' 
-                    ? 'Custom' 
+                    ? '$5,500+' 
                     : isAnnual 
                       ? `$${annualMonthlyPrice.toLocaleString()}` 
                       : `$${monthlyPrice.toLocaleString()}`;
                 const priceSubtext = tierId === 'free' 
                   ? '14-day free trial' 
                   : tierId === 'enterprise' 
-                    ? 'starts at $3,500/mo' 
+                    ? '/month • Custom solutions' 
                     : isAnnual 
                       ? '/month billed annually' 
                       : '/month';
+                const annualNote = tierId === 'starter' && isAnnual 
+                  ? 'Billed annually at $6,708/year'
+                  : tierId === 'professional' && isAnnual
+                    ? 'Billed annually at $23,988/year'
+                    : null;
                 
                 return (
                 <Card
@@ -252,7 +257,7 @@ export default function UniversalMarketing() {
                   data-testid={`card-tier-${tier.id}`}
                 >
                   {tier.popular && (
-                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary">
+                    <Badge className="absolute -top-3 left-1/2 -translate-x-1/2 bg-green-600">
                       Most Popular
                     </Badge>
                   )}
@@ -264,13 +269,16 @@ export default function UniversalMarketing() {
                       <span className="text-3xl font-bold">{displayPrice}</span>
                       <span className="text-sm text-muted-foreground ml-1">{priceSubtext}</span>
                     </div>
+                    {annualNote && (
+                      <p className="text-xs text-muted-foreground">{annualNote}</p>
+                    )}
                     <p className="text-xs text-primary font-medium mt-2">{tier.savings}</p>
                   </CardHeader>
 
                   <CardContent className="space-y-4">
                     <Button
-                      className="w-full"
-                      variant={tier.popular ? 'default' : 'outline'}
+                      className={`w-full ${tier.popular ? 'bg-green-600 hover:bg-green-700' : ''}`}
+                      variant={tier.popular ? 'default' : tierId === 'enterprise' ? 'secondary' : 'outline'}
                       onClick={() => {
                         if (tier.cta === 'Contact Sales') {
                           setLocation('/contact');
@@ -294,6 +302,131 @@ export default function UniversalMarketing() {
                   </CardContent>
                 </Card>
               );})}
+            </div>
+
+            {/* ADD-ONS SECTION */}
+            <div className="mt-16">
+              <div className="text-center mb-8">
+                <h2 className="text-xl md:text-2xl font-bold mb-2">Power-Up Your Professional Plan</h2>
+                <p className="text-muted-foreground">Add-ons available for Professional tier subscribers</p>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-5xl mx-auto">
+                {/* Per-Client Profitability */}
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Per-Client Profitability</CardTitle>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold">$199</span>
+                      <span className="text-sm text-muted-foreground">/mo</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <p className="text-sm text-muted-foreground mb-3">See which contracts make money</p>
+                    <ul className="space-y-1 text-xs">
+                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Client margin reports</li>
+                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Profitability ranking</li>
+                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Revenue analysis</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                {/* Trinity Predictive Insights */}
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Predictive Insights</CardTitle>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold">$249</span>
+                      <span className="text-sm text-muted-foreground">/mo</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <p className="text-sm text-muted-foreground mb-3">AI-powered financial forecasting</p>
+                    <ul className="space-y-1 text-xs">
+                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Cash flow forecasting</li>
+                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> What-if scenarios</li>
+                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Seasonal alerts</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                {/* Additional AI Credits */}
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">AI Credits Pack</CardTitle>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold">$59</span>
+                      <span className="text-sm text-muted-foreground">/pack</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <p className="text-sm text-muted-foreground mb-3">5,000 credits per pack</p>
+                    <ul className="space-y-1 text-xs">
+                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Credits added instantly</li>
+                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> One-time purchase</li>
+                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> No expiration</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+
+                {/* Additional Location */}
+                <Card className="hover:shadow-md transition-shadow">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Additional Location</CardTitle>
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-2xl font-bold">$149</span>
+                      <span className="text-sm text-muted-foreground">/mo each</span>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <p className="text-sm text-muted-foreground mb-3">Multi-site management</p>
+                    <ul className="space-y-1 text-xs">
+                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Per-location analytics</li>
+                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Separate scheduling</li>
+                      <li className="flex items-center gap-1"><Check className="h-3 w-3 text-primary" /> Consolidated reports</li>
+                    </ul>
+                  </CardContent>
+                </Card>
+              </div>
+            </div>
+
+            {/* FAQ Section */}
+            <div className="mt-16 max-w-3xl mx-auto">
+              <h2 className="text-xl md:text-2xl font-bold text-center mb-8">Frequently Asked Questions</h2>
+              <div className="space-y-4">
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Can I change plans anytime?</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-sm text-muted-foreground">Yes, you can upgrade or downgrade anytime. Upgrades are prorated immediately, downgrades take effect at the end of your billing period.</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">What happens if I go over my employee limit?</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-sm text-muted-foreground">You'll be automatically billed at the overage rate for your tier. Starter: $22/employee, Professional: $20/employee. Enterprise has custom negotiated rates.</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">Do unused AI credits roll over?</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-sm text-muted-foreground">No, credits reset each billing cycle. Consider purchasing credit packs if you anticipate needing more credits in a given month.</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-base">What's included in the free trial?</CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-sm text-muted-foreground">14 days of basic features: 5 employees max, basic scheduling (no AI), basic time tracking, 500 AI credits, and email support. No credit card required.</p>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </div>
         </section>

@@ -12,9 +12,13 @@ import { db } from '../../db';
 import { workspaces, employees } from '@shared/schema';
 import { eq, and, count, ne } from 'drizzle-orm';
 import { TIER_PRICING, type SubscriptionTier } from './subscriptionManager';
-import { BILLING } from '@shared/billingConfig';
+import { BILLING, TierKey } from '@shared/billingConfig';
 
-const EMPLOYEE_OVERAGE_RATE = BILLING.overages.perEmployee;
+// Get tier-specific overage rate (in cents)
+function getOverageRate(tier: TierKey): number {
+  const rate = BILLING.overages[tier as keyof typeof BILLING.overages];
+  return typeof rate === 'number' ? rate : 0;
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-09-30.clover',
@@ -57,6 +61,7 @@ export class UsageTracker {
 
   /**
    * Get employee usage details for a workspace
+   * Uses tier-specific limits and overage rates from billingConfig
    */
   async getEmployeeUsage(workspaceId: string): Promise<EmployeeUsage> {
     const [workspace] = await db
@@ -69,13 +74,14 @@ export class UsageTracker {
       throw new Error('Workspace not found');
     }
 
-    const tier = (workspace.subscriptionTier || 'free') as SubscriptionTier;
-    const tierConfig = TIER_PRICING[tier];
+    const tier = (workspace.subscriptionTier || 'free') as TierKey;
+    const tierConfig = BILLING.tiers[tier];
     const maxEmployees = tierConfig?.maxEmployees || 5;
+    const overageRate = getOverageRate(tier);
     
     const currentCount = await this.getEmployeeCount(workspaceId);
     const overageCount = Math.max(0, currentCount - maxEmployees);
-    const overageCost = overageCount * EMPLOYEE_OVERAGE_RATE;
+    const overageCost = overageCount * overageRate;
 
     return {
       workspaceId,
@@ -215,28 +221,40 @@ export class UsageTracker {
 
   /**
    * Check if workspace can add more employees
+   * Enforces tier-based limits with tier-specific overage rates
    */
-  async canAddEmployee(workspaceId: string): Promise<{ allowed: boolean; current: number; max: number; message?: string }> {
-    const usage = await this.getEmployeeUsage(workspaceId);
-    
-    // Free tier: strict limit
+  async canAddEmployee(workspaceId: string): Promise<{ allowed: boolean; current: number; max: number; overageRate?: number; message?: string }> {
     const [workspace] = await db.select().from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1);
-    if (workspace?.subscriptionTier === 'free' && usage.currentCount >= usage.maxAllowed) {
+    
+    if (!workspace) {
+      return { allowed: false, current: 0, max: 0, message: 'Workspace not found' };
+    }
+
+    const tier = (workspace.subscriptionTier || 'free') as TierKey;
+    const usage = await this.getEmployeeUsage(workspaceId);
+    const overageRate = getOverageRate(tier);
+    
+    // Free tier: hard cap - no overages allowed
+    if (tier === 'free' && usage.currentCount >= usage.maxAllowed) {
       return {
         allowed: false,
         current: usage.currentCount,
         max: usage.maxAllowed,
-        message: 'Free tier limit reached. Upgrade to add more employees.',
+        message: 'Free trial limit reached (5 employees). Upgrade to add more employees.',
       };
     }
 
     // Paid tiers: allow with overage billing
     if (usage.currentCount >= usage.maxAllowed) {
+      const tierConfig = BILLING.tiers[tier];
+      const rateDisplay = overageRate / 100;
+      
       return {
         allowed: true,
         current: usage.currentCount,
         max: usage.maxAllowed,
-        message: `Adding employees beyond your ${usage.maxAllowed} limit will incur an overage charge of $${EMPLOYEE_OVERAGE_RATE / 100}/employee/month.`,
+        overageRate,
+        message: `Adding employees beyond your ${usage.maxAllowed} limit will incur an overage charge of $${rateDisplay}/employee/month.`,
       };
     }
 
@@ -244,6 +262,56 @@ export class UsageTracker {
       allowed: true,
       current: usage.currentCount,
       max: usage.maxAllowed,
+    };
+  }
+
+  /**
+   * Get AI credit usage for a workspace with tier-based limits
+   */
+  async getAICreditUsage(workspaceId: string): Promise<{
+    balance: number;
+    monthlyAllocation: number;
+    usedThisMonth: number;
+    allowsOverage: boolean;
+    overagePackPrice?: number;
+    message?: string;
+  }> {
+    const [workspace] = await db
+      .select()
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+
+    if (!workspace) {
+      throw new Error('Workspace not found');
+    }
+
+    const tier = (workspace.subscriptionTier || 'free') as TierKey;
+    const tierConfig = BILLING.tiers[tier];
+    const monthlyAllocation = tierConfig.monthlyCredits;
+    const allowsOverage = tierConfig.allowCreditOverage ?? false;
+    
+    // Get credit balance from credits ledger (would integrate with creditsLedgerService)
+    // For now, return the monthly allocation as balance
+    const balance = monthlyAllocation;
+    const usedThisMonth = 0; // Would track from credits ledger
+    
+    let message: string | undefined;
+    if (!allowsOverage && balance <= 0) {
+      if (tier === 'free') {
+        message = 'Trial credits exhausted. Upgrade to continue using AI features.';
+      } else if (tier === 'starter') {
+        message = 'Monthly credits exhausted. Upgrade to Professional or purchase an AI credit pack ($59/5,000 credits).';
+      }
+    }
+
+    return {
+      balance,
+      monthlyAllocation,
+      usedThisMonth,
+      allowsOverage,
+      overagePackPrice: allowsOverage && tier === 'professional' ? 5900 : undefined,
+      message,
     };
   }
 }

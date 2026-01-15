@@ -10,17 +10,46 @@ import {
 import { eq, and, gt, sql, or } from 'drizzle-orm';
 import { creditsLedgerService } from './creditsLedgerService';
 import { platformEventBus } from '../platformEventBus';
+import { BILLING, TierKey } from '@shared/billingConfig';
 
 const SUPPORT_ROLES = ['root_admin', 'deputy_admin', 'sysop', 'support_manager', 'support_agent'];
 const AI_SERVICE_IDS = ['trinity', 'helpai', 'bot', 'subagent'];
 
+// Tier-based feature key mapping to featureMatrix keys
+const FEATURE_TO_MATRIX_KEY: Record<string, keyof typeof BILLING.featureMatrix> = {
+  'ai_scheduling': 'ai_scheduling',
+  'gps_tracking': 'gps_time_tracking',
+  'mobile_app': 'mobile_app',
+  'shift_swap': 'shift_swapping',
+  'compliance': 'basic_compliance',
+  'advanced_compliance': 'advanced_compliance_sox',
+  'payroll': 'payroll_automation',
+  'billing': 'client_billing',
+  'invoicing': 'invoice_generation',
+  'quickbooks': 'quickbooks_integration',
+  'api_access': 'api_access',
+  'pl_dashboard': 'pl_financial_dashboard',
+  'cash_flow': 'cash_flow_forecasting',
+  'contracts': 'contract_pipeline',
+  'esignatures': 'e_signatures',
+  'document_vault': 'document_vault',
+  'client_profitability': 'client_profitability',
+  'predictive_insights': 'predictive_insights',
+  'multi_location': 'multi_location',
+  'white_label': 'white_label',
+  'incident_management': 'incident_management',
+  'strategic_insights': 'strategic_insights',
+};
+
 export type FeatureGateResult = {
   allowed: boolean;
   reason?: string;
-  requiredAction?: 'purchase_credits' | 'complete_onboarding' | 'unlock_feature' | 'enter_code';
+  requiredAction?: 'purchase_credits' | 'complete_onboarding' | 'unlock_feature' | 'enter_code' | 'upgrade_tier' | 'purchase_addon';
   creditsRequired?: number;
   currentBalance?: number;
   featureCategory?: 'trinity_command' | 'automation_action' | 'automation_cycle' | 'staged_publish' | 'ai_brain';
+  requiredTier?: string;
+  addonRequired?: string;
 };
 
 export interface FeatureDefinition {
@@ -436,6 +465,182 @@ class FeatureGateService {
     const requiredIndex = tierHierarchy.indexOf(requiredTier.toLowerCase());
 
     return { allowed: currentIndex >= requiredIndex };
+  }
+
+  /**
+   * Check if a feature is allowed based on subscription tier using the feature matrix
+   * Returns: true (allowed), false (not allowed), "addon" (requires addon purchase)
+   */
+  async checkTierFeatureAccess(
+    featureKey: string,
+    workspaceId: string
+  ): Promise<{ allowed: boolean; requiresAddon?: boolean; requiredTier?: string; addonId?: string }> {
+    const matrixKey = FEATURE_TO_MATRIX_KEY[featureKey];
+    if (!matrixKey) {
+      // Feature not in matrix, allow by default
+      return { allowed: true };
+    }
+
+    const [workspace] = await db.select().from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+
+    if (!workspace) {
+      return { allowed: false, requiredTier: 'starter' };
+    }
+
+    const tier = (workspace.subscriptionTier || 'free') as TierKey;
+    const featureAccess = BILLING.featureMatrix[matrixKey];
+    
+    if (!featureAccess) {
+      return { allowed: true };
+    }
+
+    const access = featureAccess[tier];
+
+    if (access === true) {
+      return { allowed: true };
+    } else if (access === false) {
+      // Find the minimum tier that allows this feature
+      const tierHierarchy: TierKey[] = ['free', 'starter', 'professional', 'enterprise'];
+      const requiredTier = tierHierarchy.find(t => featureAccess[t] === true);
+      return { allowed: false, requiredTier: requiredTier || 'professional' };
+    } else if (access === 'addon') {
+      // Feature requires an addon - check if workspace has it
+      const hasAddon = await this.checkWorkspaceHasAddon(workspaceId, featureKey);
+      if (hasAddon) {
+        return { allowed: true };
+      }
+      return { allowed: false, requiresAddon: true, addonId: featureKey };
+    }
+
+    return { allowed: true };
+  }
+
+  /**
+   * Check if workspace has a specific addon active
+   */
+  private async checkWorkspaceHasAddon(workspaceId: string, addonKey: string): Promise<boolean> {
+    // Check workspace addons in metadata or subscription_addons table
+    const [workspace] = await db.select().from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+
+    if (!workspace) return false;
+
+    // Check if addons are stored in workspace metadata
+    const metadata = workspace.metadata as any;
+    if (metadata?.activeAddons?.includes(addonKey)) {
+      return true;
+    }
+
+    // For now, return false - addon table can be added later
+    return false;
+  }
+
+  /**
+   * Check AI credit limits and enforce tier-based restrictions
+   */
+  async checkCreditLimits(
+    workspaceId: string,
+    creditsNeeded: number
+  ): Promise<{ allowed: boolean; reason?: string; action?: 'purchase_credits' | 'upgrade_tier' }> {
+    const [workspace] = await db.select().from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+
+    if (!workspace) {
+      return { allowed: false, reason: 'Workspace not found' };
+    }
+
+    const tier = (workspace.subscriptionTier || 'free') as TierKey;
+    const tierConfig = BILLING.tiers[tier];
+    const balance = await creditsLedgerService.getBalance(workspaceId);
+
+    // Check if user has enough credits
+    if (balance < creditsNeeded) {
+      // Check if tier allows overage
+      const allowsOverage = tierConfig.allowCreditOverage;
+      
+      if (!allowsOverage) {
+        // Free and Starter tiers cannot have overage
+        if (tier === 'free') {
+          return {
+            allowed: false,
+            reason: 'Trial credits exhausted. Upgrade to continue using AI features.',
+            action: 'upgrade_tier'
+          };
+        } else if (tier === 'starter') {
+          return {
+            allowed: false,
+            reason: 'Monthly credits exhausted. Upgrade to Professional or purchase AI credit pack.',
+            action: 'purchase_credits'
+          };
+        }
+      }
+      
+      // Professional tier can auto-charge for overage
+      if (tier === 'professional' && allowsOverage) {
+        // Allow but flag for auto-charge
+        console.log(`[FeatureGate] Professional tier credit overage for workspace ${workspaceId}`);
+      }
+    }
+
+    return { allowed: true };
+  }
+
+  /**
+   * Check employee limits and return overage info
+   */
+  async checkEmployeeLimits(
+    workspaceId: string,
+    employeeCount?: number
+  ): Promise<{ 
+    allowed: boolean; 
+    currentCount: number; 
+    limit: number; 
+    overage: number; 
+    overageRate: number;
+    action?: 'upgrade_tier' 
+  }> {
+    const [workspace] = await db.select().from(workspaces)
+      .where(eq(workspaces.id, workspaceId))
+      .limit(1);
+
+    if (!workspace) {
+      return { allowed: false, currentCount: 0, limit: 0, overage: 0, overageRate: 0 };
+    }
+
+    const tier = (workspace.subscriptionTier || 'free') as TierKey;
+    const tierConfig = BILLING.tiers[tier];
+    const limit = tierConfig.maxEmployees;
+
+    // Get actual employee count if not provided
+    const currentCount = employeeCount ?? 0; // Would need to query employees table
+
+    const overage = Math.max(0, currentCount - limit);
+    const overageRate = BILLING.overages[tier as keyof typeof BILLING.overages] || 0;
+
+    // Free trial has hard cap
+    if (tier === 'free' && currentCount >= limit) {
+      return { 
+        allowed: false, 
+        currentCount, 
+        limit, 
+        overage, 
+        overageRate: 0, 
+        action: 'upgrade_tier' 
+      };
+    }
+
+    // Other tiers allow overage with billing
+    return { 
+      allowed: true, 
+      currentCount, 
+      limit, 
+      overage, 
+      overageRate: typeof overageRate === 'number' ? overageRate : 0 
+    };
   }
 
   private async getFeatureState(workspaceId: string, featureKey: string): Promise<WorkspaceFeatureState | null> {

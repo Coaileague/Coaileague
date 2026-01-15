@@ -881,9 +881,11 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                     <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${modeConfig.colors.badge}`}>
                       {modeConfig.label}
                     </Badge>
-                    <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
-                      {location}
-                    </span>
+                    {location && location !== '/' && (
+                      <span className="text-[10px] text-muted-foreground truncate max-w-[120px]">
+                        {location}
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1090,9 +1092,11 @@ function TrinityModal({ onClose }: TrinityModalProps) {
                   {modeConfig.label}
                 </Badge>
               </div>
-              <p className="text-xs text-muted-foreground truncate">
-                {location}
-              </p>
+              {location && location !== '/' && (
+                <p className="text-xs text-muted-foreground truncate">
+                  {location}
+                </p>
+              )}
             </div>
             <div className="flex items-center gap-1 shrink-0">
               <Button
