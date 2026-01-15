@@ -1943,6 +1943,7 @@ export const shifts = pgTable("shifts", {
   employeeId: varchar("employee_id").references(() => employees.id, { onDelete: 'cascade' }),
   clientId: varchar("client_id").references(() => clients.id, { onDelete: 'set null' }),
   subClientId: varchar("sub_client_id").references(() => subClients.id, { onDelete: 'set null' }),
+  siteId: varchar("site_id"), // References sites table for location-specific rates
 
   // Billing info (captured at time of shift creation)
   billRate: decimal("bill_rate", { precision: 10, scale: 2 }),
@@ -2693,6 +2694,7 @@ export const timeEntries = pgTable("time_entries", {
   employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
   clientId: varchar("client_id").references(() => clients.id, { onDelete: 'set null' }),
   subClientId: varchar("sub_client_id").references(() => subClients.id, { onDelete: 'set null' }),
+  siteId: varchar("site_id"), // References sites table for location-specific rates
 
   // Rates (captured at time of clock-in for historical accuracy)
   capturedBillRate: decimal("captured_bill_rate", { precision: 10, scale: 2 }),
@@ -3161,7 +3163,7 @@ export const invoiceLineItems = pgTable("invoice_line_items", {
 
   // Sub-Client & Site Links
   subClientId: varchar("sub_client_id").references(() => subClients.id, { onDelete: 'set null' }),
-  siteId: varchar("site_id").references(() => sites.id, { onDelete: 'set null' }),
+  siteId: varchar("site_id"), // References sites table for location-specific rates
 
   // Line item details
   description: text("description").notNull(),
@@ -23301,3 +23303,281 @@ export const insertTrinityRuntimeFlagChangeSchema = createInsertSchema(trinityRu
 
 export type InsertTrinityRuntimeFlagChange = z.infer<typeof insertTrinityRuntimeFlagChangeSchema>;
 export type TrinityRuntimeFlagChange = typeof trinityRuntimeFlagChanges.$inferSelect;
+
+
+/**
+ * Sites Table - Physical locations for clients/sub-clients
+ * Required for rate cascading: site > sub_client > client > employee default
+ */
+export const sites = pgTable("sites", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Can belong to client OR sub-client
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: 'cascade' }),
+  subClientId: varchar("sub_client_id").references(() => subClients.id, { onDelete: 'cascade' }),
+  
+  // Site Info
+  name: varchar("name", { length: 255 }).notNull(),
+  addressLine1: varchar("address_line1", { length: 255 }),
+  addressLine2: varchar("address_line2", { length: 255 }),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 50 }),
+  zip: varchar("zip", { length: 20 }),
+  
+  // Geofencing
+  geofenceLat: decimal("geofence_lat", { precision: 10, scale: 7 }),
+  geofenceLng: decimal("geofence_lng", { precision: 10, scale: 7 }),
+  geofenceRadiusMeters: integer("geofence_radius_meters").default(100),
+  
+  // Site-specific billing (overrides client/sub-client if set)
+  billRate: decimal("bill_rate", { precision: 10, scale: 2 }),
+  
+  // Site requirements
+  requiresPhotoVerification: boolean("requires_photo_verification").default(false),
+  requiresGpsVerification: boolean("requires_gps_verification").default(true),
+  specialInstructions: text("special_instructions"),
+  
+  // QuickBooks
+  qbLocationId: varchar("qb_location_id", { length: 100 }),
+  qbSyncedAt: timestamp("qb_synced_at"),
+  
+  status: varchar("status", { length: 50 }).default("active"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("sites_workspace_idx").on(table.workspaceId),
+  index("sites_client_idx").on(table.clientId),
+  index("sites_sub_client_idx").on(table.subClientId),
+]);
+
+export const insertSiteSchema = createInsertSchema(sites).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertSite = z.infer<typeof insertSiteSchema>;
+export type Site = typeof sites.$inferSelect;
+
+/**
+ * Employee Client Rates - Rate cascading for employees at specific clients/sub-clients/sites
+ * Priority: site rate > sub_client rate > client rate > employee default
+ */
+export const employeeClientRates = pgTable("employee_client_rates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  
+  // Rate scope - only ONE should be set (mutually exclusive for priority)
+  clientId: varchar("client_id").references(() => clients.id, { onDelete: 'cascade' }),
+  subClientId: varchar("sub_client_id").references(() => subClients.id, { onDelete: 'cascade' }),
+  siteId: varchar("site_id").references(() => sites.id, { onDelete: 'cascade' }),
+  
+  // Pay rates for this specific assignment
+  payRate: decimal("pay_rate", { precision: 10, scale: 2 }).notNull(),
+  overtimeRate: decimal("overtime_rate", { precision: 10, scale: 2 }),
+  holidayRate: decimal("holiday_rate", { precision: 10, scale: 2 }),
+  
+  effectiveDate: date("effective_date"),
+  endDate: date("end_date"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("employee_client_rates_workspace_idx").on(table.workspaceId),
+  index("employee_client_rates_employee_idx").on(table.employeeId),
+  index("employee_client_rates_client_idx").on(table.clientId),
+  index("employee_client_rates_sub_client_idx").on(table.subClientId),
+  index("employee_client_rates_site_idx").on(table.siteId),
+]);
+
+export const insertEmployeeClientRateSchema = createInsertSchema(employeeClientRates).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertEmployeeClientRate = z.infer<typeof insertEmployeeClientRateSchema>;
+export type EmployeeClientRate = typeof employeeClientRates.$inferSelect;
+
+/**
+ * Workspace Billing Settings - Master config for workspace-wide billing/payroll cycles
+ */
+export const workspaceBillingSettings = pgTable("workspace_billing_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Payroll Settings
+  payrollCycle: varchar("payroll_cycle", { length: 20 }).default("bi_weekly"), // daily, weekly, bi_weekly, semi_monthly, monthly
+  payrollDayOfWeek: integer("payroll_day_of_week").default(5), // 0=Sunday, 5=Friday
+  payrollDayOfMonth: integer("payroll_day_of_month"), // For monthly/semi_monthly
+  payrollSecondDayOfMonth: integer("payroll_second_day_of_month"), // For semi_monthly (e.g., 15 and last day)
+  payrollCutoffDays: integer("payroll_cutoff_days").default(3), // Days before payday to cut off
+  
+  // Default Billing Settings (can be overridden per-client)
+  defaultBillingCycle: varchar("default_billing_cycle", { length: 20 }).default("monthly"), // daily, weekly, bi_weekly, monthly
+  defaultPaymentTerms: varchar("default_payment_terms", { length: 20 }).default("net_30"), // net_7, net_15, net_30, net_60, due_on_receipt
+  
+  // Overtime Rules (state-specific can override)
+  defaultOvertimeThreshold: decimal("default_overtime_threshold", { precision: 5, scale: 2 }).default("40.00"),
+  defaultDailyOvertimeThreshold: decimal("default_daily_overtime_threshold", { precision: 5, scale: 2 }),
+  defaultOvertimeMultiplier: decimal("default_overtime_multiplier", { precision: 4, scale: 2 }).default("1.50"),
+  defaultDoubleTimeMultiplier: decimal("default_double_time_multiplier", { precision: 4, scale: 2 }).default("2.00"),
+  
+  // Invoice Automation
+  autoGenerateInvoices: boolean("auto_generate_invoices").default(true),
+  invoicePrefix: varchar("invoice_prefix", { length: 20 }).default("INV-"),
+  invoiceNumberStart: integer("invoice_number_start").default(1000),
+  nextInvoiceNumber: integer("next_invoice_number").default(1000),
+  
+  // QuickBooks Integration
+  qbAutoSync: boolean("qb_auto_sync").default(false),
+  qbCompanyId: varchar("qb_company_id", { length: 100 }),
+  qbIncomeAccountId: varchar("qb_income_account_id", { length: 100 }),
+  qbExpenseAccountId: varchar("qb_expense_account_id", { length: 100 }),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("workspace_billing_settings_workspace_idx").on(table.workspaceId),
+]);
+
+export const insertWorkspaceBillingSettingsSchema = createInsertSchema(workspaceBillingSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertWorkspaceBillingSettings = z.infer<typeof insertWorkspaceBillingSettingsSchema>;
+export type WorkspaceBillingSettings = typeof workspaceBillingSettings.$inferSelect;
+
+/**
+ * Client Billing Settings - Per-client billing configuration overrides
+ */
+export const clientBillingSettings = pgTable("client_billing_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  
+  // Billing Cycle (overrides workspace default)
+  billingCycle: varchar("billing_cycle", { length: 20 }).default("monthly"), // daily, weekly, bi_weekly, monthly
+  billingDayOfWeek: integer("billing_day_of_week"), // For weekly cycles
+  billingDayOfMonth: integer("billing_day_of_month"), // For monthly cycles
+  
+  // Payment Terms (overrides workspace default)
+  paymentTerms: varchar("payment_terms", { length: 20 }).default("net_30"),
+  
+  // Rate Defaults for this client
+  defaultBillRate: decimal("default_bill_rate", { precision: 10, scale: 2 }),
+  defaultPayRate: decimal("default_pay_rate", { precision: 10, scale: 2 }),
+  overtimeBillMultiplier: decimal("overtime_bill_multiplier", { precision: 4, scale: 2 }).default("1.50"),
+  overtimePayMultiplier: decimal("overtime_pay_multiplier", { precision: 4, scale: 2 }).default("1.50"),
+  
+  // Invoice Settings
+  invoiceFormat: varchar("invoice_format", { length: 20 }).default("detailed"), // summary, detailed, itemized
+  groupLineItemsBy: varchar("group_line_items_by", { length: 30 }).default("employee"), // employee, sub_client, job_id, location, none
+  includeTimeBreakdown: boolean("include_time_breakdown").default(true),
+  includeEmployeeDetails: boolean("include_employee_details").default(true),
+  
+  // Email Settings
+  autoSendInvoice: boolean("auto_send_invoice").default(false),
+  invoiceRecipientEmails: text("invoice_recipient_emails").array(),
+  ccEmails: text("cc_emails").array(),
+  
+  // QuickBooks Overrides
+  qbCustomerId: varchar("qb_customer_id", { length: 100 }),
+  qbItemId: varchar("qb_item_id", { length: 100 }),
+  qbClassId: varchar("qb_class_id", { length: 100 }),
+  
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("client_billing_settings_workspace_idx").on(table.workspaceId),
+  index("client_billing_settings_client_idx").on(table.clientId),
+]);
+
+export const insertClientBillingSettingsSchema = createInsertSchema(clientBillingSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertClientBillingSettings = z.infer<typeof insertClientBillingSettingsSchema>;
+export type ClientBillingSettings = typeof clientBillingSettings.$inferSelect;
+
+/**
+ * Trinity Automation Queue - Scheduled billing/payroll/QB sync tasks
+ */
+export const trinityAutomationQueue = pgTable("trinity_automation_queue", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Task Type
+  taskType: varchar("task_type", { length: 50 }).notNull(), // generate_invoice, process_payroll, qb_sync, send_invoice, auto_approve_time
+  
+  // Task Target (polymorphic - depends on taskType)
+  targetType: varchar("target_type", { length: 30 }), // client, sub_client, employee, time_entry, invoice
+  targetId: varchar("target_id"),
+  
+  // Schedule
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  runAfterTaskId: varchar("run_after_task_id"), // For task chaining
+  priority: integer("priority").default(5), // 1=highest, 10=lowest
+  
+  // Status
+  status: varchar("status", { length: 20 }).default("pending"), // pending, running, completed, failed, cancelled, retrying
+  retryCount: integer("retry_count").default(0),
+  maxRetries: integer("max_retries").default(3),
+  lastError: text("last_error"),
+  
+  // Task Data
+  payload: jsonb("payload").$type<{
+    client_id?: string;
+    sub_client_id?: string;
+    date_range?: { start: string; end: string };
+    billing_cycle?: string;
+    invoice_id?: string;
+    time_entry_ids?: string[];
+    reminder_emails?: string[];
+    approval_required?: boolean;
+    process_time?: string;
+    [key: string]: unknown;
+  }>(),
+  
+  // Result
+  result: jsonb("result").$type<{
+    success: boolean;
+    invoice_id?: string;
+    payroll_id?: string;
+    qb_sync_id?: string;
+    error?: string;
+    details?: unknown;
+  }>(),
+  
+  // Trinity Context
+  triggeredBy: varchar("triggered_by", { length: 30 }).default("schedule"), // schedule, manual, trinity_brain, webhook
+  trinityInsight: text("trinity_insight"), // AI notes about the task
+  
+  // Execution Tracking
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+  executionTimeMs: integer("execution_time_ms"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("trinity_automation_queue_workspace_idx").on(table.workspaceId),
+  index("trinity_automation_queue_status_idx").on(table.status),
+  index("trinity_automation_queue_scheduled_idx").on(table.scheduledFor),
+  index("trinity_automation_queue_type_idx").on(table.taskType),
+  index("trinity_automation_queue_priority_idx").on(table.priority),
+]);
+
+export const insertTrinityAutomationQueueSchema = createInsertSchema(trinityAutomationQueue).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertTrinityAutomationQueue = z.infer<typeof insertTrinityAutomationQueueSchema>;
+export type TrinityAutomationQueue = typeof trinityAutomationQueue.$inferSelect;
