@@ -416,12 +416,12 @@ export default function Dashboard() {
                       </Badge>
                   )}
                   {dbUserId && (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-purple-50 border-purple-200 text-purple-700 font-mono" data-testid="badge-db-user-id" title="Database User ID">
+                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-purple-50 border-purple-200 text-purple-700 font-mono overflow-hidden whitespace-nowrap" data-testid="badge-db-user-id" title="Database User ID">
                       UID: {dbUserId}
                     </Badge>
                   )}
                   {dbWorkspaceId && (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono" data-testid="badge-db-workspace-id" title="Database Workspace ID">
+                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono overflow-hidden whitespace-nowrap" data-testid="badge-db-workspace-id" title="Database Workspace ID">
                       WS: {dbWorkspaceId.slice(0, 8)}...
                     </Badge>
                     )}
@@ -534,12 +534,12 @@ export default function Dashboard() {
                     </Badge>
                   )}
                   {dbUserId && (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-purple-50 border-purple-200 text-purple-700 font-mono" data-testid="badge-db-user-id" title="Database User ID">
+                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-purple-50 border-purple-200 text-purple-700 font-mono overflow-hidden whitespace-nowrap" data-testid="badge-db-user-id" title="Database User ID">
                       UID: {dbUserId}
                     </Badge>
                   )}
                   {dbWorkspaceId && (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono" data-testid="badge-db-workspace-id" title="Database Workspace ID">
+                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono overflow-hidden whitespace-nowrap" data-testid="badge-db-workspace-id" title="Database Workspace ID">
                       WS: {dbWorkspaceId.slice(0, 8)}...
                     </Badge>
                   )}
