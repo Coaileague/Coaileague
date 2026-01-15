@@ -874,12 +874,7 @@ function TrinityModal({ onClose }: TrinityModalProps) {
 
             {/* Header - touch-action prevents drag interference */}
             <div className="flex items-center justify-between px-4 pb-2 shrink-0" style={{ touchAction: 'manipulation' }}>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 flex items-center justify-center">
-                  <Suspense fallback={<div className="w-10 h-10" />}>
-                    <TrinityRedesign size={40} mode={chatMutation.isPending ? "THINKING" : "ANALYZING"} />
-                  </Suspense>
-                </div>
+              <div className="flex items-center gap-2">
                 <div>
                   <h1 className="font-semibold text-sm">{TRINITY_BRANDING.displayName}</h1>
                   <div className="flex items-center gap-1.5">
@@ -1088,11 +1083,6 @@ function TrinityModal({ onClose }: TrinityModalProps) {
             onMouseDown={handleMouseDown}
           >
             <GripHorizontal className="h-4 w-4 text-muted-foreground shrink-0" />
-            <div className="w-10 h-10 flex items-center justify-center shrink-0">
-              <Suspense fallback={<div className="w-10 h-10" />}>
-                <TrinityRedesign size={40} mode={chatMutation.isPending ? "THINKING" : "ANALYZING"} />
-              </Suspense>
-            </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-base">{TRINITY_BRANDING.displayName}</CardTitle>

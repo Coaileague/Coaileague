@@ -196,7 +196,7 @@ export function AppSidebar() {
       <SidebarFooter className="p-4 border-t border-slate-700/50">
         <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10 border-2 border-slate-600">
-            <AvatarImage src={undefined} alt={user?.firstName || "User"} />
+            <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} />
             <AvatarFallback className="bg-gradient-to-br from-cyan-500 to-blue-500 text-white text-sm font-bold">
               {getInitials(user?.firstName, user?.lastName)}
             </AvatarFallback>

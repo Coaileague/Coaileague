@@ -28,6 +28,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
+import { useWorkspaceAccess } from "@/hooks/useWorkspaceAccess";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
 import { useTrinityContext } from "@/hooks/use-trinity-context";
 import { useNotificationSync } from "@/hooks/use-notification-sync";
@@ -1038,6 +1039,9 @@ function NotificationsPopoverInner({ user }: { user: any }) {
   const workspaceId = (user as any)?.activeWorkspaceId || (user as any)?.workspaceId;
   const userPlatformRole = (user as any)?.platformRole as string | null | undefined;
   
+  // Get workspace role for proper notification filtering in UNS Command Center
+  const { workspaceRole, platformRole: accessPlatformRole } = useWorkspaceAccess();
+  
   // Trinity context for mode detection
   const { context: trinityContext } = useTrinityContext(workspaceId);
   const isGuruMode = trinityContext?.trinityMode === 'guru';
@@ -1806,6 +1810,8 @@ function NotificationsPopoverInner({ user }: { user: any }) {
           isOpen={true}
           onClose={() => setOpen(false)}
           onAskTrinity={handleAskTrinityFromUNS}
+          platformRole={accessPlatformRole || userPlatformRole || undefined}
+          workspaceRole={workspaceRole || undefined}
         />
       </PopoverContent>
     </Popover>

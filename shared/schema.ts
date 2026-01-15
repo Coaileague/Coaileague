@@ -212,6 +212,7 @@ export const workspaces = pgTable("workspaces", {
   address: text("address"),
   phone: varchar("phone"),
   website: varchar("website"),
+  logoUrl: varchar("logo_url"), // Organization branding logo
 
   // Subscription & billing
   subscriptionTier: varchar("subscription_tier").default("free"), // 'free', 'starter', 'professional', 'enterprise'

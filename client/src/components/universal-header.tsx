@@ -26,7 +26,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { HEADER_CONFIG, HEADER_SPACING, HEADER_HEIGHTS } from "@/config/headerConfig";
 import { getCurrentHoliday } from "@/config/mascotConfig";
 import { selectSidebarFamilies } from "@/lib/sidebarModules";
@@ -490,7 +490,8 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                       data-testid="button-user-menu-workspace"
                     >
                       <Avatar className="h-8 w-8">
-                        <AvatarFallback className="text-xs font-bold">
+                        <AvatarImage src={user?.profileImageUrl || undefined} alt={user?.firstName || "User"} />
+                        <AvatarFallback className="text-xs font-bold bg-gradient-to-br from-cyan-500 to-blue-500 text-white">
                           {getInitials(user?.firstName, user?.lastName)}
                         </AvatarFallback>
                       </Avatar>
