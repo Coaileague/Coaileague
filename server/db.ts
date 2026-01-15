@@ -28,20 +28,45 @@ if (databaseUrl && !databaseUrl.includes('neon.tech') && !databaseUrl.includes('
 
 export const pool = new Pool({ 
   connectionString: databaseUrl,
-  max: 2, // Minimal connections for Neon free tier (only allows ~5 total)
-  idleTimeoutMillis: 10000, // Release idle connections after 10s
-  connectionTimeoutMillis: 3000, // Fail fast on connection issues
+  max: 1, // Ultra-minimal: single connection to prevent "too many connections" during deploy
+  idleTimeoutMillis: 5000, // Release idle connections faster (5s)
+  connectionTimeoutMillis: 5000, // Timeout for getting a connection
   allowExitOnIdle: true // Allow pool to close when idle (helps with publishing)
 });
 export const db = drizzle({ client: pool, schema });
 
-// Health check function
-export async function checkDatabaseHealth(): Promise<boolean> {
+// Graceful shutdown - release all connections
+process.on('SIGTERM', async () => {
+  console.log('[Database] SIGTERM received, closing pool...');
   try {
-    await pool.query('SELECT 1');
+    await pool.end();
+    console.log('[Database] Pool closed gracefully');
+  } catch (err) {
+    console.error('[Database] Error closing pool:', err);
+  }
+});
+
+process.on('SIGINT', async () => {
+  console.log('[Database] SIGINT received, closing pool...');
+  try {
+    await pool.end();
+    console.log('[Database] Pool closed gracefully');
+  } catch (err) {
+    console.error('[Database] Error closing pool:', err);
+  }
+});
+
+// Health check function - with connection release
+export async function checkDatabaseHealth(): Promise<boolean> {
+  let client;
+  try {
+    client = await pool.connect();
+    await client.query('SELECT 1');
     return true;
   } catch (error) {
     console.error('Database health check failed:', error);
     return false;
+  } finally {
+    if (client) client.release();
   }
 }
