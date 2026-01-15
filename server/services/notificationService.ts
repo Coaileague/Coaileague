@@ -103,24 +103,135 @@ export async function createNotification(params: CreateNotificationParams) {
 }
 
 /**
- * Send welcome notification when a new organization is created
+ * CURATED WELCOME NOTIFICATION SYSTEM
+ * 
+ * Creates exactly 3 welcome notifications for new users:
+ * 1. Platform Welcome - What's new and platform overview
+ * 2. Org Welcome - Organization-specific welcome and role info
+ * 3. Trinity AI Guide - How to use Trinity for assistance
+ * 
+ * These notifications are designed to onboard users effectively
+ * without overwhelming them with information.
+ */
+
+const WELCOME_NOTIFICATIONS = {
+  platform: {
+    title: 'Welcome to CoAIleague - Your AI-Powered Workforce Platform',
+    message: `We're excited to have you! CoAIleague is an AI-powered workforce management platform that automates 99% of scheduling, timekeeping, and compliance tasks. Here's what you can do:
+
+• View and manage your schedule in real-time
+• Clock in/out with GPS verification  
+• Request time off and swap shifts
+• Access documents and certifications
+• Track your earnings and timesheets
+
+Our AI Brain works 24/7 to optimize operations, predict staffing needs, and ensure compliance. You're in good hands!`,
+    actionUrl: '/dashboard',
+    type: 'welcome_org',
+  },
+  
+  orgWelcome: {
+    titleTemplate: (orgName: string) => `Welcome to ${orgName}!`,
+    messageTemplate: (orgName: string, isOwner: boolean) => isOwner 
+      ? `Your organization "${orgName}" is now active! As the org owner, you have full control over employees, schedules, billing, and AI automation settings.
+
+Quick start guide:
+1. Add employees from the Team section
+2. Set up locations and job roles
+3. Create your first AI-powered schedule
+4. Configure payroll and invoicing
+
+Need help? Trinity AI is available 24/7 to assist you with any task.`
+      : `You've been added to ${orgName}! Your manager has assigned you access to view schedules, clock in/out, and manage your profile.
+
+Get started:
+1. Check your upcoming shifts in the Schedule tab
+2. Set up your profile and preferences
+3. Review any assigned documents or training
+4. Explore the Employee Portal for all self-service features
+
+Questions? Ask Trinity AI in the chat - she knows everything about the platform!`,
+    actionUrl: '/dashboard',
+    type: 'welcome_employee',
+  },
+  
+  trinityGuide: {
+    title: 'Meet Trinity - Your AI Assistant',
+    message: `Trinity is CoAIleague's AI Brain, powered by Google Gemini. She can help you with almost anything:
+
+What Trinity can do for you:
+• Answer questions about your schedule, pay, or policies
+• Help navigate the platform and find features
+• Generate reports and analytics on demand
+• Troubleshoot issues and suggest solutions
+• Automate repetitive tasks with AI workflows
+
+How to use Trinity:
+1. Click the Trinity icon (Celtic knot) in the bottom corner
+2. Type your question or request naturally
+3. Trinity understands context and learns your preferences
+
+Pro tip: Trinity has three modes - Business (work tasks), Personal (buddy mode), and Integrated (combines both). Try saying "Hey Trinity, what's on my schedule this week?"
+
+Trinity is always learning and improving. The more you use her, the better she gets at helping you!`,
+    actionUrl: '/chat',
+    type: 'system',
+  },
+};
+
+/**
+ * Send complete welcome notification package for new org owners
+ * Creates all 3 curated notifications in sequence
  */
 export async function sendWelcomeOrgNotification(workspaceId: string, ownerId: string, orgName: string) {
-  return createNotification({
+  const results = [];
+  
+  // 1. Platform Welcome
+  results.push(await createNotification({
     workspaceId,
     userId: ownerId,
-    type: 'welcome_org',
-    title: 'Welcome to CoAIleague!',
-    message: `Your organization "${orgName}" is ready. Our AI Brain will help you manage your workforce with 99% automation. Get started by adding employees and creating your first schedule.`,
-    actionUrl: '/dashboard',
+    type: WELCOME_NOTIFICATIONS.platform.type as any,
+    title: WELCOME_NOTIFICATIONS.platform.title,
+    message: WELCOME_NOTIFICATIONS.platform.message,
+    actionUrl: WELCOME_NOTIFICATIONS.platform.actionUrl,
+    relatedEntityType: 'platform',
+    relatedEntityId: 'onboarding',
+    metadata: { notificationType: 'platform_welcome', orgName },
+  }));
+  
+  // 2. Org-Specific Welcome (owner version)
+  results.push(await createNotification({
+    workspaceId,
+    userId: ownerId,
+    type: WELCOME_NOTIFICATIONS.orgWelcome.type as any,
+    title: WELCOME_NOTIFICATIONS.orgWelcome.titleTemplate(orgName),
+    message: WELCOME_NOTIFICATIONS.orgWelcome.messageTemplate(orgName, true),
+    actionUrl: WELCOME_NOTIFICATIONS.orgWelcome.actionUrl,
     relatedEntityType: 'workspace',
     relatedEntityId: workspaceId,
-    metadata: { orgName },
-  });
+    metadata: { notificationType: 'org_welcome', orgName, role: 'owner' },
+  }));
+  
+  // 3. Trinity AI Guide
+  results.push(await createNotification({
+    workspaceId,
+    userId: ownerId,
+    type: WELCOME_NOTIFICATIONS.trinityGuide.type as any,
+    title: WELCOME_NOTIFICATIONS.trinityGuide.title,
+    message: WELCOME_NOTIFICATIONS.trinityGuide.message,
+    actionUrl: WELCOME_NOTIFICATIONS.trinityGuide.actionUrl,
+    relatedEntityType: 'trinity',
+    relatedEntityId: 'onboarding',
+    metadata: { notificationType: 'trinity_guide', orgName },
+  }));
+  
+  console.log(`[Notifications] Sent 3 welcome notifications to org owner ${ownerId}`);
+  return results;
 }
 
 /**
- * Send welcome notification when a new employee is added
+ * Send complete welcome notification package for new employees
+ * Creates all 3 curated notifications in sequence
  */
 export async function sendWelcomeEmployeeNotification(
   workspaceId: string,
@@ -128,17 +239,49 @@ export async function sendWelcomeEmployeeNotification(
   employeeName: string,
   orgName: string
 ) {
-  return createNotification({
+  const results = [];
+  
+  // 1. Platform Welcome
+  results.push(await createNotification({
     workspaceId,
     userId,
-    type: 'welcome_employee',
-    title: 'Welcome to the Team!',
-    message: `Welcome to ${orgName}! You've been added as an employee. Check your schedule, clock in/out, request time off, and manage your profile here.`,
+    type: WELCOME_NOTIFICATIONS.platform.type as any,
+    title: WELCOME_NOTIFICATIONS.platform.title,
+    message: WELCOME_NOTIFICATIONS.platform.message,
+    actionUrl: WELCOME_NOTIFICATIONS.platform.actionUrl,
+    relatedEntityType: 'platform',
+    relatedEntityId: 'onboarding',
+    metadata: { notificationType: 'platform_welcome', employeeName, orgName },
+  }));
+  
+  // 2. Org-Specific Welcome (employee version)
+  results.push(await createNotification({
+    workspaceId,
+    userId,
+    type: WELCOME_NOTIFICATIONS.orgWelcome.type as any,
+    title: WELCOME_NOTIFICATIONS.orgWelcome.titleTemplate(orgName),
+    message: WELCOME_NOTIFICATIONS.orgWelcome.messageTemplate(orgName, false),
     actionUrl: '/employee-portal',
     relatedEntityType: 'employee',
     relatedEntityId: userId,
-    metadata: { employeeName, orgName },
-  });
+    metadata: { notificationType: 'org_welcome', employeeName, orgName, role: 'employee' },
+  }));
+  
+  // 3. Trinity AI Guide
+  results.push(await createNotification({
+    workspaceId,
+    userId,
+    type: WELCOME_NOTIFICATIONS.trinityGuide.type as any,
+    title: WELCOME_NOTIFICATIONS.trinityGuide.title,
+    message: WELCOME_NOTIFICATIONS.trinityGuide.message,
+    actionUrl: WELCOME_NOTIFICATIONS.trinityGuide.actionUrl,
+    relatedEntityType: 'trinity',
+    relatedEntityId: 'onboarding',
+    metadata: { notificationType: 'trinity_guide', employeeName, orgName },
+  }));
+  
+  console.log(`[Notifications] Sent 3 welcome notifications to employee ${userId}`);
+  return results;
 }
 
 /**
