@@ -26,7 +26,12 @@ if (databaseUrl && !databaseUrl.includes('neon.tech') && !databaseUrl.includes('
   console.warn('   If using Render Postgres, switch to pg + drizzle-orm/node-postgres');
 }
 
-export const pool = new Pool({ connectionString: databaseUrl });
+export const pool = new Pool({ 
+  connectionString: databaseUrl,
+  max: 5, // Limit connections for stability during publishing
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 5000
+});
 export const db = drizzle({ client: pool, schema });
 
 // Health check function
