@@ -210,6 +210,12 @@ class TrinityContextManager {
   // ============================================================================
 
   async getOrCreateSession(userId: string, workspaceId?: string): Promise<ConversationContext> {
+    // Validate userId to prevent null constraint violations
+    if (!userId) {
+      console.warn("[TrinityContextManager] getOrCreateSession called with null/undefined userId");
+      return this.createFallbackContext("unknown", workspaceId);
+    }
+    
     const cacheKey = `${userId}:${workspaceId || 'global'}`;
     
     // Check cache first

@@ -35906,15 +35906,27 @@ app.post("/api/alerts/test", requireAuth, mutationLimiter, async (req: Authentic
   app.get("/api/trinity/session", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { trinityContextManager } = await import("./services/ai-brain/trinityContextManager");
-      const userId = req.userId!;
+      const userId = req.userId;
       const workspaceId = req.query.workspaceId as string | undefined;
+      
+      // Validate userId before creating session - handle edge cases where auth passes but userId is undefined
+      if (!userId) {
+        console.warn("[Trinity Session] No userId in authenticated request, returning fallback session");
+        return res.json({ 
+          success: true, 
+          sessionId: `fallback-${Date.now()}`, 
+          turnCount: 0, 
+          knowledgeGaps: [], 
+          pendingClarifications: [] 
+        });
+      }
+      
       const context = await trinityContextManager.getEnrichedSessionContext(userId, workspaceId);
       res.json({ success: true, sessionId: context.sessionId, turnCount: context.turns.length, knowledgeGaps: context.knowledgeGaps, pendingClarifications: context.pendingClarifications });
     } catch (error: any) {
       res.status(500).json({ success: false, error: error.message });
     }
   });
-
   app.post("/api/trinity/session/:sessionId/turn", requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
       const { trinityContextManager } = await import("./services/ai-brain/trinityContextManager");
