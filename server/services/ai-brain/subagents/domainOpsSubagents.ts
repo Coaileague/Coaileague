@@ -18,13 +18,10 @@ import {
   InsertAiComponentRegistry
 } from '@shared/schema';
 import { eq, and, like, desc, sql, inArray } from 'drizzle-orm';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GEMINI_MODELS } from '../providers/geminiClient';
+import { meteredGemini } from '../../billing/meteredGeminiClient';
 import { helpaiOrchestrator } from '../../helpai/platformActionHub';
 import * as fs from 'fs';
 import * as path from 'path';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // ============================================================================
 // SHARED TYPES
@@ -519,7 +516,7 @@ class LogOpsSubagent {
   /**
    * Use AI to analyze log patterns
    */
-  async aiAnalyzeLogs(logContent: string): Promise<{
+  async aiAnalyzeLogs(logContent: string, workspaceId: string = 'platform'): Promise<{
     summary: string;
     criticalIssues: string[];
     recommendations: string[];
@@ -527,8 +524,6 @@ class LogOpsSubagent {
     console.log('[LogOps] AI analyzing logs...');
     
     try {
-      const model = genAI.getGenerativeModel({ model: GEMINI_MODELS.FLASH });
-      
       const prompt = `Analyze these application logs and identify:
 1. Critical issues that need immediate attention
 2. Patterns that suggest problems
@@ -544,13 +539,22 @@ Respond in JSON format:
   "recommendations": ["rec1", "rec2"]
 }`;
 
-      const result = await model.generateContent(prompt);
-      const text = result.response.text();
+      const result = await meteredGemini.generate({
+        workspaceId,
+        featureKey: 'log_analysis',
+        prompt,
+        model: 'gemini-1.5-flash',
+        temperature: 0.3,
+        maxOutputTokens: 1024,
+        metadata: { logLength: logContent.length }
+      });
       
-      // Parse JSON response
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+      if (result.success) {
+        // Parse JSON response
+        const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
       }
       
       return {
@@ -577,7 +581,7 @@ Respond in JSON format:
       { id: 'logs.analyze_content', name: 'Analyze Log Content', desc: 'Analyze log content for errors and issues', 
         fn: async (p: any) => { const f = await self.analyzeLogContent(p.content, p.source); if (p.persist !== false && f.length > 0) await persistGapFindings(f, 'LogOps'); return f; } },
       { id: 'logs.extract_stack_traces', name: 'Extract Stack Traces', desc: 'Extract stack traces from log content', fn: (p: any) => self.extractStackTraces(p.content) },
-      { id: 'logs.ai_analyze', name: 'AI Analyze Logs', desc: 'Use AI to analyze log patterns', fn: (p: any) => self.aiAnalyzeLogs(p.content) },
+      { id: 'logs.ai_analyze', name: 'AI Analyze Logs', desc: 'Use AI to analyze log patterns', fn: (p: any) => self.aiAnalyzeLogs(p.content, p.workspaceId) },
     ];
 
     for (const action of actions) {

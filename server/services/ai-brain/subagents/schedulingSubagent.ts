@@ -22,14 +22,11 @@ import {
   shiftSwapRequests
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc, count, avg, inArray } from 'drizzle-orm';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GEMINI_MODELS } from '../providers/geminiClient';
+import { meteredGemini } from '../../billing/meteredGeminiClient';
 import { enhancedLLMJudge } from '../llmJudgeEnhanced';
 import { platformEventBus } from '../../platformEventBus';
 import { auditLogger } from '../../audit-logger';
 import { strategicOptimizationService, EmployeeBusinessMetrics, ClientBusinessMetrics, StrategicAssignment } from '../strategicOptimizationService';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -437,15 +434,6 @@ class SchedulingSubagentService {
       this.fetchSkillMatrix(workspaceId),
     ]);
 
-    // Use Gemini 3 Pro for complex optimization
-    const model = genAI.getGenerativeModel({
-      model: GEMINI_MODELS.BRAIN,
-      generationConfig: {
-        maxOutputTokens: 2000,
-        temperature: 0.3,
-      },
-    });
-
     const prompt = `You are a Fortune 500 workforce scheduling optimizer. Generate an optimal weekly schedule.
 
 EMPLOYEES (${employeeData.length}):
@@ -468,8 +456,25 @@ Generate a JSON schedule with format:
 }`;
 
     try {
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
+      const aiResult = await meteredGemini.generate({
+        workspaceId,
+        featureKey: 'schedule_optimization',
+        prompt,
+        model: 'gemini-1.5-pro',
+        temperature: 0.3,
+        maxOutputTokens: 2000,
+        metadata: { employeeCount: employeeData.length, timeOffCount: timeOffData.length }
+      });
+
+      if (!aiResult.success) {
+        console.error('[SchedulingSubagent] AI schedule generation blocked:', aiResult.error);
+        return {
+          schedule: [],
+          metrics: { coveragePercent: 0, overtimeHours: 0, preferenceScore: 0, costEfficiency: 0 },
+          aiInsights: 'AI optimization unavailable. Manual scheduling recommended.',
+        };
+      }
+      const responseText = aiResult.text;
       
       // Parse AI response
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
@@ -964,19 +969,27 @@ Generate a JSON schedule with format:
     // Build strategic Gemini prompt
     const prompt = this.buildStrategicSchedulingPrompt(employees, clients, openShifts, summary);
 
-    // Call Gemini 3 Pro for deep strategic analysis
-    const model = genAI.getGenerativeModel({ model: GEMINI_MODELS.TIER_1 });
-    
-    const result = await model.generateContent({
-      contents: [{ role: 'user', parts: [{ text: prompt }] }],
-      generationConfig: {
-        temperature: 0.3, // Lower for more deterministic business decisions
-        topP: 0.9,
-        maxOutputTokens: 8192,
-      },
+    // Call Gemini Pro for deep strategic analysis via metered client
+    const aiResult = await meteredGemini.generate({
+      workspaceId,
+      featureKey: 'strategic_schedule_optimization',
+      prompt,
+      model: 'gemini-1.5-pro',
+      temperature: 0.3,
+      maxOutputTokens: 8192,
+      metadata: { 
+        shiftCount: openShifts.length, 
+        employeeCount: employees.length,
+        clientCount: clients.length 
+      }
     });
 
-    const responseText = result.response.text();
+    if (!aiResult.success) {
+      console.error('[SchedulingSubagent] Strategic schedule blocked:', aiResult.error);
+      return this.generateFallbackStrategicSchedule(openShifts, employees, clients);
+    }
+
+    const responseText = aiResult.text;
     
     // Parse JSON response from Gemini
     let parsedResponse: any;

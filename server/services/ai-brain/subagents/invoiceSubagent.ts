@@ -20,11 +20,8 @@ import {
   idempotencyKeys
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc, isNull, inArray } from 'drizzle-orm';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GEMINI_MODELS } from '../providers/geminiClient';
+import { meteredGemini } from '../../billing/meteredGeminiClient';
 import crypto from 'crypto';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -599,8 +596,8 @@ class InvoiceSubagentService {
       }))
       .sort((a, b) => b.estimatedRevenue - a.estimatedRevenue);
 
-    // Generate AI insights
-    const aiInsights = await this.generateGapInsights(clientGaps, totalUnbilledRevenue);
+    // Generate AI insights (metered for billing)
+    const aiInsights = await this.generateGapInsights(workspaceId, clientGaps, totalUnbilledRevenue);
 
     this.logAudit(traceId, 'invoice.detect_gaps', 'completed', {
       unbilledRevenue: totalUnbilledRevenue,
@@ -728,17 +725,12 @@ class InvoiceSubagentService {
     return recommendations;
   }
 
-  private async generateGapInsights(clientGaps: any[], totalRevenue: number): Promise<string> {
+  private async generateGapInsights(workspaceId: string, clientGaps: any[], totalRevenue: number): Promise<string> {
     if (clientGaps.length === 0) {
       return 'No unbilled revenue gaps detected. All approved work has been invoiced.';
     }
 
     try {
-      const model = genAI.getGenerativeModel({
-        model: GEMINI_MODELS.BRAIN,
-        generationConfig: { maxOutputTokens: 300, temperature: 0.3 },
-      });
-
       const prompt = `Analyze these unbilled revenue gaps and provide actionable insights:
 Total Unbilled: $${totalRevenue.toFixed(2)}
 Top Clients:
@@ -746,8 +738,21 @@ ${clientGaps.slice(0, 5).map(c => `- ${c.clientName}: $${c.estimatedRevenue.toFi
 
 Provide 2-3 sentences of executive-level recommendations to recover this revenue.`;
 
-      const result = await model.generateContent(prompt);
-      return result.response.text();
+      // Use metered client for proper billing tracking
+      const result = await meteredGemini.generate({
+        workspaceId,
+        featureKey: 'invoice_gap_analysis',
+        prompt,
+        model: 'gemini-1.5-flash',
+        temperature: 0.3,
+        maxOutputTokens: 300,
+        metadata: { clientCount: clientGaps.length, totalRevenue }
+      });
+
+      if (result.success) {
+        return result.text;
+      }
+      return `$${totalRevenue.toFixed(2)} in unbilled revenue across ${clientGaps.length} clients. Generate invoices immediately to recover.`;
     } catch (error) {
       return `$${totalRevenue.toFixed(2)} in unbilled revenue across ${clientGaps.length} clients. Generate invoices immediately to recover.`;
     }
