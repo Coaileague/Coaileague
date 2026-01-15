@@ -28,9 +28,10 @@ if (databaseUrl && !databaseUrl.includes('neon.tech') && !databaseUrl.includes('
 
 export const pool = new Pool({ 
   connectionString: databaseUrl,
-  max: 5, // Limit connections for stability during publishing
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 5000
+  max: 2, // Minimal connections for Neon free tier (only allows ~5 total)
+  idleTimeoutMillis: 10000, // Release idle connections after 10s
+  connectionTimeoutMillis: 3000, // Fail fast on connection issues
+  allowExitOnIdle: true // Allow pool to close when idle (helps with publishing)
 });
 export const db = drizzle({ client: pool, schema });
 
