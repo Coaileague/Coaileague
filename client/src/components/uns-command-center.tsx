@@ -59,7 +59,7 @@ function NotificationDetailModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-foreground max-w-lg w-[90vw] max-h-[80vh] overflow-y-auto p-0">
+      <DialogContent className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-foreground max-w-md w-[85vw] sm:w-[400px] max-h-[80vh] overflow-y-auto p-0">
         <DialogHeader className="p-4 border-b border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
           <div className="flex items-start gap-3">
             <div className={cn(
