@@ -31,6 +31,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useNotificationWebSocket } from "@/hooks/use-notification-websocket";
 import { useTrinityContext } from "@/hooks/use-trinity-context";
 import { useNotificationSync } from "@/hooks/use-notification-sync";
+import { useTrinityModal } from "@/components/trinity-chat-modal";
 import { humanizeTitle, humanizeText, generateEndUserSummary } from "@shared/utils/humanFriendlyCopy";
 import { Suspense, lazy } from "react";
 const TrinityRedesign = lazy(() => import("@/components/trinity-redesign"));
@@ -1767,11 +1768,11 @@ function NotificationsPopoverInner({ user }: { user: any }) {
     );
   }
 
+  const { openModal: openTrinityModal } = useTrinityModal();
+  
   const handleAskTrinityFromUNS = () => {
     setOpen(false);
-    setTimeout(() => {
-      window.location.href = "/trinity-insights";
-    }, 100);
+    openTrinityModal();
   };
 
   return (
