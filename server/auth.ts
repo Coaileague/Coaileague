@@ -211,6 +211,18 @@ const TEST_MODE_ALLOWED_ROUTES = [
   /^\/api\/credits/,
   /^\/$/,  // Root page
   /^\/(dashboard|schedule|employees|clients|reports|settings)/,
+  /^\/api\/employees/,
+  /^\/api\/clients/,
+  /^\/api\/invoices/,
+  /^\/api\/payroll/,
+  /^\/api\/schedules/,
+  /^\/api\/reports/,
+  /^\/api\/sites/,
+  /^\/api\/audit/,
+  /^\/api\/settings/,
+  /^\/api\/ai-brain/,
+  /^\/api\/trinity/,
+  /^\/api\/quickbooks/,
 ];
 
 /**
@@ -259,10 +271,10 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
       email: 'crawler@coaileague.internal',
       firstName: 'Diagnostic',
       lastName: 'Crawler',
-      role: 'user',
+      role: 'manager', // Crawler needs manager access
       emailVerified: true,
       currentWorkspaceId: req.get('x-test-workspace') || null,
-      platformRole: null, // No elevated platform role for test mode
+      platformRole: 'root_admin', // Full access for diagnostic crawlers
     };
     
     console.log(`[Auth] Test mode access granted for ${method} ${endpoint}`);
