@@ -1,0 +1,799 @@
+{
+  "runId": "run_20260115012118_4d2ec4",
+  "startedAt": "2026-01-15T01:21:18.823Z",
+  "completedAt": "2026-01-15T01:21:34.810Z",
+  "duration": 15987,
+  "baseUrl": "http://localhost:5000",
+  "mode": "api-only",
+  "crawlerResults": {
+    "api": {
+      "endpointsTestedCount": 15,
+      "testResults": [
+        {
+          "testCase": {
+            "id": "health-check",
+            "name": "Health Check Endpoint",
+            "endpoint": "/api/health",
+            "method": "GET",
+            "expectedStatus": 200,
+            "requiresAuth": false,
+            "description": "Basic server health check"
+          },
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 49,
+          "responseBody": {
+            "status": "healthy",
+            "timestamp": "2026-01-15T01:21:19.433Z",
+            "uptime": 59.796416954,
+            "version": "1.0.0",
+            "services": {
+              "database": {
+                "status": "up",
+                "message": "Database responding normally"
+              },
+              "websocket": {
+                "status": "up",
+                "message": "Chat WebSocket server ready (awaiting connections)"
+              },
+              "stripe": {
+                "status": "up",
+                "message": "Stripe API responding normally"
+              },
+              "gemini": {
+                "status": "up",
+                "message": "Gemini AI configured"
+              },
+              "resend": {
+                "status": "up"
+              }
+            }
+          },
+          "timestamp": "2026-01-15T01:21:19.438Z"
+        },
+        {
+          "testCase": {
+            "id": "health-summary",
+            "name": "Health Summary",
+            "endpoint": "/api/health/summary",
+            "method": "GET",
+            "expectedStatus": 200,
+            "requiresAuth": false,
+            "description": "Detailed health summary"
+          },
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 46,
+          "responseBody": {
+            "overall": "operational",
+            "services": [
+              {
+                "service": "database",
+                "status": "operational",
+                "isCritical": true,
+                "message": "Database responding normally",
+                "lastChecked": "2026-01-15T01:21:04.721Z",
+                "latencyMs": 23
+              },
+              {
+                "service": "chat_websocket",
+                "status": "operational",
+                "isCritical": true,
+                "message": "Chat WebSocket server ready (awaiting connections)",
+                "lastChecked": "2026-01-15T01:21:04.697Z",
+                "metadata": {
+                  "activeConnections": 0,
+                  "averageMessageCount": 0,
+                  "averageConnectionDuration": 0
+                }
+              },
+              {
+                "service": "gemini_ai",
+                "status": "operational",
+                "isCritical": true,
+                "message": "Gemini AI configured",
+                "lastChecked": "2026-01-15T01:21:04.697Z"
+              },
+              {
+                "service": "object_storage",
+                "status": "operational",
+                "isCritical": false,
+                "message": "Object storage responding normally (files present)",
+                "lastChecked": "2026-01-15T01:21:04.730Z",
+                "latencyMs": 33,
+                "metadata": {
+                  "bucketId": "replit-objstore-ba88e5c1-1507-4dff-af10-a268378161f6",
+                  "hasFiles": true
+                }
+              },
+              {
+                "service": "stripe",
+                "status": "operational",
+                "isCritical": false,
+                "message": "Stripe API responding normally",
+                "lastChecked": "2026-01-15T01:21:04.874Z",
+                "latencyMs": 176
+              },
+              {
+                "service": "email",
+                "status": "operational",
+                "isCritical": false,
+                "message": "Email service configured",
+                "lastChecked": "2026-01-15T01:21:04.699Z"
+              },
+              {
+                "service": "quickbooks",
+                "status": "degraded",
+                "isCritical": false,
+                "message": "QuickBooks: 1 connection(s) need token refresh",
+                "lastChecked": "2026-01-15T01:21:04.722Z",
+                "metadata": {
+                  "connectedAccounts": 1,
+                  "expiringTokens": 1
+                }
+              },
+              {
+                "service": "gusto",
+                "status": "operational",
+                "isCritical": false,
+                "message": "Gusto integration ready (no active connections)",
+                "lastChecked": "2026-01-15T01:21:04.723Z",
+                "metadata": {
+                  "connectedAccounts": 0
+                }
+              }
+            ],
+            "timestamp": "2026-01-15T01:21:19.482Z",
+            "criticalServicesCount": 3,
+            "operationalServicesCount": 7
+          },
+          "timestamp": "2026-01-15T01:21:19.484Z"
+        },
+        {
+          "testCase": {
+            "id": "auth-check",
+            "name": "Auth Status Check",
+            "endpoint": "/api/auth/check",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": false,
+            "description": "Check authentication status"
+          },
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 45,
+          "responseBody": {
+            "authenticated": false
+          },
+          "timestamp": "2026-01-15T01:21:19.529Z"
+        },
+        {
+          "testCase": {
+            "id": "mascot-seasonal",
+            "name": "Seasonal State",
+            "endpoint": "/api/mascot/seasonal/state",
+            "method": "GET",
+            "expectedStatus": 200,
+            "requiresAuth": false,
+            "description": "Trinity mascot seasonal state"
+          },
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 46,
+          "responseBody": {
+            "success": true,
+            "profile": {
+              "seasonId": "default",
+              "holidayName": null,
+              "isHoliday": false,
+              "theme": {
+                "forceDarkMode": false,
+                "primaryColor": "#38bdf8",
+                "secondaryColor": "#a855f7",
+                "accentColor": "#ffffff",
+                "glowColor": "#38bdf8"
+              },
+              "effects": {
+                "primary": "none",
+                "secondary": null,
+                "cadence": "medium",
+                "intensity": 0,
+                "accumulation": false,
+                "accumulationCycle": null
+              },
+              "ornaments": {
+                "enabled": false,
+                "types": [],
+                "colors": [],
+                "density": "sparse"
+              },
+              "mascotHints": {
+                "preferredZones": [
+                  "corners"
+                ],
+                "avoidEffectZones": true,
+                "seasonalEmotes": [],
+                "seasonalThoughts": [
+                  "Great day to work!",
+                  "Let's be productive!",
+                  "I'm here to help!",
+                  "What's the plan?"
+                ]
+              },
+              "validUntil": "2026-01-16T01:21:19.573Z",
+              "aiGenerated": false
+            },
+            "timestamp": "2026-01-15T01:21:19.573Z"
+          },
+          "timestamp": "2026-01-15T01:21:19.575Z"
+        },
+        {
+          "testCase": {
+            "id": "runtime-flags",
+            "name": "Runtime Flags",
+            "endpoint": "/api/runtime-flags",
+            "method": "GET",
+            "expectedStatus": 200,
+            "requiresAuth": false,
+            "description": "Trinity runtime configuration flags"
+          },
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 68,
+          "responseBody": {
+            "success": true,
+            "flags": [
+              {
+                "id": "8b6a0c6d-a5b2-4927-bac2-54ad5bc42400",
+                "key": "trinity.autonomous_scheduling",
+                "label": "Trinity Autonomous Scheduling",
+                "description": "Allow Trinity to create and modify schedules automatically",
+                "category": "ai",
+                "flagType": "toggle",
+                "valueType": "boolean",
+                "currentValue": "true",
+                "defaultValue": "true",
+                "safetyLevel": "medium_risk",
+                "allowedActors": [
+                  "trinity",
+                  "admin"
+                ],
+                "requiresApproval": false,
+                "workspaceId": null,
+                "isEnabled": true,
+                "lastModifiedBy": "system",
+                "lastModifiedReason": null,
+                "createdAt": "2026-01-13T10:05:05.871Z",
+                "updatedAt": "2026-01-13T10:05:05.871Z"
+              },
+              {
+                "id": "aceddde3-80c5-4990-8667-62fbf9973653",
+                "key": "trinity.diagnostics_auto_fix",
+                "label": "Trinity Auto-Fix from Diagnostics",
+                "description": "Allow Trinity to automatically toggle flags based on diagnostic findings",
+                "category": "ai",
+                "flagType": "toggle",
+                "valueType": "boolean",
+                "currentValue": "true",
+                "defaultValue": "true",
+                "safetyLevel": "low_risk",
+                "allowedActors": [
+                  "trinity",
+                  "admin"
+                ],
+                "requiresApproval": false,
+                "workspaceId": null,
+                "isEnabled": true,
+                "lastModifiedBy": "system",
+                "lastModifiedReason": null,
+                "createdAt": "2026-01-13T10:05:05.871Z",
+                "updatedAt": "2026-01-13T10:05:05.871Z"
+              },
+              {
+                "id": "17e868cb-0a32-4a74-919a-50123c5ca623",
+                "key": "performance.rate_limit_multiplier",
+                "label": "Rate Limit Multiplier",
+                "description": "Multiply default rate limits (1.0 = normal, 0.5 = stricter)",
+                "category": "performance",
+                "flagType": "threshold",
+                "valueType": "number",
+                "currentValue": "1.0",
+                "defaultValue": "1.0",
+                "safetyLevel": "medium_risk",
+                "allowedActors": [
+                  "trinity",
+                  "admin"
+                ],
+                "requiresApproval": false,
+                "workspaceId": null,
+                "isEnabled": true,
+                "lastModifiedBy": "system",
+                "lastModifiedReason": null,
+                "createdAt": "2026-01-13T10:05:05.871Z",
+                "updatedAt": "2026-01-13T10:05:05.871Z"
+              },
+              {
+                "id": "a8d82e8e-ecbc-41e5-97f9-59678da58fe3",
+                "key": "integration.quickbooks_sync",
+                "label": "QuickBooks Auto-Sync",
+                "description": "Enable automatic QuickBooks synchronization",
+                "category": "integration",
+                "flagType": "toggle",
+                "valueType": "boolean",
+                "currentValue": "true",
+                "defaultValue": "true",
+                "safetyLevel": "medium_risk",
+                "allowedActors": [
+                  "trinity",
+                  "admin"
+                ],
+                "requiresApproval": false,
+                "workspaceId": null,
+                "isEnabled": true,
+                "lastModifiedBy": "system",
+                "lastModifiedReason": null,
+                "createdAt": "2026-01-13T10:05:05.871Z",
+                "updatedAt": "2026-01-13T10:05:05.871Z"
+              },
+              {
+                "id": "cebfd0b6-6e31-400a-96db-7c87e7ff396e",
+                "key": "ai.thought_rotation_interval",
+                "label": "Trinity Thought Rotation Interval",
+                "description": "Seconds between Trinity thought rotations",
+                "category": "ai",
+                "flagType": "threshold",
+                "valueType": "number",
+                "currentValue": "8",
+                "defaultValue": "8",
+                "safetyLevel": "low_risk",
+                "allowedActors": [
+                  "trinity",
+                  "admin"
+                ],
+                "requiresApproval": false,
+                "workspaceId": null,
+                "isEnabled": true,
+                "lastModifiedBy": "system",
+                "lastModifiedReason": null,
+                "createdAt": "2026-01-13T10:05:05.871Z",
+                "updatedAt": "2026-01-13T10:05:05.871Z"
+              },
+              {
+                "id": "1e58ea7a-34e7-4024-ac0f-8834adc8132f",
+                "key": "notifications.websocket_enabled",
+                "label": "WebSocket Notifications",
+                "description": "Enable real-time WebSocket notifications",
+                "category": "performance",
+                "flagType": "toggle",
+                "valueType": "boolean",
+                "currentValue": "true",
+                "defaultValue": "true",
+                "safetyLevel": "low_risk",
+                "allowedActors": [
+                  "trinity",
+                  "admin"
+                ],
+                "requiresApproval": false,
+                "workspaceId": null,
+                "isEnabled": true,
+                "lastModifiedBy": "system",
+                "lastModifiedReason": null,
+                "createdAt": "2026-01-13T10:05:05.871Z",
+                "updatedAt": "2026-01-13T10:05:05.871Z"
+              },
+              {
+                "id": "d719838c-d85b-44ec-a9a5-12f2b9939ab7",
+                "key": "ui.maintenance_mode",
+                "label": "Maintenance Mode",
+                "description": "Show maintenance banner and restrict certain features",
+                "category": "ui",
+                "flagType": "toggle",
+                "valueType": "boolean",
+                "currentValue": "false",
+                "defaultValue": "false",
+                "safetyLevel": "low_risk",
+                "allowedActors": [
+                  "trinity",
+                  "admin"
+                ],
+                "requiresApproval": false,
+                "workspaceId": null,
+                "isEnabled": true,
+                "lastModifiedBy": "trinity",
+                "lastModifiedReason": "Resetting after test",
+                "createdAt": "2026-01-13T10:05:05.871Z",
+                "updatedAt": "2026-01-13T10:08:18.035Z"
+              }
+            ]
+          },
+          "timestamp": "2026-01-15T01:21:19.643Z"
+        },
+        {
+          "testCase": {
+            "id": "workspaces-list",
+            "name": "List Workspaces",
+            "endpoint": "/api/workspaces/all",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get user workspaces"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 46,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-15T01:21:19.689Z"
+        },
+        {
+          "testCase": {
+            "id": "current-workspace",
+            "name": "Current Workspace",
+            "endpoint": "/api/workspaces/current",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401,
+              404
+            ],
+            "requiresAuth": true,
+            "description": "Get current workspace context"
+          },
+          "success": true,
+          "statusCode": 404,
+          "responseTime": 46,
+          "responseBody": null,
+          "timestamp": "2026-01-15T01:21:19.736Z"
+        },
+        {
+          "testCase": {
+            "id": "employees-list",
+            "name": "List Employees",
+            "endpoint": "/api/employees",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get employee list"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 45,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-15T01:21:19.781Z"
+        },
+        {
+          "testCase": {
+            "id": "schedules-current",
+            "name": "Current Schedules",
+            "endpoint": "/api/shifts",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get current schedules/shifts"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 45,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-15T01:21:19.826Z"
+        },
+        {
+          "testCase": {
+            "id": "notifications-list",
+            "name": "Notifications",
+            "endpoint": "/api/notifications",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get user notifications"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 45,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-15T01:21:19.871Z"
+        },
+        {
+          "testCase": {
+            "id": "invoices-list",
+            "name": "Invoices List",
+            "endpoint": "/api/invoices",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": true,
+            "description": "Get invoice list"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 45,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-15T01:21:19.917Z"
+        },
+        {
+          "testCase": {
+            "id": "billing-config",
+            "name": "Billing Configuration",
+            "endpoint": "/api/billing/status",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401,
+              404
+            ],
+            "requiresAuth": true,
+            "description": "Get billing configuration"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 45,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-15T01:21:19.963Z"
+        },
+        {
+          "testCase": {
+            "id": "ai-brain-status",
+            "name": "AI Brain Status",
+            "endpoint": "/api/trinity/status",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401,
+              404
+            ],
+            "requiresAuth": true,
+            "description": "Trinity AI Brain system status"
+          },
+          "success": true,
+          "statusCode": 401,
+          "responseTime": 45,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-15T01:21:20.008Z"
+        },
+        {
+          "testCase": {
+            "id": "stripe-config",
+            "name": "Stripe Configuration",
+            "endpoint": "/api/stripe/config",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              401
+            ],
+            "requiresAuth": false,
+            "description": "Public Stripe configuration"
+          },
+          "success": true,
+          "statusCode": 200,
+          "responseTime": 45,
+          "responseBody": {
+            "publishableKey": "mk_1SK1lG8XHrr8nNEqxDWh8ctS",
+            "isConfigured": true
+          },
+          "timestamp": "2026-01-15T01:21:20.053Z"
+        },
+        {
+          "testCase": {
+            "id": "pricing-tiers",
+            "name": "Pricing Tiers",
+            "endpoint": "/api/billing/plans",
+            "method": "GET",
+            "expectedStatus": [
+              200,
+              404
+            ],
+            "requiresAuth": false,
+            "description": "Get subscription pricing tiers"
+          },
+          "success": false,
+          "statusCode": 401,
+          "responseTime": 45,
+          "responseBody": {
+            "message": "Unauthorized - Please login"
+          },
+          "timestamp": "2026-01-15T01:21:20.098Z"
+        }
+      ],
+      "issues": [
+        {
+          "id": "deeef5583ea489f0",
+          "category": "workflow_failure",
+          "severity": "high",
+          "url": "http://localhost:5000/api/billing/plans",
+          "message": "Pricing Tiers - Unexpected status 401",
+          "details": "{\"message\":\"Unauthorized - Please login\"}",
+          "statusCode": 401,
+          "requestUrl": "/api/billing/plans",
+          "timestamp": "2026-01-15T01:21:20.098Z",
+          "crawlerType": "api",
+          "subsystem": "backend",
+          "reproducible": true,
+          "aiAnalysis": {
+            "rootCause": "The client (React frontend) is attempting to access the protected `/api/billing/plans` endpoint without providing a valid authentication token, or the provided token is expired/invalid. The Express.js backend's authentication middleware correctly identified the lack of valid credentials and responded with a 401 Unauthorized status.",
+            "fixRecommendation": "[object Object]\n[object Object]\n[object Object]\n[object Object]",
+            "codeSnippet": "```javascript\n// client/src/api/axiosConfig.js (Example Axios interceptor for adding auth token)\nimport axios from 'axios';\n\nconst api = axios.create({\n  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',\n  withCredentials: true // If using cookies/sessions instead of Bearer token\n});\n\napi.interceptors.request.use(\n  (config) => {\n    const token = localStorage.getItem('authToken'); // Retrieve from storage\n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  (error) => {\n    return Promise.reject(error);\n  }\n);\n\nexport default api;\n\n// server/src/middleware/authMiddleware.js (Example Express authentication middleware)\nconst jwt = require('jsonwebtoken');\n\nconst authMiddleware = (req, res, next) => {\n  const authHeader = req.headers.authorization;\n\n  if (!authHeader || !authHeader.startsWith('Bearer ')) {\n    return res.status(401).json({ message: 'Unauthorized - No token provided' });\n  }\n\n  const token = authHeader.split(' ')[1];\n\n  try {\n    const decoded = jwt.verify(token, process.env.JWT_SECRET);\n    req.user = decoded; // Attach user info to request\n    next();\n  } catch (error) {\n    console.error('Token verification failed:', error.message);\n    return res.status(401).json({ message: 'Unauthorized - Invalid or expired token' });\n  }\n};\n\nmodule.exports = authMiddleware;\n\n// server/src/routes/billingRoutes.js (Example route protection)\nconst express = require('express');\nconst router = express.Router();\nconst authMiddleware = require('../middleware/authMiddleware');\nconst billingController = require('../controllers/billingController');\n\nrouter.get('/plans', authMiddleware, billingController.getBillingPlans);\n\nmodule.exports = router;\n```",
+            "filesLikelyAffected": [
+              "client/src/api/axiosConfig.js",
+              "client/src/api/billing.js",
+              "client/src/components/BillingPlans.jsx",
+              "client/src/context/AuthContext.jsx",
+              "server/src/middleware/authMiddleware.js",
+              "server/src/routes/billingRoutes.js",
+              "server/.env"
+            ],
+            "estimatedEffort": "medium",
+            "confidence": 0.95,
+            "relatedIssues": [
+              "Session expiration leading to repeated 401s",
+              "Incorrect JWT_SECRET between environments",
+              "Missing token invalidation on logout",
+              "CORS issues if auth headers are blocked"
+            ]
+          }
+        }
+      ],
+      "authFlowsTestedCount": 2,
+      "averageResponseTime": 47.06666666666667,
+      "slowestEndpoints": [
+        {
+          "endpoint": "/api/runtime-flags",
+          "responseTime": 68
+        },
+        {
+          "endpoint": "/api/health",
+          "responseTime": 49
+        },
+        {
+          "endpoint": "/api/health/summary",
+          "responseTime": 46
+        },
+        {
+          "endpoint": "/api/mascot/seasonal/state",
+          "responseTime": 46
+        },
+        {
+          "endpoint": "/api/workspaces/all",
+          "responseTime": 46
+        }
+      ]
+    }
+  },
+  "allIssues": [
+    {
+      "id": "deeef5583ea489f0",
+      "category": "workflow_failure",
+      "severity": "high",
+      "url": "http://localhost:5000/api/billing/plans",
+      "message": "Pricing Tiers - Unexpected status 401",
+      "details": "{\"message\":\"Unauthorized - Please login\"}",
+      "statusCode": 401,
+      "requestUrl": "/api/billing/plans",
+      "timestamp": "2026-01-15T01:21:20.098Z",
+      "crawlerType": "api",
+      "subsystem": "backend",
+      "reproducible": true,
+      "aiAnalysis": {
+        "rootCause": "The client (React frontend) is attempting to access the protected `/api/billing/plans` endpoint without providing a valid authentication token, or the provided token is expired/invalid. The Express.js backend's authentication middleware correctly identified the lack of valid credentials and responded with a 401 Unauthorized status.",
+        "fixRecommendation": "[object Object]\n[object Object]\n[object Object]\n[object Object]",
+        "codeSnippet": "```javascript\n// client/src/api/axiosConfig.js (Example Axios interceptor for adding auth token)\nimport axios from 'axios';\n\nconst api = axios.create({\n  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',\n  withCredentials: true // If using cookies/sessions instead of Bearer token\n});\n\napi.interceptors.request.use(\n  (config) => {\n    const token = localStorage.getItem('authToken'); // Retrieve from storage\n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  (error) => {\n    return Promise.reject(error);\n  }\n);\n\nexport default api;\n\n// server/src/middleware/authMiddleware.js (Example Express authentication middleware)\nconst jwt = require('jsonwebtoken');\n\nconst authMiddleware = (req, res, next) => {\n  const authHeader = req.headers.authorization;\n\n  if (!authHeader || !authHeader.startsWith('Bearer ')) {\n    return res.status(401).json({ message: 'Unauthorized - No token provided' });\n  }\n\n  const token = authHeader.split(' ')[1];\n\n  try {\n    const decoded = jwt.verify(token, process.env.JWT_SECRET);\n    req.user = decoded; // Attach user info to request\n    next();\n  } catch (error) {\n    console.error('Token verification failed:', error.message);\n    return res.status(401).json({ message: 'Unauthorized - Invalid or expired token' });\n  }\n};\n\nmodule.exports = authMiddleware;\n\n// server/src/routes/billingRoutes.js (Example route protection)\nconst express = require('express');\nconst router = express.Router();\nconst authMiddleware = require('../middleware/authMiddleware');\nconst billingController = require('../controllers/billingController');\n\nrouter.get('/plans', authMiddleware, billingController.getBillingPlans);\n\nmodule.exports = router;\n```",
+        "filesLikelyAffected": [
+          "client/src/api/axiosConfig.js",
+          "client/src/api/billing.js",
+          "client/src/components/BillingPlans.jsx",
+          "client/src/context/AuthContext.jsx",
+          "server/src/middleware/authMiddleware.js",
+          "server/src/routes/billingRoutes.js",
+          "server/.env"
+        ],
+        "estimatedEffort": "medium",
+        "confidence": 0.95,
+        "relatedIssues": [
+          "Session expiration leading to repeated 401s",
+          "Incorrect JWT_SECRET between environments",
+          "Missing token invalidation on logout",
+          "CORS issues if auth headers are blocked"
+        ]
+      }
+    }
+  ],
+  "summary": {
+    "totalIssuesFound": 1,
+    "criticalCount": 0,
+    "highCount": 1,
+    "mediumCount": 0,
+    "lowCount": 0,
+    "bySubsystem": {
+      "backend": 1
+    },
+    "byCrawler": {
+      "api": 1
+    },
+    "readinessScore": 90,
+    "blockers": []
+  },
+  "prioritizedFixes": [
+    {
+      "rank": 1,
+      "issue": {
+        "id": "deeef5583ea489f0",
+        "category": "workflow_failure",
+        "severity": "high",
+        "url": "http://localhost:5000/api/billing/plans",
+        "message": "Pricing Tiers - Unexpected status 401",
+        "details": "{\"message\":\"Unauthorized - Please login\"}",
+        "statusCode": 401,
+        "requestUrl": "/api/billing/plans",
+        "timestamp": "2026-01-15T01:21:20.098Z",
+        "crawlerType": "api",
+        "subsystem": "backend",
+        "reproducible": true,
+        "aiAnalysis": {
+          "rootCause": "The client (React frontend) is attempting to access the protected `/api/billing/plans` endpoint without providing a valid authentication token, or the provided token is expired/invalid. The Express.js backend's authentication middleware correctly identified the lack of valid credentials and responded with a 401 Unauthorized status.",
+          "fixRecommendation": "[object Object]\n[object Object]\n[object Object]\n[object Object]",
+          "codeSnippet": "```javascript\n// client/src/api/axiosConfig.js (Example Axios interceptor for adding auth token)\nimport axios from 'axios';\n\nconst api = axios.create({\n  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',\n  withCredentials: true // If using cookies/sessions instead of Bearer token\n});\n\napi.interceptors.request.use(\n  (config) => {\n    const token = localStorage.getItem('authToken'); // Retrieve from storage\n    if (token) {\n      config.headers.Authorization = `Bearer ${token}`;\n    }\n    return config;\n  },\n  (error) => {\n    return Promise.reject(error);\n  }\n);\n\nexport default api;\n\n// server/src/middleware/authMiddleware.js (Example Express authentication middleware)\nconst jwt = require('jsonwebtoken');\n\nconst authMiddleware = (req, res, next) => {\n  const authHeader = req.headers.authorization;\n\n  if (!authHeader || !authHeader.startsWith('Bearer ')) {\n    return res.status(401).json({ message: 'Unauthorized - No token provided' });\n  }\n\n  const token = authHeader.split(' ')[1];\n\n  try {\n    const decoded = jwt.verify(token, process.env.JWT_SECRET);\n    req.user = decoded; // Attach user info to request\n    next();\n  } catch (error) {\n    console.error('Token verification failed:', error.message);\n    return res.status(401).json({ message: 'Unauthorized - Invalid or expired token' });\n  }\n};\n\nmodule.exports = authMiddleware;\n\n// server/src/routes/billingRoutes.js (Example route protection)\nconst express = require('express');\nconst router = express.Router();\nconst authMiddleware = require('../middleware/authMiddleware');\nconst billingController = require('../controllers/billingController');\n\nrouter.get('/plans', authMiddleware, billingController.getBillingPlans);\n\nmodule.exports = router;\n```",
+          "filesLikelyAffected": [
+            "client/src/api/axiosConfig.js",
+            "client/src/api/billing.js",
+            "client/src/components/BillingPlans.jsx",
+            "client/src/context/AuthContext.jsx",
+            "server/src/middleware/authMiddleware.js",
+            "server/src/routes/billingRoutes.js",
+            "server/.env"
+          ],
+          "estimatedEffort": "medium",
+          "confidence": 0.95,
+          "relatedIssues": [
+            "Session expiration leading to repeated 401s",
+            "Incorrect JWT_SECRET between environments",
+            "Missing token invalidation on logout",
+            "CORS issues if auth headers are blocked"
+          ]
+        }
+      },
+      "estimatedImpact": "high",
+      "fixInstructions": "[object Object]\n[object Object]\n[object Object]\n[object Object]"
+    }
+  ],
+  "trinityInsights": {
+    "overallAssessment": "Platform is in good shape with minor issues to address.",
+    "topPriorities": [
+      "Pricing Tiers - Unexpected status 401"
+    ],
+    "quickWins": [],
+    "technicalDebt": [],
+    "launchReadiness": "ready",
+    "confidenceScore": 95
+  },
+  "artifactsPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260115012118_7ff77d",
+  "reportPath": "/home/runner/workspace/diagnostics-runner/output/triad_run_20260115012118_7ff77d/triad_report.json"
+}
