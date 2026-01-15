@@ -1714,7 +1714,7 @@ router.get('/quickbooks/status', requireAuth, requireWorkspaceMembership('query'
 
     // Calculate token expiry status
     const now = new Date();
-    const accessTokenExpiry = connection.accessTokenExpiresAt ? new Date(connection.accessTokenExpiresAt) : null;
+    const accessTokenExpiry = connection.expiresAt ? new Date(connection.expiresAt) : null;
     const refreshTokenExpiry = connection.refreshTokenExpiresAt ? new Date(connection.refreshTokenExpiresAt) : null;
     
     const accessTokenExpiresSoon = accessTokenExpiry && 
@@ -1725,24 +1725,63 @@ router.get('/quickbooks/status', requireAuth, requireWorkspaceMembership('query'
     const refreshTokenExpired = refreshTokenExpiry && refreshTokenExpiry < now;
 
     // Determine overall status
-    let status: 'connected' | 'token_expiring' | 'token_expired' | 'error' = 'connected';
+    let status: 'connected' | 'token_expiring' | 'token_expired' | 'disconnected_recoverable' | 'needs_reauthorization' | 'disconnected' | 'error' = 'connected';
     let needsAttention = false;
+    let canRefresh = true;
     let message = 'QuickBooks connected and syncing';
 
-    if (refreshTokenExpired) {
+    // Check if connection is disconnected or error state
+    const isDisconnected = connection.status === 'disconnected';
+    const isError = connection.status === 'error';
+    const hasValidRefreshToken = !refreshTokenExpired && connection.refreshToken;
+
+    // First, handle connection.status states that override token analysis
+    if (isError) {
+      status = 'error';
+      needsAttention = true;
+      canRefresh = hasValidRefreshToken;
+      message = hasValidRefreshToken 
+        ? 'Connection error. Click "Renew Connection" to try restoring access.'
+        : 'Connection error. Please reconnect to QuickBooks.';
+    } else if (refreshTokenExpired) {
+      status = 'needs_reauthorization';
+      needsAttention = true;
+      canRefresh = false;
+      message = 'Both tokens have expired. You need to reconnect to QuickBooks.';
+    } else if (isDisconnected && hasValidRefreshToken) {
+      status = 'disconnected_recoverable';
+      needsAttention = true;
+      canRefresh = true;
+      message = 'QuickBooks was disconnected. Click "Renew Connection" to restore access.';
+    } else if (isDisconnected) {
+      status = 'disconnected';
+      needsAttention = true;
+      canRefresh = false;
+      message = 'QuickBooks is disconnected. Please reconnect.';
+    } else if (tokenExpired && hasValidRefreshToken) {
       status = 'token_expired';
       needsAttention = true;
-      message = 'QuickBooks connection expired. Please reconnect.';
+      canRefresh = true;
+      message = 'Access token expired. Click "Renew Connection" to restore access.';
+      // Trigger background refresh
+      quickbooksTokenRefresh.refreshExpiringTokens().catch(console.error);
     } else if (tokenExpired) {
       status = 'token_expired';
       needsAttention = true;
-      message = 'Access token expired. Attempting auto-refresh.';
-      // Trigger background refresh
-      quickbooksTokenRefresh.refreshExpiringTokens().catch(console.error);
+      canRefresh = false;
+      message = 'Access token expired. Please reconnect to QuickBooks.';
+    } else if (connection.status !== 'connected') {
+      // Handle any other non-connected states
+      status = 'disconnected';
+      needsAttention = true;
+      canRefresh = hasValidRefreshToken;
+      message = hasValidRefreshToken 
+        ? 'QuickBooks needs attention. Click "Renew Connection" to restore access.'
+        : 'QuickBooks is not connected. Please reconnect.';
     } else if (accessTokenExpiresSoon) {
       status = 'token_expiring';
-      needsAttention = true;
-      message = 'Token expiring soon. Will auto-refresh.';
+      needsAttention = false; // Not critical, will auto-refresh
+      message = 'Token expiring soon. Will auto-refresh when needed.';
       // Trigger background refresh
       quickbooksTokenRefresh.refreshExpiringTokens().catch(console.error);
     } else if (refreshTokenExpiresSoon) {
@@ -1756,21 +1795,21 @@ router.get('/quickbooks/status', requireAuth, requireWorkspaceMembership('query'
     const companyName = metadata.companyName || metadata.CompanyName || 'Unknown Company';
 
     return res.json({
-      connected: connection.status === 'connected',
-      status: connection.status === 'connected' ? status : connection.status,
+      connected: connection.status === 'connected' && !tokenExpired,
+      status,
       connectionId: connection.id,
       realmId: connection.realmId,
       companyId: connection.companyId,
       companyName,
-      lastSyncedAt: connection.lastSyncedAt,
-      accessTokenExpiresAt: connection.accessTokenExpiresAt,
+      lastSyncedAt: connection.lastSyncAt,
+      accessTokenExpiresAt: connection.expiresAt,
       refreshTokenExpiresAt: connection.refreshTokenExpiresAt,
       tokenExpiresSoon: accessTokenExpiresSoon || refreshTokenExpiresSoon,
-      tokenExpired: tokenExpired || refreshTokenExpired,
+      tokenExpired: !!tokenExpired,
       needsAttention,
       message,
       canDisconnect: true,
-      canRefresh: !refreshTokenExpired,
+      canRefresh,
       migrationWizardAvailable: true,
     });
   } catch (error: any) {

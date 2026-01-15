@@ -347,6 +347,20 @@ export default function IntegrationsPage() {
             {FRIENDLY_LABELS.error}
           </Badge>
         );
+      case 'disconnected_recoverable':
+        return (
+          <Badge variant="secondary" className="gap-1" data-testid={`badge-status-recoverable`}>
+            <AlertCircle className="w-3 h-3" />
+            Can Restore
+          </Badge>
+        );
+      case 'needs_reauthorization':
+        return (
+          <Badge variant="destructive" className="gap-1" data-testid={`badge-status-needs-reauth`}>
+            <XCircle className="w-3 h-3" />
+            Needs Reconnect
+          </Badge>
+        );
       default:
         return (
           <Badge variant="outline" className="gap-1" data-testid={`badge-status-disconnected`}>
@@ -376,6 +390,9 @@ export default function IntegrationsPage() {
     const isExpired = isQuickBooks 
       ? (qbStatus?.status === 'token_expired' || qbStatus?.status === 'error' || qbStatus?.tokenExpired)
       : connection?.status === 'expired';
+    const isRecoverable = isQuickBooks && qbStatus?.status === 'disconnected_recoverable';
+    const needsReauth = isQuickBooks && qbStatus?.status === 'needs_reauthorization';
+    const canRefresh = isQuickBooks ? qbStatus?.canRefresh : false;
     const needsAttention = isQuickBooks ? qbStatus?.needsAttention : false;
     const statusMessage = isQuickBooks ? (qbStatusError ? String(qbStatusError) : qbStatus?.message) : null;
     const lastSyncedAt = isQuickBooks ? qbStatus?.lastSyncedAt : connection?.lastSyncedAt;
@@ -453,7 +470,8 @@ export default function IntegrationsPage() {
           )}
 
           <div className="flex gap-2 flex-wrap">
-            {!isConnected ? (
+            {/* Show Connect button when not connected and no recoverable state */}
+            {!isConnected && !isRecoverable && !isExpired && (
               <Button
                 onClick={() => connectMutation.mutate(partner)}
                 disabled={connectMutation.isPending || (isQuickBooks && qbStatusLoading)}
@@ -467,30 +485,50 @@ export default function IntegrationsPage() {
                 )}
                 {connectMutation.isPending ? 'Connecting...' : 'Connect'}
               </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => setDisconnectDialog({ open: true, partner })}
-                  className="gap-2"
-                  data-testid={`button-disconnect-${partner}`}
-                >
-                  <Unlink className="w-4 h-4" />
-                  Disconnect
-                </Button>
-                {(isExpired || needsAttention) && (
-                  <Button
-                    variant="secondary"
-                    onClick={() => refreshMutation.mutate(partner)}
-                    disabled={refreshMutation.isPending}
-                    className="gap-2"
-                    data-testid={`button-refresh-${partner}`}
-                  >
-                    <RefreshCw className={`w-4 h-4 ${refreshMutation.isPending ? 'animate-spin' : ''}`} />
-                    {refreshMutation.isPending ? 'Renewing...' : 'Renew Connection'}
-                  </Button>
+            )}
+
+            {/* Show Reconnect button if needs reauthorization */}
+            {needsReauth && (
+              <Button
+                onClick={() => connectMutation.mutate(partner)}
+                disabled={connectMutation.isPending}
+                className="gap-2"
+                variant="destructive"
+                data-testid={`button-reconnect-${partner}`}
+              >
+                {connectMutation.isPending ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <LinkIcon className="w-4 h-4" />
                 )}
-              </>
+                {connectMutation.isPending ? 'Reconnecting...' : 'Reconnect to QuickBooks'}
+              </Button>
+            )}
+
+            {/* Show Refresh button for recoverable states */}
+            {(isRecoverable || isExpired || (canRefresh && needsAttention)) && !needsReauth && (
+              <Button
+                onClick={() => refreshMutation.mutate(partner)}
+                disabled={refreshMutation.isPending}
+                className="gap-2"
+                data-testid={`button-refresh-${partner}`}
+              >
+                <RefreshCw className={`w-4 h-4 ${refreshMutation.isPending ? 'animate-spin' : ''}`} />
+                {refreshMutation.isPending ? 'Restoring Connection...' : 'Restore Connection'}
+              </Button>
+            )}
+
+            {/* Show Disconnect button when connected */}
+            {isConnected && (
+              <Button
+                variant="outline"
+                onClick={() => setDisconnectDialog({ open: true, partner })}
+                className="gap-2"
+                data-testid={`button-disconnect-${partner}`}
+              >
+                <Unlink className="w-4 h-4" />
+                Disconnect
+              </Button>
             )}
           </div>
         </CardContent>
