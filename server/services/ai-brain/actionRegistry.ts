@@ -73,6 +73,7 @@ class AIBrainActionRegistry {
     this.registerIntegrationActions();
     this.registerOnboardingActions();
     this.registerStrategicOptimizationActions();
+    this.registerContractPipelineActions();
 
     this.initialized = true;
     console.log(`[AI Brain Action Registry] Initialization complete`);
@@ -1140,11 +1141,135 @@ class AIBrainActionRegistry {
   }
 
   // ============================================================================
+  // CONTRACT PIPELINE ACTIONS
+  // ============================================================================
+
+  private registerContractPipelineActions(): void {
+    const getContractStats: ActionHandler = {
+      actionId: 'contracts.get_stats',
+      name: 'Get Contract Pipeline Statistics',
+      category: 'billing',
+      description: 'Get contract pipeline statistics including proposals, contracts, and conversion rates',
+      requiredRoles: ['owner', 'manager', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { contractPipelineService } = await import('../contracts/contractPipelineService');
+        const stats = await contractPipelineService.getStatistics(request.workspaceId!);
+        return createResult(request.actionId, true, `Contract stats: ${stats.totalContracts} contracts, ${stats.pendingSignatures} pending signatures, $${stats.totalContractValue.toFixed(2)} total value`, stats, start);
+      },
+    };
+
+    const getPendingSignatures: ActionHandler = {
+      actionId: 'contracts.get_pending_signatures',
+      name: 'Get Pending Signatures',
+      category: 'billing',
+      description: 'Get contracts waiting for client signatures',
+      requiredRoles: ['owner', 'manager', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { contractPipelineService } = await import('../contracts/contractPipelineService');
+        const contracts = await contractPipelineService.getContracts(request.workspaceId!, { status: 'pending_signatures' });
+        return createResult(request.actionId, true, `Found ${contracts.length} contracts awaiting signatures`, { contracts, count: contracts.length }, start);
+      },
+    };
+
+    const getExpiringContracts: ActionHandler = {
+      actionId: 'contracts.get_expiring',
+      name: 'Get Expiring Contracts',
+      category: 'billing',
+      description: 'Get contracts expiring within 30 days',
+      requiredRoles: ['owner', 'manager', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { contractPipelineService } = await import('../contracts/contractPipelineService');
+        const thirtyDaysFromNow = new Date();
+        thirtyDaysFromNow.setDate(thirtyDaysFromNow.getDate() + 30);
+        const contracts = await contractPipelineService.getContracts(request.workspaceId!, { expiresBy: thirtyDaysFromNow });
+        return createResult(request.actionId, true, `Found ${contracts.length} contracts expiring in next 30 days`, { contracts, count: contracts.length }, start);
+      },
+    };
+
+    const getContractUsage: ActionHandler = {
+      actionId: 'contracts.get_usage',
+      name: 'Get Contract Pipeline Usage',
+      category: 'billing',
+      description: 'Get current month contract pipeline quota usage',
+      requiredRoles: ['owner', 'manager', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { contractPipelineService } = await import('../contracts/contractPipelineService');
+        const usage = await contractPipelineService.getUsage(request.workspaceId!);
+        const status = usage.isUnlimited ? 'unlimited' : `${usage.quotaUsed}/${usage.quotaLimit} used (${usage.remaining} remaining)`;
+        return createResult(request.actionId, true, `Contract quota: ${status}`, usage, start);
+      },
+    };
+
+    const getContractTemplates: ActionHandler = {
+      actionId: 'contracts.get_templates',
+      name: 'Get Contract Templates',
+      category: 'billing',
+      description: 'Get available contract templates',
+      requiredRoles: ['owner', 'manager', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { contractPipelineService } = await import('../contracts/contractPipelineService');
+        const templates = await contractPipelineService.getTemplates(request.workspaceId!);
+        return createResult(request.actionId, true, `Found ${templates.length} contract templates`, { templates, count: templates.length }, start);
+      },
+    };
+
+    const searchContracts: ActionHandler = {
+      actionId: 'contracts.search',
+      name: 'Search Contracts',
+      category: 'billing',
+      description: 'Search contracts by client name, title, or content',
+      requiredRoles: ['owner', 'manager', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { contractPipelineService } = await import('../contracts/contractPipelineService');
+        const searchTerm = request.payload?.query || '';
+        const contracts = await contractPipelineService.getContracts(request.workspaceId!, {});
+        const filtered = contracts.filter(c => 
+          c.clientName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          c.title?.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        return createResult(request.actionId, true, `Found ${filtered.length} contracts matching "${searchTerm}"`, { contracts: filtered, count: filtered.length }, start);
+      },
+    };
+
+    const getContractAuditTrail: ActionHandler = {
+      actionId: 'contracts.get_audit_trail',
+      name: 'Get Contract Audit Trail',
+      category: 'billing',
+      description: 'Get audit trail for a specific contract',
+      requiredRoles: ['owner', 'manager', 'root_admin'],
+      handler: async (request: ActionRequest): Promise<ActionResult> => {
+        const start = Date.now();
+        const { contractPipelineService } = await import('../contracts/contractPipelineService');
+        const contractId = request.payload?.contractId;
+        if (!contractId) {
+          return createResult(request.actionId, false, 'Contract ID is required', null, start);
+        }
+        const auditTrail = await contractPipelineService.getAuditTrail(contractId);
+        return createResult(request.actionId, true, `Found ${auditTrail.length} audit entries`, { auditTrail, count: auditTrail.length }, start);
+      },
+    };
+
+    helpaiOrchestrator.registerAction(getContractStats);
+    helpaiOrchestrator.registerAction(getPendingSignatures);
+    helpaiOrchestrator.registerAction(getExpiringContracts);
+    helpaiOrchestrator.registerAction(getContractUsage);
+    helpaiOrchestrator.registerAction(getContractTemplates);
+    helpaiOrchestrator.registerAction(searchContracts);
+    helpaiOrchestrator.registerAction(getContractAuditTrail);
+  }
+
+  // ============================================================================
   // PUBLIC API
   // ============================================================================
 
   getRegisteredActionCount(): number {
-    return 33; // Updated count including 8 new strategic actions
+    return 40; // Updated count including 8 strategic + 7 contract pipeline actions
   }
 }
 

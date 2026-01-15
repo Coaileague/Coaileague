@@ -342,6 +342,43 @@ export const BILLING = {
   },
 
   // ==========================================================================
+  // CONTRACT PIPELINE - Premium Feature Quotas & Credits
+  // Tier-based monthly quota with credit overage for extra contracts
+  // ==========================================================================
+  contractPipeline: {
+    // Monthly contract quotas per tier (proposals + contracts count against quota)
+    tierQuotas: {
+      free: 0,           // No contract pipeline access
+      starter: 10,       // 10 contracts/month included
+      professional: 50,  // 50 contracts/month included
+      enterprise: -1,    // Unlimited
+    },
+    // Credit cost per contract after quota exhausted
+    overageCreditsPerContract: 25, // 25 credits = ~$0.25 per extra contract
+    // Feature flags
+    features: {
+      templates: { free: false, starter: true, professional: true, enterprise: true },
+      customTemplates: { free: false, starter: false, professional: true, enterprise: true },
+      digitalSignatures: { free: false, starter: true, professional: true, enterprise: true },
+      drawnSignatures: { free: false, starter: false, professional: true, enterprise: true },
+      auditTrail: { free: false, starter: true, professional: true, enterprise: true },
+      evidenceExport: { free: false, starter: false, professional: true, enterprise: true },
+      amendments: { free: false, starter: true, professional: true, enterprise: true },
+      attachments: { free: false, starter: true, professional: true, enterprise: true },
+      trinityQueries: { free: false, starter: true, professional: true, enterprise: true },
+      autoReminders: { free: false, starter: true, professional: true, enterprise: true },
+    },
+    // Document retention (days)
+    retentionDays: {
+      free: 0,
+      starter: 365 * 3,     // 3 years
+      professional: 365 * 7, // 7 years (default legal standard)
+      enterprise: 365 * 10,  // 10 years
+    },
+    description: "Legal-grade contract management with digital signatures and audit trails",
+  },
+
+  // ==========================================================================
   // STRIPE ENVIRONMENT VARIABLE MAPPING
   // ==========================================================================
   stripeEnvVars: {
@@ -468,4 +505,35 @@ export function getRecommendedSetupFee(tierId: TierKey): SetupFeeKey {
     enterprise: "enterprise",
   };
   return tierToSetup[tierId];
+}
+
+// ============================================================================
+// CONTRACT PIPELINE HELPER FUNCTIONS
+// ============================================================================
+
+export function getContractPipelineQuota(tierId: TierKey): number {
+  return BILLING.contractPipeline.tierQuotas[tierId] ?? 0;
+}
+
+export function hasContractPipelineAccess(tierId: TierKey): boolean {
+  return getContractPipelineQuota(tierId) !== 0;
+}
+
+export function isContractPipelineUnlimited(tierId: TierKey): boolean {
+  return getContractPipelineQuota(tierId) === -1;
+}
+
+export function getContractPipelineOverageCredits(): number {
+  return BILLING.contractPipeline.overageCreditsPerContract;
+}
+
+export function canUseContractFeature(
+  tierId: TierKey, 
+  feature: keyof typeof BILLING.contractPipeline.features
+): boolean {
+  return BILLING.contractPipeline.features[feature]?.[tierId] ?? false;
+}
+
+export function getContractRetentionDays(tierId: TierKey): number {
+  return BILLING.contractPipeline.retentionDays[tierId] ?? 0;
 }
