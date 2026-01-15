@@ -414,17 +414,21 @@ export default function Dashboard() {
                       <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-blue-50 border-blue-200 text-blue-700" data-testid="badge-org-id">
                         {orgId}
                       </Badge>
-                  )}
-                  {dbUserId && (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-purple-50 border-purple-200 text-purple-700 font-mono whitespace-nowrap min-w-fit" data-testid="badge-db-user-id" title="Database User ID">
-                      UID: {dbUserId}
-                    </Badge>
-                  )}
-                  {dbWorkspaceId && (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono" data-testid="badge-db-workspace-id" title="Database Workspace ID">
-                      WS: {dbWorkspaceId.substring(0, 8)}...
-                    </Badge>
                     )}
+                  </div>
+                  <div className="w-full max-w-full min-w-0 overflow-x-auto mt-1 pb-1">
+                    <div className="flex items-center gap-1.5 w-max">
+                      {dbUserId && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 bg-purple-50 border-purple-200 text-purple-700 font-mono whitespace-nowrap" data-testid="badge-db-user-id" title={`Database User ID: ${dbUserId}`}>
+                          UID: {dbUserId}
+                        </Badge>
+                      )}
+                      {dbWorkspaceId && (
+                        <Badge variant="outline" className="text-[9px] px-1.5 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono whitespace-nowrap" data-testid="badge-db-workspace-id" title={`Database Workspace ID: ${dbWorkspaceId}`}>
+                          WS: {dbWorkspaceId}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                   {workspace?.name && (
                     <p className="text-xs font-semibold text-blue-700 mt-2" data-testid="text-org-name">
@@ -517,7 +521,7 @@ export default function Dashboard() {
                 )}
                 
                 {/* User Identity Badges */}
-                <div className="flex items-center justify-center gap-2 flex-wrap mb-3">
+                <div className="flex items-center justify-center gap-2 flex-wrap mb-2">
                   {displayExternalId && (
                     <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-blue-50 border-blue-200 text-blue-700 font-medium" data-testid="badge-external-id">
                       {displayExternalId}
@@ -533,16 +537,20 @@ export default function Dashboard() {
                       {orgId}
                     </Badge>
                   )}
-                  {dbUserId && (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-purple-50 border-purple-200 text-purple-700 font-mono whitespace-nowrap min-w-fit" data-testid="badge-db-user-id" title="Database User ID">
-                      UID: {dbUserId}
-                    </Badge>
-                  )}
-                  {dbWorkspaceId && (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono" data-testid="badge-db-workspace-id" title="Database Workspace ID">
-                      WS: {dbWorkspaceId.substring(0, 8)}...
-                    </Badge>
-                  )}
+                </div>
+                <div className="w-full max-w-full min-w-0 overflow-x-auto mb-3 pb-1">
+                  <div className="flex items-center justify-center gap-2 w-max mx-auto">
+                    {dbUserId && (
+                      <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-purple-50 border-purple-200 text-purple-700 font-mono whitespace-nowrap" data-testid="badge-db-user-id" title={`Database User ID: ${dbUserId}`}>
+                        UID: {dbUserId}
+                      </Badge>
+                    )}
+                    {dbWorkspaceId && (
+                      <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono whitespace-nowrap" data-testid="badge-db-workspace-id" title={`Database Workspace ID: ${dbWorkspaceId}`}>
+                        WS: {dbWorkspaceId}
+                      </Badge>
+                    )}
+                  </div>
                 </div>
                 
                 <p className="text-muted-foreground text-sm sm:text-base lg:text-lg">

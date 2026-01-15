@@ -1,0 +1,421 @@
+## COAILEAGUE PRICING RESTRUCTURE - COMPLETE OVERHAUL
+
+### PRIORITY: HIGH - Update all pricing, tiers, features, Stripe, and billing enforcement
+
+---
+
+## SECTION 1: NEW PRICING TIERS
+
+### TIER 1: FREE TRIAL
+- Price: $0
+- Duration: 14 days
+- Employees: 5 max (1 manager)
+- AI Credits: 500 (trial period only)
+- No overage allowed - must upgrade to continue
+
+### TIER 2: STARTER
+- Monthly: $699/month
+- Annual: $559/month ($6,708/year - 20% savings)
+- Employees Included: 15
+- Overage Rate: $22/employee/month after 15
+- AI Credits: 2,500/month
+- Overage AI Credits: Not allowed - must upgrade or purchase add-on
+
+### TIER 3: PROFESSIONAL (Most Popular - add badge)
+- Monthly: $2,499/month
+- Annual: $1,999/month ($23,988/year - 20% savings)
+- Employees Included: 50
+- Overage Rate: $20/employee/month after 50
+- AI Credits: 15,000/month
+- Overage AI Credits: Charged at $59/5,000 credits automatically
+
+### TIER 4: ENTERPRISE
+- Monthly: Starting at $5,500/month
+- Annual: Custom pricing (contact sales)
+- Employees Included: 150+
+- Overage Rate: Custom (negotiated)
+- AI Credits: Unlimited
+- White-label, API, dedicated support included
+
+---
+
+## SECTION 2: ADD-ON PRODUCTS
+
+Create these as separate Stripe products, available to Professional tier only:
+
+1. Per-Client Profitability Analysis
+   - Price: $199/month
+   - Stripe Product ID: addon_client_profitability
+   - Features unlocked: Client margin reports, contract profitability ranking, revenue per client analysis
+
+2. Trinity Predictive Insights
+   - Price: $249/month
+   - Stripe Product ID: addon_predictive_insights
+   - Features unlocked: Cash flow forecasting, what-if scenarios, AI financial predictions, seasonal pattern alerts
+
+3. Additional AI Credits Pack
+   - Price: $59 one-time per 5,000 credits
+   - Stripe Product ID: addon_ai_credits_5000
+   - Credits added immediately to account balance
+
+4. Additional Location
+   - Price: $149/month per location
+   - Stripe Product ID: addon_location
+   - Enables multi-location management per location added
+
+---
+
+## SECTION 3: FEATURE MATRIX BY TIER
+
+### FREE TRIAL includes:
+- Basic scheduling (manual, no AI optimization)
+- Basic time tracking (no GPS)
+- Dashboard access
+- 5 employees max
+- 500 AI credits total
+- Email support only
+- NO: GPS, mobile app, automation, integrations, compliance, contracts
+
+### STARTER ($699/month) includes:
+- Trinity AI scheduling (basic optimization)
+- GPS time tracking
+- Mobile app for guards
+- Shift swapping
+- Basic compliance alerts
+- Email/SMS notifications
+- Basic reporting & analytics
+- Employee onboarding tools
+- 2,500 AI credits/month
+- Email support (72hr response)
+
+### STARTER does NOT include:
+- QuickBooks integration
+- Payroll automation
+- Billing/invoice automation
+- P&L Financial Dashboard
+- Contract Pipeline
+- Document vault
+- E-signatures
+- Advanced compliance (SOX)
+- Incident management
+- Strategic business insights
+- Per-client profitability
+- Predictive insights
+
+### PROFESSIONAL ($2,499/month) includes EVERYTHING in Starter, PLUS:
+- FULL Trinity AI automation (profit-first scheduling)
+- Automated payroll processing
+- Client billing automation
+- Invoice generation & management
+- QuickBooks integration (full sync)
+- P&L Financial Dashboard
+- Contract Pipeline (create, send, track)
+- E-signature capture (typed + drawn)
+- Document vault with audit trail
+- Advanced compliance (SOX audit trails)
+- Incident management & reporting
+- Strategic business insights
+- 15,000 AI credits/month
+- Priority support (24hr response)
+
+### PROFESSIONAL does NOT include (available as add-ons):
+- Per-client profitability analysis (add-on $199/mo)
+- Trinity predictive insights (add-on $249/mo)
+- Multi-location management (add-on $149/location)
+- White-label
+- API access
+- Custom integrations
+
+### ENTERPRISE ($5,500+/month) includes EVERYTHING, no exceptions:
+- All Professional features
+- Per-client profitability (included)
+- Trinity predictive insights (included)
+- Cash flow forecasting
+- Multi-location management (unlimited)
+- White-label options
+- Full API access
+- Custom integrations (ADP, Workday, Paychex, etc.)
+- Bulk contract generation
+- Custom contract templates
+- Dedicated account manager
+- Custom SLAs
+- Unlimited AI credits
+- On-demand support (phone + video)
+
+---
+
+## SECTION 4: STRIPE CONFIGURATION
+
+### Update/Create Stripe Products:
+
+1. Archive ALL existing price objects (do not delete, archive for existing subscribers)
+
+2. Create new Products and Prices:
+
+PRODUCT: CoAIleague Starter
+- stripe_product_id: prod_starter
+- Price (Monthly): $699/month, recurring
+- Price (Annual): $6,708/year ($559/mo equivalent), recurring
+- Metadata: { tier: "starter", employees_included: 15, ai_credits: 2500, overage_rate: 22 }
+
+PRODUCT: CoAIleague Professional
+- stripe_product_id: prod_professional
+- Price (Monthly): $2,499/month, recurring
+- Price (Annual): $23,988/year ($1,999/mo equivalent), recurring
+- Metadata: { tier: "professional", employees_included: 50, ai_credits: 15000, overage_rate: 20 }
+
+PRODUCT: CoAIleague Enterprise
+- stripe_product_id: prod_enterprise
+- Price (Monthly): $5,500/month, recurring (base - custom quotes override)
+- Metadata: { tier: "enterprise", employees_included: 150, ai_credits: -1, overage_rate: 0 }
+- Note: -1 ai_credits means unlimited
+
+PRODUCT: Employee Overage - Starter
+- stripe_product_id: prod_overage_starter
+- Price: $22/unit, metered billing
+- Metadata: { type: "overage", tier: "starter" }
+
+PRODUCT: Employee Overage - Professional
+- stripe_product_id: prod_overage_professional
+- Price: $20/unit, metered billing
+- Metadata: { type: "overage", tier: "professional" }
+
+PRODUCT: Add-On - Per-Client Profitability
+- stripe_product_id: prod_addon_profitability
+- Price: $199/month, recurring
+- Metadata: { type: "addon", feature: "client_profitability" }
+
+PRODUCT: Add-On - Predictive Insights
+- stripe_product_id: prod_addon_predictive
+- Price: $249/month, recurring
+- Metadata: { type: "addon", feature: "predictive_insights" }
+
+PRODUCT: Add-On - AI Credits Pack
+- stripe_product_id: prod_addon_ai_credits
+- Price: $59 one-time
+- Metadata: { type: "addon", feature: "ai_credits", credits: 5000 }
+
+PRODUCT: Add-On - Additional Location
+- stripe_product_id: prod_addon_location
+- Price: $149/month per unit, recurring
+- Metadata: { type: "addon", feature: "location" }
+
+---
+
+## SECTION 5: BILLING ENFORCEMENT & LIMITS
+
+### Implement these controls in the billing/subscription service:
+
+1. EMPLOYEE LIMITS
+   - Track active employees per org
+   - Free Trial: Hard cap at 5, show upgrade modal if attempting to add more
+   - Starter: Soft cap at 15, auto-add overage line item to next invoice for each employee over 15
+   - Professional: Soft cap at 50, auto-add overage line item for each employee over 50
+   - Enterprise: No cap (or custom cap per contract)
+
+2. AI CREDIT LIMITS
+   - Track AI credit usage per org per billing cycle
+   - Free Trial: Hard cap at 500, show "trial credits exhausted" + upgrade CTA
+   - Starter: Hard cap at 2,500, show "upgrade to Professional or purchase AI credit pack" modal
+   - Professional: Soft cap at 15,000, auto-charge $59 per 5,000 additional credits used
+   - Enterprise: No cap (unlimited)
+
+3. CREDIT RESET
+   - Reset AI credits to tier allocation on billing cycle renewal
+   - Unused credits do NOT roll over
+
+4. FEATURE GATING
+   - Check subscription tier + active add-ons before allowing access to features
+   - If user tries to access feature not in their tier, show upgrade modal with clear pricing
+   - Log all feature-gate hits for analytics (helps identify upsell opportunities)
+
+5. OVERAGE BILLING
+   - Calculate overages at end of billing period
+   - Add as line items to invoice before charging
+   - Send overage warning email when org hits 80% of employee limit
+   - Send overage notification email when org exceeds limit (with amount they'll be charged)
+
+---
+
+## SECTION 6: UPDATE PRICING PAGE UI
+
+### Header Section:
+- Add toggle: "Monthly" | "Annual" (Annual selected shows "Save 20%" badge)
+- Update tagline: "AI-Powered Workforce Management for Security Companies"
+
+### Tier Cards Layout (left to right):
+
+CARD 1 - FREE TRIAL
+- Badge: None
+- Price display: "$0"
+- Subtext: "14-day free trial"
+- Subtext2: "No credit card required"
+- CTA Button: "Start Free Trial" (blue outline)
+- Features list:
+  ✓ Up to 5 employees, 1 manager
+  ✓ Basic scheduling
+  ✓ Time tracking
+  ✓ 500 AI credits for trial
+  ✓ Email support
+
+CARD 2 - STARTER
+- Badge: None
+- Price display: "$699" (if monthly) / "$559" (if annual)
+- Subtext: "/month"
+- Subtext2 (annual only): "Billed annually at $6,708/year"
+- Value prop: "Saves ~$12K/year in admin time"
+- CTA Button: "Start Free Trial" (blue filled)
+- Features list:
+  ✓ Up to 15 employees included
+  ✓ +$22/employee after 15
+  ✓ Trinity AI scheduling
+  ✓ GPS time tracking
+  ✓ Mobile app for guards
+  ✓ Basic compliance alerts
+  ✓ Email/SMS notifications
+  ✓ Shift swapping
+  ✓ 2,500 AI credits/month
+  ✓ Email support (72hr response)
+
+CARD 3 - PROFESSIONAL (Highlighted/Featured)
+- Badge: "Most Popular" (green)
+- Border: Blue or highlighted
+- Price display: "$2,499" (if monthly) / "$1,999" (if annual)
+- Subtext: "/month"
+- Subtext2 (annual only): "Billed annually at $23,988/year"
+- Value prop: "Saves ~$45K/year in admin time"
+- CTA Button: "Start Free Trial" (green filled, larger)
+- Features list:
+  ✓ Up to 50 employees included
+  ✓ +$20/employee after 50
+  ✓ FULL Trinity AI automation
+  ✓ Profit-first scheduling optimization
+  ✓ Automated payroll processing
+  ✓ Client billing automation
+  ✓ QuickBooks integration
+  ✓ P&L Financial Dashboard
+  ✓ Contract Pipeline & E-signatures
+  ✓ Document vault & audit trail
+  ✓ Advanced compliance (SOX audit trails)
+  ✓ Incident management
+  ✓ Strategic business insights
+  ✓ 15,000 AI credits/month
+  ✓ Priority support (24hr response)
+
+CARD 4 - ENTERPRISE
+- Badge: None (or "Custom")
+- Price display: "$5,500+"
+- Subtext: "/month"
+- Subtext2: "Custom solutions for large operations"
+- Value prop: "Saves ~$250K+/year in admin time"
+- CTA Button: "Contact Sales" (dark/black filled)
+- Features list:
+  ✓ 150+ employees included
+  ✓ Everything in Professional, plus:
+  ✓ Per-client profitability analysis
+  ✓ Trinity predictive insights
+  ✓ Multi-location management
+  ✓ White-label options
+  ✓ API access
+  ✓ Custom integrations (ADP, Workday)
+  ✓ Dedicated account manager
+  ✓ Custom SLAs
+  ✓ Unlimited AI credits
+  ✓ On-demand support
+
+### Add-Ons Section (below tier cards):
+- Header: "Power-Up Your Professional Plan"
+- Subtext: "Add-ons available for Professional tier subscribers"
+- Display as smaller cards or table:
+
+| Add-On | Price | Description |
+| Per-Client Profitability | $199/mo | See which contracts make money |
+| Trinity Predictive Insights | $249/mo | AI-powered financial forecasting |
+| Additional AI Credits | $59/pack | 5,000 credits per pack |
+| Additional Locations | $149/mo each | Multi-site management |
+
+### ROI Calculator Section:
+- Update calculator with new pricing
+- Ensure recommended tier shows correct new price
+- Update savings calculations if needed
+
+### FAQ Section:
+- Add FAQ: "Can I change plans anytime?" → Yes, upgrade/downgrade anytime, prorated
+- Add FAQ: "What happens if I go over my employee limit?" → Auto-billed at overage rate
+- Add FAQ: "Do unused AI credits roll over?" → No, credits reset each billing cycle
+- Add FAQ: "What's included in the free trial?" → Full Starter features for 14 days
+
+---
+
+## SECTION 7: DATABASE SCHEMA UPDATES (if needed)
+
+Ensure these fields exist in subscription/org tables:
+```sql
+-- Subscription table
+tier VARCHAR (free_trial, starter, professional, enterprise)
+billing_cycle VARCHAR (monthly, annual)
+employees_included INTEGER
+employees_current INTEGER
+overage_rate DECIMAL
+ai_credits_monthly INTEGER
+ai_credits_used INTEGER
+ai_credits_reset_date TIMESTAMP
+
+-- Add-ons table (or subscription_addons)
+org_id UUID
+addon_type VARCHAR (client_profitability, predictive_insights, ai_credits, location)
+quantity INTEGER (for locations and credit packs)
+stripe_subscription_item_id VARCHAR
+active BOOLEAN
+created_at TIMESTAMP
+```
+
+---
+
+## SECTION 8: TASKS CHECKLIST
+
+Complete these tasks in order:
+
+[ ] 1. Create all new Stripe products and prices as specified above
+[ ] 2. Archive old Stripe prices (don't delete - existing subs need them)
+[ ] 3. Update database schema if needed for new fields
+[ ] 4. Update pricing page UI with new tiers, prices, features
+[ ] 5. Update subscription service with new tier limits and overage logic
+[ ] 6. Implement AI credit tracking and enforcement
+[ ] 7. Implement employee limit tracking and overage billing
+[ ] 8. Implement feature gating based on tier and add-ons
+[ ] 9. Update ROI calculator with new pricing
+[ ] 10. Add add-ons purchase flow for Professional tier users
+[ ] 11. Update all hardcoded price references in codebase
+[ ] 12. Test full subscription flow: signup → trial → upgrade → overage → add-on purchase
+[ ] 13. Verify Stripe webhooks handle all new products/prices correctly
+[ ] 14. Update email templates with new pricing if referenced
+
+---
+
+## SECTION 9: CONFIRMATION REQUIRED
+
+After completing all tasks, report back with:
+
+1. List of all Stripe products/prices created (with IDs)
+2. Confirmation pricing page is updated with screenshots
+3. Confirmation billing enforcement is active
+4. Confirmation feature gating is working
+5. Any issues encountered and how they were resolved
+
+---
+
+END OF PRICING RESTRUCTURE COMMAND
+
+Summary of what this command does:
+
+New aggressive pricing - Starter $699, Professional $2,499, Enterprise $5,500+
+Clear feature gates - Each tier knows exactly what's included
+Overage billing - Auto-charges for extra employees ($22 Starter, $20 Pro)
+AI credit limits - Hard caps on lower tiers, auto-charge on Pro
+Add-ons - Upsell paths for Professional users
+Stripe sync - Creates all products/prices correctly
+UI updates - Complete pricing page redesign
+Enforcement - Actually blocks/charges for overages
+
+Send it and let me know what Replit reports back! 
