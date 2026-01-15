@@ -185,6 +185,12 @@ export async function resolveWorkspaceForUser(userId: string, requestedWorkspace
 
 export function requireWorkspaceRole(allowedRoles: WorkspaceRole[]) {
   return async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    // Check for test mode - crawlers get full access
+    if ((req as any).isTestMode) {
+      req.platformRole = "root_admin" as any;
+      return next();
+    }
+
     if (!req.user?.id) {
       return res.status(401).json({ error: 'Authentication required' });
     }
@@ -249,6 +255,13 @@ export const requireContractor = requireWorkspaceRole(['org_owner', 'department_
 // Uses hasPlatformWideAccess for consistent platform role handling across all guards
 export const requireManagerOrPlatformStaff: RequestHandler = async (req, res, next) => {
   const authReq = req as AuthenticatedRequest;
+  
+  // Check for test mode - crawlers get full access
+  if ((authReq as any).isTestMode) {
+    authReq.platformRole = "root_admin";
+    return next();
+  }
+
   
   if (!authReq.user?.id) {
     return res.status(401).json({ message: 'Unauthorized - Please login' });
