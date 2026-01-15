@@ -191,11 +191,11 @@ export default function Dashboard() {
   });
   const orgCode = workspace?.orgCode || 'N/A';
 
-  // Fetch workspace health status
+  // Fetch workspace health status (only when user has a workspace selected)
   const { data: workspaceHealth } = useQuery<WorkspaceHealth>({
     queryKey: queryKeys.workspace.health,
     queryFn: () => apiGet('workspace.getHealth'),
-    enabled: isAuthenticated,
+    enabled: isAuthenticated && !!user?.currentWorkspaceId,
   });
 
   // Fetch workspace stats with typed response

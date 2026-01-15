@@ -16,7 +16,7 @@ import { NotificationsPopover } from "@/components/notifications-popover";
 import { MobileNotificationSheet } from "@/components/mobile/MobileNotificationSheet";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { AISearchTrigger } from "@/components/ai-search";
-import { TrinityMiniButton } from "@/components/trinity-button";
+import { TrinityMiniButton, TrinityDesktopButton } from "@/components/trinity-button";
 import { useTrinityModal } from "@/components/trinity-chat-modal";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import {
@@ -230,7 +230,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
                     <>
                       {showNotificationFeatures && (
                         <div className={`flex items-center ${HEADER_SPACING.mobileIconGap}`}>
-                          <TrinityMiniButton 
+                          <TrinityDesktopButton 
                             onClick={openTrinityModal} 
                             data-testid="button-trinity-header"
                           />
@@ -475,7 +475,7 @@ export function UniversalHeader({ variant = "auto" }: UniversalHeaderProps) {
             <>
               {/* Desktop workspace controls */}
               <div className="hidden md:flex items-center gap-3">
-                <TrinityMiniButton 
+                <TrinityDesktopButton 
                   onClick={openTrinityModal} 
                   data-testid="button-trinity-workspace"
                 />
