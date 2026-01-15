@@ -81,6 +81,33 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 curl -H "x-test-key: $DIAG_BYPASS_SECRET" http://localhost:5000/api/employees
 ```
 
+## QuickBooks Automation Roadmap (All Service Industries)
+
+**Target Industries:** Security, Cleaning, Home Health, HVAC, Plumbing, Painting, Landscaping, Electrical, and all service businesses.
+
+### Phase 1: Core Cash Flow (MVP Priority)
+- **Estimate → Invoice Flow**: Auto-convert approved estimates to invoices
+- **Time-to-Invoice**: Tracked hours → billable line items automatically
+- **Recurring Billing**: Service contracts auto-invoice monthly/weekly
+- **Payment Reminders**: Automated collection emails with payment links
+- **Job Costing**: Profit/loss per job, client, location
+
+### Phase 2: Cost Control & Operations
+- **Materials/PO Sync**: Auto-create purchase orders from job materials
+- **Expense Categorization**: Trinity AI auto-categorizes receipts to QBO accounts
+- **Payroll Sync**: Timesheets → payroll with job codes
+- **Vendor Payment Scheduling**: Smart bill pay with cash flow optimization
+- **Inventory Tracking**: Supplies/parts usage per job
+
+### Phase 3: Intelligence & Compliance
+- **1099/W-2 Prep**: Auto-flag contractors vs employees for tax time
+- **Multi-Location Rollups**: Franchise/branch P&L reporting
+- **Industry Templates**: Pre-built service catalogs per industry
+- **Home Health EVV**: Electronic Visit Verification billing codes
+- **Financial Watchdog**: AI reconciliation with discrepancy alerts
+
+**Migration Note:** CloudEvents webhook format migration required by May 15, 2026.
+
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
 - **Resend**: Email delivery and notification workflows.
