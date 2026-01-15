@@ -576,12 +576,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get platform updates with user read state - fetch more for display (50 items)
       
-      const platformUpdatesData = await storage.getPlatformUpdatesWithReadState(userId, workspaceId, 50);
+      const platformUpdatesDataRaw = await storage.getPlatformUpdatesWithReadState(userId, workspaceId, 50);
+      
+      // CRITICAL FIX: Filter out viewed platform updates for "Clear All" functionality
+      // Only show unread platform updates in the notification center
+      // Use query param ?includeViewed=true to include all (for admin/history views)
+      const includeViewed = req.query.includeViewed === 'true';
+      const platformUpdatesData = includeViewed 
+        ? platformUpdatesDataRaw 
+        : platformUpdatesDataRaw.filter(u => !u.isViewed);
       
       
       // Get unread count directly from storage (single source of truth)
       const trueUnreadPlatformUpdates = await storage.getUnreadPlatformUpdatesCount(userId, workspaceId);
-      
       // Get notifications - fetch more for display (50 items)
       const notifications = await storage.getAllNotificationsForUser(userId, workspaceId, 50);
       

@@ -188,6 +188,53 @@ export function getSession() {
 }
 
 // ============================================================================
+// Test Mode Configuration (for crawlers/diagnostics)
+// ============================================================================
+
+const TEST_MODE_SECRET = process.env.DIAG_BYPASS_SECRET || process.env.TEST_MODE_SECRET;
+
+interface TestModeContext {
+  isTestMode: boolean;
+  testUserId: string;
+  allowedRoutes: RegExp[];
+}
+
+// Routes allowed in test mode (read-only, diagnostic endpoints)
+const TEST_MODE_ALLOWED_ROUTES = [
+  /^\/api\/health/,
+  /^\/api\/user$/,
+  /^\/api\/notifications/,
+  /^\/api\/platform-updates/,
+  /^\/api\/whats-new/,
+  /^\/api\/workspaces/,
+  /^\/api\/seasonal/,
+  /^\/api\/credits/,
+  /^\/$/,  // Root page
+  /^\/(dashboard|schedule|employees|clients|reports|settings)/,
+];
+
+/**
+ * Validate x-test-key header for crawler/diagnostic access
+ * Returns true if the key is valid and test mode should be enabled
+ */
+export function validateTestKey(testKey: string | undefined): boolean {
+  if (!testKey || !TEST_MODE_SECRET) {
+    return false;
+  }
+  // Use timing-safe comparison to prevent timing attacks
+  try {
+    const keyBuffer = Buffer.from(testKey);
+    const secretBuffer = Buffer.from(TEST_MODE_SECRET);
+    if (keyBuffer.length !== secretBuffer.length) {
+      return false;
+    }
+    return crypto.timingSafeEqual(keyBuffer, secretBuffer);
+  } catch {
+    return false;
+  }
+}
+
+// ============================================================================
 // Authentication Middleware
 // ============================================================================
 
@@ -195,6 +242,34 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
   const endpoint = req.path;
   const method = req.method;
   const ipAddress = req.ip || req.socket?.remoteAddress;
+
+  // Check for test mode (x-test-key header) - allows crawlers to bypass auth
+  const testKey = req.get('x-test-key');
+  if (validateTestKey(testKey)) {
+    // Check if route is allowed in test mode
+    const isAllowedRoute = TEST_MODE_ALLOWED_ROUTES.some(pattern => pattern.test(endpoint));
+    if (!isAllowedRoute && method !== 'GET') {
+      console.warn(`[Auth] Test mode blocked for ${method} ${endpoint} - not in allowed routes`);
+      return res.status(403).json({ message: "Test mode not allowed for this endpoint" });
+    }
+    
+    // Create test mode user with read-only access
+    const testUser = {
+      id: 'test-crawler-user',
+      email: 'crawler@coaileague.internal',
+      firstName: 'Diagnostic',
+      lastName: 'Crawler',
+      role: 'user',
+      emailVerified: true,
+      currentWorkspaceId: req.get('x-test-workspace') || null,
+      platformRole: null, // No elevated platform role for test mode
+    };
+    
+    console.log(`[Auth] Test mode access granted for ${method} ${endpoint}`);
+    (req as any).user = testUser;
+    (req as any).isTestMode = true;
+    return next();
+  }
 
   if (!req.session?.userId) {
     trinityOrchestration.auth.requestUnauthenticated(endpoint, method, 'no_session', ipAddress);
