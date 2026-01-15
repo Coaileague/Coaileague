@@ -159,6 +159,7 @@ const EmployeeRecognition = lazy(() => import("@/pages/employee-recognition"));
 const AlertConfiguration = lazy(() => import("@/pages/alert-configuration"));
 const AccountingIntegrations = lazy(() => import("@/pages/accounting-integrations"));
 const QuickBooksImport = lazy(() => import("@/pages/quickbooks-import"));
+const FinancialIntelligence = lazy(() => import("@/pages/financial-intelligence"));
 const ResolutionInbox = lazy(() => import("@/pages/resolution-inbox"));
 const Records = lazy(() => import("@/pages/records"));
 const Insights = lazy(() => import("@/pages/insights"));
@@ -1059,6 +1060,7 @@ function AppContent() {
               <Route path="/analytics/reports" component={AnalyticsReportsPage} />
               <Route path="/clients" component={Clients} />
               <Route path="/invoices" component={Invoices} />
+              <Route path="/financial-intelligence" component={FinancialIntelligence} />
               <Route path="/reports" component={Reports} />
               <Route path="/analytics" component={Analytics} />
               <Route path="/audit-logs" component={AuditLogs} />
@@ -1405,6 +1407,7 @@ function AppContent() {
                 <Route path="/analytics/reports" component={AnalyticsReportsPage} />
                 <Route path="/clients" component={Clients} />
                 <Route path="/invoices" component={Invoices} />
+              <Route path="/financial-intelligence" component={FinancialIntelligence} />
                 <Route path="/reports" component={Reports} />
                 <Route path="/analytics" component={Analytics} />
                 <Route path="/audit-logs" component={AuditLogs} />
