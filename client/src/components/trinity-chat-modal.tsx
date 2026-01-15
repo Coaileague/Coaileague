@@ -25,7 +25,6 @@ import { useToast } from '@/hooks/use-toast';
 import { useLocation } from 'wouter';
 import { useAuth } from '@/hooks/useAuth';
 import { 
-  isPublicRoute, 
   TRINITY_MODES, 
   TRINITY_BRANDING, 
   TRINITY_MOBILE_CONFIG,
@@ -254,25 +253,25 @@ export function TrinityModalProvider({ children }: { children: React.ReactNode }
     prevUserRef.current = user;
   }, [user, authLoading]);
 
-  // CMD+K command palette shortcut
+  // CMD+K command palette shortcut - works anywhere for logged-in users
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
         e.preventDefault();
-        if (user && !isPublicRoute(location)) {
+        if (user) {
           toggleModal();
         }
       }
     };
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [user, location, toggleModal]);
+  }, [user, toggleModal]);
 
+  // Allow modal for any authenticated user, regardless of route
+  // This enables Trinity chat on public pages for logged-in users
   const shouldRenderModal = useMemo(() => {
-    if (!user) return false;
-    if (isPublicRoute(location)) return false;
-    return true;
-  }, [user, location]);
+    return !!user;
+  }, [user]);
 
   return (
     <TrinityModalContext.Provider value={{ 
