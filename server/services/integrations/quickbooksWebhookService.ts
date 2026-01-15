@@ -8,6 +8,28 @@
  * - Bidirectional sync when QuickBooks data changes
  * 
  * @see https://developer.intuit.com/app/developer/qbo/docs/develop/webhooks
+ * 
+ * ============================================================================
+ * MIGRATION REQUIRED: CloudEvents Format (Deadline: May 15, 2026)
+ * ============================================================================
+ * Intuit is requiring migration from legacy webhook format to CloudEvents.
+ * 
+ * Current (Legacy):
+ *   { eventNotifications: [{ realmId, dataChangeEvent: { entities: [...] } }] }
+ * 
+ * New (CloudEvents):
+ *   { specversion, type, source, id, time, datacontenttype, data: {...} }
+ * 
+ * Migration Steps:
+ * 1. Q2 2025: Test new format in Intuit Developer Portal sandbox (toggle available)
+ * 2. Q3 2025: Update WebhookNotification interface and processWebhookNotification()
+ * 3. Q4 2025: Deploy to production with new format
+ * 4. Q1 2026: Remove legacy format support
+ * 
+ * Resources:
+ * - https://blogs.intuit.com/2025/12/01/upcoming-changes-to-apis-and-tools-that-may-impact-your-application/
+ * - Developer Portal: Use webhook toggle to switch between formats for testing
+ * ============================================================================
  */
 
 import crypto from 'crypto';
