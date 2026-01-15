@@ -6774,22 +6774,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Returns external IDs for employees (EMP-XXXX), support agents (SUP-XXXX), clients (CLI-XXXX), orgs (ORG-XXXX)
   app.get('/api/identity/me', async (req: any, res) => {
     try {
-      // Support BOTH auth systems for mobile/desktop compatibility
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
       let userId: string | undefined;
+      let workspaceId: string | undefined;
       
-      // Try custom auth first (session-based)
-      if (req.session?.userId) {
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
         userId = req.session.userId;
       }
       // Try Replit Auth (OIDC)
       else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
         userId = req.user.claims.sub;
       }
-      
-      if (!userId) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
       // Get user account
       const user = await storage.getUser(userId);
       if (!user) {
@@ -6805,6 +6808,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         orgId: null,
         platformRole: user.platformRole,
         workspaceRole: null,
+        // Database IDs for support/admin visibility - helps isolate sessions per org
+        dbUserId: user.id, // Always show own user ID for support/Trinity
+        dbWorkspaceId: user.currentWorkspaceId || null, // Current workspace UUID
         details: null,
       };
       

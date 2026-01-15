@@ -6,12 +6,16 @@ interface IdentityResponse {
   // User type classification
   userType: 'employee' | 'support_agent' | 'client' | 'platform_admin' | 'guest';
   
-  // External IDs for RBAC tracking
+  // External IDs for RBAC tracking (friendly format)
   externalId: string | null; // EMP-XXXX-00001, SUP-XXXX, CLI-XXXX-00001, ORG-XXXX
   employeeId: string | null; // EMP-XXXX-00001 (if employee)
   supportCode: string | null; // SUP-XXXX (if support agent)
   clientId: string | null; // CLI-XXXX-00001 (if client)
   orgId: string | null; // ORG-XXXX (organization)
+  
+  // Database IDs for support/admin visibility
+  dbUserId: string | null; // Actual user ID from database (e.g., 48003611)
+  dbWorkspaceId: string | null; // Actual workspace UUID (e.g., 37a04d24-51bd-4856-9faa-d26a2fe82094)
   
   // Role information
   platformRole: string | null; // root_admin, deputy_admin, sysop, etc.
@@ -46,12 +50,16 @@ export function useIdentity() {
     identity: data,
     isLoading,
     
-    // External IDs for RBAC tracking
+    // External IDs for RBAC tracking (friendly format)
     externalId: data?.externalId, // Primary external ID (employee/support/client)
     employeeId: data?.employeeId, // EMP-XXXX-00001
     supportCode: data?.supportCode, // SUP-XXXX
     clientId: data?.clientId, // CLI-XXXX-00001
     orgId: data?.orgId, // ORG-XXXX
+    
+    // Database IDs for support/admin visibility
+    dbUserId: data?.dbUserId, // Actual user ID from database
+    dbWorkspaceId: data?.dbWorkspaceId, // Actual workspace UUID
     
     // User classification
     userType: data?.userType || 'guest',
