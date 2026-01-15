@@ -23581,3 +23581,364 @@ export const insertTrinityAutomationQueueSchema = createInsertSchema(trinityAuto
 
 export type InsertTrinityAutomationQueue = z.infer<typeof insertTrinityAutomationQueueSchema>;
 export type TrinityAutomationQueue = typeof trinityAutomationQueue.$inferSelect;
+
+// ============================================================================
+// PHASE 3: INTELLIGENCE & COMPLIANCE - QuickBooks Automation Features
+// ============================================================================
+
+/**
+ * Industry Service Templates - Pre-built service catalogs per industry
+ * Supports: Security, Cleaning, Home Health, HVAC, Plumbing, Painting, Landscaping, Electrical
+ */
+export const industryServiceTemplates = pgTable("industry_service_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  industryKey: varchar("industry_key", { length: 50 }).notNull(), // security, cleaning, home_health, hvac, plumbing, painting, landscaping, electrical
+  serviceName: varchar("service_name", { length: 200 }).notNull(),
+  serviceCode: varchar("service_code", { length: 50 }), // Industry standard code if applicable
+  description: text("description"),
+  defaultRate: decimal("default_rate", { precision: 10, scale: 2 }),
+  rateType: varchar("rate_type", { length: 20 }).default("hourly"), // hourly, flat, per_unit
+  unitLabel: varchar("unit_label", { length: 50 }), // hour, visit, sqft, job
+  qboItemType: varchar("qbo_item_type", { length: 30 }).default("Service"), // Service, NonInventory
+  taxable: boolean("taxable").default(false),
+  evvRequired: boolean("evv_required").default(false), // For home health services
+  evvBillingCode: varchar("evv_billing_code", { length: 20 }), // EVV code if applicable
+  isActive: boolean("is_active").default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("industry_templates_industry_idx").on(table.industryKey),
+  index("industry_templates_active_idx").on(table.isActive),
+]);
+
+export const insertIndustryServiceTemplateSchema = createInsertSchema(industryServiceTemplates).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertIndustryServiceTemplate = z.infer<typeof insertIndustryServiceTemplateSchema>;
+export type IndustryServiceTemplate = typeof industryServiceTemplates.$inferSelect;
+
+/**
+ * Workspace Service Catalog - Services imported from industry templates or created custom
+ */
+export const workspaceServiceCatalog = pgTable("workspace_service_catalog", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  templateId: varchar("template_id").references(() => industryServiceTemplates.id), // Source template if any
+  serviceName: varchar("service_name", { length: 200 }).notNull(),
+  serviceCode: varchar("service_code", { length: 50 }),
+  description: text("description"),
+  defaultRate: decimal("default_rate", { precision: 10, scale: 2 }),
+  rateType: varchar("rate_type", { length: 20 }).default("hourly"),
+  unitLabel: varchar("unit_label", { length: 50 }),
+  // QuickBooks mapping
+  qboItemId: varchar("qbo_item_id", { length: 100 }),
+  qboItemSyncToken: varchar("qbo_item_sync_token", { length: 50 }),
+  qboLastSynced: timestamp("qbo_last_synced"),
+  // EVV for home health
+  evvRequired: boolean("evv_required").default(false),
+  evvBillingCode: varchar("evv_billing_code", { length: 20 }),
+  taxable: boolean("taxable").default(false),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("workspace_catalog_workspace_idx").on(table.workspaceId),
+  index("workspace_catalog_qbo_idx").on(table.qboItemId),
+  index("workspace_catalog_evv_idx").on(table.evvBillingCode),
+]);
+
+export const insertWorkspaceServiceCatalogSchema = createInsertSchema(workspaceServiceCatalog).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertWorkspaceServiceCatalog = z.infer<typeof insertWorkspaceServiceCatalogSchema>;
+export type WorkspaceServiceCatalog = typeof workspaceServiceCatalog.$inferSelect;
+
+/**
+ * EVV Billing Codes - Electronic Visit Verification codes for home health
+ */
+export const evvBillingCodes = pgTable("evv_billing_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  stateCode: varchar("state_code", { length: 2 }).notNull(), // US state
+  billingCode: varchar("billing_code", { length: 20 }).notNull(),
+  description: text("description").notNull(),
+  serviceCategory: varchar("service_category", { length: 50 }), // personal_care, skilled_nursing, respite, etc.
+  requiresPhysicianOrder: boolean("requires_physician_order").default(false),
+  maxUnitsPerDay: integer("max_units_per_day"),
+  unitDurationMinutes: integer("unit_duration_minutes").default(15), // Typical 15-min units
+  medicaidRate: decimal("medicaid_rate", { precision: 10, scale: 2 }),
+  effectiveDate: date("effective_date"),
+  expirationDate: date("expiration_date"),
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("evv_codes_state_idx").on(table.stateCode),
+  index("evv_codes_code_idx").on(table.billingCode),
+  uniqueIndex("evv_codes_state_code_unique").on(table.stateCode, table.billingCode),
+]);
+
+export const insertEvvBillingCodeSchema = createInsertSchema(evvBillingCodes).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertEvvBillingCode = z.infer<typeof insertEvvBillingCodeSchema>;
+export type EvvBillingCode = typeof evvBillingCodes.$inferSelect;
+
+/**
+ * EVV Visit Records - Electronic Visit Verification for home health visits
+ */
+export const evvVisitRecords = pgTable("evv_visit_records", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  timeEntryId: varchar("time_entry_id").references(() => timeEntries.id),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id),
+  clientId: varchar("client_id").notNull().references(() => clients.id),
+  billingCodeId: varchar("billing_code_id").references(() => evvBillingCodes.id),
+  // Visit timing
+  scheduledStart: timestamp("scheduled_start"),
+  scheduledEnd: timestamp("scheduled_end"),
+  actualStart: timestamp("actual_start"),
+  actualEnd: timestamp("actual_end"),
+  // GPS verification
+  checkInLat: decimal("check_in_lat", { precision: 10, scale: 7 }),
+  checkInLng: decimal("check_in_lng", { precision: 10, scale: 7 }),
+  checkOutLat: decimal("check_out_lat", { precision: 10, scale: 7 }),
+  checkOutLng: decimal("check_out_lng", { precision: 10, scale: 7 }),
+  gpsVerified: boolean("gps_verified").default(false),
+  // Client verification
+  clientSignature: text("client_signature"), // Base64 signature image
+  clientSignedAt: timestamp("client_signed_at"),
+  // Billing
+  unitsProvided: decimal("units_provided", { precision: 6, scale: 2 }),
+  billableAmount: decimal("billable_amount", { precision: 10, scale: 2 }),
+  invoiceId: varchar("invoice_id").references(() => invoices.id),
+  // Status
+  status: varchar("status", { length: 30 }).default("pending"), // pending, verified, disputed, billed
+  verificationNotes: text("verification_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("evv_visits_workspace_idx").on(table.workspaceId),
+  index("evv_visits_employee_idx").on(table.employeeId),
+  index("evv_visits_client_idx").on(table.clientId),
+  index("evv_visits_status_idx").on(table.status),
+  index("evv_visits_date_idx").on(table.actualStart),
+]);
+
+export const insertEvvVisitRecordSchema = createInsertSchema(evvVisitRecords).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertEvvVisitRecord = z.infer<typeof insertEvvVisitRecordSchema>;
+export type EvvVisitRecord = typeof evvVisitRecords.$inferSelect;
+
+/**
+ * Business Locations - For multi-location/franchise P&L rollups
+ */
+export const businessLocations = pgTable("business_locations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  name: varchar("name", { length: 200 }).notNull(),
+  code: varchar("code", { length: 20 }), // Short code like "NYC-01"
+  locationType: varchar("location_type", { length: 30 }).default("branch"), // headquarters, branch, franchise, satellite
+  parentLocationId: varchar("parent_location_id"), // For hierarchical rollups
+  // Address
+  address: text("address"),
+  city: varchar("city", { length: 100 }),
+  state: varchar("state", { length: 50 }),
+  postalCode: varchar("postal_code", { length: 20 }),
+  country: varchar("country", { length: 50 }).default("USA"),
+  // QuickBooks mapping
+  qboClassId: varchar("qbo_class_id", { length: 100 }), // QBO Class for location tracking
+  qboLocationId: varchar("qbo_location_id", { length: 100 }), // QBO Location entity
+  qboDepartmentId: varchar("qbo_department_id", { length: 100 }),
+  // Manager
+  managerId: varchar("manager_id").references(() => employees.id),
+  // Status
+  isActive: boolean("is_active").default(true),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("locations_workspace_idx").on(table.workspaceId),
+  index("locations_qbo_class_idx").on(table.qboClassId),
+  index("locations_parent_idx").on(table.parentLocationId),
+]);
+
+export const insertBusinessLocationSchema = createInsertSchema(businessLocations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertBusinessLocation = z.infer<typeof insertBusinessLocationSchema>;
+export type BusinessLocation = typeof businessLocations.$inferSelect;
+
+/**
+ * Location P&L Snapshots - Periodic profit/loss by location for rollups
+ */
+export const locationPnlSnapshots = pgTable("location_pnl_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  locationId: varchar("location_id").notNull().references(() => businessLocations.id, { onDelete: 'cascade' }),
+  periodType: varchar("period_type", { length: 20 }).notNull(), // daily, weekly, monthly, quarterly, yearly
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  // Revenue
+  totalRevenue: decimal("total_revenue", { precision: 14, scale: 2 }).default("0"),
+  invoicedAmount: decimal("invoiced_amount", { precision: 14, scale: 2 }).default("0"),
+  collectedAmount: decimal("collected_amount", { precision: 14, scale: 2 }).default("0"),
+  // Costs
+  totalLabor: decimal("total_labor", { precision: 14, scale: 2 }).default("0"),
+  totalMaterials: decimal("total_materials", { precision: 14, scale: 2 }).default("0"),
+  totalOverhead: decimal("total_overhead", { precision: 14, scale: 2 }).default("0"),
+  // Profit
+  grossProfit: decimal("gross_profit", { precision: 14, scale: 2 }).default("0"),
+  netProfit: decimal("net_profit", { precision: 14, scale: 2 }).default("0"),
+  profitMargin: decimal("profit_margin", { precision: 5, scale: 2 }), // Percentage
+  // Metrics
+  totalHoursWorked: decimal("total_hours_worked", { precision: 10, scale: 2 }),
+  totalShifts: integer("total_shifts"),
+  employeeCount: integer("employee_count"),
+  clientCount: integer("client_count"),
+  // Sync
+  qboSynced: boolean("qbo_synced").default(false),
+  qboSyncedAt: timestamp("qbo_synced_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("pnl_snapshots_workspace_idx").on(table.workspaceId),
+  index("pnl_snapshots_location_idx").on(table.locationId),
+  index("pnl_snapshots_period_idx").on(table.periodStart, table.periodEnd),
+  uniqueIndex("pnl_snapshots_unique").on(table.locationId, table.periodType, table.periodStart),
+]);
+
+export const insertLocationPnlSnapshotSchema = createInsertSchema(locationPnlSnapshots).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertLocationPnlSnapshot = z.infer<typeof insertLocationPnlSnapshotSchema>;
+export type LocationPnlSnapshot = typeof locationPnlSnapshots.$inferSelect;
+
+/**
+ * Financial Reconciliation Findings - AI-detected discrepancies between CoAIleague and QuickBooks
+ */
+export const reconciliationFindings = pgTable("reconciliation_findings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  runId: varchar("run_id").notNull(), // Groups findings from same reconciliation run
+  // Finding type
+  findingType: varchar("finding_type", { length: 50 }).notNull(), // invoice_mismatch, payment_mismatch, time_mismatch, customer_sync, employee_sync, duplicate_entry
+  severity: varchar("severity", { length: 20 }).notNull(), // low, medium, high, critical
+  // Entity references
+  entityType: varchar("entity_type", { length: 30 }), // invoice, payment, time_entry, customer, employee, vendor
+  localEntityId: varchar("local_entity_id"),
+  qboEntityId: varchar("qbo_entity_id"),
+  // Discrepancy details
+  fieldName: varchar("field_name", { length: 100 }), // Which field has discrepancy
+  localValue: text("local_value"),
+  qboValue: text("qbo_value"),
+  discrepancyAmount: decimal("discrepancy_amount", { precision: 14, scale: 2 }), // Dollar difference if applicable
+  // AI analysis
+  description: text("description").notNull(),
+  suggestedAction: text("suggested_action"),
+  confidence: decimal("confidence", { precision: 3, scale: 2 }), // 0.00 to 1.00
+  autoFixable: boolean("auto_fixable").default(false),
+  // Resolution
+  status: varchar("status", { length: 20 }).default("open"), // open, acknowledged, resolved, ignored, auto_fixed
+  resolvedBy: varchar("resolved_by").references(() => users.id),
+  resolvedAt: timestamp("resolved_at"),
+  resolutionNotes: text("resolution_notes"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("recon_findings_workspace_idx").on(table.workspaceId),
+  index("recon_findings_run_idx").on(table.runId),
+  index("recon_findings_status_idx").on(table.status),
+  index("recon_findings_severity_idx").on(table.severity),
+  index("recon_findings_type_idx").on(table.findingType),
+]);
+
+export const insertReconciliationFindingSchema = createInsertSchema(reconciliationFindings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertReconciliationFinding = z.infer<typeof insertReconciliationFindingSchema>;
+export type ReconciliationFinding = typeof reconciliationFindings.$inferSelect;
+
+/**
+ * Reconciliation Runs - Track reconciliation scan history
+ */
+export const reconciliationRuns = pgTable("reconciliation_runs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  runType: varchar("run_type", { length: 30 }).notNull(), // scheduled, manual, triggered
+  startedAt: timestamp("started_at").notNull(),
+  completedAt: timestamp("completed_at"),
+  periodStart: date("period_start"),
+  periodEnd: date("period_end"),
+  // Results
+  status: varchar("status", { length: 20 }).default("running"), // running, completed, failed
+  totalEntitiesScanned: integer("total_entities_scanned").default(0),
+  findingsCount: integer("findings_count").default(0),
+  criticalCount: integer("critical_count").default(0),
+  highCount: integer("high_count").default(0),
+  mediumCount: integer("medium_count").default(0),
+  lowCount: integer("low_count").default(0),
+  autoFixedCount: integer("auto_fixed_count").default(0),
+  totalDiscrepancyAmount: decimal("total_discrepancy_amount", { precision: 14, scale: 2 }),
+  // Metadata
+  triggeredBy: varchar("triggered_by").references(() => users.id),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("recon_runs_workspace_idx").on(table.workspaceId),
+  index("recon_runs_status_idx").on(table.status),
+]);
+
+export const insertReconciliationRunSchema = createInsertSchema(reconciliationRuns).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertReconciliationRun = z.infer<typeof insertReconciliationRunSchema>;
+export type ReconciliationRun = typeof reconciliationRuns.$inferSelect;
+
+/**
+ * Worker Tax Classification History - Track 1099/W-2 classification changes
+ */
+export const workerTaxClassificationHistory = pgTable("worker_tax_classification_history", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  employeeId: varchar("employee_id").notNull().references(() => employees.id, { onDelete: 'cascade' }),
+  // Classification
+  previousClassification: varchar("previous_classification", { length: 30 }),
+  newClassification: varchar("new_classification", { length: 30 }).notNull(), // w2_employee, 1099_contractor
+  // Source of change
+  changeSource: varchar("change_source", { length: 30 }).notNull(), // manual, qbo_sync, ai_detection
+  qboVendorId: varchar("qbo_vendor_id"), // If synced from QBO Vendor
+  qboEmployeeId: varchar("qbo_employee_id"), // If synced from QBO Employee
+  // AI detection details
+  aiConfidence: decimal("ai_confidence", { precision: 3, scale: 2 }),
+  aiReasoning: text("ai_reasoning"),
+  // Flags
+  is1099Eligible: boolean("is_1099_eligible").default(false),
+  requiresReview: boolean("requires_review").default(false),
+  reviewedBy: varchar("reviewed_by").references(() => users.id),
+  reviewedAt: timestamp("reviewed_at"),
+  // Tax year
+  taxYear: integer("tax_year").notNull(),
+  effectiveDate: date("effective_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("tax_class_history_workspace_idx").on(table.workspaceId),
+  index("tax_class_history_employee_idx").on(table.employeeId),
+  index("tax_class_history_year_idx").on(table.taxYear),
+]);
+
+export const insertWorkerTaxClassificationHistorySchema = createInsertSchema(workerTaxClassificationHistory).omit({
+  id: true,
+  createdAt: true,
+});
+export type InsertWorkerTaxClassificationHistory = z.infer<typeof insertWorkerTaxClassificationHistorySchema>;
+export type WorkerTaxClassificationHistory = typeof workerTaxClassificationHistory.$inferSelect;
