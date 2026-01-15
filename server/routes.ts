@@ -140,6 +140,7 @@ import maintenanceRoutes from "./routes/maintenanceRoutes"; // Maintenance Mode
 import resendWebhooksRouter from "./routes/resendWebhooks"; // Resend email webhooks
 import quickbooksPhase3Router from "./routes/quickbooksPhase3Routes"; // QuickBooks Phase 3 Intelligence & Compliance
 import financialIntelligenceRouter from "./routes/financialIntelligence"; // Financial Intelligence P&L Dashboard
+import contractPipelineRouter, { publicPortalRouter as contractPortalRouter } from "./routes/contractPipelineRoutes"; // Contract Lifecycle Pipeline (Premium)
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
 import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
@@ -3516,6 +3517,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/trinity/self-edit", trinitySelfEditRouter); // Trinity Self-Edit Governance
   app.use("/api/quickbooks/phase3", requireAuth, attachWorkspaceId, quickbooksPhase3Router); // QuickBooks Phase 3 Intelligence & Compliance
   app.use("/api/finance", requireAuth, attachWorkspaceId, financialIntelligenceRouter); // Financial Intelligence P&L Dashboard
+  app.use("/api/contracts/portal", contractPortalRouter); // Public contract portal (no auth required)
+  app.use("/api/contracts", requireAuth, attachWorkspaceId, contractPipelineRouter); // Contract Lifecycle Pipeline (Premium)
   
   // ============================================================================
   // ROUTE HEALTH MONITORING (Trinity Platform Awareness)

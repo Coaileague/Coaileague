@@ -24193,3 +24193,302 @@ export const insertFinancialAlertSchema = createInsertSchema(financialAlerts).om
 });
 export type InsertFinancialAlert = z.infer<typeof insertFinancialAlertSchema>;
 export type FinancialAlert = typeof financialAlerts.$inferSelect;
+
+
+// ============================================================================
+// CLIENT CONTRACT LIFECYCLE PIPELINE - Premium Feature
+// End-to-end proposal-to-signature-to-storage system for CLIENT contracts.
+// (Separate from employee HR documents in contractDocuments table)
+// ============================================================================
+
+/**
+ * Client Contract Document Types (Proposals, Contracts, Amendments)
+ */
+export const clientContractDocTypeEnum = pgEnum('client_contract_doc_type', [
+  'proposal',      // Initial proposal sent to client
+  'contract',      // Formal contract after proposal acceptance
+  'amendment',     // Amendment to existing contract
+  'addendum',      // Additional terms/exhibits
+]);
+
+/**
+ * Client Contract Status Flow
+ */
+export const clientContractStatusEnum = pgEnum('client_contract_status', [
+  'draft',              // Being created/edited
+  'sent',               // Sent to client
+  'viewed',             // Client has viewed
+  'accepted',           // Client accepted proposal
+  'changes_requested',  // Client requested modifications
+  'declined',           // Client declined
+  'pending_signatures', // Awaiting signatures
+  'partially_signed',   // One party has signed
+  'executed',           // Fully signed and binding
+  'expired',            // Past expiration
+  'terminated',         // Terminated early
+  'archived',           // Long-term storage
+]);
+
+/**
+ * Client Contract Signature Types
+ */
+export const clientSignatureTypeEnum = pgEnum('client_signature_type', [
+  'typed',     // Typed legal name + consent
+  'drawn',     // Touch/mouse drawn signature
+  'uploaded',  // Uploaded image
+]);
+
+/**
+ * Client Contract Signer Role
+ */
+export const clientSignerRoleEnum = pgEnum('client_signer_role', [
+  'company',   // Org owner/representative
+  'client',    // Client party
+  'witness',   // Optional witness
+  'notary',    // Optional notary
+]);
+
+/**
+ * Client Contract Audit Actions
+ */
+export const clientContractAuditActionEnum = pgEnum('client_contract_audit_action', [
+  'created', 'updated', 'sent', 'viewed', 'downloaded',
+  'accepted', 'declined', 'changes_requested', 'signed',
+  'executed', 'amended', 'terminated', 'archived', 'searched',
+  'reminder_sent', 'access_granted', 'access_revoked',
+]);
+
+/**
+ * Client Contract Templates
+ */
+export const clientContractTemplates = pgTable("client_contract_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  name: varchar("name", { length: 200 }).notNull(),
+  description: text("description"),
+  category: varchar("category", { length: 100 }),
+  content: text("content").notNull(),
+  fieldMappings: jsonb("field_mappings").default({}),
+  includedClauses: text("included_clauses").array(),
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").default(true),
+  usageCount: integer("usage_count").default(0),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("client_template_workspace_idx").on(table.workspaceId),
+  index("client_template_category_idx").on(table.category),
+]);
+
+export const insertClientContractTemplateSchema = createInsertSchema(clientContractTemplates).omit({
+  id: true, createdAt: true, updatedAt: true, usageCount: true,
+});
+export type InsertClientContractTemplate = z.infer<typeof insertClientContractTemplateSchema>;
+export type ClientContractTemplate = typeof clientContractTemplates.$inferSelect;
+
+/**
+ * Client Contracts - Core proposal/contract table
+ */
+export const clientContracts = pgTable("client_contracts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  docType: clientContractDocTypeEnum("doc_type").notNull(),
+  parentDocumentId: varchar("parent_document_id"),
+  templateId: varchar("template_id").references(() => clientContractTemplates.id),
+  clientId: varchar("client_id").references(() => clients.id),
+  clientName: varchar("client_name", { length: 200 }),
+  clientEmail: varchar("client_email", { length: 255 }),
+  title: varchar("title", { length: 300 }).notNull(),
+  content: text("content").notNull(),
+  summary: text("summary"),
+  services: jsonb("services").default([]),
+  billingTerms: jsonb("billing_terms").default({}),
+  totalValue: decimal("total_value", { precision: 14, scale: 2 }),
+  status: clientContractStatusEnum("status").notNull().default('draft'),
+  statusChangedAt: timestamp("status_changed_at").defaultNow(),
+  statusChangedBy: varchar("status_changed_by").references(() => users.id),
+  sentAt: timestamp("sent_at"),
+  viewedAt: timestamp("viewed_at"),
+  acceptedAt: timestamp("accepted_at"),
+  executedAt: timestamp("executed_at"),
+  expiresAt: timestamp("expires_at"),
+  effectiveDate: date("effective_date"),
+  termEndDate: date("term_end_date"),
+  contentHash: varchar("content_hash", { length: 64 }),
+  lockedAt: timestamp("locked_at"),
+  requiresWitness: boolean("requires_witness").default(false),
+  requiresNotary: boolean("requires_notary").default(false),
+  specialTerms: text("special_terms"),
+  declineReason: text("decline_reason"),
+  changesRequested: text("changes_requested"),
+  viewCount: integer("view_count").default(0),
+  remindersSent: integer("reminders_sent").default(0),
+  lastReminderAt: timestamp("last_reminder_at"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("client_contract_workspace_idx").on(table.workspaceId),
+  index("client_contract_client_idx").on(table.clientId),
+  index("client_contract_status_idx").on(table.status),
+  index("client_contract_type_idx").on(table.docType),
+  index("client_contract_expires_idx").on(table.expiresAt),
+]);
+
+export const insertClientContractSchema = createInsertSchema(clientContracts).omit({
+  id: true, createdAt: true, updatedAt: true, viewCount: true, remindersSent: true,
+});
+export type InsertClientContract = z.infer<typeof insertClientContractSchema>;
+export type ClientContract = typeof clientContracts.$inferSelect;
+
+/**
+ * Client Contract Signatures - Digital signatures with forensic metadata
+ */
+export const clientContractSignatures = pgTable("client_contract_signatures", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractId: varchar("contract_id").notNull().references(() => clientContracts.id, { onDelete: 'cascade' }),
+  signerRole: clientSignerRoleEnum("signer_role").notNull(),
+  signerName: varchar("signer_name", { length: 200 }).notNull(),
+  signerEmail: varchar("signer_email", { length: 255 }).notNull(),
+  signerTitle: varchar("signer_title", { length: 100 }),
+  signatureType: clientSignatureTypeEnum("signature_type").notNull(),
+  signatureData: text("signature_data"),
+  consentGiven: boolean("consent_given").notNull().default(false),
+  consentText: text("consent_text"),
+  signedAt: timestamp("signed_at"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  geolocation: jsonb("geolocation"),
+  timezone: varchar("timezone", { length: 50 }),
+  emailVerified: boolean("email_verified").default(false),
+  verificationToken: varchar("verification_token", { length: 100 }),
+  verifiedAt: timestamp("verified_at"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("client_sig_contract_idx").on(table.contractId),
+  index("client_sig_email_idx").on(table.signerEmail),
+]);
+
+export const insertClientContractSignatureSchema = createInsertSchema(clientContractSignatures).omit({
+  id: true, createdAt: true,
+});
+export type InsertClientContractSignature = z.infer<typeof insertClientContractSignatureSchema>;
+export type ClientContractSignature = typeof clientContractSignatures.$inferSelect;
+
+/**
+ * Client Contract Audit Log - Immutable trail for legal compliance
+ */
+export const clientContractAuditLog = pgTable("client_contract_audit_log", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractId: varchar("contract_id").notNull().references(() => clientContracts.id, { onDelete: 'cascade' }),
+  action: clientContractAuditActionEnum("action").notNull(),
+  actionDescription: text("action_description"),
+  actorId: varchar("actor_id"),
+  actorType: varchar("actor_type", { length: 20 }).notNull(),
+  actorName: varchar("actor_name", { length: 200 }),
+  actorEmail: varchar("actor_email", { length: 255 }),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  userAgent: text("user_agent"),
+  geolocation: jsonb("geolocation"),
+  metadata: jsonb("metadata").default({}),
+  previousStatus: varchar("previous_status", { length: 50 }),
+  newStatus: varchar("new_status", { length: 50 }),
+  timestamp: timestamp("timestamp").defaultNow().notNull(),
+}, (table) => [
+  index("client_audit_contract_idx").on(table.contractId),
+  index("client_audit_action_idx").on(table.action),
+  index("client_audit_time_idx").on(table.timestamp),
+]);
+
+export const insertClientContractAuditLogSchema = createInsertSchema(clientContractAuditLog).omit({
+  id: true, timestamp: true,
+});
+export type InsertClientContractAuditLog = z.infer<typeof insertClientContractAuditLogSchema>;
+export type ClientContractAuditLog = typeof clientContractAuditLog.$inferSelect;
+
+/**
+ * Client Contract Access Tokens - Secure portal access without login
+ */
+export const clientContractAccessTokens = pgTable("client_contract_access_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractId: varchar("contract_id").notNull().references(() => clientContracts.id, { onDelete: 'cascade' }),
+  token: varchar("token", { length: 100 }).notNull().unique(),
+  tokenHash: varchar("token_hash", { length: 64 }),
+  recipientEmail: varchar("recipient_email", { length: 255 }).notNull(),
+  recipientName: varchar("recipient_name", { length: 200 }),
+  purpose: varchar("purpose", { length: 20 }).notNull(),
+  expiresAt: timestamp("expires_at").notNull(),
+  maxUses: integer("max_uses").default(10),
+  useCount: integer("use_count").default(0),
+  lastUsedAt: timestamp("last_used_at"),
+  lastIpAddress: varchar("last_ip_address", { length: 45 }),
+  isRevoked: boolean("is_revoked").default(false),
+  revokedAt: timestamp("revoked_at"),
+  revokedBy: varchar("revoked_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("client_token_contract_idx").on(table.contractId),
+  index("client_token_email_idx").on(table.recipientEmail),
+  index("client_token_expires_idx").on(table.expiresAt),
+]);
+
+export const insertClientContractAccessTokenSchema = createInsertSchema(clientContractAccessTokens).omit({
+  id: true, createdAt: true, useCount: true,
+});
+export type InsertClientContractAccessToken = z.infer<typeof insertClientContractAccessTokenSchema>;
+export type ClientContractAccessToken = typeof clientContractAccessTokens.$inferSelect;
+
+/**
+ * Client Contract Attachments - Supporting documents
+ */
+export const clientContractAttachments = pgTable("client_contract_attachments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  contractId: varchar("contract_id").notNull().references(() => clientContracts.id, { onDelete: 'cascade' }),
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileType: varchar("file_type", { length: 50 }),
+  fileSize: integer("file_size"),
+  storageKey: varchar("storage_key", { length: 500 }),
+  storageUrl: text("storage_url"),
+  description: text("description"),
+  attachmentType: varchar("attachment_type", { length: 50 }),
+  fileHash: varchar("file_hash", { length: 64 }),
+  uploadedBy: varchar("uploaded_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("client_attach_contract_idx").on(table.contractId),
+]);
+
+export const insertClientContractAttachmentSchema = createInsertSchema(clientContractAttachments).omit({
+  id: true, createdAt: true,
+});
+export type InsertClientContractAttachment = z.infer<typeof insertClientContractAttachmentSchema>;
+export type ClientContractAttachment = typeof clientContractAttachments.$inferSelect;
+
+/**
+ * Client Contract Pipeline Usage - Monthly usage tracking for billing
+ */
+export const clientContractPipelineUsage = pgTable("client_contract_pipeline_usage", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  proposalsCreated: integer("proposals_created").default(0),
+  contractsExecuted: integer("contracts_executed").default(0),
+  amendmentsCreated: integer("amendments_created").default(0),
+  quotaLimit: integer("quota_limit").notNull(),
+  quotaUsed: integer("quota_used").default(0),
+  overageCount: integer("overage_count").default(0),
+  overageCreditsCharged: integer("overage_credits_charged").default(0),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("client_usage_workspace_idx").on(table.workspaceId),
+  uniqueIndex("client_usage_unique_idx").on(table.workspaceId, table.periodStart),
+]);
+
+export const insertClientContractPipelineUsageSchema = createInsertSchema(clientContractPipelineUsage).omit({
+  id: true, createdAt: true, updatedAt: true,
+});
+export type InsertClientContractPipelineUsage = z.infer<typeof insertClientContractPipelineUsageSchema>;
+export type ClientContractPipelineUsage = typeof clientContractPipelineUsage.$inferSelect;

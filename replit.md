@@ -139,6 +139,50 @@ curl -H "x-test-key: $DIAG_BYPASS_SECRET" http://localhost:5000/api/employees
 
 **Credit-Exempt Features:** Trinity conversations, mascot interactions, guest demos (FREE - tokens used but not charged to encourage engagement).
 
+## Contract Lifecycle Pipeline (Premium Feature)
+
+**Purpose:** End-to-end proposal-to-signature-to-storage system with digital signatures, client portals, document vault, and full audit trails. E-SIGN Act & UETA compliant for court-admissible electronic signatures.
+
+**Database Tables:**
+- `client_contract_templates`: Reusable contract templates with field mappings
+- `client_contracts`: Proposals, contracts, amendments with full lifecycle tracking
+- `client_contract_signatures`: E-signatures with forensic metadata (IP, user agent, geolocation)
+- `client_contract_audit_log`: Immutable audit trail for compliance
+- `client_contract_access_tokens`: Secure portal access tokens
+- `client_contract_attachments`: File attachments for contracts
+- `client_contract_pipeline_usage`: Monthly quota tracking per workspace
+
+**API Routes:**
+- `GET/POST /api/contracts/templates` - Template CRUD
+- `GET/POST /api/contracts` - Contract lifecycle management  
+- `GET/POST /api/contracts/:id/signatures` - Signature collection
+- `GET /api/contracts/:id/audit-trail` - Audit trail export
+- `GET /api/contracts/usage` - Quota usage stats
+- `GET /api/contracts/portal/:token` - Public portal access (no auth required)
+
+**Tier-Based Quotas (Monthly):**
+| Tier | Quota | Overage Cost |
+|------|-------|-------------|
+| Starter | 10 contracts | 25 credits each |
+| Professional | 50 contracts | 20 credits each |
+| Enterprise | Unlimited | N/A |
+
+**Trinity AI Actions (7 new actions):**
+- `contracts.get_stats` - Pipeline statistics
+- `contracts.get_pending_signatures` - Awaiting signatures
+- `contracts.get_expiring` - Expiring within 30 days
+- `contracts.get_usage` - Quota status
+- `contracts.get_templates` - Available templates
+- `contracts.search` - Search by client/title
+- `contracts.get_audit_trail` - Audit trail for contract
+
+**Implementation Files:**
+- `shared/schema.ts`: Database table definitions
+- `shared/billingConfig.ts`: Quota and credit configuration
+- `server/services/contracts/contractPipelineService.ts`: Core service
+- `server/routes/contractPipelineRoutes.ts`: API endpoints
+- `server/services/ai-brain/actionRegistry.ts`: Trinity AI integration
+
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
 - **Resend**: Email delivery and notification workflows.
