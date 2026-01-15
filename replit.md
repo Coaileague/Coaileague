@@ -61,6 +61,26 @@ CoAIleague features a multi-tenant architecture with RBAC security and isolation
 - **Trinity Elite:** Features like Strategic Optimization Engine (employee scoring, client tiering, profit-first scheduling), Go-Live Confidence Check, Resolution Inbox, QuickBooks 99% Automation, and Financial Watchdog for reconciliation with discrepancy alerts.
 - **Diagnostics Subagent:** Playwright-based E2E site auditor for pre-launch bug detection. Crawls up to 300 pages, tests user workflows, detects console errors, broken images/links, network failures, and CAPTCHAs. Generates HTML report and summary.json for agent-driven bug fixing.
 
+## Custom Authentication & Testing
+
+**Authentication System:**
+- Custom session-based auth using express-session + PostgreSQL (NOT Replit Auth)
+- Password hashing with PBKDF2-SHA256
+- Account lockout protection after failed attempts
+- Session cookies with secure flags
+
+**Diagnostic Crawler Bypass (for testing):**
+- Header: `x-test-key` with value from `DIAG_BYPASS_SECRET` environment variable
+- Uses REAL user ID (`48003611`) and workspace ID (`37a04d24-51bd-4856-9faa-d26a2fe82094`)
+- Grants `org_owner` workspace role and `root_admin` platform role
+- All `/api/` routes are accessible in test mode
+- Optional: Use `x-test-workspace` header to override workspace ID
+
+**Testing with curl:**
+```bash
+curl -H "x-test-key: $DIAG_BYPASS_SECRET" http://localhost:5000/api/employees
+```
+
 ## External Dependencies
 - **Stripe**: Payment processing, payroll, and financial integrations.
 - **Resend**: Email delivery and notification workflows.

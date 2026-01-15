@@ -253,25 +253,39 @@ export const requireAuth: RequestHandler = async (req, res, next) => {
     }
     
     // Create test mode user with full access including workspace context
-    // Use actual workspace ID that has data for proper testing
+    // Use REAL user ID and workspace ID from the database for proper testing
+    // This solves workspace membership checks - the test user is a real user with real access
     const testWorkspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+    const testUserId = '48003611'; // Real user ID from database (txpsinvestigations@gmail.com)
+    const testEmployeeId = '1ec71001-fe48-4da2-92ac-40e763bd59f7'; // Real employee ID (Andre Brown)
+    
     const testUser = {
-      id: 'test-crawler-user',
-      email: 'crawler@coaileague.internal',
+      id: testUserId,
+      email: 'txpsinvestigations@gmail.com',
       firstName: 'Diagnostic',
       lastName: 'Crawler',
-      role: 'manager',
+      role: 'org_owner',
       emailVerified: true,
       currentWorkspaceId: testWorkspaceId,
       platformRole: 'root_admin',
+      employeeId: testEmployeeId,
     };
     
     console.log(`[Auth] Test mode access granted for ${method} ${endpoint}`);
     (req as any).user = testUser;
+    (req as any).userId = testUser.id;  // Many endpoints use req.userId directly
     (req as any).isTestMode = true;
     (req as any).workspaceId = testWorkspaceId;
     (req as any).workspaceRole = 'org_owner';
     (req as any).platformRole = 'root_admin';
+    
+    // Mock session data for endpoints that access req.session.userId
+    if (!req.session) {
+      (req as any).session = {};
+    }
+    (req.session as any).userId = testUser.id;
+    (req.session as any).workspaceId = testWorkspaceId;
+    
     return next();
   }
 
