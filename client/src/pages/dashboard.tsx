@@ -421,8 +421,8 @@ export default function Dashboard() {
                     </Badge>
                   )}
                   {dbWorkspaceId && (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono whitespace-nowrap min-w-fit" data-testid="badge-db-workspace-id" title="Database Workspace ID">
-                      WS: {dbWorkspaceId}
+                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono" data-testid="badge-db-workspace-id" title="Database Workspace ID">
+                      WS: {dbWorkspaceId.substring(0, 8)}...
                     </Badge>
                     )}
                   </div>
@@ -539,8 +539,8 @@ export default function Dashboard() {
                     </Badge>
                   )}
                   {dbWorkspaceId && (
-                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono whitespace-nowrap min-w-fit" data-testid="badge-db-workspace-id" title="Database Workspace ID">
-                      WS: {dbWorkspaceId}
+                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono" data-testid="badge-db-workspace-id" title="Database Workspace ID">
+                      WS: {dbWorkspaceId.substring(0, 8)}...
                     </Badge>
                   )}
                 </div>

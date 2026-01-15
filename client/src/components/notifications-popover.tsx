@@ -1156,6 +1156,21 @@ function NotificationsPopoverInner({ user }: { user: any }) {
   // Total unread across all tabs
   const totalUnread = alertsCount + updatesCount + systemCount;
 
+  // Auto-switch to tab with notifications when popover opens
+  // This fixes the issue where count shows 2 but user sees empty (because default tab is alerts)
+  useEffect(() => {
+    if (open && totalUnread > 0) {
+      // Priority: alerts > updates > system (switch to first tab with unread)
+      if (alertsCount > 0) {
+        setActiveTab('alerts');
+      } else if (updatesCount > 0) {
+        setActiveTab('updates');
+      } else if (systemCount > 0) {
+        setActiveTab('system');
+      }
+    }
+  }, [open]); // Only run when popover opens, not on count changes
+
   // Filter notifications by active tab
   // Each tab has its own distinct category - no sub-filters needed
   const filteredNotifications = visibleNotifications.filter(n => {
@@ -1448,7 +1463,8 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       className="flex flex-col h-full min-h-0 overflow-hidden"
     >
       {/* UNS Header with Trinity Branding - Violet to Indigo Gradient */}
-      <div className={`${compact ? 'px-3 py-2' : 'px-4 py-3'} border-b bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0`}>
+      {/* Added pr-14 to prevent overlap with Sheet close button on mobile */}
+      <div className={`${compact ? 'px-3 py-2 pr-14' : 'px-4 py-3'} border-b bg-gradient-to-r from-violet-600 to-indigo-600 flex-shrink-0`}>
         <div className="flex items-center justify-between gap-2">
           <div className="flex items-center gap-2 min-w-0 flex-1">
             <div className={`relative ${compact ? 'w-7 h-7' : 'w-10 h-10'} rounded-lg bg-white/20 backdrop-blur-sm flex items-center justify-center flex-shrink-0`}>
@@ -1478,9 +1494,10 @@ function NotificationsPopoverInner({ user }: { user: any }) {
       </div>
       
       {/* Main Tabs: ALERTS | UPDATES | SYSTEM (Admin) */}
-      <div className={`border-b bg-muted/30 flex-shrink-0 ${compact ? 'px-2' : 'px-2'}`}>
+      {/* Added pr-2 on compact to give Clear All button breathing room from sheet edges */}
+      <div className={`border-b bg-muted/30 flex-shrink-0 ${compact ? 'px-2 pr-2' : 'px-2'}`}>
         {/* Tabs row - full width on mobile */}
-        <div className="flex items-center justify-between w-full">
+        <div className="flex items-center justify-between w-full gap-1">
           {/* All tabs in a row */}
           <div className="flex items-center">
             {/* ALERTS Tab - Operational alerts requiring attention */}
