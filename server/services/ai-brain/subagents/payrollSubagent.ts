@@ -19,14 +19,11 @@ import {
   idempotencyKeys
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, desc, inArray } from 'drizzle-orm';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GEMINI_MODELS } from '../providers/geminiClient';
+import { meteredGemini } from '../../billing/meteredGeminiClient';
 import { enhancedLLMJudge } from '../llmJudgeEnhanced';
 import { platformEventBus } from '../../platformEventBus';
 import { auditLogger } from '../../audit-logger';
 import crypto from 'crypto';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // ============================================================================
 // TYPES & INTERFACES
@@ -659,7 +656,7 @@ class PayrollSubagentService {
       }
 
       // Generate AI insights
-      const aiInsights = await this.generateAnomalyInsights(anomalies, hoursByEmployee.size);
+      const aiInsights = await this.generateAnomalyInsights(workspaceId, anomalies, hoursByEmployee.size);
 
       this.tracer.endTrace(trace, 'completed', { anomalyCount: anomalies.length });
 
@@ -740,24 +737,31 @@ class PayrollSubagentService {
       .limit(count);
   }
 
-  private async generateAnomalyInsights(anomalies: any[], employeeCount: number): Promise<string> {
+  private async generateAnomalyInsights(workspaceId: string, anomalies: any[], employeeCount: number): Promise<string> {
     if (anomalies.length === 0) {
       return 'No significant anomalies detected. Payroll appears consistent with historical patterns.';
     }
 
     try {
-      const model = genAI.getGenerativeModel({
-        model: GEMINI_MODELS.BRAIN,
-        generationConfig: { maxOutputTokens: 300, temperature: 0.3 },
-      });
-
       const prompt = `Analyze these payroll anomalies and provide actionable insights:
 ${anomalies.map(a => `- [${a.severity.toUpperCase()}] ${a.type}: ${a.description}`).join('\n')}
 
 Provide 2-3 sentences of executive-level insights and recommended actions.`;
 
-      const result = await model.generateContent(prompt);
-      return result.response.text();
+      const result = await meteredGemini.generate({
+        workspaceId,
+        featureKey: 'payroll_anomaly_insights',
+        prompt,
+        model: 'gemini-1.5-flash',
+        temperature: 0.3,
+        maxOutputTokens: 300,
+        metadata: { anomalyCount: anomalies.length, employeeCount }
+      });
+      
+      if (result.success) {
+        return result.text;
+      }
+      return `${anomalies.length} anomalies detected. Review high-severity items before processing payroll.`;
     } catch (error) {
       return `${anomalies.length} anomalies detected. Review high-severity items before processing payroll.`;
     }

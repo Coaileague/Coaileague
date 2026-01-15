@@ -18,10 +18,6 @@ import {
   userNotificationPreferences
 } from '@shared/schema';
 import { eq, and, gte, desc, inArray, sql } from 'drizzle-orm';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GEMINI_MODELS } from '../providers/geminiClient';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // ============================================================================
 // TYPES & INTERFACES

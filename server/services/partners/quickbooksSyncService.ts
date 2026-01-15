@@ -21,15 +21,13 @@ import {
 import { eq, and, or, ilike, gte, lte, desc, isNull } from 'drizzle-orm';
 import { quickbooksOAuthService } from '../oauth/quickbooks';
 import { platformEventBus } from '../platformEventBus';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { meteredGemini } from '../billing/meteredGeminiClient';
 import { enhancedLLMJudge } from '../ai-brain/llmJudgeEnhanced';
 import { auditLogger } from '../audit-logger';
 import { quickbooksRateLimiter } from '../integrations/quickbooksRateLimiter';
 import crypto from 'crypto';
 import { INTEGRATIONS } from '@shared/platformConfig';
 import { emailService } from '../emailService';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 // Use centralized config - NO HARDCODED URLs
 const QBO_API_BASE = INTEGRATIONS.quickbooks.getCompanyApiBase();
@@ -1812,11 +1810,6 @@ export class QuickBooksSyncService {
     console.log(`[QuickBooksSyncService] Analyzing error with Gemini AI: ${error.message}`);
 
     try {
-      const model = genAI.getGenerativeModel({
-        model: 'gemini-2.5-flash',
-        generationConfig: { maxOutputTokens: 500, temperature: 0.2 },
-      });
-
       const prompt = `You are a QuickBooks integration specialist. Analyze this sync error and recommend an action.
 
 ERROR DETAILS:
@@ -1844,8 +1837,27 @@ Respond in JSON format:
   "retryDelayMs": 1000
 }`;
 
-      const result = await model.generateContent(prompt);
-      const responseText = result.response.text();
+      // Use metered client for proper billing tracking
+      const result = await meteredGemini.generate({
+        workspaceId,
+        featureKey: 'quickbooks_error_analysis',
+        prompt,
+        model: 'gemini-1.5-flash',
+        temperature: 0.2,
+        maxOutputTokens: 500,
+        metadata: { operation: context.operation, entityType: context.entityType }
+      });
+
+      if (!result.success) {
+        console.error(`[QuickBooksSyncService] AI analysis failed: ${result.error}`);
+        return {
+          action: 'ESCALATE',
+          reasoning: 'AI analysis failed, escalating for human review',
+          shouldRetry: false,
+        };
+      }
+
+      const responseText = result.text;
       
       const jsonMatch = responseText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
