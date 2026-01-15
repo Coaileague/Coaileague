@@ -4,11 +4,8 @@
  * With AI Guard Rails: Input validation, rate limiting, audit logging
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
+import { meteredGemini } from './billing/meteredGeminiClient';
 import { aiGuardRails, type AIRequestContext } from "./aiGuardRails";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export interface SentimentAnalysisResult {
   sentiment: "positive" | "neutral" | "negative" | "hostile";
@@ -49,14 +46,6 @@ export async function analyzeSentiment(
   }
 
   try {
-    const model = genAI.getGenerativeModel({ 
-      model: GEMINI_MODELS.SIMPLE,
-      generationConfig: {
-        maxOutputTokens: ANTI_YAP_PRESETS.simple.maxTokens,
-        temperature: ANTI_YAP_PRESETS.simple.temperature,
-      }
-    });
-
     const prompt = `Analyze the sentiment and urgency of this dispute/complaint message. 
     
 Message: "${message}"
@@ -79,9 +68,29 @@ Rules:
 - Escalate: true if urgency >= 3 or sentiment is hostile
 - Action: Specific next step (e.g., "Route to manager", "Create urgent ticket", "Immediate callback required")`;
 
-    const aiResponse = await model.generateContent(prompt);
-    const responseText =
-      aiResponse.response.candidates?.[0]?.content?.parts?.[0]?.text || "{}";
+    const aiResult = await meteredGemini.generate({
+      workspaceId: workspaceId || 'platform',
+      userId: userId || 'system',
+      featureKey: 'ai_sentiment_analysis',
+      prompt,
+      model: 'gemini-1.5-flash',
+      temperature: 0.3,
+      maxOutputTokens: 256
+    });
+
+    if (!aiResult.success) {
+      console.warn('Sentiment analysis AI call failed:', aiResult.error);
+      return {
+        sentiment: 'neutral',
+        confidence: 0,
+        urgencyLevel: 2,
+        reasoning: 'AI analysis unavailable',
+        shouldEscalate: false,
+        suggestedAction: 'Manual review recommended'
+      };
+    }
+
+    const responseText = aiResult.text;
 
     // Extract JSON from response (handle markdown code blocks if present)
     let jsonText = responseText;

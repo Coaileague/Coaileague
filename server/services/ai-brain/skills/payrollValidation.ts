@@ -22,10 +22,7 @@ import {
   timeEntryBreaks 
 } from '@shared/schema';
 import { eq, and, gte, lte, sql, isNull, count, sum } from 'drizzle-orm';
-import { GEMINI_MODELS, ANTI_YAP_PRESETS } from '../providers/geminiClient';
-import { GoogleGenerativeAI } from '@google/generative-ai';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
+import { meteredGemini } from '../../../billing/meteredGeminiClient';
 
 interface PayrollValidationParams {
   workspaceId: string;

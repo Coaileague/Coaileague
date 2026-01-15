@@ -5,6 +5,7 @@
  * Integrates with Trinity AI Brain for contextual suggestions.
  */
 
+import { meteredGemini } from './billing/meteredGeminiClient';
 import { db } from '../db';
 import { sql } from 'drizzle-orm';
 
@@ -95,20 +96,27 @@ class SmartReplyService {
     }
     
     try {
-      const { GoogleGenerativeAI } = await import('@google/generative-ai');
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-8b' });
-      
       const prompt = `Generate a professional, helpful reply to this message in a workforce management context. Keep it brief (1-2 sentences max):
 
 Message: "${message}"
 
 Reply:`;
       
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
+      const result = await meteredGemini.generate({
+        workspaceId: context.workspaceId || 'platform',
+        userId: context.userId || 'system',
+        featureKey: 'ai_smart_reply',
+        prompt,
+        model: 'gemini-1.5-flash',
+        temperature: 0.7,
+        maxOutputTokens: 128
+      });
       
-      return text || 'I\'ll follow up on this shortly.';
+      if (result.success && result.text) {
+        return result.text.trim() || 'I\'ll follow up on this shortly.';
+      }
+      
+      return 'I\'ll follow up on this shortly.';
     } catch (error) {
       console.error('[SmartReply] Single reply generation failed:', error);
       return 'I\'ll look into this and get back to you.';
@@ -120,10 +128,6 @@ Reply:`;
     context: SmartReplyContext
   ): Promise<SmartReply[]> {
     try {
-      const { GoogleGenerativeAI } = await import('@google/generative-ai');
-      const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
-      const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash-8b' });
-      
       const prompt = `Generate 3 brief, professional reply suggestions for this message in a workforce management context. Return as JSON array with "text" and "confidence" (0.0-1.0) fields.
 
 Message: "${message}"
@@ -131,8 +135,21 @@ Context: ${context.topic || 'general conversation'}
 
 Return only valid JSON array, no markdown:`;
       
-      const result = await model.generateContent(prompt);
-      const text = result.response.text().trim();
+      const result = await meteredGemini.generate({
+        workspaceId: context.workspaceId || 'platform',
+        userId: context.userId || 'system',
+        featureKey: 'ai_smart_reply',
+        prompt,
+        model: 'gemini-1.5-flash',
+        temperature: 0.7,
+        maxOutputTokens: 256
+      });
+      
+      if (!result.success) {
+        return [];
+      }
+      
+      const text = result.text.trim();
       
       try {
         const parsed = JSON.parse(text.replace(/```json\n?|\n?```/g, ''));

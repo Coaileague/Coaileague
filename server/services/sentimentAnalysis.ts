@@ -4,20 +4,11 @@
  * Now with full persistence to sentiment_history table for trend analysis
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
+import { meteredGemini } from './billing/meteredGeminiClient';
+import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 import { db } from '../db';
 import { supportTickets, disputes, sentimentHistory } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ 
-  model: GEMINI_MODELS.SIMPLE,
-  generationConfig: {
-    maxOutputTokens: ANTI_YAP_PRESETS.simple.maxTokens,
-    temperature: ANTI_YAP_PRESETS.simple.temperature,
-  }
-});
 
 export interface SentimentResult {
   score: number; // -1 (negative) to 1 (positive)
@@ -33,16 +24,11 @@ export interface SentimentResult {
  */
 export async function analyzeReviewSentiment(
   reviewId: string,
-  reviewText: string
+  reviewText: string,
+  workspaceId?: string
 ): Promise<SentimentResult> {
   try {
-    const response = await model.generateContent({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: `Analyze the sentiment of this review text. Respond in JSON format:
+    const prompt = `Analyze the sentiment of this review text. Respond in JSON format:
 {
   "score": <number from -1 to 1>,
   "label": "negative" | "neutral" | "positive",
@@ -51,19 +37,26 @@ export async function analyzeReviewSentiment(
 }
 
 Review text:
-${reviewText}`,
-            },
-          ],
-        },
-      ],
+${reviewText}`;
+
+    const result = await meteredGemini.generate({
+      workspaceId: workspaceId || 'platform',
+      featureKey: 'ai_sentiment_analysis',
+      prompt,
+      model: 'gemini-1.5-flash',
+      temperature: ANTI_YAP_PRESETS.simple.temperature,
+      maxOutputTokens: ANTI_YAP_PRESETS.simple.maxTokens,
     });
 
-    const content = response.response.text();
-    const parsed = JSON.parse(content);
+    if (!result.success) {
+      throw new Error(result.error || 'Sentiment analysis failed');
+    }
+
+    const parsed = JSON.parse(result.text);
 
     // Persist sentiment to history for trend analysis
     await persistSentimentHistory({
-      workspaceId: '', // Will be set by caller if available
+      workspaceId: workspaceId || '',
       sourceType: 'review',
       sourceId: reviewId,
       overallScore: (parsed.score + 1) / 2, // Convert -1..1 to 0..1
@@ -96,16 +89,11 @@ ${reviewText}`,
  */
 export async function analyzeSupportTicketSentiment(
   ticketId: string,
-  ticketText: string
+  ticketText: string,
+  workspaceId?: string
 ): Promise<SentimentResult & { shouldEscalate: boolean }> {
   try {
-    const response = await model.generateContent({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: `Analyze support ticket sentiment and urgency. Respond in JSON:
+    const prompt = `Analyze support ticket sentiment and urgency. Respond in JSON:
 {
   "score": <number from -1 to 1>,
   "label": "negative" | "neutral" | "positive",
@@ -115,20 +103,27 @@ export async function analyzeSupportTicketSentiment(
 }
 
 Support Ticket:
-${ticketText}`,
-            },
-          ],
-        },
-      ],
+${ticketText}`;
+
+    const result = await meteredGemini.generate({
+      workspaceId: workspaceId || 'platform',
+      featureKey: 'ai_sentiment_analysis',
+      prompt,
+      model: 'gemini-1.5-flash',
+      temperature: ANTI_YAP_PRESETS.simple.temperature,
+      maxOutputTokens: ANTI_YAP_PRESETS.simple.maxTokens,
     });
 
-    const content = response.response.text();
-    const parsed = JSON.parse(content);
+    if (!result.success) {
+      throw new Error(result.error || 'Sentiment analysis failed');
+    }
+
+    const parsed = JSON.parse(result.text);
     const shouldEscalate = parsed.urgency === 'critical' || parsed.score < -0.5;
 
     // Persist sentiment to history with escalation action insights
     await persistSentimentHistory({
-      workspaceId: '', // Will be set by caller if available  
+      workspaceId: workspaceId || '',
       sourceType: 'ticket',
       sourceId: ticketId,
       overallScore: (parsed.score + 1) / 2, // Convert -1..1 to 0..1
@@ -164,16 +159,11 @@ ${ticketText}`,
  */
 export async function analyzeDisputeSentiment(
   disputeId: string,
-  disputeText: string
+  disputeText: string,
+  workspaceId?: string
 ): Promise<SentimentResult & { resolutionConfidence: number }> {
   try {
-    const response = await model.generateContent({
-      contents: [
-        {
-          role: 'user',
-          parts: [
-            {
-              text: `Analyze dispute sentiment and recommend resolution confidence. JSON:
+    const prompt = `Analyze dispute sentiment and recommend resolution confidence. JSON:
 {
   "score": <-1 to 1>,
   "label": "negative" | "neutral" | "positive",
@@ -183,19 +173,26 @@ export async function analyzeDisputeSentiment(
 }
 
 Dispute Description:
-${disputeText}`,
-            },
-          ],
-        },
-      ],
+${disputeText}`;
+
+    const result = await meteredGemini.generate({
+      workspaceId: workspaceId || 'platform',
+      featureKey: 'ai_sentiment_analysis',
+      prompt,
+      model: 'gemini-1.5-flash',
+      temperature: ANTI_YAP_PRESETS.simple.temperature,
+      maxOutputTokens: ANTI_YAP_PRESETS.simple.maxTokens,
     });
 
-    const content = response.response.text();
-    const parsed = JSON.parse(content);
+    if (!result.success) {
+      throw new Error(result.error || 'Sentiment analysis failed');
+    }
+
+    const parsed = JSON.parse(result.text);
 
     // Persist dispute sentiment with resolution insights
     await persistSentimentHistory({
-      workspaceId: '', // Will be set by caller if available
+      workspaceId: workspaceId || '',
       sourceType: 'dispute',
       sourceId: disputeId,
       overallScore: (parsed.score + 1) / 2, // Convert -1..1 to 0..1

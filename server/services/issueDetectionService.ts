@@ -6,10 +6,8 @@
 
 import aiBrainConfig from "@shared/config/aiBrainGuardrails";
 import { notificationEngine } from "./universalNotificationEngine";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
+import { meteredGemini } from './billing/meteredGeminiClient';
+import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 
 export interface DetectedIssue {
   id: string;
@@ -202,14 +200,6 @@ export class IssueDetectionService {
     const baseResult = await this.detectIssues(workspaceId, documentType, extractedData, documentId);
 
     try {
-      const model = genAI.getGenerativeModel({ 
-        model: GEMINI_MODELS.SUPERVISOR,
-        generationConfig: {
-          maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
-          temperature: ANTI_YAP_PRESETS.supervisor.temperature,
-        }
-      });
-
       const prompt = `
         Analyze this extracted ${documentType} data for potential issues or anomalies that might indicate data quality problems:
         
@@ -224,32 +214,40 @@ export class IssueDetectionService {
         }
       `;
 
-      const response = await model.generateContent(prompt);
-      const responseText = response.response.text();
+      const result = await meteredGemini.generate({
+        workspaceId: workspaceId || 'platform',
+        featureKey: 'ai_issue_detection',
+        prompt,
+        model: 'gemini-1.5-flash',
+        temperature: ANTI_YAP_PRESETS.supervisor.temperature,
+        maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
+      });
 
-      const jsonMatch = responseText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const aiAnalysis = JSON.parse(jsonMatch[0]);
+      if (result.success && result.text) {
+        const jsonMatch = result.text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          const aiAnalysis = JSON.parse(jsonMatch[0]);
 
-        // Add AI-detected issues
-        if (aiAnalysis.additionalIssues) {
-          for (const aiIssue of aiAnalysis.additionalIssues) {
-            baseResult.issues.push({
-              id: `ai_issue_${Date.now()}`,
-              type: aiIssue.type,
-              severity: aiIssue.severity,
-              title: `AI Detected: ${aiIssue.type}`,
-              description: aiIssue.description,
-              affectedFields: [],
-              suggestedAction: aiIssue.suggestedAction,
-              detectedAt: new Date(),
-              requiresApproval: aiIssue.severity === "critical",
-            });
-          }
+          // Add AI-detected issues
+          if (aiAnalysis.additionalIssues) {
+            for (const aiIssue of aiAnalysis.additionalIssues) {
+              baseResult.issues.push({
+                id: `ai_issue_${Date.now()}`,
+                type: aiIssue.type,
+                severity: aiIssue.severity,
+                title: `AI Detected: ${aiIssue.type}`,
+                description: aiIssue.description,
+                affectedFields: [],
+                suggestedAction: aiIssue.suggestedAction,
+                detectedAt: new Date(),
+                requiresApproval: aiIssue.severity === "critical",
+              });
+            }
 
-          // Update overall severity
-          if (aiAnalysis.additionalIssues.some((i: any) => i.severity === "critical")) {
-            baseResult.overallSeverity = "critical";
+            // Update overall severity
+            if (aiAnalysis.additionalIssues.some((i: any) => i.severity === "critical")) {
+              baseResult.overallSeverity = "critical";
+            }
           }
         }
       }

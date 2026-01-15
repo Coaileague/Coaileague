@@ -14,7 +14,7 @@
  * - ID registry for all created entities
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import { meteredGemini } from './billing/meteredGeminiClient';
 import { storage } from '../storage';
 import { auditLogger, type AuditContext } from './audit-logger';
 import { aiGuardRails, type AIRequestContext } from './aiGuardRails';
@@ -33,17 +33,7 @@ import {
   type ValidatedInvoiceDecision,
   type ValidatedPayrollDecision,
 } from './automation-schemas';
-
-// Initialize Gemini AI with tiered model architecture
-import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
-const model = genAI.getGenerativeModel({ 
-  model: GEMINI_MODELS.ORCHESTRATOR,
-  generationConfig: {
-    maxOutputTokens: ANTI_YAP_PRESETS.orchestrator.maxTokens,
-    temperature: ANTI_YAP_PRESETS.orchestrator.temperature,
-  }
-});
+import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 
 export interface GeminiResponse<T = any> {
   decision: T;
@@ -124,16 +114,24 @@ export class AutomationEngine {
     const startTime = Date.now();
     
     try {
-      // Call Gemini API
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      const rawText = response.text();
-      
-      // Extract usage metadata
-      const usageMetadata = (response as any).usageMetadata;
-      const tokensUsed = usageMetadata?.totalTokenCount || 0;
-      const promptTokens = usageMetadata?.promptTokenCount || 0;
-      const completionTokens = usageMetadata?.candidatesTokenCount || 0;
+      // Call metered Gemini API
+      const aiResult = await meteredGemini.generate({
+        workspaceId: context.workspaceId || 'platform',
+        featureKey: 'ai_automation',
+        prompt,
+        model: 'gemini-1.5-flash',
+        temperature: ANTI_YAP_PRESETS.orchestrator.temperature,
+        maxOutputTokens: ANTI_YAP_PRESETS.orchestrator.maxTokens,
+      });
+
+      if (!aiResult.success) {
+        throw new Error(aiResult.error || 'Automation AI call failed');
+      }
+
+      const rawText = aiResult.text;
+      const tokensUsed = aiResult.tokensUsed.total;
+      const promptTokens = aiResult.tokensUsed.input || 0;
+      const completionTokens = aiResult.tokensUsed.output || 0;
       
       // Parse and validate JSON response
       let decision: T;
