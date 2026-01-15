@@ -3187,6 +3187,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/auth/request-password-reset', authLimiter);
   app.use('/api/helpdesk/authenticate-ticket', authLimiter);
   app.use('/api/helpdesk/authenticate-workid', authLimiter);
+  app.use("/api/auth/forgot-password", authLimiter);
+  app.use("/api/auth/magic-link", authLimiter);
+  app.use("/api/auth/reset-password", authLimiter);
+  app.use("/api/auth/reset-password-request", authLimiter);
+  app.use("/api/auth/reset-password-confirm", authLimiter);
   
   // Register custom auth routes (AFTER rate limiters for security)
   app.use(authRoutes);
@@ -3732,7 +3737,419 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // ============================================================================
+  // CUSTOM AUTH ENDPOINTS (Email/Password, Magic Links, Password Reset)
+  // ============================================================================
+
+  // Login with email/password
+  app.post('/api/auth/login', async (req: Request, res) => {
+    try {
+      const { email, password } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+
+      const { authService } = await import('./services/authService');
+      const result = await authService.login(
+        email,
+        password,
+        req.ip || req.socket?.remoteAddress,
+        req.get('user-agent')
+      );
+
+      if (!result.success) {
+        const status = result.code === 'ACCOUNT_LOCKED' ? 423 : 401;
+        return res.status(status).json({ message: result.error, code: result.code });
+      }
+
+      // Set HttpOnly cookie for session token
+      res.cookie('auth_token', result.sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/',
+      });
+
+      // Also set up express session for compatibility
+      if (result.user) {
+        req.session.userId = result.user.id;
+        req.session.passport = {
+          user: {
+            claims: {
+              sub: result.user.id,
+              email: result.user.email,
+              first_name: result.user.firstName,
+              last_name: result.user.lastName,
+            },
+            expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60),
+          },
+        };
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err: any) => err ? reject(err) : resolve());
+        });
+      }
+
+      res.json({
+        success: true,
+        user: result.user,
+      });
+    } catch (error: any) {
+      console.error('[Auth] Login error:', error);
+      res.status(500).json({ message: 'Login failed' });
+    }
+  });
+
+  // Logout current session
+  app.post('/api/auth/logout', async (req: Request, res) => {
+    try {
+      const authToken = req.cookies?.auth_token;
+      
+      if (authToken) {
+        const { authService } = await import('./services/authService');
+        await authService.logout(authToken);
+      }
+
+      // Clear cookie
+      res.clearCookie('auth_token', { path: '/' });
+
+      // Destroy express session
+      req.session.destroy((err) => {
+        if (err) console.error('[Auth] Session destroy error:', err);
+      });
+
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error('[Auth] Logout error:', error);
+      res.status(500).json({ message: 'Logout failed' });
+    }
+  });
+
+  // Logout all sessions
+  app.post('/api/auth/logout-all', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+
+      const { authService } = await import('./services/authService');
+      await authService.logoutAllSessions(userId);
+
+      // Clear current cookie
+      res.clearCookie('auth_token', { path: '/' });
+
+      // Destroy express session
+      req.session.destroy((err) => {
+        if (err) console.error('[Auth] Session destroy error:', err);
+      });
+
+      res.json({ success: true, message: 'All sessions logged out' });
+    } catch (error: any) {
+      console.error('[Auth] Logout all error:', error);
+      res.status(500).json({ message: 'Failed to logout all sessions' });
+    }
+  });
+
+  // Request password reset
+  app.post('/api/auth/forgot-password', async (req: Request, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+
+      const { authService } = await import('./services/authService');
+      await authService.requestPasswordReset(email);
+
+      // Always return success to prevent email enumeration
+      res.json({ success: true, message: 'If an account exists, a reset link has been sent' });
+    } catch (error: any) {
+      console.error('[Auth] Forgot password error:', error);
+      res.status(500).json({ message: 'Failed to process request' });
+    }
+  });
+
+  // Reset password with token
+  app.post('/api/auth/reset-password', async (req: Request, res) => {
+    try {
+      const { token, password } = req.body;
+
+      if (!token || !password) {
+        return res.status(400).json({ message: 'Token and password are required' });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ message: 'Password must be at least 8 characters' });
+      }
+
+      const { authService } = await import('./services/authService');
+      const result = await authService.resetPassword(token, password);
+
+      if (!result.success) {
+        return res.status(400).json({ message: result.error, code: result.code });
+      }
+
+      res.json({ success: true, message: 'Password reset successfully' });
+    } catch (error: any) {
+      console.error('[Auth] Reset password error:', error);
+      res.status(500).json({ message: 'Failed to reset password' });
+    }
+  });
+
+  // Verify email with token
+  app.get('/api/auth/verify-email', async (req: Request, res) => {
+    try {
+      const { token } = req.query;
+
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: 'Token is required' });
+      }
+
+      const { authService } = await import('./services/authService');
+      const result = await authService.verifyEmail(token);
+
+      if (!result.success) {
+        return res.status(400).json({ message: result.error, code: result.code });
+      }
+
+      res.json({ success: true, message: 'Email verified successfully', user: result.user });
+    } catch (error: any) {
+      console.error('[Auth] Verify email error:', error);
+      res.status(500).json({ message: 'Failed to verify email' });
+    }
+  });
+
+  // Resend verification email
+  app.post('/api/auth/resend-verification', async (req: Request, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+
+      const { authService } = await import('./services/authService');
+      await authService.resendVerification(email);
+
+      // Always return success to prevent email enumeration
+      res.json({ success: true, message: 'If an account exists and is unverified, a verification link has been sent' });
+    } catch (error: any) {
+      console.error('[Auth] Resend verification error:', error);
+      res.status(500).json({ message: 'Failed to resend verification' });
+    }
+  });
+
+  // Request magic link
+  app.post('/api/auth/magic-link', async (req: Request, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: 'Email is required' });
+      }
+
+      const { authService } = await import('./services/authService');
+      await authService.requestMagicLink(email);
+
+      // Always return success to prevent email enumeration
+      res.json({ success: true, message: 'If an account exists, a magic link has been sent' });
+    } catch (error: any) {
+      console.error('[Auth] Magic link request error:', error);
+      res.status(500).json({ message: 'Failed to send magic link' });
+    }
+  });
+
+  // Verify magic link
+  app.get('/api/auth/magic-link/verify', async (req: Request, res) => {
+    try {
+      const { token } = req.query;
+
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: 'Token is required' });
+      }
+
+      const { authService } = await import('./services/authService');
+      const result = await authService.verifyMagicLink(
+        token,
+        req.ip || req.socket?.remoteAddress,
+        req.get('user-agent')
+      );
+
+      if (!result.success) {
+        return res.status(400).json({ message: result.error, code: result.code });
+      }
+
+      // Set HttpOnly cookie for session token
+      res.cookie('auth_token', result.sessionToken, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'lax',
+        maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+        path: '/',
+      });
+
+      // Also set up express session for compatibility
+      if (result.user) {
+        req.session.userId = result.user.id;
+        req.session.passport = {
+          user: {
+            claims: {
+              sub: result.user.id,
+              email: result.user.email,
+              first_name: result.user.firstName,
+              last_name: result.user.lastName,
+            },
+            expires_at: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60),
+          },
+        };
+        await new Promise<void>((resolve, reject) => {
+          req.session.save((err: any) => err ? reject(err) : resolve());
+        });
+      }
+
+      res.json({ success: true, user: result.user });
+    } catch (error: any) {
+      console.error('[Auth] Magic link verify error:', error);
+      res.status(500).json({ message: 'Failed to verify magic link' });
+    }
+  });
+
+  // Change password (authenticated)
+  app.post('/api/auth/change-password', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const userId = req.user?.id || req.user?.claims?.sub;
+      if (!userId) {
+        return res.status(401).json({ message: 'Not authenticated' });
+      }
+
+      const { currentPassword, newPassword } = req.body;
+
+      if (!currentPassword || !newPassword) {
+        return res.status(400).json({ message: 'Current and new password are required' });
+      }
+
+      if (newPassword.length < 8) {
+        return res.status(400).json({ message: 'New password must be at least 8 characters' });
+      }
+
+      const { authService } = await import('./services/authService');
+      const result = await authService.changePassword(userId, currentPassword, newPassword);
+
+      if (!result.success) {
+        return res.status(400).json({ message: result.error, code: result.code });
+      }
+
+      res.json({ success: true, message: 'Password changed successfully' });
+    } catch (error: any) {
+      console.error('[Auth] Change password error:', error);
+      res.status(500).json({ message: 'Failed to change password' });
+    }
+  });
+
+  // Validate session (for custom auth token)
+  app.get('/api/auth/session', async (req: Request, res) => {
+    try {
+      const authToken = req.cookies?.auth_token;
+
+      if (!authToken) {
+        return res.status(401).json({ authenticated: false, message: 'No session' });
+      }
+
+      const { authService } = await import('./services/authService');
+      const result = await authService.validateSession(authToken);
+
+      if (!result.success) {
+        res.clearCookie('auth_token', { path: '/' });
+        return res.status(401).json({ authenticated: false, message: result.error });
+      }
+
+      res.json({ authenticated: true, user: result.user });
+    } catch (error: any) {
+      console.error('[Auth] Session validation error:', error);
+      res.status(500).json({ authenticated: false, message: 'Session validation failed' });
+    }
+  });
+
+  // Simple registration (without org creation - for individual users)
+  app.post('/api/auth/register-simple', async (req: Request, res) => {
+    try {
+      const { email, password, firstName, lastName } = req.body;
+
+      if (!email || !password) {
+        return res.status(400).json({ message: 'Email and password are required' });
+      }
+
+      if (password.length < 8) {
+        return res.status(400).json({ message: 'Password must be at least 8 characters' });
+      }
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({ message: 'Invalid email format' });
+      }
+
+      const { authService } = await import('./services/authService');
+      const result = await authService.register(email, password, firstName, lastName);
+
+      if (!result.success) {
+        const status = result.code === 'EMAIL_EXISTS' ? 409 : 400;
+        return res.status(status).json({ message: result.error, code: result.code });
+      }
+
+      res.status(201).json({
+        success: true,
+        message: 'Account created. Please check your email to verify your account.',
+        user: result.user,
+      });
+    } catch (error: any) {
+      console.error('[Auth] Simple registration error:', error);
+      res.status(500).json({ message: 'Registration failed' });
+    }
+  });
+
+  // ============================================================================
+
+  // Alias routes for backwards compatibility
+  app.post("/api/auth/reset-password-request", async (req: Request, res) => {
+    // Forward to forgot-password endpoint
+    const { authService } = await import("./services/authService");
+    try {
+      const { email } = req.body;
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+      await authService.requestPasswordReset(email);
+      return res.json({ success: true, message: "If an account exists, a reset link has been sent" });
+    } catch (error: any) {
+      console.error("Password reset error:", error);
+      return res.json({ success: true, message: "If an account exists, a reset link has been sent" });
+    }
+  });
+
+  app.post("/api/auth/reset-password-confirm", async (req: Request, res) => {
+    // Forward to reset-password endpoint
+    const { authService } = await import("./services/authService");
+    try {
+      const { token, password } = req.body;
+      if (!token || !password) {
+        return res.status(400).json({ message: "Token and new password are required" });
+      }
+      const result = await authService.resetPassword(token, password);
+      if (!result.success) {
+        return res.status(400).json({ message: result.error });
+      }
+      return res.json({ success: true, message: "Password reset successful" });
+    } catch (error: any) {
+      console.error("Password reset confirm error:", error);
+      return res.status(400).json({ message: "Password reset failed" });
+    }
+  });
+  // END CUSTOM AUTH ENDPOINTS
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+
     try {
       const userId = req.user?.id || req.user?.claims?.sub;
       const user = await storage.getUser(userId);
