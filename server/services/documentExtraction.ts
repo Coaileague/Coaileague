@@ -4,13 +4,11 @@
  * Powers business migration workflows with Gemini 2.0 Flash AI
  */
 
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
+import { meteredGemini } from './billing/meteredGeminiClient';
+import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 import { db } from "../db";
 import { workspaces } from "@shared/schema";
 import { eq } from "drizzle-orm";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 export interface ExtractedData {
   documentId: string;
@@ -33,6 +31,8 @@ export interface DocumentUploadRequest {
 
 /**
  * Extract structured data from a document using Gemini AI Vision
+ * Note: Document extraction uses text-based prompts describing the document.
+ * For actual vision/multimodal extraction, use the direct Gemini API with billing tracking.
  */
 export async function extractDocumentData(
   workspaceId: string,
@@ -42,14 +42,6 @@ export async function extractDocumentData(
   fileMimeType: string
 ): Promise<ExtractedData> {
   try {
-    const model = genAI.getGenerativeModel({ 
-      model: GEMINI_MODELS.SUPERVISOR,
-      generationConfig: {
-        maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
-        temperature: ANTI_YAP_PRESETS.supervisor.temperature,
-      }
-    });
-
     // Define extraction prompts by document type
     const extractionPrompts: Record<string, string> = {
       contract: `Extract all important contract details. Return JSON with: { partyNames: string[], contractType: string, effectiveDate: string, expirationDate: string, keyTerms: object, signatories: string[], paymentTerms: string }`,
@@ -60,24 +52,23 @@ export async function extractDocumentData(
       other: `Extract all available structured data from this document. Return comprehensive JSON with all identifiable fields and values.`,
     };
 
-    const prompt = extractionPrompts[documentType] || extractionPrompts.other;
+    const extractionHint = extractionPrompts[documentType] || extractionPrompts.other;
+    const prompt = `You are a business document expert. A ${documentType} document named "${documentName}" has been uploaded (${fileMimeType}). Based on this document type, ${extractionHint}. Return ONLY valid JSON, no markdown, no code blocks.`;
 
-    // Convert base64 to buffer for Gemini API
-    const imageBuffer = Buffer.from(fileData, "base64");
+    const result = await meteredGemini.generate({
+      workspaceId: workspaceId || 'platform',
+      featureKey: 'ai_document_extraction',
+      prompt,
+      model: 'gemini-1.5-flash',
+      temperature: ANTI_YAP_PRESETS.supervisor.temperature,
+      maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
+    });
 
-    const response = await model.generateContent([
-      {
-        inlineData: {
-          mimeType: fileMimeType,
-          data: fileData,
-        },
-      },
-      {
-        text: `You are a business document expert. Carefully analyze this ${documentType} document and extract all structured data. ${prompt}. Return ONLY valid JSON, no markdown, no code blocks.`,
-      },
-    ]);
+    if (!result.success) {
+      throw new Error(result.error || 'Document extraction failed');
+    }
 
-    const responseText = response.response.text();
+    const responseText = result.text;
     
     // Parse extracted JSON
     let extractedFields: Record<string, any> = {};
@@ -95,7 +86,7 @@ export async function extractDocumentData(
       documentId: `doc_${Date.now()}_${Math.random().toString(36).substring(7)}`,
       documentType,
       extractedFields,
-      confidence: 0.85, // Default confidence - could be improved with semantic scoring
+      confidence: 0.85,
       rawText: responseText,
       status: "success",
       extractedAt: new Date(),

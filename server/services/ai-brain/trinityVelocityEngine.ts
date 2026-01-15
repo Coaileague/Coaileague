@@ -1,7 +1,6 @@
-import { GoogleGenerativeAI, GenerativeModel } from '@google/generative-ai';
 import { EventEmitter } from 'events';
 import { createHash } from 'crypto';
-import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './providers/geminiClient';
+import { meteredGemini } from '../billing/meteredGeminiClient';
 
 interface CacheEntry {
   value: any;
@@ -101,8 +100,6 @@ const DEFAULT_CONFIG: VelocityConfig = {
 
 
 export class TrinityVelocityEngine extends EventEmitter {
-  private genAI: GoogleGenerativeAI;
-  private flashModel: GenerativeModel;
   private cache: AgentCache;
   private config: VelocityConfig;
   private activeSemaphore: number = 0;
@@ -110,18 +107,7 @@ export class TrinityVelocityEngine extends EventEmitter {
 
   constructor(apiKey: string, config: Partial<VelocityConfig> = {}) {
     super();
-    this.genAI = new GoogleGenerativeAI(apiKey);
     this.config = { ...DEFAULT_CONFIG, ...config };
-    
-    this.flashModel = this.genAI.getGenerativeModel({
-      model: GEMINI_MODELS.SUPERVISOR,
-      generationConfig: {
-        responseMimeType: 'application/json',
-        maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
-        temperature: ANTI_YAP_PRESETS.supervisor.temperature,
-      },
-    });
-    
     this.cache = new AgentCache(this.config.cacheTtlMs);
     
     console.log('[TrinityVelocity] Engine initialized with config:', {
@@ -149,7 +135,7 @@ export class TrinityVelocityEngine extends EventEmitter {
     try {
       // STEP 1: DECOMPOSITION (The Map)
       this.emit('phase_started', { phase: 'decomposition' });
-      const plan = await this.decomposeTask(userTask, context.availableAgents);
+      const plan = await this.decomposeTask(userTask, context.availableAgents, context.workspaceId, context.userId);
       this.emit('phase_completed', { 
         phase: 'decomposition', 
         subtaskCount: plan.subtasks.length 
@@ -179,7 +165,7 @@ export class TrinityVelocityEngine extends EventEmitter {
 
       // STEP 3: CONSOLIDATION (The Reduce)
       this.emit('phase_started', { phase: 'consolidation' });
-      const synthesis = await this.consolidateResults(userTask, validResults);
+      const synthesis = await this.consolidateResults(userTask, validResults, context.workspaceId, context.userId);
       this.emit('phase_completed', { phase: 'consolidation' });
 
       // Build final output
@@ -237,7 +223,9 @@ export class TrinityVelocityEngine extends EventEmitter {
 
   private async decomposeTask(
     userTask: string,
-    availableAgents: string[]
+    availableAgents: string[],
+    workspaceId: string,
+    userId: string
   ): Promise<{ subtasks: VelocitySubTask[] }> {
     const decompositionPrompt = `You are the Dispatcher for Trinity AI. Break this task into independent sub-tasks that can be executed in parallel by specialized agents.
 
@@ -254,27 +242,39 @@ Rules:
 Return a JSON object with a "subtasks" array.`;
 
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: GEMINI_MODELS.ORCHESTRATOR,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          maxOutputTokens: ANTI_YAP_PRESETS.orchestrator.maxTokens,
-          temperature: ANTI_YAP_PRESETS.orchestrator.temperature,
-        },
+      const result = await meteredGemini.generate({
+        workspaceId,
+        userId,
+        featureKey: 'ai_trinity_orchestrator',
+        prompt: decompositionPrompt,
+        model: 'gemini-1.5-flash',
+        temperature: 0.3,
+        maxOutputTokens: 1024
       });
 
-      const result = await model.generateContent(decompositionPrompt);
-      const response = await result.response;
-      const text = response.text();
-      
-      const parsed = JSON.parse(text);
-      
-      // Ensure subtasks is always an array
-      if (!Array.isArray(parsed.subtasks)) {
-        return { subtasks: [] };
+      if (!result.success) {
+        console.error('[TrinityVelocity] Decomposition failed:', result.error);
+        return {
+          subtasks: [{
+            id: 'fallback-1',
+            agent: 'general',
+            instruction: userTask,
+            priority: 5,
+          }],
+        };
       }
 
-      return parsed;
+      const text = result.text;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+        if (!Array.isArray(parsed.subtasks)) {
+          return { subtasks: [] };
+        }
+        return parsed;
+      }
+
+      return { subtasks: [] };
     } catch (error) {
       console.error('[TrinityVelocity] Decomposition failed:', error);
       // Fallback: single general task
@@ -365,21 +365,25 @@ Context:
 - User ID: ${context.userId}
 - Workspace: ${context.workspaceId}
 
-Provide your response with a confidence score (0.0-1.0) and any recommendations.`;
+Provide your response as JSON with: confidence (0.0-1.0), data (object), and recommendation (string).`;
 
-      const model = this.genAI.getGenerativeModel({
-        model: GEMINI_MODELS.SUPERVISOR,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
-          temperature: ANTI_YAP_PRESETS.supervisor.temperature,
-        },
+      const result = await meteredGemini.generate({
+        workspaceId: context.workspaceId,
+        userId: context.userId,
+        featureKey: 'ai_trinity_agent',
+        prompt: agentPrompt,
+        model: 'gemini-1.5-flash',
+        temperature: 0.5,
+        maxOutputTokens: 1024
       });
 
-      const result = await model.generateContent(agentPrompt);
-      const response = await result.response;
-      const text = response.text();
-      const parsed = JSON.parse(text);
+      if (!result.success) {
+        throw new Error(result.error || 'Agent execution failed');
+      }
+
+      const text = result.text;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : { confidence: 0.8, data: {}, recommendation: text };
 
       const agentResult: VelocityAgentResult = {
         agent: task.agent,
@@ -464,7 +468,9 @@ Provide your response with a confidence score (0.0-1.0) and any recommendations.
 
   private async consolidateResults(
     originalTask: string,
-    results: VelocityAgentResult[]
+    results: VelocityAgentResult[],
+    workspaceId: string,
+    userId: string
   ): Promise<string> {
     const successfulResults = results.filter(r => r.status !== 'failed');
     
@@ -484,42 +490,52 @@ Data: ${JSON.stringify(r.data, null, 2)}
 Recommendation: ${r.recommendation || 'None'}
 `).join('\n')}
 
-Synthesize these results into a coherent, actionable response for the user. Use Markdown formatting.`;
+Synthesize these results into a coherent, actionable response for the user. Use Markdown formatting. Return as JSON with: synthesis (string), keyInsights (array), actionItems (array).`;
 
     try {
-      const model = this.genAI.getGenerativeModel({
-        model: GEMINI_MODELS.ORCHESTRATOR,
-        generationConfig: {
-          responseMimeType: 'application/json',
-          maxOutputTokens: ANTI_YAP_PRESETS.orchestrator.maxTokens,
-          temperature: ANTI_YAP_PRESETS.orchestrator.temperature,
-        },
+      const result = await meteredGemini.generate({
+        workspaceId,
+        userId,
+        featureKey: 'ai_trinity_orchestrator',
+        prompt: consolidationPrompt,
+        model: 'gemini-1.5-flash',
+        temperature: 0.5,
+        maxOutputTokens: 2048
       });
 
-      const result = await model.generateContent(consolidationPrompt);
-      const response = await result.response;
-      const text = response.text();
-      const parsed = JSON.parse(text);
-
-      // Format the synthesis with insights
-      let synthesis = parsed.synthesis || '';
-      
-      if (parsed.keyInsights?.length > 0) {
-        synthesis += '\n\n**Key Insights:**\n';
-        parsed.keyInsights.forEach((insight: string) => {
-          synthesis += `- ${insight}\n`;
-        });
+      if (!result.success) {
+        console.error('[TrinityVelocity] Consolidation failed:', result.error);
+        return successfulResults
+          .map(r => `**${r.agent}**: ${r.recommendation || JSON.stringify(r.data)}`)
+          .join('\n\n');
       }
 
-      if (parsed.actionItems?.length > 0) {
-        synthesis += '\n\n**Action Items:**\n';
-        parsed.actionItems.forEach((item: string, i: number) => {
-          synthesis += `${i + 1}. ${item}\n`;
-        });
+      const text = result.text;
+      const jsonMatch = text.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        const parsed = JSON.parse(jsonMatch[0]);
+
+        // Format the synthesis with insights
+        let synthesis = parsed.synthesis || '';
+        
+        if (parsed.keyInsights?.length > 0) {
+          synthesis += '\n\n**Key Insights:**\n';
+          parsed.keyInsights.forEach((insight: string) => {
+            synthesis += `- ${insight}\n`;
+          });
+        }
+
+        if (parsed.actionItems?.length > 0) {
+          synthesis += '\n\n**Action Items:**\n';
+          parsed.actionItems.forEach((item: string, i: number) => {
+            synthesis += `${i + 1}. ${item}\n`;
+          });
+        }
+
+        return synthesis;
       }
 
-      return synthesis;
-
+      return text;
     } catch (error) {
       console.error('[TrinityVelocity] Consolidation failed:', error);
       // Fallback: simple concatenation

@@ -85,35 +85,55 @@ export async function isUnlimitedCreditUser(userId: string, workspaceId: string)
  */
 export const UNLIMITED_CREDITS_BALANCE = 999999999;
 
-// Credit cost per feature (calibrated to AI token usage)
+// Credit cost per feature (calibrated to Gemini 3 API costs Jan 2026)
+// 1 credit = $0.01 | Gemini 3 Pro: $2/1M input, $12/1M output (thinking tokens at output rate)
+// Gemini 3 Flash: $0.50/1M input, $3/1M output
+// Thinking mode adds 2K-5K extra output tokens per request
+// Pricing: Actual cost × 4x margin = fair credits
+// 
+// Example: Schedule generation (Gemini 3 Flash with thinking)
+//          2K input + 4K thinking + 1.5K response = $0.018 actual
+//          With 4x margin = $0.072, so ~7 credits is fair
 export const CREDIT_COSTS = {
-  // AI Scheduling
-  'ai_scheduling': 25,           // Full schedule generation
-  'ai_schedule_optimization': 15, // Optimize existing schedule
-  'ai_shift_matching': 5,         // Match employee to single shift
-  'ai_open_shift_fill': 10,       // AI-powered open shift auto-fill
+  // AI Scheduling - Gemini 3 Flash with thinking (~7K output tokens)
+  'ai_scheduling': 7,             // Full schedule generation
+  'ai_schedule_optimization': 5,  // Optimize existing schedule
+  'ai_shift_matching': 2,         // Match employee to single shift
+  'ai_open_shift_fill': 3,        // AI-powered open shift auto-fill
   
-  // AI Invoicing
-  'ai_invoice_generation': 15,    // Generate invoice from timesheet
-  'ai_invoice_review': 3,         // Review invoice for errors
+  // AI Invoicing - Gemini 3 Flash with thinking (~5K output tokens)
+  'ai_invoice_generation': 5,     // Generate invoice from timesheet
+  'ai_invoice_review': 2,         // Review invoice for errors
+  'invoice_gap_analysis': 3,      // Analyze unbilled revenue gaps
   
-  // AI Payroll
-  'ai_payroll_processing': 15,    // Process payroll run
-  'ai_payroll_verification': 5,   // Verify payroll calculations
+  // AI Payroll - Gemini 3 Flash with thinking (~6K output tokens)
+  'ai_payroll_processing': 6,     // Process payroll run
+  'ai_payroll_verification': 2,   // Verify payroll calculations
+  'payroll_anomaly_insights': 3,  // Anomaly detection insights
   
-  // AI Communications
-  'ai_chat_query': 5,             // HelpAI or QueryOS chat message
-  'ai_email_generation': 8,       // Generate email content
+  // AI Communications - Gemini 3 Flash (~3K output tokens)
+  'ai_chat_query': 2,             // HelpAI or QueryOS chat message
+  'ai_email_generation': 3,       // Generate email content
   
-  // AI Analytics
-  'ai_analytics_report': 12,      // Generate analytics report
-  'ai_predictions': 10,           // Predictive analytics
+  // AI Analytics - Gemini 3 Flash with thinking (~5K output)
+  'ai_analytics_report': 5,       // Generate analytics report
+  'ai_predictions': 4,            // Predictive analytics
   
-  // AI Migration
-  'ai_migration': 10,             // Gemini Vision data extraction
+  // AI Migration - Gemini 3 Pro Vision (~4K output)
+  'ai_migration': 8,              // Gemini Vision data extraction (uses Pro)
   
-  // General AI
-  'ai_general': 3,                // Generic AI operation
+  // QuickBooks Integration - Gemini 3 Flash (~4K output)
+  'quickbooks_error_analysis': 3, // Error analysis and retry strategy
+  
+  // Scheduling Subagent - Gemini 3 Flash with thinking
+  'schedule_optimization': 5,     // Schedule optimization
+  'strategic_schedule_optimization': 7, // Strategic scheduling (Pro model)
+  
+  // Domain Operations - Gemini 3 Flash (~2K output)
+  'log_analysis': 2,              // Log analysis
+  
+  // General AI - Gemini 3 Flash (~2K output)
+  'ai_general': 2,                // Generic AI operation
   
   // Trinity Conversations (FREE - no credits charged)
   'trinity_thought': 0,           // Trinity thought bubbles
@@ -145,12 +165,14 @@ export const CREDIT_EXEMPT_FEATURES = new Set([
 ]);
 
 // Monthly credit allocation by subscription tier
+// Rebalanced Jan 2026 for Gemini 3 pricing (1 credit = $0.01)
+// Generous allocations so customers don't feel nickel-and-dimed
 export const TIER_CREDIT_ALLOCATIONS = {
-  'free': 100,
-  'trial': 250,        // Trial accounts get 250 credits to test features
-  'starter': 500,
-  'professional': 2000,
-  'enterprise': 10000,
+  'free': 100,          // ~14 schedules or 50 chats - enough to try the platform
+  'trial': 300,         // ~42 schedules - generous trial to fully test features
+  'starter': 1000,      // ~142 schedules/month ($10 value at cost)
+  'professional': 5000, // ~714 schedules/month - feels unlimited
+  'enterprise': 25000,  // ~3571 schedules/month - truly unlimited for large orgs
 } as const;
 
 export interface CreditCheckResult {

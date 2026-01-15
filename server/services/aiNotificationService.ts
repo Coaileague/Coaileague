@@ -7,12 +7,10 @@ import {
   maintenanceAcknowledgments
 } from "@shared/schema";
 import { eq, and, or, desc, isNull, sql, lt, gte } from "drizzle-orm";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
+import { meteredGemini } from './billing/meteredGeminiClient';
+import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 import { broadcastPlatformUpdateGlobal } from '../websocket';
 import { humanizeTitle, containsTechnicalJargon } from '@shared/utils/humanFriendlyCopy';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || "");
 
 type UpdateCategory = "feature" | "improvement" | "bugfix" | "security" | "announcement";
 type AlertSeverity = "info" | "warning" | "critical";
@@ -167,13 +165,6 @@ export async function generatePlatformUpdate(data: AIInsightData): Promise<Platf
   let enhancedDescription = data.description;
   
   try {
-    const model = genAI.getGenerativeModel({ 
-      model: GEMINI_MODELS.NOTIFICATION,
-      generationConfig: {
-        maxOutputTokens: ANTI_YAP_PRESETS.notification.maxTokens,
-        temperature: ANTI_YAP_PRESETS.notification.temperature,
-      }
-    });
     const prompt = `You are Trinity, the AI brain behind CoAIleague. Write platform update notifications in your humanized senior engineer voice.
 
 TRINITY'S VOICE RULES:
@@ -203,10 +194,16 @@ CATEGORY: ${data.category || 'improvement'}
 Write Trinity's notification (short, human, helpful):
 SUMMARY:`;
     
-    const result = await model.generateContent(prompt);
-    const response = result.response.text().trim();
-    if (response && response.length < 500) {
-      enhancedDescription = response;
+    const result = await meteredGemini.generate({
+      workspaceId: data.workspaceId || 'platform',
+      featureKey: 'ai_notification',
+      prompt,
+      model: 'gemini-1.5-flash',
+      temperature: ANTI_YAP_PRESETS.notification.temperature,
+      maxOutputTokens: ANTI_YAP_PRESETS.notification.maxTokens,
+    });
+    if (result.success && result.text && result.text.length < 500) {
+      enhancedDescription = result.text.trim();
     }
   } catch (error) {
     console.log("[AINotification] Gemini enhancement skipped:", error);
@@ -664,21 +661,20 @@ export async function getNewUserWelcomeSummary(
     let welcomeMessage = "We're excited to have you on board!";
     
     try {
-      const model = genAI.getGenerativeModel({ 
-        model: GEMINI_MODELS.NOTIFICATION,
-        generationConfig: {
-          maxOutputTokens: ANTI_YAP_PRESETS.notification.maxTokens,
-          temperature: ANTI_YAP_PRESETS.notification.temperature,
-        }
-      });
       const updateTitles = updates.map(u => u.title).join(", ");
       
       const prompt = `You are CoAIleague's friendly AI assistant. Create a brief, warm welcome message (max 2 sentences) for a new user, mentioning these platform highlights: ${updateTitles}. Be encouraging and helpful.`;
       
-      const result = await model.generateContent(prompt);
-      const response = result.response.text().trim();
-      if (response && response.length < 300) {
-        welcomeMessage = response;
+      const result = await meteredGemini.generate({
+        workspaceId: workspaceId || 'platform',
+        featureKey: 'ai_notification',
+        prompt,
+        model: 'gemini-1.5-flash',
+        temperature: ANTI_YAP_PRESETS.notification.temperature,
+        maxOutputTokens: ANTI_YAP_PRESETS.notification.maxTokens,
+      });
+      if (result.success && result.text && result.text.length < 300) {
+        welcomeMessage = result.text.trim();
       }
     } catch (error) {
       console.log("[AINotification] Welcome summary AI enhancement skipped:", error);

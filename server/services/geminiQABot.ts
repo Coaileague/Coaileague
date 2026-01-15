@@ -3,11 +3,8 @@
  * Provides intelligent responses to user questions in HelpDesk
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
+import { meteredGemini } from './billing/meteredGeminiClient';
 import { aiActivityService } from './aiActivityService';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 interface Message {
   role: 'user' | 'assistant';
@@ -61,14 +58,6 @@ export async function getAiResponse(
 
     aiActivityService.startThinking('HelpAI', { workspaceId, userId, message: 'Processing your question...' });
 
-    const model = genAI.getGenerativeModel({ 
-      model: GEMINI_MODELS.HELLOS,
-      generationConfig: {
-        maxOutputTokens: ANTI_YAP_PRESETS.helpai.maxTokens,
-        temperature: ANTI_YAP_PRESETS.helpai.temperature,
-      }
-    });
-
     // Build system prompt
     const systemPrompt = `You are HelpAI, an AI assistant for CoAIleague - an AI-powered workforce management platform.
 
@@ -94,32 +83,34 @@ GUIDELINES:
 
 Remember: You're a helpful AI assistant, not a human. Be honest about your limitations.`;
 
-    // Convert conversation history to Gemini format
-    const chatHistory = conversationHistory.map(msg => ({
-      role: msg.role === 'user' ? 'user' : 'model',
-      parts: [{ text: msg.content }]
-    }));
+    // Build conversation context
+    const historyContext = conversationHistory.map(msg => 
+      `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}`
+    ).join('\n');
 
-    const chat = model.startChat({
-      history: chatHistory,
-      generationConfig: {
-        maxOutputTokens: 256, // Keep responses concise
-        temperature: 0.7,
-      },
-      systemInstruction: {
-        parts: [{ text: systemPrompt }],
-        role: 'user'
-      }
+    const fullPrompt = `${historyContext ? `Previous conversation:\n${historyContext}\n\n` : ''}User: ${userMessage}`;
+
+    const result = await meteredGemini.generate({
+      workspaceId,
+      userId,
+      featureKey: 'ai_helpai',
+      prompt: fullPrompt,
+      systemInstruction: systemPrompt,
+      model: 'gemini-1.5-flash',
+      temperature: 0.7,
+      maxOutputTokens: 256
     });
 
-    const result = await chat.sendMessage(userMessage);
-    const response = result.response;
-    const text = response.text();
+    if (!result.success) {
+      console.error('[Gemini Q&A Bot] Metered call failed:', result.error);
+      aiActivityService.error('HelpAI', { workspaceId, userId, message: 'Processing error' });
+      return {
+        message: "I'm having trouble processing that right now. Please try rephrasing your question or contact support.",
+        shouldRespond: false,
+      };
+    }
 
-    // Estimate token usage (Gemini doesn't provide exact counts in response)
-    const estimatedTokens = Math.ceil((userMessage.length + text.length) / 4);
-    const costPerMillionTokens = 0.075; // Gemini 2.0 Flash pricing (very cheap!)
-    const estimatedCost = (estimatedTokens / 1_000_000) * costPerMillionTokens;
+    const text = result.text;
 
     aiActivityService.complete('HelpAI', { workspaceId, userId, message: 'Response ready' });
 
@@ -127,8 +118,8 @@ Remember: You're a helpful AI assistant, not a human. Be honest about your limit
       message: text.trim(),
       shouldRespond: true,
       tokenUsage: {
-        totalTokens: estimatedTokens,
-        totalCost: estimatedCost,
+        totalTokens: result.tokensUsed.total,
+        totalCost: result.billing.creditsDeducted * 0.001, // Convert credits to cost estimate
       },
     };
   } catch (error) {

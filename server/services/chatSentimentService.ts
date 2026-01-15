@@ -9,13 +9,11 @@
  * - Emit alerts for support staff
  */
 
-import { GoogleGenerativeAI } from '@google/generative-ai';
-import { GEMINI_MODELS, ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
+import { meteredGemini } from './billing/meteredGeminiClient';
+import { ANTI_YAP_PRESETS } from './ai-brain/providers/geminiClient';
 import { db } from '../db';
 import { chatMessages } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY || '');
 
 export interface ChatSentimentAnalysisResult {
   sentiment: 'positive' | 'neutral' | 'negative' | 'urgent';
@@ -30,6 +28,7 @@ export interface ChatSentimentAnalysisResult {
  * Analyze sentiment of a chat message
  * @param message The chat message text
  * @param context Additional context (e.g., conversation history, user type)
+ * @param workspaceId Workspace ID for billing attribution
  * @returns Sentiment analysis result
  */
 export async function analyzeChatMessageSentiment(
@@ -38,17 +37,10 @@ export async function analyzeChatMessageSentiment(
     senderType?: string;
     conversationContext?: string;
     previousMessages?: string[];
-  }
+  },
+  workspaceId?: string
 ): Promise<ChatSentimentAnalysisResult> {
   try {
-    const model = genAI.getGenerativeModel({ 
-      model: GEMINI_MODELS.SUPERVISOR,
-      generationConfig: {
-        maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
-        temperature: ANTI_YAP_PRESETS.supervisor.temperature,
-      }
-    });
-
     // Build context for analysis
     const contextStr = context?.conversationContext 
       ? `\nContext: ${context.conversationContext}`
@@ -80,8 +72,20 @@ Classification rules:
 - urgencyLevel: Consider message urgency, not just sentiment
 - shouldEscalate: true if sentiment is negative or urgency >= 3`;
 
-    const response = await model.generateContent(prompt);
-    const responseText = response.response.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const aiResult = await meteredGemini.generate({
+      workspaceId: workspaceId || 'platform',
+      featureKey: 'ai_chat_sentiment',
+      prompt,
+      model: 'gemini-1.5-flash',
+      temperature: ANTI_YAP_PRESETS.supervisor.temperature,
+      maxOutputTokens: ANTI_YAP_PRESETS.supervisor.maxTokens,
+    });
+
+    if (!aiResult.success) {
+      throw new Error(aiResult.error || 'Chat sentiment analysis failed');
+    }
+
+    const responseText = aiResult.text || '{}';
 
     // Extract JSON from response
     let jsonText = responseText;
