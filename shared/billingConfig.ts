@@ -243,6 +243,11 @@ export const BILLING = {
     ai_migration: 25,
     // QuickBooks (Flash)
     quickbooks_error_analysis: 5,
+    // Financial Intelligence (Pro - complex P&L analysis)
+    financial_pl_summary: 12,
+    financial_insights: 15,
+    financial_client_profitability: 10,
+    financial_trend_analysis: 8,
     // Scheduling (Flash/Pro)
     schedule_optimization: 6,
     strategic_schedule_optimization: 20,

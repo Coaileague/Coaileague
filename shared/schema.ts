@@ -23942,3 +23942,254 @@ export const insertWorkerTaxClassificationHistorySchema = createInsertSchema(wor
 });
 export type InsertWorkerTaxClassificationHistory = z.infer<typeof insertWorkerTaxClassificationHistorySchema>;
 export type WorkerTaxClassificationHistory = typeof workerTaxClassificationHistory.$inferSelect;
+
+// ============================================================================
+// FINANCIAL INTELLIGENCE - P&L Dashboard Tables
+// ============================================================================
+
+/**
+ * Financial Snapshots - Cached P&L calculations by period
+ * Stores aggregated financial metrics for fast dashboard queries
+ */
+export const financialSnapshotGranularityEnum = pgEnum('financial_snapshot_granularity', [
+  'weekly', 'monthly', 'quarterly', 'annual', 'custom'
+]);
+
+export const financialSnapshotSourceEnum = pgEnum('financial_snapshot_source', [
+  'platform', 'quickbooks', 'hybrid'
+]);
+
+export const financialSnapshots = pgTable("financial_snapshots", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Period definition
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  granularity: financialSnapshotGranularityEnum("granularity").notNull(),
+  
+  // Core P&L metrics
+  revenueTotal: decimal("revenue_total", { precision: 14, scale: 2 }).notNull().default('0'),
+  payrollTotal: decimal("payroll_total", { precision: 14, scale: 2 }).notNull().default('0'),
+  expenseTotal: decimal("expense_total", { precision: 14, scale: 2 }).notNull().default('0'),
+  
+  // Calculated metrics
+  grossProfit: decimal("gross_profit", { precision: 14, scale: 2 }).notNull().default('0'),
+  netProfit: decimal("net_profit", { precision: 14, scale: 2 }).notNull().default('0'),
+  marginPercent: decimal("margin_percent", { precision: 5, scale: 2 }),
+  
+  // Revenue breakdown
+  invoicedAmount: decimal("invoiced_amount", { precision: 14, scale: 2 }),
+  collectedAmount: decimal("collected_amount", { precision: 14, scale: 2 }),
+  outstandingAmount: decimal("outstanding_amount", { precision: 14, scale: 2 }),
+  
+  // Expense breakdown
+  overtimeCost: decimal("overtime_cost", { precision: 14, scale: 2 }),
+  benefitsCost: decimal("benefits_cost", { precision: 14, scale: 2 }),
+  insuranceCost: decimal("insurance_cost", { precision: 14, scale: 2 }),
+  equipmentCost: decimal("equipment_cost", { precision: 14, scale: 2 }),
+  adminCost: decimal("admin_cost", { precision: 14, scale: 2 }),
+  
+  // Data source
+  source: financialSnapshotSourceEnum("source").notNull().default('platform'),
+  quickbooksLastSyncAt: timestamp("quickbooks_last_sync_at"),
+  
+  // AI insights (stored for caching)
+  aiInsights: jsonb("ai_insights"), // Array of insight strings
+  aiInsightsGeneratedAt: timestamp("ai_insights_generated_at"),
+  
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("fin_snapshot_workspace_idx").on(table.workspaceId),
+  index("fin_snapshot_period_idx").on(table.periodStart, table.periodEnd),
+  index("fin_snapshot_granularity_idx").on(table.granularity),
+]);
+
+export const insertFinancialSnapshotSchema = createInsertSchema(financialSnapshots).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertFinancialSnapshot = z.infer<typeof insertFinancialSnapshotSchema>;
+export type FinancialSnapshot = typeof financialSnapshots.$inferSelect;
+
+/**
+ * QuickBooks Transactions - Synced transaction log
+ * Raw transaction data from QuickBooks for reconciliation and P&L
+ */
+export const qbTransactionTypeEnum = pgEnum('qb_transaction_type', [
+  'invoice', 'payment', 'expense', 'journal', 'bill', 'credit_memo', 'deposit'
+]);
+
+export const qbTransactions = pgTable("qb_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // QuickBooks reference
+  qbTxnId: varchar("qb_txn_id").notNull(),
+  qbDocNumber: varchar("qb_doc_number"),
+  txnType: qbTransactionTypeEnum("txn_type").notNull(),
+  
+  // Transaction details
+  txnDate: date("txn_date").notNull(),
+  amount: decimal("amount", { precision: 14, scale: 2 }).notNull(),
+  accountName: varchar("account_name"),
+  accountId: varchar("account_id"),
+  
+  // Entity references
+  customerId: varchar("customer_id"),
+  customerName: varchar("customer_name"),
+  vendorId: varchar("vendor_id"),
+  vendorName: varchar("vendor_name"),
+  
+  // Category for expense tracking
+  expenseCategory: varchar("expense_category"),
+  
+  // Raw data
+  rawJson: jsonb("raw_json"),
+  
+  // Sync metadata
+  syncedAt: timestamp("synced_at").defaultNow().notNull(),
+  lastUpdatedAt: timestamp("last_updated_at"),
+  
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("qb_txn_workspace_idx").on(table.workspaceId),
+  index("qb_txn_qb_id_idx").on(table.qbTxnId),
+  index("qb_txn_type_idx").on(table.txnType),
+  index("qb_txn_date_idx").on(table.txnDate),
+  uniqueIndex("qb_txn_unique_idx").on(table.workspaceId, table.qbTxnId),
+]);
+
+export const insertQbTransactionSchema = createInsertSchema(qbTransactions).omit({
+  id: true,
+  createdAt: true,
+  syncedAt: true,
+});
+export type InsertQbTransaction = z.infer<typeof insertQbTransactionSchema>;
+export type QbTransaction = typeof qbTransactions.$inferSelect;
+
+/**
+ * Client Profitability - Per-client financial metrics
+ * Tracks revenue, costs, and margin by client for profitability analysis
+ */
+export const clientProfitability = pgTable("client_profitability", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  clientId: varchar("client_id").notNull().references(() => clients.id, { onDelete: 'cascade' }),
+  
+  // Period definition
+  periodStart: date("period_start").notNull(),
+  periodEnd: date("period_end").notNull(),
+  
+  // Revenue metrics
+  revenue: decimal("revenue", { precision: 14, scale: 2 }).notNull().default('0'),
+  invoicedHours: decimal("invoiced_hours", { precision: 10, scale: 2 }),
+  effectiveBillRate: decimal("effective_bill_rate", { precision: 10, scale: 2 }),
+  
+  // Cost metrics
+  directLaborCost: decimal("direct_labor_cost", { precision: 14, scale: 2 }).notNull().default('0'),
+  overtimeCost: decimal("overtime_cost", { precision: 14, scale: 2 }),
+  directExpenses: decimal("direct_expenses", { precision: 14, scale: 2 }),
+  overheadAllocated: decimal("overhead_allocated", { precision: 14, scale: 2 }),
+  
+  // Hours tracking
+  scheduledHours: decimal("scheduled_hours", { precision: 10, scale: 2 }),
+  actualHours: decimal("actual_hours", { precision: 10, scale: 2 }),
+  
+  // Profitability
+  grossProfit: decimal("gross_profit", { precision: 14, scale: 2 }).notNull().default('0'),
+  netProfit: decimal("net_profit", { precision: 14, scale: 2 }),
+  marginPercent: decimal("margin_percent", { precision: 5, scale: 2 }),
+  
+  // Comparison to target
+  targetMarginPercent: decimal("target_margin_percent", { precision: 5, scale: 2 }),
+  marginVariance: decimal("margin_variance", { precision: 5, scale: 2 }),
+  
+  // AI-detected flags
+  isUnderperforming: boolean("is_underperforming").default(false),
+  aiRecommendation: text("ai_recommendation"),
+  
+  generatedAt: timestamp("generated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+}, (table) => [
+  index("client_profit_workspace_idx").on(table.workspaceId),
+  index("client_profit_client_idx").on(table.clientId),
+  index("client_profit_period_idx").on(table.periodStart, table.periodEnd),
+  uniqueIndex("client_profit_unique_idx").on(table.workspaceId, table.clientId, table.periodStart, table.periodEnd),
+]);
+
+export const insertClientProfitabilitySchema = createInsertSchema(clientProfitability).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export type InsertClientProfitability = z.infer<typeof insertClientProfitabilitySchema>;
+export type ClientProfitability = typeof clientProfitability.$inferSelect;
+
+/**
+ * Financial Alerts - Trinity-generated financial insights and warnings
+ * Stores AI-detected issues and recommendations for dashboard display
+ */
+export const financialAlertCategoryEnum = pgEnum('financial_alert_category', [
+  'ar_aging', 'margin', 'payroll', 'expense', 'cash_flow', 
+  'client_profit', 'sync', 'compliance', 'forecast'
+]);
+
+export const financialAlertSeverityEnum = pgEnum('financial_alert_severity', [
+  'info', 'warning', 'critical'
+]);
+
+export const financialAlerts = pgTable("financial_alerts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  workspaceId: varchar("workspace_id").notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  
+  // Alert classification
+  severity: financialAlertSeverityEnum("severity").notNull(),
+  category: financialAlertCategoryEnum("category").notNull(),
+  
+  // Alert content
+  title: varchar("title", { length: 200 }).notNull(),
+  message: text("message").notNull(),
+  actionSuggestion: text("action_suggestion"),
+  
+  // Related entity (for drill-down)
+  relatedEntityType: varchar("related_entity_type"), // 'client', 'invoice', 'employee', 'expense'
+  relatedEntityId: varchar("related_entity_id"),
+  
+  // Numeric details for display
+  metricValue: decimal("metric_value", { precision: 14, scale: 2 }),
+  thresholdValue: decimal("threshold_value", { precision: 14, scale: 2 }),
+  variancePercent: decimal("variance_percent", { precision: 5, scale: 2 }),
+  
+  // Lifecycle
+  status: varchar("status", { length: 20 }).default("active"), // active, acknowledged, resolved, dismissed
+  acknowledgedBy: varchar("acknowledged_by").references(() => users.id),
+  acknowledgedAt: timestamp("acknowledged_at"),
+  resolvedAt: timestamp("resolved_at"),
+  
+  // Auto-generated flag
+  isAiGenerated: boolean("is_ai_generated").default(true),
+  aiModel: varchar("ai_model"),
+  
+  detectedAt: timestamp("detected_at").defaultNow().notNull(),
+  expiresAt: timestamp("expires_at"), // Auto-dismiss old alerts
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+}, (table) => [
+  index("fin_alert_workspace_idx").on(table.workspaceId),
+  index("fin_alert_severity_idx").on(table.severity),
+  index("fin_alert_category_idx").on(table.category),
+  index("fin_alert_status_idx").on(table.status),
+  index("fin_alert_detected_idx").on(table.detectedAt),
+]);
+
+export const insertFinancialAlertSchema = createInsertSchema(financialAlerts).omit({
+  id: true,
+  createdAt: true,
+  detectedAt: true,
+});
+export type InsertFinancialAlert = z.infer<typeof insertFinancialAlertSchema>;
+export type FinancialAlert = typeof financialAlerts.$inferSelect;

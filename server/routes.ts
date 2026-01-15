@@ -139,6 +139,7 @@ import featureFlagsRoutes from "./routes/featureFlagsRoutes"; // Trinity Runtime
 import maintenanceRoutes from "./routes/maintenanceRoutes"; // Maintenance Mode
 import resendWebhooksRouter from "./routes/resendWebhooks"; // Resend email webhooks
 import quickbooksPhase3Router from "./routes/quickbooksPhase3Routes"; // QuickBooks Phase 3 Intelligence & Compliance
+import financialIntelligenceRouter from "./routes/financialIntelligence"; // Financial Intelligence P&L Dashboard
 import { performanceMetrics } from "./services/performanceMetrics";
 import { sentimentAnalyzer } from "./services/sentimentAnalyzer";
 import { initiateEmployeeOnboarding } from "./services/onboardingAutomation";
@@ -3514,6 +3515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/hris", hrisRouter); // HRIS Integration Routes - per-route auth, callback must be public for OAuth
   app.use("/api/trinity/self-edit", trinitySelfEditRouter); // Trinity Self-Edit Governance
   app.use("/api/quickbooks/phase3", requireAuth, attachWorkspaceId, quickbooksPhase3Router); // QuickBooks Phase 3 Intelligence & Compliance
+  app.use("/api/finance", requireAuth, attachWorkspaceId, financialIntelligenceRouter); // Financial Intelligence P&L Dashboard
   
   // ============================================================================
   // ROUTE HEALTH MONITORING (Trinity Platform Awareness)

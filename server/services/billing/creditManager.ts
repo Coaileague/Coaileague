@@ -129,6 +129,12 @@ export const CREDIT_COSTS = {
   // QuickBooks Integration - Gemini 3 Flash with thinking
   'quickbooks_error_analysis': 5, // Error analysis and retry strategy (Flash)
   
+  // Financial Intelligence - Gemini 3 Pro (complex P&L analysis)
+  'financial_pl_summary': 12,           // P&L dashboard summary generation (Pro)
+  'financial_insights': 15,              // AI-powered financial insights (Pro)
+  'financial_client_profitability': 10,  // Per-client profitability analysis (Pro)
+  'financial_trend_analysis': 8,         // Trend comparison and forecasting (Pro)
+  
   // Scheduling Subagent - Model depends on complexity
   'schedule_optimization': 6,     // Schedule optimization (Flash)
   'strategic_schedule_optimization': 20, // Strategic scheduling (Pro with deep reasoning)
