@@ -157,7 +157,7 @@ Questions? Ask Trinity AI in the chat - she knows everything about the platform!
   
   trinityGuide: {
     title: 'Meet Trinity - Your AI Assistant',
-    message: `Trinity is CoAIleague's AI Brain, powered by Google Gemini. She can help you with almost anything:
+    message: `Trinity is CoAIleague's AI Brain, powered by Google Gemini. Think of her as a brilliant colleague who's always available to help.
 
 What Trinity can do for you:
 • Answer questions about your schedule, pay, or policies
@@ -169,11 +169,15 @@ What Trinity can do for you:
 How to use Trinity:
 1. Click the Trinity icon (Celtic knot) in the bottom corner
 2. Type your question or request naturally
-3. Trinity understands context and learns your preferences
+3. Trinity understands context and remembers your preferences
 
-Pro tip: Trinity has three modes - Business (work tasks), Personal (buddy mode), and Integrated (combines both). Try saying "Hey Trinity, what's on my schedule this week?"
+Trinity has two modes:
+• Business Mode - Your helpful business partner for scheduling, analytics, invoicing, and day-to-day operations. She's warm, supportive, and data-driven.
+• Guru Mode - Tech expert mode for troubleshooting, integrations, and platform configuration. Like having a senior engineer on call.
 
-Trinity is always learning and improving. The more you use her, the better she gets at helping you!`,
+Try saying "Hey Trinity, what's on my schedule this week?" or "Help me understand my overtime costs."
+
+Trinity learns from every conversation and gets better at helping you over time!`,
     actionUrl: '/chat',
     type: 'system',
   },
