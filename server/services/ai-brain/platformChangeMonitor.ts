@@ -437,18 +437,23 @@ Respond ONLY with valid JSON:
   }
   
   private generateEndUserSummary(change: DetectedChange): string {
-    const moduleList = change.affectedModules.join(', ') || 'the platform';
+    const moduleList = change.affectedModules.join(', ') || 'core systems';
+    const affectedAreas = change.affectedFiles.slice(0, 2).map(f => {
+      const parts = f.split('/');
+      return parts[parts.length - 1].replace(/\.(ts|tsx|js|jsx)$/, '');
+    }).join(', ');
+    
     switch (change.type) {
       case 'bug_fixed':
-        return `Fixed a hiccup in ${moduleList}. Should be running smooth now.`;
+        return `We resolved an issue affecting ${moduleList}. The problem was identified and fixed - everything should be working correctly now. If you were experiencing any issues in this area, please try again.`;
       case 'feature_added':
-        return `Just shipped something new for ${moduleList}! Worth checking out.`;
+        return `New capability added to ${moduleList}! This enhancement brings additional functionality to help you work more efficiently. Check out the ${affectedAreas || 'updated areas'} to see what's new.`;
       case 'security_fix':
-        return `Tightened up security - your data stays safe. Nothing you need to do.`;
+        return `Security improvements have been applied to protect your data. These behind-the-scenes updates keep your information safe - no action needed on your end.`;
       case 'enhancement':
-        return `Boosted ${moduleList} - faster and better than before.`;
+        return `We've improved ${moduleList} to be faster and more reliable. You may notice better performance when using these features.`;
       default:
-        return `Quick update to ${moduleList}. Making things run smoother.`;
+        return `Platform update applied to ${moduleList}. These improvements help ensure everything runs smoothly. No action required.`;
     }
   }
   
@@ -565,18 +570,20 @@ Respond ONLY with valid JSON:
 
   private generateFallbackSummary(change: DetectedChange): string {
     const moduleList = change.affectedModules.join(', ') || 'platform core';
+    const fileCount = change.affectedFiles.length;
+    const fileContext = fileCount > 0 ? ` (${fileCount} file${fileCount > 1 ? 's' : ''} updated)` : '';
     
     switch (change.type) {
       case 'bug_fixed':
-        return `Fixed a hiccup in ${moduleList}. Should be running smooth now - no action needed on your end.`;
+        return `Resolved an issue in ${moduleList}${fileContext}. The bug has been identified and patched - affected functionality should now work as expected. No action required on your part.`;
       case 'feature_added':
-        return `Just shipped something new for ${moduleList}! Worth checking out when you get a chance.`;
+        return `New feature deployed to ${moduleList}${fileContext}. This addition expands platform capabilities and may include new UI elements or functionality. Check the affected area for what's new.`;
       case 'security_fix':
-        return `Tightened up security on ${moduleList}. Your data stays safe - nothing you need to do.`;
+        return `Security patch applied to ${moduleList}${fileContext}. These updates strengthen platform security and protect your data. No user action needed.`;
       case 'enhancement':
-        return `Boosted ${moduleList} - faster and more reliable than before.`;
+        return `Performance and reliability improvements to ${moduleList}${fileContext}. These optimizations help the platform run faster and more smoothly.`;
       default:
-        return `Quick update to ${moduleList}. Making things run smoother.`;
+        return `Platform update applied to ${moduleList}${fileContext}. This maintenance update ensures continued stability and optimal performance.`;
     }
   }
 

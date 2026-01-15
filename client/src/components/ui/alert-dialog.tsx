@@ -91,12 +91,12 @@ const AlertDialogContent = React.forwardRef<
         {showHomeButton && (
           <button
             onClick={handleHomeClick}
-            className="absolute right-2 top-2 flex items-center justify-center rounded-md min-h-9 min-w-9 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-accent active:bg-accent/80"
+            className="absolute right-1.5 top-1.5 sm:right-2 sm:top-2 flex items-center justify-center rounded-md min-h-11 min-w-11 sm:min-h-9 sm:min-w-9 opacity-70 ring-offset-background transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 hover:bg-accent active:bg-accent/80"
             data-testid={config.testId}
             title={config.tooltip}
             aria-label={config.ariaLabel}
           >
-            <Home className="h-4 w-4" />
+            <Home className="h-5 w-5 sm:h-4 sm:w-4" />
             <span className="sr-only">{config.ariaLabel}</span>
           </button>
         )}
@@ -113,7 +113,7 @@ const AlertDialogHeader = ({
 }: React.HTMLAttributes<HTMLDivElement>) => (
   <div
     className={cn(
-      "flex flex-col space-y-2 text-center sm:text-left",
+      "flex flex-col space-y-2 text-center sm:text-left pr-14 sm:pr-12",
       className
     )}
     {...props}
