@@ -348,7 +348,7 @@ export default function Dashboard() {
   const isLoadingDashboard = isLoading || accessLoading;
 
   // Get identity data for mobile display
-  const { externalId, employeeId, supportCode, orgId, workspaceRole: identityWorkspaceRole } = useIdentity();
+  const { externalId, employeeId, supportCode, orgId, dbUserId, dbWorkspaceId, workspaceRole: identityWorkspaceRole } = useIdentity();
   
   // Generate display name and initials
   const displayName = user?.firstName && user?.lastName 
@@ -414,6 +414,16 @@ export default function Dashboard() {
                       <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-blue-50 border-blue-200 text-blue-700" data-testid="badge-org-id">
                         {orgId}
                       </Badge>
+                  )}
+                  {dbUserId && (
+                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-purple-50 border-purple-200 text-purple-700 font-mono" data-testid="badge-db-user-id" title="Database User ID">
+                      UID: {dbUserId}
+                    </Badge>
+                  )}
+                  {dbWorkspaceId && (
+                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono" data-testid="badge-db-workspace-id" title="Database Workspace ID">
+                      WS: {dbWorkspaceId.slice(0, 8)}...
+                    </Badge>
                     )}
                   </div>
                   {workspace?.name && (
@@ -521,6 +531,16 @@ export default function Dashboard() {
                   {orgId && (
                     <Badge variant="outline" className="text-xs px-2.5 py-0.5 bg-blue-50 border-blue-200 text-blue-700 font-medium" data-testid="badge-org-id">
                       {orgId}
+                    </Badge>
+                  )}
+                  {dbUserId && (
+                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-purple-50 border-purple-200 text-purple-700 font-mono" data-testid="badge-db-user-id" title="Database User ID">
+                      UID: {dbUserId}
+                    </Badge>
+                  )}
+                  {dbWorkspaceId && (
+                    <Badge variant="outline" className="text-[10px] px-2 py-0.5 bg-green-50 border-green-200 text-green-700 font-mono" data-testid="badge-db-workspace-id" title="Database Workspace ID">
+                      WS: {dbWorkspaceId.slice(0, 8)}...
                     </Badge>
                   )}
                 </div>

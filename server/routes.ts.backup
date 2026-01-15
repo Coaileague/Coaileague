@@ -6793,6 +6793,291 @@ export async function registerRoutes(app: Express): Promise<Server> {
       else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
         userId = req.user.claims.sub;
       }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
+      // Support BOTH auth systems AND test mode for mobile/desktop compatibility
+      let userId: string | undefined;
+      let workspaceId: string | undefined;
+      
+      // Check for test mode first (x-test-key header)
+      const testKey = req.get('x-test-key');
+      const { validateTestKey } = await import("./auth");
+      if (validateTestKey(testKey)) {
+        userId = '48003611'; // Real test user ID
+        workspaceId = req.get('x-test-workspace') || '37a04d24-51bd-4856-9faa-d26a2fe82094';
+      }
+      // Try custom auth (session-based)
+      else if (req.session?.userId) {
+        userId = req.session.userId;
+      }
+      // Try Replit Auth (OIDC)
+      else if (req.isAuthenticated?.() && req.user?.claims?.sub) {
+        userId = req.user.claims.sub;
+      }
       // Get user account
       const user = await storage.getUser(userId);
       if (!user) {
