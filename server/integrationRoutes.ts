@@ -799,7 +799,7 @@ router.post('/quickbooks/push', requireAuth, requireWorkspaceMembership(), async
     const apiBase = getQuickBooksApiBase();
 
     // Determine which workspace to fetch data from
-    const SANDBOX_WORKSPACE_ID = 'sandbox-test-workspace';
+    const SANDBOX_WORKSPACE_ID = '37a04d24-51bd-4856-9faa-d26a2fe82094';
     const sourceWorkspaceId = useSandboxData ? SANDBOX_WORKSPACE_ID : workspaceId;
     
     console.log(`[QuickBooks Push] Source workspace: ${useSandboxData ? 'SANDBOX TEST DATA' : 'real workspace'}`);

@@ -7,7 +7,7 @@ import {
 import { eq, and, count } from 'drizzle-orm';
 import { platformEventBus } from '../platformEventBus';
 
-const SANDBOX_WORKSPACE_ID = 'sandbox-test-workspace';
+const SANDBOX_WORKSPACE_ID = '37a04d24-51bd-4856-9faa-d26a2fe82094';
 const SANDBOX_USER_ID = 'sandbox-test-user';
 
 const SECURITY_POSITIONS = [
