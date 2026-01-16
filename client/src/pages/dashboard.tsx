@@ -42,7 +42,7 @@ interface WorkspaceHealth {
   status: 'green' | 'yellow' | 'red';
   message: string;
   billing: { status: string; active: boolean };
-  integrations: { quickbooks: string; gusto: string };
+  integrations: { quickbooks: string; quickbooksRealmId: string | null; gusto: string };
   automations: { invoicing: boolean; payroll: boolean; scheduling: boolean };
   safeToRun: boolean;
 }
@@ -609,7 +609,7 @@ export default function Dashboard() {
                   </div>
                   <div className="bg-background/50 rounded-lg p-3">
                     <p className="text-xs text-muted-foreground mb-1">QuickBooks</p>
-                    <p className="font-semibold text-sm">{workspaceHealth.integrations.quickbooks === 'connected' ? '✓ Connected' : '- Not Connected'}</p>
+                    <p className="font-semibold text-sm">{workspaceHealth.integrations.quickbooks === 'connected' ? <><span className="text-green-600">✓</span> <span className="text-orange-500 font-mono">{workspaceHealth.integrations.quickbooksRealmId || 'Connected'}</span></> : '- Not Connected'}</p>
                   </div>
                   <div className="bg-background/50 rounded-lg p-3">
                     <p className="text-xs text-muted-foreground mb-1">Gusto</p>

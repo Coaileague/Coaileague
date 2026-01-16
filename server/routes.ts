@@ -345,6 +345,7 @@ import {
   trinityCredits,
   trinityCreditTransactions,
   workspaceInvites,
+  partnerConnections,
 } from "@shared/schema";
 import crypto from "crypto";
 import { sql, eq, and, or, isNull, isNotNull, lte, gte, desc, asc, inArray, ne } from "drizzle-orm";
@@ -3025,23 +3026,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
-      // Check if platform staff - they get platform-wide health view
-      const userId = req.user?.id || req.user?.claims?.sub;
-      if (userId) {
-        const { getUserPlatformRole, hasPlatformWideAccess } = await import('./rbac');
-        const platformRole = await getUserPlatformRole(userId);
-        if (hasPlatformWideAccess(platformRole)) {
-          return res.json({
-            overallStatus: 'green',
-            statusMessage: 'Platform staff - full access',
-            billingActive: true,
-            subscriptionTier: 'enterprise',
-            integrations: { quickbooks: 'platform', gusto: 'platform' },
-            isPlatformStaff: true,
-          });
+        // Check if platform staff - they get platform-wide health view
+        const userId = req.user?.id || req.user?.claims?.sub;
+        if (userId) {
+          const { getUserPlatformRole, hasPlatformWideAccess } = await import('./rbac');
+          const platformRole = await getUserPlatformRole(userId);
+          if (hasPlatformWideAccess(platformRole)) {
+            return res.json({
+              overallStatus: 'green',
+              statusMessage: 'Platform staff - full access',
+              billingActive: true,
+              subscriptionTier: 'enterprise',
+              integrations: { quickbooks: 'platform', gusto: 'platform' },
+              isPlatformStaff: true,
+            });
+          }
         }
-      }
-
         return res.status(400).json({ error: 'No workspace selected' });
       }
 
@@ -3052,17 +3052,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check partner integrations
-      const qboConnection = await db.select().from(partnerIntegrations)
+      const qboConnection = await db.select().from(partnerConnections)
         .where(and(
-          eq(partnerIntegrations.workspaceId, workspaceId),
-          eq(partnerIntegrations.provider, 'quickbooks')
+          eq(partnerConnections.workspaceId, workspaceId),
+          eq(partnerConnections.partnerType, 'quickbooks')
         ))
         .limit(1);
 
-      const gustoConnection = await db.select().from(partnerIntegrations)
+      const gustoConnection = await db.select().from(partnerConnections)
         .where(and(
-          eq(partnerIntegrations.workspaceId, workspaceId),
-          eq(partnerIntegrations.provider, 'gusto')
+          eq(partnerConnections.workspaceId, workspaceId),
+          eq(partnerConnections.partnerType, 'gusto')
         ))
         .limit(1);
 
@@ -3091,6 +3091,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         integrations: {
           quickbooks: qboConnection.length > 0 ? 'connected' : 'not_connected',
+          quickbooksRealmId: qboConnection.length > 0 ? qboConnection[0].realmId : null,
           gusto: gustoConnection.length > 0 ? 'connected' : 'not_connected',
         },
         automations: {
