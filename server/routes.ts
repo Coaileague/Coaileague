@@ -345,7 +345,6 @@ import {
   trinityCredits,
   trinityCreditTransactions,
   workspaceInvites,
-  partnerConnections,
 } from "@shared/schema";
 import crypto from "crypto";
 import { sql, eq, and, or, isNull, isNotNull, lte, gte, desc, asc, inArray, ne } from "drizzle-orm";
@@ -3026,22 +3025,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const workspaceId = req.workspaceId;
       if (!workspaceId) {
-        // Check if platform staff - they get platform-wide health view
-        const userId = req.user?.id || req.user?.claims?.sub;
-        if (userId) {
-          const { getUserPlatformRole, hasPlatformWideAccess } = await import('./rbac');
-          const platformRole = await getUserPlatformRole(userId);
-          if (hasPlatformWideAccess(platformRole)) {
-            return res.json({
-              overallStatus: 'green',
-              statusMessage: 'Platform staff - full access',
-              billingActive: true,
-              subscriptionTier: 'enterprise',
-              integrations: { quickbooks: 'platform', gusto: 'platform' },
-              isPlatformStaff: true,
-            });
-          }
+      // Check if platform staff - they get platform-wide health view
+      const userId = req.user?.id || req.user?.claims?.sub;
+      if (userId) {
+        const { getUserPlatformRole, hasPlatformWideAccess } = await import('./rbac');
+        const platformRole = await getUserPlatformRole(userId);
+        if (hasPlatformWideAccess(platformRole)) {
+          return res.json({
+            overallStatus: 'green',
+            statusMessage: 'Platform staff - full access',
+            billingActive: true,
+            subscriptionTier: 'enterprise',
+            integrations: { quickbooks: 'platform', gusto: 'platform' },
+            isPlatformStaff: true,
+          });
         }
+      }
+
         return res.status(400).json({ error: 'No workspace selected' });
       }
 
@@ -3052,17 +3052,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check partner integrations
-      const qboConnection = await db.select().from(partnerConnections)
+      const qboConnection = await db.select().from(partnerIntegrations)
         .where(and(
-          eq(partnerConnections.workspaceId, workspaceId),
-          eq(partnerConnections.partnerType, 'quickbooks')
+          eq(partnerIntegrations.workspaceId, workspaceId),
+          eq(partnerIntegrations.provider, 'quickbooks')
         ))
         .limit(1);
 
-      const gustoConnection = await db.select().from(partnerConnections)
+      const gustoConnection = await db.select().from(partnerIntegrations)
         .where(and(
-          eq(partnerConnections.workspaceId, workspaceId),
-          eq(partnerConnections.partnerType, 'gusto')
+          eq(partnerIntegrations.workspaceId, workspaceId),
+          eq(partnerIntegrations.provider, 'gusto')
         ))
         .limit(1);
 
@@ -3091,7 +3091,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         },
         integrations: {
           quickbooks: qboConnection.length > 0 ? 'connected' : 'not_connected',
-          quickbooksRealmId: qboConnection.length > 0 ? qboConnection[0].realmId : null,
           gusto: gustoConnection.length > 0 ? 'connected' : 'not_connected',
         },
         automations: {
@@ -3394,87 +3393,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use('/api/incidents', incidentsRouter);
   // Register Gamification & Employee Engagement System
   app.use('/api/gamification', gamificationRouter);
-
-  // ============================================================
-  // FRONTEND COMPATIBILITY ENDPOINTS
-  // ============================================================
-
-  // Workspace current endpoint - alias for /api/workspace
-  app.get('/api/workspace/current', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-      const user = await storage.getUser(userId);
-      let workspace = null;
-      if (user?.currentWorkspaceId) workspace = await storage.getWorkspace(user.currentWorkspaceId);
-      if (!workspace) workspace = await storage.getWorkspaceByOwnerId(userId);
-      if (!workspace) return res.status(404).json({ message: 'No workspace found' });
-      res.json(workspace);
-    } catch (error) {
-      console.error('Workspace current error:', error);
-      res.status(500).json({ message: 'Failed to get current workspace' });
-    }
-  });
-
-  // Workspaces current endpoint - alias for /api/workspace
-  app.get('/api/workspaces/current', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-      const user = await storage.getUser(userId);
-      let workspace = null;
-      if (user?.currentWorkspaceId) workspace = await storage.getWorkspace(user.currentWorkspaceId);
-      if (!workspace) workspace = await storage.getWorkspaceByOwnerId(userId);
-      if (!workspace) return res.status(404).json({ message: 'No workspace found' });
-      res.json(workspace);
-    } catch (error) {
-      console.error('Workspaces current error:', error);
-      res.status(500).json({ message: 'Failed to get current workspace' });
-    }
-  });
-
-  // User role endpoint
-  app.get('/api/user/role', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = req.user?.id;
-      if (!userId) return res.status(401).json({ message: 'Unauthorized' });
-      const user = await storage.getUser(userId);
-      const workspaceId = req.workspaceId;
-      let workspaceRole = null;
-      if (workspaceId && userId) {
-        const employee = await storage.getEmployeeByUserId(userId, workspaceId);
-        workspaceRole = employee?.workspaceRole || null;
-      }
-      res.json({ platformRole: user?.platformRole || null, workspaceRole, userId });
-    } catch (error) {
-      console.error('User role error:', error);
-      res.status(500).json({ message: 'Failed to get user role' });
-    }
-  });
-
-  // Device profile endpoint
-  app.get('/api/device/profile', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      res.json({ deviceId: null, notificationsEnabled: true, theme: 'system', hapticFeedback: true });
-    } catch (error) {
-      console.error('Device profile error:', error);
-      res.status(500).json({ message: 'Failed to get device profile' });
-    }
-  });
-
-  // Breaks jurisdiction endpoint
-  app.get('/api/breaks/jurisdiction', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const jurisdiction = (req.query.state as string) || 'CA';
-      const breaksService = (await import('./services/breaksService')).breaksService;
-      const rules = await breaksService.getLaborLawRulesByJurisdiction(jurisdiction);
-      res.json(rules);
-    } catch (error) {
-      console.error('Breaks jurisdiction error:', error);
-      res.json([]);
-    }
-  });
-
   app.use('/api/dashboard', requireAuth, dashboardRoutes);
   app.use('/api/gamification/enhanced', requireAuth, gamificationEnhancedRoutes);
   app.use('/api/ai/scheduling', requireAuth, aiSchedulingRoutes);
@@ -12390,110 +12308,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch expense" });
     }
   });
-
-  // ============================================================
-  // PENDING COUNT ENDPOINTS - Dashboard approval banner
-  // ============================================================
-  
-  app.get('/api/shifts/approvals/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const workspaceId = req.workspaceId;
-      if (!workspaceId) return res.json({ count: 0 });
-      const result = await db.select({ count: sql<number>`count(*)` })
-        .from(shifts)
-        .where(and(eq(shifts.workspaceId, workspaceId), eq(shifts.status, 'draft')));
-      res.json({ count: Number(result[0]?.count) || 0 });
-    } catch (error) {
-      console.error('Shifts pending count error:', error);
-      res.json({ count: 0 });
-    }
-  });
-
-  app.get('/api/timesheets/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const workspaceId = req.workspaceId;
-      if (!workspaceId) return res.json({ count: 0 });
-      const { timesheetEditRequests } = await import("@shared/schema");
-      const result = await db.select({ count: sql<number>`count(*)` })
-        .from(timesheetEditRequests)
-        .where(and(eq(timesheetEditRequests.workspaceId, workspaceId), eq(timesheetEditRequests.status, 'pending')));
-      res.json({ count: Number(result[0]?.count) || 0 });
-    } catch (error) {
-      console.error('Timesheets pending count error:', error);
-      res.json({ count: 0 });
-    }
-  });
-
-  app.get('/api/time-off/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const workspaceId = req.workspaceId;
-      if (!workspaceId) return res.json({ count: 0 });
-      const { timeOffRequests } = await import("@shared/schema");
-      const result = await db.select({ count: sql<number>`count(*)` })
-        .from(timeOffRequests)
-        .where(and(eq(timeOffRequests.workspaceId, workspaceId), eq(timeOffRequests.status, 'pending')));
-      res.json({ count: Number(result[0]?.count) || 0 });
-    } catch (error) {
-      console.error('Time-off pending count error:', error);
-      res.json({ count: 0 });
-    }
-  });
-
-  app.get('/api/expenses/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const workspaceId = req.workspaceId;
-      if (!workspaceId) return res.json({ count: 0 });
-      const result = await db.select({ count: sql<number>`count(*)` })
-        .from(expenses)
-        .where(and(eq(expenses.workspaceId, workspaceId), eq(expenses.status, 'submitted')));
-      res.json({ count: Number(result[0]?.count) || 0 });
-    } catch (error) {
-      console.error('Expenses pending count error:', error);
-      res.json({ count: 0 });
-    }
-  });
-
-  // Unified approvals pending count (all types combined)
-  app.get('/api/approvals/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const workspaceId = req.workspaceId;
-      if (!workspaceId) return res.json({ count: 0, breakdown: { shifts: 0, timesheets: 0, timeOff: 0, expenses: 0 } });
-      
-      const { timesheetEditRequests, timeOffRequests } = await import("@shared/schema");
-      
-      // Parallel queries for all approval types
-      const [shiftsResult, timesheetsResult, timeOffResult, expensesResult] = await Promise.all([
-        db.select({ count: sql<number>`count(*)` })
-          .from(shifts)
-          .where(and(eq(shifts.workspaceId, workspaceId), eq(shifts.status, 'draft'))),
-        db.select({ count: sql<number>`count(*)` })
-          .from(timesheetEditRequests)
-          .where(and(eq(timesheetEditRequests.workspaceId, workspaceId), eq(timesheetEditRequests.status, 'pending'))),
-        db.select({ count: sql<number>`count(*)` })
-          .from(timeOffRequests)
-          .where(and(eq(timeOffRequests.workspaceId, workspaceId), eq(timeOffRequests.status, 'pending'))),
-        db.select({ count: sql<number>`count(*)` })
-          .from(expenses)
-          .where(and(eq(expenses.workspaceId, workspaceId), eq(expenses.status, 'submitted'))),
-      ]);
-      
-      const breakdown = {
-        shifts: Number(shiftsResult[0]?.count) || 0,
-        timesheets: Number(timesheetsResult[0]?.count) || 0,
-        timeOff: Number(timeOffResult[0]?.count) || 0,
-        expenses: Number(expensesResult[0]?.count) || 0,
-      };
-      
-      res.json({ 
-        count: breakdown.shifts + breakdown.timesheets + breakdown.timeOff + breakdown.expenses,
-        breakdown
-      });
-    } catch (error) {
-      console.error('Approvals pending count error:', error);
-      res.json({ count: 0, breakdown: { shifts: 0, timesheets: 0, timeOff: 0, expenses: 0 } });
-    }
-  });
-
 
   // Upload expense receipt to object storage
   app.post('/api/expenses/:id/receipts', requireAuth, async (req: AuthenticatedRequest, res) => {
