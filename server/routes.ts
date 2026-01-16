@@ -118,6 +118,7 @@ import { integrationRoutes, partnerRoutes } from "./routes/integrationManagement
 import bugRemediationRouter from "./routes/bugRemediation"; // Bug Report AI Analysis & Auto-Fix
 import { onboardingRouter } from "./routes/onboardingRoutes";
 import { registerFlexStaffingRoutes } from "./routes/flexStaffingRoutes";
+import { registerSalesRoutes } from "./routes/salesRoutes";
 import { registerDocumentLibraryRoutes } from "./routes/documentLibraryRoutes";
 import { registerExternalEmailRoutes } from "./routes/externalEmailRoutes";
 import { registerLeadCrmRoutes } from "./routes/leadCrmRoutes";
@@ -3592,6 +3593,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerLeadCrmRoutes(app, requireAuth);
   registerDocumentLibraryRoutes(app, requireAuth);
   registerFlexStaffingRoutes(app, requireAuth);
+  registerSalesRoutes(app, requireAuth);
   registerExternalEmailRoutes(app, requireAuth);
   app.use("/api/workspace/integrations", requireAuth, integrationRoutes); // Workspace Integration Management
   app.use("/api/admin/partners", requirePlatformStaff, partnerRoutes); // Partner Catalog Management (Support Roles)
