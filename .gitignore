@@ -4,3 +4,7 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+*.tar.gz.parta*
+*.tar.gz.partb*
+workforceos-platform.tar.gz.*
+.github/workflows/
