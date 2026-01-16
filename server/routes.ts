@@ -12320,7 +12320,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!workspaceId) return res.json({ count: 0 });
       const result = await db.select({ count: sql<number>`count(*)` })
         .from(shifts)
-        .where(and(eq(shifts.workspaceId, workspaceId), eq(shifts.status, 'pending')));
+        .where(and(eq(shifts.workspaceId, workspaceId), eq(shifts.status, 'draft')));
       res.json({ count: Number(result[0]?.count) || 0 });
     } catch (error) {
       console.error('Shifts pending count error:', error);
@@ -12364,11 +12364,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!workspaceId) return res.json({ count: 0 });
       const result = await db.select({ count: sql<number>`count(*)` })
         .from(expenses)
-        .where(and(eq(expenses.workspaceId, workspaceId), eq(expenses.status, 'pending')));
+        .where(and(eq(expenses.workspaceId, workspaceId), eq(expenses.status, 'submitted')));
       res.json({ count: Number(result[0]?.count) || 0 });
     } catch (error) {
       console.error('Expenses pending count error:', error);
       res.json({ count: 0 });
+
+  // Unified approvals pending count (all types combined)
+  app.get('/api/approvals/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.json({ count: 0, breakdown: { shifts: 0, timesheets: 0, timeOff: 0, expenses: 0 } });
+      
+      const { timesheetEditRequests, timeOffRequests } = await import("@shared/schema");
+      
+      // Parallel queries for all approval types
+      const [shiftsResult, timesheetsResult, timeOffResult, expensesResult] = await Promise.all([
+        db.select({ count: sql<number>`count(*)` })
+          .from(shifts)
+          .where(and(eq(shifts.workspaceId, workspaceId), eq(shifts.status, 'draft'))),
+        db.select({ count: sql<number>`count(*)` })
+          .from(timesheetEditRequests)
+          .where(and(eq(timesheetEditRequests.workspaceId, workspaceId), eq(timesheetEditRequests.status, 'pending'))),
+        db.select({ count: sql<number>`count(*)` })
+          .from(timeOffRequests)
+          .where(and(eq(timeOffRequests.workspaceId, workspaceId), eq(timeOffRequests.status, 'pending'))),
+        db.select({ count: sql<number>`count(*)` })
+          .from(expenses)
+          .where(and(eq(expenses.workspaceId, workspaceId), eq(expenses.status, 'submitted'))),
+      ]);
+      
+      const breakdown = {
+        shifts: Number(shiftsResult[0]?.count) || 0,
+        timesheets: Number(timesheetsResult[0]?.count) || 0,
+        timeOff: Number(timeOffResult[0]?.count) || 0,
+        expenses: Number(expensesResult[0]?.count) || 0,
+      };
+      
+      res.json({ 
+        count: breakdown.shifts + breakdown.timesheets + breakdown.timeOff + breakdown.expenses,
+        breakdown
+      });
+    } catch (error) {
+      console.error('Approvals pending count error:', error);
+      res.json({ count: 0, breakdown: { shifts: 0, timesheets: 0, timeOff: 0, expenses: 0 } });
+    }
+  });
     }
   });
 
