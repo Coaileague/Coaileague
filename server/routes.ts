@@ -12310,6 +12310,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ============================================================
+  // PENDING COUNT ENDPOINTS - Dashboard approval banner
+  // ============================================================
+  
+  app.get('/api/shifts/approvals/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.json({ count: 0 });
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(shifts)
+        .where(and(eq(shifts.workspaceId, workspaceId), eq(shifts.status, 'pending')));
+      res.json({ count: Number(result[0]?.count) || 0 });
+    } catch (error) {
+      console.error('Shifts pending count error:', error);
+      res.json({ count: 0 });
+    }
+  });
+
+  app.get('/api/timesheets/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.json({ count: 0 });
+      const { timesheetEditRequests } = await import("@shared/schema");
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(timesheetEditRequests)
+        .where(and(eq(timesheetEditRequests.workspaceId, workspaceId), eq(timesheetEditRequests.status, 'pending')));
+      res.json({ count: Number(result[0]?.count) || 0 });
+    } catch (error) {
+      console.error('Timesheets pending count error:', error);
+      res.json({ count: 0 });
+    }
+  });
+
+  app.get('/api/time-off/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.json({ count: 0 });
+      const { timeOffRequests } = await import("@shared/schema");
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(timeOffRequests)
+        .where(and(eq(timeOffRequests.workspaceId, workspaceId), eq(timeOffRequests.status, 'pending')));
+      res.json({ count: Number(result[0]?.count) || 0 });
+    } catch (error) {
+      console.error('Time-off pending count error:', error);
+      res.json({ count: 0 });
+    }
+  });
+
+  app.get('/api/expenses/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.json({ count: 0 });
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(expenses)
+        .where(and(eq(expenses.workspaceId, workspaceId), eq(expenses.status, 'pending')));
+      res.json({ count: Number(result[0]?.count) || 0 });
+    } catch (error) {
+      console.error('Expenses pending count error:', error);
+      res.json({ count: 0 });
+    }
+  });
+
+
   // Upload expense receipt to object storage
   app.post('/api/expenses/:id/receipts', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
