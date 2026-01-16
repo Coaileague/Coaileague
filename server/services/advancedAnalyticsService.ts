@@ -254,7 +254,7 @@ async function getMetricsForPeriod(workspaceId: string, range: DateRange) {
     
     db.select({
       totalInvoiced: sql<number>`COALESCE(SUM(CASE WHEN ${invoices.status} != 'draft' THEN ${invoices.total} ELSE 0 END), 0)`,
-      pendingCount: sql<number>`COUNT(CASE WHEN ${invoices.status} IN ('sent', 'pending') THEN 1 END)`,
+      pendingCount: sql<number>`COUNT(CASE WHEN ${invoices.status} IN ('sent', 'overdue') THEN 1 END)`,
       paidCount: sql<number>`COUNT(CASE WHEN ${invoices.status} = 'paid' THEN 1 END)`
     })
     .from(invoices)
@@ -550,8 +550,8 @@ export async function getRevenueMetrics(
       SELECT 
         COALESCE(SUM(total), 0) as total_invoiced,
         COALESCE(SUM(CASE WHEN status = 'paid' THEN total ELSE 0 END), 0) as total_paid,
-        COALESCE(SUM(CASE WHEN status IN ('sent', 'pending') THEN total ELSE 0 END), 0) as total_pending,
-        COALESCE(SUM(CASE WHEN status IN ('sent', 'pending') AND due_date < NOW() THEN total ELSE 0 END), 0) as total_overdue,
+        COALESCE(SUM(CASE WHEN status IN ('sent', 'overdue') THEN total ELSE 0 END), 0) as total_pending,
+        COALESCE(SUM(CASE WHEN status IN ('sent', 'overdue') AND due_date < NOW() THEN total ELSE 0 END), 0) as total_overdue,
         COALESCE(AVG(total), 0) as avg_invoice,
         COALESCE(SUM(platform_fee_amount), 0) as platform_fees,
         COALESCE(SUM(business_amount), 0) as net_revenue,

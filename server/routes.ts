@@ -12373,6 +12373,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/expenses/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
+    try {
+      const workspaceId = req.workspaceId;
+      if (!workspaceId) return res.json({ count: 0 });
+      const result = await db.select({ count: sql<number>`count(*)` })
+        .from(expenses)
+        .where(and(eq(expenses.workspaceId, workspaceId), eq(expenses.status, 'submitted')));
+      res.json({ count: Number(result[0]?.count) || 0 });
+    } catch (error) {
+      console.error('Expenses pending count error:', error);
+      res.json({ count: 0 });
+    }
+  });
+
   // Get single expense with receipts
   app.get('/api/expenses/:id', requireAuth, async (req: AuthenticatedRequest, res) => {
     try {
@@ -12439,19 +12453,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/expenses/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {
-    try {
-      const workspaceId = req.workspaceId;
-      if (!workspaceId) return res.json({ count: 0 });
-      const result = await db.select({ count: sql<number>`count(*)` })
-        .from(expenses)
-        .where(and(eq(expenses.workspaceId, workspaceId), eq(expenses.status, 'submitted')));
-      res.json({ count: Number(result[0]?.count) || 0 });
-    } catch (error) {
-      console.error('Expenses pending count error:', error);
-      res.json({ count: 0 });
-    }
-  });
 
   // Unified approvals pending count (all types combined)
   app.get('/api/approvals/pending-count', requireAuth, async (req: AuthenticatedRequest, res) => {

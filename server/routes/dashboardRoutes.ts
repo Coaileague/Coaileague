@@ -7,6 +7,43 @@ import { eq, and, gte, lte, count, sum, sql } from "drizzle-orm";
 
 const router = Router();
 
+// Root dashboard route - alias for /metrics
+router.get("/", async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const isPlatformAdmin = ['root_admin', 'super_admin', 'deputy_admin', 'sysop'].includes(user?.platformRole);
+    const workspaceId = (isPlatformAdmin && req.query.workspaceId as string) || user?.workspaceId;
+    
+    if (!workspaceId) {
+      if (isPlatformAdmin) {
+        return res.json({
+          hoursThisWeek: 0,
+          hoursTrend: 0,
+          pendingInvoices: 0,
+          invoiceTotal: 0,
+          upcomingShifts: 0,
+          shiftsToday: 0,
+          activeEmployees: 0,
+          totalHoursTracked: 0,
+          message: 'No workspace context. Select a workspace or use ?workspaceId=<id> to view metrics.'
+        });
+      }
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    // Return basic dashboard data
+    res.json({
+      success: true,
+      workspaceId,
+      message: "Dashboard root - use /metrics for detailed data"
+    });
+  } catch (error) {
+    console.error('Dashboard root error:', error);
+    res.status(500).json({ error: "Failed to load dashboard" });
+  }
+});
+
+
 // Get dashboard metrics
 router.get("/metrics", async (req: Request, res: Response) => {
   try {
