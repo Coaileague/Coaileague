@@ -10,7 +10,10 @@ import connectPg from "connect-pg-simple";
 import { storage } from "./storage";
 
 if (!process.env.REPLIT_DOMAINS) {
-  throw new Error("Environment variable REPLIT_DOMAINS not provided");
+  // REPLIT_DOMAINS is only required when using Replit OIDC authentication.
+  // On Railway and other platforms, the app uses its own password-based auth
+  // (server/auth.ts) and this module's setupAuth() is never called.
+  console.warn("[replitAuth] REPLIT_DOMAINS not set — Replit OIDC auth is disabled. Using platform-native auth instead.");
 }
 
 const getOidcConfig = memoize(
@@ -112,6 +115,10 @@ async function upsertUser(
 }
 
 export async function setupAuth(app: Express) {
+  if (!process.env.REPLIT_DOMAINS) {
+    console.warn("[replitAuth] setupAuth() called but REPLIT_DOMAINS is not set — skipping Replit OIDC setup.");
+    return;
+  }
   console.log('[Auth] Initializing authentication system');
   app.set("trust proxy", 1);
   
