@@ -1,9 +1,28 @@
+/**
+ * One-shot Railway migration runner — applies all SQL files in /migrations
+ * to the Railway Postgres instance specified by DATABASE_URL.
+ *
+ * NOTE: This is a manual / debugging utility. The normal production flow runs
+ * `drizzle-kit push --config=drizzle.config.ts` from the start script (see
+ * package.json), which is more capable than raw SQL migrations because it
+ * diffs shared/schema.ts against the live DB and applies the delta.
+ *
+ * Usage:
+ *   DATABASE_URL='postgresql://...' npx tsx migrate-railway.ts
+ *
+ * SECURITY: Never hardcode the connection string. Always pass it via env.
+ */
 import pg from 'pg';
 import { readFileSync } from 'fs';
 import { readdirSync } from 'fs';
 import path from 'path';
 
-const DB_URL = 'postgresql://postgres:EvAAWZUwRCaoOecMWkAWuJQBZwhRVIio@junction.proxy.rlwy.net:52981/railway';
+const DB_URL = process.env.DATABASE_URL;
+if (!DB_URL) {
+  console.error('❌ DATABASE_URL environment variable is required');
+  console.error('   Usage: DATABASE_URL="postgresql://..." npx tsx migrate-railway.ts');
+  process.exit(1);
+}
 
 (async () => {
   const client = new pg.Client(DB_URL);
