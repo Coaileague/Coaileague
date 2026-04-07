@@ -12,7 +12,7 @@ import { Router, Request, Response } from 'express';
 import { requireAuth } from '../auth';
 import { requirePlatformStaff, AuthenticatedRequest } from '../rbac';
 import { trinityAutonomousNotifier, notifySupportStaff } from '../services/ai-brain/trinityAutonomousNotifier';
-import rateLimit from 'express-rate-limit';
+import rateLimit, { ipKeyGenerator } from 'express-rate-limit';
 
 const router = Router();
 
@@ -23,7 +23,8 @@ const testAlertLimiter = rateLimit({
   message: { success: false, error: 'Too many test alerts. Please wait before trying again.' },
   keyGenerator: (req: Request) => {
     const authReq = req as AuthenticatedRequest;
-    return authReq.userId || req.ip || 'anonymous';
+    if (authReq.userId) return authReq.userId;
+    return ipKeyGenerator(req);
   },
   standardHeaders: true,
   legacyHeaders: false,
