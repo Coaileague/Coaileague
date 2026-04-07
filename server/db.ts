@@ -1,5 +1,6 @@
 // Standard pg driver - compatible with Railway PostgreSQL and any standard Postgres
-import { Pool } from 'pg';
+import pkg from 'pg';
+const { Pool } = pkg;
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from "@shared/schema";
 
