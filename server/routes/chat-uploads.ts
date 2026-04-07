@@ -18,13 +18,17 @@ const router = Router();
 // Validate environment configuration
 const BUCKET_ID = process.env.DEFAULT_OBJECT_STORAGE_BUCKET_ID;
 const PRIVATE_DIR = process.env.PRIVATE_OBJECT_DIR || "/.private";
+const STORAGE_CONFIGURED = !!BUCKET_ID;
 
-if (!BUCKET_ID) {
-  throw new Error("DEFAULT_OBJECT_STORAGE_BUCKET_ID environment variable is required for chat uploads");
+if (!STORAGE_CONFIGURED) {
+  console.warn(
+    "[chat-uploads] DEFAULT_OBJECT_STORAGE_BUCKET_ID not set — chat file uploads disabled. " +
+    "Set this environment variable to enable Google Cloud Storage uploads."
+  );
 }
 
-// Initialize Google Cloud Storage
-const storage = new Storage();
+// Initialize Google Cloud Storage (lazy — only used when STORAGE_CONFIGURED)
+const storage = STORAGE_CONFIGURED ? new Storage() : null;
 
 // File upload configuration
 const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB
@@ -132,9 +136,16 @@ router.post(
   async (req, res) => {
     const authReq = req as AuthenticatedRequest;
     try {
+      if (!STORAGE_CONFIGURED || !storage) {
+        return res.status(503).json({
+          error: "Chat file uploads are not configured on this deployment",
+          code: "STORAGE_NOT_CONFIGURED",
+        });
+      }
+
       const files = req.files as Express.Multer.File[];
       const { conversationId, isPublic } = req.body;
-      
+
       if (!files || files.length === 0) {
         return res.status(400).json({ error: "No files provided" });
       }
