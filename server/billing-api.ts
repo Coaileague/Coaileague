@@ -16,7 +16,6 @@ import {
   orgRewards,
 } from '@shared/schema';
 import { eq } from 'drizzle-orm';
-import { isAuthenticated } from './replitAuth';
 import { requireAuth } from './auth';
 import { type AuthenticatedRequest } from './rbac';
 import Stripe from 'stripe';

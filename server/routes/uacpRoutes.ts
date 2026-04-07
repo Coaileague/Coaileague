@@ -23,7 +23,7 @@ import {
 import { eq, and, or, desc, inArray, gte, lte, isNull, sql } from 'drizzle-orm';
 import { policyDecisionPoint, EntityType } from '../services/uacp/policyDecisionPoint';
 import { agentIdentityService } from '../services/uacp/agentIdentityService';
-import { isAuthenticated as requireAuth } from '../replitAuth';
+import { requireAuth } from '../auth';
 
 const router = Router();
 

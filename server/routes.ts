@@ -22,8 +22,7 @@ const platformWorkspaceSeedLock = {
 };
 import { storage } from "./storage";
 import { db, pool } from "./db";
-import { setupAuth, isAuthenticated } from "./replitAuth";
-import { setupAuth as setupCustomAuth, requireAuth } from "./auth"; // Custom auth
+import { setupAuth as setupCustomAuth, requireAuth, requireAuth as isAuthenticated } from "./auth"; // Platform-native auth (Replit OIDC removed)
 import authRoutes from "./authRoutes"; // Custom auth routes
 import mascotRouter from "./routes/mascot-routes"; // Trinity AI Mascot routes
 import trinityAlertsRouter from "./routes/trinity-alerts"; // Trinity Autonomous Alerts
@@ -493,9 +492,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup custom auth (portable, session-based)
   setupCustomAuth(app);
-  
-  // Also setup Replit auth (for backward compatibility)
-  await setupAuth(app);
   
   // Trust proxy for accurate IP detection behind load balancers
   app.set('trust proxy', 1);

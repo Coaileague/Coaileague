@@ -4,7 +4,6 @@
  */
 
 import express, { Router, Request, Response } from 'express';
-import { isAuthenticated } from './replitAuth';
 import { requireAuth } from './auth';
 import { db } from './db';
 import { aiBrainService } from './services/ai-brain/aiBrainService';
@@ -93,7 +92,7 @@ aiBrainRouter.get('/system-status', requireAuth, async (req: Request, res: Respo
 /**
  * POST /api/ai-brain/trinity-scan - Trigger Trinity's platform scan to build knowledge
  */
-aiBrainRouter.post('/trinity-scan', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/trinity-scan', requireAuth, async (req: Request, res: Response) => {
   try {
     if (trinityScanOrchestrator.isCurrentlyScanning()) {
       return res.status(409).json({ error: 'Scan already in progress' });
@@ -115,7 +114,7 @@ aiBrainRouter.post('/trinity-scan', isAuthenticated, async (req: Request, res: R
 /**
  * GET /api/ai-brain/trinity-knowledge - Get Trinity's current knowledge state
  */
-aiBrainRouter.get('/trinity-knowledge', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/trinity-knowledge', requireAuth, async (req: Request, res: Response) => {
   try {
     const state = await trinityScanOrchestrator.getKnowledgeState();
     
@@ -135,7 +134,7 @@ aiBrainRouter.get('/trinity-knowledge', isAuthenticated, async (req: Request, re
 /**
  * GET /api/ai-brain/trinity-persistence-test - Test if Trinity's knowledge persists
  */
-aiBrainRouter.get('/trinity-persistence-test', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/trinity-persistence-test', requireAuth, async (req: Request, res: Response) => {
   try {
     const result = await trinityScanOrchestrator.testKnowledgePersistence();
     
@@ -156,7 +155,7 @@ aiBrainRouter.get('/trinity-persistence-test', isAuthenticated, async (req: Requ
 /**
  * GET /api/ai-brain/skills - Get available AI Brain skills
  */
-aiBrainRouter.get('/skills', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/skills', requireAuth, async (req: Request, res: Response) => {
   try {
     const skills = aiBrainService.getAvailableSkills();
     res.json({ 
@@ -181,7 +180,7 @@ aiBrainRouter.get('/skills', isAuthenticated, async (req: Request, res: Response
 /**
  * GET /api/ai-brain/approvals - Get pending approvals
  */
-aiBrainRouter.get('/approvals', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/approvals', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.user?.currentWorkspaceId;
@@ -197,7 +196,7 @@ aiBrainRouter.get('/approvals', isAuthenticated, async (req: Request, res: Respo
 /**
  * GET /api/ai-brain/patterns - Get global patterns
  */
-aiBrainRouter.get('/patterns', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/patterns', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.user?.currentWorkspaceId;
@@ -244,7 +243,7 @@ aiBrainRouter.get('/patterns', isAuthenticated, async (req: Request, res: Respon
 /**
  * GET /api/ai-brain/jobs/recent - Get recent jobs
  */
-aiBrainRouter.get('/jobs/recent', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/jobs/recent', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.user?.currentWorkspaceId;
@@ -280,7 +279,7 @@ aiBrainRouter.get('/jobs/recent', isAuthenticated, async (req: Request, res: Res
 /**
  * POST /api/ai-brain/jobs - Enqueue new AI job
  */
-aiBrainRouter.post('/jobs', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/jobs', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { skill, input, priority } = req.body;
@@ -303,7 +302,7 @@ aiBrainRouter.post('/jobs', isAuthenticated, async (req: Request, res: Response)
 /**
  * POST /api/ai-brain/jobs/:id/approve - Approve a job
  */
-aiBrainRouter.post('/jobs/:id/approve', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/jobs/:id/approve', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { id } = req.params;
@@ -319,7 +318,7 @@ aiBrainRouter.post('/jobs/:id/approve', isAuthenticated, async (req: Request, re
 /**
  * POST /api/ai-brain/jobs/:id/reject - Reject a job
  */
-aiBrainRouter.post('/jobs/:id/reject', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/jobs/:id/reject', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { id } = req.params;
@@ -337,7 +336,7 @@ aiBrainRouter.post('/jobs/:id/reject', isAuthenticated, async (req: Request, res
 /**
  * POST /api/ai-brain/feedback - Submit feedback
  */
-aiBrainRouter.post('/feedback', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/feedback', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     await aiBrainService.submitFeedback({
@@ -356,7 +355,7 @@ aiBrainRouter.post('/feedback', isAuthenticated, async (req: Request, res: Respo
 /**
  * POST /api/ai-brain/business-insight - Generate business insights
  */
-aiBrainRouter.post('/business-insight', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/business-insight', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { insightType, timeframe, focusArea } = req.body;
@@ -383,7 +382,7 @@ aiBrainRouter.post('/business-insight', isAuthenticated, async (req: Request, re
 /**
  * POST /api/ai-brain/recommend - Get platform recommendations
  */
-aiBrainRouter.post('/recommend', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/recommend', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { userNeed, currentPlan, currentUsage } = req.body;
@@ -411,7 +410,7 @@ aiBrainRouter.post('/recommend', isAuthenticated, async (req: Request, res: Resp
  * POST /api/ai-brain/chat - AI Chat support (HelpAI)
  * Accepts conversationId for proper chatroom routing
  */
-aiBrainRouter.post('/chat', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/chat', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { message, conversationHistory, shouldLearn, conversationId, sessionId } = req.body;
@@ -441,7 +440,7 @@ aiBrainRouter.post('/chat', isAuthenticated, async (req: Request, res: Response)
 /**
  * GET /api/ai-brain/faqs - Get FAQs (global knowledge base)
  */
-aiBrainRouter.get('/faqs', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/faqs', requireAuth, async (req: Request, res: Response) => {
   try {
     // FAQs are global (not workspace-scoped)
     const faqs = await db
@@ -461,7 +460,7 @@ aiBrainRouter.get('/faqs', isAuthenticated, async (req: Request, res: Response) 
 /**
  * POST /api/ai-brain/faqs - Create new FAQ
  */
-aiBrainRouter.post('/faqs', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/faqs', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { question, answer, category, tags } = req.body;
@@ -488,7 +487,7 @@ aiBrainRouter.post('/faqs', isAuthenticated, async (req: Request, res: Response)
 /**
  * POST /api/ai-brain/faqs/:id/helpful - Mark FAQ as helpful
  */
-aiBrainRouter.post('/faqs/:id/helpful', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/faqs/:id/helpful', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
@@ -509,7 +508,7 @@ aiBrainRouter.post('/faqs/:id/helpful', isAuthenticated, async (req: Request, re
 /**
  * GET /api/ai-brain/checkpoints - Get all paused automation checkpoints
  */
-aiBrainRouter.get('/checkpoints', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/checkpoints', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.user?.currentWorkspaceId;
@@ -533,7 +532,7 @@ aiBrainRouter.get('/checkpoints', isAuthenticated, async (req: Request, res: Res
 /**
  * POST /api/ai-brain/checkpoints/:id/resume - Resume automation from checkpoint
  */
-aiBrainRouter.post('/checkpoints/:id/resume', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/checkpoints/:id/resume', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { id } = req.params;
@@ -614,7 +613,7 @@ aiBrainRouter.post('/checkpoints/:id/resume', isAuthenticated, async (req: Reque
 /**
  * GET /api/ai-brain/global-patterns - Get cross-org learning patterns
  */
-aiBrainRouter.get('/global-patterns', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/global-patterns', requireAuth, async (req: Request, res: Response) => {
   try {
     const patterns = await db
       .select()
@@ -636,7 +635,7 @@ aiBrainRouter.get('/global-patterns', isAuthenticated, async (req: Request, res:
 /**
  * GET /api/ai-brain/gaps - Get top FAQ gap events (unanswered questions)
  */
-aiBrainRouter.get('/gaps', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/gaps', requireAuth, async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 20;
     const gaps = await aiBrainService.getTopGaps(limit);
@@ -655,7 +654,7 @@ aiBrainRouter.get('/gaps', isAuthenticated, async (req: Request, res: Response) 
 /**
  * POST /api/ai-brain/gaps/:id/resolve - Resolve a gap by creating/updating FAQ
  */
-aiBrainRouter.post('/gaps/:id/resolve', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/gaps/:id/resolve', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id;
@@ -721,7 +720,7 @@ aiBrainRouter.post('/gaps/:id/resolve', isAuthenticated, async (req: Request, re
 /**
  * GET /api/ai-brain/faqs/stale - Get stale FAQs that need review
  */
-aiBrainRouter.get('/faqs/stale', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/faqs/stale', requireAuth, async (req: Request, res: Response) => {
   try {
     const staleFaqs = await aiBrainService.detectStaleFaqs();
     
@@ -739,7 +738,7 @@ aiBrainRouter.get('/faqs/stale', isAuthenticated, async (req: Request, res: Resp
 /**
  * POST /api/ai-brain/faqs/:id/verify - Mark an FAQ as verified/reviewed
  */
-aiBrainRouter.post('/faqs/:id/verify', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/faqs/:id/verify', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id;
@@ -769,7 +768,7 @@ aiBrainRouter.post('/faqs/:id/verify', isAuthenticated, async (req: Request, res
 /**
  * GET /api/ai-brain/faqs/:id/versions - Get version history for an FAQ
  */
-aiBrainRouter.get('/faqs/:id/versions', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/faqs/:id/versions', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
@@ -789,7 +788,7 @@ aiBrainRouter.get('/faqs/:id/versions', isAuthenticated, async (req: Request, re
 /**
  * POST /api/ai-brain/faqs/:id/update - Update an FAQ with version control
  */
-aiBrainRouter.post('/faqs/:id/update', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/faqs/:id/update', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const userId = authReq.user?.id;
@@ -854,7 +853,7 @@ aiBrainRouter.post('/faqs/:id/update', isAuthenticated, async (req: Request, res
 /**
  * POST /api/ai-brain/tickets/:id/learn - Learn from a resolved ticket
  */
-aiBrainRouter.post('/tickets/:id/learn', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/tickets/:id/learn', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     
@@ -873,7 +872,7 @@ aiBrainRouter.post('/tickets/:id/learn', isAuthenticated, async (req: Request, r
 /**
  * POST /api/ai-brain/gaps/record - Record a gap event (for low-confidence AI responses)
  */
-aiBrainRouter.post('/gaps/record', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/gaps/record', requireAuth, async (req: Request, res: Response) => {
   try {
     const { question, sourceType, sourceId, suggestedAnswer, confidence, context } = req.body;
     
@@ -903,7 +902,7 @@ aiBrainRouter.post('/gaps/record', isAuthenticated, async (req: Request, res: Re
 /**
  * GET /api/ai-brain/learning/stats - Get FAQ learning statistics
  */
-aiBrainRouter.get('/learning/stats', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/learning/stats', requireAuth, async (req: Request, res: Response) => {
   try {
     // Get FAQ stats
     const faqStats = await db.select({
@@ -947,7 +946,7 @@ aiBrainRouter.get('/learning/stats', isAuthenticated, async (req: Request, res: 
 /**
  * GET /api/ai-brain/platform-info - Get platform feature documentation for support agents
  */
-aiBrainRouter.get('/platform-info', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/platform-info', requireAuth, async (req: Request, res: Response) => {
   try {
     const { category, search } = req.query;
     const platformInfo = aiBrainService.getPlatformInfo();
@@ -977,7 +976,7 @@ aiBrainRouter.get('/platform-info', isAuthenticated, async (req: Request, res: R
 /**
  * POST /api/ai-brain/diagnose - AI diagnoses user issue based on description
  */
-aiBrainRouter.post('/diagnose', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/diagnose', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { description, symptoms, affectedFeature, context } = req.body;
@@ -1009,7 +1008,7 @@ aiBrainRouter.post('/diagnose', isAuthenticated, async (req: Request, res: Respo
 /**
  * GET /api/ai-brain/feature-status - Check if features are enabled for workspace
  */
-aiBrainRouter.get('/feature-status', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/feature-status', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.user?.currentWorkspaceId;
@@ -1047,7 +1046,7 @@ aiBrainRouter.get('/feature-status', isAuthenticated, async (req: Request, res: 
 /**
  * POST /api/ai-brain/platform-awareness - Ask AI about platform features
  */
-aiBrainRouter.post('/platform-awareness', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/platform-awareness', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { query, queryType, context } = req.body;
@@ -1081,7 +1080,7 @@ aiBrainRouter.post('/platform-awareness', isAuthenticated, async (req: Request, 
 /**
  * POST /api/ai-brain/feature-event - Record feature usage for learning
  */
-aiBrainRouter.post('/feature-event', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/feature-event', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { featureId, eventType, metadata } = req.body;
@@ -1116,7 +1115,7 @@ aiBrainRouter.post('/feature-event', isAuthenticated, async (req: Request, res: 
 /**
  * GET /api/ai-brain/feature/:featureId - Get detailed info about a specific feature
  */
-aiBrainRouter.get('/feature/:featureId', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/feature/:featureId', requireAuth, async (req: Request, res: Response) => {
   try {
     const { featureId } = req.params;
     const platformInfo = aiBrainService.getPlatformInfo();
@@ -1147,7 +1146,7 @@ aiBrainRouter.get('/feature/:featureId', isAuthenticated, async (req: Request, r
 /**
  * GET /api/ai-brain/confidence/subagent/:subagentId - Get confidence score for a specific subagent
  */
-aiBrainRouter.get('/confidence/subagent/:subagentId', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/confidence/subagent/:subagentId', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const { subagentId } = req.params;
@@ -1173,7 +1172,7 @@ aiBrainRouter.get('/confidence/subagent/:subagentId', isAuthenticated, async (re
 /**
  * GET /api/ai-brain/confidence/org - Get org-level automation readiness
  */
-aiBrainRouter.get('/confidence/org', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/confidence/org', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.user?.currentWorkspaceId;
@@ -1198,7 +1197,7 @@ aiBrainRouter.get('/confidence/org', isAuthenticated, async (req: Request, res: 
 /**
  * GET /api/ai-brain/confidence/graduation - Check graduation eligibility
  */
-aiBrainRouter.get('/confidence/graduation', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/confidence/graduation', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.user?.currentWorkspaceId;
@@ -1218,7 +1217,7 @@ aiBrainRouter.get('/confidence/graduation', isAuthenticated, async (req: Request
 /**
  * POST /api/ai-brain/confidence/graduate - Graduate org to higher automation level
  */
-aiBrainRouter.post('/confidence/graduate', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.post('/confidence/graduate', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.user?.currentWorkspaceId;
@@ -1239,7 +1238,7 @@ aiBrainRouter.post('/confidence/graduate', isAuthenticated, async (req: Request,
 /**
  * GET /api/ai-brain/confidence/suggestions - Get AI optimization suggestions
  */
-aiBrainRouter.get('/confidence/suggestions', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/confidence/suggestions', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.user?.currentWorkspaceId;
@@ -1259,7 +1258,7 @@ aiBrainRouter.get('/confidence/suggestions', isAuthenticated, async (req: Reques
 /**
  * GET /api/ai-brain/confidence/trinity-summary - Get Trinity monitoring summary
  */
-aiBrainRouter.get('/confidence/trinity-summary', isAuthenticated, async (req: Request, res: Response) => {
+aiBrainRouter.get('/confidence/trinity-summary', requireAuth, async (req: Request, res: Response) => {
   try {
     const authReq = req as AuthenticatedRequest;
     const workspaceId = authReq.user?.currentWorkspaceId;
