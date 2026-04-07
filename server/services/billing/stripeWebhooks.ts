@@ -12,6 +12,7 @@
  */
 
 import Stripe from 'stripe';
+import { getStripe } from './stripeClient';
 import { db } from '../../db';
 import {
   workspaces,
@@ -102,10 +103,11 @@ setInterval(() => {
     .catch((err) => log.warn('[stripeWebhooks] Cleanup job failed:', err));
 }, 24 * 60 * 60 * 1000).unref();
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
-  timeout: 10000,
-  maxNetworkRetries: 2,
+// Lazy proxy: avoids module-load crash if STRIPE_SECRET_KEY is missing.
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
 });
 
 export interface WebhookResult {

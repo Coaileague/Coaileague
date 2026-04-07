@@ -9,6 +9,7 @@
 
 import { createLogger } from '../../lib/logger';
 import Stripe from 'stripe';
+import { getStripe } from './stripeClient';
 import crypto from 'crypto';
 import { db } from '../../db';
 import { workspaces, employees } from '@shared/schema';
@@ -25,11 +26,12 @@ function getOverageRate(tier: TierKey): number {
   return typeof rate === 'number' ? rate : 0;
 }
 
-// GAP-62 FIX: Added timeout and maxNetworkRetries.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-09-30.clover',
-  timeout: 10000,
-  maxNetworkRetries: 2,
+// GAP-62 FIX: timeout + maxNetworkRetries are configured inside getStripe().
+// Lazy proxy avoids module-load crash when STRIPE_SECRET_KEY is missing.
+const stripe = new Proxy({} as Stripe, {
+  get(_t, prop) {
+    return (getStripe() as any)[prop];
+  },
 });
 
 export interface EmployeeUsage {
